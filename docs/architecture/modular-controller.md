@@ -70,6 +70,12 @@ its budget checks. A host may use a larger local context, but the adapter cannot
 claim compact-mode support unless the core-rendered envelope and receipt pass
 unchanged.
 
+Controller gates are runtime preconditions, not advisory metadata. Task and
+finalization transitions validate every gate configured for the current phase by
+resolving the frozen receipt path and checking receipt binding, freshness,
+dependencies, PASS verdict, and required attestation fields before mutating
+state.
+
 ## SOLID
 
 SOLID is required where it creates testable boundaries:

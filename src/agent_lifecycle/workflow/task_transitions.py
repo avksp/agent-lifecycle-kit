@@ -14,6 +14,7 @@ from agent_lifecycle.workflow.artifacts import (
     package_root,
 )
 from agent_lifecycle.workflow.events import append_event
+from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.reviews import validate_task_result, validate_task_review
 from agent_lifecycle.workflow.selectors import find_task, ready_tasks, unlock_ready_tasks
@@ -47,7 +48,16 @@ def start_task(
     _require_dependencies_accepted(state, task)
     _require_parallel_capacity(state)
     attempt = next_available_attempt(state_path, state, task)
+    gate_receipts = validate_controller_gates(
+        state_path,
+        state,
+        task,
+        phase="pre-launch",
+        operation_id=operation_id,
+        attempt=attempt,
+    )
     _mark_task_running(state, task, attempt, reason)
+    record_gate_receipts(task, gate_receipts)
     _commit_task_event(
         state_path,
         state,
@@ -76,6 +86,14 @@ def commit_task_result(
     task = find_task(state, task_id)
     if task.get("status") != "RUNNING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not RUNNING")
+    gate_receipts = validate_controller_gates(
+        state_path,
+        state,
+        task,
+        phase="post-attempt",
+        operation_id=operation_id,
+        attempt=int(task["attempt"]),
+    )
     expected_path = artifact_path(task, "result", int(task["attempt"]))
     if normalize_repo_path(result_path) != expected_path:
         raise LifecycleError("artifact-path-mismatch", "task result path does not match frozen template")
@@ -86,6 +104,7 @@ def commit_task_result(
     task["result"] = identity
     task["status"] = "VERIFYING"
     task["lastReason"] = reason
+    record_gate_receipts(task, gate_receipts)
     state["phase"] = "STEP_REVIEW"
     _commit_task_event(
         state_path,
@@ -112,6 +131,14 @@ def accept_task(
     task = find_task(state, task_id)
     if task.get("status") != "VERIFYING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not VERIFYING")
+    gate_receipts = validate_controller_gates(
+        state_path,
+        state,
+        task,
+        phase="pre-acceptance",
+        operation_id=operation_id,
+        attempt=int(task["attempt"]),
+    )
     expected_path = artifact_path(task, "review", int(task["attempt"]))
     if normalize_repo_path(review_path) != expected_path:
         raise LifecycleError("artifact-path-mismatch", "task review path does not match frozen template")
@@ -119,6 +146,7 @@ def accept_task(
     review = read_json_object(root / expected_path, label="task review")
     identity = artifact_identity(root, expected_path, review)
     validate_task_review(state, task, review)
+    record_gate_receipts(task, gate_receipts)
     _mark_task_accepted(state, task, review, identity, reason)
     _commit_task_event(
         state_path,

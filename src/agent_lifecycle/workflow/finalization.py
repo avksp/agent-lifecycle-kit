@@ -9,6 +9,7 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_jso
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.events import append_event
+from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.state import (
     load_state,
@@ -45,8 +46,18 @@ def finalize_run(
     final_audit = read_json_object(root / final_audit_rel, label="final audit")
     final_audit_identity = artifact_identity(root, final_audit_rel, final_audit)
     _validate_final_audit(state, final_audit)
+    finalization_gate_receipts = _validate_finalization_gates(
+        state_path,
+        state,
+        operation_id=operation_id,
+    )
     proof_rel = normalize_repo_path(proof_path)
-    proof = _proof_body(state, final_audit=final_audit_identity, reason=reason)
+    proof = _proof_body(
+        state,
+        final_audit=final_audit_identity,
+        finalization_gate_receipts=finalization_gate_receipts,
+        reason=reason,
+    )
     write_json_create(root / proof_rel, proof)
     identity = artifact_identity(root, proof_rel, proof)
     state["finalProof"] = {**identity, "semanticStatus": proof["semanticStatus"]}
@@ -57,7 +68,12 @@ def finalize_run(
         state,
         operation_id=operation_id,
         event_type="run-finalized",
-        payload={"finalAudit": final_audit_identity, "proof": state["finalProof"], "reason": reason},
+        payload={
+            "finalAudit": final_audit_identity,
+            "finalizationGateReceipts": finalization_gate_receipts,
+            "proof": state["finalProof"],
+            "reason": reason,
+        },
     )
     return status(state_path)
 
@@ -106,7 +122,36 @@ def _validate_final_audit(state: dict[str, Any], final_audit: dict[str, Any]) ->
         )
 
 
-def _proof_body(state: dict[str, Any], *, final_audit: dict[str, Any], reason: str) -> dict[str, Any]:
+def _validate_finalization_gates(
+    state_path: Path,
+    state: dict[str, Any],
+    *,
+    operation_id: str,
+) -> list[dict[str, Any]]:
+    receipts: list[dict[str, Any]] = []
+    for task in state.get("tasks", []):
+        if task.get("status") != "ACCEPTED":
+            continue
+        task_receipts = validate_controller_gates(
+            state_path,
+            state,
+            task,
+            phase="finalization",
+            operation_id=operation_id,
+            attempt=int(task.get("attempt", 0)),
+        )
+        record_gate_receipts(task, task_receipts)
+        receipts.extend(task_receipts)
+    return receipts
+
+
+def _proof_body(
+    state: dict[str, Any],
+    *,
+    final_audit: dict[str, Any],
+    finalization_gate_receipts: list[dict[str, Any]],
+    reason: str,
+) -> dict[str, Any]:
     accepted = [
         {
             "id": task.get("id"),
@@ -128,6 +173,7 @@ def _proof_body(state: dict[str, Any], *, final_audit: dict[str, Any], reason: s
         "productionPromotionClaimed": False,
         "acceptedTasks": accepted,
         "finalAudit": final_audit,
+        "finalizationGateReceipts": finalization_gate_receipts,
         "reason": reason,
         "createdAt": now_iso(),
     }
