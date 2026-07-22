@@ -146,6 +146,12 @@ rendered receipt status is `FAIL`, the CLI exits non-zero and returns
 `READY_FOR_FINALIZATION`, match the run's plan revision and digest, avoid
 production-promotion claims, and contain no unresolved MEDIUM+ findings.
 
+Workflow transitions enforce task `controllerGates` for `pre-launch`,
+`post-attempt`, `pre-acceptance`, and `finalization` phases. Expected receipts
+are resolved from the frozen `receiptPath` template and must bind gate, run,
+package, task, attempt, phase, operation, plan digest, source revision, PASS
+verdict, freshness, dependencies, and configured attestation fields.
+
 Tests use only the Python standard library:
 
 ```bash
