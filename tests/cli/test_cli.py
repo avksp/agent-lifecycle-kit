@@ -150,6 +150,47 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(payload["schemaVersion"], "agent-small-context-profile-validation.v1")
         self.assertEqual(payload["defaultWindow"], "8k")
+        self.assertIn("4k-strict", payload["windows"])
+
+    def test_context_check_overflow_returns_non_zero_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            packet, summary = _write_context_inputs(Path(tmp), oversized=True)
+            code, payload = _run_cli([
+                "context",
+                "check",
+                "--profile",
+                str(ROOT / "profiles/small-context-profile.v1.json"),
+                "--task-packet",
+                str(packet),
+                "--summary",
+                str(summary),
+                "--target-window",
+                "4k-strict",
+            ])
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["schemaVersion"], "agent-lifecycle-error.v1")
+            self.assertEqual(payload["code"], "context-overflow")
+            self.assertEqual(payload["details"]["receipt"]["status"], "FAIL")
+
+    def test_context_render_overflow_returns_non_zero_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            packet, summary = _write_context_inputs(Path(tmp), oversized=True)
+            code, payload = _run_cli([
+                "context",
+                "render",
+                "--profile",
+                str(ROOT / "profiles/small-context-profile.v1.json"),
+                "--task-packet",
+                str(packet),
+                "--summary",
+                str(summary),
+                "--target-window",
+                "4k-strict",
+            ])
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["schemaVersion"], "agent-lifecycle-error.v1")
+            self.assertEqual(payload["code"], "context-overflow")
+            self.assertEqual(payload["details"]["receipt"]["status"], "FAIL")
 
     def test_tier_resolve_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -216,6 +257,63 @@ def _write_state(root: Path) -> Path:
         encoding="utf-8",
     )
     return path
+
+
+def _write_context_inputs(root: Path, *, oversized: bool) -> tuple[Path, Path]:
+    packet_path = root / "task-packet.json"
+    summary_path = root / "summary.json"
+    packet = {
+        "schemaVersion": "agent-task-packet.v1",
+        "plan": {"packageId": "package", "planRevision": 1, "planDigest": "0" * 64},
+        "task": {
+            "id": "WS-01",
+            "title": "Add compact context support",
+            "owner": "worker",
+            "reviewer": "reviewer",
+            "dependsOn": [],
+            "required": True,
+            "plannedItems": _context_planned_items(oversized=oversized),
+            "acceptanceIds": ["AC-CONTEXT"],
+            "evidenceIds": ["EV-CONTEXT"],
+            "artifactPaths": {},
+            "capabilityHints": [],
+            "requiredTools": [],
+            "executionPolicy": {},
+        },
+        "ownership": {
+            "writes": ["src/agent_lifecycle/context"],
+            "readOnly": ["profiles/small-context-profile.v1.json"],
+            "forbiddenWrites": [],
+            "leadOwned": [],
+        },
+        "specification": {
+            "tier": "S1",
+            "revision": 1,
+            "requirements": ["REQ-CONTEXT"],
+            "traceDigest": "1" * 64,
+        },
+        "context": {"refs": ["profiles/small-context-profile.v1.json"]},
+        "validation": {"acceptanceIds": ["AC-CONTEXT"], "evidenceIds": ["EV-CONTEXT"]},
+        "acceptance": [{"id": "AC-CONTEXT", "statement": "context receipt passes"}],
+    }
+    summary = {
+        "latestUserIntent": "Add compact context mode for small local models.",
+        "activeDecisions": ["Use deterministic renderer and fail closed on overflow."],
+        "openBlockers": [],
+        "acceptedEvidence": [{"id": "EV-CONTEXT", "status": "pending"}],
+        "changedFiles": ["src/agent_lifecycle/context/rendering.py"],
+        "nextRequiredAction": "render compact envelope",
+        "doNotDo": ["Do not load the full plan package into a small context."],
+    }
+    packet_path.write_text(json.dumps(packet), encoding="utf-8")
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    return packet_path, summary_path
+
+
+def _context_planned_items(*, oversized: bool) -> list[str]:
+    if oversized:
+        return ["REQ-" + ("x" * 200)] * 300
+    return ["REQ-CONTEXT"]
 
 
 def _task(payload: dict) -> dict:

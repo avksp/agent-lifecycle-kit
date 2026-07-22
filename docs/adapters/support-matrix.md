@@ -18,9 +18,9 @@ with bounded live install and lifecycle conformance evidence.
 ## Compact context support
 
 The source release includes `profiles/small-context-profile.v1.json` and a
-deterministic `context check/render` CLI for 8k, 16k, 32k, and 64k context
-windows. This is a core capability; adapters must pass the rendered envelope to
-their host without silently expanding or truncating it.
+deterministic `context check/render` CLI for 4k-strict, 8k, 16k, 32k, and 64k
+context windows. This is a core capability; adapters must pass the rendered
+envelope to their host without silently expanding or truncating it.
 
 ## Production-promotion platform matrix
 

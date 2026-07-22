@@ -63,10 +63,12 @@ heuristic. Every changed production slice must have a bounded subject that fits
 the C8 profile, and overflow must be resolved by splitting the subject or
 module before review.
 
-The `small-context-profile.v1` release profile is the portable C8 baseline. It
-supports 8k, 16k, 32k, and 64k hosts and forbids silent truncation. A host may
-use a larger local context, but the adapter cannot claim compact-mode support
-unless the core-rendered envelope and receipt pass unchanged.
+The `small-context-profile.v1` release profile is the portable compact-context
+baseline. It supports 4k-strict, 8k, 16k, 32k, and 64k hosts and forbids silent
+truncation. The CLI also exits non-zero when a rendered context receipt fails
+its budget checks. A host may use a larger local context, but the adapter cannot
+claim compact-mode support unless the core-rendered envelope and receipt pass
+unchanged.
 
 ## SOLID
 

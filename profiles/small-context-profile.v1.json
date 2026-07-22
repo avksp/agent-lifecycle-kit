@@ -22,6 +22,26 @@
     "truncateOnOverflow": false
   },
   "windows": {
+    "4k-strict": {
+      "limits": {
+        "maxRenderedEnvelopeTokens": 3072,
+        "reservedOutputTokens": 1024,
+        "maxActivePacketTokens": 1200,
+        "maxStateSummaryTokens": 450,
+        "maxEvidenceSummaryTokens": 256,
+        "maxToolOutputTokens": 128,
+        "maxRecentUserTurnsVerbatim": 1
+      },
+      "overflowPolicy": {
+        "defaultAction": "split-task",
+        "allowedActions": [
+          "split-task",
+          "request-larger-context",
+          "block"
+        ],
+        "truncateAllowed": false
+      }
+    },
     "8k": {
       "limits": {
         "maxRenderedEnvelopeTokens": 6144,

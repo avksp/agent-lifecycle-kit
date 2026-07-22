@@ -52,7 +52,7 @@ cancellation, and telemetry.
 - Drop tool dumps and intermediate data after extracting decisions, evidence
   ids, hashes, exit codes, and blockers.
 - Prefer deterministic validators before semantic review.
-- For 8k/16k/32k/64k hosts, render/check context with
+- For 4k-strict/8k/16k/32k/64k hosts, render/check context with
   `small-context-profile.v1`; overflow must split, request larger context, or
   block, never silently truncate.
 

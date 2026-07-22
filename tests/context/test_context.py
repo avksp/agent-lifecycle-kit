@@ -16,7 +16,20 @@ class ContextTests(unittest.TestCase):
         result = load_context_profile(ROOT / "profiles/small-context-profile.v1.json")
         self.assertEqual(result["schemaVersion"], "agent-small-context-profile-validation.v1")
         self.assertEqual(result["defaultWindow"], "8k")
+        self.assertIn("4k-strict", result["windows"])
         self.assertIn("8k", result["windows"])
+
+    def test_rendered_packet_fits_4k_strict_profile(self) -> None:
+        profile = _profile()
+        result = render_context(profile, _packet(), _summary(), latest_user="Implement exactly this task.", window="4k-strict")
+        self.assertEqual(result["status"], "PASS")
+        receipt = result["receipt"]
+        self.assertEqual(receipt["window"], "4k-strict")
+        self.assertEqual(receipt["limits"]["maxRecentUserTurnsVerbatim"], 1)
+        self.assertLessEqual(
+            receipt["estimatedTokens"]["renderedEnvelope"],
+            receipt["limits"]["maxRenderedEnvelopeTokens"],
+        )
 
     def test_rendered_packet_fits_8k_profile(self) -> None:
         profile = _profile()

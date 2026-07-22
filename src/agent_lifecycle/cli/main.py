@@ -293,26 +293,38 @@ def _dispatch_context(args: argparse.Namespace) -> dict[str, Any]:
     if args.context_command == "profile-check":
         return load_context_profile(Path(args.profile))
     if args.context_command == "check":
-        return check_context(
+        result = check_context(
             Path(args.profile),
             Path(args.task_packet),
             Path(args.summary),
             latest_user=args.latest_user,
             window=args.target_window,
         )
+        return _require_context_pass(result)
     if args.context_command == "render":
         from agent_lifecycle.contracts import read_json_object
 
         profile = read_json_object(Path(args.profile), label="context profile")
         load_context_profile(Path(args.profile))
-        return render_context(
+        result = render_context(
             profile,
             read_json_object(Path(args.task_packet), label="task packet"),
             read_json_object(Path(args.summary), label="state summary"),
             latest_user=args.latest_user,
             window=args.target_window,
         )
+        return _require_context_pass(result)
     raise LifecycleError("command-not-implemented", "context command is not implemented")
+
+
+def _require_context_pass(result: dict[str, Any]) -> dict[str, Any]:
+    if result.get("status") == "FAIL":
+        raise LifecycleError(
+            "context-overflow",
+            "compact context exceeds target window",
+            {"receipt": result.get("receipt")},
+        )
+    return result
 
 
 def _dispatch_tier(args: argparse.Namespace) -> dict[str, Any]:

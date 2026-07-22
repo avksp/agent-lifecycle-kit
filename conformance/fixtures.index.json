@@ -22,9 +22,9 @@
   ],
   "contextProfiles": [
     {
-      "bytes": 2857,
+      "bytes": 3408,
       "path": "profiles/small-context-profile.v1.json",
-      "sha256": "3e1a4298efe3ea9020c3e6f1ba5ddb1146b4a29e1de8531489a78fe0be6d9be6"
+      "sha256": "2b8c9847e12c7c41550d3fe919d4001e1125a3ce9b50b77dd11ca11d7f58e7f8"
     }
   ],
   "evaluations": [

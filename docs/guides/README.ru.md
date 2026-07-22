@@ -56,9 +56,9 @@ packets, состоянием запуска, evidence, бюджетами и п
 
 Системы с маленьким контекстным окном поддерживаются через детерминированный
 профиль контекста, а не через свободное сокращение prompt. В поставке есть
-`profiles/small-context-profile.v1.json`: он описывает окна 8k, 16k, 32k и
-64k, резервирует место под ответ, ограничивает active packet и state summary и
-запрещает тихое обрезание.
+`profiles/small-context-profile.v1.json`: он описывает окна 4k-strict, 8k,
+16k, 32k и 64k, резервирует место под ответ, ограничивает active packet и state
+summary и запрещает тихое обрезание.
 
 Если rendered envelope не помещается, controller должен split/refreeze task,
 запросить larger context или заблокировать run. Старый контекст и tool output
@@ -101,6 +101,7 @@ agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-i
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle context profile-check --profile profiles/small-context-profile.v1.json
+agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 4k-strict
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
@@ -128,6 +129,10 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 `context render` и `neutrality`. Остальные lifecycle groups зарезервированы и
 fail-closed возвращают стабильный `agent-lifecycle-error.v1`, пока их core
 modules не реализованы.
+
+`context check` и `context render` также fail-closed при overflow: если
+rendered receipt получает `status: FAIL`, CLI завершается с non-zero exit и
+возвращает `agent-lifecycle-error.v1` с кодом `context-overflow`.
 
 Тесты используют только Python standard library:
 
