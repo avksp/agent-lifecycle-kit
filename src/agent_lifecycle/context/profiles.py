@@ -7,7 +7,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 
-WINDOWS = {"8k": 8192, "16k": 16384, "32k": 32768, "64k": 65536}
+WINDOWS = {"4k-strict": 4096, "8k": 8192, "16k": 16384, "32k": 32768, "64k": 65536}
 REQUIRED_SUMMARY_FIELDS = {
     "latestUserIntent",
     "activeDecisions",

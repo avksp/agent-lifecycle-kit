@@ -74,7 +74,7 @@ _SCHEMAS: dict[str, dict[str, Any]] = {
         "properties": {
             "schemaVersion": {"const": "agent-small-context-profile.v1"},
             "profileId": {"type": "string", "minLength": 1},
-            "defaultWindow": {"enum": ["8k", "16k", "32k", "64k"]},
+            "defaultWindow": {"enum": ["4k-strict", "8k", "16k", "32k", "64k"]},
             "windows": {"type": "object"},
             "requiredSummaryFields": {"type": "array", "items": {"type": "string"}},
         },
@@ -89,7 +89,7 @@ _SCHEMAS: dict[str, dict[str, Any]] = {
             "schemaVersion": {"const": "agent-context-render-receipt.v1"},
             "status": {"enum": ["PASS", "FAIL"]},
             "profileId": {"type": "string", "minLength": 1},
-            "window": {"enum": ["8k", "16k", "32k", "64k"]},
+            "window": {"enum": ["4k-strict", "8k", "16k", "32k", "64k"]},
             "estimatedTokens": {"type": "object"},
             "checks": {"type": "array", "items": {"type": "object"}},
             "envelopeDigest": {"type": "string", "minLength": 64, "maxLength": 64},
