@@ -30,6 +30,20 @@ class ContextTests(unittest.TestCase):
             receipt["estimatedTokens"]["renderedEnvelope"],
             receipt["limits"]["maxRenderedEnvelopeTokens"],
         )
+        check_ids = {item["id"] for item in receipt["checks"]}
+        self.assertEqual(
+            check_ids,
+            {
+                "rendered-envelope",
+                "reserved-output-budget",
+                "active-packet",
+                "state-summary",
+                "evidence-summary",
+                "tool-output",
+                "recent-user-turns-verbatim",
+            },
+        )
+        self.assertEqual(receipt["counts"]["recentUserTurnsVerbatim"], 1)
 
     def test_rendered_packet_fits_8k_profile(self) -> None:
         profile = _profile()
@@ -49,6 +63,40 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(result["status"], "FAIL")
         self.assertFalse(result["receipt"]["overflowPolicy"]["truncateAllowed"])
         self.assertEqual(result["receipt"]["overflowPolicy"]["defaultAction"], "split-task")
+
+    def test_reserved_output_budget_fails_closed(self) -> None:
+        profile = _profile()
+        profile["windows"]["4k-strict"]["limits"]["maxRenderedEnvelopeTokens"] = 1
+        profile["windows"]["4k-strict"]["limits"]["reservedOutputTokens"] = 4095
+        result = render_context(profile, _packet(), _summary(), window="4k-strict")
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(_check(result, "reserved-output-budget")["status"], "FAIL")
+        self.assertFalse(result["receipt"]["overflowPolicy"]["truncateAllowed"])
+
+    def test_oversized_evidence_summary_fails_closed(self) -> None:
+        summary = _summary()
+        summary["acceptedEvidence"] = [{"id": "EV-CONTEXT", "summary": "x" * 2000}]
+        result = render_context(_profile(), _packet(), summary, window="4k-strict")
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(_check(result, "evidence-summary")["status"], "FAIL")
+        self.assertFalse(result["receipt"]["overflowPolicy"]["truncateAllowed"])
+
+    def test_oversized_tool_outputs_fail_closed(self) -> None:
+        summary = _summary()
+        summary["toolOutputs"] = [{"tool": "test-runner", "summary": "x" * 1200}]
+        result = render_context(_profile(), _packet(), summary, window="4k-strict")
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(_check(result, "tool-output")["status"], "FAIL")
+        self.assertIn("toolOutputs", result["envelope"]["stateSummary"])
+        self.assertFalse(result["receipt"]["overflowPolicy"]["truncateAllowed"])
+
+    def test_recent_user_turn_limit_fails_closed(self) -> None:
+        profile = _profile()
+        profile["windows"]["4k-strict"]["limits"]["maxRecentUserTurnsVerbatim"] = 0
+        result = render_context(profile, _packet(), _summary(), latest_user="Do it.", window="4k-strict")
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(_check(result, "recent-user-turns-verbatim")["status"], "FAIL")
+        self.assertFalse(result["receipt"]["overflowPolicy"]["truncateAllowed"])
 
     def test_missing_summary_field_is_rejected(self) -> None:
         summary = _summary()
@@ -110,6 +158,10 @@ def _summary() -> dict:
         "nextRequiredAction": "render compact envelope",
         "doNotDo": ["Do not load the full plan package into an 8k context."],
     }
+
+
+def _check(result: dict, check_id: str) -> dict:
+    return next(item for item in result["receipt"]["checks"] if item["id"] == check_id)
 
 
 if __name__ == "__main__":

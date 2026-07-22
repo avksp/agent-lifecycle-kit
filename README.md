@@ -58,7 +58,8 @@ Small-context hosts are supported through a deterministic context profile, not
 through prompt-only truncation. The bundled
 `profiles/small-context-profile.v1.json` defines 4k-strict, 8k, 16k, 32k, and
 64k windows, reserves output space, limits the active packet and state summary,
-and forbids silent truncation.
+limits evidence/tool-output summaries and recent verbatim user turns, and
+forbids silent truncation.
 
 If a rendered envelope does not fit, the controller must split the task,
 request a larger context, or block the run. Older context and tool output are
@@ -140,7 +141,10 @@ core modules land.
 
 `context check` and `context render` also fail closed on overflow: if the
 rendered receipt status is `FAIL`, the CLI exits non-zero and returns
-`agent-lifecycle-error.v1` with code `context-overflow`.
+`agent-lifecycle-error.v1` with code `context-overflow`. The receipt checks the
+rendered envelope, reserved-output budget, active packet, state summary,
+accepted evidence summary, optional `toolOutputs`, and recent verbatim
+user-turn count.
 
 `workflow finalize` requires `--final-audit`. The audit must pass with
 `READY_FOR_FINALIZATION`, match the run's plan revision and digest, avoid
