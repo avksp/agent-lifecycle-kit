@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "agent-lifecycle-synthetic-scenario.v1",
+  "scenarioId": "S2-MULTI-01",
+  "title": "Multi-owner reviewed DAG",
+  "sddTier": "S2",
+  "tags": [
+    "happy-path",
+    "repeated-review",
+    "parallel-execution",
+    "final-verdict",
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "liveModelInvocations": 0,
+  "steps": [
+    {
+      "stage": "specification",
+      "expected": "independent review requires one refinement round"
+    },
+    {
+      "stage": "plan-review",
+      "expected": "READY_TO_FREEZE after repeated review"
+    },
+    {
+      "stage": "packet-compile",
+      "expected": "four executable owners plus explicit integration"
+    },
+    {
+      "stage": "execution",
+      "expected": "parallel dependency wave within budget"
+    },
+    {
+      "stage": "final-audit",
+      "expected": "COMPLETE"
+    }
+  ],
+  "expectedOutcome": {
+    "taskVerdicts": [
+      "ACCEPTED",
+      "ACCEPTED",
+      "ACCEPTED",
+      "ACCEPTED"
+    ],
+    "finalVerdict": "COMPLETE",
+    "qualityRegression": false
+  }
+}

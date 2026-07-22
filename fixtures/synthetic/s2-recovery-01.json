@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "agent-lifecycle-synthetic-scenario.v1",
+  "scenarioId": "S2-RECOVERY-01",
+  "title": "Recovery, remediation and refreeze",
+  "sddTier": "S2",
+  "tags": [
+    "reopen-refreeze",
+    "rejection-remediation",
+    "crash-recovery",
+    "final-verdict",
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "liveModelInvocations": 0,
+  "steps": [
+    {
+      "stage": "task-review",
+      "expected": "REWORK for bounded implementation defect"
+    },
+    {
+      "stage": "remediation",
+      "expected": "second attempt accepted"
+    },
+    {
+      "stage": "contract-change",
+      "expected": "REOPENED and refrozen for ownership change"
+    },
+    {
+      "stage": "crash-recovery",
+      "expected": "WAL replay resumes exact operation"
+    },
+    {
+      "stage": "finalization",
+      "expected": "idempotent final proof replay"
+    }
+  ],
+  "expectedOutcome": {
+    "taskVerdicts": [
+      "REWORK",
+      "ACCEPTED",
+      "CONTRACT_CHANGE",
+      "ACCEPTED"
+    ],
+    "finalVerdict": "COMPLETE",
+    "qualityRegression": false
+  }
+}

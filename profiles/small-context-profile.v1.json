@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "agent-small-context-profile.v1",
+  "profileId": "small-context-profile.v1",
+  "defaultWindow": "8k",
+  "mode": "compact",
+  "tokenEstimator": "canonical-json-bytes-div-4-ceil",
+  "requiredSummaryFields": [
+    "acceptedEvidence",
+    "activeDecisions",
+    "changedFiles",
+    "doNotDo",
+    "latestUserIntent",
+    "nextRequiredAction",
+    "openBlockers"
+  ],
+  "globalRules": {
+    "fullPlanDumpAllowed": false,
+    "fullToolDumpAllowed": false,
+    "latestUserTurnsVerbatim": true,
+    "olderContextSummaryRequired": true,
+    "deterministicValidationBeforeSemanticReview": true,
+    "truncateOnOverflow": false
+  },
+  "windows": {
+    "8k": {
+      "limits": {
+        "maxRenderedEnvelopeTokens": 6144,
+        "reservedOutputTokens": 1536,
+        "maxActivePacketTokens": 2500,
+        "maxStateSummaryTokens": 900,
+        "maxEvidenceSummaryTokens": 768,
+        "maxToolOutputTokens": 512,
+        "maxRecentUserTurnsVerbatim": 3
+      },
+      "overflowPolicy": {
+        "defaultAction": "split-task",
+        "allowedActions": [
+          "split-task",
+          "request-larger-context",
+          "block"
+        ],
+        "truncateAllowed": false
+      }
+    },
+    "16k": {
+      "limits": {
+        "maxRenderedEnvelopeTokens": 12288,
+        "reservedOutputTokens": 3072,
+        "maxActivePacketTokens": 5000,
+        "maxStateSummaryTokens": 1800,
+        "maxEvidenceSummaryTokens": 1500,
+        "maxToolOutputTokens": 1024,
+        "maxRecentUserTurnsVerbatim": 4
+      },
+      "overflowPolicy": {
+        "defaultAction": "split-task",
+        "allowedActions": [
+          "split-task",
+          "request-larger-context",
+          "block"
+        ],
+        "truncateAllowed": false
+      }
+    },
+    "32k": {
+      "limits": {
+        "maxRenderedEnvelopeTokens": 24576,
+        "reservedOutputTokens": 6144,
+        "maxActivePacketTokens": 10000,
+        "maxStateSummaryTokens": 3600,
+        "maxEvidenceSummaryTokens": 3000,
+        "maxToolOutputTokens": 2048,
+        "maxRecentUserTurnsVerbatim": 5
+      },
+      "overflowPolicy": {
+        "defaultAction": "split-task",
+        "allowedActions": [
+          "split-task",
+          "request-larger-context",
+          "block"
+        ],
+        "truncateAllowed": false
+      }
+    },
+    "64k": {
+      "limits": {
+        "maxRenderedEnvelopeTokens": 49152,
+        "reservedOutputTokens": 12288,
+        "maxActivePacketTokens": 20000,
+        "maxStateSummaryTokens": 7200,
+        "maxEvidenceSummaryTokens": 6000,
+        "maxToolOutputTokens": 4096,
+        "maxRecentUserTurnsVerbatim": 6
+      },
+      "overflowPolicy": {
+        "defaultAction": "split-task",
+        "allowedActions": [
+          "split-task",
+          "request-larger-context",
+          "block"
+        ],
+        "truncateAllowed": false
+      }
+    }
+  }
+}

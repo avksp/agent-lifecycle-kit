@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "agent-lifecycle-scenario-taxonomy.v1",
+  "requiredSddTiers": [
+    "S0",
+    "S1",
+    "S2"
+  ],
+  "requiredOperatingSystems": [
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "requiredCoverageTags": [
+    "happy-path",
+    "repeated-review",
+    "stale-artifacts",
+    "forged-artifacts",
+    "ownership-conflicts",
+    "cyclic-dag",
+    "reopen-refreeze",
+    "parallel-execution",
+    "rejection-remediation",
+    "crash-recovery",
+    "budget-exhaustion",
+    "path-attacks",
+    "adapter-failure",
+    "final-verdict"
+  ],
+  "scenarioSchema": {
+    "requiredFields": [
+      "schemaVersion",
+      "scenarioId",
+      "sddTier",
+      "tags",
+      "steps",
+      "expectedOutcome"
+    ],
+    "schemaVersion": "agent-lifecycle-synthetic-scenario.v1"
+  }
+}
