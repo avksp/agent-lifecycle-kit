@@ -1,0 +1,15 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "groupings": [
+    {
+      "title": "Agent Lifecycle",
+      "skills": [
+        "agent-first-planning",
+        "audit-agent-plan",
+        "agent-plan-to-workers",
+        "agent-workflow-orchestrator",
+        "audit-plan-implementation"
+      ]
+    }
+  ]
+}

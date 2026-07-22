@@ -1,10 +1,12 @@
 {
   "name": "agent-lifecycle-kit",
   "version": "0.1.1",
-  "description": "Lifecycle skills and adapter metadata for reviewed planning, execution, audit, and final proof.",
+  "description": "Provider-neutral lifecycle skills for reviewed SDD planning, controlled execution, implementation audit, and final proof.",
   "author": {
     "name": "Agent Lifecycle Kit contributors"
   },
+  "homepage": "https://github.com/avksp/agent-lifecycle-kit",
+  "repository": "https://github.com/avksp/agent-lifecycle-kit",
   "license": "Apache-2.0",
   "skills": "./skills",
   "interface": {

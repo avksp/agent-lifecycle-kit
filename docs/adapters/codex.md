@@ -1,11 +1,15 @@
 # Codex adapter
 
 The Codex projection packages the shared lifecycle skills and a Codex plugin
-manifest. The adapter is experimental until live Codex conformance evidence is
-published in a release support matrix.
+manifest. The root repository is the canonical Codex plugin root for `v0.1.1`;
+`adapters/codex/` remains an offline conformance projection.
 
-Use the shared skills directly from source mode during development:
+Install from the tagged source marketplace:
 
-```text
-Use agent-workflow-orchestrator from Agent Lifecycle Kit.
+```bash
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.1.1
+codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
+
+The adapter remains `EXPERIMENTAL` until live Codex install and lifecycle
+conformance evidence is published in the support matrix.

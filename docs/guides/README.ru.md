@@ -4,22 +4,22 @@
 
 Agent Lifecycle Kit — независимый от провайдера набор для управления полным
 жизненным циклом агентной разработки: от исходной задачи и проверенной
-спецификации до замороженного плана, проверенной реализации и
-воспроизводимого финального вердикта.
+SDD-спецификации до замороженного плана, контролируемой реализации,
+независимого аудита и воспроизводимого финального вердикта.
 
-Он распространяется как один репозиторий с единым семантическим ядром и
-несколькими нативными адаптерами. Это не только Codex-плагин: Codex, Claude
-Code, Cursor, Hermes и OpenCode используют разные модели установки и
-возможностей.
+Набор распространяется как один репозиторий с единым семантическим ядром и
+нативными проекциями для Codex, Claude Code, Cursor, Hermes и OpenCode.
 
-> **Статус до первого релиза**
->
-> Текущая ветка `main` является release-candidate source tree. В ней есть
-> offline adapter projections и source-mode core CLI для workflow, schema,
-> tier, compact context, ownership и neutrality проверок. Команды установки
-> через marketplaces ниже нельзя считать доступными, пока tagged release не
-> опубликует соответствующие manifest-файлы, а support matrix не присвоит
-> адаптеру статус `EXPERIMENTAL` или `VERIFIED`.
+## Текущий статус
+
+`v0.1.1` — tagged source release. В репозитории есть корневые publication
+manifests для Codex, Claude Code и Cursor, а также projection metadata для
+Hermes и OpenCode.
+
+Адаптеры пока имеют статус `EXPERIMENTAL`: есть offline contract coverage и
+fail-closed descriptors, но статуса `VERIFIED` нет до появления live install и
+lifecycle conformance evidence для каждого host. Публикация в публичных
+директориях также зависит от review-процесса каждой платформы.
 
 ## Что делает набор
 
@@ -58,34 +58,31 @@ packets, состоянием запуска, evidence, бюджетами и п
 профиль контекста, а не через свободное сокращение prompt. В поставке есть
 `profiles/small-context-profile.v1.json`: он описывает окна 8k, 16k, 32k и
 64k, резервирует место под ответ, ограничивает active packet и state summary и
-запрещает тихое обрезание. Если rendered envelope не помещается, controller
-должен split/refreeze task, запросить larger context или заблокировать run.
+запрещает тихое обрезание.
 
-Compact envelope содержит только active role, последнюю пользовательскую
-инструкцию, проекцию active task packet, точный write set, acceptance/evidence
-ids и структурированную state summary. Старый контекст и tool output
+Если rendered envelope не помещается, controller должен split/refreeze task,
+запросить larger context или заблокировать run. Старый контекст и tool output
 представляются hashable summaries и evidence identities.
 
-## Одна поставка и нативные адаптеры
+## Структура поставки
 
-Универсальная поставка не означает единый формат manifest. Релиз проецирует
-одно ядро в нативный формат каждой поддерживаемой системы:
+Универсальная поставка не означает единый формат manifest. Одно ядро
+проецируется в нативную модель загрузки каждой системы:
 
-| Система | Нативная проекция релиза | Модель установки |
+| Система | Release artifact | Статус |
 | --- | --- | --- |
-| Codex | `.codex-plugin/plugin.json` и общий `skills/` | Codex marketplace |
-| Claude Code | `.claude-plugin/plugin.json`, общий `skills/` и metadata адаптера Claude | Claude plugin marketplace или `--plugin-dir` для разработки |
-| Cursor | `.cursor-plugin/plugin.json`, общий `skills/` и metadata адаптера Cursor | Cursor Marketplace и `/add-plugin` |
-| Hermes | общий `skills/`, registry/config Hermes и metadata launcher-адаптера | Hermes adapter package или локальная registry/config projection |
-| OpenCode | общий `skills/` и JS/TS-адаптер OpenCode | каталоги `.opencode/` или npm plugin в `opencode.json` |
-| Другие системы | версионированный adapter contract и conformance suite | нативный пакет конкретной системы |
+| Codex | `.codex-plugin/plugin.json` и `.agents/plugins/marketplace.json` | Experimental marketplace-ready source projection |
+| Claude Code | `.claude-plugin/plugin.json` и `.claude-plugin/marketplace.json` | Experimental marketplace-ready source projection |
+| Cursor | `.cursor-plugin/plugin.json` и `.cursor-plugin/marketplace.json` | Experimental source projection для public/team marketplace review |
+| Hermes | `skills.sh.json`, общий `skills/` и `adapters/hermes/*` | Experimental direct-skill/tap projection |
+| OpenCode | `opencode.json`, общий `skills/` и `adapters/opencode/*` | Experimental local/npm-ready projection metadata |
 
-Первый релиз ориентирован на эти пять систем. Адаптер не получает статус
-`VERIFIED` без ограниченного live conformance evidence. Адаптеры, проверенные
-только offline, обозначаются как `EXPERIMENTAL`; отсутствие обязательной
-security-critical capability приводит к fail-closed остановке.
+Корень репозитория — canonical plugin root для Codex, Claude Code и Cursor.
+Старые каталоги `adapters/<host>/` остаются offline conformance projections и
+host-specific metadata. Пользователям следует устанавливать root package, если
+конкретный будущий релиз явно не опубликует materialized adapter package.
 
-## Установка
+## Установка и публикация
 
 ### Source-mode core CLI
 
@@ -100,10 +97,12 @@ agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
 agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --reason "<reason>"
 agent-lifecycle workflow task-accept --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --review <task-review.json> --reason "<reason>"
+agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --proof <final-proof.json> --reason "<reason>"
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle context profile-check --profile profiles/small-context-profile.v1.json
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
+agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
@@ -115,6 +114,7 @@ PYTHONPATH=src python -m agent_lifecycle schema list
 PYTHONPATH=src python -m agent_lifecycle workflow status --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow next --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --proof <final-proof.json> --reason "<reason>"
 PYTHONPATH=src python -m agent_lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 PYTHONPATH=src python -m agent_lifecycle tier resolve --request <tier-request.json>
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
@@ -123,11 +123,11 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 
 Сейчас реализованы core CLI groups `version`, `schema`, `workflow status`,
 `workflow next`, `workflow block`, `workflow resolve`, `workflow task-start`,
-`workflow task-result`, `workflow task-accept`, `audit ownership`,
-`tier resolve`, `context profile-check`, `context check`, `context render` и
-`neutrality`. Остальные
-lifecycle groups зарезервированы и fail-closed возвращают стабильный
-`agent-lifecycle-error.v1`, пока их core modules не реализованы.
+`workflow task-result`, `workflow task-accept`, `workflow finalize`,
+`audit ownership`, `tier resolve`, `context profile-check`, `context check`,
+`context render` и `neutrality`. Остальные lifecycle groups зарезервированы и
+fail-closed возвращают стабильный `agent-lifecycle-error.v1`, пока их core
+modules не реализованы.
 
 Тесты используют только Python standard library:
 
@@ -137,86 +137,108 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 
 ### Codex
 
-После публикации release marketplace:
+Установка из tagged source marketplace:
 
 ```bash
-codex plugin marketplace add <marketplace-repository-or-local-root>
-codex plugin add agent-lifecycle-kit@<marketplace-name>
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.1.1
+codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
 Настроенные marketplaces также доступны через `/plugins`. После установки
-нужно начать новую сессию Codex, чтобы загрузились skills и адаптер.
+нужно начать новую сессию Codex, чтобы загрузились bundled skills.
+
+Для публикации в публичный OpenAI Plugins Directory нужно отправить root
+package как skills-only plugin через OpenAI plugin submission portal. Не
+заявляйте статус `VERIFIED`, пока в support matrix нет live Codex install и
+lifecycle conformance evidence.
 
 ### Claude Code
 
-Для опубликованного marketplace:
+Добавить marketplace и установить plugin:
 
 ```bash
-claude plugin marketplace add <marketplace-repository-or-local-root>
-claude plugin install agent-lifecycle-kit@<marketplace-name>
+claude plugin marketplace add avksp/agent-lifecycle-kit
+claude plugin install agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
-Для локальной разработки после появления Claude manifest:
+В интерактивной Claude Code session эквивалентный slash flow:
 
-```bash
-claude --plugin-dir <path-to-agent-lifecycle-kit>
+```text
+/plugin marketplace add avksp/agent-lifecycle-kit
+/plugin install agent-lifecycle-kit@agent-lifecycle-kit
+/reload-plugins
 ```
 
-После установки или изменения локального плагина выполните
-`/reload-plugins`. Skills Claude-плагина используют namespace имени плагина.
+Plugin skills используют namespace имени plugin, например
+`/agent-lifecycle-kit:agent-workflow-orchestrator`.
+
+Для включения в Anthropic-managed public directory нужен внешний plugin review
+Claude. Repo-level marketplace достаточно для private/community distribution,
+но это не public-directory approval claim.
 
 ### Cursor
 
-После публикации адаптера в Cursor Marketplace выполните в Cursor Agent chat:
+Для локальной проверки перед submission скопируйте или symlink-ните репозиторий
+в local plugin directory Cursor:
+
+```bash
+mkdir -p ~/.cursor/plugins/local
+ln -s /path/to/agent-lifecycle-kit ~/.cursor/plugins/local/agent-lifecycle-kit
+```
+
+Затем перезапустите Cursor или выполните `Developer: Reload Window`. После
+локальной проверки отправьте public repository на
+`https://cursor.com/marketplace/publish`.
+
+Для Teams/Enterprise импортируйте GitHub repo как team marketplace через
+Dashboard -> Plugins. После public approval устанавливайте из Cursor
+Marketplace или Customize panel. Если ваша сборка Cursor поддерживает
+chat-based plugin installation:
 
 ```text
 /add-plugin agent-lifecycle-kit
 ```
 
-В support matrix релиза будет указана минимальная проверенная версия Cursor и
-результат lifecycle canary для локальной установки.
-
 ### Hermes
 
-Hermes использует общие lifecycle skills через Hermes-specific registry или
-configuration projection плюс launcher-адаптер. Точный локальный registry path,
-package name и invocation syntax будут задокументированы только после того,
-как Hermes artifact будет создан и пройдёт Hermes conformance suite.
+Hermes может устанавливать общие skills напрямую. Для установки всех lifecycle
+skills из tagged release:
 
-До этого Hermes является обязательной целью adapter-контракта standalone
-release, но не verified runtime claim.
+```bash
+for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.1.1/skills/${skill}/SKILL.md"
+done
+```
+
+Корневой `skills.sh.json` содержит tap/category metadata для систем, которые
+читают skills.sh-compatible indexes. `adapters/hermes/*` содержит
+experimental registry и slash-command projection metadata. Это не live Hermes
+plugin verification claim.
 
 ### OpenCode
 
-OpenCode не использует manifest от Codex, Claude или Cursor. Релиз будет
-содержать OpenCode-проекцию с каноническими skills и runtime-адаптером. Для
-установки на уровне проекта она размещается в:
+OpenCode загружает plugins и skills разными механизмами. Для project install
+скопируйте общие skills и adapter в целевой проект:
 
-```text
-.opencode/skills/<skill-name>/SKILL.md
-.opencode/plugins/agent-lifecycle-kit.{js,ts}
+```bash
+KIT=/path/to/agent-lifecycle-kit
+mkdir -p .opencode/skills .opencode/plugins
+cp -R "$KIT"/skills/* .opencode/skills/
+cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js .opencode/plugins/
 ```
 
-Для пользовательской установки используются соответствующие каталоги:
+Для user-level install:
 
-```text
-~/.config/opencode/skills/<skill-name>/SKILL.md
-~/.config/opencode/plugins/agent-lifecycle-kit.{js,ts}
+```bash
+KIT=/path/to/agent-lifecycle-kit
+mkdir -p ~/.config/opencode/skills ~/.config/opencode/plugins
+cp -R "$KIT"/skills/* ~/.config/opencode/skills/
+cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/plugins/
 ```
 
-Если адаптер будет опубликован в npm, его можно будет указать в
-`opencode.json`:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["<published-opencode-adapter-package>"]
-}
-```
-
-Точная команда копирования/установки и имя пакета появятся только после того,
-как соответствующий release artifact будет создан и пройдёт OpenCode
-conformance suite.
+В корне репозитория также есть `opencode.json` для проверки из source
+checkout. Будущий npm package может ссылаться на тот же adapter, но `v0.1.1`
+не заявляет npm publication.
 
 ## Использование
 
@@ -236,17 +258,16 @@ conformance suite.
 
 Если система поддерживает явный вызов:
 
-- Codex: выберите установленный плагин или его skill через `@` либо попросите
-  Codex использовать `agent-workflow-orchestrator` из Agent Lifecycle Kit
+- Codex: выберите Agent Lifecycle Kit или попросите Codex использовать
+  `agent-workflow-orchestrator`
 - Claude Code: `/agent-lifecycle-kit:agent-workflow-orchestrator`
 - Cursor: попросите Agent использовать `agent-workflow-orchestrator`
-- Hermes: попросите Hermes загрузить `agent-workflow-orchestrator` через
-  настроенный lifecycle-kit registry или launcher-адаптер
+- Hermes: используйте `/agent-workflow-orchestrator` после установки skill
 - OpenCode: попросите агента загрузить `agent-workflow-orchestrator` через
   нативный skill tool
 
 Точный namespaced syntax определяется support matrix конкретного релиза.
-Pre-release пример не является заявлением о совместимости invocation.
+Experimental adapter projection не является live runtime compatibility claim.
 
 ### Использование отдельных skills
 
@@ -323,8 +344,9 @@ freeze-ится controller. Ручной override может повысить ti
 
 ## Документация
 
-- [English README](README.md)
-- [Modular controller architecture](docs/architecture/modular-controller.md)
+- [English README](../../README.md)
+- [Adapter support matrix](../adapters/support-matrix.md)
+- [Modular controller architecture](../architecture/modular-controller.md)
 - [Документация плагинов Codex](https://learn.chatgpt.com/docs/build-plugins)
 - [Документация плагинов Claude Code](https://code.claude.com/docs/en/plugins)
 - [Документация плагинов Cursor](https://cursor.com/docs/plugins)
@@ -334,4 +356,4 @@ freeze-ится controller. Ручной override может повысить ti
 
 ## Лицензия
 
-Проект распространяется по [Apache License 2.0](LICENSE).
+Проект распространяется по [Apache License 2.0](../../LICENSE).

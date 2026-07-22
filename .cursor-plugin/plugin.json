@@ -1,11 +1,20 @@
 {
   "name": "agent-lifecycle-kit",
   "version": "0.1.1",
-  "description": "Agent lifecycle planning, execution, audit, and final proof for Cursor.",
+  "description": "Provider-neutral lifecycle skills for reviewed SDD planning, controlled execution, implementation audit, and final proof.",
   "author": {
     "name": "Agent Lifecycle Kit contributors"
   },
+  "homepage": "https://github.com/avksp/agent-lifecycle-kit",
+  "repository": "https://github.com/avksp/agent-lifecycle-kit",
   "license": "Apache-2.0",
+  "keywords": [
+    "agents",
+    "planning",
+    "workflow",
+    "audit",
+    "sdd"
+  ],
   "skills": "./skills",
   "interface": {
     "displayName": "Agent Lifecycle Kit",
