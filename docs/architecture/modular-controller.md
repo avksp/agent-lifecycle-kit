@@ -70,6 +70,12 @@ its budget checks. A host may use a larger local context, but the adapter cannot
 claim compact-mode support unless the core-rendered envelope and receipt pass
 unchanged.
 
+The receipt must enforce every bundled profile budget at runtime: rendered
+envelope, reserved-output budget, active packet, state summary, accepted
+evidence summary, optional `toolOutputs`, and recent verbatim user-turn count.
+If any check fails, the controller blocks or splits instead of producing a
+truncated prompt.
+
 Controller gates are runtime preconditions, not advisory metadata. Task and
 finalization transitions validate every gate configured for the current phase by
 resolving the frozen receipt path and checking receipt binding, freshness,

@@ -8,6 +8,8 @@ from typing import Any
 from agent_lifecycle.context.profiles import REQUIRED_SUMMARY_FIELDS, resolve_window, validate_context_profile
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, read_json_object
 
+OPTIONAL_SUMMARY_FIELDS = {"toolOutputs"}
+
 
 def render_context(
     profile: dict[str, Any],
@@ -67,7 +69,11 @@ def _summary_projection(summary: dict[str, Any]) -> dict[str, Any]:
     missing = sorted(field for field in REQUIRED_SUMMARY_FIELDS if field not in summary)
     if missing:
         raise LifecycleError("invalid-context-summary", "compact summary is missing required fields", {"missing": missing})
-    return {field: summary[field] for field in sorted(REQUIRED_SUMMARY_FIELDS)}
+    projected = {field: summary[field] for field in sorted(REQUIRED_SUMMARY_FIELDS)}
+    for field in sorted(OPTIONAL_SUMMARY_FIELDS):
+        if field in summary:
+            projected[field] = summary[field]
+    return projected
 
 
 def _packet_projection(packet: dict[str, Any]) -> dict[str, Any]:
@@ -102,10 +108,18 @@ def _receipt(
     envelope_tokens = estimate_tokens(envelope)
     packet_tokens = estimate_tokens(packet)
     summary_tokens = estimate_tokens(summary)
+    evidence_tokens = _optional_tokens(summary["acceptedEvidence"])
+    tool_output_tokens = _optional_tokens(summary.get("toolOutputs", []))
+    recent_user_turns = _recent_user_turn_count(envelope.get("latestUserInstruction", ""))
+    reserved_output_budget = envelope_tokens + limits["reservedOutputTokens"]
     checks = [
         _check("rendered-envelope", envelope_tokens, limits["maxRenderedEnvelopeTokens"]),
+        _check("reserved-output-budget", reserved_output_budget, selected["targetContextWindowTokens"]),
         _check("active-packet", packet_tokens, limits["maxActivePacketTokens"]),
         _check("state-summary", summary_tokens, limits["maxStateSummaryTokens"]),
+        _check("evidence-summary", evidence_tokens, limits["maxEvidenceSummaryTokens"]),
+        _check("tool-output", tool_output_tokens, limits["maxToolOutputTokens"]),
+        _check_count("recent-user-turns-verbatim", recent_user_turns, limits["maxRecentUserTurnsVerbatim"]),
     ]
     status = "PASS" if all(item["status"] == "PASS" for item in checks) else "FAIL"
     return {
@@ -116,8 +130,14 @@ def _receipt(
         "window": selected["name"],
         "estimatedTokens": {
             "renderedEnvelope": envelope_tokens,
+            "reservedOutputBudget": reserved_output_budget,
             "activePacket": packet_tokens,
             "stateSummary": summary_tokens,
+            "evidenceSummary": evidence_tokens,
+            "toolOutput": tool_output_tokens,
+        },
+        "counts": {
+            "recentUserTurnsVerbatim": recent_user_turns,
         },
         "limits": limits,
         "checks": checks,
@@ -133,3 +153,26 @@ def _check(name: str, value: int, limit: int) -> dict[str, Any]:
         "estimatedTokens": value,
         "limit": limit,
     }
+
+
+def _check_count(name: str, value: int, limit: int) -> dict[str, Any]:
+    return {
+        "id": name,
+        "status": "PASS" if value <= limit else "FAIL",
+        "count": value,
+        "limit": limit,
+    }
+
+
+def _optional_tokens(value: Any) -> int:
+    if value in (None, "", [], {}):
+        return 0
+    return estimate_tokens(value)
+
+
+def _recent_user_turn_count(latest_user: Any) -> int:
+    if isinstance(latest_user, str):
+        return 1 if latest_user else 0
+    if isinstance(latest_user, list):
+        return len([item for item in latest_user if item])
+    return 0
