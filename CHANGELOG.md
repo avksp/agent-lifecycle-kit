@@ -4,6 +4,7 @@
 
 - Added the `4k-strict` compact-context window for local models and constrained hosts below the previous 8k baseline.
 - Fixed `context check` and `context render` CLI overflow semantics: a rendered `FAIL` result now exits non-zero with `context-overflow`.
+- Fixed compact context receipts to enforce all bundled profile budgets: reserved output, active packet, state summary, evidence summary, optional tool output, and recent verbatim user turns.
 - Added CLI wiring for existing specification, plan, and task-packet compiler core checks.
 - Added a required final-audit precondition to `workflow finalize` and bind the audit identity into final proof.
 - Added hard controller-gate receipt enforcement for task and finalization workflow transitions.

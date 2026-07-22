@@ -58,7 +58,8 @@ packets, состоянием запуска, evidence, бюджетами и п
 профиль контекста, а не через свободное сокращение prompt. В поставке есть
 `profiles/small-context-profile.v1.json`: он описывает окна 4k-strict, 8k,
 16k, 32k и 64k, резервирует место под ответ, ограничивает active packet и state
-summary и запрещает тихое обрезание.
+summary, ограничивает evidence/tool-output summaries и число последних
+verbatim user turns, а также запрещает тихое обрезание.
 
 Если rendered envelope не помещается, controller должен split/refreeze task,
 запросить larger context или заблокировать run. Старый контекст и tool output
@@ -139,7 +140,10 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 
 `context check` и `context render` также fail-closed при overflow: если
 rendered receipt получает `status: FAIL`, CLI завершается с non-zero exit и
-возвращает `agent-lifecycle-error.v1` с кодом `context-overflow`.
+возвращает `agent-lifecycle-error.v1` с кодом `context-overflow`. Receipt
+проверяет rendered envelope, reserved-output budget, active packet, state
+summary, accepted evidence summary, optional `toolOutputs` и число recent
+verbatim user turns.
 
 `workflow finalize` требует `--final-audit`. Audit должен пройти с
 `READY_FOR_FINALIZATION`, совпадать с `planRevision` и `planDigest` run, не
