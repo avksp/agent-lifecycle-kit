@@ -4,6 +4,7 @@ import json
 import sys
 import tempfile
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -92,6 +93,91 @@ class WorkflowTests(unittest.TestCase):
             task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
             self.assertEqual(task["status"], "RUNNING")
             self.assertEqual(task["attempt"], 2)
+
+    def test_start_task_requires_pre_launch_gate_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = _write_state(Path(tmp), phase="RUNNING")
+            _add_gate(state_path, _gate("G-PRE", ["pre-launch"]))
+            with self.assertRaises(LifecycleError):
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="launch",
+                )
+
+    def test_start_task_records_pre_launch_gate_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            gate = _gate("G-PRE", ["pre-launch"])
+            _add_gate(state_path, gate)
+            _write_gate_receipt(root, gate, phase="pre-launch", operation_id="start-op", attempt=1)
+            payload = start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(task["status"], "RUNNING")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            stored = next(item for item in state["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(stored["controllerGateReceipts"][0]["gateId"], "G-PRE")
+
+    def test_start_task_accepts_state_level_gate_dependency(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            gate = _gate("G-PRE", ["pre-launch"])
+            gate["dependsOnGateIds"] = ["G-AUTH"]
+            _add_gate(state_path, gate)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["controllerGateReceipts"] = [{"gateId": "G-AUTH", "path": "gates/auth.json"}]
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            _write_gate_receipt(root, gate, phase="pre-launch", operation_id="start-op", attempt=1)
+
+            payload = start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+
+            task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(task["status"], "RUNNING")
+
+    def test_commit_result_requires_post_attempt_gate_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            _add_gate(state_path, _gate("G-POST", ["post-attempt"]))
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            write_json_create(root / result_path, _result(attempt=1))
+            with self.assertRaises(LifecycleError):
+                commit_task_result(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="result-op",
+                    expected_revision=2,
+                    source_revision="source",
+                    result_path=result_path,
+                    reason="done",
+                )
 
     def test_commit_result_and_accept_review_unlocks_next_phase(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -271,6 +357,29 @@ class WorkflowTests(unittest.TestCase):
                     reason="done",
                 )
 
+    def test_finalize_run_requires_finalization_gate_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state["tasks"][0]["attempt"] = 1
+            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["controllerGates"] = [_gate("G-FINAL", ["finalization"])]
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+
+            with self.assertRaises(LifecycleError):
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
+
 
 def _write_state(
     root: Path,
@@ -331,6 +440,72 @@ def _write_state(
         encoding="utf-8",
     )
     return path
+
+
+def _add_gate(state_path: Path, gate: dict) -> None:
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["tasks"][0].setdefault("controllerGateReceipts", [])
+    state["tasks"][0]["controllerGates"] = [gate]
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+
+def _gate(gate_id: str, phases: list[str]) -> dict:
+    return {
+        "id": gate_id,
+        "phases": phases,
+        "receiptPath": "gates/{gateId}/{taskId}/attempt-{attempt}/{phase}-{operationId}.json",
+        "maxAgeSeconds": 7200,
+        "attestationRequired": True,
+        "dependsOnGateIds": [],
+    }
+
+
+def _write_gate_receipt(
+    root: Path,
+    gate: dict,
+    *,
+    phase: str,
+    operation_id: str,
+    attempt: int,
+) -> None:
+    path = _gate_receipt_path(gate, phase=phase, operation_id=operation_id, attempt=attempt)
+    write_json_create(root / path, _gate_receipt(gate, phase=phase, operation_id=operation_id, attempt=attempt))
+
+
+def _gate_receipt_path(gate: dict, *, phase: str, operation_id: str, attempt: int) -> str:
+    return (
+        str(gate["receiptPath"])
+        .replace("{gateId}", gate["id"])
+        .replace("{taskId}", "WS-01")
+        .replace("{attempt}", str(attempt))
+        .replace("{phase}", phase)
+        .replace("{operationId}", operation_id)
+    )
+
+
+def _gate_receipt(gate: dict, *, phase: str, operation_id: str, attempt: int) -> dict:
+    return {
+        "schemaVersion": "agent-controller-gate-receipt.v1",
+        "gateId": gate["id"],
+        "runId": "run",
+        "packageId": "package",
+        "taskId": "WS-01",
+        "attempt": attempt,
+        "phase": phase,
+        "operationId": operation_id,
+        "planDigest": "0" * 64,
+        "sourceRevision": "source",
+        "verdict": "PASS",
+        "generatedAt": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "attestation": {
+            "schemaVersion": "agent-controller-gate-attestation.v1",
+            "claimsDigest": "a" * 64,
+            "subjectDigest": "b" * 64,
+            "scopeDigest": "c" * 64,
+            "authorityDigest": "d" * 64,
+            "signature": "signature",
+        },
+    }
 
 
 def _write_plan_bundle(root: Path, *, include_dependent: bool = False) -> None:
