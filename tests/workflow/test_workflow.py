@@ -228,12 +228,14 @@ class WorkflowTests(unittest.TestCase):
             state["tasks"][0]["attempt"] = 1
             state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
 
             payload = finalize_run(
                 state_path,
                 operation_id="finalize-op",
                 expected_revision=1,
                 source_revision="source",
+                final_audit_path="final/final-audit.json",
                 proof_path="final/proof.json",
                 reason="done",
             )
@@ -243,6 +245,31 @@ class WorkflowTests(unittest.TestCase):
             proof = json.loads((root / "final/proof.json").read_text(encoding="utf-8"))
             self.assertEqual(proof["schemaVersion"], "agent-run-final-proof.v1")
             self.assertFalse(proof["productionPromotionClaimed"])
+            self.assertEqual(proof["finalAudit"]["path"], "final/final-audit.json")
+
+    def test_finalize_run_rejects_final_audit_with_open_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state["tasks"][0]["attempt"] = 1
+            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            audit = _final_audit()
+            audit["findings"] = [{"id": "F-1", "status": "open", "severity": "MEDIUM"}]
+            write_json_create(root / "final/final-audit.json", audit)
+
+            with self.assertRaises(LifecycleError):
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
 
 
 def _write_state(
@@ -487,6 +514,20 @@ def _review(*, attempt: int, result_hash: str) -> dict:
         ],
         "findings": [],
         "summary": "accepted",
+    }
+
+
+def _final_audit() -> dict:
+    return {
+        "schemaVersion": "agent-final-candidate-audit.v1",
+        "status": "PASS",
+        "semanticStatus": "READY_FOR_FINALIZATION",
+        "planRevision": 1,
+        "planDigest": "0" * 64,
+        "productionPromotionClaimed": False,
+        "notAcceptedTasks": [],
+        "missingReleaseEvidence": [],
+        "findings": [],
     }
 
 
