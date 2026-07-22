@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "agent-lifecycle-hermes-commands.v1",
+  "package": "agent-lifecycle-kit",
+  "slashCommandSupport": "optional-host-capability",
+  "unsupportedOperationPolicy": "fail-closed",
+  "commands": [
+    {
+      "name": "/agent-lifecycle-kit:agent-workflow-orchestrator",
+      "skill": "agent-workflow-orchestrator",
+      "description": "Run or resume the full reviewed lifecycle."
+    },
+    {
+      "name": "/agent-lifecycle-kit:agent-first-planning",
+      "skill": "agent-first-planning",
+      "description": "Create or revise an SDD agent-ready plan."
+    },
+    {
+      "name": "/agent-lifecycle-kit:audit-plan-implementation",
+      "skill": "audit-plan-implementation",
+      "description": "Audit a task attempt or final implementation."
+    }
+  ]
+}

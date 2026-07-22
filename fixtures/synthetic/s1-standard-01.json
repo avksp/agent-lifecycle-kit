@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "agent-lifecycle-synthetic-scenario.v1",
+  "scenarioId": "S1-STANDARD-01",
+  "title": "Single-owner standard implementation",
+  "sddTier": "S1",
+  "tags": [
+    "happy-path",
+    "final-verdict",
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "liveModelInvocations": 0,
+  "steps": [
+    {
+      "stage": "clarification",
+      "input": "Add a small command with tests and documentation.",
+      "expected": "bounded assumptions"
+    },
+    {
+      "stage": "plan",
+      "expected": "one executable workstream plus validation evidence"
+    },
+    {
+      "stage": "task-review",
+      "expected": "independent ACCEPTED review"
+    },
+    {
+      "stage": "final-audit",
+      "expected": "COMPLETE"
+    }
+  ],
+  "expectedOutcome": {
+    "taskVerdicts": [
+      "ACCEPTED"
+    ],
+    "finalVerdict": "COMPLETE",
+    "qualityRegression": false
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "agent-lifecycle-benchmark-authority-profile.v1",
+  "profileId": "agent-lifecycle-benchmark-authority.v1",
+  "baselineAuthority": {
+    "algorithm": "Ed25519",
+    "canonicalization": "RFC8785-JCS",
+    "trustRootPathEnvironment": "AGENT_LIFECYCLE_BASELINE_TRUST_ROOT",
+    "expectedFingerprintEnvironment": "AGENT_LIFECYCLE_BASELINE_AUTHORITY_FINGERPRINT",
+    "signingKeyPathEnvironment": "AGENT_LIFECYCLE_BASELINE_SIGNING_KEY",
+    "privateKeyMayEnterRepositoryStateLogsOrEvidence": false,
+    "controllerStoredFields": [
+      "authorityFingerprint",
+      "trustRootSha256",
+      "profileId"
+    ],
+    "canonicalPayloadFields": [
+      "profileId",
+      "corpusSha256",
+      "sourceRevision",
+      "dependencyLockSha256",
+      "runMeasurementsSha256",
+      "p50",
+      "p95",
+      "independentAuditSha256",
+      "predecessorBaselineSha256",
+      "issuedAt"
+    ],
+    "detachedSignatureEnvelopeFields": [
+      "algorithm",
+      "keyId",
+      "signerFingerprint",
+      "payloadSha256",
+      "signatureBase64"
+    ],
+    "firstReleaseSequence": [
+      "run-deterministic-benchmark",
+      "independent-audit-candidate-measurements",
+      "bind-audit-approved-candidate-digest",
+      "sign-sha256-of-canonical-payload",
+      "verify-signature-and-fingerprint",
+      "publish-baseline"
+    ],
+    "laterReleaseSequence": [
+      "verify-prior-baseline-signature-and-lineage",
+      "run-deterministic-benchmark",
+      "compare-absolute-and-relative-gates",
+      "independent-audit-candidate-measurements",
+      "bind-audit-approved-candidate-and-predecessor-digests",
+      "sign-sha256-of-canonical-payload",
+      "verify-signature-and-fingerprint",
+      "publish-baseline"
+    ]
+  },
+  "liveCalibrationAuthority": {
+    "profileSchemaVersion": "agent-lifecycle-live-model-profile.v1",
+    "signatureAlgorithm": "Ed25519",
+    "canonicalization": "RFC8785-JCS",
+    "modelProfilePathEnvironment": "AGENT_LIFECYCLE_LIVE_COST_MODEL_PROFILE",
+    "modelProfileTrustRootEnvironment": "AGENT_LIFECYCLE_LIVE_COST_TRUST_ROOT",
+    "expectedSignerFingerprintEnvironment": "AGENT_LIFECYCLE_LIVE_COST_SIGNER_FINGERPRINT",
+    "maximumProfileAgeHours": 24,
+    "requiredProfileFields": [
+      "schemaVersion",
+      "profileId",
+      "issuedAt",
+      "expiresAt",
+      "configurationSha256",
+      "roleCapabilityProfiles",
+      "independenceBindings",
+      "orderedFallbackPolicy",
+      "usageAttestationPolicy",
+      "signatureEnvelope"
+    ],
+    "requiredRoles": [
+      "clarification",
+      "plan-authoring",
+      "plan-review",
+      "implementation",
+      "task-review",
+      "final-audit"
+    ],
+    "requiredCapabilities": [
+      "structured-json",
+      "repository-read",
+      "repository-write",
+      "tool-execution",
+      "usage-attestation"
+    ],
+    "requiredIndependenceBindings": [
+      "plan-authoring!=plan-review",
+      "implementation!=task-review",
+      "implementation!=final-audit"
+    ],
+    "controllerStoredFields": [
+      "profileId",
+      "profileSha256",
+      "configurationSha256",
+      "signerFingerprint",
+      "issuedAt",
+      "expiresAt"
+    ],
+    "modelNamesAllowedInCoreContract": false,
+    "requiredScenarios": [
+      "S0-MECHANICAL-01",
+      "S1-STANDARD-01",
+      "S2-MULTI-01"
+    ],
+    "coldRunsPerScenario": 1,
+    "warmRunsPerScenario": 1,
+    "maximumTotalBillableTokens": 120000,
+    "maximumWallSeconds": 7200,
+    "qualityRegressionAllowed": false,
+    "missingOrUnattestedUsage": "FAIL"
+  }
+}

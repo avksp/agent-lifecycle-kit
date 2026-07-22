@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "agent-specification-review.v1",
+  "reviewId": "spec-review-r03",
+  "specificationId": "SPEC-standalone-v1",
+  "packageId": "standalone-v1",
+  "specificationRevision": 2,
+  "reviewedSpecificationHash": "255757b2f176de2ab33e09697698357f2c060f5cef5be4988815860eb7eb5b89",
+  "previousReview": {
+    "reviewId": "spec-review-r02",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r02.json",
+    "sha256": "a06523847e3e1b10602402e32829248e81941f3bff1c6d486a740f8baaa7931d"
+  },
+  "traceability": {
+    "requirementCount": 26,
+    "requiredRequirementCount": 26,
+    "acceptanceLinkCount": 26,
+    "evidenceLinkCount": 36,
+    "uncoveredRequirementCount": 0
+  },
+  "verdict": "CHANGES_REQUIRED",
+  "reviewer": {
+    "id": "spec-reviewer-r03",
+    "independent": true,
+    "surface": "codex",
+    "runId": "standalone-v1-spec-review-r03-independent"
+  },
+  "reviewedAt": "2026-07-15T15:38:47Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "FAIL",
+      "rationale": "All twenty-six requirements are explicit, required, uniquely projected into the current plan, and free of placeholders, but REQ-RESOURCE promises hard semantic-call and context ceilings that its named machine authority does not completely define.",
+      "findingIds": [
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "scope",
+      "status": "PASS",
+      "rationale": "Included, excluded, and deferred scope is explicit and consistent across the specification and all reviewed source references: one neutral Python lifecycle kit, exactly five thin skills, four offline EXPERIMENTAL adapters, synthetic conformance, and no remote publication or origin-specific content.",
+      "findingIds": []
+    },
+    {
+      "id": "acceptance",
+      "status": "FAIL",
+      "rationale": "All twenty-six acceptance ids and thirty-six evidence ids are unique, reciprocal, and projected exactly once, but AC-RESOURCE and EV-RESOURCE cannot prove the promised hard semantic-call and cumulative-context controls because the authoritative profile contains no such per-run thresholds.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "constraints-risks",
+      "status": "FAIL",
+      "rationale": "Neutrality, external trust, adapter maturity, matrix authority, reviewer independence, severity, and secret-handling risks are fail-closed, but resource exhaustion through an unbounded number of logical semantic calls or unbounded cumulative context bytes per run is not governed by the profile named as immutable authority.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "testability-evidence",
+      "status": "FAIL",
+      "rationale": "The source references define deterministic neutrality, routing, adapter, benchmark, platform, task-verdict, and final-audit evidence, but the resource gate lacks numeric per-run semantic-call and cumulative-context limits against which a validator can issue a fail-closed verdict.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "consistency",
+      "status": "FAIL",
+      "rationale": "Specification revision 2, its reciprocal plan projections, and the reviewed source references agree on the repaired neutrality, task/final severity, offline adapter, benchmark, and platform-matrix contracts; however, REQ-RESOURCE and 02-architecture-contracts.md require semantic-call and cumulative-context ceilings that agent-lifecycle-budget-profile.v1.json does not contain.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "SPEC-004",
+      "severity": "MEDIUM",
+      "class": "inconsistency",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+      "status": "open",
+      "message": "REQ-RESOURCE requires tier-wide hard ceilings for semantic calls and context bytes, and 02-architecture-contracts.md explicitly includes cumulative context and semantic calls among resource ceilings. The named immutable machine authority defines a logicalSemanticCall measurement but no hard logical-semantic-call count per task or run; it defines contextBytesPerCall and aggregate p95 release SLOs but no hard cumulative context-bytes-per-run ceiling. semanticIterationsPerAttempt is not defined as a one-to-one semantic-call bound, and a cohort p95 is not an individual-run hard ceiling, so the promised fail-closed controls are not fully specified or testable.",
+      "requiredAction": "Revise the specification and its authoritative resource profile together: add explicit numeric hard logical-semantic-call and cumulative-context-byte ceilings at the required tier/task/run scopes, or narrow REQ-RESOURCE and the architecture contract to the exact enforceable limits. Define the relationship between semantic iterations and logical semantic calls, update AC-RESOURCE and EV-RESOURCE reciprocally, increment the specification revision, and obtain a new full independent review linked to this r03 artifact by exact content identity."
+    },
+    {
+      "id": "SPEC-001",
+      "severity": "MEDIUM",
+      "class": "acceptance-gap",
+      "dimension": "acceptance",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "The detached Ed25519 neutrality authority, trust-root ownership, signer and subject binding, freshness, zero-result conditions, temporary conformance keys, runtime gates, release scope, and reciprocal evidence remain preserved in revision 2 and its source references.",
+      "requiredAction": "No further action for SPEC-001; preserve these external-authority, redaction, freshness, subject-binding, runtime-gate, and release-scope semantics during the next specification revision."
+    },
+    {
+      "id": "SPEC-002",
+      "severity": "MEDIUM",
+      "class": "specification-defect",
+      "dimension": "requirements",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 2 preserves the complete provider-neutral stage and role routing contract, deterministic capability-preserving fallback, independent review bindings, fail-closed unavailability, and exact usage attribution established after the earlier review.",
+      "requiredAction": "No further action for SPEC-002; retain REQ-ROUTING, AC-ROUTING, EV-ROUTING, and their exact task projection during the next specification revision."
+    },
+    {
+      "id": "SPEC-003",
+      "severity": "MEDIUM",
+      "class": "ambiguity",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 2 strengthens and preserves the shared offline adapter baseline, frozen normalized contract inventory, closed compatibility ranges, evidence-accurate EXPERIMENTAL inclusion, and separately authorized live VERIFIED promotion route.",
+      "requiredAction": "No further action for SPEC-003; keep the shared offline baseline authoritative and prevent surface-specific requirements or maturity claims from weakening it."
+    }
+  ],
+  "summary": "CHANGES_REQUIRED after a full independent r03 review. Structural validation binds specification revision 2 to 255757b2f176de2ab33e09697698357f2c060f5cef5be4988815860eb7eb5b89; predecessor authority spec-review-r02 is bound by SHA-256 a06523847e3e1b10602402e32829248e81941f3bff1c6d486a740f8baaa7931d; all twenty-six required requirements have complete unique acceptance and evidence links; and prior findings SPEC-001 through SPEC-003 remain resolved. One MEDIUM blocker remains: SPEC-004, because the immutable budget profile does not define the hard semantic-call and cumulative-context-per-run ceilings promised by REQ-RESOURCE and its architecture source."
+}

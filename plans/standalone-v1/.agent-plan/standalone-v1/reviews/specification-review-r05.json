@@ -1,0 +1,187 @@
+{
+  "schemaVersion": "agent-specification-review.v1",
+  "reviewId": "spec-review-r05",
+  "specificationId": "SPEC-standalone-v1",
+  "packageId": "standalone-v1",
+  "specificationRevision": 4,
+  "reviewedSpecificationHash": "846e0f7f1d36fd21f7564d21536f520da4b111aae536a16e3ae0e2b9ded3274f",
+  "previousReview": {
+    "reviewId": "spec-review-r04",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r04.json",
+    "sha256": "fd62d85e5fc7a0e1a5fb8bc288a1a9877cfbd9ea1d5b44d31f04282098827bd2"
+  },
+  "traceability": {
+    "requirementCount": 26,
+    "requiredRequirementCount": 26,
+    "acceptanceLinkCount": 26,
+    "evidenceLinkCount": 37,
+    "uncoveredRequirementCount": 0
+  },
+  "verdict": "CHANGES_REQUIRED",
+  "reviewer": {
+    "id": "spec-reviewer-r05",
+    "independent": true,
+    "surface": "codex",
+    "runId": "standalone-v1-spec-review-r05-independent-neutralized"
+  },
+  "reviewedAt": "2026-07-15T20:18:38Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "FAIL",
+      "rationale": "All twenty-six required outcomes are uniquely projected, and revision 4 states the intended neutrality, release and terminal ordering, but the machine authorities do not yet define an executable write-once output protocol, an atomic non-recursive release inventory lineage, or an acyclic terminal finalization transaction.",
+      "findingIds": [
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008",
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "scope",
+      "status": "PASS",
+      "rationale": "Included, excluded and deferred scope remains explicit and project-neutral. All nineteen unique source references exist, and no origin-project identifier or path, copied sample, origin-specific profile, or provider/model name in a core contract was found.",
+      "findingIds": []
+    },
+    {
+      "id": "acceptance",
+      "status": "FAIL",
+      "rationale": "The reciprocal mapping is exact at twenty-six requirements, twenty-six acceptance criteria and thirty-seven unique evidence ids, including EV-RELEASE-ASSEMBLY, but acceptance does not freeze occupied-output, authority-input, partial-release-publication, matrix-lineage, post-review-neutrality, or terminal crash/replay negatives strongly enough to prove the corrected contracts.",
+      "findingIds": [
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008",
+        "SPEC-001"
+      ]
+    },
+    {
+      "id": "constraints-risks",
+      "status": "FAIL",
+      "rationale": "Reviewer independence, budgets, adapter maturity and secret-redaction boundaries remain explicit, but reused output paths, underspecified external authority files, archive expansion limits, split release publication and post-gate controller outputs leave security, TOCTOU and recovery risks open.",
+      "findingIds": [
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008",
+        "SPEC-001",
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "testability-evidence",
+      "status": "FAIL",
+      "rationale": "Every required evidence id has one owner, command, artifact and receipt, yet the current contracts cannot deterministically verify prior-output occupancy, canonical detached-signature domains, atomic release commit identity, one non-recursive matrix payload identity, or an acyclic final proof covering the terminal review and CAS/WAL transition.",
+      "findingIds": [
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008",
+        "SPEC-001",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "consistency",
+      "status": "FAIL",
+      "rationale": "Verbatim plan projections and the conditional releaseInventoryDigest rule are consistent, but neutrality v2 simultaneously excludes current output paths and claims prior outputs are scanned, WS-01 and WS-14 use legacy authority environment names, matrix evidence refers to an inventory assembled later, and final proof requires its own digest inside a digest-named artifact.",
+      "findingIds": [
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "SPEC-005",
+      "severity": "HIGH",
+      "class": "specification-defect",
+      "dimension": "constraints-risks",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v2.json",
+      "status": "open",
+      "message": "The subject projection excludes fixed current-operation artifact and receipt paths while also requiring previous outputs to remain scanned, but it defines neither occupied-path/write-once semantics nor a canonical acyclic artifact-and-receipt commit. A stale or attacker-controlled prior file at a reused output path can therefore be omitted from the subject, and partial publication, path aliasing, archive expansion and detached-signature implementations can diverge while claiming the same operationOutputSetDigest.",
+      "requiredAction": "Freeze a portable write-once operation-output contract: every exact output path is operation-bound, confined, canonical and absent before production; publication uses create-if-absent/no-replace, while an existing same-operation artifact permits only read-only idempotent verification of identical claims and every other occupancy, alias or race fails closed. Define a canonical domain-separated JCS claims body, content identities for every non-self-referential primary artifact, a detached signed receipt published last as commit marker, producer/verifier parity, and exact POSIX/Windows no-follow handle-relative path and stable-read rules. Add numeric archive depth, entry-count, compressed/expanded/per-entry byte and ratio limits plus duplicate/case-fold path and special-file policy. Extend EV-NEUTRALITY, EV-NEUTRALITY-NEGATIVE, EV-NEUTRALITY-RUNTIME and EV-NEUTRALITY-RELEASE with occupied-path, replay, partial-publication, substitution, alias, race, mutation and archive-bomb negatives."
+    },
+    {
+      "id": "SPEC-006",
+      "severity": "HIGH",
+      "class": "inconsistency",
+      "dimension": "constraints-risks",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "open",
+      "message": "The frozen neutrality v2 profile and authority documentation require AGENT_LIFECYCLE_NEUTRALITY_DENY_AUTHORITY, AGENT_LIFECYCLE_NEUTRALITY_TRUST_ROOT, AGENT_LIFECYCLE_NEUTRALITY_SIGNING_KEY and AGENT_LIFECYCLE_NEUTRALITY_SIGNER_FINGERPRINT, but WS-01 and WS-14 commands use legacy AGENT_LIFECYCLE_EXTERNAL_DENY_FILE, AGENT_LIFECYCLE_DENY_TRUST_ROOT and AGENT_LIFECYCLE_ATTESTATION_SIGNING_KEY names and omit the expected signer-fingerprint input. The machine profile also does not freeze the outside-workspace, no-follow, schema, size, signature, freshness and stable-read rules required to reject stale or in-repository authorities.",
+      "requiredAction": "Use exactly the NEUTRALITY_* environment contract in the profile, controller gate and WS-01/WS-14 commands. Freeze deny authority, trust root and signing input schemas and require bounded regular files outside workspace, Git and artifact roots; no-follow handle opens; before/after stable identities; Ed25519 signature and expected fingerprint match; issued-at/expiry freshness; producer-only private-key access; and zero secret material in durable outputs. Extend AC-NEUTRALITY, AC-NEUTRALITY-RUNTIME and AC-NEUTRALITY-RELEASE plus their existing evidence with stale, in-repository, symlink/reparse, race, oversize, malformed-schema, bad-signature and fingerprint-mismatch negatives."
+    },
+    {
+      "id": "SPEC-007",
+      "severity": "HIGH",
+      "class": "inconsistency",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/10-release-matrix.md",
+      "status": "open",
+      "message": "Revision 4 requires one atomic immutable release root and inventory, but VAL-RELEASE-ASSEMBLY publishes release/payloads and the accepted inventory in separate mutable directories. Matrix legs and AC-PLATFORM-MATRIX also claim one release inventory before the canonical inventory is assembled after aggregation, so the current authority cannot distinguish a non-recursive tested payload identity from the later final unit that includes authority and provenance artifacts.",
+      "requiredAction": "Freeze one release-assembly transaction: both clean builds produce the same canonical candidatePayloadInventoryDigest over payload bytes only; every matrix leg, the aggregate and both clean builds bind that non-recursive digest; a separate finalInventoryDigest covers the complete staged release unit. Publish payload objects and inventory under a write-once content-addressed generation, then publish one no-replace manifest/commit marker last; orphan pre-commit objects remain non-authoritative. Require assembly, neutrality and --no-build verification to consume the exact committed generation and compare read-only pre/post Merkle identities. Update REQ-RELEASE, REQ-PLATFORM-MATRIX, AC-RELEASE, AC-PLATFORM-MATRIX, EV-RELEASE-ASSEMBLY, EV-NEUTRALITY-RELEASE, EV-MATRIX-AGGREGATE and EV-RELEASE with crash, substitution, matrix-digest mismatch and post-scan mutation negatives, without changing WS-14 ownership."
+    },
+    {
+      "id": "SPEC-008",
+      "severity": "HIGH",
+      "class": "specification-defect",
+      "dimension": "testability-evidence",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/final-proof-authority-profile.v1.json",
+      "status": "open",
+      "message": "The finite terminal ordering is stated, but the terminal review, final proof, WAL append and COMPLETE state are created after the last post-attempt neutrality gate. The profile also places proofDigest inside the required proof bindings and in {proofDigest}.json without defining a non-self-referential digest domain or an exact controller-finalization output projection, so COMPLETE cannot be both content-addressed and bound to the unchanged final subject.",
+      "requiredAction": "After the accepted terminal review, enter AWAITING_FINAL_PROOF or an exactly equivalent state bound to expected revision and digest. Freeze a deterministic controllerFinalizationOutputSet and finalization-neutrality projection in which the terminal review and every prior artifact are inputs and only the exact current proof/transaction outputs are projected. Encode a closed canonical proof body and place bodyDigest in a separate envelope at an immutable unique path preallocated by finalization operationId; the accepted proof identity is the envelope digest stored only in CAS, WAL and state, with no mutable alias or digest-derived output path cycle. Bind operation/profile/plan/authorization, terminal result/audit/post-gate/review, release inventory, final change set and predecessor state/WAL identities. Specify create-if-absent proof publication, idempotent WAL append plus fsync, atomic state replacement and recovery after every crash point; identical replay returns the same proof, conflicting replay or any drift blocks COMPLETE. Cover verifier parity, post-review forbidden-content/substitution, output occupancy, crash, replay and mutation in EV-WORKFLOW, EV-NEUTRALITY-RUNTIME and EV-FINAL while preserving WS-05 controller and WS-15 audit ownership."
+    },
+    {
+      "id": "SPEC-001",
+      "severity": "MEDIUM",
+      "class": "acceptance-gap",
+      "dimension": "acceptance",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 4 preserves the detached Ed25519 neutrality authority, trust-root ownership, signer and subject binding, freshness, zero-result conditions, runtime gates, release scope and redaction boundary established by earlier reviews.",
+      "requiredAction": "Preserve the SPEC-001 semantics while resolving SPEC-005 and SPEC-006; do not weaken external trust, redaction, freshness, runtime gates or release scope."
+    },
+    {
+      "id": "SPEC-002",
+      "severity": "MEDIUM",
+      "class": "specification-defect",
+      "dimension": "requirements",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 4 preserves provider-neutral stage and role routing, deterministic capability-preserving fallback, independent review bindings, fail-closed unavailability and exact usage attribution.",
+      "requiredAction": "No further action for SPEC-002; retain REQ-ROUTING, AC-ROUTING, EV-ROUTING and their exact task projection."
+    },
+    {
+      "id": "SPEC-003",
+      "severity": "MEDIUM",
+      "class": "ambiguity",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 4 preserves the shared offline adapter baseline, frozen normalized contract inventory, closed compatibility ranges, evidence-accurate EXPERIMENTAL inclusion and separately authorized live VERIFIED promotion.",
+      "requiredAction": "No further action for SPEC-003; keep the shared offline baseline authoritative and prevent surface-specific requirements or maturity claims from weakening it."
+    },
+    {
+      "id": "SPEC-004",
+      "severity": "MEDIUM",
+      "class": "inconsistency",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+      "status": "resolved",
+      "message": "Revision 4 preserves the exact S0/S1/S2 logical-call, context, tool, evidence, parallelism, attempt and wall-time ceilings, cumulative counter scopes, benchmark cohorts and fail-closed behavior accepted by review r04.",
+      "requiredAction": "No further action for SPEC-004; preserve all numeric ceilings, cumulative scopes, reciprocal AC/EV links and fail-closed enforcement."
+    }
+  ],
+  "summary": "CHANGES_REQUIRED after a full independent review of specification revision 4 bound to 846e0f7f1d36fd21f7564d21536f520da4b111aae536a16e3ae0e2b9ded3274f and previous review fd62d85e5fc7a0e1a5fb8bc288a1a9877cfbd9ea1d5b44d31f04282098827bd2. Traceability is complete at 26 required requirements, 26 acceptance links and 37 unique evidence links, including EV-RELEASE-ASSEMBLY; scope is project-neutral; SPEC-001 through SPEC-004 remain resolved. SPEC-005 through SPEC-008 are open because exact neutrality output publication, external authority inputs, atomic release identity and terminal controller finalization are not yet fully deterministic, acyclic and fail closed. Correct within revision 4, append a new independent review linked to this r05 report, and freeze only after all six dimensions pass."
+}

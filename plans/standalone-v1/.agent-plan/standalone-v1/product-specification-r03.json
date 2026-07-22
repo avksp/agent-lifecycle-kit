@@ -1,0 +1,511 @@
+{
+  "schemaVersion": "agent-product-specification.v1",
+  "specificationId": "SPEC-standalone-v1",
+  "packageId": "standalone-v1",
+  "revision": 3,
+  "status": "FROZEN",
+  "author": {
+    "id": "root-planner",
+    "surface": "codex",
+    "runId": "standalone-v1-spec-author-r03"
+  },
+  "intent": {
+    "problem": "Agent lifecycle behavior is commonly duplicated across host-specific instructions, scripts, and mutable run state, which makes planning, independent review, execution, recovery, and final verification difficult to reproduce across agent surfaces.",
+    "targetOutcome": "Deliver a project-neutral, model-neutral, installable lifecycle kit with deterministic contracts, five thin semantic roles, surface adapters, synthetic conformance tests, fail-closed neutrality controls, bounded resource accounting, and release evidence.",
+    "currentBehavior": "Specification revision 1 is frozen. Revision 2 closed the rejected plan gaps, but independent specification review r03 rejected its resource contract because the machine authority lacked explicit per-task and per-run logical semantic-call ceilings and a hard cumulative-context-per-run ceiling.",
+    "targetBehavior": "A host can clarify a request, freeze an independently reviewed SDD specification and implementation plan, compile a dependency DAG, execute and audit each task, remediate or refreeze safely, resume after interruption, and complete only when every task and the final independent audit have no unresolved MEDIUM, HIGH, or BLOCKER finding, while loading only stage-relevant context and retaining no origin-specific information."
+  },
+  "scope": {
+    "included": [
+      "A fail-closed neutrality boundary for worktrees, Git history, generated distributions, adapter bundles, and synthetic evaluation content.",
+      "A Python package and compact JSON CLI implementing specification, plan, freeze, task compilation, workflow, audit, schema, conformance, and neutrality contracts.",
+      "Five thin lifecycle skills backed by one deterministic core implementation.",
+      "Adapters for Codex, Claude, Cursor, and OpenCode using a versioned host-operation protocol and external model profiles.",
+      "Synthetic S0, S1, and S2 conformance scenarios, resource and token accounting, recovery tests, packaging, governance, and release verification."
+    ],
+    "excluded": [
+      "Origin-specific profiles, paths, commands, documentation, fixtures, examples, identifiers, or copied repository history.",
+      "Bundled credentials, model names in core contracts, network services, hosted control planes, and automatic publication to external registries.",
+      "Claims that an adapter is verified without live host conformance evidence."
+    ],
+    "deferred": [
+      "Additional host adapters beyond the four named v1 surfaces.",
+      "A graphical workflow console and hosted telemetry service.",
+      "Remote execution backends beyond the versioned local host protocol."
+    ]
+  },
+  "requirements": [
+    {
+      "id": "REQ-NEUTRALITY",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "Before any extraction, fixture, skill, or adapter work, the kit shall provide and execute a fail-closed bootstrap neutrality boundary that scans names and content across tracked, staged, untracked, ignored, reachable, reflog, and unreachable Git data; rejects symlinks, submodules, LFS pointers, opaque or skipped inputs, traversal, stale or in-repository deny sets, unsupported archives, read races, and signature failures; runs the complete negative conformance suite; verifies external Ed25519 trust; and emits a fresh redacted subject-bound receipt with zero findings, skips, and opaque inputs before WS-02 may launch.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-NEUTRALITY"
+      ],
+      "evidenceIds": [
+        "EV-NEUTRALITY",
+        "EV-NEUTRALITY-NEGATIVE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/01-source-preflight.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md"
+      ]
+    },
+    {
+      "id": "REQ-NEUTRALITY-RUNTIME",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "The controller shall execute a content-addressed neutrality gate before every downstream task launch and after every task attempt, binding the current subject hash, external deny authority digest, trust-root fingerprint, covered current-tree scope, freshness, zero findings, zero skips, and zero opaque inputs; launch and acceptance shall fail closed if the signed redacted receipt is missing, stale, mismatched, or invalid, and external rule values or private keys shall never enter packets, state, logs, prompts, evidence payloads, or Git.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-NEUTRALITY-RUNTIME"
+      ],
+      "evidenceIds": [
+        "EV-NEUTRALITY-RUNTIME"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v1.json"
+      ]
+    },
+    {
+      "id": "REQ-NEUTRALITY-RELEASE",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "Release readiness shall require a fresh signed redacted neutrality receipt covering all refs and reflogs, reachable and unreachable Git objects, commit and tag payloads, tree paths, tracked, staged, untracked and ignored files, recursively bounded wheel, source-distribution and adapter archives, package metadata, SBOM, generated documentation, and release inventory, with verified external authority, subject and scope hashes, freshness, and exactly zero findings, skips, opaque inputs, and incomplete scans.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-NEUTRALITY-RELEASE"
+      ],
+      "evidenceIds": [
+        "EV-NEUTRALITY-RELEASE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/10-release-matrix.md"
+      ]
+    },
+    {
+      "id": "REQ-FOUNDATION",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "The kit shall provide a reproducible Python 3.11 through 3.13 package foundation with one locked dependency graph, Apache-2.0 notices, stable versioning, clean-environment installation metadata, and a single canonical implementation source; cross-platform release proof is governed separately by REQ-PLATFORM-MATRIX.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-FOUNDATION"
+      ],
+      "evidenceIds": [
+        "EV-FOUNDATION"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md"
+      ]
+    },
+    {
+      "id": "REQ-CONTRACTS",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The core shall expose versioned JSON-compatible contracts, JSON Schemas, stable error codes, normalized repository-relative paths, a provider-neutral host-operation protocol, and a pluggable change-set boundary without embedding host or model selection logic.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CONTRACTS"
+      ],
+      "evidenceIds": [
+        "EV-CONTRACTS"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md"
+      ]
+    },
+    {
+      "id": "REQ-SDD",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The core shall implement SDD tiers S0, S1, and S2 with deterministic clarification, specification validation, independent specification review, plan validation, independent plan review, immutable freeze locks, revision lineage, reopened state, and fail-closed refreeze rules.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-SDD"
+      ],
+      "evidenceIds": [
+        "EV-SDD"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/08-plan-review-and-change-control.md"
+      ]
+    },
+    {
+      "id": "REQ-COMPILER",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The compiler shall transform only a frozen, hash-verified plan DAG into deterministic task packets containing task-local projections, exact write ownership, launch gates, capability requirements, validation contracts, reviewer routes, and bounded context references.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-COMPILER"
+      ],
+      "evidenceIds": [
+        "EV-COMPILER"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/04-agent-dag-and-ownership.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/05-worker-prompts.md"
+      ]
+    },
+    {
+      "id": "REQ-WORKFLOW",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The workflow engine shall durably enforce dependency waves, approval modes, actor and reviewer independence, task attempts, per-step review, remediation, contract-change reopening, final audit, cancellation, deadlines, atomic state transitions, append-only events, crash recovery, resume, and reconciliation.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-WORKFLOW"
+      ],
+      "evidenceIds": [
+        "EV-WORKFLOW"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/03-workstreams.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/08-plan-review-and-change-control.md"
+      ]
+    },
+    {
+      "id": "REQ-AUDIT",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The audit service shall independently verify each task and the final implementation against the frozen specification, plan, exact write sets, change set, evidence receipts, acceptance criteria, and immutable lock, returning machine-readable findings-first verdicts without silently repairing implementation.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-AUDIT"
+      ],
+      "evidenceIds": [
+        "EV-AUDIT"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md"
+      ]
+    },
+    {
+      "id": "REQ-USAGE",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The host protocol shall record an end-to-end usage ledger for clarification, specification authoring and review, planning and review, implementation, task review, remediation, and final audit, preserving raw provider counters plus host-attested normalized billable tokens, prompt identities, cache usage, context bytes, tool calls, validation runs, and wall time.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-USAGE"
+      ],
+      "evidenceIds": [
+        "EV-USAGE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md"
+      ]
+    },
+    {
+      "id": "REQ-RESOURCE",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The lifecycle shall enforce the immutable machine-readable agent-lifecycle-budget-profile.v1 product profile: explicit hard logical-semantic-call ceilings per task and per run; context-byte ceilings per call and cumulatively per run; tier-wide hard ceilings for billable tokens, tool calls, validations, attempts, evidence bytes, parallelism, and wall time; stage-specific hard billable-token ceilings; and mandatory absolute release SLOs. Each semantic iteration shall permit zero or one logical semantic call; task and run counters shall remain cumulative across attempts, stages, review, remediation, cache use, and fallback; optional diagnostics shall never weaken a hard gate; and any hard-ceiling or unverified usage-attestation breach shall fail closed.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-RESOURCE"
+      ],
+      "evidenceIds": [
+        "EV-RESOURCE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/09-product-resource-budgets.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json"
+      ]
+    },
+    {
+      "id": "REQ-COST-BENCHMARK",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The release accounting-conformance suite shall use deterministic synthetic-host replay with scenario-specific replayed semantic calls and zero live model invocations to measure the frozen S0, S1, and S2 corpus, schema-valid normalized usage attestations, separate cold and warm cache cohorts, at least twenty runs per scenario and cohort, zero quality or audit regression, no hard-ceiling violation, and mandatory absolute p95 targets for billable tokens, cumulative context bytes per run, tool calls, and wall time; the first release shall publish the exact independently audited baseline through the frozen Ed25519 baseline authority, and every later release shall additionally remain within five percent p50 and ten percent p95 of the immediately prior verified signed baseline.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-COST-BENCHMARK"
+      ],
+      "evidenceIds": [
+        "EV-COST-BENCHMARK"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/09-product-resource-budgets.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+        "plans/standalone-v1/.agent-plan/standalone-v1/benchmark-authority-profile.v1.json"
+      ]
+    },
+    {
+      "id": "REQ-LIVE-COST-CALIBRATION",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "Production release shall additionally execute one cold and one warm live host run for the frozen S0 mechanical, S1 standard, and S2 multi-owner scenarios through a signed provider-neutral external model profile, preserve all semantic acceptance and audit verdicts, record host-attested usage, stay within 120000 total billable tokens and 7200 wall seconds, fail closed on missing or unverifiable usage, and emit a content-addressed calibration receipt without embedding provider or model names in core contracts.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-LIVE-COST-CALIBRATION"
+      ],
+      "evidenceIds": [
+        "EV-LIVE-COST-CALIBRATION"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/09-product-resource-budgets.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+        "plans/standalone-v1/.agent-plan/standalone-v1/benchmark-authority-profile.v1.json"
+      ]
+    },
+    {
+      "id": "REQ-ROUTING",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The lifecycle shall map clarification, specification authoring, specification review, plan authoring, plan review, implementation, task review, remediation, and final audit to provider-neutral capability profiles in external host configuration; profiles may resolve to one or different host models, but selection and ordered fallback shall be deterministic, fallback shall preserve every mandatory capability and independence class, unavailable mandatory capability shall fail closed, and every usage receipt shall record the stage, role, selected profile id, configuration digest, opaque host model identity, fallback decision, and attributed usage without embedding provider or model names in core contracts.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-ROUTING"
+      ],
+      "evidenceIds": [
+        "EV-ROUTING"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md"
+      ]
+    },
+    {
+      "id": "REQ-CLI",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The package shall provide a stable compact JSON CLI for specification, plan, task compilation, workflow, audit, adapter, conformance, neutrality, and schema operations, with full state available only by explicit request and without host-specific shell wrappers in core.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CLI"
+      ],
+      "evidenceIds": [
+        "EV-CLI"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md"
+      ]
+    },
+    {
+      "id": "REQ-SKILLS",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The distribution shall contain exactly five canonical thin lifecycle skills for plan authoring, independent plan audit, task packet compilation, durable orchestration, and independent implementation audit; each entry shall remain stage-routed, project-neutral, surface-neutral, and no larger than 8192 bytes.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-SKILLS"
+      ],
+      "evidenceIds": [
+        "EV-SKILLS"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md"
+      ]
+    },
+    {
+      "id": "REQ-CONFORMANCE",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The kit shall include only synthetic, inventoried fixtures and deterministic conformance scenarios covering S0, S1, and S2 happy paths, repeated review, stale or forged artifacts, ownership conflicts, cyclic DAGs, reopen and refreeze, parallel execution, rejection and remediation, crash recovery, budget exhaustion, path attacks, adapter failure, and final verdicts across supported operating systems.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CONFORMANCE"
+      ],
+      "evidenceIds": [
+        "EV-CONFORMANCE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md"
+      ]
+    },
+    {
+      "id": "REQ-ADAPTER-BASELINE",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "Every required surface-adapter workstream shall be fully executable offline from the frozen normalized contract inventory and shall produce an EXPERIMENTAL adapter that installs and discovers deterministically, validates every versioned protocol envelope, declares capabilities and maturity, pins a closed offline contract-compatibility range plus content-addressed authoritative source provenance, omits any live-tested host range, fails closed for unsupported operations, and passes the shared synthetic baseline. Live surface runtime is never a required release prerequisite; VERIFIED is an optional later promotion requiring a bounded live-tested host range and fresh live evidence for install, discovery, launch, wait, cancel, resume, tool execution, result collection, usage attestation, task audit, and final audit.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-ADAPTER-BASELINE"
+      ],
+      "evidenceIds": [
+        "EV-ADAPTER-BASELINE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r01.json"
+      ]
+    },
+    {
+      "id": "REQ-CODEX",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The Codex adapter shall satisfy the shared offline adapter baseline, publish a bounded compatibility descriptor and evidence-accurate EXPERIMENTAL maturity without requiring a live surface runtime, map every available host operation without reimplementing core semantics, and fail closed for absent capabilities; only the separate optional live promotion route may mark it VERIFIED.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CODEX"
+      ],
+      "evidenceIds": [
+        "EV-CODEX"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r01.json"
+      ]
+    },
+    {
+      "id": "REQ-CLAUDE",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The Claude adapter shall satisfy the shared offline adapter baseline, publish a bounded compatibility descriptor and evidence-accurate EXPERIMENTAL maturity without requiring a live surface runtime, map every available host operation without reimplementing core semantics, and fail closed for absent capabilities; only the separate optional live promotion route may mark it VERIFIED.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CLAUDE"
+      ],
+      "evidenceIds": [
+        "EV-CLAUDE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r01.json"
+      ]
+    },
+    {
+      "id": "REQ-CURSOR",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The Cursor adapter shall satisfy the shared offline adapter baseline, publish a bounded compatibility descriptor and evidence-accurate EXPERIMENTAL maturity without requiring a live surface runtime, map every available host operation without reimplementing core semantics, and fail closed for absent capabilities; only the separate optional live promotion route may mark it VERIFIED.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CURSOR"
+      ],
+      "evidenceIds": [
+        "EV-CURSOR"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r01.json"
+      ]
+    },
+    {
+      "id": "REQ-OPENCODE",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The OpenCode adapter shall satisfy the shared offline adapter baseline, publish a bounded compatibility descriptor and evidence-accurate EXPERIMENTAL maturity without requiring a live surface runtime, map every available host operation without reimplementing core semantics, and fail closed for absent capabilities; only the separate optional live promotion route may mark it VERIFIED.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-OPENCODE"
+      ],
+      "evidenceIds": [
+        "EV-OPENCODE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r01.json"
+      ]
+    },
+    {
+      "id": "REQ-RELEASE",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "Release engineering shall build reproducible wheel, source distribution, adapter bundles, SBOM, checksums, notices, and provenance in clean environments; consume the authenticated complete platform-matrix aggregate; run recursive full-history and release-payload neutrality verification; and block publication unless every payload hash, dependency/license result, matrix leg, neutrality authority, and adapter maturity claim verifies.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-RELEASE"
+      ],
+      "evidenceIds": [
+        "EV-RELEASE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist.md"
+      ]
+    },
+    {
+      "id": "REQ-PLATFORM-MATRIX",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "Production release proof shall execute the exact nine-leg matrix of Ubuntu 24.04 x86_64, macOS 14 arm64, and Windows Server 2022 x86_64 with CPython 3.11, 3.12, and 3.13; each leg shall emit a distinct authenticated content-addressed receipt bound to the same source revision, dependency lock, OS image identity, interpreter identity, commands, and artifact hashes; and a fail-closed aggregate shall reject any missing, stale, duplicate, incompatible, self-asserted, or mismatched leg.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-PLATFORM-MATRIX"
+      ],
+      "evidenceIds": [
+        "EV-MATRIX-LINUX-PY311",
+        "EV-MATRIX-LINUX-PY312",
+        "EV-MATRIX-LINUX-PY313",
+        "EV-MATRIX-MACOS-PY311",
+        "EV-MATRIX-MACOS-PY312",
+        "EV-MATRIX-MACOS-PY313",
+        "EV-MATRIX-WINDOWS-PY311",
+        "EV-MATRIX-WINDOWS-PY312",
+        "EV-MATRIX-WINDOWS-PY313",
+        "EV-MATRIX-AGGREGATE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/10-release-matrix.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v1.json"
+      ]
+    },
+    {
+      "id": "REQ-TASK-VERDICT",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "The workflow controller shall move a task to ACCEPTED only after an independent findings-first task audit verifies the frozen packet, exact write ownership, result, evidence and usage lineage and reports no unresolved MEDIUM, HIGH, or BLOCKER finding; a BLOCKER shall stop execution immediately, while any other rejected verdict shall follow the frozen remediation or contract-change route without silent repair.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-TASK-VERDICT"
+      ],
+      "evidenceIds": [
+        "EV-TASK-VERDICT"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist.md"
+      ]
+    },
+    {
+      "id": "REQ-FINAL",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "The final COMPLETE verdict shall require an independent findings-first audit with no unresolved MEDIUM, HIGH, or BLOCKER finding and shall reconcile every frozen requirement, accepted task, workstream, write set, evidence receipt, resource ledger, neutrality gate, release artifact, platform-matrix aggregate, and conformance verdict against the immutable lock.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-FINAL"
+      ],
+      "evidenceIds": [
+        "EV-FINAL"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist.md"
+      ]
+    }
+  ],
+  "review": {
+    "reviewId": "spec-review-r04",
+    "verdict": "READY_TO_PLAN",
+    "reviewedRevision": 3,
+    "report": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r04.json"
+  },
+  "freeze": {
+    "reviewId": "spec-review-r04",
+    "frozenAt": "2026-07-15T15:54:09.045660Z",
+    "frozenBy": "root-planning-lead"
+  }
+}

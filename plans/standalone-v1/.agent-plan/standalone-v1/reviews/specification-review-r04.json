@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "agent-specification-review.v1",
+  "reviewId": "spec-review-r04",
+  "specificationId": "SPEC-standalone-v1",
+  "packageId": "standalone-v1",
+  "specificationRevision": 3,
+  "reviewedSpecificationHash": "9337aeab8c2771c2244bb4384ec6be2afc956f7496cbbb31d587e28136ea6a28",
+  "previousReview": {
+    "reviewId": "spec-review-r03",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r03.json",
+    "sha256": "e61e7e847e18d26b1fc312f2f9760eb357b33dca02d79cf95bf18997c0e0aa35"
+  },
+  "traceability": {
+    "requirementCount": 26,
+    "requiredRequirementCount": 26,
+    "acceptanceLinkCount": 26,
+    "evidenceLinkCount": 36,
+    "uncoveredRequirementCount": 0
+  },
+  "verdict": "READY_TO_PLAN",
+  "reviewer": {
+    "id": "spec-reviewer-r04",
+    "independent": true,
+    "surface": "codex",
+    "runId": "standalone-v1-spec-review-r04-independent"
+  },
+  "reviewedAt": "2026-07-15T15:47:54Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "All twenty-six required outcomes are explicit, project-neutral, free of placeholders, and uniquely projected into required workstreams. REQ-RESOURCE now freezes exact logical-call and context scopes, cumulative-counter behavior, and fail-closed semantics in addition to the previously complete neutrality, routing, adapter, release, and final-verdict contracts.",
+      "findingIds": [
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "scope",
+      "status": "PASS",
+      "rationale": "Included, excluded, and deferred scope is explicit and consistent across the specification and all reviewed source references: one neutral Python lifecycle kit, exactly five thin skills, four offline EXPERIMENTAL adapters, synthetic conformance, and no remote publication or origin-specific content.",
+      "findingIds": []
+    },
+    {
+      "id": "acceptance",
+      "status": "PASS",
+      "rationale": "All twenty-six acceptance ids and thirty-six evidence ids are unique, reciprocal, and projected exactly once. AC-RESOURCE and EV-RESOURCE now cover zero-or-one call per iteration, hard calls per task and run, context per call and cumulative run, cumulative counters, and fail-closed enforcement against the exact machine profile.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "constraints-risks",
+      "status": "PASS",
+      "rationale": "Neutrality and external trust, reviewer independence, secret redaction, task and final severity, deterministic capability fallback, offline adapter maturity, platform authority, logical-call exhaustion, and cumulative-context exhaustion are decision-complete and fail closed.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "testability-evidence",
+      "status": "PASS",
+      "rationale": "The specification and source references define deterministic evidence for neutrality, routing, adapter behavior, SDD lifecycle, benchmarks, platform receipts, task/final verdicts, and resource enforcement. The machine profile supplies numeric S0/S1/S2 limits, and the reciprocal resource evidence contract names a bounded validator command and fresh receipt.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    },
+    {
+      "id": "consistency",
+      "status": "PASS",
+      "rationale": "Specification revision 3, all eighteen unique source references, and the reciprocal manifest projections agree on requirement wording, acceptance, evidence, authority ownership, release gates, and resource semantics. For every tier, logical calls per task equal iterations per attempt times attempts, and cumulative context per run equals calls per run times context per call.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-003",
+        "SPEC-004"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "SPEC-001",
+      "severity": "MEDIUM",
+      "class": "acceptance-gap",
+      "dimension": "acceptance",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "The detached Ed25519 neutrality authority, trust-root ownership, signer and subject binding, freshness, zero-result conditions, temporary conformance keys, runtime gates, release scope, and reciprocal evidence remain preserved in revision 3 and its source references.",
+      "requiredAction": "No further action for SPEC-001; preserve these external-authority, redaction, freshness, subject-binding, runtime-gate, and release-scope semantics during planning and implementation."
+    },
+    {
+      "id": "SPEC-002",
+      "severity": "MEDIUM",
+      "class": "specification-defect",
+      "dimension": "requirements",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 3 preserves the complete provider-neutral stage and role routing contract, deterministic capability-preserving fallback, independent review bindings, fail-closed unavailability, and exact usage attribution established after the earlier review.",
+      "requiredAction": "No further action for SPEC-002; retain REQ-ROUTING, AC-ROUTING, EV-ROUTING, and their exact task projection during planning and implementation."
+    },
+    {
+      "id": "SPEC-003",
+      "severity": "MEDIUM",
+      "class": "ambiguity",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 3 preserves the shared offline adapter baseline, frozen normalized contract inventory, closed compatibility ranges, evidence-accurate EXPERIMENTAL inclusion, and separately authorized live VERIFIED promotion route.",
+      "requiredAction": "No further action for SPEC-003; keep the shared offline baseline authoritative and prevent surface-specific requirements or maturity claims from weakening it."
+    },
+    {
+      "id": "SPEC-004",
+      "severity": "MEDIUM",
+      "class": "inconsistency",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+      "status": "resolved",
+      "message": "Revision 3 and its machine authority now define zero-or-one logical call per semantic iteration; hard calls per task of 4, 6, and 8; hard calls per run of 12, 32, and 192; context per call of 32768, 65536, and 131072 bytes; and cumulative context per run of 393216, 2097152, and 25165824 bytes for S0, S1, and S2 respectively. Task and run counters remain cumulative across attempts, stages, review, remediation, fallback, retries, and cache reuse, while AC-RESOURCE, EV-RESOURCE, prose, and manifest projections require the same fail-closed contract.",
+      "requiredAction": "No further action for SPEC-004; preserve these exact numeric ceilings, counter scopes, zero-or-one relationship, reciprocal AC/EV links, and fail-closed behavior during plan freeze and implementation."
+    }
+  ],
+  "summary": "READY_TO_PLAN after a full independent r04 review. Structural validation binds specification revision 3 to 9337aeab8c2771c2244bb4384ec6be2afc956f7496cbbb31d587e28136ea6a28; predecessor authority spec-review-r03 is bound by SHA-256 e61e7e847e18d26b1fc312f2f9760eb357b33dca02d79cf95bf18997c0e0aa35; all twenty-six required requirements have complete unique acceptance and evidence links; every reciprocal plan projection matches; and SPEC-001 through SPEC-004 are resolved with all six mandatory review dimensions passing and no open finding."
+}

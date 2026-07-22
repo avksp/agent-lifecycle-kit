@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "agent-specification-review.v1",
+  "reviewId": "spec-review-r02",
+  "specificationId": "SPEC-standalone-v1",
+  "packageId": "standalone-v1",
+  "specificationRevision": 1,
+  "reviewedSpecificationHash": "20179dbbf8c0c16cf3a3e82b3ceb19e9a397f033002ad7a2d0609fa2df1ec567",
+  "previousReview": null,
+  "traceability": {
+    "requirementCount": 20,
+    "requiredRequirementCount": 20,
+    "acceptanceLinkCount": 20,
+    "evidenceLinkCount": 20,
+    "uncoveredRequirementCount": 0
+  },
+  "verdict": "READY_TO_PLAN",
+  "reviewer": {
+    "id": "spec-reviewer-r02",
+    "independent": true,
+    "surface": "codex",
+    "runId": "standalone-v1-spec-review-r02-independent"
+  },
+  "reviewedAt": "2026-07-15T14:01:10Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "All twenty required outcomes are explicit, project-neutral, non-duplicated, and mapped exactly once into the current plan; the routing and shared adapter baseline additions close the prior behavioral gaps.",
+      "findingIds": ["SPEC-002", "SPEC-003"]
+    },
+    {
+      "id": "scope",
+      "status": "PASS",
+      "rationale": "Included, excluded, and deferred scope remains explicit and consistent with a standalone lifecycle kit, four initial surface adapters, synthetic-only repository content, and no remote publication authority.",
+      "findingIds": []
+    },
+    {
+      "id": "acceptance",
+      "status": "PASS",
+      "rationale": "Every requirement has one unique acceptance id and one unique evidence id; the corrected neutrality, routing, and adapter baseline promises now have reciprocal criteria and final gates.",
+      "findingIds": ["SPEC-001", "SPEC-002", "SPEC-003"]
+    },
+    {
+      "id": "constraints-risks",
+      "status": "PASS",
+      "rationale": "External trust ownership, temporary conformance keys, deterministic capability fallback, reviewer independence, unsupported operations, adapter maturity, resource limits, and zero-origin-information controls are decision-complete and fail closed.",
+      "findingIds": ["SPEC-001", "SPEC-002", "SPEC-003"]
+    },
+    {
+      "id": "testability-evidence",
+      "status": "PASS",
+      "rationale": "The specification and plan define deterministic signature negatives, stage and role routing cases, synthetic adapter inclusion, live verification promotion, exact usage attribution, release evidence, and independent final reconciliation.",
+      "findingIds": ["SPEC-001", "SPEC-002", "SPEC-003"]
+    },
+    {
+      "id": "consistency",
+      "status": "PASS",
+      "rationale": "Requirement wording, developer overview, architecture contracts, workstreams, traceability matrix, acceptance checklist, and release rules agree on signing authority, routing semantics, and EXPERIMENTAL versus VERIFIED behavior.",
+      "findingIds": ["SPEC-001", "SPEC-003"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "SPEC-001",
+      "severity": "MEDIUM",
+      "class": "acceptance-gap",
+      "dimension": "acceptance",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "REQ-NEUTRALITY now defines detached Ed25519 authority and attestation verification, host-owned external trust roots, signer and subject binding, freshness, zero-result conditions, temporary conformance keys, and fail-closed behavior; AC-NEUTRALITY and final gates test the same contract.",
+      "requiredAction": "No further specification change is required; preserve the external trust-root, temporary-key, freshness, subject-binding, and reciprocal evidence semantics during plan freeze and implementation."
+    },
+    {
+      "id": "SPEC-002",
+      "severity": "MEDIUM",
+      "class": "specification-defect",
+      "dimension": "requirements",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "REQ-ROUTING now enumerates every semantic stage and role, keeps profiles in external provider-neutral configuration, allows one or different host models, preserves mandatory capabilities and independence during deterministic fallback, fails closed when unavailable, and attributes the exact selection in usage receipts.",
+      "requiredAction": "No further specification change is required; retain REQ-ROUTING, AC-ROUTING, EV-ROUTING, and their exact task projection as one reciprocal contract."
+    },
+    {
+      "id": "SPEC-003",
+      "severity": "MEDIUM",
+      "class": "ambiguity",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "REQ-ADAPTER-BASELINE now fixes the minimum install, discovery, envelope, capability, fail-closed, and synthetic conformance contract; the four adapter requirements inherit it, EXPERIMENTAL inclusion is explicitly release-acceptable, and VERIFIED requires fresh live proof of the complete operation matrix.",
+      "requiredAction": "No further specification change is required; keep the shared baseline authoritative and prevent any surface-specific requirement or maturity claim from weakening it."
+    }
+  ],
+  "summary": "READY_TO_PLAN after a full second-round review. Structural validation binds hash 20179dbbf8c0c16cf3a3e82b3ceb19e9a397f033002ad7a2d0609fa2df1ec567; all twenty required requirements have unique acceptance and evidence links, SPEC-001 through SPEC-003 are resolved in both specification and plan projections, and all six mandatory review dimensions pass with no open blocking, high, or medium finding."
+}

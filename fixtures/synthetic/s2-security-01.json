@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "agent-lifecycle-synthetic-scenario.v1",
+  "scenarioId": "S2-SECURITY-01",
+  "title": "Authority, path and artifact negatives",
+  "sddTier": "S2",
+  "tags": [
+    "stale-artifacts",
+    "forged-artifacts",
+    "ownership-conflicts",
+    "cyclic-dag",
+    "budget-exhaustion",
+    "path-attacks",
+    "adapter-failure",
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "liveModelInvocations": 0,
+  "steps": [
+    {
+      "stage": "pre-launch-gate",
+      "expected": "reject stale or forged receipt"
+    },
+    {
+      "stage": "compile",
+      "expected": "reject cyclic DAG"
+    },
+    {
+      "stage": "ownership-audit",
+      "expected": "reject forbidden write"
+    },
+    {
+      "stage": "adapter-operation",
+      "expected": "unsupported operation fails closed"
+    }
+  ],
+  "expectedOutcome": {
+    "taskVerdicts": [
+      "BLOCKED",
+      "CONTRACT_CHANGE"
+    ],
+    "finalVerdict": "NOT_READY",
+    "qualityRegression": false
+  }
+}

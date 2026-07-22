@@ -1,0 +1,258 @@
+{
+  "schemaVersion": "agent-lifecycle-final-proof-authority-profile.v2",
+  "profileId": "controller-finalization-transaction",
+  "profileVersion": "2.0.0",
+  "canonicalization": {
+    "encoding": "RFC8785-JCS",
+    "hash": "SHA-256",
+    "proofBodyDigestDomain": "agent-lifecycle-final-proof-body-v2\u0000",
+    "envelopeDigestDomain": "agent-lifecycle-final-proof-envelope-v2\u0000",
+    "signatureDomain": "agent-lifecycle-final-proof-signature-v2\u0000",
+    "additionalPropertiesAllowed": false
+  },
+  "terminalSequence": [
+    "terminal-task-pre-launch-neutrality",
+    "independent-final-audit-ready-for-finalization",
+    "terminal-task-result",
+    "terminal-task-post-attempt-neutrality",
+    "independent-terminal-task-review-accepted",
+    "enter-awaiting-final-proof",
+    "finalization-neutrality-projection",
+    "controller-proof-create-if-absent",
+    "completion-wal-append-and-fsync",
+    "state-cas-replacement",
+    "complete"
+  ],
+  "finalAudit": {
+    "requiredSemanticStatus": "READY_FOR_FINALIZATION",
+    "mustReconcileAllPredecessorTasks": true,
+    "mustBindTerminalPreLaunchGate": true,
+    "mustNotClaimLaterPostAttemptGateReviewOrFinalization": true,
+    "maximumOpenSeverity": "LOW"
+  },
+  "awaitingFinalProof": {
+    "state": "AWAITING_FINAL_PROOF",
+    "enteredOnlyAfterAcceptedTerminalReview": true,
+    "requiredPredecessorPhase": "FINAL_AUDIT",
+    "bindExpectedStateRevision": true,
+    "bindExpectedStateDigest": true,
+    "bindWalPredecessorDigest": true,
+    "bindFinalizationOperationId": true,
+    "operationIdAllocatedBeforeProjection": true
+  },
+  "finalizationNeutrality": {
+    "authorityProfile": "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json",
+    "scopeProfile": "terminal-finalization-complete",
+    "inputsMustInclude": [
+      "terminal audit",
+      "terminal task result",
+      "terminal post-attempt neutrality receipt",
+      "accepted terminal task review",
+      "all predecessor results reviews evidence usage and gate receipts",
+      "frozen plan lock task-packet index and authorization",
+      "immutable release generation",
+      "current implementation change set",
+      "predecessor workflow state and WAL"
+    ],
+    "exactCurrentProjectionRequired": true,
+    "projectedControllerOutputs": [
+      {
+        "role": "primary-artifact",
+        "pathTemplate": "{artifactRoot}/workflow/finalization/{runId}/{operationId}.json",
+        "publication": "create-if-absent-before-detached-receipt"
+      },
+      {
+        "role": "detached-commit-receipt",
+        "pathTemplate": "{artifactRoot}/workflow/finalization/{runId}/{operationId}.receipt.json",
+        "publication": "create-if-absent-last"
+      }
+    ],
+    "futureControllerOutputPathsAreScanInputsNotOperationOutputs": true,
+    "futureProofPathMustBeAbsentAtScan": true,
+    "preStateAndWalAreImmutableScanInputsForThisOperation": true,
+    "reviewForbiddenContentAndSubstitutionMustFail": true,
+    "producerVerifierParityRequired": true
+  },
+  "controllerFinalizationOutputSet": {
+    "canonicalDescriptorOrder": [
+      "role",
+      "pathTemplate",
+      "transitionMode",
+      "predecessorIdentitySource"
+    ],
+    "digestField": "controllerFinalizationOutputSetDigest",
+    "descriptors": [
+      {
+        "role": "controller-final-proof",
+        "pathTemplate": "{artifactRoot}/workflow/final-proof/{runId}/{operationId}.json",
+        "transitionMode": "create-if-absent-no-replace",
+        "predecessorIdentitySource": "path-absent-in-finalization-neutrality-projection"
+      },
+      {
+        "role": "completion-wal-record",
+        "pathTemplate": "{artifactRoot}/workflow/events.jsonl",
+        "transitionMode": "idempotent-append-and-fsync",
+        "predecessorIdentitySource": "awaiting-final-proof-wal-length-and-digest"
+      },
+      {
+        "role": "workflow-state-replacement",
+        "pathTemplate": "{artifactRoot}/workflow/run.state.json",
+        "transitionMode": "expected-revision-and-digest-cas-atomic-replace",
+        "predecessorIdentitySource": "awaiting-final-proof-state-revision-and-digest"
+      }
+    ],
+    "digestRule": "SHA-256(RFC8785-JCS(descriptors sorted by role pathTemplate transitionMode predecessorIdentitySource))",
+    "separateFromNeutralityOperationOutputManifest": true,
+    "boundByFinalizationNeutralityClaims": true,
+    "boundByProofBody": true,
+    "proofPathMustBeUniqueToRunAndOperation": true,
+    "mutableAliasAcceptedAsIdentity": false,
+    "proofCreateIfAbsentNoReplace": true,
+    "walAndStatePredecessorIdentitiesRequired": true,
+    "transitionReferencesEnvelopeDigestSymbolicallyAs": "selfEnvelopeDigest",
+    "controllerOutputsExcludedFromImplementationChangeSet": true,
+    "closedSchemasOnly": true,
+    "rawUserOrModelTextForbidden": true
+  },
+  "proofEnvelope": {
+    "schemaVersion": "agent-controller-final-proof-envelope.v2",
+    "artifactPathTemplate": "{artifactRoot}/workflow/final-proof/{runId}/{operationId}.json",
+    "writeOnce": true,
+    "createIfAbsentNoReplace": true,
+    "fields": [
+      "schemaVersion",
+      "proofBody",
+      "proofBodyDigest",
+      "signerFingerprint",
+      "signature"
+    ],
+    "proofBodyMustNotContain": [
+      "proofBodyDigest",
+      "envelopeDigest",
+      "artifactPath"
+    ],
+    "proofBodyDigestRule": "SHA-256(proofBodyDigestDomain || RFC8785-JCS(proofBody))",
+    "signatureRule": "Ed25519(signatureDomain || proofBodyDigest)",
+    "signatureAuthority": "the verified finalization-neutrality signer and trust root",
+    "envelopeDigestRule": "SHA-256(envelopeDigestDomain || RFC8785-JCS(envelope))",
+    "envelopeDigestStorage": [
+      "completion WAL record",
+      "COMPLETE workflow state"
+    ],
+    "envelopeDigestMustNotBeEmbedded": true,
+    "acceptedIdentity": "envelopeDigest"
+  },
+  "proofBody": {
+    "schemaVersion": "agent-controller-final-proof-body.v2",
+    "additionalPropertiesAllowed": false,
+    "requiredBindings": [
+      "runId",
+      "packageId",
+      "operationId",
+      "planDigest",
+      "sourceRevision",
+      "planLockIdentity",
+      "taskPacketIndexIdentity",
+      "authorizationIdentity",
+      "neutralityAuthorityProfileDigest",
+      "finalProofAuthorityProfileDigest",
+      "controllerFinalizationOutputSetDigest",
+      "expectedPredecessorStateRevision",
+      "expectedPredecessorStateDigest",
+      "walPredecessorLength",
+      "walPredecessorDigest",
+      "acceptedTaskResultIdentities",
+      "acceptedTaskReviewIdentities",
+      "evidenceReceiptIdentities",
+      "usageLedgerIdentity",
+      "controllerGateReceiptIdentities",
+      "terminalAuditIdentity",
+      "terminalTaskResultIdentity",
+      "terminalPostAttemptGateIdentity",
+      "terminalTaskReviewIdentity",
+      "finalizationNeutralityArtifactIdentity",
+      "finalizationNeutralityReceiptIdentity",
+      "canonicalReleaseInventoryDigest",
+      "finalImplementationChangeSetDigest"
+    ],
+    "onlyNormalizedIdentifiersEnumsTimesAndDigests": true
+  },
+  "transaction": {
+    "expectedStateRevisionRequired": true,
+    "compareAndSwapRequired": true,
+    "appendOnlyWalRequired": true,
+    "exclusiveNonMutatingControllerLockRequired": true,
+    "walAppendIdempotencyKey": "{runId}:{operationId}:complete",
+    "walRecordBinds": [
+      "walPredecessorDigest",
+      "proofEnvelopeDigest",
+      "expectedPredecessorStateDigest",
+      "completeStateDigest"
+    ],
+    "orderedSteps": [
+      "verify awaiting-final-proof state revision digest and WAL predecessor",
+      "revalidate all proof-body identities and finalization-neutrality receipt",
+      "publish proof envelope create-if-absent",
+      "append completion WAL record and fsync",
+      "atomically replace state with COMPLETE projection by compare-and-swap",
+      "fsync containing directories",
+      "verify durable proof WAL and state identities"
+    ],
+    "successTransition": {
+      "from": "AWAITING_FINAL_PROOF",
+      "to": "COMPLETE"
+    },
+    "failureMode": "remain-non-complete-and-record-blocker"
+  },
+  "recovery": {
+    "crashBeforeProof": "recompute and retry the same operation",
+    "crashAfterProofBeforeWal": "verify identical proof envelope then append the same idempotency-keyed WAL record",
+    "crashAfterWalBeforeState": "verify proof and WAL predecessor chain then perform the same state CAS",
+    "crashAfterState": "verify all three durable identities and return the existing COMPLETE result",
+    "identicalReplay": "return-the-same-proof-and-complete-state",
+    "conflictingReplay": "fail-closed-and-block-run",
+    "anyPlanSourceProfileReviewGateInventoryOrChangeSetDrift": "fail-closed-and-block-run"
+  },
+  "verifier": {
+    "reconstructPreOperationProjection": true,
+    "excludeOnlyExactNewProofEnvelope": true,
+    "verifyWalPrefixLengthAndDigestAndSingleExpectedSuffix": true,
+    "reconstructPreStateFromWalPrefix": true,
+    "verifyDeterministicCompleteState": true,
+    "rejectAnyOtherPostScanMutation": true,
+    "additionalPostProofNeutralityGateForbiddenBecauseItWouldReopenTheCycle": true
+  },
+  "requiredRevalidations": [
+    "frozen-plan-and-lock",
+    "compiled-packet-index",
+    "execution-authorization",
+    "all-accepted-task-results-and-reviews",
+    "all-required-evidence-and-usage-receipts",
+    "all-controller-gate-receipts",
+    "terminal-review-covered-by-finalization-neutrality",
+    "exact-final-implementation-change-set-and-write-ownership",
+    "immutable-release-generation",
+    "no-open-medium-high-or-blocker-findings"
+  ],
+  "negativeConformance": {
+    "requiredCases": [
+      "post-review-forbidden-content",
+      "terminal-review-substitution",
+      "finalization-output-occupancy",
+      "proof-body-or-envelope-mutation",
+      "proof-replay-across-run-plan-or-operation",
+      "stale-state-revision-or-digest",
+      "wal-predecessor-mismatch",
+      "crash-before-proof",
+      "crash-after-proof-before-wal",
+      "crash-after-wal-before-state",
+      "conflicting-completion-replay",
+      "plan-source-profile-gate-inventory-or-change-set-drift"
+    ]
+  },
+  "independence": {
+    "finalAuditorDistinctFromTaskActorsAndReviewers": true,
+    "terminalReviewerDistinctFromTerminalActor": true,
+    "controllerProofDoesNotReplaceIndependentReview": true
+  }
+}

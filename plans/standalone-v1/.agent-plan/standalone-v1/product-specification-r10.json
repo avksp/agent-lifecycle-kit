@@ -1,0 +1,694 @@
+{
+  "schemaVersion": "agent-product-specification.v1",
+  "specificationId": "SPEC-standalone-v1",
+  "packageId": "standalone-v1",
+  "revision": 10,
+  "status": "FROZEN",
+  "author": {
+    "id": "root-planner",
+    "surface": "codex",
+    "runId": "standalone-v1-spec-author-r08"
+  },
+  "intent": {
+    "problem": "Agent lifecycle behavior is commonly duplicated across host-specific instructions, scripts, and mutable run state, which makes planning, independent review, execution, recovery, and final verification difficult to reproduce across agent surfaces.",
+    "targetOutcome": "Deliver a project-neutral, model-neutral, installable lifecycle kit with deterministic contracts, five thin semantic roles, surface adapters, synthetic conformance tests, fail-closed neutrality controls, bounded resource accounting, and release evidence.",
+    "currentBehavior": "Revision 7 froze the standalone lifecycle kit plan and compiled packets, but execution-controller init exposed a plan-level safety gap: validation commands requiring host-policy or required approval were still represented as local-process commands, which the durable controller correctly rejects because approved execution must flow through the host-operation adapter protocol. Revision 8 preserves the product requirements and reopens only the execution projection so approved validation commands can be dispatched through signed host-operation receipts.",
+    "targetBehavior": "A host can clarify a request, freeze an independently reviewed SDD specification and implementation plan, compile a dependency DAG, execute and audit each task, remediate or reopen on contract change, and complete only after final proof. The first release supports Codex, Claude Code, Cursor, Hermes and OpenCode through offline EXPERIMENTAL adapters, keeps lifecycle semantics in a modular shared core, and reserves VERIFIED adapter status for optional live host evidence."
+  },
+  "scope": {
+    "included": [
+      "A fail-closed write-once neutrality boundary for worktrees, Git history, generated distributions, adapter bundles, synthetic evaluation content, external authority inputs, bounded archives, and terminal finalization.",
+      "A Python package and compact JSON CLI implementing specification, plan, freeze, task compilation, workflow, audit, schema, conformance, and neutrality contracts.",
+      "Five thin lifecycle skills backed by one deterministic core implementation.",
+      "Adapters for Codex, Claude, Cursor, Hermes and OpenCode using a versioned host-operation protocol and external model profiles.",
+      "Synthetic S0, S1, and S2 conformance scenarios, resource and token accounting, recovery tests, packaging, governance, and release verification."
+    ],
+    "excluded": [
+      "Origin-specific profiles, paths, commands, documentation, fixtures, examples, identifiers, or copied repository history.",
+      "Bundled credentials, model names in core contracts, network services, hosted control planes, and automatic publication to external registries.",
+      "Claims that an adapter is verified without live host conformance evidence."
+    ],
+    "deferred": [
+      "Additional host adapters beyond the five named v1 surfaces.",
+      "A graphical workflow console and hosted telemetry service.",
+      "Remote execution backends beyond the versioned local host protocol."
+    ]
+  },
+  "requirements": [
+    {
+      "id": "REQ-NEUTRALITY",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "Before downstream extraction, fixture, skill, adapter or release work starts, WS-01 shall pass an autonomous local bootstrap boundary: the controller-managed generic repository-policy scan, the complete neutrality negative suite and the foundation suite shall run with Python stdlib only, without pytest, network, host-operation approval or committed origin-specific deny values. Every local validation command shall consume the signed controller operation request, write only declared controller protocol outputs, bind run, package, task, attempt, phase, operation, command, plan digest, source revision and canonical path, and fail closed on any non-zero neutrality counter, output conflict, skipped input, opaque input, read race, incomplete scan, unsupported archive, archive-limit breach or path alias conflict. Origin-specific deny values and Ed25519 signing material shall remain outside the standalone repository and shall be supplied only to downstream pre-launch, post-attempt, release and finalization neutrality gates through the bounded fresh external NEUTRALITY_* authority contract.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-NEUTRALITY"
+      ],
+      "evidenceIds": [
+        "EV-NEUTRALITY",
+        "EV-NEUTRALITY-NEGATIVE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/01-source-preflight-r09.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts-r09.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/03-workstreams-r09.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence-r09.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist-r09.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles-r09.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json"
+      ]
+    },
+    {
+      "id": "REQ-NEUTRALITY-RUNTIME",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "The controller shall execute the frozen neutrality v3 gate before every downstream launch and after every task attempt with an operation-unique create-no-replace detached receipt, exact output-descriptor and primary-artifact manifests, producer/verifier recomputation of output, archive, external-authority, worktree, Git-object, scope, subject and claims digests, fresh verified NEUTRALITY_* authority, and all required zero counters. Any occupancy, replay mismatch, authority drift, alias, archive breach, incomplete scan or read race shall durably block launch or acceptance; rule values, trust material, private keys, matched fragments and credentials shall never enter packets, state, logs, prompts or durable evidence. After the accepted terminal review, the controller shall additionally run the frozen finalization-neutrality projection over that review and every prior artifact before deterministic proof, WAL and state outputs may be committed.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-NEUTRALITY-RUNTIME"
+      ],
+      "evidenceIds": [
+        "EV-NEUTRALITY-RUNTIME"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json"
+      ]
+    },
+    {
+      "id": "REQ-NEUTRALITY-RELEASE",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "Offline release-candidate readiness shall run local current-tree and release-payload neutrality scans with zero findings under the portable policy. Signed all-refs, reflog, unreachable-object and all-archive release neutrality remains a deferred production-promotion gate and shall not be claimed by the offline candidate.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-NEUTRALITY-RELEASE"
+      ],
+      "evidenceIds": [
+        "EV-NEUTRALITY-RELEASE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/19-offline-release-candidate-refreeze-r11.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json"
+      ]
+    },
+    {
+      "id": "REQ-FOUNDATION",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "The kit shall provide a reproducible Python 3.11 through 3.13 package foundation with one locked dependency graph, Apache-2.0 notices, stable versioning, clean-environment installation metadata, and a single canonical implementation source; cross-platform release proof is governed separately by REQ-PLATFORM-MATRIX.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-FOUNDATION"
+      ],
+      "evidenceIds": [
+        "EV-FOUNDATION"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md"
+      ]
+    },
+    {
+      "id": "REQ-CONTRACTS",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The core shall expose versioned JSON-compatible contracts, JSON Schemas, stable error codes, normalized repository-relative paths, a provider-neutral host-operation protocol, and a pluggable change-set boundary without embedding host or model selection logic.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CONTRACTS"
+      ],
+      "evidenceIds": [
+        "EV-CONTRACTS"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md"
+      ]
+    },
+    {
+      "id": "REQ-SDD",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The core shall implement SDD tiers S0, S1, and S2 with deterministic clarification, specification validation, independent specification review, plan validation, independent plan review, immutable freeze locks, revision lineage, reopened state, and fail-closed refreeze rules.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-SDD"
+      ],
+      "evidenceIds": [
+        "EV-SDD"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/08-plan-review-and-change-control.md"
+      ]
+    },
+    {
+      "id": "REQ-COMPILER",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The compiler shall transform only a frozen, hash-verified plan DAG into deterministic task packets containing task-local projections, exact write ownership, launch gates, capability requirements, validation contracts, reviewer routes, and bounded context references.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-COMPILER"
+      ],
+      "evidenceIds": [
+        "EV-COMPILER"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/04-agent-dag-and-ownership.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/05-worker-prompts.md"
+      ]
+    },
+    {
+      "id": "REQ-WORKFLOW",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The workflow engine shall durably enforce dependency waves, approval modes, actor and reviewer independence, task attempts, per-step review, remediation, contract-change reopening, cancellation, deadlines, atomic state transitions, append-only events, crash recovery, resume and reconciliation. Terminal completion shall be finite: the independent final audit reconciles all predecessors and the terminal pre-launch gate; the terminal post-attempt gate covers that audit result; an independent review accepts the terminal attempt; the controller enters AWAITING_FINAL_PROOF bound to exact state and WAL predecessors; finalization neutrality covers the accepted review and all existing artifacts; and only a closed acyclic proof envelope at a fixed run/operation write-once path, followed by one idempotent fsynced WAL append and expected-revision atomic state replacement, may transition to COMPLETE. Identical replay shall return the same proof and state, while any conflicting replay, crash-recovery mismatch or plan, source, authority, review, gate, inventory or change-set drift fails closed.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-WORKFLOW"
+      ],
+      "evidenceIds": [
+        "EV-WORKFLOW"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/03-workstreams.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/08-plan-review-and-change-control.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/final-proof-authority-profile.v2.json",
+        "plans/standalone-v1/.agent-plan/standalone-v1/13-modular-controller-architecture-r06.md"
+      ]
+    },
+    {
+      "id": "REQ-CONTROLLER-MODULARITY",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "The workflow controller shall be implemented as a modular Python package with a thin CLI facade. Production lifecycle semantics shall not live in one large workflowctl.py-style script. The implementation shall keep one-way dependencies from CLI to API to use-case modules to contracts/ports, keep adapters outside core imports, and pass small-context size gates for source files, functions, dispatchers and launchers. SOLID boundaries are required for state transition, artifact store, operation publication, host adapter, usage attestation, authorization gate and validator execution; DRY is required for canonical JSON, digest, WAL, publication, receipt, path and capability logic; YAGNI forbids hosted control planes, mandatory MCP/app servers, provider-specific routing in core, copied project samples and live adapter promotion as a release prerequisite.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CONTROLLER-MODULARITY"
+      ],
+      "evidenceIds": [
+        "EV-CONTROLLER-MODULARITY"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/13-modular-controller-architecture-r06.md"
+      ]
+    },
+    {
+      "id": "REQ-AUDIT",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The audit service shall independently verify each task and the final implementation against the frozen specification, plan, exact write sets, change set, evidence receipts, acceptance criteria, and immutable lock, returning machine-readable findings-first verdicts without silently repairing implementation.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-AUDIT"
+      ],
+      "evidenceIds": [
+        "EV-AUDIT"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md"
+      ]
+    },
+    {
+      "id": "REQ-USAGE",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The host protocol shall record an end-to-end usage ledger for clarification, specification authoring and review, planning and review, implementation, task review, remediation, and final audit, preserving raw provider counters plus host-attested normalized billable tokens, prompt identities, cache usage, context bytes, tool calls, validation runs, and wall time.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-USAGE"
+      ],
+      "evidenceIds": [
+        "EV-USAGE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md"
+      ]
+    },
+    {
+      "id": "REQ-RESOURCE",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The lifecycle shall enforce the immutable machine-readable agent-lifecycle-budget-profile.v1 product profile: explicit hard logical-semantic-call ceilings per task and per run; context-byte ceilings per call and cumulatively per run; tier-wide hard ceilings for billable tokens, tool calls, validations, attempts, evidence bytes, parallelism, and wall time; stage-specific hard billable-token ceilings; and mandatory absolute release SLOs. Each semantic iteration shall permit zero or one logical semantic call; task and run counters shall remain cumulative across attempts, stages, review, remediation, cache use, and fallback; optional diagnostics shall never weaken a hard gate; and any hard-ceiling or unverified usage-attestation breach shall fail closed.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-RESOURCE"
+      ],
+      "evidenceIds": [
+        "EV-RESOURCE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/09-product-resource-budgets.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json"
+      ]
+    },
+    {
+      "id": "REQ-COST-BENCHMARK",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The release accounting-conformance suite shall use deterministic synthetic-host replay with scenario-specific replayed semantic calls and zero live model invocations to measure the frozen S0, S1, and S2 corpus, schema-valid normalized usage attestations, separate cold and warm cache cohorts, at least twenty runs per scenario and cohort, zero quality or audit regression, no hard-ceiling violation, and mandatory absolute p95 targets for billable tokens, cumulative context bytes per run, tool calls, and wall time; the first release shall publish the exact independently audited baseline through the frozen Ed25519 baseline authority, and every later release shall additionally remain within five percent p50 and ten percent p95 of the immediately prior verified signed baseline.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-COST-BENCHMARK"
+      ],
+      "evidenceIds": [
+        "EV-COST-BENCHMARK"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/09-product-resource-budgets.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+        "plans/standalone-v1/.agent-plan/standalone-v1/benchmark-authority-profile.v1.json"
+      ]
+    },
+    {
+      "id": "REQ-LIVE-COST-CALIBRATION",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The kit shall publish a provider-neutral live cost calibration contract as a deferred production-promotion gate. The offline candidate validates the deterministic synthetic baseline and documents the required external environment and receipt inputs without claiming live model execution.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-LIVE-COST-CALIBRATION"
+      ],
+      "evidenceIds": [
+        "EV-LIVE-COST-CALIBRATION"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/19-offline-release-candidate-refreeze-r11.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/benchmark-authority-profile.v1.json",
+        "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json"
+      ]
+    },
+    {
+      "id": "REQ-ROUTING",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The lifecycle shall map clarification, specification authoring, specification review, plan authoring, plan review, implementation, task review, remediation, and final audit to provider-neutral capability profiles in external host configuration; profiles may resolve to one or different host models, but selection and ordered fallback shall be deterministic, fallback shall preserve every mandatory capability and independence class, unavailable mandatory capability shall fail closed, and every usage receipt shall record the stage, role, selected profile id, configuration digest, opaque host model identity, fallback decision, and attributed usage without embedding provider or model names in core contracts.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-ROUTING"
+      ],
+      "evidenceIds": [
+        "EV-ROUTING"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md"
+      ]
+    },
+    {
+      "id": "REQ-CLI",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The package shall provide a stable compact JSON CLI for specification, plan, task compilation, workflow, audit, adapter, conformance, neutrality, and schema operations, with full state available only by explicit request, no host-specific shell wrappers in core, and a thin dispatcher over modular controller services rather than production lifecycle semantics inside one monolithic script.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CLI"
+      ],
+      "evidenceIds": [
+        "EV-CLI"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/13-modular-controller-architecture-r06.md"
+      ]
+    },
+    {
+      "id": "REQ-SKILLS",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The distribution shall contain exactly five canonical thin lifecycle skills for plan authoring, independent plan audit, task packet compilation, durable orchestration, and independent implementation audit; each entry shall remain stage-routed, project-neutral, surface-neutral, and no larger than 8192 bytes.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-SKILLS"
+      ],
+      "evidenceIds": [
+        "EV-SKILLS"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md"
+      ]
+    },
+    {
+      "id": "REQ-CONFORMANCE",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The kit shall include only synthetic, inventoried fixtures and deterministic conformance scenarios covering S0, S1, and S2 happy paths, repeated review, stale or forged artifacts, ownership conflicts, cyclic DAGs, reopen and refreeze, parallel execution, rejection and remediation, crash recovery, budget exhaustion, path attacks, adapter failure, and final verdicts across supported operating systems.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CONFORMANCE"
+      ],
+      "evidenceIds": [
+        "EV-CONFORMANCE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md"
+      ]
+    },
+    {
+      "id": "REQ-ADAPTER-BASELINE",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "Every required surface-adapter workstream for Codex, Claude Code, Cursor, Hermes and OpenCode shall be fully executable offline from the frozen normalized contract inventory and shall produce an EXPERIMENTAL adapter that installs and discovers deterministically, validates every versioned protocol envelope, declares capabilities and maturity, pins a closed offline contract-compatibility range plus content-addressed authoritative source provenance, omits any live-tested host range, fails closed for unsupported operations, and passes the shared synthetic baseline. Live surface runtime is never a required release prerequisite; VERIFIED is an optional later promotion requiring a bounded live-tested host range and fresh live evidence for install, discovery, launch, wait, cancel, resume, tool execution, result collection, usage attestation, task audit, and final audit.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-ADAPTER-BASELINE"
+      ],
+      "evidenceIds": [
+        "EV-ADAPTER-BASELINE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r02.json"
+      ]
+    },
+    {
+      "id": "REQ-CODEX",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The Codex adapter shall satisfy the shared offline adapter baseline, publish a bounded compatibility descriptor and evidence-accurate EXPERIMENTAL maturity without requiring a live surface runtime, map every available host operation without reimplementing core semantics, and fail closed for absent capabilities; only the separate optional live promotion route may mark it VERIFIED.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CODEX"
+      ],
+      "evidenceIds": [
+        "EV-CODEX"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r02.json"
+      ]
+    },
+    {
+      "id": "REQ-CLAUDE",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The Claude adapter shall satisfy the shared offline adapter baseline, publish a bounded compatibility descriptor and evidence-accurate EXPERIMENTAL maturity without requiring a live surface runtime, map every available host operation without reimplementing core semantics, and fail closed for absent capabilities; only the separate optional live promotion route may mark it VERIFIED.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CLAUDE"
+      ],
+      "evidenceIds": [
+        "EV-CLAUDE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r02.json"
+      ]
+    },
+    {
+      "id": "REQ-CURSOR",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The Cursor adapter shall satisfy the shared offline adapter baseline, publish a bounded compatibility descriptor and evidence-accurate EXPERIMENTAL maturity without requiring a live surface runtime, map every available host operation without reimplementing core semantics, and fail closed for absent capabilities; only the separate optional live promotion route may mark it VERIFIED.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-CURSOR"
+      ],
+      "evidenceIds": [
+        "EV-CURSOR"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r02.json"
+      ]
+    },
+    {
+      "id": "REQ-OPENCODE",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The OpenCode adapter shall satisfy the shared offline adapter baseline, publish a bounded compatibility descriptor and evidence-accurate EXPERIMENTAL maturity without requiring a live surface runtime, map every available host operation without reimplementing core semantics, and fail closed for absent capabilities; only the separate optional live promotion route may mark it VERIFIED.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-OPENCODE"
+      ],
+      "evidenceIds": [
+        "EV-OPENCODE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r02.json"
+      ]
+    },
+    {
+      "id": "REQ-HERMES",
+      "kind": "functional",
+      "priority": "must",
+      "statement": "The Hermes adapter shall satisfy the shared offline adapter baseline, publish a bounded compatibility descriptor and evidence-accurate EXPERIMENTAL maturity without requiring a live Hermes runtime, project the shared lifecycle skills into Hermes skill-directory discovery, support slash-command invocation where available, map every available host operation without reimplementing core semantics, and fail closed for absent capabilities; only the separate optional live promotion route may mark it VERIFIED.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-HERMES"
+      ],
+      "evidenceIds": [
+        "EV-HERMES"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/17-universal-distribution-and-readme-r08.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r02.json"
+      ]
+    },
+    {
+      "id": "REQ-RELEASE",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The offline release-candidate shall assemble a content-addressed local release payload from the current source tree, shared skills, adapters, conformance corpus, documentation and governance files; verify two deterministic inventory passes over the same payload bytes; publish no production-ready or verified-external claim; and leave production promotion blocked until signed external release authorities exist.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-RELEASE"
+      ],
+      "evidenceIds": [
+        "EV-RELEASE-ASSEMBLY",
+        "EV-RELEASE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/19-offline-release-candidate-refreeze-r11.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/release-assembly-profile.v1.json"
+      ]
+    },
+    {
+      "id": "REQ-PLATFORM-MATRIX",
+      "kind": "non-functional",
+      "priority": "must",
+      "statement": "The kit shall publish CI workflow and support-matrix contracts for Ubuntu, macOS and Windows on CPython 3.11, 3.12 and 3.13 as production-promotion requirements. The offline candidate validates the matrix contract and adapter EXPERIMENTAL maturity locally without claiming authenticated matrix leg receipts.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-PLATFORM-MATRIX"
+      ],
+      "evidenceIds": [
+        "EV-MATRIX-AGGREGATE"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/19-offline-release-candidate-refreeze-r11.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json"
+      ]
+    },
+    {
+      "id": "REQ-TASK-VERDICT",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "The workflow controller shall move a task to ACCEPTED only after an independent findings-first task audit verifies the frozen packet, exact write ownership, result, evidence and usage lineage and reports no unresolved MEDIUM, HIGH, or BLOCKER finding; a BLOCKER shall stop execution immediately, while any other rejected verdict shall follow the frozen remediation or contract-change route without silent repair.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-TASK-VERDICT"
+      ],
+      "evidenceIds": [
+        "EV-TASK-VERDICT"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist.md"
+      ]
+    },
+    {
+      "id": "REQ-FINAL",
+      "kind": "constraint",
+      "priority": "must",
+      "statement": "The terminal independent findings-first audit shall reconcile accepted tasks, write sets, local release-candidate inventory, local neutrality, conformance, adapter maturity, controller state and deferred production-promotion blockers against the immutable lock. It may report READY_FOR_FINALIZATION for the offline candidate only when no production-ready or verified-external claim is emitted and no unresolved MEDIUM, HIGH or BLOCKER finding remains.",
+      "required": true,
+      "acceptanceIds": [
+        "AC-FINAL"
+      ],
+      "evidenceIds": [
+        "EV-FINAL"
+      ],
+      "sourceRefs": [
+        "plans/standalone-v1/.agent-plan/standalone-v1/19-offline-release-candidate-refreeze-r11.md",
+        "plans/standalone-v1/.agent-plan/standalone-v1/final-proof-authority-profile.v2.json"
+      ]
+    }
+  ],
+  "review": {
+    "reviewId": "spec-review-r09",
+    "verdict": "READY_TO_PLAN",
+    "reviewedRevision": 10,
+    "report": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r09.json"
+  },
+  "sourceSet": {
+    "schemaVersion": "agent-specification-source-set.v2",
+    "canonicalization": "RFC8785-JCS",
+    "hashAlgorithm": "SHA-256",
+    "entries": [
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md",
+        "sha256": "8d6b3a2ae1ec6c8e01464773ea31cba62d83c07f10d38a6dbd86b2dc23987e2f",
+        "bytes": 6444
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/01-source-preflight-r09.md",
+        "sha256": "9f262b04d2e61690f01b5778053266ee5e871f7a069e2a8e4a11459f37ecd23a",
+        "bytes": 7325
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts-r09.md",
+        "sha256": "e4c876265571312c6789030b54daf1938846055aeb2a811ffab019c0e2cda010",
+        "bytes": 9508
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "sha256": "b8c7f535381e0265dc8e16c748c51c2e786812ff62fd78907963645862d7ff79",
+        "bytes": 9309
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/03-workstreams-r09.md",
+        "sha256": "0f96ed9bebf53d0f6432bff51d0f6809af4d80eaec043fb1b0af629af45674de",
+        "bytes": 6336
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/03-workstreams.md",
+        "sha256": "2e69fe975fb6993c3caeb7cd959d5c5c51d8307a7d8b370d1f6ed14cfbeca63f",
+        "bytes": 6129
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/04-agent-dag-and-ownership.md",
+        "sha256": "3ee85d7f9b463379237ab398f15daf64f5758d6fb59fdffaafcd5f0e25d2807d",
+        "bytes": 4700
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/05-worker-prompts.md",
+        "sha256": "d2e0562a4d71e3a2440a9404b9a3ed7a48ad6656dac01a099b9eecbf244baeae",
+        "bytes": 3679
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence-r09.md",
+        "sha256": "4381b6af8d5400ee5c385990c74c510895aea13e9e76408ecf39d88cfa68b3be",
+        "bytes": 12265
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "sha256": "b4567e2b1e681db9cb33f4ef95da3bc972409ecbec9d0433a2e111daa0dacbce",
+        "bytes": 11793
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist-r09.md",
+        "sha256": "f4912bb64ef07e2c35981d38f6f570c3ecb9754ac7d183a4589fbe93ee09b800",
+        "bytes": 8718
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist.md",
+        "sha256": "1a3dfffe72768cb7cfa1135c0bccfbde98c331c5be0a21d0e3b8980f95d736e4",
+        "bytes": 8764
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/08-plan-review-and-change-control.md",
+        "sha256": "322274787a43f32bdcf130de6a884a4684821d96a5a0952bcf6126e73e099f08",
+        "bytes": 7042
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/09-product-resource-budgets.md",
+        "sha256": "a1cfc1078dcc329fb50042d373ab124ea9a1030bfa9694ae06587155179306d2",
+        "bytes": 6822
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/10-release-matrix.md",
+        "sha256": "03526c7c7649e587f40789dd7ca8f9c2f61a6a5fd89d56fe50383a5e391af922",
+        "bytes": 4373
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "sha256": "ec6f72a57fdbf64e6724806cb6318165eb62f1912fcd101739aa931f7d01b2c2",
+        "bytes": 2949
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles-r09.md",
+        "sha256": "55a1026083b9ccd3f0eb2035e83319d25d2aa283900292dea96aaaee94fb4172",
+        "bytes": 13849
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles.md",
+        "sha256": "53e680cd83f437cb7237a05cb55208b8583e29bae8bf7f87313832691f7d11c2",
+        "bytes": 13357
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/13-modular-controller-architecture-r06.md",
+        "sha256": "94aad62853e245114978c1f48a33089a17dc7288877387b185b313717087a47b",
+        "bytes": 3621
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/17-universal-distribution-and-readme-r08.md",
+        "sha256": "ae24f2ec81c578807d25188db6d5eaa291a7b1d11251b6de536516348e68f812",
+        "bytes": 5171
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r02.json",
+        "sha256": "c332a29de6eed7dcf1ff93cfa5cb0868557f31d1f7ff635ba2df2c7695ed3d4a",
+        "bytes": 6337
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+        "sha256": "8325a2d1075252724b6de9d97d49b23991010ce457941a7e3bdfe28dfb9826ad",
+        "bytes": 6468
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/benchmark-authority-profile.v1.json",
+        "sha256": "dc6a0868f8f61b239a2b1c384168ba7a5cbfc03d4a8231fcdcba18e9e98874d9",
+        "bytes": 3514
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json",
+        "sha256": "a3f644bc0df6c1b0a0c4fdc024e8bc01e3e900fa3863153197668793aa19a280",
+        "bytes": 3685
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/final-proof-authority-profile.v2.json",
+        "sha256": "072c8e1768182b3ee3b4670aad9efe54cff5fd9a86a5f083c65bf400ca410d94",
+        "bytes": 10245
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json",
+        "sha256": "604dc96d6e8af476a30472c6a0166844d39892977709a1ec609b2d0c31361d96",
+        "bytes": 11243
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/release-assembly-profile.v1.json",
+        "sha256": "8f92e0406e930d74c18819da014fbf93669da7a0fd09e51023316c6fbaea6093",
+        "bytes": 4606
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/19-offline-release-candidate-refreeze-r11.md",
+        "sha256": "f41ee4ea3380f6787014b686ccca271e70e10b9713d100fcfe663ce2db95b60b",
+        "bytes": 1882
+      }
+    ],
+    "aggregateSha256": "53deef8cbce681aa10fd2ce6467f941b4beda0ebc4b1114325c4e77c3b8c70c5"
+  },
+  "freeze": {
+    "reviewId": "spec-review-r09",
+    "frozenAt": "2026-07-22T11:40:00Z",
+    "frozenBy": "root-lifecycle-controller"
+  }
+}

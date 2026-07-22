@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "agent-lifecycle-synthetic-scenario.v1",
+  "scenarioId": "S1-SMALL-CONTEXT-8K-01",
+  "title": "Single-owner compact context execution in an 8k host",
+  "sddTier": "S1",
+  "contextProfile": "small-context-profile.v1",
+  "targetContextWindow": "8k",
+  "tags": [
+    "happy-path",
+    "small-context",
+    "final-verdict",
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "liveModelInvocations": 0,
+  "steps": [
+    {
+      "stage": "tier-resolution",
+      "expected": "S1 selected by deterministic resolver"
+    },
+    {
+      "stage": "context-render",
+      "expected": "active packet plus compact summary fit the 8k profile"
+    },
+    {
+      "stage": "context-overflow-negative",
+      "expected": "oversized packets fail closed with split-task action"
+    },
+    {
+      "stage": "final-audit",
+      "expected": "COMPLETE"
+    }
+  ],
+  "expectedOutcome": {
+    "taskVerdicts": [
+      "ACCEPTED"
+    ],
+    "finalVerdict": "COMPLETE",
+    "qualityRegression": false
+  }
+}

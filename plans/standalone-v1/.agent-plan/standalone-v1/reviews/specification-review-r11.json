@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "agent-specification-review.v1",
+  "reviewId": "spec-review-r11",
+  "specificationId": "SPEC-standalone-v1",
+  "packageId": "standalone-v1",
+  "specificationRevision": 12,
+  "reviewedSpecificationHash": "4a9f75d105803183eabfcacdb6418ca757db33e4202ff2d49b49c7e8c9a684c6",
+  "previousReview": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r10.json",
+    "sha256": "db96f0fdc407e266fcdd8e4a22226584b7afe022f2e1d739e1fb3ca7f37e1033",
+    "bytes": 8148,
+    "reviewId": "spec-review-r10"
+  },
+  "sourceSet": {
+    "schemaVersion": "agent-specification-source-set.v2",
+    "canonicalization": "RFC8785-JCS",
+    "hashAlgorithm": "SHA-256",
+    "entries": [
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md",
+        "sha256": "8d6b3a2ae1ec6c8e01464773ea31cba62d83c07f10d38a6dbd86b2dc23987e2f",
+        "bytes": 6444
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/01-source-preflight-r09.md",
+        "sha256": "9f262b04d2e61690f01b5778053266ee5e871f7a069e2a8e4a11459f37ecd23a",
+        "bytes": 7325
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts-r09.md",
+        "sha256": "e4c876265571312c6789030b54daf1938846055aeb2a811ffab019c0e2cda010",
+        "bytes": 9508
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "sha256": "b8c7f535381e0265dc8e16c748c51c2e786812ff62fd78907963645862d7ff79",
+        "bytes": 9309
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/03-workstreams-r09.md",
+        "sha256": "0f96ed9bebf53d0f6432bff51d0f6809af4d80eaec043fb1b0af629af45674de",
+        "bytes": 6336
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/03-workstreams.md",
+        "sha256": "2e69fe975fb6993c3caeb7cd959d5c5c51d8307a7d8b370d1f6ed14cfbeca63f",
+        "bytes": 6129
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/04-agent-dag-and-ownership.md",
+        "sha256": "3ee85d7f9b463379237ab398f15daf64f5758d6fb59fdffaafcd5f0e25d2807d",
+        "bytes": 4700
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/05-worker-prompts.md",
+        "sha256": "d2e0562a4d71e3a2440a9404b9a3ed7a48ad6656dac01a099b9eecbf244baeae",
+        "bytes": 3679
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence-r09.md",
+        "sha256": "4381b6af8d5400ee5c385990c74c510895aea13e9e76408ecf39d88cfa68b3be",
+        "bytes": 12265
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "sha256": "b4567e2b1e681db9cb33f4ef95da3bc972409ecbec9d0433a2e111daa0dacbce",
+        "bytes": 11793
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist-r09.md",
+        "sha256": "f4912bb64ef07e2c35981d38f6f570c3ecb9754ac7d183a4589fbe93ee09b800",
+        "bytes": 8718
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist.md",
+        "sha256": "1a3dfffe72768cb7cfa1135c0bccfbde98c331c5be0a21d0e3b8980f95d736e4",
+        "bytes": 8764
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/08-plan-review-and-change-control.md",
+        "sha256": "322274787a43f32bdcf130de6a884a4684821d96a5a0952bcf6126e73e099f08",
+        "bytes": 7042
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/09-product-resource-budgets.md",
+        "sha256": "a1cfc1078dcc329fb50042d373ab124ea9a1030bfa9694ae06587155179306d2",
+        "bytes": 6822
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/10-release-matrix.md",
+        "sha256": "03526c7c7649e587f40789dd7ca8f9c2f61a6a5fd89d56fe50383a5e391af922",
+        "bytes": 4373
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "sha256": "ec6f72a57fdbf64e6724806cb6318165eb62f1912fcd101739aa931f7d01b2c2",
+        "bytes": 2949
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles-r09.md",
+        "sha256": "55a1026083b9ccd3f0eb2035e83319d25d2aa283900292dea96aaaee94fb4172",
+        "bytes": 13849
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles.md",
+        "sha256": "53e680cd83f437cb7237a05cb55208b8583e29bae8bf7f87313832691f7d11c2",
+        "bytes": 13357
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/13-modular-controller-architecture-r06.md",
+        "sha256": "94aad62853e245114978c1f48a33089a17dc7288877387b185b313717087a47b",
+        "bytes": 3621
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/17-universal-distribution-and-readme-r08.md",
+        "sha256": "ae24f2ec81c578807d25188db6d5eaa291a7b1d11251b6de536516348e68f812",
+        "bytes": 5171
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r02.json",
+        "sha256": "c332a29de6eed7dcf1ff93cfa5cb0868557f31d1f7ff635ba2df2c7695ed3d4a",
+        "bytes": 6337
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+        "sha256": "8325a2d1075252724b6de9d97d49b23991010ce457941a7e3bdfe28dfb9826ad",
+        "bytes": 6468
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/benchmark-authority-profile.v1.json",
+        "sha256": "dc6a0868f8f61b239a2b1c384168ba7a5cbfc03d4a8231fcdcba18e9e98874d9",
+        "bytes": 3514
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json",
+        "sha256": "a3f644bc0df6c1b0a0c4fdc024e8bc01e3e900fa3863153197668793aa19a280",
+        "bytes": 3685
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/final-proof-authority-profile.v2.json",
+        "sha256": "072c8e1768182b3ee3b4670aad9efe54cff5fd9a86a5f083c65bf400ca410d94",
+        "bytes": 10245
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json",
+        "sha256": "74747e66f586e1ad49de81f84eca84dc76668071912368f7fb4dc7577f4c5755",
+        "bytes": 11243
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/release-assembly-profile.v1.json",
+        "sha256": "8f92e0406e930d74c18819da014fbf93669da7a0fd09e51023316c6fbaea6093",
+        "bytes": 4606
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/19-offline-release-candidate-refreeze-r11.md",
+        "sha256": "f41ee4ea3380f6787014b686ccca271e70e10b9713d100fcfe663ce2db95b60b",
+        "bytes": 1882
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/20-neutral-profile-name-cleanup-r12.md",
+        "sha256": "d2ba07d7f2691bf896a612d4435a16ec81eed065cc2ae135ad7fa69d96324313",
+        "bytes": 636
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/21-finalization-controller-transition-r13.md",
+        "sha256": "96f6fe30785454d3aae740c86305965a7d53393d5c2be1d454a51ece22493029",
+        "bytes": 843
+      }
+    ],
+    "aggregateSha256": "e10698d1f46b0ad16b24248a7461965597167f52b592bc14af68eb7e500f09cf"
+  },
+  "verdict": "READY_TO_PLAN",
+  "reviewer": {
+    "id": "spec-reviewer-r11",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-spec-review-r11-finalization"
+  },
+  "reviewedAt": "2026-07-22T13:15:00Z",
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "REQ-FINAL now includes explicit controller finalization to COMPLETE."
+    },
+    {
+      "id": "operability",
+      "status": "PASS",
+      "rationale": "The lifecycle has a terminal goal-mode transition after final audit acceptance."
+    }
+  ],
+  "findings": [],
+  "summary": "Specification revision 12 is READY_TO_PLAN; it closes the terminal finalization gap."
+}

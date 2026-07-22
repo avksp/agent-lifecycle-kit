@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r11",
+  "packageId": "standalone-v1",
+  "planRevision": 13,
+  "reviewedPlanHash": "eb1004aaf290a0b4651c9f41d5ee7cedc5c57cfbed362910117110ce846866ad",
+  "previousReview": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r10.json",
+    "sha256": "18d55431c80de05ee56f783cdd10993e98edd3a891e8320e146b45774874190d",
+    "bytes": 2653,
+    "reviewId": "plan-review-r10"
+  },
+  "qualityMetrics": {
+    "taskCount": 16,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 9,
+    "maxParallelWidth": 5,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 39,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 49152,
+    "actualContextBytesTotal": 362000,
+    "maxTaskContextBytes": 49152,
+    "validationInvocationCount": 30,
+    "estimatedMinimumToolCalls": 73
+  },
+  "verdict": "READY_TO_FREEZE",
+  "reviewer": {
+    "id": "plan-reviewer-r11",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-plan-review-r11-finalization"
+  },
+  "reviewedAt": "2026-07-22T13:15:00Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "REQ-FINAL and AC-FINAL now require a terminal proof and COMPLETE transition."
+    },
+    {
+      "id": "ownership",
+      "status": "PASS",
+      "rationale": "Finalization source files are lead-owned controller support; worker write sets remain overlap-free."
+    },
+    {
+      "id": "execution-safety",
+      "status": "PASS",
+      "rationale": "WS-14 and WS-15 are intentionally made incompatible for preservation so their evidence binds the finalization-capable source tree."
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-FINALIZATION-R13",
+      "severity": "HIGH",
+      "class": "terminal-state-gap",
+      "dimension": "execution-safety",
+      "artifact": "src/agent_lifecycle/workflow/finalization.py",
+      "status": "resolved",
+      "message": "The controller could accept all tasks but lacked a terminal COMPLETE transition. Revision 13 adds workflow finalize and requires rerun of WS-14 and WS-15.",
+      "requiredAction": "Finalize only from FINAL_AUDIT with all required tasks accepted and publish a canonical proof."
+    }
+  ],
+  "summary": "Revision 13 is READY_TO_FREEZE and closes the goal-mode terminal finalization gap."
+}

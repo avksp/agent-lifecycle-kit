@@ -1,0 +1,363 @@
+{
+  "schemaVersion": "agent-lifecycle-neutrality-authority-profile.v3",
+  "profileId": "neutrality-write-once-authority",
+  "profileVersion": "3.0.0",
+  "canonicalization": {
+    "claims": "RFC8785-JCS",
+    "hash": "SHA-256",
+    "signature": "Ed25519",
+    "signatureDomain": "agent-lifecycle-neutrality-claims-v3\u0000",
+    "receiptSchemaVersion": "agent-neutrality-detached-receipt.v3",
+    "additionalPropertiesAllowed": false
+  },
+  "externalAuthorityInputs": {
+    "environment": {
+      "denyAuthorityPath": "AGENT_LIFECYCLE_NEUTRALITY_DENY_AUTHORITY",
+      "trustRootPath": "AGENT_LIFECYCLE_NEUTRALITY_TRUST_ROOT",
+      "signingKeyPath": "AGENT_LIFECYCLE_NEUTRALITY_SIGNING_KEY",
+      "expectedSignerFingerprint": "AGENT_LIFECYCLE_NEUTRALITY_SIGNER_FINGERPRINT"
+    },
+    "commonFilePolicy": {
+      "absolutePathsOnly": true,
+      "mustRemainOutside": [
+        "workspaceRoot",
+        "artifactRoot",
+        "gitDirectory",
+        "releaseRoot"
+      ],
+      "regularFilesOnly": true,
+      "rejectSymlinks": true,
+      "rejectReparsePoints": true,
+      "rejectHardlinkCountGreaterThanOne": true,
+      "openRelativeToVerifiedParentHandle": true,
+      "noFollowEveryComponent": true,
+      "beforeAndAfterStableIdentityRequired": true,
+      "readFromOpenedHandleOnly": true,
+      "rejectIdentityOrContentChange": true
+    },
+    "inputs": {
+      "denyAuthority": {
+        "schemaVersion": "agent-neutrality-deny-authority.v1",
+        "maxBytes": 1048576,
+        "maxValiditySeconds": 86400,
+        "signatureByTrustRootRequired": true,
+        "producerRequired": true,
+        "verifierRequired": true
+      },
+      "trustRoot": {
+        "schemaVersion": "agent-neutrality-trust-root.v1",
+        "maxBytes": 262144,
+        "maxValiditySeconds": 31622400,
+        "producerRequired": true,
+        "verifierRequired": true
+      },
+      "signingKey": {
+        "schemaVersion": "agent-neutrality-signing-key.v1",
+        "maxBytes": 65536,
+        "maxValiditySeconds": 86400,
+        "producerRequired": true,
+        "verifierRequired": false,
+        "privateMaterial": true
+      },
+      "expectedSignerFingerprint": {
+        "pattern": "^ed25519:[a-f0-9]{64}$",
+        "mustMatchSigningKey": true,
+        "mustBeAuthorizedByTrustRoot": true
+      }
+    },
+    "freshness": {
+      "issuedAtRequired": true,
+      "expiresAtRequired": true,
+      "maxClockSkewSeconds": 300,
+      "trustedVerificationTimeBoundToReceipt": true
+    },
+    "durableOutputPolicy": {
+      "allowOnlySchemasVersionsDigestsFingerprintsSignaturesAndTimes": true,
+      "forbidRuleValues": true,
+      "forbidPrivateKeyMaterial": true,
+      "forbidTrustRootMaterial": true,
+      "forbidMatchedFragments": true
+    }
+  },
+  "subjectProjection": {
+    "schemaVersion": "agent-neutrality-subject-projection.v2",
+    "operationOutputProtocol": {
+      "descriptorSchema": {
+        "requiredFields": [
+          "path",
+          "role",
+          "operationId",
+          "required",
+          "mustBeUnique",
+          "contentIdentityRule",
+          "publicationOrder"
+        ],
+        "allowedRoles": [
+          "primary-artifact",
+          "detached-commit-receipt"
+        ],
+        "canonicalOrder": [
+          "publicationOrder",
+          "role",
+          "path"
+        ],
+        "additionalPropertiesAllowed": false
+      },
+      "pathSource": "frozen-command-or-controller-receipt-template",
+      "exactPathsOnly": true,
+      "portableAsciiOutputPathsOnly": true,
+      "operationBound": true,
+      "mustBeUnique": true,
+      "allowDirectoryGlobOrImplicitExclusion": false,
+      "excludedFromSubjectEnumeration": true,
+      "incrementsSkippedInputs": false,
+      "scanOutputsFromOtherOperations": true,
+      "occupancy": {
+        "newOperation": "require-absent-at-scan-and-immediately-before-each-publication",
+        "sameOperationCommitted": "read-only-idempotent-verification-only",
+        "sameOperationPartial": "fail-closed-use-new-operation-and-scan-partial-output",
+        "anyOtherOccupancyAliasOrRace": "fail-closed",
+        "neverOverwrite": true
+      },
+      "primaryArtifacts": {
+        "contentAddressedBy": "SHA-256",
+        "contentIdentitiesRequiredInSignedClaims": true,
+        "publishBeforeReceipt": true,
+        "createIfAbsentNoReplace": true,
+        "partialPublicationIsNotAccepted": true
+      },
+      "detachedReceipt": {
+        "role": "detached-commit-receipt",
+        "publishedLast": true,
+        "createIfAbsentNoReplace": true,
+        "commitMarker": true,
+        "signatureInput": "signatureDomain || claimsDigest",
+        "signatureFieldExcludedFromClaimsDigest": true,
+        "receiptIdentity": "SHA-256(RFC8785-JCS(envelope))",
+        "selfIdentityNotEmbeddedInSignedClaims": true
+      },
+    "signedClaimsRequiredBindings": [
+        "operationOutputManifestDigest",
+        "primaryArtifactManifestDigest",
+        "projectionSchemaVersion",
+        "scopeProfileDigest",
+        "archivePolicyDigest",
+        "externalAuthorityContractDigest",
+        "workingTreeDigest",
+        "gitObjectSetDigest",
+        "subjectDigest",
+        "authorityDigest",
+        "runId",
+        "packageId",
+      "taskId",
+      "attempt",
+      "phase",
+      "operationId",
+        "planDigest",
+        "sourceRevision",
+      "zeroCounters"
+    ],
+    "conditionalSignedClaimBindings": {
+      "validation-task-command": [
+        "validationOperationId",
+        "commandId"
+      ]
+    },
+      "operationOutputSetDigestRule": "SHA-256(RFC8785-JCS(descriptors sorted by publicationOrder role path))",
+      "producerVerifierParityRequired": true
+    },
+    "portablePathPolicy": {
+      "repositoryRelativeOutputsOnly": true,
+      "separator": "/",
+      "unicodeNormalization": "NFC",
+      "portableCollisionKey": "NFC-casefold",
+      "scannedSubjectPathsMayUseNormalizedUtf8": true,
+      "rejectAbsoluteDriveUncAdsOrDeviceNames": true,
+      "rejectNulControlBackslashEmptyDotOrDotDotSegments": true,
+      "rejectTrailingDotOrSpace": true,
+      "rejectNormalizationOrCasefoldCollisions": true,
+      "rejectSymlinksHardlinksReparsePointsAndSpecialFiles": true,
+      "requireWorkspaceContainment": true,
+      "openRelativeToVerifiedDirectoryHandles": true,
+      "noFollowEveryComponent": true
+    },
+    "stableRead": {
+      "openedHandleOnly": true,
+      "preAndPostIdentityRequired": true,
+      "posixIdentityFields": [
+        "device",
+        "inode",
+        "mode",
+        "size",
+        "mtimeNs"
+      ],
+      "windowsIdentityFields": [
+        "volumeSerialNumber",
+        "fileId",
+        "attributes",
+        "reparseTag",
+        "size",
+        "lastWriteTimeNs"
+      ],
+      "bindGitRefsAndObjectSet": true,
+      "mismatchCounter": "readRaces",
+      "mismatchFailsClosed": true
+    },
+    "archivePolicy": {
+      "supportedFormatsByMagic": [
+        "zip",
+        "tar",
+        "tar-gzip"
+      ],
+      "maxArchiveNestingDepth": 4,
+      "maxArchivesPerSubject": 1000,
+      "maxEntriesPerArchive": 10000,
+      "maxEntriesPerSubject": 100000,
+      "maxCompressedBytesPerArchive": 536870912,
+      "maxExpandedBytesPerArchive": 2147483648,
+      "maxExpandedBytesPerEntry": 268435456,
+      "maxExpandedBytesPerSubject": 4294967296,
+      "maxCompressionRatio": 100,
+      "maxPathUtf8Bytes": 4096,
+      "rejectEncryptedArchives": true,
+      "rejectUnsupportedCompression": true,
+      "rejectDuplicateNormalizedPaths": true,
+      "rejectCasefoldCollisions": true,
+      "rejectAbsoluteTraversalAdsDeviceOrTrailingSpaceDotPaths": true,
+      "rejectSymlinkHardlinkDeviceFifoSocketAndSparseEntries": true,
+      "limitBreachCounter": "archiveLimitBreaches",
+      "unsupportedCounter": "unsupportedArchives",
+      "incompleteCounter": "incompleteScans",
+      "anyNonZeroCounterFailsClosed": true
+    },
+    "requiredDigests": [
+      "scopeProfileDigest",
+      "archivePolicyDigest",
+      "externalAuthorityContractDigest",
+      "operationOutputManifestDigest",
+      "primaryArtifactManifestDigest",
+      "workingTreeDigest",
+      "gitObjectSetDigest",
+      "subjectDigest",
+      "authorityDigest",
+      "claimsDigest"
+    ],
+    "conditionalDigests": {
+      "releaseInventoryDigest": {
+        "requiredForScopeProfiles": [
+          "all-git-and-release-payloads"
+        ],
+        "mustBeNullOtherwise": true
+      }
+    }
+  },
+  "gate": {
+    "id": "neutrality-current-tree",
+    "equivalentGateIds": [
+      "neutrality-current-tree",
+      "release-launch-neutrality"
+    ],
+    "phases": [
+      "pre-launch",
+      "post-attempt"
+    ],
+    "appliesTo": [
+      "WS-02",
+      "WS-03",
+      "WS-04",
+      "WS-05",
+      "WS-06",
+      "WS-07",
+      "WS-08",
+      "WS-09",
+      "WS-10",
+      "WS-11",
+      "WS-12",
+      "WS-13",
+      "WS-14",
+      "WS-15"
+    ],
+    "scopeProfile": "current-tree-complete",
+    "receiptPath": "plans/standalone-v1/workflow/gates/{gateId}/{taskId}/attempt-{attempt}/{phase}-{operationId}.json",
+    "operationOutputs": [
+      {
+        "pathTemplate": "{receiptPath}",
+        "role": "detached-commit-receipt",
+        "required": true,
+        "mustBeUnique": true,
+        "contentIdentityRule": "canonical-signed-envelope",
+        "publicationOrder": 1
+      }
+    ],
+    "maxAgeSeconds": 7200,
+    "attestationRequired": true,
+    "requiredBindings": [
+      "gateId",
+      "runId",
+      "packageId",
+      "taskId",
+      "attempt",
+      "phase",
+      "operationId",
+      "planDigest",
+      "sourceRevision",
+      "projectionSchemaVersion",
+      "scopeProfileDigest",
+      "archivePolicyDigest",
+      "externalAuthorityContractDigest",
+      "operationOutputManifestDigest",
+      "workingTreeDigest",
+      "gitObjectSetDigest",
+      "subjectDigest",
+      "claimsDigest"
+    ],
+    "requiredZeroCounters": {
+      "findings": 0,
+      "skippedInputs": 0,
+      "opaqueInputs": 0,
+      "readRaces": 0,
+      "incompleteScans": 0,
+      "unsupportedArchives": 0,
+      "archiveLimitBreaches": 0,
+      "occupiedOutputConflicts": 0,
+      "pathAliasConflicts": 0
+    }
+  },
+  "negativeConformance": {
+    "requiredCases": [
+      "occupied-output-path",
+      "same-operation-claim-mismatch",
+      "partial-primary-publication",
+      "primary-substitution",
+      "receipt-substitution",
+      "path-alias-and-casefold-collision",
+      "output-creation-race",
+      "stable-read-mutation",
+      "archive-depth-entry-byte-ratio-bomb",
+      "archive-duplicate-casefold-and-special-file",
+      "authority-inside-workspace-or-artifact-root",
+      "authority-symlink-reparse-or-hardlink",
+      "authority-read-race-or-oversize",
+      "authority-malformed-schema-or-stale",
+      "authority-bad-signature-or-fingerprint"
+    ]
+  },
+  "redaction": {
+    "forbiddenDurableValues": [
+      "deny rule values",
+      "private signing key material",
+      "trust root material",
+      "matched source fragments",
+      "credentials"
+    ],
+    "allowedDurableValues": [
+      "schema versions",
+      "SHA-256 digests",
+      "public signer fingerprint",
+      "canonical Ed25519 signature",
+      "exact operation output paths",
+      "zero-result counters",
+      "timestamps and lineage identifiers"
+    ]
+  }
+}

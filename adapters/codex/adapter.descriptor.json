@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "agent-lifecycle-host-adapter.v1",
+  "adapterId": "codex",
+  "host": "codex",
+  "nativeProjection": "codex-plugin",
+  "maturity": "EXPERIMENTAL",
+  "liveTestedHostRange": null,
+  "releaseAssembly": {
+    "sharedSkillsSource": "skills",
+    "materializedSkillsTarget": "adapters/codex/skills",
+    "strategy": "copy-shared-skills-at-release"
+  },
+  "contractCompatibility": {
+    "rangeKind": "closed-offline",
+    "minimum": "adapter-contract.v1",
+    "maximum": "adapter-contract.v1",
+    "authoritativeSource": {
+      "sourceId": "normalized-contract-inventory-r02",
+      "sha256": "c332a29de6eed7dcf1ff93cfa5cb0868557f31d1f7ff635ba2df2c7695ed3d4a"
+    }
+  },
+  "unsupportedOperationPolicy": "fail-closed",
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
+  "operations": [
+    {
+      "name": "install",
+      "mapping": "codex-plugin-install",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "discover",
+      "mapping": "codex-skill-discovery",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "validate-envelope",
+      "mapping": "core-schema-validation",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "launch",
+      "mapping": "host-agent-launch",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "wait",
+      "mapping": "host-bounded-wait",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "cancel",
+      "mapping": "host-cancel-request",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "resume",
+      "mapping": "workflow-state-resume",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "tool-execution",
+      "mapping": "host-tool-call",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "result-collection",
+      "mapping": "task-result-artifact",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "usage-attestation",
+      "mapping": "host-usage-ledger",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "task-audit",
+      "mapping": "audit-plan-implementation",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "final-audit",
+      "mapping": "audit-plan-implementation",
+      "offlineConformance": "deterministic"
+    }
+  ]
+}

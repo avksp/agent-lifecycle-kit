@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "agent-lifecycle-final-proof-authority-profile.v1",
+  "profileId": "controller-final-proof",
+  "profileVersion": "1.0.0",
+  "terminalSequence": [
+    "terminal-task-pre-launch-neutrality",
+    "independent-final-audit-ready-for-finalization",
+    "terminal-task-result",
+    "terminal-task-post-attempt-neutrality",
+    "independent-terminal-task-review",
+    "controller-final-proof",
+    "complete"
+  ],
+  "finalAudit": {
+    "requiredSemanticStatus": "READY_FOR_FINALIZATION",
+    "mustReconcileAllPredecessorTasks": true,
+    "mustBindTerminalPreLaunchGate": true,
+    "mustNotClaimLaterPostAttemptGateOrReview": true,
+    "maximumOpenSeverity": "LOW"
+  },
+  "controllerFinalProof": {
+    "controllerOwned": true,
+    "expectedStateRevisionRequired": true,
+    "compareAndSwapRequired": true,
+    "appendOnlyWalRequired": true,
+    "artifactPathTemplate": "{artifactRoot}/workflow/final-proof/{proofDigest}.json",
+    "contentAddressed": true,
+    "atomicPublication": true,
+    "requiredBindings": [
+      "runId",
+      "packageId",
+      "planDigest",
+      "sourceRevision",
+      "planLockIdentity",
+      "taskPacketIndexIdentity",
+      "authorizationIdentity",
+      "acceptedTaskResultIdentities",
+      "acceptedTaskReviewIdentities",
+      "evidenceReceiptIdentities",
+      "usageLedgerIdentity",
+      "controllerGateReceiptIdentities",
+      "terminalPostAttemptGateIdentity",
+      "finalAuditIdentity",
+      "terminalTaskReviewIdentity",
+      "releaseInventoryDigest",
+      "finalChangeSetDigest",
+      "proofDigest"
+    ],
+    "requiredRevalidations": [
+      "frozen-plan-and-lock",
+      "compiled-packet-index",
+      "execution-authorization",
+      "all-accepted-task-results-and-reviews",
+      "all-required-evidence-and-usage-receipts",
+      "all-controller-gate-receipts",
+      "exact-final-change-set-and-write-ownership",
+      "immutable-release-inventory",
+      "no-open-medium-high-or-blocker-findings"
+    ],
+    "successTransition": {
+      "from": "FINAL_AUDIT",
+      "to": "COMPLETE"
+    },
+    "failureMode": "remain-non-complete"
+  },
+  "independence": {
+    "finalAuditorDistinctFromTaskActorsAndReviewers": true,
+    "controllerProofDoesNotReplaceIndependentReview": true
+  }
+}

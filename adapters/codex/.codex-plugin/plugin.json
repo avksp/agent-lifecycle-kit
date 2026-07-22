@@ -1,0 +1,34 @@
+{
+  "name": "agent-lifecycle-kit",
+  "version": "0.1.0",
+  "description": "Provider-neutral lifecycle skills and adapter metadata for reviewed agent planning, execution, audit, and final proof.",
+  "author": {
+    "name": "Agent Lifecycle Kit Maintainers"
+  },
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "planning",
+    "workflow",
+    "audit",
+    "sdd"
+  ],
+  "skills": "./skills",
+  "interface": {
+    "displayName": "Agent Lifecycle Kit",
+    "shortDescription": "Reviewed planning, execution, audit, and proof workflow.",
+    "longDescription": "Run a host-neutral lifecycle from clarification through SDD planning, freeze, task packets, implementation review, and final audit.",
+    "developerName": "Agent Lifecycle Kit Maintainers",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use agent-workflow-orchestrator for this task.",
+      "Create and review an SDD plan before implementation.",
+      "Audit the implementation against the frozen plan."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

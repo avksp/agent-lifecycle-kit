@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "agent-specification-freeze-receipt.v1",
+  "packageId": "standalone-v1",
+  "specificationId": "SPEC-standalone-v1",
+  "specificationRevision": 3,
+  "specification": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r03.json",
+    "sha256": "36123e0ae2db8b972eef0f02693cc7a8cc69d93a0a3170649a771d787f18b453",
+    "bytes": 28103
+  },
+  "review": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r04.json",
+    "sha256": "fd62d85e5fc7a0e1a5fb8bc288a1a9877cfbd9ea1d5b44d31f04282098827bd2",
+    "bytes": 7833,
+    "reviewId": "spec-review-r04"
+  },
+  "previousReceipt": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-freeze-r01.json",
+    "sha256": "0cdf295cb477b24a75f63d45cbf1d1fb629bc99386ce81ac7786c23f150bde8a",
+    "bytes": 745,
+    "specificationRevision": 1,
+    "reviewId": "spec-review-r02"
+  },
+  "frozenAt": "2026-07-15T15:54:09.045660Z",
+  "frozenBy": "root-planning-lead"
+}

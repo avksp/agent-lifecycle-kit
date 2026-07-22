@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "agent-lifecycle-synthetic-replay-plan.v1",
+  "planId": "synthetic-replay-plan-v1",
+  "host": "synthetic-host",
+  "liveModelInvocations": 0,
+  "cohorts": [
+    "cold",
+    "warm"
+  ],
+  "runsPerScenarioCohort": 20,
+  "scenarioFixtures": [
+    "fixtures/synthetic/s0-mechanical-01.json",
+    "fixtures/synthetic/s1-standard-01.json",
+    "fixtures/synthetic/s1-small-context-8k-01.json",
+    "fixtures/synthetic/s2-multi-01.json",
+    "fixtures/synthetic/s2-security-01.json",
+    "fixtures/synthetic/s2-recovery-01.json"
+  ],
+  "semanticReplay": {
+    "S0-MECHANICAL-01": {
+      "logicalCallsPerRun": 4,
+      "qualityOracle": "final-verdict-complete"
+    },
+    "S1-STANDARD-01": {
+      "logicalCallsPerRun": 8,
+      "qualityOracle": "task-and-final-audit-complete"
+    },
+    "S1-SMALL-CONTEXT-8K-01": {
+      "logicalCallsPerRun": 8,
+      "qualityOracle": "compact-context-receipt-and-final-audit-complete"
+    },
+    "S2-MULTI-01": {
+      "logicalCallsPerRun": 24,
+      "qualityOracle": "parallel-dag-complete"
+    },
+    "S2-SECURITY-01": {
+      "logicalCallsPerRun": 18,
+      "qualityOracle": "fail-closed-negatives"
+    },
+    "S2-RECOVERY-01": {
+      "logicalCallsPerRun": 28,
+      "qualityOracle": "recovery-and-refreeze"
+    }
+  }
+}

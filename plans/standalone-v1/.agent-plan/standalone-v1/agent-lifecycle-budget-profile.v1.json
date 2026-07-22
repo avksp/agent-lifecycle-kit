@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "agent-lifecycle-budget-profile.v1",
+  "profileId": "agent-lifecycle-budget-profile.v1",
+  "measurement": {
+    "billableTokens": "host-attested normalized counter with raw counters preserved",
+    "contextBytesPerCall": "exact rendered semantic envelope bytes before transport",
+    "contextBytesPerRun": "sum of contextBytesPerCall over one complete scenario run",
+    "semanticIteration": "one controller-authorized task-attempt slot containing zero or one logical semantic call; deterministic-only work consumes no iteration",
+    "logicalSemanticCall": "one budgeted semantic usage event produced by either a live provider invocation or a deterministic replay; fallback and cache reuse never reset the counter",
+    "logicalSemanticCallsPerTask": "sum of logical semantic calls across all stages and attempts attributed to one executable task",
+    "logicalSemanticCallsPerRun": "sum of every task-scoped and lifecycle-scoped logical semantic call in one run",
+    "cumulativeContextBytesPerRun": "sum of exact contextBytesPerCall values for every logical semantic call in one run",
+    "liveModelInvocation": "one actual provider call; always zero in deterministic replay and nonzero only in live calibration",
+    "missingAttestation": "FAIL"
+  },
+  "tiers": {
+    "S0": {
+      "hardRunCeilings": {
+        "billableTokens": 100000,
+        "contextBytesPerCall": 32768,
+        "cumulativeContextBytesPerRun": 393216,
+        "semanticIterationsPerAttempt": 2,
+        "logicalSemanticCallsPerTask": 4,
+        "logicalSemanticCallsPerRun": 12,
+        "toolCallsPerIteration": 12,
+        "toolCallsPerTask": 30,
+        "toolCallsPerRun": 80,
+        "validationRunsPerTask": 2,
+        "taskAttempts": 2,
+        "parallelExecutableTasks": 1,
+        "evidenceBytesPerArtifact": 8388608,
+        "evidenceBytesPerTask": 33554432,
+        "evidenceBytesPerRun": 134217728,
+        "taskWallSeconds": 1800,
+        "runWallSeconds": 3600
+      },
+      "hardStageTokenCeilings": {
+        "clarification": 4000,
+        "specificationAuthoring": 0,
+        "specificationReview": 0,
+        "planAuthoring": 8000,
+        "planReview": 6000,
+        "implementationPerTaskAttempt": 32000,
+        "taskReviewPerTaskAttempt": 8000,
+        "remediationPerTaskAttempt": 16000,
+        "finalAudit": 12000
+      },
+      "absoluteP95ReleaseSlo": {
+        "billableTokensPerRun": 70000,
+        "cumulativeContextBytesPerRun": 196608,
+        "toolCallsPerRun": 60,
+        "wallSecondsPerRun": 2700
+      }
+    },
+    "S1": {
+      "hardRunCeilings": {
+        "billableTokens": 300000,
+        "contextBytesPerCall": 65536,
+        "cumulativeContextBytesPerRun": 2097152,
+        "semanticIterationsPerAttempt": 3,
+        "logicalSemanticCallsPerTask": 6,
+        "logicalSemanticCallsPerRun": 32,
+        "toolCallsPerIteration": 16,
+        "toolCallsPerTask": 45,
+        "toolCallsPerRun": 250,
+        "validationRunsPerTask": 3,
+        "taskAttempts": 2,
+        "parallelExecutableTasks": 1,
+        "evidenceBytesPerArtifact": 16777216,
+        "evidenceBytesPerTask": 67108864,
+        "evidenceBytesPerRun": 268435456,
+        "taskWallSeconds": 3600,
+        "runWallSeconds": 14400
+      },
+      "hardStageTokenCeilings": {
+        "clarification": 8000,
+        "specificationAuthoring": 12000,
+        "specificationReview": 8000,
+        "planAuthoring": 20000,
+        "planReview": 16000,
+        "implementationPerTaskAttempt": 64000,
+        "taskReviewPerTaskAttempt": 16000,
+        "remediationPerTaskAttempt": 32000,
+        "finalAudit": 24000
+      },
+      "absoluteP95ReleaseSlo": {
+        "billableTokensPerRun": 220000,
+        "cumulativeContextBytesPerRun": 1048576,
+        "toolCallsPerRun": 180,
+        "wallSecondsPerRun": 10800
+      }
+    },
+    "S2": {
+      "hardRunCeilings": {
+        "billableTokens": 1000000,
+        "contextBytesPerCall": 131072,
+        "cumulativeContextBytesPerRun": 25165824,
+        "semanticIterationsPerAttempt": 4,
+        "logicalSemanticCallsPerTask": 8,
+        "logicalSemanticCallsPerRun": 192,
+        "toolCallsPerIteration": 20,
+        "toolCallsPerTask": 60,
+        "toolCallsPerRun": 600,
+        "validationRunsPerTask": 3,
+        "taskAttempts": 2,
+        "parallelExecutableTasks": 4,
+        "evidenceBytesPerArtifact": 16777216,
+        "evidenceBytesPerTask": 67108864,
+        "evidenceBytesPerRun": 536870912,
+        "taskWallSeconds": 7200,
+        "runWallSeconds": 86400
+      },
+      "hardStageTokenCeilings": {
+        "clarification": 16000,
+        "specificationAuthoring": 40000,
+        "specificationReview": 30000,
+        "planAuthoring": 60000,
+        "planReview": 45000,
+        "implementationPerTaskAttempt": 120000,
+        "taskReviewPerTaskAttempt": 30000,
+        "remediationPerTaskAttempt": 60000,
+        "finalAudit": 60000
+      },
+      "absoluteP95ReleaseSlo": {
+        "billableTokensPerRun": 800000,
+        "cumulativeContextBytesPerRun": 16777216,
+        "toolCallsPerRun": 500,
+        "wallSecondsPerRun": 72000
+      }
+    }
+  },
+  "benchmark": {
+    "mode": "deterministic-synthetic-host-replay",
+    "liveModelInvocationsPerBenchmarkRun": 0,
+    "replayedSemanticCallsPerScenario": {
+      "S0-MECHANICAL-01": 2,
+      "S1-STANDARD-01": 5,
+      "S2-MULTI-01": 20,
+      "S2-SECURITY-01": 8,
+      "S2-RECOVERY-01": 16
+    },
+    "scenarios": [
+      "S0-MECHANICAL-01",
+      "S1-STANDARD-01",
+      "S2-MULTI-01",
+      "S2-SECURITY-01",
+      "S2-RECOVERY-01"
+    ],
+    "coldRunsPerScenario": 20,
+    "warmRunsPerScenario": 20,
+    "minimumTotalRuns": 200,
+    "qualityRegressionAllowed": false,
+    "relativeP50RegressionPercent": 5,
+    "relativeP95RegressionPercent": 10,
+    "firstRelease": {
+      "relativeBaselineRequired": false,
+      "absoluteSloRequired": true,
+      "publishSignedBaselineOnSuccess": true
+    },
+    "laterRelease": {
+      "priorSignedBaselineRequired": true,
+      "candidateSelfBaselineAllowed": false
+    },
+    "requiredLiveCalibration": {
+      "authorityProfile": "agent-lifecycle-benchmark-authority.v1",
+      "releaseGate": true,
+      "budgetScope": "separate-external-host-authority",
+      "requiredScenarios": [
+        "S0-MECHANICAL-01",
+        "S1-STANDARD-01",
+        "S2-MULTI-01"
+      ],
+      "coldRunsPerScenario": 1,
+      "warmRunsPerScenario": 1,
+      "maximumTotalBillableTokens": 120000,
+      "maximumWallSeconds": 7200
+    }
+  }
+}

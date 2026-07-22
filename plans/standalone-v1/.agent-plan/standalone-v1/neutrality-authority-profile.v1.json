@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "agent-lifecycle-neutrality-authority-profile.v1",
+  "profileId": "neutrality-current-tree-authority",
+  "profileVersion": "1.0.0",
+  "signature": {
+    "algorithm": "Ed25519",
+    "receiptSchemaVersion": "agent-controller-gate-receipt.v1",
+    "attestationSchemaVersion": "agent-controller-gate-attestation.v1",
+    "denyAuthorityPathEnvironment": "AGENT_LIFECYCLE_NEUTRALITY_DENY_AUTHORITY",
+    "trustRootPathEnvironment": "AGENT_LIFECYCLE_NEUTRALITY_TRUST_ROOT",
+    "signingKeyPathEnvironment": "AGENT_LIFECYCLE_NEUTRALITY_SIGNING_KEY",
+    "expectedSignerFingerprintEnvironment": "AGENT_LIFECYCLE_NEUTRALITY_SIGNER_FINGERPRINT"
+  },
+  "gate": {
+    "id": "neutrality-current-tree",
+    "phases": [
+      "pre-launch",
+      "post-attempt"
+    ],
+    "appliesTo": [
+      "WS-02",
+      "WS-03",
+      "WS-04",
+      "WS-05",
+      "WS-06",
+      "WS-07",
+      "WS-08",
+      "WS-09",
+      "WS-10",
+      "WS-11",
+      "WS-12",
+      "WS-13",
+      "WS-14",
+      "WS-15"
+    ],
+    "scopeProfile": "current-tree-complete",
+    "receiptPath": "plans/standalone-v1/workflow/gates/{gateId}/{taskId}/attempt-{attempt}/{phase}-{operationId}.json",
+    "maxAgeSeconds": 7200,
+    "attestationRequired": true,
+    "requiredBindings": [
+      "gateId",
+      "runId",
+      "packageId",
+      "taskId",
+      "attempt",
+      "phase",
+      "operationId",
+      "planDigest",
+      "sourceRevision"
+    ],
+    "requiredAttestationFields": [
+      "claimsDigest",
+      "subjectDigest",
+      "scopeDigest",
+      "authorityDigest",
+      "signerFingerprint",
+      "signature"
+    ],
+    "requiredZeroCounters": {
+      "findings": 0,
+      "skippedInputs": 0,
+      "opaqueInputs": 0,
+      "readRaces": 0
+    }
+  },
+  "redaction": {
+    "forbiddenDurableValues": [
+      "deny rule values",
+      "private signing key material",
+      "trust root material",
+      "matched source fragments",
+      "credentials"
+    ],
+    "allowedDurableValues": [
+      "SHA-256 digests",
+      "public signer fingerprint",
+      "canonical Ed25519 signature",
+      "zero-result counters",
+      "timestamps and lineage identifiers"
+    ]
+  }
+}

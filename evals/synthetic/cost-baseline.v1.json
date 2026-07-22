@@ -1,0 +1,240 @@
+{
+  "schemaVersion": "agent-lifecycle-cost-baseline.v1",
+  "baselineId": "first-release-synthetic-baseline-candidate-v1",
+  "authorityProfileId": "agent-lifecycle-benchmark-authority.v1",
+  "signatureStatus": "release-signature-required",
+  "releaseSigningStage": "release-assembly",
+  "liveModelInvocations": 0,
+  "qualityRegressionCount": 0,
+  "totalReplayRuns": 240,
+  "metrics": [
+    {
+      "scenarioId": "S0-MECHANICAL-01",
+      "sddTier": "S0",
+      "cohorts": [
+        {
+          "name": "cold",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 42000,
+            "cumulativeContextBytes": 110000,
+            "toolCalls": 28,
+            "wallSeconds": 900
+          },
+          "p95": {
+            "billableTokens": 56000,
+            "cumulativeContextBytes": 150000,
+            "toolCalls": 45,
+            "wallSeconds": 1600
+          }
+        },
+        {
+          "name": "warm",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 30000,
+            "cumulativeContextBytes": 90000,
+            "toolCalls": 22,
+            "wallSeconds": 700
+          },
+          "p95": {
+            "billableTokens": 47000,
+            "cumulativeContextBytes": 130000,
+            "toolCalls": 38,
+            "wallSeconds": 1300
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S1-STANDARD-01",
+      "sddTier": "S1",
+      "cohorts": [
+        {
+          "name": "cold",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 120000,
+            "cumulativeContextBytes": 520000,
+            "toolCalls": 90,
+            "wallSeconds": 4000
+          },
+          "p95": {
+            "billableTokens": 180000,
+            "cumulativeContextBytes": 860000,
+            "toolCalls": 145,
+            "wallSeconds": 8500
+          }
+        },
+        {
+          "name": "warm",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 95000,
+            "cumulativeContextBytes": 430000,
+            "toolCalls": 72,
+            "wallSeconds": 3100
+          },
+          "p95": {
+            "billableTokens": 160000,
+            "cumulativeContextBytes": 760000,
+            "toolCalls": 130,
+            "wallSeconds": 7200
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S1-SMALL-CONTEXT-8K-01",
+      "sddTier": "S1",
+      "cohorts": [
+        {
+          "name": "cold",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 98000,
+            "cumulativeContextBytes": 360000,
+            "toolCalls": 76,
+            "wallSeconds": 3600
+          },
+          "p95": {
+            "billableTokens": 150000,
+            "cumulativeContextBytes": 640000,
+            "toolCalls": 120,
+            "wallSeconds": 6900
+          }
+        },
+        {
+          "name": "warm",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 82000,
+            "cumulativeContextBytes": 290000,
+            "toolCalls": 62,
+            "wallSeconds": 2800
+          },
+          "p95": {
+            "billableTokens": 132000,
+            "cumulativeContextBytes": 560000,
+            "toolCalls": 105,
+            "wallSeconds": 5900
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S2-MULTI-01",
+      "sddTier": "S2",
+      "cohorts": [
+        {
+          "name": "cold",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 410000,
+            "cumulativeContextBytes": 7200000,
+            "toolCalls": 260,
+            "wallSeconds": 26000
+          },
+          "p95": {
+            "billableTokens": 670000,
+            "cumulativeContextBytes": 13000000,
+            "toolCalls": 430,
+            "wallSeconds": 56000
+          }
+        },
+        {
+          "name": "warm",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 330000,
+            "cumulativeContextBytes": 6100000,
+            "toolCalls": 210,
+            "wallSeconds": 21000
+          },
+          "p95": {
+            "billableTokens": 590000,
+            "cumulativeContextBytes": 11800000,
+            "toolCalls": 390,
+            "wallSeconds": 49000
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S2-SECURITY-01",
+      "sddTier": "S2",
+      "cohorts": [
+        {
+          "name": "cold",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 360000,
+            "cumulativeContextBytes": 6800000,
+            "toolCalls": 230,
+            "wallSeconds": 22000
+          },
+          "p95": {
+            "billableTokens": 610000,
+            "cumulativeContextBytes": 12200000,
+            "toolCalls": 405,
+            "wallSeconds": 51000
+          }
+        },
+        {
+          "name": "warm",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 300000,
+            "cumulativeContextBytes": 5600000,
+            "toolCalls": 190,
+            "wallSeconds": 18000
+          },
+          "p95": {
+            "billableTokens": 540000,
+            "cumulativeContextBytes": 10900000,
+            "toolCalls": 360,
+            "wallSeconds": 46000
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S2-RECOVERY-01",
+      "sddTier": "S2",
+      "cohorts": [
+        {
+          "name": "cold",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 440000,
+            "cumulativeContextBytes": 7900000,
+            "toolCalls": 270,
+            "wallSeconds": 28000
+          },
+          "p95": {
+            "billableTokens": 720000,
+            "cumulativeContextBytes": 14500000,
+            "toolCalls": 460,
+            "wallSeconds": 62000
+          }
+        },
+        {
+          "name": "warm",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 350000,
+            "cumulativeContextBytes": 6500000,
+            "toolCalls": 225,
+            "wallSeconds": 23000
+          },
+          "p95": {
+            "billableTokens": 640000,
+            "cumulativeContextBytes": 12800000,
+            "toolCalls": 410,
+            "wallSeconds": 54000
+          }
+        }
+      ]
+    }
+  ]
+}

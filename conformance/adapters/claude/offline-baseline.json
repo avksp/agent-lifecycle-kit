@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "agent-lifecycle-adapter-conformance.v1",
+  "adapterId": "claude",
+  "host": "claude-code",
+  "baselineId": "offline-adapter-baseline-v1",
+  "adapterDescriptor": "adapters/claude/adapter.descriptor.json",
+  "nativeManifest": "adapters/claude/.claude-plugin/plugin.json",
+  "sharedBaseline": "conformance/core/adapter-baseline.v1.json",
+  "requiredMaturity": "EXPERIMENTAL",
+  "liveRuntimeRequired": false,
+  "expectedResult": "PASS"
+}

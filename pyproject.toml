@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=70,<81", "wheel>=0.42,<1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-lifecycle-kit"
+version = "0.1.0"
+description = "Provider-neutral lifecycle controller core for specification, planning, execution, validation, and audit workflows."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Agent Lifecycle Kit contributors" }]
+keywords = ["agents", "planning", "sdd", "audit", "workflow", "lifecycle"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.scripts]
+agent-lifecycle = "agent_lifecycle.cli:main"
+agent-lifecycle-neutrality = "agent_lifecycle.neutrality.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

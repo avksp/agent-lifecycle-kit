@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "agent-lifecycle-neutrality-policy.v1",
+  "policyId": "portable-neutrality-default",
+  "policyVersion": "1.0.0",
+  "scan": {
+    "includeWorktree": true,
+    "includeGitObjects": true,
+    "maxFileBytes": 16777216,
+    "maxObjectBytes": 16777216
+  },
+  "archives": {
+    "maxArchiveNestingDepth": 4,
+    "maxArchivesPerSubject": 1000,
+    "maxEntriesPerArchive": 10000,
+    "maxEntriesPerSubject": 100000,
+    "maxCompressedBytesPerArchive": 536870912,
+    "maxExpandedBytesPerArchive": 2147483648,
+    "maxExpandedBytesPerEntry": 268435456,
+    "maxExpandedBytesPerSubject": 4294967296,
+    "maxCompressionRatio": 100
+  },
+  "pathExcludes": ["^\\.git/", "^policy/neutrality\\.policy\\.json$"],
+  "denyLiterals": [],
+  "denyRegexes": [
+    "(^|[^A-Za-z0-9_])(/Users/|/Volumes/|/home/|[A-Za-z]:\\\\)"
+  ]
+}

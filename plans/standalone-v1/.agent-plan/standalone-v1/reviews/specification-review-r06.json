@@ -1,0 +1,302 @@
+{
+  "schemaVersion": "agent-specification-review.v1",
+  "reviewId": "spec-review-r06",
+  "specificationId": "SPEC-standalone-v1",
+  "packageId": "standalone-v1",
+  "specificationRevision": 7,
+  "reviewedSpecificationHash": "c1809c9257dc7bfc2b6af53a7906600516fd124b51ca802d003c708bda70dea4",
+  "sourceSet": {
+    "schemaVersion": "agent-specification-source-set.v2",
+    "canonicalization": "RFC8785-JCS",
+    "hashAlgorithm": "SHA-256",
+    "entries": [
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md",
+        "sha256": "8d6b3a2ae1ec6c8e01464773ea31cba62d83c07f10d38a6dbd86b2dc23987e2f",
+        "bytes": 6444
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/01-source-preflight.md",
+        "sha256": "8b582148b31c3a3168df0cbce0e95719299ab8d84a822d13cf227ffdb15b3c7d",
+        "bytes": 6554
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/02-architecture-contracts.md",
+        "sha256": "b8c7f535381e0265dc8e16c748c51c2e786812ff62fd78907963645862d7ff79",
+        "bytes": 9309
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/03-workstreams.md",
+        "sha256": "2e69fe975fb6993c3caeb7cd959d5c5c51d8307a7d8b370d1f6ed14cfbeca63f",
+        "bytes": 6129
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/04-agent-dag-and-ownership.md",
+        "sha256": "3ee85d7f9b463379237ab398f15daf64f5758d6fb59fdffaafcd5f0e25d2807d",
+        "bytes": 4700
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/05-worker-prompts.md",
+        "sha256": "d2e0562a4d71e3a2440a9404b9a3ed7a48ad6656dac01a099b9eecbf244baeae",
+        "bytes": 3679
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+        "sha256": "b4567e2b1e681db9cb33f4ef95da3bc972409ecbec9d0433a2e111daa0dacbce",
+        "bytes": 11793
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/07-acceptance-and-lead-checklist.md",
+        "sha256": "1a3dfffe72768cb7cfa1135c0bccfbde98c331c5be0a21d0e3b8980f95d736e4",
+        "bytes": 8764
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/08-plan-review-and-change-control.md",
+        "sha256": "322274787a43f32bdcf130de6a884a4684821d96a5a0952bcf6126e73e099f08",
+        "bytes": 7042
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/09-product-resource-budgets.md",
+        "sha256": "a1cfc1078dcc329fb50042d373ab124ea9a1030bfa9694ae06587155179306d2",
+        "bytes": 6822
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/10-release-matrix.md",
+        "sha256": "03526c7c7649e587f40789dd7ca8f9c2f61a6a5fd89d56fe50383a5e391af922",
+        "bytes": 4373
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/11-adapter-compatibility-and-maturity.md",
+        "sha256": "ec6f72a57fdbf64e6724806cb6318165eb62f1912fcd101739aa931f7d01b2c2",
+        "bytes": 2949
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/12-authority-and-environment-profiles.md",
+        "sha256": "53e680cd83f437cb7237a05cb55208b8583e29bae8bf7f87313832691f7d11c2",
+        "bytes": 13357
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/13-modular-controller-architecture-r06.md",
+        "sha256": "94aad62853e245114978c1f48a33089a17dc7288877387b185b313717087a47b",
+        "bytes": 3621
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/17-universal-distribution-and-readme-r08.md",
+        "sha256": "ae24f2ec81c578807d25188db6d5eaa291a7b1d11251b6de536516348e68f812",
+        "bytes": 5171
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/adapter-contract-inventory-r02.json",
+        "sha256": "c332a29de6eed7dcf1ff93cfa5cb0868557f31d1f7ff635ba2df2c7695ed3d4a",
+        "bytes": 6337
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+        "sha256": "8325a2d1075252724b6de9d97d49b23991010ce457941a7e3bdfe28dfb9826ad",
+        "bytes": 6468
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/benchmark-authority-profile.v1.json",
+        "sha256": "dc6a0868f8f61b239a2b1c384168ba7a5cbfc03d4a8231fcdcba18e9e98874d9",
+        "bytes": 3514
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json",
+        "sha256": "a3f644bc0df6c1b0a0c4fdc024e8bc01e3e900fa3863153197668793aa19a280",
+        "bytes": 3685
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/final-proof-authority-profile.v2.json",
+        "sha256": "072c8e1768182b3ee3b4670aad9efe54cff5fd9a86a5f083c65bf400ca410d94",
+        "bytes": 10245
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json",
+        "sha256": "604dc96d6e8af476a30472c6a0166844d39892977709a1ec609b2d0c31361d96",
+        "bytes": 11243
+      },
+      {
+        "path": "plans/standalone-v1/.agent-plan/standalone-v1/release-assembly-profile.v1.json",
+        "sha256": "8f92e0406e930d74c18819da014fbf93669da7a0fd09e51023316c6fbaea6093",
+        "bytes": 4606
+      }
+    ],
+    "aggregateSha256": "c5ebf988577e32cc2e94e2186aa15a2649f649c088ad7dfba2d2d6952b7f0297"
+  },
+  "previousReview": {
+    "reviewId": "spec-review-r05",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r05.json",
+    "sha256": "7e62ce2ad9b18d3ce5ef56ebb8b68505d6e9b0108d1b4d2f9cf86c1db386591d"
+  },
+  "traceability": {
+    "requirementCount": 28,
+    "requiredRequirementCount": 28,
+    "acceptanceLinkCount": 28,
+    "evidenceLinkCount": 39,
+    "uncoveredRequirementCount": 0
+  },
+  "verdict": "READY_TO_PLAN",
+  "reviewer": {
+    "id": "spec-reviewer-r06",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-spec-review-r06-independent-audit"
+  },
+  "reviewedAt": "2026-07-22T00:00:00Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "All twenty-eight required requirements are explicit, project-neutral and uniquely linked to acceptance and evidence. Revision 7 adds source-set v2 authority closure while preserving Hermes and modular-controller scope from revision 6.",
+      "findingIds": [
+        "SPEC-002",
+        "SPEC-003",
+        "SPEC-004",
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008"
+      ]
+    },
+    {
+      "id": "scope",
+      "status": "PASS",
+      "rationale": "The included/excluded/deferred scope remains one standalone, project-neutral lifecycle kit with five host projections and no origin-project artifacts or credentials.",
+      "findingIds": []
+    },
+    {
+      "id": "acceptance",
+      "status": "PASS",
+      "rationale": "All requirements have at least one acceptance id and one evidence id; release, neutrality, final proof, adapter baseline, Hermes and modular controller requirements are evidence-bound.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008"
+      ]
+    },
+    {
+      "id": "constraints-risks",
+      "status": "PASS",
+      "rationale": "Revision 7 preserves external trust, write-once publication, source-set closure, fail-closed adapter maturity, release transaction identity, terminal finalization and bounded resource policy.",
+      "findingIds": [
+        "SPEC-001",
+        "SPEC-004",
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008"
+      ]
+    },
+    {
+      "id": "testability-evidence",
+      "status": "PASS",
+      "rationale": "Every high-risk path is mapped to concrete evidence: neutrality runtime/release gates, controller modularity shape report, release assembly negatives, matrix aggregate, adapter offline conformance and final proof parity.",
+      "findingIds": [
+        "SPEC-004",
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008"
+      ]
+    },
+    {
+      "id": "consistency",
+      "status": "PASS",
+      "rationale": "The r07 sourceSet entries equal the requirement sourceRefs union, JSON authority closure validates, prior r05 open findings are preserved as resolved dispositions, and manifest specification pointer is aligned to revision 7.",
+      "findingIds": [
+        "SPEC-003",
+        "SPEC-004",
+        "SPEC-005",
+        "SPEC-006",
+        "SPEC-007",
+        "SPEC-008"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "SPEC-001",
+      "severity": "MEDIUM",
+      "class": "acceptance-gap",
+      "dimension": "acceptance",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 7 preserves detached Ed25519 neutrality authority, trust-root ownership, signer and subject binding, freshness, zero-result conditions, runtime gates, release scope and redaction boundaries.",
+      "requiredAction": "No further action; preserve these semantics during plan review, freeze and implementation."
+    },
+    {
+      "id": "SPEC-002",
+      "severity": "MEDIUM",
+      "class": "specification-defect",
+      "dimension": "requirements",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 7 preserves provider-neutral stage and role routing, deterministic capability fallback, independent review bindings, fail-closed unavailability and exact usage attribution.",
+      "requiredAction": "No further action; retain REQ-ROUTING, AC-ROUTING and EV-ROUTING projections."
+    },
+    {
+      "id": "SPEC-003",
+      "severity": "MEDIUM",
+      "class": "ambiguity",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "resolved",
+      "message": "Revision 7 preserves the shared offline adapter baseline for Codex, Claude Code, Cursor, Hermes and OpenCode, with evidence-accurate EXPERIMENTAL maturity and optional live VERIFIED promotion.",
+      "requiredAction": "No further action; do not weaken the shared offline baseline or claim live verification without evidence."
+    },
+    {
+      "id": "SPEC-004",
+      "severity": "MEDIUM",
+      "class": "inconsistency",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+      "status": "resolved",
+      "message": "Revision 7 preserves exact S0/S1/S2 call, context, tool, evidence, parallelism, attempt and wall-time ceilings, cumulative counter scopes, benchmark cohorts and fail-closed resource behavior.",
+      "requiredAction": "No further action; preserve all numeric ceilings and reciprocal AC/EV links."
+    },
+    {
+      "id": "SPEC-005",
+      "severity": "HIGH",
+      "class": "specification-defect",
+      "dimension": "constraints-risks",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json",
+      "status": "resolved",
+      "message": "Revision 7 resolves the write-once operation-output gap through v3 neutrality authority, operation-bound output paths, no-replace publication, idempotent identical replay, alias/race/occupancy failure, archive limits and negative evidence requirements.",
+      "requiredAction": "Preserve the v3 write-once output contract and negative evidence in implementation."
+    },
+    {
+      "id": "SPEC-006",
+      "severity": "HIGH",
+      "class": "inconsistency",
+      "dimension": "constraints-risks",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Revision 7 aligns neutrality environment names and authority rules through the NEUTRALITY_* contract, external bounded regular files, no-follow stable reads, Ed25519 fingerprint checks, freshness and redacted durable outputs.",
+      "requiredAction": "Preserve exact NEUTRALITY_* names and fail closed for stale, in-repository, symlinked, oversized, malformed, bad-signature or fingerprint-mismatched authority inputs."
+    },
+    {
+      "id": "SPEC-007",
+      "severity": "HIGH",
+      "class": "inconsistency",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/10-release-matrix.md",
+      "status": "resolved",
+      "message": "Revision 7 separates candidatePayloadInventoryDigest from finalInventoryDigest and freezes one no-replace release assembly transaction with matrix, aggregate, clean-build, neutrality and --no-build verification binding.",
+      "requiredAction": "Preserve the non-recursive candidate digest, final inventory digest and crash/substitution/mutation negative coverage during plan review and implementation."
+    },
+    {
+      "id": "SPEC-008",
+      "severity": "HIGH",
+      "class": "specification-defect",
+      "dimension": "testability-evidence",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/final-proof-authority-profile.v2.json",
+      "status": "resolved",
+      "message": "Revision 7 resolves terminal finalization through AWAITING_FINAL_PROOF, closed controllerFinalizationOutputSet, non-self-referential body/envelope digest separation, immutable proof publication, WAL/state binding and recovery semantics.",
+      "requiredAction": "Preserve final proof body/envelope separation, predecessor state/WAL binding and fail-closed replay/mutation handling."
+    }
+  ],
+  "summary": "READY_TO_PLAN for specification revision 7 after full audit: all twenty-eight required requirements have complete links, sourceSet v2 validates against twenty-two source authorities, prior r05 open findings SPEC-005 through SPEC-008 are resolved, and no open blocking finding remains."
+}

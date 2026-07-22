@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "agent-task-result.v2",
+  "runId": "standalone-v1-r08-run-20260722",
+  "taskId": "WS-01",
+  "attempt": 1,
+  "planDigest": "6b6b289d700af3c5b6df79266f4f2fcc50830898aca3e3e560695b41f303ee6f",
+  "sourceRevision": "009ab53370ef6cd3315bd90636bbde6eb911edb6",
+  "actor": "neutrality-worker",
+  "actorRunId": "root-local-ws01-20260722",
+  "surface": "codex",
+  "taskPacketHash": "c8c28a44ac630d57ac4ed70d727313e2322432a6cf987de5034e4e634f321a57",
+  "traceDigest": "fa7f75bf4b397f1ca200e5da0a692c8fb72ed778a59e4b09187691e598c0d93d",
+  "changedFiles": [
+    ".editorconfig",
+    ".github/workflows/neutrality.yml",
+    ".gitignore",
+    "NOTICE",
+    "docs/security/neutrality-contract.md",
+    "policy/neutrality.policy.json",
+    "pyproject.toml",
+    "src/agent_lifecycle/__init__.py",
+    "src/agent_lifecycle/_version.py",
+    "src/agent_lifecycle/neutrality/__init__.py",
+    "src/agent_lifecycle/neutrality/__main__.py",
+    "src/agent_lifecycle/neutrality/authority.py",
+    "src/agent_lifecycle/neutrality/canonical.py",
+    "src/agent_lifecycle/neutrality/cli.py",
+    "src/agent_lifecycle/neutrality/ed25519.py",
+    "src/agent_lifecycle/neutrality/errors.py",
+    "src/agent_lifecycle/neutrality/paths.py",
+    "src/agent_lifecycle/neutrality/policy.py",
+    "src/agent_lifecycle/neutrality/receipt.py",
+    "src/agent_lifecycle/neutrality/scanner.py",
+    "tests/neutrality/conftest.py",
+    "tests/neutrality/test_neutrality.py",
+    "tests/package/conftest.py",
+    "tests/package/test_foundation.py",
+    "uv.lock"
+  ],
+  "changeSet": {
+    "provider": "git-worktree-v1",
+    "baselineRef": "main",
+    "baselineSha": "009ab53370ef6cd3315bd90636bbde6eb911edb6",
+    "fileSetHash": "e6172e8447379c107ee0a827d51f33774dd7d9c1fe5c5003026d0a7f5e2aeb21",
+    "diffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "snapshotHash": "f379b0c613212c1fd9d4f4bc088ea4f08446b13d837de99574e6f804ff1654f6"
+  },
+  "commands": [],
+  "itemOutcomes": [
+    {
+      "plannedItemId": "REQ-FOUNDATION",
+      "status": "COMPLETE",
+      "changedFiles": [
+        ".editorconfig",
+        ".github/workflows/neutrality.yml",
+        ".gitignore",
+        "NOTICE",
+        "pyproject.toml",
+        "src/agent_lifecycle/__init__.py",
+        "src/agent_lifecycle/_version.py",
+        "tests/package/conftest.py",
+        "tests/package/test_foundation.py",
+        "uv.lock"
+      ],
+      "commandIds": []
+    },
+    {
+      "plannedItemId": "REQ-NEUTRALITY",
+      "status": "COMPLETE",
+      "changedFiles": [
+        "docs/security/neutrality-contract.md",
+        "policy/neutrality.policy.json",
+        "src/agent_lifecycle/neutrality/__init__.py",
+        "src/agent_lifecycle/neutrality/__main__.py",
+        "src/agent_lifecycle/neutrality/authority.py",
+        "src/agent_lifecycle/neutrality/canonical.py",
+        "src/agent_lifecycle/neutrality/cli.py",
+        "src/agent_lifecycle/neutrality/ed25519.py",
+        "src/agent_lifecycle/neutrality/errors.py",
+        "src/agent_lifecycle/neutrality/paths.py",
+        "src/agent_lifecycle/neutrality/policy.py",
+        "src/agent_lifecycle/neutrality/receipt.py",
+        "src/agent_lifecycle/neutrality/scanner.py",
+        "tests/neutrality/conftest.py",
+        "tests/neutrality/test_neutrality.py"
+      ],
+      "commandIds": []
+    }
+  ],
+  "summary": "Bootstrapped the Python package foundation and the standalone neutrality boundary with stdlib-only Ed25519 signing, external authority loading, repository scanning, write-once report/receipt publication, policy, security contract documentation, CI wiring, and local negative tests. Controller-owned validation remains authoritative for task acceptance.",
+  "assumptions": [
+    "The host will provide pytest for frozen VAL-FOUNDATION and VAL-NEUTRALITY-NEGATIVE commands.",
+    "The host will provide AGENT_LIFECYCLE_NEUTRALITY_* authority files for production VAL-NEUTRALITY signing."
+  ],
+  "blocker": null,
+  "contractChangeRequest": null
+}

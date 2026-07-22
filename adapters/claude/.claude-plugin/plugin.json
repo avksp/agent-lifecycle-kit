@@ -1,0 +1,16 @@
+{
+  "name": "agent-lifecycle-kit",
+  "version": "0.1.0",
+  "description": "Lifecycle skills and adapter metadata for reviewed planning, execution, audit, and final proof.",
+  "author": {
+    "name": "Agent Lifecycle Kit Maintainers"
+  },
+  "license": "MIT",
+  "skills": "./skills",
+  "interface": {
+    "displayName": "Agent Lifecycle Kit",
+    "shortDescription": "SDD planning, orchestration, and implementation audit.",
+    "developerName": "Agent Lifecycle Kit Maintainers",
+    "category": "Productivity"
+  }
+}

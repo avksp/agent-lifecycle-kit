@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "agent-lifecycle-budget-targets.v1",
+  "profileId": "agent-lifecycle-budget-profile.v1",
+  "corpus": [
+    "S0-MECHANICAL-01",
+    "S1-STANDARD-01",
+    "S1-SMALL-CONTEXT-8K-01",
+    "S2-MULTI-01",
+    "S2-SECURITY-01",
+    "S2-RECOVERY-01"
+  ],
+  "cohorts": [
+    "cold",
+    "warm"
+  ],
+  "runsPerScenarioCohort": 20,
+  "liveModelInvocations": 0,
+  "absoluteP95Targets": {
+    "S0": {
+      "billableTokens": 70000,
+      "cumulativeContextBytes": 196608,
+      "toolCalls": 60,
+      "wallSeconds": 2700
+    },
+    "S1": {
+      "billableTokens": 220000,
+      "cumulativeContextBytes": 1048576,
+      "toolCalls": 180,
+      "wallSeconds": 10800
+    },
+    "S2": {
+      "billableTokens": 800000,
+      "cumulativeContextBytes": 16777216,
+      "toolCalls": 500,
+      "wallSeconds": 72000
+    }
+  },
+  "hardCeilings": {
+    "S0": {
+      "billableTokens": 100000,
+      "cumulativeContextBytes": 393216,
+      "toolCalls": 80,
+      "wallSeconds": 3600
+    },
+    "S1": {
+      "billableTokens": 300000,
+      "cumulativeContextBytes": 2097152,
+      "toolCalls": 250,
+      "wallSeconds": 14400
+    },
+    "S2": {
+      "billableTokens": 1000000,
+      "cumulativeContextBytes": 25165824,
+      "toolCalls": 600,
+      "wallSeconds": 86400
+    }
+  },
+  "relativeRegressionLimitsAfterFirstRelease": {
+    "p50Percent": 5,
+    "p95Percent": 10
+  }
+}

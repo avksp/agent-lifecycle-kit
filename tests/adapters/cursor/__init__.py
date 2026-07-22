@@ -1,0 +1,1 @@
+"""Cursor adapter conformance tests."""
