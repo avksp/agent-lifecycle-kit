@@ -97,9 +97,12 @@ agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
 agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --reason "<reason>"
 agent-lifecycle workflow task-accept --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --review <task-review.json> --reason "<reason>"
-agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --proof <final-proof.json> --reason "<reason>"
+agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --reason "<reason>"
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 agent-lifecycle tier resolve --request <tier-request.json>
+agent-lifecycle specification check --specification <specification.json>
+agent-lifecycle plan check --manifest <plan.manifest.json> --lock <plan.lock.json>
+agent-lifecycle task compile --manifest <plan.manifest.json> --out-dir <task-packet-dir> --write
 agent-lifecycle context profile-check --profile profiles/small-context-profile.v1.json
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 4k-strict
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
@@ -115,9 +118,12 @@ PYTHONPATH=src python -m agent_lifecycle schema list
 PYTHONPATH=src python -m agent_lifecycle workflow status --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow next --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
-PYTHONPATH=src python -m agent_lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --proof <final-proof.json> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --reason "<reason>"
 PYTHONPATH=src python -m agent_lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 PYTHONPATH=src python -m agent_lifecycle tier resolve --request <tier-request.json>
+PYTHONPATH=src python -m agent_lifecycle specification check --specification <specification.json>
+PYTHONPATH=src python -m agent_lifecycle plan check --manifest <plan.manifest.json> --lock <plan.lock.json>
+PYTHONPATH=src python -m agent_lifecycle task compile --manifest <plan.manifest.json> --out-dir <task-packet-dir> --write
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
@@ -126,13 +132,18 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 `workflow next`, `workflow block`, `workflow resolve`, `workflow task-start`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
-`context render` и `neutrality`. Остальные lifecycle groups зарезервированы и
-fail-closed возвращают стабильный `agent-lifecycle-error.v1`, пока их core
-modules не реализованы.
+`context render`, `specification check`, `plan check`, `task compile` и
+`neutrality`. Lifecycle groups `adapter` и `conformance` остаются
+зарезервированными и fail-closed возвращают стабильный
+`agent-lifecycle-error.v1`, пока их runtime core modules не реализованы.
 
 `context check` и `context render` также fail-closed при overflow: если
 rendered receipt получает `status: FAIL`, CLI завершается с non-zero exit и
 возвращает `agent-lifecycle-error.v1` с кодом `context-overflow`.
+
+`workflow finalize` требует `--final-audit`. Audit должен пройти с
+`READY_FOR_FINALIZATION`, совпадать с `planRevision` и `planDigest` run, не
+заявлять production promotion и не содержать unresolved MEDIUM+ findings.
 
 Тесты используют только Python standard library:
 

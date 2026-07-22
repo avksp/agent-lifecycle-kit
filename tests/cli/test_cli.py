@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -35,7 +36,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["$id"], "agent-host-operation-request.v1")
 
     def test_reserved_group_fails_with_stable_error(self) -> None:
-        code, payload = _run_cli(["plan"])
+        code, payload = _run_cli(["adapter"])
         self.assertEqual(code, 2)
         self.assertEqual(payload["schemaVersion"], "agent-lifecycle-error.v1")
         self.assertEqual(payload["code"], "command-not-implemented")
@@ -212,6 +213,66 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["schemaVersion"], "agent-sdd-tier-resolution.v1")
             self.assertEqual(payload["tier"], "S0")
 
+    def test_specification_check_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "specification.json"
+            path.write_text(
+                json.dumps({
+                    "tier": "S1",
+                    "status": "FROZEN",
+                    "requirements": [{"id": "REQ-1", "required": True}],
+                }),
+                encoding="utf-8",
+            )
+            code, payload = _run_cli(["specification", "check", "--specification", str(path)])
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-specification-validation.v1")
+            self.assertEqual(payload["requirementCount"], 1)
+
+    def test_plan_check_cli_validates_manifest_and_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = root / "plan.manifest.json"
+            manifest = _manifest()
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            lock_path = root / "plan.lock.json"
+            lock_path.write_text(
+                json.dumps({
+                    "schemaVersion": "agent-plan-lock.v1",
+                    "planRevision": manifest["planRevision"],
+                    "manifestHash": canonical_digest(manifest),
+                }),
+                encoding="utf-8",
+            )
+            code, payload = _run_cli([
+                "plan",
+                "check",
+                "--manifest",
+                str(manifest_path),
+                "--lock",
+                str(lock_path),
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-plan-check.v1")
+            self.assertEqual(payload["manifest"]["schemaVersion"], "agent-plan-validation.v1")
+            self.assertEqual(payload["lock"]["schemaVersion"], "agent-plan-lock-verification.v1")
+
+    def test_task_compile_cli_writes_packets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = _write_task_compile_bundle(root)
+            previous_cwd = Path.cwd()
+            os.chdir(root)
+            try:
+                code, payload = _run_cli(["task", "compile", "--manifest", str(manifest_path), "--write"])
+            finally:
+                os.chdir(previous_cwd)
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-task-packet-compile-result.v1")
+            self.assertEqual(payload["index"]["packetCount"], 1)
+            packet_path = root / "plans/p/workflow/task-packets/WS-01.task-packet.json"
+            self.assertTrue(packet_path.exists())
+
 
 def _run_cli(args: list[str]) -> tuple[int, dict]:
     stdout = StringIO()
@@ -314,6 +375,52 @@ def _context_planned_items(*, oversized: bool) -> list[str]:
     if oversized:
         return ["REQ-" + ("x" * 200)] * 300
     return ["REQ-CONTEXT"]
+
+
+def _write_task_compile_bundle(root: Path) -> Path:
+    manifest = {
+        "status": "FROZEN",
+        "planRevision": 1,
+        "package": {
+            "id": "p",
+            "artifactRoot": "plans/p",
+            "planArtifactRoot": "plans/p/.agent-plan/p",
+        },
+        "specification": {"tier": "S1", "revision": 1, "artifact": "spec.json"},
+        "readOnly": [],
+        "forbiddenWrites": [],
+        "leadOwned": [],
+        "workstreams": [
+            {
+                "id": "WS-01",
+                "title": "Compile",
+                "owner": "worker",
+                "reviewer": "reviewer",
+                "dependsOn": [],
+                "writes": ["src"],
+                "plannedItems": [{"id": "REQ-1", "description": "Do it"}],
+                "acceptanceIds": ["AC-1"],
+                "evidenceIds": ["EV-1"],
+                "artifactPaths": {
+                    "result": "tasks/WS-01/attempt-{attempt}/task-result.json",
+                    "review": "tasks/WS-01/attempt-{attempt}/task-review.json",
+                },
+            }
+        ],
+        "acceptanceCriteria": [{"id": "AC-1", "evidenceIds": ["EV-1"]}],
+    }
+    lock = {
+        "schemaVersion": "agent-plan-lock.v1",
+        "manifestHash": canonical_digest(manifest),
+        "planRevision": 1,
+    }
+    lock_path = root / "plans/p/.agent-plan/p/plan.lock.json"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path.write_text(json.dumps(lock), encoding="utf-8")
+    manifest_path = root / "plans/p/plan.manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    return manifest_path
 
 
 def _task(payload: dict) -> dict:

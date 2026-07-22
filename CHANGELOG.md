@@ -4,6 +4,8 @@
 
 - Added the `4k-strict` compact-context window for local models and constrained hosts below the previous 8k baseline.
 - Fixed `context check` and `context render` CLI overflow semantics: a rendered `FAIL` result now exits non-zero with `context-overflow`.
+- Added CLI wiring for existing specification, plan, and task-packet compiler core checks.
+- Added a required final-audit precondition to `workflow finalize` and bind the audit identity into final proof.
 
 ## 0.1.1 - 2026-07-22
 

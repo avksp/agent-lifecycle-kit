@@ -10,11 +10,14 @@ from agent_lifecycle import __version__
 from agent_lifecycle.audit import build_ownership_report
 from agent_lifecycle.audit.ownership import report_has_category
 from agent_lifecycle.changesets import changed_files
-from agent_lifecycle.contracts import LifecycleError, canonical_bytes
+from agent_lifecycle.compiler import compile_task_packets
+from agent_lifecycle.contracts import LifecycleError, canonical_bytes, read_json_object
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.context import check_context, load_context_profile, render_context
+from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.neutrality.cli import main as neutrality_main
-from agent_lifecycle.planning import resolve_sdd_tier
+from agent_lifecycle.planning import resolve_sdd_tier, validate_plan_manifest
+from agent_lifecycle.specification import validate_specification
 from agent_lifecycle.workflow import (
     accept_task,
     adopt_plan,
@@ -118,6 +121,7 @@ def _parser() -> argparse.ArgumentParser:
     workflow_finalize.add_argument("--operation-id", required=True)
     workflow_finalize.add_argument("--expected-revision", required=True, type=int)
     workflow_finalize.add_argument("--source-revision", required=True)
+    workflow_finalize.add_argument("--final-audit", required=True)
     workflow_finalize.add_argument("--proof", required=True)
     workflow_finalize.add_argument("--reason", required=True)
     audit = subparsers.add_parser("audit", help="audit commands")
@@ -148,7 +152,26 @@ def _parser() -> argparse.ArgumentParser:
     tier_sub = tier.add_subparsers(dest="tier_command", required=True)
     tier_resolve = tier_sub.add_parser("resolve")
     tier_resolve.add_argument("--request", required=True)
-    for name in ("specification", "plan", "task", "adapter", "conformance"):
+
+    specification = subparsers.add_parser("specification", help="specification commands")
+    specification_sub = specification.add_subparsers(dest="specification_command", required=True)
+    specification_check = specification_sub.add_parser("check")
+    specification_check.add_argument("--specification", required=True)
+
+    plan = subparsers.add_parser("plan", help="plan commands")
+    plan_sub = plan.add_subparsers(dest="plan_command", required=True)
+    plan_check = plan_sub.add_parser("check")
+    plan_check.add_argument("--manifest", required=True)
+    plan_check.add_argument("--lock")
+
+    task = subparsers.add_parser("task", help="task commands")
+    task_sub = task.add_subparsers(dest="task_command", required=True)
+    task_compile = task_sub.add_parser("compile")
+    task_compile.add_argument("--manifest", required=True)
+    task_compile.add_argument("--out-dir")
+    task_compile.add_argument("--write", action="store_true")
+
+    for name in ("adapter", "conformance"):
         subparsers.add_parser(name, help=f"{name} commands")
     return parser
 
@@ -174,6 +197,12 @@ def _dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] 
         return _dispatch_context(args)
     if args.command == "tier":
         return _dispatch_tier(args)
+    if args.command == "specification":
+        return _dispatch_specification(args)
+    if args.command == "plan":
+        return _dispatch_plan(args)
+    if args.command == "task":
+        return _dispatch_task(args)
     raise LifecycleError(
         "command-not-implemented",
         f"{args.command} command group is reserved but not implemented in this build",
@@ -214,6 +243,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             operation_id=args.operation_id,
             expected_revision=args.expected_revision,
             source_revision=args.source_revision,
+            final_audit_path=args.final_audit,
             proof_path=args.proof,
             reason=args.reason,
         )
@@ -330,11 +360,44 @@ def _require_context_pass(result: dict[str, Any]) -> dict[str, Any]:
 def _dispatch_tier(args: argparse.Namespace) -> dict[str, Any]:
     from pathlib import Path
 
-    from agent_lifecycle.contracts import read_json_object
-
     if args.tier_command == "resolve":
         return resolve_sdd_tier(read_json_object(Path(args.request), label="tier request"))
     raise LifecycleError("command-not-implemented", "tier command is not implemented")
+
+
+def _dispatch_specification(args: argparse.Namespace) -> dict[str, Any]:
+    from pathlib import Path
+
+    if args.specification_command == "check":
+        return validate_specification(read_json_object(Path(args.specification), label="specification"))
+    raise LifecycleError("command-not-implemented", "specification command is not implemented")
+
+
+def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
+    from pathlib import Path
+
+    if args.plan_command == "check":
+        manifest = read_json_object(Path(args.manifest), label="plan manifest")
+        lock = read_json_object(Path(args.lock), label="plan lock") if args.lock else None
+        return {
+            "schemaVersion": "agent-plan-check.v1",
+            "manifest": validate_plan_manifest(manifest),
+            "lock": verify_plan_lock(manifest, lock) if lock else None,
+        }
+    raise LifecycleError("command-not-implemented", "plan command is not implemented")
+
+
+def _dispatch_task(args: argparse.Namespace) -> dict[str, Any]:
+    from pathlib import Path
+
+    if args.task_command == "compile":
+        result = compile_task_packets(
+            Path(args.manifest),
+            out_dir=Path(args.out_dir) if args.out_dir else None,
+            write=args.write,
+        )
+        return {"schemaVersion": "agent-task-packet-compile-result.v1", **result}
+    raise LifecycleError("command-not-implemented", "task command is not implemented")
 
 
 def _write(payload: dict[str, Any]) -> None:
