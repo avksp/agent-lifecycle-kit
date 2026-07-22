@@ -3,21 +3,23 @@
 [Русская версия](docs/guides/README.ru.md)
 
 Agent Lifecycle Kit is a provider-neutral workflow distribution for turning a
-software request into a reviewed specification, a frozen agent-ready plan,
-audited implementation, and a reproducible final verdict.
+software request into a reviewed SDD specification, a frozen agent-ready plan,
+controlled implementation, independent implementation audit, and reproducible
+final verdict.
 
-It is distributed as one repository with one semantic core and multiple native
-host adapters. It is not a Codex-only plugin: Codex, Claude Code, Cursor,
-Hermes, and OpenCode use their own installation and capability models.
+It is distributed as one repository with one semantic core and native host
+projections for Codex, Claude Code, Cursor, Hermes, and OpenCode.
 
-> **Pre-release status**
->
-> The current `main` branch is a release-candidate source tree. It contains
-> offline adapter projections and the source-mode core CLI for workflow,
-> schema, tier, compact context, ownership, and neutrality checks. Do not treat
-> marketplace installation commands below as available until a tagged release
-> publishes the referenced manifests and its support matrix marks the adapter
-> `EXPERIMENTAL` or `VERIFIED`.
+## Current status
+
+`v0.1.1` is a tagged source release. The repository now contains root-level
+publication manifests for Codex, Claude Code, and Cursor, plus Hermes and
+OpenCode projection metadata.
+
+The adapters are still `EXPERIMENTAL`: they have offline contract coverage and
+fail-closed descriptors, but they are not `VERIFIED` until each host has live
+install and lifecycle conformance evidence. Public directory publication also
+depends on each host marketplace review process.
 
 ## What the kit does
 
@@ -54,36 +56,34 @@ deterministic core rather than reimplemented in each host adapter.
 
 Small-context hosts are supported through a deterministic context profile, not
 through prompt-only truncation. The bundled
-`profiles/small-context-profile.v1.json` defines 8k, 16k, 32k, and 64k
-windows, reserves output space, limits the active packet and state summary, and
-forbids silent truncation. If a rendered envelope does not fit, the controller
-must split the task, request a larger context, or block the run.
+`profiles/small-context-profile.v1.json` defines 8k, 16k, 32k, and 64k windows,
+reserves output space, limits the active packet and state summary, and forbids
+silent truncation.
 
-The compact envelope contains only the active role, latest user instruction,
-active task packet projection, exact write set, acceptance/evidence ids, and a
-structured state summary. Older context and tool output are represented by
-hashable summaries and evidence identities.
+If a rendered envelope does not fit, the controller must split the task,
+request a larger context, or block the run. Older context and tool output are
+represented by hashable summaries and evidence identities.
 
-## One distribution, native host adapters
+## Distribution layout
 
-A universal distribution does not mean one manifest format. The release
-projects the same core into the native format of each supported host:
+A universal distribution does not mean one manifest format. The same core is
+projected into each host's native loading model:
 
-| Host | Native release projection | Installation model |
+| Host | Release artifact | Status |
 | --- | --- | --- |
-| Codex | `.codex-plugin/plugin.json` plus shared `skills/` | Codex marketplace |
-| Claude Code | `.claude-plugin/plugin.json` plus shared `skills/` and Claude adapter metadata | Claude plugin marketplace or `--plugin-dir` for development |
-| Cursor | `.cursor-plugin/plugin.json` plus shared `skills/` and Cursor adapter metadata | Cursor Marketplace and `/add-plugin` |
-| Hermes | shared `skills/` plus Hermes registry/config and launcher metadata | Hermes adapter package or local registry/config projection |
-| OpenCode | shared `skills/` plus an OpenCode JS/TS adapter | `.opencode/` directories or an npm plugin declared in `opencode.json` |
-| Other hosts | versioned adapter contract and conformance suite | host-specific adapter package |
+| Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | Experimental marketplace-ready source projection |
+| Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Experimental marketplace-ready source projection |
+| Cursor | `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` | Experimental source projection for public or team marketplace review |
+| Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | Experimental direct-skill/tap projection |
+| OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | Experimental local/npm-ready projection metadata |
 
-The first release targets these five hosts. A host is never described as
-`VERIFIED` without bounded live conformance evidence. Offline-only adapters are
-reported as `EXPERIMENTAL`, and unavailable safety-critical capabilities fail
-closed.
+The root repository is the canonical plugin root for Codex, Claude Code, and
+Cursor. The older `adapters/<host>/` directories remain offline conformance
+projections and host-specific metadata; users should install from the root
+package unless a future release explicitly publishes a materialized adapter
+package.
 
-## Installation
+## Installation and publication
 
 ### Source-mode core CLI
 
@@ -103,6 +103,7 @@ agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle context profile-check --profile profiles/small-context-profile.v1.json
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
+agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
@@ -121,12 +122,13 @@ PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
-The currently implemented core CLI groups are `version`, `schema`,
-`workflow status`, `workflow next`, `workflow block`, `workflow resolve`,
-`workflow task-start`, `workflow task-result`, `workflow task-accept`, and
-`workflow finalize`, `audit ownership`, `tier resolve`, `context profile-check`,
-`context check`, `context render`, and `neutrality`. Other lifecycle groups are reserved and fail closed with a
-stable `agent-lifecycle-error.v1` response until their core modules land.
+Implemented core CLI groups are `version`, `schema`, `workflow status`,
+`workflow next`, `workflow block`, `workflow resolve`, `workflow task-start`,
+`workflow task-result`, `workflow task-accept`, `workflow finalize`,
+`audit ownership`, `tier resolve`, `context profile-check`, `context check`,
+`context render`, and `neutrality`. Other lifecycle groups are reserved and
+fail closed with a stable `agent-lifecycle-error.v1` response until their core
+modules land.
 
 Tests use only the Python standard library:
 
@@ -136,92 +138,111 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 
 ### Codex
 
-After a release marketplace is available:
+Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add <marketplace-repository-or-local-root>
-codex plugin add agent-lifecycle-kit@<marketplace-name>
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.1.1
+codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
 You can also browse configured marketplaces with `/plugins`. Start a new Codex
-session after installation so the bundled skills and adapter are loaded.
+session after installation so the bundled skills are loaded.
+
+For public Plugins Directory publication, submit the root package as a
+skills-only plugin through the OpenAI plugin submission portal. Do not claim
+`VERIFIED` until live Codex install and lifecycle conformance evidence is
+published in the support matrix.
 
 ### Claude Code
 
-For a released marketplace:
+Add the marketplace and install the plugin:
 
 ```bash
-claude plugin marketplace add <marketplace-repository-or-local-root>
-claude plugin install agent-lifecycle-kit@<marketplace-name>
+claude plugin marketplace add avksp/agent-lifecycle-kit
+claude plugin install agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
-For local adapter development after the Claude manifest exists:
+In an interactive Claude Code session, the equivalent slash flow is:
 
-```bash
-claude --plugin-dir <path-to-agent-lifecycle-kit>
+```text
+/plugin marketplace add avksp/agent-lifecycle-kit
+/plugin install agent-lifecycle-kit@agent-lifecycle-kit
+/reload-plugins
 ```
 
-Run `/reload-plugins` after installing or changing the local plugin. Claude
-plugin skills are namespaced by plugin name.
+Plugin skills are namespaced by plugin name, for example
+`/agent-lifecycle-kit:agent-workflow-orchestrator`.
+
+For inclusion in the Anthropic-managed public directory, submit the plugin for
+Claude's external plugin review. The repo-level marketplace is enough for
+private or community distribution, but not a public-directory approval claim.
 
 ### Cursor
 
-After the adapter is published on the Cursor Marketplace, run this in Cursor
-Agent chat:
+For local validation before submission, symlink or copy the repository into
+Cursor's local plugin directory:
+
+```bash
+mkdir -p ~/.cursor/plugins/local
+ln -s /path/to/agent-lifecycle-kit ~/.cursor/plugins/local/agent-lifecycle-kit
+```
+
+Then restart Cursor or run `Developer: Reload Window`. After local validation,
+submit the public repository at `https://cursor.com/marketplace/publish`.
+
+For Teams or Enterprise, import the GitHub repository as a team marketplace
+from Dashboard -> Plugins. After public approval, install from the Cursor
+Marketplace or Customize panel. If your Cursor build supports chat-based
+plugin installation, use:
 
 ```text
 /add-plugin agent-lifecycle-kit
 ```
 
-The release support matrix will state the minimum validated Cursor version and
-whether local-path installation has passed the lifecycle canary.
-
 ### Hermes
 
-Hermes uses the shared lifecycle skills through a Hermes-specific registry or
-configuration projection plus a launcher adapter. The exact local registry path,
-package name, and invocation syntax will be documented only after the Hermes
-artifact exists and passes the Hermes conformance suite.
+Hermes can install the shared skills directly. To install all lifecycle skills
+from the tagged release:
 
-Until then, Hermes is a required adapter target for the standalone release
-contract, not a verified runtime claim.
+```bash
+for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.1.1/skills/${skill}/SKILL.md"
+done
+```
+
+The root `skills.sh.json` provides tap/category metadata for hosts that read
+skills.sh-compatible indexes. `adapters/hermes/*` contains experimental
+registry and slash-command projection metadata. It is not a live Hermes plugin
+verification claim.
 
 ### OpenCode
 
-OpenCode does not use the Codex, Claude, or Cursor manifest. A release will
-contain an OpenCode projection with both the canonical skills and the runtime
-adapter. For project-scoped installation it will be copied into:
+OpenCode loads plugins and skills through separate mechanisms. For a project
+install, copy the shared skills and adapter into the target project:
 
-```text
-.opencode/skills/<skill-name>/SKILL.md
-.opencode/plugins/agent-lifecycle-kit.{js,ts}
+```bash
+KIT=/path/to/agent-lifecycle-kit
+mkdir -p .opencode/skills .opencode/plugins
+cp -R "$KIT"/skills/* .opencode/skills/
+cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js .opencode/plugins/
 ```
 
-For user-scoped installation the equivalent roots are:
+For user-level install:
 
-```text
-~/.config/opencode/skills/<skill-name>/SKILL.md
-~/.config/opencode/plugins/agent-lifecycle-kit.{js,ts}
+```bash
+KIT=/path/to/agent-lifecycle-kit
+mkdir -p ~/.config/opencode/skills ~/.config/opencode/plugins
+cp -R "$KIT"/skills/* ~/.config/opencode/skills/
+cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/plugins/
 ```
 
-If the adapter is published to npm, it can instead be declared in
-`opencode.json`:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["<published-opencode-adapter-package>"]
-}
-```
-
-The exact copy/install command and package name will be added only when the
-corresponding release artifact exists and passes the OpenCode conformance
-suite.
+The repository root also includes `opencode.json` for source checkout testing.
+A future npm package can point to the same adapter, but no npm publication is
+claimed by `v0.1.1`.
 
 ## Usage
 
-Ask the host to run the full lifecycle through
-`agent-workflow-orchestrator`. For example:
+Ask the host to run the full lifecycle through `agent-workflow-orchestrator`:
 
 ```text
 Use the agent-workflow-orchestrator skill.
@@ -236,17 +257,16 @@ Run the final audit and terminal review before reporting completion.
 
 Host-specific explicit invocation may be used when available:
 
-- Codex: select the installed plugin or bundled skill with `@`, or ask Codex to
-  use `agent-workflow-orchestrator` from Agent Lifecycle Kit
+- Codex: select Agent Lifecycle Kit or ask Codex to use
+  `agent-workflow-orchestrator`
 - Claude Code: `/agent-lifecycle-kit:agent-workflow-orchestrator`
 - Cursor: ask Agent to use `agent-workflow-orchestrator`
-- Hermes: ask Hermes to load `agent-workflow-orchestrator` through the
-  configured lifecycle-kit registry or launcher adapter
+- Hermes: run `/agent-workflow-orchestrator` after installing the skill
 - OpenCode: ask the agent to load `agent-workflow-orchestrator` through its
   native skill tool
 
-The release support matrix is authoritative for exact namespaced syntax. A
-pre-release example is not an invocation compatibility claim.
+The release support matrix is authoritative for exact namespaced syntax. An
+experimental adapter projection is not a live runtime compatibility claim.
 
 ### Stage-specific skills
 
@@ -310,8 +330,8 @@ requires resolver and independent review agreement.
 
 - Core contracts do not embed provider names, model names, project paths, or
   credentials.
-- The repository and all samples, fixtures, and evaluations must remain free
-  of source-project information.
+- The repository and all samples, fixtures, and evaluations must remain free of
+  source-project information.
 - Adapters may translate discovery, invocation, approvals, subagents, and host
   operations, but they may not reimplement lifecycle semantics.
 - Install only trusted releases. Native plugins and hooks may execute code with
@@ -321,6 +341,7 @@ requires resolver and independent review agreement.
 ## Documentation
 
 - [Russian README](docs/guides/README.ru.md)
+- [Adapter support matrix](docs/adapters/support-matrix.md)
 - [Modular controller architecture](docs/architecture/modular-controller.md)
 - [Codex plugin documentation](https://learn.chatgpt.com/docs/build-plugins)
 - [Claude Code plugin documentation](https://code.claude.com/docs/en/plugins)

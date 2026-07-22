@@ -1,23 +1,23 @@
 # Adapter support matrix
 
-This matrix is the authoritative release-candidate support claim. `EXPERIMENTAL`
-means the adapter has an offline projection and deterministic contract tests.
-`VERIFIED` is reserved for a later production-promotion release with bounded
-live conformance evidence.
+This matrix is the authoritative `v0.1.1` source-release support claim.
+`EXPERIMENTAL` means the adapter has an offline projection and deterministic
+contract tests. `VERIFIED` is reserved for a later production-promotion release
+with bounded live install and lifecycle conformance evidence.
 
 ## Runtime support
 
-| Host | Projection | Current maturity | Install claim |
+| Host | Projection | Current maturity | Install/publication claim |
 | --- | --- | --- | --- |
-| Codex | `.codex-plugin/plugin.json` plus shared skills | EXPERIMENTAL | Release-candidate projection only |
-| Claude Code | `.claude-plugin/plugin.json` plus shared skills | EXPERIMENTAL | Release-candidate projection only |
-| Cursor | `.cursor-plugin/plugin.json` plus shared skills | EXPERIMENTAL | Release-candidate projection only |
-| Hermes | Hermes registry/config projection plus shared skills | EXPERIMENTAL | Release-candidate projection only |
-| OpenCode | `opencode.json` and JS adapter plus shared skills | EXPERIMENTAL | Release-candidate projection only |
+| Codex | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | EXPERIMENTAL | Tagged source marketplace manifest exists; public Plugins Directory review not claimed |
+| Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | EXPERIMENTAL | Tagged source marketplace manifest exists; official directory review not claimed |
+| Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills | EXPERIMENTAL | Source projection exists for local/team validation and public submission; marketplace approval not claimed |
+| Hermes | `skills.sh.json`, shared skills, and Hermes registry/slash-command projection metadata | EXPERIMENTAL | Direct skill install/tap metadata exists; live Hermes verification not claimed |
+| OpenCode | Root `opencode.json`, shared skills, and JS adapter projection metadata | EXPERIMENTAL | Local source projection exists; npm package publication not claimed |
 
 ## Compact context support
 
-The release candidate includes `profiles/small-context-profile.v1.json` and a
+The source release includes `profiles/small-context-profile.v1.json` and a
 deterministic `context check/render` CLI for 8k, 16k, 32k, and 64k context
 windows. This is a core capability; adapters must pass the rendered envelope to
 their host without silently expanding or truncating it.
@@ -25,8 +25,8 @@ their host without silently expanding or truncating it.
 ## Production-promotion platform matrix
 
 The production-promotion contract requires these external CI legs. The offline
-candidate validates that the contract is present; it does not claim the legs
-were executed.
+source release validates that the contract is present; it does not claim the
+legs were executed.
 
 | Leg id | OS family | Architecture | Python |
 | --- | --- | --- | --- |

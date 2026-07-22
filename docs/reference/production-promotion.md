@@ -1,6 +1,6 @@
 # Production promotion contract
 
-Production promotion is outside the offline release-candidate proof.
+Production promotion is outside the offline source-release proof.
 
 Required external evidence:
 

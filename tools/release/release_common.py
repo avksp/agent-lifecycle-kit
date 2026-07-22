@@ -22,6 +22,10 @@ EXCLUDED_PREFIXES = (
 
 PAYLOAD_ROOTS = (
     ".github/workflows",
+    ".agents/plugins",
+    ".claude-plugin",
+    ".codex-plugin",
+    ".cursor-plugin",
     "adapters",
     "conformance",
     "docs",
@@ -35,8 +39,10 @@ PAYLOAD_ROOTS = (
     "CONTRIBUTING.md",
     "LICENSE",
     "NOTICE",
+    "opencode.json",
     "README.md",
     "SECURITY.md",
+    "skills.sh.json",
     "THIRD_PARTY_NOTICES.md",
     "pyproject.toml",
     "uv.lock",
