@@ -1,10 +1,13 @@
 {
   "name": "agent-lifecycle-kit",
   "version": "0.1.1",
-  "description": "Provider-neutral lifecycle skills and adapter metadata for reviewed agent planning, execution, audit, and final proof.",
+  "description": "Provider-neutral lifecycle skills for reviewed SDD planning, controlled execution, implementation audit, and final proof.",
   "author": {
-    "name": "Agent Lifecycle Kit contributors"
+    "name": "Agent Lifecycle Kit contributors",
+    "url": "https://github.com/avksp"
   },
+  "homepage": "https://github.com/avksp/agent-lifecycle-kit",
+  "repository": "https://github.com/avksp/agent-lifecycle-kit",
   "license": "Apache-2.0",
   "keywords": [
     "agents",
@@ -16,8 +19,8 @@
   "skills": "./skills",
   "interface": {
     "displayName": "Agent Lifecycle Kit",
-    "shortDescription": "Reviewed planning, execution, audit, and proof workflow.",
-    "longDescription": "Run a host-neutral lifecycle from clarification through SDD planning, freeze, task packets, implementation review, and final audit.",
+    "shortDescription": "Reviewed SDD planning, execution, audit, and proof.",
+    "longDescription": "Run a provider-neutral software-agent lifecycle from clarification through SDD specification, plan freeze, task packets, controlled implementation, independent implementation review, and final audit.",
     "developerName": "Agent Lifecycle Kit contributors",
     "category": "Productivity",
     "capabilities": [

@@ -1,0 +1,21 @@
+{
+  "name": "agent-lifecycle-kit",
+  "interface": {
+    "displayName": "Agent Lifecycle Kit"
+  },
+  "plugins": [
+    {
+      "name": "agent-lifecycle-kit",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/avksp/agent-lifecycle-kit.git",
+        "ref": "v0.1.1"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

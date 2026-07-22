@@ -1,7 +1,7 @@
 # Release security
 
-Offline release-candidate generation must be deterministic and local. It may
-write release inventory and evidence files, but it must not read credentials or
+Offline source-release generation must be deterministic and local. It may write
+release inventory and evidence files, but it must not read credentials or
 require network access.
 
 Production promotion must use external signing and verification authorities.

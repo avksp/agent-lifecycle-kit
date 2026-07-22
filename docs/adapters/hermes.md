@@ -1,8 +1,14 @@
 # Hermes adapter
 
-The Hermes projection packages shared lifecycle skills with Hermes registry and
-launcher metadata. The adapter is experimental until live Hermes conformance
-evidence is published in a release support matrix.
+The Hermes projection packages shared lifecycle skills, root `skills.sh.json`,
+and Hermes registry/slash-command metadata under `adapters/hermes/`.
 
-Hermes availability is part of the standalone release target, not a verified
-runtime claim in the offline release candidate.
+Install individual skills directly from the tagged source release, for example:
+
+```bash
+hermes skills install https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.1.1/skills/agent-workflow-orchestrator/SKILL.md
+```
+
+Hermes availability is part of the standalone release target, but remains
+`EXPERIMENTAL` until live Hermes conformance evidence is published in the
+support matrix.
