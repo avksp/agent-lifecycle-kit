@@ -1,0 +1,251 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r05",
+  "packageId": "standalone-v1",
+  "planRevision": 7,
+  "reviewedPlanHash": "f8f4fa56278cadddf2654990966b9f8d0a3d27ea73dd498df952811b436011be",
+  "previousReview": {
+    "reviewId": "plan-review-r03",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r03.json",
+    "sha256": "307c9f88b7647e72172a6a0d5d9a5efc79ffe447e67d3d12353675cccf668b91"
+  },
+  "qualityMetrics": {
+    "taskCount": 16,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 9,
+    "maxParallelWidth": 5,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 39,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 49152,
+    "actualContextBytesTotal": 359217,
+    "maxTaskContextBytes": 38899,
+    "validationInvocationCount": 39,
+    "estimatedMinimumToolCalls": 81
+  },
+  "verdict": "READY_TO_FREEZE",
+  "reviewer": {
+    "id": "plan-reviewer-r05",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-plan-review-r05-independent-audit"
+  },
+  "reviewedAt": "2026-07-22T00:00:00Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "Frozen S2 specification revision 7 is READY and every required requirement is projected into required workstreams with exact planned-item statements after projection repair.",
+      "findingIds": [
+        "PLAN-001",
+        "PLAN-004",
+        "PLAN-NEUTRALITY-SUBJECT-FIXPOINT",
+        "PLAN-RELEASE-PAYLOAD-ORDER",
+        "PLAN-FINAL-POST-GATE-CYCLE"
+      ]
+    },
+    {
+      "id": "architecture",
+      "status": "PASS",
+      "rationale": "The plan separates core lifecycle semantics from adapters, adds the modular controller boundary, keeps adapters as host-operation projections, and reserves release/finalization authority to controller-owned workstreams.",
+      "findingIds": [
+        "PLAN-004",
+        "PLAN-FINAL-POST-GATE-CYCLE"
+      ]
+    },
+    {
+      "id": "ownership",
+      "status": "PASS",
+      "rationale": "Sixteen workstreams have disjoint write sets; shared release/finalization/controller artifacts are owned by explicit sequential workstreams; writeOverlapCount is zero.",
+      "findingIds": [
+        "PLAN-007",
+        "PLAN-WS01-ENTRYPOINT"
+      ]
+    },
+    {
+      "id": "correctness-compatibility",
+      "status": "PASS",
+      "rationale": "Codex, Claude Code, Cursor, Hermes and OpenCode are covered by a shared offline EXPERIMENTAL adapter baseline, with live VERIFIED promotion explicitly outside required release proof.",
+      "findingIds": [
+        "PLAN-004"
+      ]
+    },
+    {
+      "id": "security-permissions",
+      "status": "PASS",
+      "rationale": "Neutrality v3 freezes external no-follow signed authority, write-once output projection, redaction, stale/input rejection, release neutrality and finalization neutrality checks.",
+      "findingIds": [
+        "PLAN-002",
+        "PLAN-NEUTRALITY-SUBJECT-FIXPOINT"
+      ]
+    },
+    {
+      "id": "performance-scale",
+      "status": "PASS",
+      "rationale": "The resource budget profile remains frozen; max task context is 38899 bytes under the 49152-byte ceiling, validation invocations are explicit, and estimated minimum tool calls are bounded at 81.",
+      "findingIds": [
+        "PLAN-005"
+      ]
+    },
+    {
+      "id": "testing-evidence",
+      "status": "PASS",
+      "rationale": "The plan declares 39 evidence identities, release assembly separates candidate and final inventory digests, platform matrix receipts bind the candidate digest, and final proof has dedicated parity/negative evidence.",
+      "findingIds": [
+        "PLAN-003",
+        "PLAN-006",
+        "PLAN-RELEASE-PAYLOAD-ORDER",
+        "PLAN-FINAL-POST-GATE-CYCLE"
+      ]
+    },
+    {
+      "id": "operability",
+      "status": "PASS",
+      "rationale": "The release matrix, aggregate receipts, immutable release assembly, README/license/governance scope and installability boundaries are assigned to WS-14 with final audit in WS-15.",
+      "findingIds": [
+        "PLAN-006",
+        "PLAN-RELEASE-PAYLOAD-ORDER"
+      ]
+    },
+    {
+      "id": "execution-safety",
+      "status": "PASS",
+      "rationale": "Workflow state, controller gates, task reviews, final audit, AWAITING_FINAL_PROOF, final proof body/envelope separation and WAL/state CAS are explicitly gated before COMPLETE.",
+      "findingIds": [
+        "PLAN-001",
+        "PLAN-FINAL-POST-GATE-CYCLE"
+      ]
+    },
+    {
+      "id": "efficiency-portability",
+      "status": "PASS",
+      "rationale": "The plan stays host-neutral, keeps five thin skills, uses native adapters only as projections, has no project-local paths, and has no duplicate validation commands or unresolved blocking questions.",
+      "findingIds": [
+        "PLAN-004",
+        "PLAN-005"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-NEUTRALITY-SUBJECT-FIXPOINT",
+      "severity": "HIGH",
+      "class": "execution-safety-gap",
+      "dimension": "security-permissions",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json",
+      "status": "resolved",
+      "message": "Revision 7 replaces the ambiguous self-scanning neutrality boundary with operation-bound write-once output projection, external signed authority, no-replace publication, stable reads and negative evidence.",
+      "requiredAction": "Preserve neutrality v3 semantics and fail closed on occupancy, alias, race, mutation, stale authority and signature mismatch."
+    },
+    {
+      "id": "PLAN-RELEASE-PAYLOAD-ORDER",
+      "severity": "HIGH",
+      "class": "evidence-gap",
+      "dimension": "testing-evidence",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/release-assembly-profile.v1.json",
+      "status": "resolved",
+      "message": "Revision 7 assigns WS-14 release assembly to produce a non-recursive candidatePayloadInventoryDigest before release neutrality and a separate finalInventoryDigest for the committed generation.",
+      "requiredAction": "Preserve WS-14 sequential ownership, release assembly transaction order and crash/substitution/matrix mismatch negative evidence."
+    },
+    {
+      "id": "PLAN-FINAL-POST-GATE-CYCLE",
+      "severity": "MEDIUM",
+      "class": "execution-safety-gap",
+      "dimension": "execution-safety",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/final-proof-authority-profile.v2.json",
+      "status": "resolved",
+      "message": "Revision 7 moves terminal completion through READY_FOR_FINALIZATION and AWAITING_FINAL_PROOF with final proof body/envelope separation, finalization output projection and WAL/state binding before COMPLETE.",
+      "requiredAction": "Preserve final proof parity, post-review mutation negatives and COMPLETE CAS/recovery semantics."
+    },
+    {
+      "id": "PLAN-WS01-ENTRYPOINT",
+      "severity": "HIGH",
+      "class": "ownership-gap",
+      "dimension": "ownership",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "WS-01 keeps the neutrality subpackage entrypoint while WS-07 owns root CLI/module entrypoints.",
+      "requiredAction": "Preserve the split entrypoint ownership."
+    },
+    {
+      "id": "PLAN-001",
+      "severity": "MEDIUM",
+      "class": "execution-safety-gap",
+      "dimension": "execution-safety",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r02.json",
+      "status": "resolved",
+      "message": "Specification and plan-review ancestry is append-only and content-addressed through r07/r05.",
+      "requiredAction": "Preserve review and freeze lineage during plan freeze."
+    },
+    {
+      "id": "PLAN-002",
+      "severity": "HIGH",
+      "class": "evidence-gap",
+      "dimension": "security-permissions",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Bootstrap, runtime and release neutrality scopes, external trust inputs, signed receipts, zero-result counters and redaction are present.",
+      "requiredAction": "Preserve all neutrality receipt bindings."
+    },
+    {
+      "id": "PLAN-003",
+      "severity": "HIGH",
+      "class": "plan-defect",
+      "dimension": "testing-evidence",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r07.json",
+      "status": "resolved",
+      "message": "Task and final acceptance reject unresolved Medium, High or Blocker findings.",
+      "requiredAction": "Retain exact severity thresholds."
+    },
+    {
+      "id": "PLAN-004",
+      "severity": "MEDIUM",
+      "class": "execution-safety-gap",
+      "dimension": "correctness-compatibility",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Required adapters run offline from frozen contracts and cannot claim maturity above EXPERIMENTAL without separate live proof; Hermes is now included.",
+      "requiredAction": "Keep live capability outside the required DAG and preserve evidence-accurate maturity."
+    },
+    {
+      "id": "PLAN-005",
+      "severity": "MEDIUM",
+      "class": "plan-defect",
+      "dimension": "performance-scale",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+      "status": "resolved",
+      "message": "Product profile freezes S0/S1/S2 ceilings, benchmark cohorts, regression limits and bounded live calibration.",
+      "requiredAction": "Preserve product budget and benchmark authorities."
+    },
+    {
+      "id": "PLAN-006",
+      "severity": "MEDIUM",
+      "class": "evidence-gap",
+      "dimension": "operability",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Nine CI-owned platform legs, external authority and fail-closed aggregate evidence are frozen.",
+      "requiredAction": "Preserve all leg identities, receipts and aggregate consumption."
+    },
+    {
+      "id": "PLAN-007",
+      "severity": "HIGH",
+      "class": "ownership-gap",
+      "dimension": "ownership",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Workstreams remain the sole canonical dependency DAG; worker-level dependsOn fields remain absent.",
+      "requiredAction": "Keep dependencies exclusively in workstreams[].dependsOn."
+    }
+  ],
+  "summary": "READY_TO_FREEZE for plan revision 7: frozen S2 specification revision 7 is ready; the report is bound to the immediately prior locked plan review r03 and resolves the intermediate r04 findings; plan-ready validation passes; quality metrics show 16 tasks, critical path 8, max width 5, zero write overlaps, zero unresolved blocking questions, 39 evidence items and 81 estimated minimum tool calls.",
+  "optimizationNotes": [
+    "Declared maxParallelTasks remains 4 while max wave width is 5, so the controller will naturally split one wide wave without changing ownership.",
+    "No duplicate validation commands were detected; keep release assembly and final proof as single owner sequential gates.",
+    "Max task context remains below the 49152-byte ceiling; use task packets rather than full plan context during execution."
+  ]
+}

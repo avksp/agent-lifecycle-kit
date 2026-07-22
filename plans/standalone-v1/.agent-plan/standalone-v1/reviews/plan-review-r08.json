@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r08",
+  "packageId": "standalone-v1",
+  "planRevision": 10,
+  "reviewedPlanHash": "b99d3b9c8add5bfbd40d0f528ebb67e61dc2ed8bc4ebb873c58b04ea53a0ebf3",
+  "previousReview": {
+    "reviewId": "plan-review-r07",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r07.json",
+    "sha256": "d7fb869cee4bccf9cb2a233b7d23f57f31d3b06a853fa4fe51f99880f4185214"
+  },
+  "qualityMetrics": {
+    "taskCount": 16,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 9,
+    "maxParallelWidth": 5,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 39,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 49152,
+    "actualContextBytesTotal": 357487,
+    "maxTaskContextBytes": 37169,
+    "validationInvocationCount": 39,
+    "estimatedMinimumToolCalls": 81
+  },
+  "verdict": "READY_TO_FREEZE",
+  "reviewer": {
+    "id": "plan-reviewer-r08",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-plan-review-r08-independent-audit"
+  },
+  "reviewedAt": "2026-07-22T10:20:00Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "Revision 10 is a plan-only write-attribution correction and does not change product requirements.",
+      "findingIds": [
+        "PLAN-OWNERSHIP-ATTRIBUTION-R10"
+      ]
+    },
+    {
+      "id": "architecture",
+      "status": "PASS",
+      "rationale": "Controller-owned mutable package manifest handling remains separate from worker-owned implementation paths.",
+      "findingIds": [
+        "PLAN-OWNERSHIP-ATTRIBUTION-R10"
+      ]
+    },
+    {
+      "id": "ownership",
+      "status": "PASS",
+      "rationale": "The previously unowned package manifest and Russian README paths now have exact authority attribution; the Russian README moved under the existing release docs/guides scope; the unnecessary root test marker was removed; write overlap remains zero.",
+      "findingIds": [
+        "PLAN-OWNERSHIP-ATTRIBUTION-R10"
+      ]
+    },
+    {
+      "id": "correctness-compatibility",
+      "status": "PASS",
+      "rationale": "The correction does not alter adapter compatibility scope, host protocol behavior, or maturity claims.",
+      "findingIds": []
+    },
+    {
+      "id": "security-permissions",
+      "status": "PASS",
+      "rationale": "No authority, credential, host-operation, neutrality, or release-signing boundary is widened.",
+      "findingIds": []
+    },
+    {
+      "id": "performance-scale",
+      "status": "PASS",
+      "rationale": "Quality metrics remain within the frozen context and validation budgets.",
+      "findingIds": []
+    },
+    {
+      "id": "testing-evidence",
+      "status": "PASS",
+      "rationale": "Stdlib discovery remains covered without a root test marker; validation command inventory is unchanged.",
+      "findingIds": [
+        "PLAN-OWNERSHIP-ATTRIBUTION-R10"
+      ]
+    },
+    {
+      "id": "operability",
+      "status": "PASS",
+      "rationale": "Russian README ownership is assigned under the release documentation scope without changing release sequencing.",
+      "findingIds": [
+        "PLAN-OWNERSHIP-ATTRIBUTION-R10"
+      ]
+    },
+    {
+      "id": "execution-safety",
+      "status": "PASS",
+      "rationale": "The controller can now reject unowned writes before task acceptance using the frozen ownership map.",
+      "findingIds": [
+        "PLAN-OWNERSHIP-ATTRIBUTION-R10"
+      ]
+    },
+    {
+      "id": "efficiency-portability",
+      "status": "PASS",
+      "rationale": "The correction adds one short plan note and no extra required validation invocations.",
+      "findingIds": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-OWNERSHIP-ATTRIBUTION-R10",
+      "severity": "HIGH",
+      "class": "ownership-gap",
+      "dimension": "ownership",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Execution pre-acceptance ownership audit found unowned paths: the mutable package manifest, the root stdlib test-discovery marker, and the Russian README. Revision 10 treats the manifest as plan authority, removes the unnecessary root test marker, and moves the Russian README to docs/guides/README.ru.md under the existing WS-14 release documentation scope.",
+      "requiredAction": "Preserve exact ownership coverage and fail closed on unowned or forbidden writes before task acceptance."
+    }
+  ],
+  "summary": "Revision 10 is READY_TO_FREEZE as a minimal ownership-attribution correction. It changes no requirements, task dependencies, resource budgets, adapter scope, controller gates, or acceptance thresholds."
+}

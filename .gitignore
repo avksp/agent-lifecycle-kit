@@ -1,0 +1,21 @@
+.DS_Store
+.coverage
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.egg-info/
+build/
+dist/
+htmlcov/
+
+# Local lifecycle authority material and generated evidence are never committed.
+.agent-lifecycle-authority/
+plans/standalone-v1/evidence/
+plans/standalone-v1/workflow/validation/
+plans/standalone-v1/workflow/gates/
+
+# Transient lifecycle controller locks are process-local.
+plans/**/.agent-plan/**/*.lock
+plans/**/workflow/*.lock

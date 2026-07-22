@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "agent-lifecycle-synthetic-scenario.v1",
+  "scenarioId": "S0-MECHANICAL-01",
+  "title": "Bounded mechanical edit",
+  "sddTier": "S0",
+  "tags": [
+    "happy-path",
+    "final-verdict",
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "liveModelInvocations": 0,
+  "steps": [
+    {
+      "stage": "clarification",
+      "input": "Rename one internal helper with no behavior change.",
+      "expected": "no-blocking-questions"
+    },
+    {
+      "stage": "plan",
+      "expected": "single bounded mechanical workstream"
+    },
+    {
+      "stage": "implementation",
+      "expected": "one owner, exact write set, deterministic validation"
+    },
+    {
+      "stage": "final-audit",
+      "expected": "COMPLETE"
+    }
+  ],
+  "expectedOutcome": {
+    "taskVerdicts": [
+      "ACCEPTED"
+    ],
+    "finalVerdict": "COMPLETE",
+    "qualityRegression": false
+  }
+}

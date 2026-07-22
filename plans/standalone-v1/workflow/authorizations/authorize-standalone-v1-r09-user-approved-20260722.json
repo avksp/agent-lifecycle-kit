@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "agent-authorization-receipt.v1",
+  "runId": "standalone-v1-r08-run-20260722",
+  "packageId": "standalone-v1",
+  "planDigest": "8ae2a46a6ac273a4a4574eb91878163479fb2414b6557824882e31a92f66b7e4",
+  "sourceRevision": "009ab53370ef6cd3315bd90636bbde6eb911edb6",
+  "mode": "approval-required",
+  "decision": "APPROVED",
+  "authorizedBy": "root-lifecycle-controller",
+  "authorizedAt": "2026-07-22T09:20:00Z",
+  "host": {
+    "surface": "codex",
+    "operationId": "authorize-standalone-v1-r09-user-approved-20260722"
+  }
+}

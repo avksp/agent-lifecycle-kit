@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "agent-lifecycle-release-authority-preflight-profile.v1",
+  "profileId": "release-authority-preflight",
+  "profileVersion": "1.0.0",
+  "canonicalization": {
+    "encoding": "RFC8785-JCS",
+    "hash": "SHA-256",
+    "signature": "Ed25519",
+    "signatureDomain": "agent-lifecycle-release-authority-preflight-v1\u0000",
+    "additionalPropertiesAllowed": false
+  },
+  "externalInputs": [
+    {
+      "role": "ci-matrix-allowlist",
+      "pathEnvironment": "AGENT_LIFECYCLE_CI_MATRIX_ALLOWLIST_FILE",
+      "trustRootEnvironment": "AGENT_LIFECYCLE_CI_MATRIX_TRUST_ROOT",
+      "expectedFingerprintEnvironment": "AGENT_LIFECYCLE_CI_MATRIX_SIGNER_FINGERPRINT",
+      "maximumAgeHours": 24
+    },
+    {
+      "role": "benchmark-baseline-authority",
+      "pathEnvironment": "AGENT_LIFECYCLE_BASELINE_AUTHORITY_FILE",
+      "trustRootEnvironment": "AGENT_LIFECYCLE_BASELINE_TRUST_ROOT",
+      "expectedFingerprintEnvironment": "AGENT_LIFECYCLE_BASELINE_AUTHORITY_FINGERPRINT",
+      "maximumAgeHours": 720
+    },
+    {
+      "role": "live-calibration-model-profile",
+      "pathEnvironment": "AGENT_LIFECYCLE_LIVE_COST_MODEL_PROFILE",
+      "trustRootEnvironment": "AGENT_LIFECYCLE_LIVE_COST_TRUST_ROOT",
+      "expectedFingerprintEnvironment": "AGENT_LIFECYCLE_LIVE_COST_SIGNER_FINGERPRINT",
+      "maximumAgeHours": 24
+    }
+  ],
+  "externalPathPolicy": {
+    "mustBeOutsideWorkspaceGitArtifactAndReleaseRoots": true,
+    "regularFileOnly": true,
+    "noSymlinkReparseHardlinkOrSpecialFile": true,
+    "stableReadRequired": true,
+    "maximumBytesPerInput": 1048576,
+    "privateContentMayEnterStateLogsPacketsOrEvidence": false
+  },
+  "controllerAttestation": {
+    "trustRootEnvironment": "AGENT_LIFECYCLE_RELEASE_PREFLIGHT_TRUST_ROOT",
+    "expectedFingerprintEnvironment": "AGENT_LIFECYCLE_RELEASE_PREFLIGHT_SIGNER_FINGERPRINT",
+    "producerSigningKeyEnvironment": "AGENT_LIFECYCLE_RELEASE_PREFLIGHT_SIGNING_KEY",
+    "signingKeyAllowedOnlyForProducer": true
+  },
+  "requiredReceiptBindings": [
+    "gateId",
+    "runId",
+    "packageId",
+    "taskId",
+    "attempt",
+    "phase",
+    "operationId",
+    "planDigest",
+    "sourceRevision",
+    "dependencyLockDigest",
+    "ciMatrixProfileDigest",
+    "ciAllowlistDigest",
+    "ciCommandSetDigest",
+    "baselineAuthorityProfileDigest",
+    "baselineAuthorityDigest",
+    "liveModelProfileDigest",
+    "releaseAssemblyProfileDigest",
+    "authorityFingerprintSet",
+    "issuedAt",
+    "expiresAt"
+  ],
+  "preDispatchRule": "a verified fresh receipt must be stored in durable task state before any WS-14 external dispatch or live calibration",
+  "driftRule": "any authority, profile, source, plan, lock, attempt or predecessor-gate drift invalidates the receipt and blocks launch",
+  "redaction": {
+    "allowedDurableValues": [
+      "normalized identifiers",
+      "digests",
+      "fingerprints",
+      "issuedAt",
+      "expiresAt"
+    ],
+    "rawAuthorityPayloadsKeysTokensProviderOrModelNamesForbidden": true
+  }
+}

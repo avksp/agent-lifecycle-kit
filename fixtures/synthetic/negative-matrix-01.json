@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "agent-lifecycle-negative-matrix.v1",
+  "matrixId": "NEGATIVE-MATRIX-01",
+  "liveModelInvocations": 0,
+  "cases": [
+    {
+      "caseId": "stale-gate-receipt",
+      "tags": [
+        "stale-artifacts"
+      ],
+      "expectedVerdict": "BLOCKED"
+    },
+    {
+      "caseId": "forged-task-review",
+      "tags": [
+        "forged-artifacts"
+      ],
+      "expectedVerdict": "BLOCKED"
+    },
+    {
+      "caseId": "overlapping-worker-write",
+      "tags": [
+        "ownership-conflicts"
+      ],
+      "expectedVerdict": "CONTRACT_CHANGE"
+    },
+    {
+      "caseId": "cyclic-worker-dag",
+      "tags": [
+        "cyclic-dag"
+      ],
+      "expectedVerdict": "CHANGES_REQUIRED"
+    },
+    {
+      "caseId": "traversal-output-path",
+      "tags": [
+        "path-attacks"
+      ],
+      "expectedVerdict": "BLOCKED"
+    },
+    {
+      "caseId": "unsupported-host-cancel",
+      "tags": [
+        "adapter-failure"
+      ],
+      "expectedVerdict": "BLOCKED"
+    },
+    {
+      "caseId": "budget-hard-ceiling",
+      "tags": [
+        "budget-exhaustion"
+      ],
+      "expectedVerdict": "REWORK"
+    },
+    {
+      "caseId": "partial-publication-crash",
+      "tags": [
+        "crash-recovery"
+      ],
+      "expectedVerdict": "RESUME_OR_BLOCK"
+    }
+  ]
+}

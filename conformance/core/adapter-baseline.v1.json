@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "agent-lifecycle-adapter-baseline.v1",
+  "baselineId": "offline-adapter-baseline-v1",
+  "contractCompatibility": {
+    "rangeKind": "closed-offline",
+    "minimum": "adapter-contract.v1",
+    "maximum": "adapter-contract.v1",
+    "authoritativeSource": {
+      "sourceId": "normalized-contract-inventory-r02",
+      "sha256": "c332a29de6eed7dcf1ff93cfa5cb0868557f31d1f7ff635ba2df2c7695ed3d4a"
+    }
+  },
+  "requiredHosts": [
+    "codex",
+    "claude-code",
+    "cursor",
+    "hermes",
+    "opencode"
+  ],
+  "requiredProtocolEnvelopes": [
+    "adapter-discovery.v1",
+    "adapter-capability-descriptor.v1",
+    "host-operation-request.v1",
+    "host-operation-receipt.v1",
+    "usage-attestation.v1",
+    "task-result.v2",
+    "task-review.v2",
+    "final-audit.v2"
+  ],
+  "requiredOperations": [
+    "install",
+    "discover",
+    "validate-envelope",
+    "launch",
+    "wait",
+    "cancel",
+    "resume",
+    "tool-execution",
+    "result-collection",
+    "usage-attestation",
+    "task-audit",
+    "final-audit"
+  ],
+  "maturityRules": {
+    "requiredReleaseMaturity": "EXPERIMENTAL",
+    "verifiedRequiresLiveEvidence": true,
+    "unsupportedOperationPolicy": "fail-closed",
+    "offlineBaselineRequired": true,
+    "liveTestedHostRange": null
+  },
+  "hostMatrix": [
+    {
+      "host": "codex",
+      "nativeProjection": "codex-plugin",
+      "offlineInstallDiscoveryRequired": true,
+      "declaredMaturity": "EXPERIMENTAL"
+    },
+    {
+      "host": "claude-code",
+      "nativeProjection": "claude-plugin",
+      "offlineInstallDiscoveryRequired": true,
+      "declaredMaturity": "EXPERIMENTAL"
+    },
+    {
+      "host": "cursor",
+      "nativeProjection": "cursor-plugin",
+      "offlineInstallDiscoveryRequired": true,
+      "declaredMaturity": "EXPERIMENTAL"
+    },
+    {
+      "host": "hermes",
+      "nativeProjection": "hermes-registry",
+      "offlineInstallDiscoveryRequired": true,
+      "declaredMaturity": "EXPERIMENTAL"
+    },
+    {
+      "host": "opencode",
+      "nativeProjection": "opencode-plugin",
+      "offlineInstallDiscoveryRequired": true,
+      "declaredMaturity": "EXPERIMENTAL"
+    }
+  ]
+}

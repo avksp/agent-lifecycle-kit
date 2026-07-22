@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r09",
+  "packageId": "standalone-v1",
+  "planRevision": 11,
+  "reviewedPlanHash": "011cd4f78fc7017c441282c498356e7ff7b0b111b7aa9ec5c279cf874470607f",
+  "previousReview": {
+    "reviewId": "plan-review-r08",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r08.json",
+    "sha256": "eb93644bb3c06b14bab1cb9a67a22faf149b1cb27dd9dd4fa679cb9f9d26aed4"
+  },
+  "qualityMetrics": {
+    "taskCount": 16,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 9,
+    "maxParallelWidth": 5,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 39,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 49152,
+    "actualContextBytesTotal": 360000,
+    "maxTaskContextBytes": 49152,
+    "validationInvocationCount": 30,
+    "estimatedMinimumToolCalls": 72
+  },
+  "verdict": "READY_TO_FREEZE",
+  "reviewer": {
+    "id": "plan-reviewer-r09",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-plan-review-r09-offline-release-candidate"
+  },
+  "reviewedAt": "2026-07-22T11:45:00Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "Plan revision 11 implements specification revision 10 and narrows release scope to offline release-candidate readiness."
+    },
+    {
+      "id": "architecture",
+      "status": "PASS",
+      "rationale": "Portable core remains separate from adapters; release tooling is local and does not import project-specific state."
+    },
+    {
+      "id": "ownership",
+      "status": "PASS",
+      "rationale": "Controller preserve-compatible changes are lead-owned refreeze support; WS-14 owns only release/governance outputs and prior accepted workstream contracts remain unchanged."
+    },
+    {
+      "id": "security-permissions",
+      "status": "PASS",
+      "rationale": "External authority requirements are not weakened into false PASS claims; they are deferred blockers for production promotion."
+    },
+    {
+      "id": "testing-evidence",
+      "status": "PASS",
+      "rationale": "WS-14 validation commands are local-process commands and individual external matrix legs are no longer required for offline candidate acceptance."
+    },
+    {
+      "id": "operability",
+      "status": "PASS",
+      "rationale": "The blocked run can adopt revision 11 with preserveAcceptedCompatible and continue from WS-14."
+    },
+    {
+      "id": "efficiency-portability",
+      "status": "PASS",
+      "rationale": "The refreeze avoids rerunning already accepted compatible tasks and removes nine external matrix-leg host-operation validations from the required local candidate path."
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-OFFLINE-RELEASE-CANDIDATE-R11",
+      "severity": "HIGH",
+      "class": "release-authority-scope",
+      "dimension": "operability",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Revision 10 blocked autonomous completion because WS-14 required unavailable external CI, signature and live-cost authorities and pointed at non-existing release/final controller commands.",
+      "requiredAction": "Revision 11 shall only claim local offline release-candidate readiness, keep production promotion blocked until signed external evidence exists, and keep controller refreeze support lead-owned rather than assigning overlapping worker ownership."
+    }
+  ],
+  "summary": "Revision 11 is READY_TO_FREEZE for autonomous offline release-candidate completion. Production promotion remains a separate deferred authority gate and is not claimed by this plan."
+}

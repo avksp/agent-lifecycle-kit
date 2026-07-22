@@ -1,0 +1,208 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r02",
+  "packageId": "standalone-v1",
+  "planRevision": 2,
+  "reviewedPlanHash": "730ca7e6c5841475c0aaf8dc44aeb706df5f49bbd9b6d3ee1755b98da5a1bd82",
+  "previousReview": {
+    "reviewId": "plan-review-r01",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r01.json",
+    "sha256": "e1abab9c75105853d1064f15c602b8594dc25bb2c05bb2b0303e29dbe9ffce0b"
+  },
+  "qualityMetrics": {
+    "taskCount": 15,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 8,
+    "maxParallelWidth": 4,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 36,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 65536,
+    "actualContextBytesTotal": 420640,
+    "maxTaskContextBytes": 52565,
+    "validationInvocationCount": 36,
+    "estimatedMinimumToolCalls": 75
+  },
+  "verdict": "CHANGES_REQUIRED",
+  "reviewer": {
+    "id": "independent-plan-reviewer-r02",
+    "independent": true,
+    "surface": "codex",
+    "runId": "standalone-v1-plan-review-r02-independent-retry"
+  },
+  "reviewedAt": "2026-07-15T16:10:24Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "All twenty-six frozen S2 requirements are explicit, required and reciprocally projected exactly once into required workstreams, acceptance criteria and thirty-six evidence artifacts; the final severity and product-budget gaps from r01 are resolved.",
+      "findingIds": [
+        "PLAN-003",
+        "PLAN-005"
+      ]
+    },
+    {
+      "id": "architecture",
+      "status": "PASS",
+      "rationale": "Core lifecycle semantics, thin skills, isolated surface adapters, change-set providers, authority profiles and release tooling have explicit one-way boundaries, fail-closed behavior and compatibility seams.",
+      "findingIds": []
+    },
+    {
+      "id": "ownership",
+      "status": "FAIL",
+      "rationale": "Canonical workstream ownership is disjoint and its DAG is acyclic, but every worker entry also declares the forbidden dependsOn field, duplicating DAG authority and making the schema-3.0 ready profile fail.",
+      "findingIds": [
+        "PLAN-007"
+      ]
+    },
+    {
+      "id": "correctness-compatibility",
+      "status": "PASS",
+      "rationale": "The required adapter path is now fully offline, pinned to the immutable contract inventory and capped honestly at EXPERIMENTAL; optional live promotion cannot block or weaken the required release DAG.",
+      "findingIds": [
+        "PLAN-004"
+      ]
+    },
+    {
+      "id": "security-permissions",
+      "status": "PASS",
+      "rationale": "Bootstrap, per-launch, post-attempt and release neutrality scopes are fail-closed, externally trusted, signed, subject-bound and redacted, with explicit secret and deny-authority boundaries.",
+      "findingIds": [
+        "PLAN-002"
+      ]
+    },
+    {
+      "id": "performance-scale",
+      "status": "PASS",
+      "rationale": "The frozen product profile defines exact S0/S1/S2 logical-call, token, context, tool, evidence, parallelism and wall-time ceilings plus deterministic p50/p95 benchmark and live-calibration gates.",
+      "findingIds": [
+        "PLAN-005"
+      ]
+    },
+    {
+      "id": "testing-evidence",
+      "status": "PASS",
+      "rationale": "Each requirement has reciprocal acceptance and bounded evidence with a producer command, receipt, validator identity, runtime class, threshold, freshness and reuse rule; task and final acceptance reject every open Medium, High or Blocker finding.",
+      "findingIds": [
+        "PLAN-002",
+        "PLAN-003",
+        "PLAN-005",
+        "PLAN-006"
+      ]
+    },
+    {
+      "id": "operability",
+      "status": "PASS",
+      "rationale": "Offline adapter execution is non-blocking, while externally owned neutrality, live-calibration and exact nine-leg CI authorities have explicit launch gates, signed receipts, timeouts and fail-closed aggregation.",
+      "findingIds": [
+        "PLAN-004",
+        "PLAN-006"
+      ]
+    },
+    {
+      "id": "execution-safety",
+      "status": "FAIL",
+      "rationale": "The specification lineage, plan-review disclosure, approvals, bounded retries, durable state, neutrality gates and no-open-Medium verdicts are explicit, but the freeze candidate cannot pass deterministic ready validation while worker.dependsOn remains present.",
+      "findingIds": [
+        "PLAN-001",
+        "PLAN-002",
+        "PLAN-003",
+        "PLAN-004",
+        "PLAN-007"
+      ]
+    },
+    {
+      "id": "efficiency-portability",
+      "status": "PASS",
+      "rationale": "The provider-neutral fifteen-task DAG retains eight effective waves, width four, zero overlaps and zero duplicate validation commands; maximum task context is 52565 bytes under the frozen 65536-byte ceiling, with task-local progressive disclosure.",
+      "findingIds": [
+        "PLAN-005",
+        "PLAN-006"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-007",
+      "severity": "HIGH",
+      "class": "ownership-gap",
+      "dimension": "ownership",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "open",
+      "message": "Schema 3.0 makes workstreams the only canonical dependency DAG, but all fifteen worker entries declare dependsOn: fourteen repeat non-empty worker dependencies and neutrality-worker carries the forbidden empty field. The deterministic plan-ready validator therefore stops with 'worker.dependsOn is forbidden; workstreams are the canonical DAG'. Even where the duplicated values currently match, the second authority is non-conformant and can drift during packet compilation or execution.",
+      "requiredAction": "Remove dependsOn from every worker entry while preserving the dependency graph exclusively in workstreams[].dependsOn. Re-run the ready-profile package validator and quality analyzer against the corrected subject, then submit the new subject for independent review before freeze."
+    },
+    {
+      "id": "PLAN-002",
+      "severity": "HIGH",
+      "class": "evidence-gap",
+      "dimension": "security-permissions",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Revision 2 adds the complete bootstrap negative suite, a full repository scan, signed controller-owned pre-launch and post-attempt neutrality gates for WS-02 through WS-15, explicit external trust inputs, full-history and recursive release-payload evidence, and final verification of signer, subject, scope, freshness and zero-result counters.",
+      "requiredAction": "No further action for PLAN-002; preserve the frozen neutrality authority profile, controller receipt bindings, full bootstrap/release scopes and redaction boundary when correcting PLAN-007."
+    },
+    {
+      "id": "PLAN-003",
+      "severity": "HIGH",
+      "class": "plan-defect",
+      "dimension": "testing-evidence",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r03.json",
+      "status": "resolved",
+      "message": "Frozen specification revision 3, its reciprocal manifest projections and every task/final gate now require no unresolved Medium, High or Blocker finding for ACCEPTED or COMPLETE, with Blocker stopping execution immediately.",
+      "requiredAction": "No further action for PLAN-003; retain the exact task and final severity thresholds during the manifest-only correction."
+    },
+    {
+      "id": "PLAN-001",
+      "severity": "MEDIUM",
+      "class": "execution-safety-gap",
+      "dimension": "execution-safety",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r02.json",
+      "status": "resolved",
+      "message": "The exact first specification-review subject is preserved as product-specification-r01-round01.snapshot.json, specification-review-r02 links specification-review-r01 by exact content identity, and the append-only r03/r04 review chain reaches the valid specification-freeze-r03 receipt. The unavailable rejected plan-r01 subject is separately disclosed without fabricating replay, while this full r02 review links the exact r01 review artifact.",
+      "requiredAction": "No further action for PLAN-001; preserve the specification chain, plan-review-r01 artifact and plan-review-r01-subject-disclosure.json unchanged."
+    },
+    {
+      "id": "PLAN-004",
+      "severity": "MEDIUM",
+      "class": "execution-safety-gap",
+      "dimension": "correctness-compatibility",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "WS-10 through WS-13 now run with network denied and no live-surface capability gate, consume the immutable normalized contract inventory, pin closed offline compatibility descriptors and emit release-eligible EXPERIMENTAL evidence; VERIFIED remains an optional separately authorized live promotion.",
+      "requiredAction": "No further action for PLAN-004; keep live surface capability outside the required DAG and prevent offline evidence from promoting maturity above EXPERIMENTAL."
+    },
+    {
+      "id": "PLAN-005",
+      "severity": "MEDIUM",
+      "class": "plan-defect",
+      "dimension": "performance-scale",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/agent-lifecycle-budget-profile.v1.json",
+      "status": "resolved",
+      "message": "The immutable product budget profile now freezes S0/S1/S2 hard ceilings, stage token limits, logical-call and cumulative-context semantics, five benchmark scenarios, two hundred deterministic cold/warm runs, absolute p95 SLOs, later-release p50/p95 regression limits, signed baseline sequencing and six bounded live calibration runs.",
+      "requiredAction": "No further action for PLAN-005; preserve the exact profile, benchmark authority, reciprocal EV-RESOURCE and EV-COST-BENCHMARK contracts, and distinction between implementation-run orchestration limits and shipped product limits."
+    },
+    {
+      "id": "PLAN-006",
+      "severity": "MEDIUM",
+      "class": "evidence-gap",
+      "dimension": "operability",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Revision 2 freezes the exact Ubuntu, macOS and Windows by CPython 3.11 through 3.13 matrix, nine distinct CI-owned evidence and receipt paths, an external signed allowlist authority, exact per-leg environment identities and a signed fail-closed aggregate consumed by release evidence.",
+      "requiredAction": "No further action for PLAN-006; preserve all nine leg identities, per-leg receipts, external authority and exact aggregate consumption during the manifest-only correction."
+    }
+  ],
+  "summary": "CHANGES_REQUIRED after a full independent ten-dimension review of plan revision 2. The reviewed subject is bound to 730ca7e6c5841475c0aaf8dc44aeb706df5f49bbd9b6d3ee1755b98da5a1bd82 and the exact r01 predecessor review is bound to e1abab9c75105853d1064f15c602b8594dc25bb2c05bb2b0303e29dbe9ffce0b; the missing rejected-r01 subject remains explicitly disclosed rather than reconstructed. PLAN-001 through PLAN-006 are resolved, the frozen S2 specification chain is valid, semantic traceability covers twenty-six requirements and thirty-six evidence artifacts, and the DAG has fifteen tasks, eight effective waves, width four, zero write overlaps, zero open questions and zero duplicate commands. One new HIGH finding remains: PLAN-007. The ready-profile validator rejects worker.dependsOn because workstreams are the canonical DAG, so this plan cannot be frozen until those fifteen forbidden fields are removed and the corrected subject is independently re-reviewed.",
+  "optimizationNotes": [
+    "Compared with r01, critical path, effective waves and maximum width remain 8, 8 and 4, with zero write overlaps and zero duplicate commands; the safe dependency shape therefore needs no redesign.",
+    "Evidence count increased from 20 to 36, validation invocations from 20 to 36 and minimum tool calls from 59 to 75 to close the neutrality, resource and platform-matrix proof gaps. Referenced context increased from 231681 to 420640 bytes, but the maximum task packet remains 52565 bytes under the 65536-byte ceiling.",
+    "Remove only the forbidden worker.dependsOn members. Keeping the workstream DAG unchanged resolves PLAN-007 without changing waves, ownership, acceptance, evidence coverage or context projections.",
+    "Retain the single controller-owned content-addressed neutrality gate and referenced authority profile; duplicating its contract or external values into task packets would increase context and weaken the redaction boundary.",
+    "The r01 subject disclosure remains authoritative: do not spend review or tool budget attempting to reconstruct the unavailable rejected draft. Continue through exact review-artifact lineage and a full audit of each new subject."
+  ]
+}

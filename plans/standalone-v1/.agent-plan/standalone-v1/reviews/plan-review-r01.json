@@ -1,0 +1,191 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r01",
+  "packageId": "standalone-v1",
+  "planRevision": 1,
+  "reviewedPlanHash": "219672162da526fb2a332cdeb816ee4169c2fc14a7754d38c16527352ea1a179",
+  "previousReview": null,
+  "qualityMetrics": {
+    "taskCount": 15,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 8,
+    "maxParallelWidth": 4,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 20,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 65536,
+    "actualContextBytesTotal": 231681,
+    "maxTaskContextBytes": 29407,
+    "validationInvocationCount": 20,
+    "estimatedMinimumToolCalls": 59
+  },
+  "verdict": "CHANGES_REQUIRED",
+  "reviewer": {
+    "id": "independent-plan-reviewer-r01",
+    "independent": true,
+    "surface": "codex",
+    "runId": "standalone-v1-plan-review-r01-independent"
+  },
+  "reviewedAt": "2026-07-15T14:11:40Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "FAIL",
+      "rationale": "The frozen final-completion rule and resource-efficiency promise are weaker or less measurable than the production-ready lifecycle they claim to define.",
+      "findingIds": [
+        "PLAN-003",
+        "PLAN-005"
+      ]
+    },
+    {
+      "id": "architecture",
+      "status": "PASS",
+      "rationale": "Core semantics, thin skills, surface adapters, change-set providers, artifact storage and release tooling have explicit one-way boundaries, failure behavior and rollback seams.",
+      "findingIds": []
+    },
+    {
+      "id": "ownership",
+      "status": "PASS",
+      "rationale": "The fifteen-task DAG is acyclic, all owners and reviewers are distinct, exact recursive write sets are disjoint, and mutable controller state is the only lead-owned area.",
+      "findingIds": []
+    },
+    {
+      "id": "correctness-compatibility",
+      "status": "FAIL",
+      "rationale": "Required adapter launch gates conflict with the frozen evidence-accurate EXPERIMENTAL release path and can make the required DAG unexecutable when a live surface runtime is absent.",
+      "findingIds": [
+        "PLAN-004"
+      ]
+    },
+    {
+      "id": "security-permissions",
+      "status": "FAIL",
+      "rationale": "The neutrality requirement is strong in prose, but its executable evidence does not enforce the promised scopes or a fresh signed gate for each downstream attempt.",
+      "findingIds": [
+        "PLAN-002"
+      ]
+    },
+    {
+      "id": "performance-scale",
+      "status": "FAIL",
+      "rationale": "Cost collection is planned, but product-level SDD tier and stage budgets and regression thresholds are not frozen, so token and tool efficiency is not objectively testable.",
+      "findingIds": [
+        "PLAN-005"
+      ]
+    },
+    {
+      "id": "testing-evidence",
+      "status": "FAIL",
+      "rationale": "Neutrality coverage, completion severity rules and cross-platform release proof do not yet have sufficient reciprocal executable evidence contracts.",
+      "findingIds": [
+        "PLAN-002",
+        "PLAN-003",
+        "PLAN-005",
+        "PLAN-006"
+      ]
+    },
+    {
+      "id": "operability",
+      "status": "FAIL",
+      "rationale": "Required live surface prerequisites and the supported operating-system and Python matrix lack a deterministic non-blocking route or exact externally owned evidence aggregation contract.",
+      "findingIds": [
+        "PLAN-004",
+        "PLAN-006"
+      ]
+    },
+    {
+      "id": "execution-safety",
+      "status": "FAIL",
+      "rationale": "Specification review lineage is not fully content-addressed, downstream neutrality acceptance is not fail-closed, and the current completion threshold can accept unresolved medium findings.",
+      "findingIds": [
+        "PLAN-001",
+        "PLAN-002",
+        "PLAN-003",
+        "PLAN-004"
+      ]
+    },
+    {
+      "id": "efficiency-portability",
+      "status": "FAIL",
+      "rationale": "The packet shape is compact and provider-neutral, but product budget targets and portable matrix evidence remain unspecified; fixing them need not increase the safe DAG width or context ceiling.",
+      "findingIds": [
+        "PLAN-005",
+        "PLAN-006"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-002",
+      "severity": "HIGH",
+      "class": "evidence-gap",
+      "dimension": "security-permissions",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "open",
+      "message": "REQ-NEUTRALITY is not enforced by the frozen command graph. VAL-NEUTRALITY scans only current-tree, no command executes tests/neutrality, and WS-02 through WS-15 have no task-local or controller-owned fresh neutrality command and signed receipt even though the immutable plan says every accepted attempt includes one. The release and final commands also do not explicitly bind the external deny authority, attestation trust root and required full-history/archive scopes. The package can therefore accept work without proving history, unreachable-object, archive, signature-negative and per-attempt zero-leak conditions.",
+      "requiredAction": "Add executable evidence for the complete neutrality negative suite and a full repository bootstrap scan before WS-02. Freeze a controller-level pre-launch and post-attempt neutrality gate, or equivalent task-local commands, whose redacted signed receipt is required for every downstream launch and acceptance. Bind explicit external trust inputs, subject and scope hashes, freshness and full-history/archive modes into WS-14 and WS-15 evidence without persisting deny values or private keys."
+    },
+    {
+      "id": "PLAN-003",
+      "severity": "HIGH",
+      "class": "plan-defect",
+      "dimension": "testing-evidence",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+      "status": "open",
+      "message": "REQ-FINAL, AC-FINAL and the final threshold permit COMPLETE when medium findings remain open; the plan also does not freeze the corresponding no-open-Medium-or-High rule for per-task ACCEPTED verdicts. That allows a nominally production-ready lifecycle to complete with unresolved correctness, security, evidence or operability defects that this same plan review would reject.",
+      "requiredAction": "Publish a higher S2 specification revision and update every reciprocal projection, conformance case and final gate so task ACCEPTED and final COMPLETE require no unresolved MEDIUM or HIGH finding, while BLOCKER remains an immediate fail-closed condition. Independently review and refreeze the specification before the next plan review."
+    },
+    {
+      "id": "PLAN-001",
+      "severity": "MEDIUM",
+      "class": "execution-safety-gap",
+      "dimension": "execution-safety",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r02.json",
+      "status": "open",
+      "message": "The package claims two specification review rounds, but specification-review-r02.json has previousReview=null although it resolves findings from r01 against a different reviewedSpecificationHash. The exact r01 specification snapshot is not preserved, so the listed first review cannot be replayed and the convergence history is not content-addressed end to end.",
+      "requiredAction": "Restore an authoritative immutable subject for the first review and publish the corrected specification as a strictly higher revision whose review links the immediately prior independent review by id, path and SHA-256, or remove the unverifiable first round from authoritative planFiles and revision claims and treat the current frozen review as the first authority. Preserve stable finding lineage in either valid authority model."
+    },
+    {
+      "id": "PLAN-004",
+      "severity": "MEDIUM",
+      "class": "execution-safety-gap",
+      "dimension": "correctness-compatibility",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "open",
+      "message": "REQ-ADAPTER-BASELINE makes a synthetic-baseline EXPERIMENTAL adapter release-acceptable, yet every required adapter task has external-environment-required, requires surface-runtime and cannot launch until the target surface capability is declared. No target runtime availability or authority is frozen. Goal-mode execution can therefore block on four optional live environments even when the promised EXPERIMENTAL outcome should remain achievable offline, and the adapter tasks have no pinned host contract/version source in their context.",
+      "requiredAction": "Split each adapter gate into a required offline synthetic install/discovery/envelope baseline that can produce an honest EXPERIMENTAL adapter and an optional, separately evidenced live promotion route for VERIFIED. Require surface-runtime only for the promotion route, pin the target host contract or compatibility range and authoritative schema source, and fail closed without upgrading maturity when live capability is absent."
+    },
+    {
+      "id": "PLAN-005",
+      "severity": "MEDIUM",
+      "class": "plan-defect",
+      "dimension": "performance-scale",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/06-validation-and-evidence.md",
+      "status": "open",
+      "message": "REQ-RESOURCE and WS-09 promise tier-aware ceilings and p50/p95 token, context, tool-call and wall-time comparisons, but no product S0/S1/S2 stage or capability budget table, baseline corpus, regression tolerance or pass threshold is frozen. The orchestration values in the manifest budget this implementation run, not the shipped kit. Arbitrarily expensive defaults could therefore satisfy the current evidence contract.",
+      "requiredAction": "Freeze product-level hard ceilings and optimization targets by SDD tier and lifecycle stage, identify the synthetic benchmark corpus and measurement normalization, and define p50/p95 and regression pass rules. Keep hard safety ceilings distinct from advisory optimization targets and make EV-RESOURCE and EV-CONFORMANCE verify the exact versioned budget profile."
+    },
+    {
+      "id": "PLAN-006",
+      "severity": "MEDIUM",
+      "class": "evidence-gap",
+      "dimension": "operability",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "open",
+      "message": "REQ-FOUNDATION, REQ-CONFORMANCE and REQ-RELEASE promise Python 3.11 through 3.13 behavior on Linux, macOS and Windows, but the frozen evidence graph has one local foundation command, one portable-offline conformance command and one release command whose clean-build-matrix label is not backed by exact matrix legs, per-leg receipts or an authenticated aggregation rule. A single-host run can currently appear to satisfy cross-platform release readiness.",
+      "requiredAction": "Define the exact operating-system and Python matrix, owner and toolchain identity for every leg; emit bounded content-addressed per-leg receipts; and make EV-RELEASE consume a fail-closed aggregate that rejects missing, stale, duplicated or incompatible legs. Keep local preflight distinct from production cross-platform release evidence."
+    }
+  ],
+  "summary": "CHANGES_REQUIRED after a full ten-dimension S2 review. Deterministic ready validation passes and binds plan hash 219672162da526fb2a332cdeb816ee4169c2fc14a7754d38c16527352ea1a179 with 15 tasks, eight effective waves, width four, zero write overlaps, zero blockers and 20 declared evidence artifacts. Semantic review found two HIGH and four MEDIUM open findings in neutrality enforcement, completion thresholds, specification-review lineage, adapter execution routing, product token/resource budgets and cross-platform release proof. The plan is not production-ready or safe to freeze until those findings are corrected and independently re-reviewed.",
+  "optimizationNotes": [
+    "This is the first plan review, so the recorded metrics are the comparison baseline: critical path 8, effective waves 8, maximum width 4, total referenced context 231681 bytes, maximum task context 29407 bytes and estimated minimum tool calls 59.",
+    "Retain the current disjoint four-way service and adapter waves; merging them would reduce task count but weaken ownership and review independence without fixing any open finding.",
+    "Implement one controller-owned content-addressed neutrality gate that task packets reference by digest instead of copying the full scanner contract and deny data into every packet; this closes PLAN-002 while limiting repeated context and tool output.",
+    "Keep deterministic validators, synthetic adapter baselines and matrix prechecks before semantic or live-host calls. Live adapter promotion should be an optional evidence route so unavailable surfaces do not consume retries or block the required release DAG.",
+    "After freezing product budget profiles, compare the next revision against this review and reduce repeated validation only when each required evidence artifact keeps a distinct producer command, receipt and semantic threshold."
+  ]
+}

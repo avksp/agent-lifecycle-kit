@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "agent-lifecycle-adapter-authorities.v1",
+  "revision": 1,
+  "capturedAt": "2026-07-15T14:32:44Z",
+  "retrievalTool": {
+    "id": "curl",
+    "version": "8.7.1",
+    "build": "x86_64-apple-darwin25.0 libcurl/8.7.1 SecureTransport LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1",
+    "method": "HTTPS GET, fail on HTTP error, follow redirects, preserve raw response bytes, 30 second timeout"
+  },
+  "normalizedFactsDigestContract": {
+    "algorithm": "SHA-256",
+    "encoding": "UTF-8",
+    "canonicalization": "RFC8785-JCS",
+    "scope": "the normalizedFacts array value only"
+  },
+  "liveHostEvidenceIncluded": false,
+  "adapters": [
+    {
+      "adapterId": "codex",
+      "contractId": "codex-plugin-contract-2026-07-15",
+      "contractCompatibilityRange": {
+        "minimum": "codex-plugin-contract-2026-07-15",
+        "maximum": "codex-plugin-contract-2026-07-15"
+      },
+      "hostTestedRange": null,
+      "officialSources": [
+        {
+          "uri": "https://learn.chatgpt.com/docs/build-plugins.md",
+          "sha256": "71d34334545be1dcbf5e3dd81195b722ac030840ec61a057a7fc5e68fcef79cc"
+        }
+      ],
+      "normalizedFacts": [
+        "manifest:.codex-plugin/plugin.json",
+        "skillsRoot:skills",
+        "unsupportedOperations:explicit-fail-closed"
+      ],
+      "normalizedFactsSha256": "70465cbea4a2e1d1a3052bab03d2874b567af1d598f7f40b37cf1586fa236b25",
+      "normalizedSnapshotAuthority": "independent-specification-review-and-plan-lock",
+      "redistribution": "reference-only-no-source-text"
+    },
+    {
+      "adapterId": "claude",
+      "contractId": "claude-plugin-contract-2026-07-15",
+      "contractCompatibilityRange": {
+        "minimum": "claude-plugin-contract-2026-07-15",
+        "maximum": "claude-plugin-contract-2026-07-15"
+      },
+      "hostTestedRange": null,
+      "officialSources": [
+        {
+          "uri": "https://code.claude.com/docs/en/plugins.md",
+          "sha256": "1e47c49339d2705edca706b78843b8ddad7ed1017e569a0a239ab8e326754c95"
+        }
+      ],
+      "normalizedFacts": [
+        "manifest:.claude-plugin/plugin.json",
+        "skillsRoot:skills",
+        "agentsRoot:agents",
+        "hooksRoot:hooks",
+        "unsupportedOperations:explicit-fail-closed"
+      ],
+      "normalizedFactsSha256": "b50584e1327a5678bc3fdb50167c2b447ef04cd5758b8b2473853e35c143451a",
+      "normalizedSnapshotAuthority": "independent-specification-review-and-plan-lock",
+      "redistribution": "reference-only-no-source-text"
+    },
+    {
+      "adapterId": "cursor",
+      "contractId": "cursor-agent-contract-2026-07-15",
+      "contractCompatibilityRange": {
+        "minimum": "cursor-agent-contract-2026-07-15",
+        "maximum": "cursor-agent-contract-2026-07-15"
+      },
+      "hostTestedRange": null,
+      "officialSources": [
+        {
+          "uri": "https://docs.cursor.com/context/rules-for-ai",
+          "sha256": "34efb96589c7f1230ca165dea4c175053bcc83cbb945aafdb7531da63cfca10a"
+        },
+        {
+          "uri": "https://docs.cursor.com/en/cli/using",
+          "sha256": "34efb96589c7f1230ca165dea4c175053bcc83cbb945aafdb7531da63cfca10a"
+        }
+      ],
+      "normalizedFacts": [
+        "rulesRoot:.cursor/rules",
+        "rulesFormat:mdc",
+        "rootInstructions:AGENTS.md",
+        "cliOutput:structured",
+        "unsupportedOperations:explicit-fail-closed"
+      ],
+      "normalizedFactsSha256": "6c4f85a4dac3a81c98864e9808461d6ae8a2403f9bb77dd88948a5aea6aa495e",
+      "normalizedSnapshotAuthority": "independent-specification-review-and-plan-lock",
+      "sourceCaptureLimitation": "The two official URLs currently return the same client-rendered page shell. The shell digest is provenance only; the normalized facts digest, independent specification review and immutable plan lock are the offline contract authority.",
+      "redistribution": "reference-only-no-source-text"
+    },
+    {
+      "adapterId": "opencode",
+      "contractId": "opencode-extension-contract-2026-07-15",
+      "contractCompatibilityRange": {
+        "minimum": "opencode-extension-contract-2026-07-15",
+        "maximum": "opencode-extension-contract-2026-07-15"
+      },
+      "hostTestedRange": null,
+      "officialSources": [
+        {
+          "uri": "https://opencode.ai/docs/plugins.md",
+          "sha256": "ab99892a03931c7d7cb36f93beba067346492cb9adae0f263fb6ac83f83391bb"
+        },
+        {
+          "uri": "https://opencode.ai/docs/skills.md",
+          "sha256": "0cc6d2ebeece718df41fdec0164d406b1fa9bd60fd5b46c94fc0fab63ddd5b93"
+        },
+        {
+          "uri": "https://opencode.ai/docs/agents.md",
+          "sha256": "7b7dfc8ca2fc363358d6c6f4625bc13d8386942f9b64b0fcaa711a5aeee56074"
+        }
+      ],
+      "normalizedFacts": [
+        "skillsFile:SKILL.md",
+        "agents:declared-mode-and-permissions",
+        "plugins:event-extension-hooks",
+        "unsupportedOperations:explicit-fail-closed"
+      ],
+      "normalizedFactsSha256": "971ea3dc82339c52c6e8b2f90b4f4d18470e9cde77f4eb5bc315ab0bc4f55a0a",
+      "normalizedSnapshotAuthority": "independent-specification-review-and-plan-lock",
+      "redistribution": "reference-only-no-source-text"
+    }
+  ]
+}

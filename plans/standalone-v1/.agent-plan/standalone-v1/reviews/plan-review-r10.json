@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r10",
+  "packageId": "standalone-v1",
+  "planRevision": 12,
+  "reviewedPlanHash": "d7330c6831e20bf16ab384f3abce6b11fb1f0d5af6d54f814d2f117c22517110",
+  "previousReview": {
+    "reviewId": "plan-review-r09",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r09.json",
+    "sha256": "2ddc127edaf3291f95642026e6d2ca5eb06e8a13d2893b36f7ff0410622a4ebd"
+  },
+  "qualityMetrics": {
+    "taskCount": 16,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 9,
+    "maxParallelWidth": 5,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 39,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 49152,
+    "actualContextBytesTotal": 360000,
+    "maxTaskContextBytes": 49152,
+    "validationInvocationCount": 30,
+    "estimatedMinimumToolCalls": 72
+  },
+  "verdict": "READY_TO_FREEZE",
+  "reviewer": {
+    "id": "plan-reviewer-r10",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-plan-review-r10-neutral-profile-cleanup"
+  },
+  "reviewedAt": "2026-07-22T12:40:00Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "Plan revision 12 changes no requirements, workstreams, validation commands or acceptance gates."
+    },
+    {
+      "id": "ownership",
+      "status": "PASS",
+      "rationale": "Only frozen plan/source-set metadata and one profile key changed; write overlap remains zero."
+    },
+    {
+      "id": "source-hygiene",
+      "status": "PASS",
+      "rationale": "The project-looking profile key was replaced with neutral wording."
+    },
+    {
+      "id": "operability",
+      "status": "PASS",
+      "rationale": "The blocked/run state can adopt revision 12 with preserveAcceptedCompatible and restart WS-14 without rerunning accepted predecessors."
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-SOURCE-HYGIENE-R12",
+      "severity": "MEDIUM",
+      "class": "project-neutrality",
+      "dimension": "source-hygiene",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/neutrality-authority-profile.v3.json",
+      "status": "resolved",
+      "message": "A generic archive-policy field name contained a project-looking token. Revision 12 renames it without changing behavior.",
+      "requiredAction": "Keep standalone source and plan artifacts free of source-project markers."
+    }
+  ],
+  "summary": "Revision 12 is READY_TO_FREEZE as a hygiene-only project-neutrality correction."
+}

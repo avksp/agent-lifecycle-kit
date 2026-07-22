@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "agent-plan-review-subject-disclosure.v1",
+  "packageId": "standalone-v1",
+  "recordedAt": "2026-07-15T14:32:44Z",
+  "recordedBy": {
+    "id": "root-planner",
+    "surface": "codex",
+    "runId": "standalone-v1-plan-author-r02"
+  },
+  "priorReview": {
+    "reviewId": "plan-review-r01",
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r01.json",
+    "sha256": "e1abab9c75105853d1064f15c602b8594dc25bb2c05bb2b0303e29dbe9ffce0b",
+    "reviewedPlanHash": "219672162da526fb2a332cdeb816ee4169c2fc14a7754d38c16527352ea1a179",
+    "verdict": "CHANGES_REQUIRED"
+  },
+  "priorSubjectSnapshot": {
+    "available": false,
+    "reason": "The rejected draft was not frozen and its plan files changed before a complete reviewed-subject snapshot was preserved. Reconstructing its reviewed hash would be unverifiable."
+  },
+  "requiredContinuation": {
+    "previousReviewMustReferenceR01": true,
+    "retainEveryR01FindingWithDisposition": true,
+    "fullIndependentReviewRequired": true,
+    "deltaOnlyReviewAllowed": false,
+    "reason": "No plan lock has ever been created. The r01 review artifact remains the cryptographic previousReview, while this disclosure prevents a false claim that its subject snapshot is replayable."
+  }
+}

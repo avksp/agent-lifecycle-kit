@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "agent-lifecycle-fixtures-index.v1",
+  "indexId": "synthetic-conformance-fixtures-v1",
+  "syntheticOnly": true,
+  "liveModelInvocations": 0,
+  "coreProfiles": [
+    {
+      "bytes": 2145,
+      "path": "conformance/core/adapter-baseline.v1.json",
+      "sha256": "f0e8ea49d1065b4e07ce1f664da38bbc2e4d6edf615f577c0a2db9e8c9701461"
+    },
+    {
+      "bytes": 1375,
+      "path": "conformance/core/budget-targets.v1.json",
+      "sha256": "a1991a10747c0ee256030a7b9fa100afdd16f83bb78169a0c553b60c8860dbfc"
+    },
+    {
+      "bytes": 783,
+      "path": "conformance/core/scenario-taxonomy.v1.json",
+      "sha256": "7f1d34485f02ca9e263ef5fbc4f4c37d6e2722ef1224779395576147258f695d"
+    }
+  ],
+  "contextProfiles": [
+    {
+      "bytes": 2857,
+      "path": "profiles/small-context-profile.v1.json",
+      "sha256": "3e1a4298efe3ea9020c3e6f1ba5ddb1146b4a29e1de8531489a78fe0be6d9be6"
+    }
+  ],
+  "evaluations": [
+    {
+      "bytes": 6181,
+      "path": "evals/synthetic/cost-baseline.v1.json",
+      "sha256": "0b6705f0ecb6ffb0a6d1185c68f92a9194c83d0e1a7041232cec7f4b1b70f30e"
+    },
+    {
+      "bytes": 1274,
+      "path": "evals/synthetic/replay-plan.v1.json",
+      "sha256": "b9d9f26831084d4b98306a7c49c2a88636eead868f11df35331582d0cc07cca6"
+    }
+  ],
+  "fixtures": [
+    {
+      "bytes": 1281,
+      "path": "fixtures/synthetic/negative-matrix-01.json",
+      "sha256": "8237622f973b3d6d40db1df6d342d178b66097b4c98ff9a47401191b4cac2e38"
+    },
+    {
+      "bytes": 876,
+      "path": "fixtures/synthetic/s0-mechanical-01.json",
+      "sha256": "bfee2fc175a0e095c881b602a843199b828192d66b75039e076b20837805b54b"
+    },
+    {
+      "bytes": 997,
+      "path": "fixtures/synthetic/s1-small-context-8k-01.json",
+      "sha256": "4ff734fa5af221cc65a0bd3a95e2631b73cf3c9a83d6df8bcec1fc0c8c11f858"
+    },
+    {
+      "bytes": 869,
+      "path": "fixtures/synthetic/s1-standard-01.json",
+      "sha256": "17059dc78ba78711a889733ce21080d035e256a3f2b9c8301318790066bfdd95"
+    },
+    {
+      "bytes": 1036,
+      "path": "fixtures/synthetic/s2-multi-01.json",
+      "sha256": "c2d03df49c265de3da381767627676bc3050090e88c6f62d682785c23984d576"
+    },
+    {
+      "bytes": 1055,
+      "path": "fixtures/synthetic/s2-recovery-01.json",
+      "sha256": "4a70bd077b151bb62c7f33a395fd1976bc843e00aceaa435328ef53359ef5cc4"
+    },
+    {
+      "bytes": 963,
+      "path": "fixtures/synthetic/s2-security-01.json",
+      "sha256": "febe7b0a9aa117b66428c8511fa9335800a7f17de55d237763475739ec4e8f37"
+    }
+  ]
+}

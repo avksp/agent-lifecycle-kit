@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "agent-specification-freeze-receipt.v1",
+  "packageId": "standalone-v1",
+  "specificationId": "SPEC-standalone-v1",
+  "specificationRevision": 1,
+  "specification": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r01.json",
+    "sha256": "6f0974f5ca990ee3d26eebec4f418b5a3bd2875fef732e2d4cb28a10663c919d",
+    "bytes": 19064
+  },
+  "review": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r02.json",
+    "sha256": "a06523847e3e1b10602402e32829248e81941f3bff1c6d486a740f8baaa7931d",
+    "bytes": 5668,
+    "reviewId": "spec-review-r02"
+  },
+  "previousReceipt": null,
+  "frozenAt": "2026-07-15T14:04:18.889487Z",
+  "frozenBy": "root-controller"
+}

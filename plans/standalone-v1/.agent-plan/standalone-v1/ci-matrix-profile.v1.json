@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "agent-lifecycle-ci-matrix-profile.v1",
+  "profileId": "agent-lifecycle-ci-matrix-authority.v1",
+  "commandSetId": "agent-lifecycle-release-matrix.v1",
+  "authority": {
+    "algorithm": "Ed25519",
+    "allowlistPathEnvironment": "AGENT_LIFECYCLE_CI_MATRIX_ALLOWLIST_FILE",
+    "trustRootPathEnvironment": "AGENT_LIFECYCLE_CI_MATRIX_TRUST_ROOT",
+    "maximumAgeHours": 24,
+    "controllerStoredFields": [
+      "allowlistSha256",
+      "authorityFingerprint",
+      "expiresAt",
+      "legProfileIds"
+    ],
+    "receiptMaySelectProfile": false
+  },
+  "legProfiles": [
+    {
+      "id": "linux-py311",
+      "osFamily": "Ubuntu 24.04",
+      "architecture": "x86_64",
+      "pythonMinor": "3.11"
+    },
+    {
+      "id": "linux-py312",
+      "osFamily": "Ubuntu 24.04",
+      "architecture": "x86_64",
+      "pythonMinor": "3.12"
+    },
+    {
+      "id": "linux-py313",
+      "osFamily": "Ubuntu 24.04",
+      "architecture": "x86_64",
+      "pythonMinor": "3.13"
+    },
+    {
+      "id": "macos-py311",
+      "osFamily": "macOS 14",
+      "architecture": "arm64",
+      "pythonMinor": "3.11"
+    },
+    {
+      "id": "macos-py312",
+      "osFamily": "macOS 14",
+      "architecture": "arm64",
+      "pythonMinor": "3.12"
+    },
+    {
+      "id": "macos-py313",
+      "osFamily": "macOS 14",
+      "architecture": "arm64",
+      "pythonMinor": "3.13"
+    },
+    {
+      "id": "windows-py311",
+      "osFamily": "Windows Server 2022",
+      "architecture": "x86_64",
+      "pythonMinor": "3.11"
+    },
+    {
+      "id": "windows-py312",
+      "osFamily": "Windows Server 2022",
+      "architecture": "x86_64",
+      "pythonMinor": "3.12"
+    },
+    {
+      "id": "windows-py313",
+      "osFamily": "Windows Server 2022",
+      "architecture": "x86_64",
+      "pythonMinor": "3.13"
+    }
+  ],
+  "requiredAllowlistLegFields": [
+    "legId",
+    "runnerImageDigest",
+    "architecture",
+    "pythonPatchRange",
+    "toolchainRanges",
+    "commandSetSha256",
+    "ciSigningAuthorityFingerprint",
+    "receiptLifetimeSeconds",
+    "networkScope",
+    "secretScope"
+  ],
+  "dispatch": {
+    "producer": "external-ci-authority",
+    "workerSelfSignedReceiptAllowed": false,
+    "localPreflightPromotesRelease": false,
+    "allLegsSameSourceRevision": true,
+    "allLegsSameDependencyLock": true,
+    "aggregateRequiresExactLegSet": true
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "agent-specification-review.v1",
+  "reviewId": "spec-review-r01",
+  "specificationId": "SPEC-standalone-v1",
+  "packageId": "standalone-v1",
+  "specificationRevision": 1,
+  "reviewedSpecificationHash": "5aa8aa7c00361ad077566b02342eb50fac421a12db5f16d7b31e0acbf49f981b",
+  "previousReview": null,
+  "traceability": {
+    "requirementCount": 18,
+    "requiredRequirementCount": 18,
+    "acceptanceLinkCount": 18,
+    "evidenceLinkCount": 18,
+    "uncoveredRequirementCount": 0
+  },
+  "verdict": "CHANGES_REQUIRED",
+  "reviewer": {
+    "id": "spec-reviewer-r01",
+    "independent": true,
+    "surface": "codex",
+    "runId": "standalone-v1-spec-review-r01-independent"
+  },
+  "reviewedAt": "2026-07-15T13:54:44Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "FAIL",
+      "findingIds": ["SPEC-002", "SPEC-003"]
+    },
+    {
+      "id": "scope",
+      "status": "PASS",
+      "rationale": "Included, excluded, and deferred scope is explicit, standalone, project-neutral, and consistent with the requested lifecycle and four initial host surfaces.",
+      "findingIds": []
+    },
+    {
+      "id": "acceptance",
+      "status": "FAIL",
+      "findingIds": ["SPEC-001", "SPEC-002", "SPEC-003"]
+    },
+    {
+      "id": "constraints-risks",
+      "status": "FAIL",
+      "findingIds": ["SPEC-001", "SPEC-002", "SPEC-003"]
+    },
+    {
+      "id": "testability-evidence",
+      "status": "FAIL",
+      "findingIds": ["SPEC-001", "SPEC-002", "SPEC-003"]
+    },
+    {
+      "id": "consistency",
+      "status": "FAIL",
+      "findingIds": ["SPEC-001", "SPEC-003"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "SPEC-001",
+      "severity": "MEDIUM",
+      "class": "acceptance-gap",
+      "dimension": "acceptance",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/product-specification-r01-round01.snapshot.json",
+      "status": "open",
+      "message": "REQ-NEUTRALITY requires signed attestations, but AC-NEUTRALITY, the evidence contract, and final gates define only redaction and content addressing; the plan also defers real signing keys. The signature trust source, verification behavior, and failure rule are therefore ambiguous and untestable.",
+      "requiredAction": "Choose one v1 contract: remove the signed-attestation promise in favor of content-addressed redacted attestations, or define the local signing and trust model, key provenance, verification command, negative cases, and reciprocal acceptance/evidence gate without requiring production keys."
+    },
+    {
+      "id": "SPEC-002",
+      "severity": "MEDIUM",
+      "class": "specification-defect",
+      "dimension": "requirements",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/product-specification-r01-round01.snapshot.json",
+      "status": "open",
+      "message": "The specification assigns model routing to adapters in supporting prose but has no canonical requirement for stage-to-capability profile selection. It does not guarantee that planning, review, implementation, remediation, and final audit may use distinct externally configured model profiles, nor define deterministic fallback, unsupported-capability, and per-stage usage-attribution behavior.",
+      "requiredAction": "Add a provider-neutral routing requirement with reciprocal acceptance and evidence ids that freezes stage and role capability profiles outside core, permits one or different host models, rejects unavailable required capabilities fail-closed, records the selected profile in usage receipts, and tests deterministic fallback without embedding provider model names."
+    },
+    {
+      "id": "SPEC-003",
+      "severity": "MEDIUM",
+      "class": "ambiguity",
+      "dimension": "consistency",
+      "artifact": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/product-specification-r01-round01.snapshot.json",
+      "status": "open",
+      "message": "Each adapter requirement mandates the full operation list, while scope and supporting decisions allow adapters to remain EXPERIMENTAL and capabilities to be unsupported. The minimum v1 adapter baseline and the release effect of a missing operation or absent live host proof are not defined, so both a vacuous adapter matrix and an unattainable all-operations gate are plausible.",
+      "requiredAction": "Define one shared adapter baseline and apply it to all four adapters: required install and discovery behavior, protocol envelope and explicit capability declaration, fail-closed handling for unsupported operations, the minimum synthetic conformance required for inclusion, the live evidence needed for VERIFIED, and whether an evidence-accurate EXPERIMENTAL adapter is release-acceptable."
+    }
+  ],
+  "summary": "The draft is structurally valid and project-neutral, with 18 required requirements and complete structural acceptance/evidence links. It is not ready to freeze because signing semantics, stage-specific model/capability routing, and the minimum adapter release contract remain ambiguous or lack reciprocal acceptance evidence."
+}
