@@ -56,9 +56,9 @@ deterministic core rather than reimplemented in each host adapter.
 
 Small-context hosts are supported through a deterministic context profile, not
 through prompt-only truncation. The bundled
-`profiles/small-context-profile.v1.json` defines 8k, 16k, 32k, and 64k windows,
-reserves output space, limits the active packet and state summary, and forbids
-silent truncation.
+`profiles/small-context-profile.v1.json` defines 4k-strict, 8k, 16k, 32k, and
+64k windows, reserves output space, limits the active packet and state summary,
+and forbids silent truncation.
 
 If a rendered envelope does not fit, the controller must split the task,
 request a larger context, or block the run. Older context and tool output are
@@ -102,6 +102,7 @@ agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-i
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle context profile-check --profile profiles/small-context-profile.v1.json
+agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 4k-strict
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
@@ -129,6 +130,10 @@ Implemented core CLI groups are `version`, `schema`, `workflow status`,
 `context render`, and `neutrality`. Other lifecycle groups are reserved and
 fail closed with a stable `agent-lifecycle-error.v1` response until their core
 modules land.
+
+`context check` and `context render` also fail closed on overflow: if the
+rendered receipt status is `FAIL`, the CLI exits non-zero and returns
+`agent-lifecycle-error.v1` with code `context-overflow`.
 
 Tests use only the Python standard library:
 

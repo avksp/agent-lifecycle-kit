@@ -120,6 +120,7 @@ class SyntheticConformanceTests(unittest.TestCase):
         profile = load_json(ROOT / "profiles/small-context-profile.v1.json")
         self.assertEqual(fixture["contextProfile"], profile["profileId"])
         self.assertEqual(fixture["targetContextWindow"], profile["defaultWindow"])
+        self.assertIn("4k-strict", profile["windows"])
         self.assertIn("small-context", fixture["tags"])
 
 
