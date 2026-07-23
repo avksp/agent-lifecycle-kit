@@ -94,9 +94,12 @@ See
 
 ## Model routing
 
-Model routing is an advisory deterministic core capability. The core resolves a
-neutral model class for each phase or task attempt; host adapters map that class
-to a configured provider/runtime model outside portable artifacts.
+Model routing is a deterministic provider-neutral core capability. The core
+resolves a neutral model class for each phase or task attempt; host adapters map
+that class to a configured provider/runtime model outside portable artifacts.
+When a task attempt has `attemptModelRoute.requiresUsageReceipt=true`,
+`workflow task-result` is fail-closed until a valid host-attested usage receipt
+is provided.
 
 ```bash
 agent-lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
@@ -145,7 +148,7 @@ agent-lifecycle schema list
 agent-lifecycle workflow status --state <path-to-run.state.json>
 agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
-agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --reason "<reason>"
+agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --model-usage-receipt <model-usage-receipt.json> --reason "<reason>"
 agent-lifecycle workflow task-accept --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --review <task-review.json> --reason "<reason>"
 agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --reason "<reason>"
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
@@ -401,6 +404,11 @@ packet set. The default flow asks for authorization before execution.
 Automatic execution is allowed only when the frozen run policy and host policy
 both permit it. Contract changes, authority drift, missing evidence, exhausted
 budgets, or unavailable mandatory capabilities block the run.
+
+For model-backed attempts, adapters must execute the task with the selected
+`attemptModelRoute` or fail closed. The controller accepts the result only when
+the usage receipt binds to the run, task, attempt, plan digest, source revision
+and route decision digest.
 
 SDD tier selection is proposed by planning, checked by the deterministic
 `tier resolve` rules, independently reviewed by `audit-agent-plan`, and then

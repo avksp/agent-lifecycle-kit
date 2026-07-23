@@ -46,8 +46,11 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertIsNone(descriptor["liveTestedHostRange"])
         self.assertEqual(descriptor["unsupportedOperationPolicy"], "fail-closed")
         self.assertEqual(descriptor["contractCompatibility"], baseline["contractCompatibility"])
-        self.assertEqual(descriptor["modelRouting"]["status"], "advisory")
+        self.assertEqual(descriptor["modelRouting"]["status"], "workflow-enforced")
         self.assertFalse(descriptor["modelRouting"]["providerModelNamesInCore"])
+        self.assertEqual(descriptor["modelRouting"]["attemptRoutePolicy"], "must-execute-or-fail-closed")
+        self.assertTrue(descriptor["modelRouting"]["usageReceiptRequired"])
+        self.assertFalse(descriptor["modelRouting"]["liveVerified"])
         self.assertTrue(required_operations.issubset(provided_operations))
 
     def test_offline_conformance_descriptor_passes_without_live_runtime(self) -> None:

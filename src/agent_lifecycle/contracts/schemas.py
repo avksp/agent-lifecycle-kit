@@ -41,6 +41,7 @@ _SCHEMAS: dict[str, dict[str, Any]] = {
             "inputs": {"type": "object"},
             "outputs": {"type": "array", "items": {"type": "object"}},
             "constraints": {"type": "object"},
+            "modelRoute": {"type": "object"},
         },
     },
     "agent-host-operation-receipt.v1": {

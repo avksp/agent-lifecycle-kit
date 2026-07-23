@@ -95,10 +95,12 @@ quality regressions и p95 budget overruns. Для universal `VERIFIED` claim н
 
 ## Model routing
 
-Model routing — advisory deterministic capability ядра. Ядро выбирает
+Model routing — deterministic provider-neutral capability ядра. Ядро выбирает
 нейтральный класс модели для lifecycle phase или task attempt, а host adapter
 сопоставляет этот класс с конкретной моделью провайдера/локального runtime вне
-portable artifacts.
+portable artifacts. Если у task attempt есть
+`attemptModelRoute.requiresUsageReceipt=true`, `workflow task-result`
+fail-closed до получения валидного host-attested usage receipt.
 
 ```bash
 agent-lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
@@ -146,7 +148,7 @@ agent-lifecycle schema list
 agent-lifecycle workflow status --state <path-to-run.state.json>
 agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
-agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --reason "<reason>"
+agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --model-usage-receipt <model-usage-receipt.json> --reason "<reason>"
 agent-lifecycle workflow task-accept --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --review <task-review.json> --reason "<reason>"
 agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --reason "<reason>"
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
@@ -407,6 +409,11 @@ mode. Система с background tasks отображает их через а
 разрешено frozen run policy и политикой системы. Изменение контракта, drift
 полномочий, отсутствие evidence, исчерпание бюджета или отсутствие обязательной
 capability блокирует запуск.
+
+Для model-backed attempts адаптер должен выполнить задачу через выбранный
+`attemptModelRoute` или fail-closed. Controller принимает result только если
+usage receipt привязан к run, task, attempt, plan digest, source revision и
+route decision digest.
 
 SDD tier выбирается планировщиком, проверяется deterministic rules через
 `tier resolve`, независимо проверяется `audit-agent-plan` и только после этого

@@ -24,17 +24,21 @@
   "unsupportedOperationPolicy": "fail-closed",
   "coreSemantics": "delegated-to-agent-lifecycle-core",
   "modelRouting": {
-    "status": "advisory",
+    "status": "workflow-enforced",
     "profileSupport": "host-local",
     "providerModelNamesInCore": false,
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "usageReceiptRequired": true,
     "unsupportedClassPolicy": "fail-closed",
-    "criticalReviewPolicy": "requires-strong-or-calibrated-local-review"
+    "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
+    "liveVerified": false
   },
   "operations": [
     {"name": "install", "mapping": "hermes-registry-install", "offlineConformance": "deterministic"},
     {"name": "discover", "mapping": "hermes-skill-directory-discovery", "offlineConformance": "deterministic"},
     {"name": "validate-envelope", "mapping": "core-schema-validation", "offlineConformance": "deterministic"},
     {"name": "launch", "mapping": "host-agent-launch", "offlineConformance": "synthetic"},
+    {"name": "model-route-execution", "mapping": "attemptModelRoute-to-host-model", "offlineConformance": "synthetic"},
     {"name": "wait", "mapping": "host-bounded-wait", "offlineConformance": "synthetic"},
     {"name": "cancel", "mapping": "host-cancel-request", "offlineConformance": "synthetic"},
     {"name": "resume", "mapping": "workflow-state-resume", "offlineConformance": "synthetic"},

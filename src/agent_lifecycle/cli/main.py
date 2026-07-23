@@ -116,6 +116,8 @@ def _parser() -> argparse.ArgumentParser:
     workflow_result.add_argument("--expected-revision", required=True, type=int)
     workflow_result.add_argument("--source-revision", required=True)
     workflow_result.add_argument("--result", required=True)
+    workflow_result.add_argument("--model-usage-receipt")
+    workflow_result.add_argument("--budget-targets")
     workflow_result.add_argument("--reason", required=True)
     workflow_accept = workflow_sub.add_parser("task-accept")
     workflow_accept.add_argument("--state", required=True)
@@ -301,6 +303,8 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Any) -> dict[s
             expected_revision=args.expected_revision,
             source_revision=args.source_revision,
             result_path=args.result,
+            model_usage_receipt_path=args.model_usage_receipt,
+            budget_targets_path=args.budget_targets,
             reason=args.reason,
         )
     if args.workflow_command == "task-accept":

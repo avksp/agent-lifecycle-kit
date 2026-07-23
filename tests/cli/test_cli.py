@@ -141,6 +141,64 @@ class CliTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(_task(payload)["status"], "ACCEPTED")
 
+    def test_workflow_task_result_cli_accepts_model_usage_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root)
+            route = _model_route()
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["modelRoute"] = route
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            code, _payload = _run_cli(
+                [
+                    "workflow",
+                    "task-start",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "start-op",
+                    "--expected-revision",
+                    "1",
+                    "--source-revision",
+                    "source",
+                    "--reason",
+                    "launch",
+                ]
+            )
+            self.assertEqual(code, 0)
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            write_json_create(root / result_path, _result())
+            write_json_create(root / usage_path, _model_usage_receipt(route))
+
+            code, payload = _run_cli(
+                [
+                    "workflow",
+                    "task-result",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "result-op",
+                    "--expected-revision",
+                    "2",
+                    "--source-revision",
+                    "source",
+                    "--result",
+                    result_path,
+                    "--model-usage-receipt",
+                    usage_path,
+                    "--reason",
+                    "done",
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(_task(payload)["status"], "VERIFYING")
+
     def test_context_profile_check_cli(self) -> None:
         code, payload = _run_cli([
             "context",
@@ -553,6 +611,55 @@ def _result() -> dict:
         "assumptions": [],
         "blocker": None,
         "contractChangeRequest": None,
+    }
+
+
+def _model_route() -> dict:
+    return {
+        "schemaVersion": "agent-lifecycle-model-route-decision.v1",
+        "operationId": "route-WS-01",
+        "phase": "task-implementation",
+        "sddTier": "S1",
+        "routingPolicy": "balanced",
+        "modelClass": "standard-code",
+        "allowedFallbackModelClasses": ["strong-reasoning"],
+        "targetContextWindow": "8k",
+        "criticalReview": False,
+        "requiresUsageReceipt": True,
+        "maxBillableTokens": 120000,
+        "reasonCodes": ["tier-s1"],
+        "requestDigest": "6" * 64,
+        "profileDigest": "7" * 64,
+        "decisionDigest": "4" * 64,
+    }
+
+
+def _model_usage_receipt(route: dict) -> dict:
+    return {
+        "schemaVersion": "agent-lifecycle-model-usage-receipt.v1",
+        "operationId": route["operationId"],
+        "runId": "run",
+        "packageId": "package",
+        "taskId": "WS-01",
+        "attempt": 1,
+        "planDigest": "0" * 64,
+        "sourceRevision": "source",
+        "host": "codex",
+        "modelClass": route["modelClass"],
+        "providerModelHash": "redacted-provider-model",
+        "routeDecisionDigest": route["decisionDigest"],
+        "usage": {
+            "inputTokens": 100,
+            "outputTokens": 20,
+            "billableTokens": 120,
+            "cumulativeContextBytes": 4096,
+            "toolCalls": 1,
+            "wallSeconds": 2,
+        },
+        "attestation": {
+            "source": "host",
+            "status": "ATTESTED",
+        },
     }
 
 

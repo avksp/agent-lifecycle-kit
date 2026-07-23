@@ -218,6 +218,128 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(task["status"], "ACCEPTED")
             self.assertEqual(payload["phase"], "FINAL_AUDIT")
 
+    def test_commit_result_requires_model_usage_receipt_for_model_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            _set_task_model_route(state_path, _model_route())
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            write_json_create(root / result_path, _result(attempt=1))
+
+            with self.assertRaises(LifecycleError) as raised:
+                commit_task_result(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="result-op",
+                    expected_revision=2,
+                    source_revision="source",
+                    result_path=result_path,
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "model-usage-receipt-required")
+
+    def test_commit_result_records_valid_model_usage_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            route = _model_route()
+            _set_task_model_route(state_path, route)
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            result = _result(attempt=1)
+            write_json_create(root / result_path, result)
+            write_json_create(root / usage_path, _model_usage_receipt(route))
+
+            payload = commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-op",
+                expected_revision=2,
+                source_revision="source",
+                result_path=result_path,
+                model_usage_receipt_path=usage_path,
+                reason="done",
+            )
+
+            task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(task["status"], "VERIFYING")
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            stored_task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(stored_task["modelUsageReceipt"]["modelClass"], "standard-code")
+            self.assertEqual(stored_task["modelUsageReceipt"]["validation"]["status"], "PASS")
+
+    def test_commit_result_rejects_model_usage_receipt_lineage_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            route = _model_route()
+            _set_task_model_route(state_path, route)
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            receipt = _model_usage_receipt(route)
+            receipt["taskId"] = "WS-OTHER"
+            write_json_create(root / result_path, _result(attempt=1))
+            write_json_create(root / usage_path, receipt)
+
+            with self.assertRaises(LifecycleError) as raised:
+                commit_task_result(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="result-op",
+                    expected_revision=2,
+                    source_revision="source",
+                    result_path=result_path,
+                    model_usage_receipt_path=usage_path,
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "model-usage-lineage-mismatch")
+
+    def test_start_task_rejects_critical_review_downgrade_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = _write_state(Path(tmp), phase="RUNNING")
+            route = _model_route()
+            route["modelClass"] = "local-compact"
+            route["criticalReview"] = True
+            _set_task_model_route(state_path, route)
+
+            with self.assertRaises(LifecycleError) as raised:
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="launch",
+                )
+
+            self.assertEqual(raised.exception.code, "model-route-critical-downgrade")
+
     def test_adopt_plan_resets_changed_plan_and_starts_execution(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -463,6 +585,12 @@ def _add_gate(state_path: Path, gate: dict) -> None:
     state_path.write_text(json.dumps(state), encoding="utf-8")
 
 
+def _set_task_model_route(state_path: Path, route: dict) -> None:
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["tasks"][0]["modelRoute"] = route
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+
 def _gate(gate_id: str, phases: list[str]) -> dict:
     return {
         "id": gate_id,
@@ -633,6 +761,55 @@ def _plan_manifest(*, include_dependent: bool = False, include_model_route: bool
             "maxRunWallSeconds": 86400,
         },
         "workstreams": workstreams,
+    }
+
+
+def _model_route() -> dict:
+    return {
+        "schemaVersion": "agent-lifecycle-model-route-decision.v1",
+        "operationId": "route-WS-01",
+        "phase": "task-implementation",
+        "sddTier": "S1",
+        "routingPolicy": "balanced",
+        "modelClass": "standard-code",
+        "allowedFallbackModelClasses": ["strong-reasoning"],
+        "targetContextWindow": "8k",
+        "criticalReview": False,
+        "requiresUsageReceipt": True,
+        "maxBillableTokens": 120000,
+        "reasonCodes": ["tier-s1"],
+        "requestDigest": "6" * 64,
+        "profileDigest": "7" * 64,
+        "decisionDigest": "4" * 64,
+    }
+
+
+def _model_usage_receipt(route: dict) -> dict:
+    return {
+        "schemaVersion": "agent-lifecycle-model-usage-receipt.v1",
+        "operationId": route["operationId"],
+        "runId": "run",
+        "packageId": "package",
+        "taskId": "WS-01",
+        "attempt": 1,
+        "planDigest": "0" * 64,
+        "sourceRevision": "source",
+        "host": "codex",
+        "modelClass": route["modelClass"],
+        "providerModelHash": "redacted-provider-model",
+        "routeDecisionDigest": route["decisionDigest"],
+        "usage": {
+            "inputTokens": 100,
+            "outputTokens": 20,
+            "billableTokens": 120,
+            "cumulativeContextBytes": 4096,
+            "toolCalls": 1,
+            "wallSeconds": 2,
+        },
+        "attestation": {
+            "source": "host",
+            "status": "ATTESTED",
+        },
     }
 
 
