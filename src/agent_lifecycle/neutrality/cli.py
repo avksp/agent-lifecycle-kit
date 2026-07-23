@@ -14,7 +14,7 @@ if __package__ in (None, ""):
 
 from agent_lifecycle.neutrality.authority import load_authority_bundle
 from agent_lifecycle.neutrality.canonical import canonical_bytes, load_json, sha256_hex, write_json_create
-from agent_lifecycle.neutrality.errors import NeutralityError
+from agent_lifecycle.neutrality.errors import NeutralityError, write_neutrality_error
 from agent_lifecycle.neutrality.policy import load_policy
 from agent_lifecycle.neutrality.receipt import build_claims, build_receipt, verify_existing_receipt
 from agent_lifecycle.neutrality.scanner import scan_repository
@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "verify-receipt":
             return _verify_receipt(args)
     except NeutralityError as exc:
-        print(f"neutrality: {exc}", file=sys.stderr)
+        write_neutrality_error(exc, sys.stdout)
         return 2
     return 2
 
