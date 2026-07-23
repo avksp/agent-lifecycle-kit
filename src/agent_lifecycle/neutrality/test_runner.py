@@ -40,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _run_suite(start_directory: str, pattern: str) -> unittest.TestResult:
-    loader = unittest.defaultTestLoader
+    loader = unittest.TestLoader()
     suite = loader.discover(start_dir=start_directory, pattern=pattern)
     runner = unittest.TextTestRunner(stream=sys.stderr, verbosity=1)
     return runner.run(suite)

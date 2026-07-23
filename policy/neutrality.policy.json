@@ -19,7 +19,14 @@
     "maxExpandedBytesPerSubject": 4294967296,
     "maxCompressionRatio": 100
   },
-  "pathExcludes": ["^\\.git/", "^policy/neutrality\\.policy\\.json$"],
+  "pathExcludes": [
+    "^\\.git/",
+    "^policy/neutrality\\.policy\\.json$",
+    "(^|/)__pycache__/",
+    "\\.pyc$",
+    "\\.pyo$",
+    "(^|/)[^/]+\\.egg-info/"
+  ],
   "denyLiterals": [],
   "denyRegexes": [
     "(^|[^A-Za-z0-9_])(/Users/|/Volumes/|/home/|[A-Za-z]:\\\\)"
