@@ -32,6 +32,15 @@ codes on fail-closed errors. Adapters should branch on `code`, not stderr text.
 Generic `neutrality-contract-violation` is reserved for uncategorized defects
 and should be treated as blocking.
 
+## Neutrality archive policy
+
+The default neutrality policy declares ZIP archive limits for nesting depth,
+archives per subject, entries per archive, entries per subject, compressed bytes
+per archive, expanded bytes per archive, expanded bytes per entry, expanded
+bytes per subject, and compression ratio. The scanner enforces these limits
+fail-closed through the `archiveLimitBreaches` counter. Unsupported archive
+formats are counted as `unsupportedArchives`.
+
 ## Production-promotion platform matrix
 
 The production-promotion contract requires these external CI legs. The offline
