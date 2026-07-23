@@ -8,4 +8,5 @@ and does not depend on a source project.
 - [Russian README](guides/README.ru.md)
 - [Release architecture](architecture/release-architecture.md)
 - [Production promotion contract](reference/production-promotion.md)
+- [Live cost calibration](reference/live-cost-calibration.md)
 - [Release security](security/release-security.md)

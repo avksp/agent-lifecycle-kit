@@ -4,6 +4,7 @@
   "corpus": [
     "S0-MECHANICAL-01",
     "S1-STANDARD-01",
+    "S1-SMALL-CONTEXT-4K-STRICT-01",
     "S1-SMALL-CONTEXT-8K-01",
     "S2-MULTI-01",
     "S2-SECURITY-01",

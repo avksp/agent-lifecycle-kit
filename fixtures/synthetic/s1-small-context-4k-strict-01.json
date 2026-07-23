@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "agent-lifecycle-synthetic-scenario.v1",
+  "scenarioId": "S1-SMALL-CONTEXT-4K-STRICT-01",
+  "title": "Single-owner compact context execution in a 4k-strict host",
+  "sddTier": "S1",
+  "contextProfile": "small-context-profile.v1",
+  "targetContextWindow": "4k-strict",
+  "tags": [
+    "happy-path",
+    "small-context",
+    "small-context-4k",
+    "final-verdict",
+    "linux",
+    "macos",
+    "windows"
+  ],
+  "liveModelInvocations": 0,
+  "steps": [
+    {
+      "stage": "tier-resolution",
+      "expected": "S1 selected by deterministic resolver"
+    },
+    {
+      "stage": "context-render",
+      "expected": "active packet plus compact summary fit the 4k-strict profile"
+    },
+    {
+      "stage": "context-budget-negative",
+      "expected": "evidence/tool-output overflow fails closed without truncation"
+    },
+    {
+      "stage": "task-split-decision",
+      "expected": "controller selects split-task or larger-context request when 4k-strict budget fails"
+    },
+    {
+      "stage": "final-audit",
+      "expected": "COMPLETE"
+    }
+  ],
+  "expectedOutcome": {
+    "taskVerdicts": [
+      "ACCEPTED"
+    ],
+    "finalVerdict": "COMPLETE",
+    "qualityRegression": false
+  }
+}

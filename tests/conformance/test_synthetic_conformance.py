@@ -123,12 +123,16 @@ class SyntheticConformanceTests(unittest.TestCase):
         self.assertEqual(total_runs, expected_runs)
 
     def test_small_context_fixture_and_profile_are_present(self) -> None:
-        fixture = load_json(FIXTURES_ROOT / "s1-small-context-8k-01.json")
+        fixture_4k = load_json(FIXTURES_ROOT / "s1-small-context-4k-strict-01.json")
+        fixture_8k = load_json(FIXTURES_ROOT / "s1-small-context-8k-01.json")
         profile = load_json(ROOT / "profiles/small-context-profile.v1.json")
-        self.assertEqual(fixture["contextProfile"], profile["profileId"])
-        self.assertEqual(fixture["targetContextWindow"], profile["defaultWindow"])
         self.assertIn("4k-strict", profile["windows"])
-        self.assertIn("small-context", fixture["tags"])
+        self.assertEqual(fixture_4k["contextProfile"], profile["profileId"])
+        self.assertEqual(fixture_4k["targetContextWindow"], "4k-strict")
+        self.assertIn("small-context-4k", fixture_4k["tags"])
+        self.assertEqual(fixture_8k["contextProfile"], profile["profileId"])
+        self.assertEqual(fixture_8k["targetContextWindow"], profile["defaultWindow"])
+        self.assertIn("small-context", fixture_8k["tags"])
 
     def test_conformance_files_are_project_neutral(self) -> None:
         roots = [CONFORMANCE_ROOT, FIXTURES_ROOT, EVALS_ROOT, ROOT / "profiles"]

@@ -65,6 +65,33 @@ If a rendered envelope does not fit, the controller must split the task,
 request a larger context, or block the run. Older context and tool output are
 represented by hashable summaries and evidence identities.
 
+The conformance corpus includes a dedicated `4k-strict` scenario
+(`S1-SMALL-CONTEXT-4K-STRICT-01`) in addition to the 8k baseline, so support for
+sub-8k local models is verified as a separate contract path.
+
+## Live cost calibration
+
+Synthetic replay baselines are useful for deterministic regression checks, but
+they are not production-promotion evidence. Promotion requires a live,
+usage-attested receipt validated against
+`conformance/core/live-calibration-profile.v1.json` and
+`conformance/core/budget-targets.v1.json`.
+
+```bash
+python tools/release/validate_live_calibration.py \
+  --profile conformance/core/live-calibration-profile.v1.json \
+  --budget-targets conformance/core/budget-targets.v1.json \
+  --receipt <signed-live-calibration-receipt.json> \
+  --evidence <live-calibration-evidence.json>
+```
+
+The validator rejects synthetic replay receipts, missing usage attestations,
+unsupported hosts, missing required scenario/cohort coverage for that host,
+quality regressions, and p95 budget overruns. A universal `VERIFIED` claim
+requires one passing live receipt per host listed in the calibration profile.
+See
+[live cost calibration](docs/reference/live-cost-calibration.md).
+
 ## Distribution layout
 
 A universal distribution does not mean one manifest format. The same core is

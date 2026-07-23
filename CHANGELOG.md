@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added a live cost/token calibration profile and verifier; production
+  promotion now requires real usage-attested receipts and rejects synthetic
+  replay evidence.
+- Added `S1-SMALL-CONTEXT-4K-STRICT-01` to the synthetic conformance corpus,
+  budget targets and replay plan.
 - Added the `4k-strict` compact-context window for local models and constrained hosts below the previous 8k baseline.
 - Fixed `context check` and `context render` CLI overflow semantics: a rendered `FAIL` result now exits non-zero with `context-overflow`.
 - Fixed compact context receipts to enforce all bundled profile budgets: reserved output, active packet, state summary, evidence summary, optional tool output, and recent verbatim user turns.

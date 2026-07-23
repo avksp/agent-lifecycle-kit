@@ -11,6 +11,7 @@
   "scenarioFixtures": [
     "fixtures/synthetic/s0-mechanical-01.json",
     "fixtures/synthetic/s1-standard-01.json",
+    "fixtures/synthetic/s1-small-context-4k-strict-01.json",
     "fixtures/synthetic/s1-small-context-8k-01.json",
     "fixtures/synthetic/s2-multi-01.json",
     "fixtures/synthetic/s2-security-01.json",
@@ -24,6 +25,10 @@
     "S1-STANDARD-01": {
       "logicalCallsPerRun": 8,
       "qualityOracle": "task-and-final-audit-complete"
+    },
+    "S1-SMALL-CONTEXT-4K-STRICT-01": {
+      "logicalCallsPerRun": 10,
+      "qualityOracle": "compact-context-4k-receipt-split-task-and-final-audit-complete"
     },
     "S1-SMALL-CONTEXT-8K-01": {
       "logicalCallsPerRun": 8,

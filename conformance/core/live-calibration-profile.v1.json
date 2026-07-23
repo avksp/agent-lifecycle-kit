@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "agent-lifecycle-live-calibration-profile.v1",
+  "profileId": "agent-lifecycle-live-cost-calibration.v1",
+  "syntheticAcceptedForProductionPromotion": false,
+  "requiredHosts": [
+    "codex",
+    "claude-code",
+    "cursor",
+    "hermes",
+    "opencode"
+  ],
+  "requiredScenarios": [
+    "S0-MECHANICAL-01",
+    "S1-STANDARD-01",
+    "S1-SMALL-CONTEXT-4K-STRICT-01",
+    "S1-SMALL-CONTEXT-8K-01",
+    "S2-MULTI-01",
+    "S2-SECURITY-01",
+    "S2-RECOVERY-01"
+  ],
+  "requiredCohorts": [
+    "cold",
+    "warm"
+  ],
+  "minimumRunsPerScenarioCohort": 1,
+  "recommendedRunsPerScenarioCohort": 5,
+  "usageMetrics": [
+    "billableTokens",
+    "inputTokens",
+    "outputTokens",
+    "cumulativeContextBytes",
+    "toolCalls",
+    "wallSeconds"
+  ],
+  "qualityRegressionAllowed": false,
+  "missingOrUnattestedUsage": "FAIL",
+  "budgetTargetSource": "conformance/core/budget-targets.v1.json",
+  "requiredReceiptSchemaVersion": "agent-lifecycle-live-calibration-receipt.v1"
+}
