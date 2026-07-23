@@ -14,7 +14,7 @@
     "runId": "standalone-v1-plan-author-r10"
   },
   "status": "FROZEN",
-  "planRevision": 15,
+  "planRevision": 16,
   "baseRevision": {
     "ref": "main",
     "sha": "92f0412bb15ac082418fb52bfe3667d518363f5e"
@@ -108,7 +108,9 @@
     "plans/standalone-v1/.agent-plan/standalone-v1/22-compact-context-ownership-refreeze-r14.md",
     "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json",
     "plans/standalone-v1/.agent-plan/standalone-v1/23-windows-line-ending-refreeze-r15.md",
-    "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json"
+    "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json",
+    "plans/standalone-v1/.agent-plan/standalone-v1/24-release-version-refreeze-r16.md",
+    "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r14.json"
   ],
   "developerOverview": "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md",
   "sources": [
@@ -1295,6 +1297,10 @@
         "WS-16"
       ],
       "writes": [
+        ".agents/plugins",
+        ".claude-plugin",
+        ".codex-plugin",
+        ".cursor-plugin",
         ".github/workflows/ci.yml",
         ".github/workflows/release.yml",
         "CHANGELOG.md",
@@ -1309,6 +1315,7 @@
         "docs/reference",
         "docs/security/release-security.md",
         "release",
+        "tests/adapters/test_publication_manifests.py",
         "tests/release",
         "tools/release",
         "plans/standalone-v1/evidence/ws-14",
@@ -4558,8 +4565,8 @@
   "planReview": {
     "required": true,
     "verdict": "READY_TO_FREEZE",
-    "reviewedRevision": 15,
-    "report": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json"
+    "reviewedRevision": 16,
+    "report": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r14.json"
   },
   "orchestration": {
     "startMode": "approval-required",
@@ -4595,8 +4602,8 @@
   },
   "freeze": {
     "lock": "plans/standalone-v1/.agent-plan/standalone-v1/plan.lock.json",
-    "reviewId": "plan-review-r13",
-    "frozenAt": "2026-07-23T05:45:48Z",
+    "reviewId": "plan-review-r14",
+    "frozenAt": "2026-07-23T06:11:52Z",
     "frozenBy": "root-lifecycle-controller"
   }
 }

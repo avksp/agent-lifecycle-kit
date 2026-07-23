@@ -6,7 +6,7 @@ and Hermes registry/slash-command metadata under `adapters/hermes/`.
 Install individual skills directly from the tagged source release, for example:
 
 ```bash
-hermes skills install https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.1.1/skills/agent-workflow-orchestrator/SKILL.md
+hermes skills install https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.1.2/skills/agent-workflow-orchestrator/SKILL.md
 ```
 
 Hermes availability is part of the standalone release target, but remains
