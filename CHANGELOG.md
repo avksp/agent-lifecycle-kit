@@ -10,6 +10,7 @@
 - Added hard controller-gate receipt enforcement for task and finalization workflow transitions.
 - Added stable machine-readable neutrality error codes and JSON error envelopes for neutrality CLI helpers.
 - Clarified the modular-controller architecture document with the current source map, implemented/reserved boundaries, and split candidates.
+- Centralized workflow operation commits in a shared operation kernel used by plan adoption, run, task, and finalization transitions.
 
 ## 0.1.1 - 2026-07-22
 

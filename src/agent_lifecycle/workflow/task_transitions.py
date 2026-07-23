@@ -13,19 +13,14 @@ from agent_lifecycle.workflow.artifacts import (
     next_available_attempt,
     package_root,
 )
-from agent_lifecycle.workflow.events import append_event
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
+from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.reviews import validate_task_result, validate_task_review
 from agent_lifecycle.workflow.selectors import find_task, ready_tasks, unlock_ready_tasks
 from agent_lifecycle.workflow.state import (
     deadline_after,
-    load_state,
     now_iso,
-    record_operation,
-    require_expected_revision,
-    require_operation_unused,
-    write_state_replace,
 )
 
 
@@ -58,7 +53,7 @@ def start_task(
     )
     _mark_task_running(state, task, attempt, reason)
     record_gate_receipts(task, gate_receipts)
-    _commit_task_event(
+    commit_state(
         state_path,
         state,
         operation_id=operation_id,
@@ -106,7 +101,7 @@ def commit_task_result(
     task["lastReason"] = reason
     record_gate_receipts(task, gate_receipts)
     state["phase"] = "STEP_REVIEW"
-    _commit_task_event(
+    commit_state(
         state_path,
         state,
         operation_id=operation_id,
@@ -148,7 +143,7 @@ def accept_task(
     validate_task_review(state, task, review)
     record_gate_receipts(task, gate_receipts)
     _mark_task_accepted(state, task, review, identity, reason)
-    _commit_task_event(
+    commit_state(
         state_path,
         state,
         operation_id=operation_id,
@@ -163,10 +158,7 @@ def _mutable_state(
     operation_id: str,
     expected_revision: int,
 ) -> dict[str, Any]:
-    state = load_state(state_path)
-    require_expected_revision(state, expected_revision)
-    require_operation_unused(state, operation_id)
-    return state
+    return load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
 
 
 def _require_source_and_authorization(state: dict[str, Any], source_revision: str) -> None:
@@ -241,24 +233,3 @@ def _mark_task_accepted(
     task.pop("attemptDeadlineAt", None)
     unlock_ready_tasks(state)
     state["phase"] = "RUNNING" if ready_tasks(state) else "FINAL_AUDIT"
-
-
-def _commit_task_event(
-    state_path: Path,
-    state: dict[str, Any],
-    *,
-    operation_id: str,
-    event_type: str,
-    payload: dict[str, Any],
-) -> None:
-    state["stateRevision"] += 1
-    state["updatedAt"] = now_iso()
-    record_operation(state, operation_id=operation_id, event_type=event_type)
-    append_event(
-        state_path=state_path,
-        state=state,
-        operation_id=operation_id,
-        event_type=event_type,
-        payload=payload,
-    )
-    write_state_replace(state_path, state)
