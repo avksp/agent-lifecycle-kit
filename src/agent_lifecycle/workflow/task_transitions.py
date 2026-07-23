@@ -14,6 +14,11 @@ from agent_lifecycle.workflow.artifacts import (
     package_root,
 )
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
+from agent_lifecycle.workflow.model_usage import (
+    model_usage_receipt_required,
+    validate_attempt_model_route,
+    validate_task_model_usage_receipt,
+)
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.reviews import validate_task_result, validate_task_review
@@ -71,6 +76,8 @@ def commit_task_result(
     expected_revision: int,
     source_revision: str,
     result_path: str,
+    model_usage_receipt_path: str | None = None,
+    budget_targets_path: str | None = None,
     reason: str,
 ) -> dict[str, Any]:
     state = _mutable_state(state_path, operation_id, expected_revision)
@@ -96,6 +103,39 @@ def commit_task_result(
     result = read_json_object(root / expected_path, label="task result")
     identity = artifact_identity(root, expected_path, result)
     validate_task_result(state, task, result, identity)
+    model_usage_identity = None
+    if model_usage_receipt_required(task):
+        if model_usage_receipt_path is None:
+            raise LifecycleError(
+                "model-usage-receipt-required",
+                "task result requires a model usage receipt for the attempt model route",
+            )
+        usage_path = normalize_repo_path(model_usage_receipt_path, label="model usage receipt")
+        receipt = read_json_object(root / usage_path, label="model usage receipt")
+        model_usage_identity = artifact_identity(root, usage_path, receipt)
+        validation = validate_task_model_usage_receipt(
+            state,
+            task,
+            receipt,
+            budget_targets=_read_budget_targets(root, budget_targets_path),
+        )
+        task["modelUsageReceipt"] = {
+            **model_usage_identity,
+            "operationId": receipt["operationId"],
+            "host": receipt["host"],
+            "modelClass": receipt["modelClass"],
+            "usage": dict(receipt["usage"]),
+            "validation": {
+                "status": validation["status"],
+                "receiptDigest": validation["receiptDigest"],
+                "routeDecisionDigest": validation.get("routeDecisionDigest"),
+            },
+        }
+    elif model_usage_receipt_path is not None:
+        raise LifecycleError(
+            "unexpected-model-usage-receipt",
+            "task attempt does not require a model usage receipt",
+        )
     task["result"] = identity
     task["status"] = "VERIFYING"
     task["lastReason"] = reason
@@ -106,7 +146,13 @@ def commit_task_result(
         state,
         operation_id=operation_id,
         event_type="task-result-committed",
-        payload={"taskId": task_id, "attempt": task["attempt"], "result": identity, "reason": reason},
+        payload={
+            "taskId": task_id,
+            "attempt": task["attempt"],
+            "result": identity,
+            "modelUsageReceipt": model_usage_identity,
+            "reason": reason,
+        },
     )
     return status(state_path)
 
@@ -203,6 +249,7 @@ def _mark_task_running(
     task["controllerGateReceipts"] = []
     task.pop("result", None)
     task.pop("review", None)
+    task.pop("modelUsageReceipt", None)
     task["attemptStartedAt"] = now_iso()
     task["attemptDeadlineAt"] = deadline_after(
         task["attemptStartedAt"],
@@ -210,11 +257,21 @@ def _mark_task_running(
     )
     task["lastReason"] = reason
     if isinstance(task.get("modelRoute"), dict) and task["modelRoute"]:
+        validate_attempt_model_route(task)
         task["attemptModelRoute"] = {
             **task["modelRoute"],
             "attempt": attempt,
         }
     state["phase"] = "RUNNING"
+
+
+def _read_budget_targets(root: Path, budget_targets_path: str | None) -> dict[str, Any] | None:
+    if budget_targets_path is None:
+        return None
+    return read_json_object(
+        root / normalize_repo_path(budget_targets_path, label="budget targets"),
+        label="budget targets",
+    )
 
 
 def _mark_task_accepted(
