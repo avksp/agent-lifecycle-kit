@@ -29,7 +29,7 @@ This is the current source map for the standalone package:
 | Plan lock verification | `freeze/locks.py` | Implemented |
 | Frozen DAG to task-packet compilation | `compiler/task_packets.py` | Implemented |
 | Compact context profiles and receipts | `context/*` | Implemented |
-| Durable workflow state, event log, task/run transitions, gate checks, finalization | `workflow/*` | Implemented |
+| Durable workflow state, operation kernel, event log, task/run transitions, gate checks, finalization | `workflow/*` | Implemented |
 | Neutrality authority, scanning, signed receipts, controller-gate helper | `neutrality/*` | Implemented |
 | Host capability descriptors | `host_protocol/contracts.py`, adapter metadata files | Implemented as offline descriptors |
 | Root CLI dispatch | `cli/main.py` | Implemented thin dispatcher; no lifecycle semantics should move here |
@@ -37,8 +37,8 @@ This is the current source map for the standalone package:
 
 Current size check: all production Python files are below the hard limits in
 this document. The largest files are `cli/main.py` at roughly 405 lines and
-`workflow/plan_adoption.py` at roughly 400 lines; both are within the current
-hard limits but remain split candidates if more behavior is added.
+`workflow/plan_adoption.py` below 400 lines; both are within the current hard
+limits but remain split candidates if more behavior is added.
 
 ## Target Shape
 
@@ -52,7 +52,9 @@ when splitting prevents a file/context limit breach:
 - `state`: state/WAL schemas, readers, projections, and compatibility; currently
   implemented under `workflow/state.py` and `workflow/events.py`.
 - `operation_kernel`: atomic state/event/WAL transactions and crash recovery;
-  currently local to workflow transition modules and the next split candidate.
+  currently implemented as `workflow/operation_kernel.py` for expected
+  revision checks, operation-id idempotency, state revision mutation, operation
+  ledger, event append, and atomic state replacement.
 - `planning`: SDD tier resolution, specification, review, and freeze logic.
 - `context`: compact profile validation, active-packet rendering, overflow
   checks, and context receipts for small-context hosts.

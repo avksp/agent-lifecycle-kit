@@ -8,17 +8,10 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
-from agent_lifecycle.workflow.events import append_event
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
+from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
-from agent_lifecycle.workflow.state import (
-    load_state,
-    now_iso,
-    record_operation,
-    require_expected_revision,
-    require_operation_unused,
-    write_state_replace,
-)
+from agent_lifecycle.workflow.state import now_iso
 
 
 def finalize_run(
@@ -31,9 +24,7 @@ def finalize_run(
     proof_path: str,
     reason: str,
 ) -> dict[str, Any]:
-    state = load_state(state_path)
-    require_expected_revision(state, expected_revision)
-    require_operation_unused(state, operation_id)
+    state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
     if state.get("phase") != "FINAL_AUDIT":
         raise LifecycleError("invalid-phase", "run finalization requires FINAL_AUDIT phase")
     if state.get("sourceRevision") != source_revision:
@@ -63,7 +54,7 @@ def finalize_run(
     state["finalProof"] = {**identity, "semanticStatus": proof["semanticStatus"]}
     state["finalAudit"] = final_audit_identity
     state["phase"] = "COMPLETE"
-    _commit(
+    commit_state(
         state_path,
         state,
         operation_id=operation_id,
@@ -178,18 +169,3 @@ def _proof_body(
         "createdAt": now_iso(),
     }
     return {**body, "bodyDigest": canonical_digest(body)}
-
-
-def _commit(
-    state_path: Path,
-    state: dict[str, Any],
-    *,
-    operation_id: str,
-    event_type: str,
-    payload: dict[str, Any],
-) -> None:
-    state["stateRevision"] += 1
-    state["updatedAt"] = now_iso()
-    record_operation(state, operation_id=operation_id, event_type=event_type)
-    append_event(state_path=state_path, state=state, operation_id=operation_id, event_type=event_type, payload=payload)
-    write_state_replace(state_path, state)
