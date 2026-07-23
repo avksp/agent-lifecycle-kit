@@ -19,3 +19,5 @@ plans/standalone-v1/workflow/gates/
 # Transient lifecycle controller locks are process-local.
 plans/**/.agent-plan/**/*.lock
 plans/**/workflow/*.lock
+
+tasks
