@@ -1,14 +1,14 @@
 {
   "schemaVersion": "agent-plan-lock.v1",
   "packageId": "standalone-v1",
-  "planRevision": 15,
-  "manifestHash": "a46a3e77cad6a0571254a7fd294bd12ec927155cddecf671831c7bfbc8358baa",
+  "planRevision": 16,
+  "manifestHash": "b8f8c45916ce590b389a13065060b45a4a33e0223b4c65a417133393252ea4ce",
   "baseRef": "main",
   "baseSha": "92f0412bb15ac082418fb52bfe3667d518363f5e",
-  "reviewId": "plan-review-r13",
-  "reviewPath": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json",
-  "reviewedPlanHash": "a46a3e77cad6a0571254a7fd294bd12ec927155cddecf671831c7bfbc8358baa",
-  "frozenAt": "2026-07-23T05:45:48Z",
+  "reviewId": "plan-review-r14",
+  "reviewPath": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r14.json",
+  "reviewedPlanHash": "b8f8c45916ce590b389a13065060b45a4a33e0223b4c65a417133393252ea4ce",
+  "frozenAt": "2026-07-23T06:11:52Z",
   "frozenBy": "root-lifecycle-controller",
   "files": [
     {
@@ -455,6 +455,16 @@
       "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json",
       "sha256": "e9d1094cf91f8e8fbc1867a1517721d94476f15ec7e9ce8735f81f208bfd70f3",
       "bytes": 3450
+    },
+    {
+      "path": "plans/standalone-v1/.agent-plan/standalone-v1/24-release-version-refreeze-r16.md",
+      "sha256": "c715f6c88d3527d452dff8d119504b67545cdb902a660e9ff4aae0c429d720d4",
+      "bytes": 1338
+    },
+    {
+      "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r14.json",
+      "sha256": "5aecc33c4ddbc8f18fa77a0b38d015c2d0b99cfa9c57297f896fd6dd4dd1c5cf",
+      "bytes": 3621
     }
   ]
 }

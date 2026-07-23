@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r14",
+  "packageId": "standalone-v1",
+  "planRevision": 16,
+  "reviewedPlanHash": "b8f8c45916ce590b389a13065060b45a4a33e0223b4c65a417133393252ea4ce",
+  "previousReview": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json",
+    "sha256": "e9d1094cf91f8e8fbc1867a1517721d94476f15ec7e9ce8735f81f208bfd70f3",
+    "bytes": 3450,
+    "reviewId": "plan-review-r13"
+  },
+  "qualityMetrics": {
+    "taskCount": 16,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 9,
+    "maxParallelWidth": 5,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 39,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 49152,
+    "actualContextBytesTotal": 362000,
+    "maxTaskContextBytes": 49152,
+    "validationInvocationCount": 30,
+    "estimatedMinimumToolCalls": 73
+  },
+  "verdict": "READY_TO_FREEZE",
+  "reviewer": {
+    "id": "plan-reviewer-r14",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-plan-review-r14-release-version-ownership"
+  },
+  "reviewedAt": "2026-07-23T06:11:52Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "Revision 16 changes only release ownership for publication manifests and version-preparation governance; it does not change lifecycle behavior or adapter maturity."
+    },
+    {
+      "id": "ownership",
+      "status": "PASS",
+      "rationale": "Root publication manifests and the shared publication-manifest test are assigned to WS-14. Adapter-local projection files remain under their existing adapter workstreams."
+    },
+    {
+      "id": "testing-evidence",
+      "status": "PASS",
+      "rationale": "The required post-refreeze gates are package tests, neutrality scan, ownership audit, release assembly and release verification before tag creation."
+    },
+    {
+      "id": "execution-safety",
+      "status": "PASS",
+      "rationale": "The release remains an EXPERIMENTAL source release and does not claim public marketplace approval, VERIFIED adapter maturity, or production promotion."
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-RELEASE-ROOT-MANIFEST-OWNERSHIP-R16",
+      "severity": "HIGH",
+      "class": "ownership-gap",
+      "dimension": "ownership",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Root publication manifests required for versioned source release preparation were not assigned in the frozen write-set contract.",
+      "requiredAction": "Assign .codex-plugin, .claude-plugin, .cursor-plugin and .agents/plugins to WS-14 release engineering and rerun ownership gates."
+    },
+    {
+      "id": "PLAN-PUBLICATION-TEST-OWNERSHIP-R16",
+      "severity": "MEDIUM",
+      "class": "ownership-gap",
+      "dimension": "ownership",
+      "artifact": "tests/adapters/test_publication_manifests.py",
+      "status": "resolved",
+      "message": "The shared publication-manifest test validates release-governance artifacts but was not assigned to a release owner.",
+      "requiredAction": "Assign tests/adapters/test_publication_manifests.py to WS-14 and keep adapter-specific tests under their adapter workstreams."
+    }
+  ],
+  "summary": "Revision 16 is READY_TO_FREEZE as a minimal release-version ownership correction for v0.1.2 preparation. It changes no product scope, task DAG, runtime behavior, adapter maturity, or production-promotion boundary."
+}

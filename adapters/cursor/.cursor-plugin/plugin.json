@@ -1,6 +1,6 @@
 {
   "name": "agent-lifecycle-kit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Agent lifecycle planning, execution, audit, and final proof for Cursor.",
   "author": {
     "name": "Agent Lifecycle Kit contributors"

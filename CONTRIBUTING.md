@@ -35,7 +35,7 @@ feat(context): add small-context profile renderer
 fix(workflow): reject stale gate receipts
 docs(readme): document marketplace installation
 test(adapters): cover publication manifests
-chore(release): prepare v0.1.1 marketplace publication
+chore(release): prepare v0.1.2 marketplace publication
 ```
 
 Rules:
