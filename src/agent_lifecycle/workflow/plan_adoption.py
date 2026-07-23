@@ -9,18 +9,13 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
-from agent_lifecycle.workflow.events import append_event
+from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.selectors import unlock_ready_tasks
 from agent_lifecycle.workflow.state import (
     TERMINAL_PHASES,
     deadline_after,
-    load_state,
     now_iso,
-    record_operation,
-    require_expected_revision,
-    require_operation_unused,
-    write_state_replace,
 )
 
 
@@ -36,9 +31,7 @@ def adopt_plan(
     start_mode: str,
     authorized_by: str | None = None,
 ) -> dict[str, Any]:
-    state = load_state(state_path)
-    require_expected_revision(state, expected_revision)
-    require_operation_unused(state, operation_id)
+    state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
     _require_adoptable(state, reset_tasks=reset_tasks)
     root = package_root(state_path, state)
     manifest = read_json_object(manifest_path, label="frozen plan manifest")
@@ -70,7 +63,7 @@ def adopt_plan(
         packet_set=packet_set,
         tasks=tasks,
     )
-    _commit(
+    commit_state(
         state_path,
         state,
         operation_id=operation_id,
@@ -93,9 +86,7 @@ def start_execution(
     source_revision: str,
     reason: str,
 ) -> dict[str, Any]:
-    state = load_state(state_path)
-    require_expected_revision(state, expected_revision)
-    require_operation_unused(state, operation_id)
+    state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
     if state["phase"] != "READY":
         raise LifecycleError("invalid-phase", "execution can only start from READY")
     if state.get("sourceRevision") != source_revision:
@@ -105,8 +96,7 @@ def start_execution(
         raise LifecycleError("authorization-required", "execution authorization is required")
     previous = state["phase"]
     state["phase"] = "RUNNING"
-    state["updatedAt"] = now_iso()
-    _commit(
+    commit_state(
         state_path,
         state,
         operation_id=operation_id,
@@ -383,18 +373,3 @@ def _last_plan_review(root: Path, manifest: dict[str, Any]) -> dict[str, Any]:
 def _raw_file_identity(path: Path) -> dict[str, Any]:
     data = path.read_bytes()
     return {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
-
-
-def _commit(
-    state_path: Path,
-    state: dict[str, Any],
-    *,
-    operation_id: str,
-    event_type: str,
-    payload: dict[str, Any],
-) -> None:
-    state["stateRevision"] += 1
-    state["updatedAt"] = now_iso()
-    record_operation(state, operation_id=operation_id, event_type=event_type)
-    append_event(state_path=state_path, state=state, operation_id=operation_id, event_type=event_type, payload=payload)
-    write_state_replace(state_path, state)
