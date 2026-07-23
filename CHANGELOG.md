@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- No changes yet.
+
+## 0.1.2 - 2026-07-23
+
 - Added a live cost/token calibration profile and verifier; production
   promotion now requires real usage-attested receipts and rejects synthetic
   replay evidence.
@@ -14,6 +18,8 @@
 - Added a required final-audit precondition to `workflow finalize` and bind the audit identity into final proof.
 - Added hard controller-gate receipt enforcement for task and finalization workflow transitions.
 - Added stable machine-readable neutrality error codes and JSON error envelopes for neutrality CLI helpers.
+- Fixed Windows checkout line-ending stability for content-addressed synthetic
+  conformance fixtures and skill metadata checks.
 - Clarified the modular-controller architecture document with the current source map, implemented/reserved boundaries, and split candidates.
 - Centralized workflow operation commits in a shared operation kernel used by plan adoption, run, task, and finalization transitions.
 - Enforced all declared ZIP archive neutrality policy limits, including nesting, archive/entry counts, compressed/expanded byte ceilings, and compression ratio.
