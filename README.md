@@ -12,7 +12,7 @@ projections for Codex, Claude Code, Cursor, Hermes, and OpenCode.
 
 ## Current status
 
-`v0.1.2` is a tagged source release. The repository now contains root-level
+`v0.2.0` is a tagged source release. The repository now contains root-level
 publication manifests for Codex, Claude Code, and Cursor, plus Hermes and
 OpenCode projection metadata.
 
@@ -225,7 +225,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.1.2
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.2.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -290,7 +290,7 @@ from the tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.1.2/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.2.0/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -322,7 +322,7 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 
 The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
-claimed by `v0.1.2`.
+claimed by `v0.2.0`.
 
 ## Usage
 

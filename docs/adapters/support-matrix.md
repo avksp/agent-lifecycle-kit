@@ -1,6 +1,6 @@
 # Adapter support matrix
 
-This matrix is the authoritative `v0.1.2` source-release support claim.
+This matrix is the authoritative `v0.2.0` source-release support claim.
 `EXPERIMENTAL` means the adapter has an offline projection and deterministic
 contract tests. `VERIFIED` is reserved for a later production-promotion release
 with bounded live install and lifecycle conformance evidence.
