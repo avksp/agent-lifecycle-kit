@@ -14,7 +14,7 @@
     "runId": "standalone-v1-plan-author-r10"
   },
   "status": "FROZEN",
-  "planRevision": 14,
+  "planRevision": 15,
   "baseRevision": {
     "ref": "main",
     "sha": "92f0412bb15ac082418fb52bfe3667d518363f5e"
@@ -106,7 +106,9 @@
     "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r11.json",
     "plans/standalone-v1/.agent-plan/standalone-v1/21-finalization-controller-transition-r13.md",
     "plans/standalone-v1/.agent-plan/standalone-v1/22-compact-context-ownership-refreeze-r14.md",
-    "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json"
+    "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json",
+    "plans/standalone-v1/.agent-plan/standalone-v1/23-windows-line-ending-refreeze-r15.md",
+    "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json"
   ],
   "developerOverview": "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md",
   "sources": [
@@ -485,6 +487,7 @@
       "dependsOn": [],
       "writes": [
         ".editorconfig",
+        ".gitattributes",
         ".gitignore",
         ".github/workflows/neutrality.yml",
         "NOTICE",
@@ -4555,8 +4558,8 @@
   "planReview": {
     "required": true,
     "verdict": "READY_TO_FREEZE",
-    "reviewedRevision": 14,
-    "report": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json"
+    "reviewedRevision": 15,
+    "report": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json"
   },
   "orchestration": {
     "startMode": "approval-required",
@@ -4592,8 +4595,8 @@
   },
   "freeze": {
     "lock": "plans/standalone-v1/.agent-plan/standalone-v1/plan.lock.json",
-    "reviewId": "plan-review-r12",
-    "frozenAt": "2026-07-23T04:46:45Z",
+    "reviewId": "plan-review-r13",
+    "frozenAt": "2026-07-23T05:45:48Z",
     "frozenBy": "root-lifecycle-controller"
   }
 }

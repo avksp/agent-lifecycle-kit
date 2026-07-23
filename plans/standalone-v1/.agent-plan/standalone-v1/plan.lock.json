@@ -1,14 +1,14 @@
 {
   "schemaVersion": "agent-plan-lock.v1",
   "packageId": "standalone-v1",
-  "planRevision": 14,
-  "manifestHash": "cee0137d50b2d0b45f70c34672edd1fcc2791a8fbe1b770bc83107517ad6ee04",
+  "planRevision": 15,
+  "manifestHash": "a46a3e77cad6a0571254a7fd294bd12ec927155cddecf671831c7bfbc8358baa",
   "baseRef": "main",
   "baseSha": "92f0412bb15ac082418fb52bfe3667d518363f5e",
-  "reviewId": "plan-review-r12",
-  "reviewPath": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json",
-  "reviewedPlanHash": "cee0137d50b2d0b45f70c34672edd1fcc2791a8fbe1b770bc83107517ad6ee04",
-  "frozenAt": "2026-07-23T04:46:45Z",
+  "reviewId": "plan-review-r13",
+  "reviewPath": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json",
+  "reviewedPlanHash": "a46a3e77cad6a0571254a7fd294bd12ec927155cddecf671831c7bfbc8358baa",
+  "frozenAt": "2026-07-23T05:45:48Z",
   "frozenBy": "root-lifecycle-controller",
   "files": [
     {
@@ -445,6 +445,16 @@
       "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json",
       "sha256": "05372bb0a63839e1e0503fb41f0aaa64adb0770452e299c8a6c3b5b09f9c26b3",
       "bytes": 3300
+    },
+    {
+      "path": "plans/standalone-v1/.agent-plan/standalone-v1/23-windows-line-ending-refreeze-r15.md",
+      "sha256": "5cfac507aa48e9a131dad37c36a1c9cca1e57fabbd435232cd6dd11fd618d730",
+      "bytes": 1404
+    },
+    {
+      "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r13.json",
+      "sha256": "e9d1094cf91f8e8fbc1867a1517721d94476f15ec7e9ce8735f81f208bfd70f3",
+      "bytes": 3450
     }
   ]
 }
