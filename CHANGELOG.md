@@ -9,6 +9,7 @@
 - Added a required final-audit precondition to `workflow finalize` and bind the audit identity into final proof.
 - Added hard controller-gate receipt enforcement for task and finalization workflow transitions.
 - Added stable machine-readable neutrality error codes and JSON error envelopes for neutrality CLI helpers.
+- Clarified the modular-controller architecture document with the current source map, implemented/reserved boundaries, and split candidates.
 
 ## 0.1.1 - 2026-07-22
 
