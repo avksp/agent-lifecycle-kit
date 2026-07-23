@@ -180,19 +180,55 @@ class NeutralityTests(unittest.TestCase):
     def test_zip_entry_limit_breach_is_counted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            archive_path = root / "archive.zip"
-            with zipfile.ZipFile(archive_path, "w") as archive:
-                archive.writestr("a.txt", "a")
-                archive.writestr("b.txt", "b")
+            _write_zip(root / "archive.zip", {"a.txt": b"a", "b.txt": b"b"})
             policy = _policy(root, max_entries=1)
-            report = scan_repository(
-                workspace_root=root,
-                policy=policy,
-                deny_literals=[],
-                deny_regexes=[],
-                scope="current-tree-complete",
-                output_paths=[Path("out/report.json"), Path("out/receipt.json")],
-            )
+            report = _scan_root(root, policy)
+            self.assertEqual(report.archive_limit_breaches, 1)
+
+    def test_declared_archive_subject_limits_are_counted(self) -> None:
+        cases = [
+            ("maxArchivesPerSubject", {"maxArchivesPerSubject": 1}),
+            ("maxEntriesPerSubject", {"maxEntriesPerSubject": 1}),
+            ("maxExpandedBytesPerSubject", {"maxExpandedBytesPerSubject": 1}),
+        ]
+        for name, archives in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                _write_zip(root / "a.zip", {"a.txt": b"a"})
+                _write_zip(root / "b.zip", {"b.txt": b"b"})
+                policy = _policy(root, archives=archives)
+                report = _scan_root(root, policy)
+                self.assertEqual(report.archive_limit_breaches, 1)
+
+    def test_declared_archive_per_archive_limits_are_counted(self) -> None:
+        cases = [
+            ("maxCompressedBytesPerArchive", {"maxCompressedBytesPerArchive": 1}, {"a.txt": b"a"}),
+            ("maxExpandedBytesPerArchive", {"maxExpandedBytesPerArchive": 1}, {"a.txt": b"aa"}),
+            ("maxExpandedBytesPerEntry", {"maxExpandedBytesPerEntry": 1}, {"a.txt": b"aa"}),
+        ]
+        for name, archives, entries in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                _write_zip(root / "archive.zip", entries)
+                policy = _policy(root, archives=archives)
+                report = _scan_root(root, policy)
+                self.assertEqual(report.archive_limit_breaches, 1)
+
+    def test_nested_archive_depth_limit_is_counted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            inner = _zip_bytes({"inner.txt": b"portable"})
+            _write_zip(root / "outer.zip", {"inner.zip": inner})
+            policy = _policy(root, archives={"maxArchiveNestingDepth": 1})
+            report = _scan_root(root, policy)
+            self.assertEqual(report.archive_limit_breaches, 1)
+
+    def test_archive_compression_ratio_limit_is_counted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_zip(root / "archive.zip", {"large.txt": b"x" * 4096}, compression=zipfile.ZIP_DEFLATED)
+            policy = _policy(root, archives={"maxCompressionRatio": 1})
+            report = _scan_root(root, policy)
             self.assertEqual(report.archive_limit_breaches, 1)
 
     def test_create_no_replace_prevents_overwrite(self) -> None:
@@ -297,14 +333,32 @@ class NeutralityTests(unittest.TestCase):
                 os.environ.update(previous)
 
 
-def _policy(root: Path, *, deny_literals: list[str] | None = None, max_entries: int = 10) -> object:
+def _policy(
+    root: Path,
+    *,
+    deny_literals: list[str] | None = None,
+    max_entries: int = 10,
+    archives: dict[str, int] | None = None,
+) -> object:
+    archive_policy = {
+        "maxArchiveNestingDepth": 4,
+        "maxArchivesPerSubject": 1000,
+        "maxEntriesPerArchive": max_entries,
+        "maxEntriesPerSubject": 100000,
+        "maxCompressedBytesPerArchive": 536870912,
+        "maxExpandedBytesPerArchive": 2147483648,
+        "maxExpandedBytesPerEntry": 1000000,
+        "maxExpandedBytesPerSubject": 4294967296,
+        "maxCompressionRatio": 100,
+    }
+    archive_policy.update(archives or {})
     path = root / "policy.json"
     path.write_text(
         json.dumps(
             {
                 "schemaVersion": "agent-lifecycle-neutrality-policy.v1",
                 "scan": {"maxFileBytes": 1000000, "maxObjectBytes": 1000000},
-                "archives": {"maxEntriesPerArchive": max_entries, "maxExpandedBytesPerEntry": 1000000},
+                "archives": archive_policy,
                 "pathExcludes": ["^policy\\.json$"],
                 "denyLiterals": deny_literals or [],
                 "denyRegexes": [],
@@ -313,6 +367,33 @@ def _policy(root: Path, *, deny_literals: list[str] | None = None, max_entries: 
         encoding="utf-8",
     )
     return load_policy(path)
+
+
+def _scan_root(root: Path, policy: object) -> object:
+    return scan_repository(
+        workspace_root=root,
+        policy=policy,
+        deny_literals=[],
+        deny_regexes=[],
+        scope="current-tree-complete",
+        output_paths=[Path("out/report.json"), Path("out/receipt.json")],
+    )
+
+
+def _write_zip(path: Path, entries: dict[str, bytes], *, compression: int = zipfile.ZIP_STORED) -> None:
+    with zipfile.ZipFile(path, "w", compression=compression) as archive:
+        for name, data in entries.items():
+            archive.writestr(name, data)
+
+
+def _zip_bytes(entries: dict[str, bytes]) -> bytes:
+    import io
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for name, data in entries.items():
+            archive.writestr(name, data)
+    return buffer.getvalue()
 
 
 def _operation_request(path: Path, output_path: str, schema_version: str) -> None:

@@ -81,6 +81,13 @@ class NeutralityReport:
         }
 
 
+@dataclass
+class ArchiveScanBudget:
+    archives: int = 0
+    entries: int = 0
+    expanded_bytes: int = 0
+
+
 def scan_repository(
     *,
     workspace_root: Path,
@@ -102,6 +109,7 @@ def scan_repository(
 
     literal_rules = tuple(deny_literals) + policy.deny_literals
     regex_rules = tuple(re.compile(value) for value in deny_regexes) + policy.deny_regexes
+    archive_budget = ArchiveScanBudget()
 
     worktree_entries: list[dict[str, Any]] = []
     for rel_path in _walk_repository_files(workspace_root, policy):
@@ -114,7 +122,7 @@ def scan_repository(
             continue
         report.scanned_files += 1
         report.findings.extend(_match_data(rel_path, data, literal_rules, regex_rules))
-        _scan_archive(rel_path, data, policy, report, literal_rules, regex_rules)
+        _scan_archive(rel_path, data, policy, report, literal_rules, regex_rules, archive_budget, depth=1)
         worktree_entries.append({"path": rel_path, "sha256": sha256_hex(data), "bytes": len(data)})
 
     git_entries: list[dict[str, Any]] = []
@@ -179,10 +187,24 @@ def _scan_archive(
     report: NeutralityReport,
     literal_rules: tuple[str, ...],
     regex_rules: tuple[Pattern[str], ...],
+    archive_budget: ArchiveScanBudget,
+    *,
+    depth: int,
 ) -> None:
     if not data.startswith(b"PK\x03\x04"):
         return
     import io
+
+    if depth > policy.max_archive_nesting_depth:
+        report.archive_limit_breaches += 1
+        return
+    archive_budget.archives += 1
+    if archive_budget.archives > policy.max_archives_per_subject:
+        report.archive_limit_breaches += 1
+        return
+    if len(data) > policy.max_compressed_bytes_per_archive:
+        report.archive_limit_breaches += 1
+        return
 
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
@@ -191,6 +213,22 @@ def _scan_archive(
             if len(infos) > policy.max_archive_entries:
                 report.archive_limit_breaches += 1
                 return
+            expanded_bytes = sum(info.file_size for info in infos)
+            compressed_bytes = sum(info.compress_size for info in infos)
+            if expanded_bytes > policy.max_expanded_bytes_per_archive:
+                report.archive_limit_breaches += 1
+                return
+            if _ratio_exceeds(expanded_bytes, compressed_bytes, policy.max_compression_ratio):
+                report.archive_limit_breaches += 1
+                return
+            if archive_budget.entries + len(infos) > policy.max_entries_per_subject:
+                report.archive_limit_breaches += 1
+                return
+            if archive_budget.expanded_bytes + expanded_bytes > policy.max_expanded_bytes_per_subject:
+                report.archive_limit_breaches += 1
+                return
+            archive_budget.entries += len(infos)
+            archive_budget.expanded_bytes += expanded_bytes
             for info in infos:
                 key = info.filename.casefold()
                 if key in names or info.filename.startswith("/") or ".." in Path(info.filename).parts:
@@ -200,10 +238,33 @@ def _scan_archive(
                 if info.file_size > policy.max_expanded_entry_bytes:
                     report.archive_limit_breaches += 1
                     return
+                if _ratio_exceeds(info.file_size, info.compress_size, policy.max_compression_ratio):
+                    report.archive_limit_breaches += 1
+                    return
+                if info.is_dir():
+                    continue
                 content = archive.read(info, pwd=None)
                 report.findings.extend(_match_data(f"{source}!{info.filename}", content, literal_rules, regex_rules))
+                _scan_archive(
+                    f"{source}!{info.filename}",
+                    content,
+                    policy,
+                    report,
+                    literal_rules,
+                    regex_rules,
+                    archive_budget,
+                    depth=depth + 1,
+                )
     except (zipfile.BadZipFile, RuntimeError):
         report.unsupported_archives += 1
+
+
+def _ratio_exceeds(expanded_bytes: int, compressed_bytes: int, max_ratio: int) -> bool:
+    if expanded_bytes <= 0:
+        return False
+    if compressed_bytes <= 0:
+        return True
+    return expanded_bytes > compressed_bytes * max_ratio
 
 
 def _git_objects(workspace_root: Path, policy: NeutralityPolicy) -> Iterable[tuple[str, bytes]]:
