@@ -209,6 +209,11 @@ def _mark_task_running(
         int(state.get("budgets", {}).get("maxTaskWallSeconds", 3600)),
     )
     task["lastReason"] = reason
+    if isinstance(task.get("modelRoute"), dict) and task["modelRoute"]:
+        task["attemptModelRoute"] = {
+            **task["modelRoute"],
+            "attempt": attempt,
+        }
     state["phase"] = "RUNNING"
 
 
