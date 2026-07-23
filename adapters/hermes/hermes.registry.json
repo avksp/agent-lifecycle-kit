@@ -1,7 +1,7 @@
 {
   "schemaVersion": "agent-lifecycle-hermes-registry.v1",
   "package": "agent-lifecycle-kit",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "skillsDirectory": "./skills",
   "adapterDescriptor": "./adapter.descriptor.json",
   "maturity": "EXPERIMENTAL",

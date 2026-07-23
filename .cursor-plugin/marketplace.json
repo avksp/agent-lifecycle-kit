@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Provider-neutral lifecycle skills for reviewed SDD planning, controlled execution, implementation audit, and final proof.",
-    "version": "0.1.2"
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "agent-lifecycle-kit",
       "source": ".",
       "description": "Reviewed SDD planning, orchestration, implementation audit, and final proof.",
-      "version": "0.1.2",
+      "version": "0.2.0",
       "author": {
         "name": "Agent Lifecycle Kit contributors"
       },

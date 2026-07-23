@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 0.2.0 - 2026-07-23
+
+- Added provider-neutral model routing for lifecycle phases and task attempts.
+- Added host-local model profile validation without storing concrete provider
+  model names in portable core contracts.
+- Added workflow enforcement for model-backed task attempts: `workflow
+  task-result` now requires a host-attested usage receipt bound to the run,
+  task, attempt, plan digest, source revision and route decision digest.
+- Added fail-closed protection against critical review downgrades to `budget`
+  or `local-compact` model classes.
+- Updated adapter descriptors and the offline adapter baseline with
+  workflow-enforced model-route execution semantics.
+
 ## 0.1.2 - 2026-07-23
 
 - Added a live cost/token calibration profile and verifier; production
