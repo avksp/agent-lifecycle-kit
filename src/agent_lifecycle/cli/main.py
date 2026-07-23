@@ -35,6 +35,8 @@ from agent_lifecycle.workflow import (
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args, remainder = parser.parse_known_args(argv)
+    if args.command == "neutrality":
+        return neutrality_main(remainder)
     try:
         payload = _dispatch(args, remainder)
     except LifecycleError as exc:
@@ -184,11 +186,6 @@ def _dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] 
             return list_schemas()
         if args.schema_command == "show":
             return get_schema(args.schema_id)
-    if args.command == "neutrality":
-        return_code = neutrality_main(remainder)
-        if return_code != 0:
-            raise LifecycleError("neutrality-command-failed", "neutrality command failed", {"exitCode": return_code})
-        return None
     if args.command == "workflow":
         return _dispatch_workflow(args)
     if args.command == "audit":

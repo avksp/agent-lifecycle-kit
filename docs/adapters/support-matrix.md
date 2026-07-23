@@ -25,6 +25,13 @@ support requires the core receipt to pass all profile budgets, including
 reserved output, active packet, state summary, evidence summary, optional
 `toolOutputs`, and recent verbatim user-turn count.
 
+## Neutrality error contract
+
+Neutrality CLI helpers return `agent-lifecycle-error.v1` with domain-specific
+codes on fail-closed errors. Adapters should branch on `code`, not stderr text.
+Generic `neutrality-contract-violation` is reserved for uncategorized defects
+and should be treated as blocking.
+
 ## Production-promotion platform matrix
 
 The production-promotion contract requires these external CI legs. The offline

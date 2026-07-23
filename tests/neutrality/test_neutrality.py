@@ -6,7 +6,9 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from contextlib import redirect_stdout
 from datetime import UTC, datetime, timedelta
+from io import StringIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -66,8 +68,9 @@ class NeutralityTests(unittest.TestCase):
             self.assertEqual(report.to_json({"operationId": "op"})["counters"]["findings"], 0)
 
     def test_output_alias_conflict_fails_closed(self) -> None:
-        with self.assertRaises(NeutralityError):
+        with self.assertRaises(NeutralityError) as caught:
             validate_output_paths([Path("Out/report.json"), Path("out/report.json")])
+        self.assertEqual(caught.exception.code, "neutrality-output-alias-conflict")
 
     def test_occupied_output_is_counted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -87,9 +90,30 @@ class NeutralityTests(unittest.TestCase):
     def test_malformed_policy_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "policy.json").write_text("[]", encoding="utf-8")
-            with self.assertRaises(NeutralityError):
+            (root / "policy.json").write_text("{}", encoding="utf-8")
+            with self.assertRaises(NeutralityError) as caught:
                 load_policy(root / "policy.json")
+            self.assertEqual(caught.exception.code, "neutrality-policy-schema-unsupported")
+
+    def test_non_object_json_fails_with_stable_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "policy.json").write_text("[]", encoding="utf-8")
+            with self.assertRaises(NeutralityError) as caught:
+                load_policy(root / "policy.json")
+            self.assertEqual(caught.exception.code, "neutrality-json-object-required")
+
+    def test_neutrality_error_uses_stable_branch_codes(self) -> None:
+        cases = {
+            "external authority path is inside a forbidden root": "neutrality-external-authority-forbidden-root",
+            "deny authority signature verification failed": "neutrality-authority-signature-invalid",
+            "authority is stale": "neutrality-authority-stale",
+            "expected signer is not authorized by trust root": "neutrality-signer-unauthorized",
+            "gate receipt planDigest binding mismatch": "neutrality-gate-binding-mismatch",
+        }
+        for message, code in cases.items():
+            with self.subTest(message=message):
+                self.assertEqual(NeutralityError(message).code, code)
 
     def test_authority_fixture_signatures_are_verifiable(self) -> None:
         seed = b"a" * 32
@@ -103,8 +127,10 @@ class NeutralityTests(unittest.TestCase):
             now = datetime.now(UTC).replace(microsecond=0)
             seed = b"b" * 32
             _write_authority(root, seed, now, authority_root=root)
-            result = _run_cli(root, seed)
+            result, payload = _run_cli_json(root, seed)
             self.assertNotEqual(result, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-lifecycle-error.v1")
+            self.assertEqual(payload["code"], "neutrality-external-authority-forbidden-root")
 
     def test_bad_signature_is_rejected_by_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -382,6 +408,10 @@ def _write_authority(
 
 
 def _run_cli(root: Path, seed: bytes, env_paths: dict[str, Path] | None = None) -> int:
+    return _run_cli_json(root, seed, env_paths=env_paths)[0]
+
+
+def _run_cli_json(root: Path, seed: bytes, env_paths: dict[str, Path] | None = None) -> tuple[int, dict]:
     from agent_lifecycle.neutrality.cli import main
 
     if env_paths is None:
@@ -400,49 +430,54 @@ def _run_cli(root: Path, seed: bytes, env_paths: dict[str, Path] | None = None) 
         }
     )
     cwd = Path.cwd()
+    stdout = StringIO()
     try:
         os.chdir(root)
-        return main(
-            [
-                "bootstrap",
-                "--profile",
-                "profile.json",
-                "--scope",
-                "current-tree-complete",
-                "--policy",
-                "policy.json",
-                "--run-id",
-                "run",
-                "--package-id",
-                "package",
-                "--task-id",
-                "task",
-                "--attempt",
-                "1",
-                "--phase",
-                "task",
-                "--operation-id",
-                "operation",
-                "--plan-digest",
-                "0" * 64,
-                "--source-revision",
-                "source",
-                "--deny-authority-env",
-                "AGENT_LIFECYCLE_NEUTRALITY_DENY_AUTHORITY",
-                "--trust-root-env",
-                "AGENT_LIFECYCLE_NEUTRALITY_TRUST_ROOT",
-                "--signing-key-env",
-                "AGENT_LIFECYCLE_NEUTRALITY_SIGNING_KEY",
-                "--expected-signer-fingerprint-env",
-                "AGENT_LIFECYCLE_NEUTRALITY_SIGNER_FINGERPRINT",
-                "--primary-output",
-                "out/report.json",
-                "--receipt",
-                "out/receipt.json",
-                "--create-no-replace",
-                "--require-zero-findings",
-            ]
-        )
+        with redirect_stdout(stdout):
+            result = main(
+                [
+                    "bootstrap",
+                    "--profile",
+                    "profile.json",
+                    "--scope",
+                    "current-tree-complete",
+                    "--policy",
+                    "policy.json",
+                    "--run-id",
+                    "run",
+                    "--package-id",
+                    "package",
+                    "--task-id",
+                    "task",
+                    "--attempt",
+                    "1",
+                    "--phase",
+                    "task",
+                    "--operation-id",
+                    "operation",
+                    "--plan-digest",
+                    "0" * 64,
+                    "--source-revision",
+                    "source",
+                    "--deny-authority-env",
+                    "AGENT_LIFECYCLE_NEUTRALITY_DENY_AUTHORITY",
+                    "--trust-root-env",
+                    "AGENT_LIFECYCLE_NEUTRALITY_TRUST_ROOT",
+                    "--signing-key-env",
+                    "AGENT_LIFECYCLE_NEUTRALITY_SIGNING_KEY",
+                    "--expected-signer-fingerprint-env",
+                    "AGENT_LIFECYCLE_NEUTRALITY_SIGNER_FINGERPRINT",
+                    "--primary-output",
+                    "out/report.json",
+                    "--receipt",
+                    "out/receipt.json",
+                    "--create-no-replace",
+                    "--require-zero-findings",
+                ]
+            )
+        text = stdout.getvalue().strip()
+        payload = json.loads(text) if text.startswith("{") else {}
+        return result, payload
     finally:
         os.chdir(cwd)
         os.environ.clear()
