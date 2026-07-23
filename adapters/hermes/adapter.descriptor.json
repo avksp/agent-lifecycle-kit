@@ -23,6 +23,13 @@
   },
   "unsupportedOperationPolicy": "fail-closed",
   "coreSemantics": "delegated-to-agent-lifecycle-core",
+  "modelRouting": {
+    "status": "advisory",
+    "profileSupport": "host-local",
+    "providerModelNamesInCore": false,
+    "unsupportedClassPolicy": "fail-closed",
+    "criticalReviewPolicy": "requires-strong-or-calibrated-local-review"
+  },
   "operations": [
     {"name": "install", "mapping": "hermes-registry-install", "offlineConformance": "deterministic"},
     {"name": "discover", "mapping": "hermes-skill-directory-discovery", "offlineConformance": "deterministic"},

@@ -39,6 +39,25 @@ by `tools/release/validate_live_calibration.py` against
 offline regression fixtures only and cannot promote an adapter from
 `EXPERIMENTAL` to `VERIFIED`.
 
+## Model routing support
+
+The core includes advisory provider-neutral model routing through
+`agent-lifecycle model profile-check`, `agent-lifecycle model route`, and
+`agent-lifecycle model usage-check`. Adapters may map neutral classes to
+concrete host/runtime models through host-local
+`agent-lifecycle-host-model-profile.v1` files. Concrete provider model names
+must not appear in portable core contracts.
+
+All current adapters remain `EXPERIMENTAL`: they declare fail-closed support
+for host-local model profiles, but no adapter is `VERIFIED` for model routing
+until it has live usage receipts and quality/cost evidence.
+
+Critical review phases must not silently downgrade to `budget` or
+`local-compact`. A local-only host can satisfy final/security/performance review
+only with an explicit `local-strong-review` or equivalent review-capable binding
+that passes context, tool-use, JSON, usage-attestation and live-calibration
+gates.
+
 ## Neutrality error contract
 
 Neutrality CLI helpers return `agent-lifecycle-error.v1` with domain-specific

@@ -70,6 +70,8 @@ class ContractTests(unittest.TestCase):
         index = list_schemas()
         ids = {item["id"] for item in index["schemas"]}
         self.assertIn("agent-host-operation-request.v1", ids)
+        self.assertIn("agent-lifecycle-model-route-request.v1", ids)
+        self.assertIn("agent-lifecycle-model-usage-receipt.v1", ids)
         self.assertEqual(get_schema("agent-lifecycle-error.v1")["additionalProperties"], False)
         with self.assertRaises(LifecycleError):
             get_schema("missing.v1")

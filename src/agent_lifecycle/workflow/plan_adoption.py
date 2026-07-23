@@ -195,6 +195,7 @@ def _build_tasks(
             "contextRefs": list(workstream.get("contextRefs", [])),
             "evidenceIds": list(workstream.get("evidenceIds", [])),
             "executionPolicy": workstream.get("executionPolicy", {}),
+            "modelRoute": dict(workstream.get("modelRoute", {})) if isinstance(workstream.get("modelRoute"), dict) else None,
             "artifactPaths": workstream.get("artifactPaths", _default_artifacts(manifest, task_id)),
             "controllerGates": _task_gates(gates, task_id),
             "packet": packets.get(task_id),
@@ -249,6 +250,7 @@ def _task_contract_compatible(
         "contextRefs",
         "evidenceIds",
         "executionPolicy",
+        "modelRoute",
         "artifactPaths",
         "required",
     )

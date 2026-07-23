@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "agent-lifecycle-model-routing-profile.v1",
+  "profileId": "default-model-routing.v1",
+  "classes": [
+    "no-model",
+    "budget",
+    "local-compact",
+    "standard-code",
+    "local-standard-code",
+    "strong-reasoning",
+    "local-strong-review",
+    "specialist-review"
+  ],
+  "phaseRules": {
+    "deterministic-validation": "no-model",
+    "schema-check": "no-model",
+    "profile-check": "no-model",
+    "context-check": "no-model",
+    "triage": "budget",
+    "s0-implementation": "budget",
+    "task-implementation": "standard-code",
+    "s1-implementation": "standard-code",
+    "s2-specification": "strong-reasoning",
+    "independent-review": "strong-reasoning",
+    "security-review": "strong-reasoning",
+    "performance-review": "strong-reasoning",
+    "release-review": "strong-reasoning",
+    "production-promotion": "strong-reasoning",
+    "final-audit": "strong-reasoning"
+  },
+  "criticalReviewPhases": [
+    "s2-specification",
+    "independent-review",
+    "security-review",
+    "performance-review",
+    "release-review",
+    "production-promotion",
+    "final-audit"
+  ],
+  "policyPresets": {
+    "cost-optimized": {
+      "description": "Prefer budget/local routes for low-risk phases, with strong fallback for quality gates."
+    },
+    "balanced": {
+      "description": "Use budget routes for bounded S0 work, standard-code for S1 implementation, and strong review for S2 or elevated risk."
+    },
+    "quality-first": {
+      "description": "Prefer standard or strong classes even when a lower-cost class could be attempted."
+    },
+    "local-only": {
+      "description": "Use only local-capable classes and block or downgrade verdicts when critical review capability is unavailable."
+    },
+    "manual": {
+      "description": "Require an explicit class in higher-level host policy before launch."
+    }
+  },
+  "tokenBudgets": {
+    "S0": {
+      "tight": 20000,
+      "normal": 40000,
+      "generous": 70000
+    },
+    "S1": {
+      "tight": 60000,
+      "normal": 120000,
+      "generous": 220000
+    },
+    "S2": {
+      "tight": 250000,
+      "normal": 400000,
+      "generous": 800000
+    }
+  }
+}

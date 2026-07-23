@@ -134,6 +134,14 @@ class SyntheticConformanceTests(unittest.TestCase):
         self.assertEqual(fixture_8k["targetContextWindow"], profile["defaultWindow"])
         self.assertIn("small-context", fixture_8k["tags"])
 
+    def test_model_routing_profile_is_present_and_provider_neutral(self) -> None:
+        profile = load_json(ROOT / "profiles/model-routing-profile.v1.json")
+        self.assertEqual(profile["schemaVersion"], "agent-lifecycle-model-routing-profile.v1")
+        self.assertIn("budget", profile["classes"])
+        self.assertIn("local-strong-review", profile["classes"])
+        self.assertEqual(profile["phaseRules"]["final-audit"], "strong-reasoning")
+        self.assertNotIn("providerModel", json.dumps(profile))
+
     def test_conformance_files_are_project_neutral(self) -> None:
         roots = [CONFORMANCE_ROOT, FIXTURES_ROOT, EVALS_ROOT, ROOT / "profiles"]
         for root in roots:

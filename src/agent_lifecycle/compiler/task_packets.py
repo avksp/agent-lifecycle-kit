@@ -66,7 +66,7 @@ def _packet(
 ) -> dict[str, Any]:
     task = _task_projection(workstream)
     specification = _specification_projection(manifest, task)
-    return {
+    packet = {
         "schemaVersion": "agent-task-packet.v1",
         "plan": _plan_projection(manifest, plan_digest),
         "task": task,
@@ -76,6 +76,10 @@ def _packet(
         "validation": _validation_projection(workstream),
         "acceptance": _acceptance_projection(manifest, workstream),
     }
+    model_route = _model_route_projection(workstream)
+    if model_route is not None:
+        packet["modelRoute"] = model_route
+    return packet
 
 
 def _task_projection(workstream: dict[str, Any]) -> dict[str, Any]:
@@ -143,6 +147,15 @@ def _validation_projection(workstream: dict[str, Any]) -> dict[str, Any]:
         "acceptanceIds": list(workstream.get("acceptanceIds", [])),
         "evidenceIds": list(workstream.get("evidenceIds", [])),
     }
+
+
+def _model_route_projection(workstream: dict[str, Any]) -> dict[str, Any] | None:
+    model_route = workstream.get("modelRoute")
+    if model_route is None:
+        return None
+    if not isinstance(model_route, dict):
+        raise LifecycleError("invalid-plan-manifest", "workstream.modelRoute must be an object")
+    return dict(model_route)
 
 
 def _acceptance_projection(

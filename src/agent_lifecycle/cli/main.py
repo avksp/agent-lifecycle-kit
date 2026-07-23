@@ -15,6 +15,12 @@ from agent_lifecycle.contracts import LifecycleError, canonical_bytes, read_json
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.context import check_context, load_context_profile, render_context
 from agent_lifecycle.freeze import verify_plan_lock
+from agent_lifecycle.model_routing import (
+    resolve_model_route,
+    validate_host_model_profile,
+    validate_model_routing_profile,
+    validate_usage_receipt,
+)
 from agent_lifecycle.neutrality.cli import main as neutrality_main
 from agent_lifecycle.planning import resolve_sdd_tier, validate_plan_manifest
 from agent_lifecycle.specification import validate_specification
@@ -150,6 +156,19 @@ def _parser() -> argparse.ArgumentParser:
     context_render.add_argument("--summary", required=True)
     context_render.add_argument("--target-window")
     context_render.add_argument("--latest-user", default="")
+    model = subparsers.add_parser("model", help="model routing commands")
+    model_sub = model.add_subparsers(dest="model_command", required=True)
+    model_route = model_sub.add_parser("route")
+    model_route.add_argument("--request", required=True)
+    model_route.add_argument("--profile", default="profiles/model-routing-profile.v1.json")
+    model_route.add_argument("--host-profile")
+    model_profile_check = model_sub.add_parser("profile-check")
+    model_profile_check.add_argument("--profile", required=True)
+    model_profile_check.add_argument("--type", choices=["auto", "routing", "host"], default="auto")
+    model_usage_check = model_sub.add_parser("usage-check")
+    model_usage_check.add_argument("--receipt", required=True)
+    model_usage_check.add_argument("--route-decision")
+    model_usage_check.add_argument("--budget-targets")
     tier = subparsers.add_parser("tier", help="SDD tier commands")
     tier_sub = tier.add_subparsers(dest="tier_command", required=True)
     tier_resolve = tier_sub.add_parser("resolve")
@@ -192,6 +211,8 @@ def _dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] 
         return _dispatch_audit(args)
     if args.command == "context":
         return _dispatch_context(args)
+    if args.command == "model":
+        return _dispatch_model(args)
     if args.command == "tier":
         return _dispatch_tier(args)
     if args.command == "specification":
@@ -342,6 +363,34 @@ def _dispatch_context(args: argparse.Namespace) -> dict[str, Any]:
         )
         return _require_context_pass(result)
     raise LifecycleError("command-not-implemented", "context command is not implemented")
+
+
+def _dispatch_model(args: argparse.Namespace) -> dict[str, Any]:
+    from pathlib import Path
+
+    if args.model_command == "profile-check":
+        profile = read_json_object(Path(args.profile), label="model profile")
+        if args.type == "routing":
+            return validate_model_routing_profile(profile)
+        if args.type == "host":
+            return validate_host_model_profile(profile)
+        if profile.get("schemaVersion") == "agent-lifecycle-host-model-profile.v1":
+            return validate_host_model_profile(profile)
+        return validate_model_routing_profile(profile)
+    if args.model_command == "route":
+        routing_profile = read_json_object(Path(args.profile), label="model routing profile")
+        host_profile = read_json_object(Path(args.host_profile), label="host model profile") if args.host_profile else None
+        request = read_json_object(Path(args.request), label="model route request")
+        return resolve_model_route(request, routing_profile, host_profile=host_profile)
+    if args.model_command == "usage-check":
+        receipt = read_json_object(Path(args.receipt), label="model usage receipt")
+        decision = read_json_object(Path(args.route_decision), label="model route decision") if args.route_decision else None
+        targets = read_json_object(Path(args.budget_targets), label="budget targets") if args.budget_targets else None
+        result = validate_usage_receipt(receipt, budget_targets=targets, route_decision=decision)
+        if result["status"] == "FAIL":
+            raise LifecycleError("model-usage-validation-failed", "model usage receipt validation failed", {"validation": result})
+        return result
+    raise LifecycleError("command-not-implemented", "model command is not implemented")
 
 
 def _require_context_pass(result: dict[str, Any]) -> dict[str, Any]:

@@ -27,6 +27,7 @@ class TaskPacketCompilerTests(unittest.TestCase):
             self.assertEqual(payload, repeat)
             self.assertEqual(payload["index"]["packetCount"], 1)
             self.assertEqual(payload["packets"][0]["task"]["id"], "WS-01")
+            self.assertEqual(payload["packets"][0]["modelRoute"]["modelClass"], "standard-code")
 
 
 def _write_bundle(root: Path) -> Path:
@@ -68,6 +69,12 @@ def _manifest() -> dict:
                 "artifactPaths": {
                     "result": "tasks/WS-01/attempt-{attempt}/task-result.json",
                     "review": "tasks/WS-01/attempt-{attempt}/task-review.json",
+                },
+                "modelRoute": {
+                    "schemaVersion": "agent-lifecycle-model-route-decision.v1",
+                    "operationId": "route-WS-01",
+                    "modelClass": "standard-code",
+                    "decisionDigest": "4" * 64,
                 },
             }
         ],
