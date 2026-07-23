@@ -1,6 +1,6 @@
 {
   "name": "agent-lifecycle-kit",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Provider-neutral lifecycle skills and adapter metadata for reviewed agent planning, execution, audit, and final proof.",
   "author": {
     "name": "Agent Lifecycle Kit contributors"
