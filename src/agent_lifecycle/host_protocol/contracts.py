@@ -23,11 +23,12 @@ class HostOperationRequest:
     inputs: dict[str, Any] = field(default_factory=dict)
     outputs: list[dict[str, Any]] = field(default_factory=list)
     constraints: dict[str, Any] = field(default_factory=dict)
+    model_route: dict[str, Any] | None = None
 
     schema_version = "agent-host-operation-request.v1"
 
     def to_json(self) -> dict[str, Any]:
-        return {
+        payload = {
             "schemaVersion": self.schema_version,
             "operationId": self.operation_id,
             "capability": self.capability,
@@ -35,10 +36,13 @@ class HostOperationRequest:
             "outputs": self.outputs,
             "constraints": self.constraints,
         }
+        if self.model_route is not None:
+            payload["modelRoute"] = self.model_route
+        return payload
 
     @classmethod
     def from_json(cls, value: dict[str, Any]) -> "HostOperationRequest":
-        allowed = {"schemaVersion", "operationId", "capability", "inputs", "outputs", "constraints"}
+        allowed = {"schemaVersion", "operationId", "capability", "inputs", "outputs", "constraints", "modelRoute"}
         _reject_unknown(value, allowed, "host operation request")
         if value.get("schemaVersion") != cls.schema_version:
             raise LifecycleError("unsupported-schema", "host operation request schemaVersion is unsupported")
@@ -52,12 +56,16 @@ class HostOperationRequest:
             raise LifecycleError("invalid-host-operation", "outputs must be an array")
         if not isinstance(value.get("constraints"), dict):
             raise LifecycleError("invalid-host-operation", "constraints must be an object")
+        model_route = value.get("modelRoute")
+        if model_route is not None and not isinstance(model_route, dict):
+            raise LifecycleError("invalid-host-operation", "modelRoute must be an object")
         return cls(
             operation_id=value["operationId"],
             capability=value["capability"],
             inputs=value["inputs"],
             outputs=value["outputs"],
             constraints=value["constraints"],
+            model_route=model_route,
         )
 
 

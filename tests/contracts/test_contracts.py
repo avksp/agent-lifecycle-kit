@@ -52,6 +52,23 @@ class ContractTests(unittest.TestCase):
         with self.assertRaises(LifecycleError):
             HostOperationRequest.from_json(invalid)
 
+    def test_host_operation_request_carries_attempt_model_route(self) -> None:
+        request = HostOperationRequest(
+            operation_id="op-1",
+            capability="task-attempt",
+            inputs={"taskId": "WS-01"},
+            outputs=[{"role": "task-result", "path": "tasks/WS-01/attempt-1/task-result.json"}],
+            constraints={"usageReceiptRequired": True},
+            model_route={
+                "schemaVersion": "agent-lifecycle-model-route-decision.v1",
+                "operationId": "route-WS-01",
+                "modelClass": "standard-code",
+                "decisionDigest": "4" * 64,
+            },
+        )
+        decoded = HostOperationRequest.from_json(request.to_json())
+        self.assertEqual(decoded.model_route["modelClass"], "standard-code")
+
     def test_host_operation_receipt_status_is_bounded(self) -> None:
         receipt = HostOperationReceipt(
             operation_id="op-1",

@@ -4,6 +4,11 @@ Model routing selects a provider-neutral model class for lifecycle phases and
 task attempts. It does not call provider APIs and does not store concrete model
 names in portable plans, task packets, locks, or workflow state.
 
+When a task attempt is started, the selected route is copied into
+`attemptModelRoute`. For model-backed routes, `workflow task-result` requires a
+host-attested `agent-lifecycle-model-usage-receipt.v1` bound to the same run,
+task, attempt, plan digest, source revision and route decision digest.
+
 ## Core commands
 
 ```bash
@@ -86,7 +91,7 @@ cloud/local restrictions, or unavailable critical-review capability.
 
 ## Usage receipts
 
-Model-backed operations should produce
+Model-backed operations must produce
 `agent-lifecycle-model-usage-receipt.v1` with normalized metrics:
 
 - `inputTokens`
@@ -97,11 +102,13 @@ Model-backed operations should produce
 - `wallSeconds`
 
 `model usage-check` validates host attestation, route binding and budget
-ceilings. Missing or unattested usage blocks production promotion evidence.
+ceilings. In workflow execution, missing, unattested or lineage-drifted usage
+blocks `workflow task-result` before a task can enter review.
 
 ## Scope boundaries
 
-The v1 implementation is intentionally advisory:
+The v1 implementation enforces route receipts without becoming a provider
+broker:
 
 - no provider API clients in core;
 - no live price lookup;
@@ -109,3 +116,8 @@ The v1 implementation is intentionally advisory:
 - no automatic marketplace/model shopping;
 - no mandatory per-task questionnaire;
 - no prompt-only heuristics without route reason codes.
+
+Adapters remain responsible for mapping `attemptModelRoute.modelClass` to a
+host-local concrete model and for returning the usage receipt. If a host cannot
+execute or attest the selected route, it must fail closed instead of silently
+downgrading.
