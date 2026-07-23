@@ -13,7 +13,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from agent_lifecycle.neutrality.canonical import load_json, write_json_create
-from agent_lifecycle.neutrality.errors import NeutralityError
+from agent_lifecycle.neutrality.errors import NeutralityError, write_neutrality_error
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
         write_json_create(Path(args.report), report)
         return 0 if report["verdict"] == "PASS" else 1
     except NeutralityError as exc:
-        print(f"unittest-runner: {exc}", file=sys.stderr)
+        write_neutrality_error(exc, sys.stdout)
         return 2
 
 
