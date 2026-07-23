@@ -58,35 +58,44 @@ class FoundationTests(unittest.TestCase):
     def test_controller_unittest_runner_uses_stdlib_only(self) -> None:
         from agent_lifecycle.neutrality.test_runner import main
 
+        had_top_level = hasattr(unittest.defaultTestLoader, "_top_level_dir")
+        previous_top_level = getattr(unittest.defaultTestLoader, "_top_level_dir", None)
+        unittest.defaultTestLoader._top_level_dir = str(ROOT)
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            suite = root / "suite"
-            suite.mkdir()
-            (suite / "test_sample.py").write_text(
-                "import unittest\n\n"
-                "class SampleTests(unittest.TestCase):\n"
-                "    def test_ok(self):\n"
-                "        self.assertTrue(True)\n",
-                encoding="utf-8",
-            )
-            _operation_request(root / "request.json", "out/report.json")
-            cwd = Path.cwd()
             try:
-                os.chdir(root)
-                result = main(
-                    [
-                        "--operation-request",
-                        "request.json",
-                        "--start-directory",
-                        "suite",
-                        "--pattern",
-                        "test*.py",
-                        "--report",
-                        "out/report.json",
-                    ]
+                root = Path(tmp)
+                suite = root / "suite"
+                suite.mkdir()
+                (suite / "test_sample.py").write_text(
+                    "import unittest\n\n"
+                    "class SampleTests(unittest.TestCase):\n"
+                    "    def test_ok(self):\n"
+                    "        self.assertTrue(True)\n",
+                    encoding="utf-8",
                 )
+                _operation_request(root / "request.json", "out/report.json")
+                cwd = Path.cwd()
+                try:
+                    os.chdir(root)
+                    result = main(
+                        [
+                            "--operation-request",
+                            "request.json",
+                            "--start-directory",
+                            "suite",
+                            "--pattern",
+                            "test*.py",
+                            "--report",
+                            "out/report.json",
+                        ]
+                    )
+                finally:
+                    os.chdir(cwd)
             finally:
-                os.chdir(cwd)
+                if had_top_level:
+                    unittest.defaultTestLoader._top_level_dir = previous_top_level
+                elif hasattr(unittest.defaultTestLoader, "_top_level_dir"):
+                    delattr(unittest.defaultTestLoader, "_top_level_dir")
             self.assertEqual(result, 0)
             report = json.loads((root / "out/report.json").read_text(encoding="utf-8"))
             self.assertEqual(report["schemaVersion"], "agent-lifecycle-unittest-report.v1")

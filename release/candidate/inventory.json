@@ -333,8 +333,8 @@
     },
     {
       "path": "policy/neutrality.policy.json",
-      "sha256": "ae10c6f465e6987f69a3fb5d3b2334fd2c8dacbb156e248ef7d883376bfe2af7",
-      "bytes": 827
+      "sha256": "f26641aedbd82da1239f95754acbc36af36e1c7e48bda36bf498af5a249e2f09",
+      "bytes": 924
     },
     {
       "path": "profiles/small-context-profile.v1.json",
@@ -553,8 +553,8 @@
     },
     {
       "path": "src/agent_lifecycle/neutrality/test_runner.py",
-      "sha256": "34aba4ef049315ad0ba3ec139221178248b63503cf76b30718bc435ccd5f5649",
-      "bytes": 4058
+      "sha256": "15c7fe9ff117fa849226dcd1ba100add7ba0deacd463e1ee92e5381a85652529",
+      "bytes": 4053
     },
     {
       "path": "src/agent_lifecycle/planning/__init__.py",
@@ -660,6 +660,31 @@
       "path": "src/agent_lifecycle/workflow/task_transitions.py",
       "sha256": "387d8f733df2875025f9b8c4739131447186695fcdd9d415f3a07ac488aac44d",
       "bytes": 8440
+    },
+    {
+      "path": "src/agent_lifecycle_kit.egg-info/PKG-INFO",
+      "sha256": "a5b4866d74671c017969e538fc91ecba0d26691e1aa36e2248f040cc60e5c418",
+      "bytes": 19264
+    },
+    {
+      "path": "src/agent_lifecycle_kit.egg-info/SOURCES.txt",
+      "sha256": "f689078c870a814859c51a413ba7bb63363650d50bba0c0b6418444c07ecd362",
+      "bytes": 2620
+    },
+    {
+      "path": "src/agent_lifecycle_kit.egg-info/dependency_links.txt",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "bytes": 1
+    },
+    {
+      "path": "src/agent_lifecycle_kit.egg-info/entry_points.txt",
+      "sha256": "6a13f83daa95fef9d16bcda32bd49e1b67016fe2a68414c2e1172824e2ced1ce",
+      "bytes": 126
+    },
+    {
+      "path": "src/agent_lifecycle_kit.egg-info/top_level.txt",
+      "sha256": "12e87cf7cc7d0e2b959001e07c20e67989c461e9a3d3304adc7b968af3c31cbf",
+      "bytes": 16
     },
     {
       "path": "tests/adapters/__init__.py",
@@ -818,8 +843,8 @@
     },
     {
       "path": "tests/package/test_foundation.py",
-      "sha256": "557b2bf2042cf3f583cf8bf6fc9461cc638ec0ace1eb46b6f3f448dc379aba90",
-      "bytes": 5277
+      "sha256": "8dc4263204135b964127398bb7519ce06fe0c8442a2688c6bb5e456da31a35cf",
+      "bytes": 5923
     },
     {
       "path": "tests/planning/__init__.py",
@@ -902,5 +927,5 @@
       "bytes": 185
     }
   ],
-  "candidatePayloadInventoryDigest": "b9a31bfb836e631b9fe04d4f862b6504f74413b314afffc8cdb67c33c9d176de"
+  "candidatePayloadInventoryDigest": "8051f0e98216bcf66dd148b1961b46f9a9a3cc25f473280b0642b0e477a27591"
 }
