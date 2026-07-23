@@ -25,6 +25,20 @@ support requires the core receipt to pass all profile budgets, including
 reserved output, active packet, state summary, evidence summary, optional
 `toolOutputs`, and recent verbatim user-turn count.
 
+The conformance corpus includes both `S1-SMALL-CONTEXT-4K-STRICT-01` and
+`S1-SMALL-CONTEXT-8K-01`. A host that claims compact-context support must pass
+the explicit `4k-strict` path rather than treating 8k behavior as proof for
+sub-8k local models.
+
+## Live cost calibration support
+
+Production-promotion cost claims require a live, usage-attested receipt checked
+by `tools/release/validate_live_calibration.py` against
+`conformance/core/live-calibration-profile.v1.json` and
+`conformance/core/budget-targets.v1.json`. Synthetic replay baselines remain
+offline regression fixtures only and cannot promote an adapter from
+`EXPERIMENTAL` to `VERIFIED`.
+
 ## Neutrality error contract
 
 Neutrality CLI helpers return `agent-lifecycle-error.v1` with domain-specific

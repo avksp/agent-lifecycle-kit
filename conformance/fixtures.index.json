@@ -10,9 +10,14 @@
       "sha256": "f0e8ea49d1065b4e07ce1f664da38bbc2e4d6edf615f577c0a2db9e8c9701461"
     },
     {
-      "bytes": 1375,
+      "bytes": 1412,
       "path": "conformance/core/budget-targets.v1.json",
-      "sha256": "a1991a10747c0ee256030a7b9fa100afdd16f83bb78169a0c553b60c8860dbfc"
+      "sha256": "e3fb9c832f14aa8598ba867a61969ed1950cdca5f9c2f17165e836de85ee63d0"
+    },
+    {
+      "bytes": 989,
+      "path": "conformance/core/live-calibration-profile.v1.json",
+      "sha256": "6191e41c0bb8595e456f6da62be1ca167c94b25742a310f743d7910368bba886"
     },
     {
       "bytes": 783,
@@ -29,14 +34,14 @@
   ],
   "evaluations": [
     {
-      "bytes": 6181,
+      "bytes": 7155,
       "path": "evals/synthetic/cost-baseline.v1.json",
-      "sha256": "0b6705f0ecb6ffb0a6d1185c68f92a9194c83d0e1a7041232cec7f4b1b70f30e"
+      "sha256": "797cdda420fb518931cc2152dc2f5b772976e22257f8936792fd83f7a64e1cad"
     },
     {
-      "bytes": 1274,
+      "bytes": 1501,
       "path": "evals/synthetic/replay-plan.v1.json",
-      "sha256": "b9d9f26831084d4b98306a7c49c2a88636eead868f11df35331582d0cc07cca6"
+      "sha256": "86f160d93e37cc0fccb7f8822ec9aa2b81ea4bc3858108a9f475214516b7c726"
     }
   ],
   "fixtures": [
@@ -49,6 +54,11 @@
       "bytes": 876,
       "path": "fixtures/synthetic/s0-mechanical-01.json",
       "sha256": "bfee2fc175a0e095c881b602a843199b828192d66b75039e076b20837805b54b"
+    },
+    {
+      "bytes": 1210,
+      "path": "fixtures/synthetic/s1-small-context-4k-strict-01.json",
+      "sha256": "688248f9c3d9eae17554adfab530e0c2f9a7e7c8c88d674f428f64d9e8ef47f1"
     },
     {
       "bytes": 997,
