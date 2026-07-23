@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r12",
+  "packageId": "standalone-v1",
+  "planRevision": 14,
+  "reviewedPlanHash": "cee0137d50b2d0b45f70c34672edd1fcc2791a8fbe1b770bc83107517ad6ee04",
+  "previousReview": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r11.json",
+    "sha256": "e3f69b6bb8ada978cea3f3b806c40c6c9aafba2dd6e3551ab39fd6288894fdd0",
+    "bytes": 2512,
+    "reviewId": "plan-review-r11"
+  },
+  "qualityMetrics": {
+    "taskCount": 16,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 9,
+    "maxParallelWidth": 5,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 39,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 49152,
+    "actualContextBytesTotal": 362000,
+    "maxTaskContextBytes": 49152,
+    "validationInvocationCount": 30,
+    "estimatedMinimumToolCalls": 73
+  },
+  "verdict": "READY_TO_FREEZE",
+  "reviewer": {
+    "id": "plan-reviewer-r12",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-plan-review-r12-compact-context-ownership"
+  },
+  "reviewedAt": "2026-07-23T04:46:45Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "Revision 14 changes only ownership attribution for already implemented compact-context hardening; release scope and acceptance semantics are unchanged."
+    },
+    {
+      "id": "ownership",
+      "status": "PASS",
+      "rationale": "The previously unowned compact-context runtime, profile and test paths are now assigned to WS-05. The workstream write sets remain overlap-free."
+    },
+    {
+      "id": "execution-safety",
+      "status": "PASS",
+      "rationale": "The refreeze preserves EXPERIMENTAL source-release maturity and keeps VERIFIED/production promotion blocked until external live evidence exists."
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-CONTEXT-OWNERSHIP-R14",
+      "severity": "HIGH",
+      "class": "ownership-gap",
+      "dimension": "ownership",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "Compact-context hardening paths were valid implementation work but were not assigned in the frozen write-set contract.",
+      "requiredAction": "Assign src/agent_lifecycle/context, tests/context and profiles/small-context-profile.v1.json to WS-05 and rerun ownership, plan, neutrality and release gates."
+    },
+    {
+      "id": "PLAN-CURRENT-HEAD-PROOF-R14",
+      "severity": "HIGH",
+      "class": "evidence-gap",
+      "dimension": "testing-evidence",
+      "artifact": "plans/standalone-v1/evidence/final/final-proof.json",
+      "status": "resolved",
+      "message": "The previous final proof was bound to an older source revision than the current release candidate.",
+      "requiredAction": "Generate fresh final evidence for the current source revision before tagging or publishing the next source release."
+    }
+  ],
+  "summary": "Revision 14 is READY_TO_FREEZE as a minimal ownership and evidence-lineage correction. It changes no product scope, task DAG, adapter maturity, production-promotion boundary or runtime behavior."
+}

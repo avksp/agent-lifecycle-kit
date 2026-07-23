@@ -1,14 +1,14 @@
 {
   "schemaVersion": "agent-plan-lock.v1",
   "packageId": "standalone-v1",
-  "planRevision": 13,
-  "manifestHash": "eb1004aaf290a0b4651c9f41d5ee7cedc5c57cfbed362910117110ce846866ad",
+  "planRevision": 14,
+  "manifestHash": "cee0137d50b2d0b45f70c34672edd1fcc2791a8fbe1b770bc83107517ad6ee04",
   "baseRef": "main",
-  "baseSha": "009ab53370ef6cd3315bd90636bbde6eb911edb6",
-  "reviewId": "plan-review-r11",
-  "reviewPath": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r11.json",
-  "reviewedPlanHash": "eb1004aaf290a0b4651c9f41d5ee7cedc5c57cfbed362910117110ce846866ad",
-  "frozenAt": "2026-07-22T13:15:00Z",
+  "baseSha": "92f0412bb15ac082418fb52bfe3667d518363f5e",
+  "reviewId": "plan-review-r12",
+  "reviewPath": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json",
+  "reviewedPlanHash": "cee0137d50b2d0b45f70c34672edd1fcc2791a8fbe1b770bc83107517ad6ee04",
+  "frozenAt": "2026-07-23T04:46:45Z",
   "frozenBy": "root-lifecycle-controller",
   "files": [
     {
@@ -435,6 +435,16 @@
       "path": "plans/standalone-v1/.agent-plan/standalone-v1/21-finalization-controller-transition-r13.md",
       "sha256": "96f6fe30785454d3aae740c86305965a7d53393d5c2be1d454a51ece22493029",
       "bytes": 843
+    },
+    {
+      "path": "plans/standalone-v1/.agent-plan/standalone-v1/22-compact-context-ownership-refreeze-r14.md",
+      "sha256": "ae5a7c509abf3532a7a6a1a4e20c011334d0462c94d9e1e5fdb2566317b1b633",
+      "bytes": 1410
+    },
+    {
+      "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json",
+      "sha256": "05372bb0a63839e1e0503fb41f0aaa64adb0770452e299c8a6c3b5b09f9c26b3",
+      "bytes": 3300
     }
   ]
 }
