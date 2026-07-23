@@ -14,10 +14,10 @@
     "runId": "standalone-v1-plan-author-r10"
   },
   "status": "FROZEN",
-  "planRevision": 13,
+  "planRevision": 14,
   "baseRevision": {
     "ref": "main",
-    "sha": "009ab53370ef6cd3315bd90636bbde6eb911edb6"
+    "sha": "92f0412bb15ac082418fb52bfe3667d518363f5e"
   },
   "planFiles": [
     "plans/standalone-v1/.agent-plan/standalone-v1/README.md",
@@ -104,7 +104,9 @@
     "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r11.json",
     "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-freeze-r12.json",
     "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r11.json",
-    "plans/standalone-v1/.agent-plan/standalone-v1/21-finalization-controller-transition-r13.md"
+    "plans/standalone-v1/.agent-plan/standalone-v1/21-finalization-controller-transition-r13.md",
+    "plans/standalone-v1/.agent-plan/standalone-v1/22-compact-context-ownership-refreeze-r14.md",
+    "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json"
   ],
   "developerOverview": "plans/standalone-v1/.agent-plan/standalone-v1/00-developer-overview.md",
   "sources": [
@@ -130,7 +132,8 @@
     "plans/standalone-v1/.agent-plan/standalone-v1/product-specification-r12.json",
     "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-review-r11.json",
     "plans/standalone-v1/.agent-plan/standalone-v1/reviews/specification-freeze-r12.json",
-    "plans/standalone-v1/.agent-plan/standalone-v1/21-finalization-controller-transition-r13.md"
+    "plans/standalone-v1/.agent-plan/standalone-v1/21-finalization-controller-transition-r13.md",
+    "plans/standalone-v1/.agent-plan/standalone-v1/22-compact-context-ownership-refreeze-r14.md"
   ],
   "decisions": {
     "questions": [],
@@ -706,10 +709,13 @@
         "src/agent_lifecycle/prompting",
         "src/agent_lifecycle/resources",
         "src/agent_lifecycle/usage",
+        "src/agent_lifecycle/context",
         "src/agent_lifecycle/workflow",
+        "profiles/small-context-profile.v1.json",
         "tests/prompting",
         "tests/resources",
         "tests/usage",
+        "tests/context",
         "tests/workflow",
         "plans/standalone-v1/evidence/ws-05"
       ],
@@ -4549,8 +4555,8 @@
   "planReview": {
     "required": true,
     "verdict": "READY_TO_FREEZE",
-    "reviewedRevision": 13,
-    "report": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r11.json"
+    "reviewedRevision": 14,
+    "report": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json"
   },
   "orchestration": {
     "startMode": "approval-required",
@@ -4586,8 +4592,8 @@
   },
   "freeze": {
     "lock": "plans/standalone-v1/.agent-plan/standalone-v1/plan.lock.json",
-    "reviewId": "plan-review-r11",
-    "frozenAt": "2026-07-22T13:15:00Z",
+    "reviewId": "plan-review-r12",
+    "frozenAt": "2026-07-23T04:46:45Z",
     "frozenBy": "root-lifecycle-controller"
   }
 }
