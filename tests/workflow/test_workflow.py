@@ -222,7 +222,7 @@ class WorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             state_path = _write_state(root, phase="BLOCKED", blocker={"code": "plan-drift", "reason": "x", "resumePhase": "RUNNING"})
-            _write_plan_bundle(root)
+            _write_plan_bundle(root, include_model_route=True)
             payload = adopt_plan(
                 state_path,
                 manifest_path=root / "plans/package/plan.manifest.json",
@@ -236,8 +236,10 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(payload["phase"], "READY")
             self.assertEqual(payload["planRevision"], 2)
             self.assertEqual(payload["nextAction"]["type"], "start-execution")
-            task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
             self.assertEqual(task["status"], "READY")
+            self.assertEqual(task["modelRoute"]["modelClass"], "standard-code")
 
             payload = start_execution(
                 state_path,
@@ -248,6 +250,18 @@ class WorkflowTests(unittest.TestCase):
             )
             self.assertEqual(payload["phase"], "RUNNING")
             self.assertEqual(payload["nextAction"]["taskIds"], ["WS-01"])
+
+            payload = start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=3,
+                source_revision="source-2",
+                reason="launch",
+            )
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(task["attemptModelRoute"]["modelClass"], "standard-code")
 
     def test_adopt_plan_preserves_compatible_accepted_tasks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -508,7 +522,7 @@ def _gate_receipt(gate: dict, *, phase: str, operation_id: str, attempt: int) ->
     }
 
 
-def _write_plan_bundle(root: Path, *, include_dependent: bool = False) -> None:
+def _write_plan_bundle(root: Path, *, include_dependent: bool = False, include_model_route: bool = False) -> None:
     plan_root = root / "plans/package/.agent-plan/package"
     packet_root = root / "plans/package/workflow/task-packets"
     review_path = plan_root / "reviews/plan-review-r01.json"
@@ -518,7 +532,7 @@ def _write_plan_bundle(root: Path, *, include_dependent: bool = False) -> None:
         "verdict": "READY_TO_FREEZE",
     }
     write_json_create(review_path, review)
-    manifest = _plan_manifest(include_dependent=include_dependent)
+    manifest = _plan_manifest(include_dependent=include_dependent, include_model_route=include_model_route)
     digest = canonical_digest(manifest)
     write_json_create(
         plan_root / "plan.lock.json",
@@ -548,7 +562,7 @@ def _write_plan_bundle(root: Path, *, include_dependent: bool = False) -> None:
     write_json_create(root / "plans/package/plan.manifest.json", manifest)
 
 
-def _plan_manifest(*, include_dependent: bool = False) -> dict:
+def _plan_manifest(*, include_dependent: bool = False, include_model_route: bool = False) -> dict:
     workstreams = [
         {
             "id": "WS-01",
@@ -570,6 +584,13 @@ def _plan_manifest(*, include_dependent: bool = False) -> dict:
             "required": True,
         }
     ]
+    if include_model_route:
+        workstreams[0]["modelRoute"] = {
+            "schemaVersion": "agent-lifecycle-model-route-decision.v1",
+            "operationId": "route-WS-01",
+            "modelClass": "standard-code",
+            "decisionDigest": "4" * 64,
+        }
     if include_dependent:
         workstreams.append({
             "id": "WS-02",
