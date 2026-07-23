@@ -1,8 +1,8 @@
 {
   "schemaVersion": "agent-release-candidate-inventory.v1",
   "packageId": "standalone-v1",
-  "planRevision": 14,
-  "planDigest": "cee0137d50b2d0b45f70c34672edd1fcc2791a8fbe1b770bc83107517ad6ee04",
+  "planRevision": 15,
+  "planDigest": "a46a3e77cad6a0571254a7fd294bd12ec927155cddecf671831c7bfbc8358baa",
   "payloadRoots": [
     ".github/workflows",
     ".agents/plugins",
@@ -873,8 +873,8 @@
     },
     {
       "path": "tests/skills/test_skill_pack.py",
-      "sha256": "daab35b4aef63e44cddd61488b3c4024b1c0c5461804709b9dce416b70cb4db7",
-      "bytes": 2133
+      "sha256": "99670748210321a9e81f817a22a8505e14e3b050452a57743c5af72f91e7d6ed",
+      "bytes": 2155
     },
     {
       "path": "tests/workflow/__init__.py",
@@ -927,5 +927,5 @@
       "bytes": 185
     }
   ],
-  "candidatePayloadInventoryDigest": "8051f0e98216bcf66dd148b1961b46f9a9a3cc25f473280b0642b0e477a27591"
+  "candidatePayloadInventoryDigest": "a55fb2c59399c92b5cf40a483b57accf461affccbd4468dc7896d79c96406b5c"
 }

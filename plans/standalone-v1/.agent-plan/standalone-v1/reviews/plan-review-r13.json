@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "agent-plan-review.v1",
+  "reviewId": "plan-review-r13",
+  "packageId": "standalone-v1",
+  "planRevision": 15,
+  "reviewedPlanHash": "a46a3e77cad6a0571254a7fd294bd12ec927155cddecf671831c7bfbc8358baa",
+  "previousReview": {
+    "path": "plans/standalone-v1/.agent-plan/standalone-v1/reviews/plan-review-r12.json",
+    "sha256": "05372bb0a63839e1e0503fb41f0aaa64adb0770452e299c8a6c3b5b09f9c26b3",
+    "bytes": 3300,
+    "reviewId": "plan-review-r12"
+  },
+  "qualityMetrics": {
+    "taskCount": 16,
+    "criticalPathLength": 8,
+    "parallelWaveCount": 8,
+    "effectiveParallelWaveCount": 9,
+    "maxParallelWidth": 5,
+    "writeOverlapCount": 0,
+    "unresolvedBlockingQuestionCount": 0,
+    "duplicateValidationCommandCount": 0,
+    "evidenceCount": 39,
+    "declaredMaxParallelTasks": 4,
+    "maxContextBytes": 49152,
+    "actualContextBytesTotal": 362000,
+    "maxTaskContextBytes": 49152,
+    "validationInvocationCount": 30,
+    "estimatedMinimumToolCalls": 73
+  },
+  "verdict": "READY_TO_FREEZE",
+  "reviewer": {
+    "id": "plan-reviewer-r13",
+    "independent": true,
+    "surface": "codex-audit-agent-plan",
+    "runId": "standalone-v1-plan-review-r13-windows-line-endings"
+  },
+  "reviewedAt": "2026-07-23T05:45:48Z",
+  "fullReview": true,
+  "dimensions": [
+    {
+      "id": "requirements",
+      "status": "PASS",
+      "rationale": "Revision 15 changes only repository checkout and CI stability semantics for text line endings; product behavior, adapter support and release maturity are unchanged."
+    },
+    {
+      "id": "ownership",
+      "status": "PASS",
+      "rationale": ".gitattributes is assigned to WS-01 as foundation repository configuration. Existing modified paths remain inside WS-08 and WS-14 ownership."
+    },
+    {
+      "id": "testing-evidence",
+      "status": "PASS",
+      "rationale": "The required post-refreeze gates are current-tree unit tests, neutrality scan, release assembly/verification and ownership audit before push."
+    },
+    {
+      "id": "execution-safety",
+      "status": "PASS",
+      "rationale": "The fix preserves strict byte-level content-addressing for synthetic fixtures by preventing checkout conversion instead of weakening fixture digest checks."
+    }
+  ],
+  "findings": [
+    {
+      "id": "PLAN-WINDOWS-LINE-ENDINGS-R15",
+      "severity": "HIGH",
+      "class": "portability-gap",
+      "dimension": "testing-evidence",
+      "artifact": "tests/conformance/test_synthetic_conformance.py",
+      "status": "resolved",
+      "message": "Windows checkout converted LF text fixtures to CRLF, changing byte size and SHA-256 for content-addressed synthetic fixtures.",
+      "requiredAction": "Add repository line-ending policy for tracked text files and rerun full local gates before push."
+    },
+    {
+      "id": "PLAN-WINDOWS-OWNERSHIP-R15",
+      "severity": "MEDIUM",
+      "class": "ownership-gap",
+      "dimension": "ownership",
+      "artifact": "plans/standalone-v1/plan.manifest.json",
+      "status": "resolved",
+      "message": "The root .gitattributes file required for CI stability was not assigned in the frozen write-set contract.",
+      "requiredAction": "Assign .gitattributes to WS-01 and refresh the plan lock."
+    }
+  ],
+  "summary": "Revision 15 is READY_TO_FREEZE as a minimal Windows CI portability and ownership correction. It changes no product scope, task DAG, adapter maturity, production-promotion boundary or runtime behavior."
+}

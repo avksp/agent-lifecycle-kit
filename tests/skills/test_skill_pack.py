@@ -39,7 +39,7 @@ class SkillPackTests(unittest.TestCase):
     def test_skills_are_thin_and_stage_routed(self) -> None:
         for name, path in self.skill_files().items():
             data = path.read_bytes()
-            text = data.decode("utf-8")
+            text = data.decode("utf-8").replace("\r\n", "\n")
 
             with self.subTest(skill=name):
                 self.assertLessEqual(len(data), 8192)
