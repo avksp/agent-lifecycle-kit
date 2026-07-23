@@ -6,7 +6,7 @@
   "releaseSigningStage": "release-assembly",
   "liveModelInvocations": 0,
   "qualityRegressionCount": 0,
-  "totalReplayRuns": 240,
+  "totalReplayRuns": 280,
   "metrics": [
     {
       "scenarioId": "S0-MECHANICAL-01",
@@ -80,6 +80,44 @@
             "cumulativeContextBytes": 760000,
             "toolCalls": 130,
             "wallSeconds": 7200
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "S1-SMALL-CONTEXT-4K-STRICT-01",
+      "sddTier": "S1",
+      "cohorts": [
+        {
+          "name": "cold",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 112000,
+            "cumulativeContextBytes": 260000,
+            "toolCalls": 88,
+            "wallSeconds": 4200
+          },
+          "p95": {
+            "billableTokens": 170000,
+            "cumulativeContextBytes": 420000,
+            "toolCalls": 140,
+            "wallSeconds": 7600
+          }
+        },
+        {
+          "name": "warm",
+          "sampleCount": 20,
+          "p50": {
+            "billableTokens": 94000,
+            "cumulativeContextBytes": 210000,
+            "toolCalls": 72,
+            "wallSeconds": 3300
+          },
+          "p95": {
+            "billableTokens": 150000,
+            "cumulativeContextBytes": 360000,
+            "toolCalls": 125,
+            "wallSeconds": 6600
           }
         }
       ]
