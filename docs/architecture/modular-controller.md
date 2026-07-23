@@ -6,36 +6,74 @@ Cursor, Hermes, OpenCode, and future adapters.
 
 ## Status
 
-The large historical `workflowctl.py` controller is a transitional
-characterization and bootstrap reference only. It must not be copied into the
-standalone release as the production implementation.
+The historical monolithic `workflowctl.py` controller is not part of the
+standalone production source. It remains a characterization and bootstrap
+reference only in source projects that still carry it.
 
-The standalone release must implement the controller as a modular Python
-package with a thin CLI entry point. The CLI may preserve stable commands, JSON
-output, exit codes, state/WAL semantics, and compatibility fixtures, but the
-implementation behind those commands must be split by responsibility.
+The standalone release implements the controller as a modular Python package
+with thin CLI entry points. The current structure is intentionally smaller than
+the full target boundary map below: missing packages are reserved seams, not a
+release requirement unless their responsibility becomes implemented runtime
+logic.
 
-## Required Shape
+## Current Implementation Map
 
-The production controller is organized around these boundaries:
+This is the current source map for the standalone package:
+
+| Responsibility | Current module(s) | Status |
+| --- | --- | --- |
+| Stable contracts, canonical JSON, digests, schemas, typed errors | `contracts/*` | Implemented |
+| Git diff discovery for ownership audit | `changesets/git.py` | Implemented |
+| Ownership audit over frozen plan write sets | `audit/ownership.py` | Implemented |
+| SDD tier and plan manifest validation | `planning/*`, `specification/*`, `review/*` | Implemented validators |
+| Plan lock verification | `freeze/locks.py` | Implemented |
+| Frozen DAG to task-packet compilation | `compiler/task_packets.py` | Implemented |
+| Compact context profiles and receipts | `context/*` | Implemented |
+| Durable workflow state, event log, task/run transitions, gate checks, finalization | `workflow/*` | Implemented |
+| Neutrality authority, scanning, signed receipts, controller-gate helper | `neutrality/*` | Implemented |
+| Host capability descriptors | `host_protocol/contracts.py`, adapter metadata files | Implemented as offline descriptors |
+| Root CLI dispatch | `cli/main.py` | Implemented thin dispatcher; no lifecycle semantics should move here |
+| Release, terminal, live adapter promotion | Metadata/docs only | Reserved until verified host evidence exists |
+
+Current size check: all production Python files are below the hard limits in
+this document. The largest files are `cli/main.py` at roughly 405 lines and
+`workflow/plan_adoption.py` at roughly 400 lines; both are within the current
+hard limits but remain split candidates if more behavior is added.
+
+## Target Shape
+
+The long-term production controller is organized around these boundaries. A
+boundary should become a package only when runtime behavior exists for it or
+when splitting prevents a file/context limit breach:
 
 - `contracts`: public schemas, canonical JSON, digests, and typed errors.
-- `ports`: host, filesystem, Git, signing, clock, process, and telemetry ports.
-- `state`: state/WAL schemas, readers, projections, and compatibility.
-- `operation_kernel`: atomic state/event/WAL transactions and crash recovery.
+- `ports`: host, filesystem, Git, signing, clock, process, and telemetry ports;
+  currently lightweight and mostly represented by direct stdlib calls.
+- `state`: state/WAL schemas, readers, projections, and compatibility; currently
+  implemented under `workflow/state.py` and `workflow/events.py`.
+- `operation_kernel`: atomic state/event/WAL transactions and crash recovery;
+  currently local to workflow transition modules and the next split candidate.
 - `planning`: SDD tier resolution, specification, review, and freeze logic.
 - `context`: compact profile validation, active-packet rendering, overflow
   checks, and context receipts for small-context hosts.
-- `compilation`: frozen DAG to task packet compilation and verification.
-- `authorization`: approval receipts, bootstrap preflight, and auto-authorize.
-- `task_runtime`: launch, status, attempt, remediation, and acceptance flow.
-- `validation`: controller gates, command receipts, and validation indexes.
-- `audit`: task and final audit validators.
-- `release`: release candidate, release inventory, and support matrix.
-- `terminal`: terminal host operations and independent terminal review.
-- `finalization`: final proof, terminal proof, and COMPLETE replay checks.
+- `compilation`: frozen DAG to task packet compilation and verification;
+  currently `compiler/task_packets.py`.
+- `authorization`: approval receipts, bootstrap preflight, and auto-authorize;
+  currently limited to run authorization fields in `workflow/plan_adoption.py`.
+- `task_runtime`: launch, status, attempt, remediation, and acceptance flow;
+  currently `workflow/task_transitions.py` plus selectors.
+- `validation`: controller gates, command receipts, and validation indexes;
+  currently `workflow/gates.py` and `neutrality/gate.py`.
+- `audit`: ownership, task review, final audit validators; currently
+  `audit/ownership.py`, `workflow/reviews.py`, and `workflow/finalization.py`.
+- `release`: release candidate, release inventory, and support matrix; currently
+  docs and metadata only.
+- `terminal`: terminal host operations and independent terminal review; reserved.
+- `finalization`: final proof, terminal proof, and COMPLETE replay checks;
+  currently final proof and final audit validation in `workflow/finalization.py`.
 - `adapters`: host-specific projections only, with no lifecycle semantics.
-- `api`: stable public API over the modular services.
+- `api`: stable public API over the modular services; currently the package
+  facades and root CLI.
 - `cli`: argument parsing and compact rendering only.
 
 The dependency direction is one-way: lower layers cannot import CLI, API, or
@@ -132,8 +170,8 @@ product requirements.
 
 A release candidate fails if any of these are true:
 
-- the production CLI imports or executes the historical monolithic
-  `workflowctl.py`;
+- the production source imports, executes, or reintroduces a historical
+  monolithic `workflowctl.py`;
 - lifecycle semantics are implemented separately in host adapters;
 - a module exceeds the hard size/context limits without an approved split;
 - security-sensitive canonicalization, signing, receipt, or WAL logic has more
