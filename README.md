@@ -12,9 +12,10 @@ projections for Codex, Claude Code, Cursor, Hermes, and OpenCode.
 
 ## Current status
 
-`v0.3.0` is the current source release. It hardens proof semantics, adapter
-validation, packaging checks, release documentation honesty, and live-host
-promotion gates before any adapter is promoted.
+`v0.4.0` is the current source release. It adds host-local model selection,
+redacted model-selection receipts, budget decision workflow controls, and
+metered/subscription/local budget modes while keeping portable core routing
+provider-neutral.
 
 The adapters are still `EXPERIMENTAL`: they have offline contract coverage and
 fail-closed descriptors, but they are not `VERIFIED` until each host has live
@@ -128,6 +129,23 @@ review require an explicitly calibrated review-capable local class such as
 `local-strong-review`; `local-compact` cannot silently satisfy those gates.
 
 See [model routing](docs/reference/model-routing.md).
+
+## Budget decisions
+
+Budget caps are safety stops, not success criteria. When a model-backed attempt
+exceeds an approved cap, the workflow enters `WAITING_FOR_BUDGET_DECISION`
+instead of accepting the task. In manual mode an operator chooses whether to
+continue, reroute, split, or abort. In auto mode the policy can reroute within a
+bounded count, but critical review phases cannot silently downgrade to weaker
+classes.
+
+Budget modes are:
+
+- `metered`: requires an approved USD cap.
+- `subscription`: requires `maxInvocations` and a token or wall-clock cap.
+- `local`: uses the same resource-cap rule as subscription mode.
+
+See [budget reroute policy](docs/guides/budget-reroute-policy.md).
 
 ## Distribution layout
 
@@ -243,7 +261,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.3.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.4.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -308,7 +326,7 @@ from the tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.3.0/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.4.0/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -340,7 +358,7 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 
 The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
-claimed by `v0.3.0`.
+claimed by `v0.4.0`.
 
 ## Usage
 

@@ -139,6 +139,11 @@ class HermesHarnessTests(unittest.TestCase):
             tmp_path = Path(tmp)
             receipt_dir = tmp_path / "receipts"
             receipt = receipt_dir / "hermes.json"
+            model_selection = hermes_harness.load_host_model_selection(
+                ROOT / "profiles/hosts/hermes-live-profile.v1.json",
+                model_class="standard-code",
+            )
+            selection_receipt = receipt_dir / "hermes-model-selection.json"
             report = hermes_harness.run_live_host_receipt(
                 hermes_bin="hermes",
                 baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json",
@@ -154,14 +159,13 @@ class HermesHarnessTests(unittest.TestCase):
                 runner=fake_runner,
                 clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
                 auth_checker=lambda _: {"authenticated": True},
-                invocation_options=hermes_harness.HermesInvocationOptions(
-                    minimal_direct=True,
-                    provider="test-provider",
-                    model="test-model",
-                ),
+                invocation_options=hermes_harness.HermesInvocationOptions(minimal_direct=True),
+                model_selection=model_selection,
+                model_selection_receipt_path=selection_receipt,
             )
 
             payload = json.loads(receipt.read_text(encoding="utf-8"))
+            selection_payload = json.loads(selection_receipt.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "PASS")
             self.assertEqual(payload["schemaVersion"], hermes_harness.LIVE_HOST_RECEIPT_SCHEMA)
             self.assertEqual(payload["host"], "hermes")
@@ -170,9 +174,10 @@ class HermesHarnessTests(unittest.TestCase):
             self.assertEqual({item["name"] for item in payload["operations"]}, set(baseline["requiredOperations"]))
             self.assertEqual(len(calls), len(baseline["requiredOperations"]))
             self.assertIn("--ignore-rules", calls[0])
-            self.assertEqual(calls[0][calls[0].index("--provider") + 1], "test-provider")
-            self.assertEqual(calls[0][calls[0].index("--model") + 1], "test-model")
+            self.assertEqual(calls[0][calls[0].index("--model") + 1], "<hermes-host-local-standard-code-model>")
             self.assertTrue(payload["hermesInvocationOptions"]["minimalDirect"])
+            self.assertEqual(selection_payload["schemaVersion"], "agent-host-model-selection-receipt.v1")
+            self.assertNotIn("<hermes-host-local-standard-code-model>", json.dumps(payload["modelSelection"]))
 
             validation_evidence = tmp_path / "host-conformance-validation.json"
             validation = subprocess.run(

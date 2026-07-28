@@ -12,9 +12,10 @@ SDD-спецификации до замороженного плана, кон�
 
 ## Текущий статус
 
-`v0.3.0` — текущий source release. Он усиливает proof semantics, adapter
-validation, packaging checks, честность release-документации и live-host
-promotion gates до любого promotion адаптеров.
+`v0.4.0` — текущий source release. Он добавляет host-local model selection,
+redacted model-selection receipts, workflow-контроль budget decisions и режимы
+бюджета `metered`/`subscription`/`local`, сохраняя portable core routing
+независимым от провайдера.
 
 Адаптеры пока имеют статус `EXPERIMENTAL`: есть offline contract coverage и
 fail-closed descriptors, но статуса `VERIFIED` нет до появления live install и
@@ -130,6 +131,28 @@ review, performance review, production promotion и S2 independent review
 
 Подробнее: [model routing](../reference/model-routing.md).
 
+## Budget decisions
+
+Budget caps — это safety stops, а не критерий успешности задачи. Если
+model-backed attempt превышает утверждённый лимит, workflow переходит в
+`WAITING_FOR_BUDGET_DECISION`, а не принимает задачу. В manual mode оператор
+решает, продолжать ли тот же route, переключиться, split/refreeze task или
+abort. В auto mode policy может reroute в пределах bounded count, но critical
+review phases не могут тихо downgrade на слабые классы.
+
+После паузы оператор применяет решение отдельным вызовом той же команды
+`workflow budget-decision` с `--action`. Этот шаг пишет immutable applied
+receipt и возвращает task в `RUNNING` или `READY`, либо оставляет workflow
+заблокированным для `split-task`/`abort`.
+
+Режимы бюджета:
+
+- `metered`: нужен утверждённый USD cap.
+- `subscription`: нужны `maxInvocations` и token или wall-clock cap.
+- `local`: использует то же правило resource caps, что и subscription mode.
+
+Подробнее: [budget reroute policy](budget-reroute-policy.md).
+
 ## Структура поставки
 
 Универсальная поставка не означает единый формат manifest. Одно ядро
@@ -244,7 +267,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Установка из tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.3.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.4.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -310,7 +333,7 @@ skills из tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.3.0/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.4.0/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -341,7 +364,7 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 ```
 
 В корне репозитория также есть `opencode.json` для проверки из source
-checkout. Будущий npm package может ссылаться на тот же adapter, но `v0.3.0`
+checkout. Будущий npm package может ссылаться на тот же adapter, но `v0.4.0`
 не заявляет npm publication.
 
 ## Использование

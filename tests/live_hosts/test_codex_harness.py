@@ -133,6 +133,11 @@ class CodexHarnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             receipt = tmp_path / "receipts/codex.json"
+            model_selection = codex_harness.load_host_model_selection(
+                ROOT / "profiles/hosts/codex-live-profile.v1.json",
+                model_class="standard-code",
+            )
+            selection_receipt = tmp_path / "receipts/codex-model-selection.json"
             report = codex_harness.run_live_host_receipt(
                 codex_bin="codex",
                 baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json",
@@ -141,11 +146,14 @@ class CodexHarnessTests(unittest.TestCase):
                 receipt_path=receipt,
                 diagnostic_dir=tmp_path / "diagnostics",
                 budget_policy=codex_harness.BudgetPolicy(mode="metered", budget_cap_usd=1.0),
+                model_selection=model_selection,
+                model_selection_receipt_path=selection_receipt,
                 runner=fake_runner,
                 clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
             )
 
             payload = json.loads(receipt.read_text(encoding="utf-8"))
+            selection_payload = json.loads(selection_receipt.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "PASS")
             self.assertEqual(payload["schemaVersion"], codex_harness.LIVE_HOST_RECEIPT_SCHEMA)
             self.assertEqual(payload["host"], "codex")
@@ -153,6 +161,10 @@ class CodexHarnessTests(unittest.TestCase):
             self.assertTrue(payload["usageAttested"])
             self.assertEqual({item["name"] for item in payload["operations"]}, set(baseline["requiredOperations"]))
             self.assertEqual(len(calls), len(baseline["requiredOperations"]))
+            self.assertEqual(calls[0][calls[0].index("--model") + 1], "<codex-host-local-standard-code-model>")
+            self.assertEqual(selection_payload["schemaVersion"], "agent-host-model-selection-receipt.v1")
+            self.assertEqual(selection_payload["modelClass"], "standard-code")
+            self.assertNotIn("<codex-host-local-standard-code-model>", json.dumps(payload["modelSelection"]))
 
     def test_live_host_receipt_blocks_when_invocation_exceeds_budget_cap(self) -> None:
         def expensive_runner(command: list[str]) -> codex_harness.CommandResult:

@@ -63,6 +63,31 @@ The command exits non-zero and writes blocking findings when:
 - `qualityStatus` is not `PASS` or `qualityRegressionCount` is non-zero;
 - p95 usage exceeds a target or hard ceiling.
 
+## Budget modes
+
+Live harnesses support three budget modes before they start real host calls:
+
+- `metered` requires an operator-approved `budgetCapUsd` and host-provided cost
+  accounting.
+- `subscription` does not require a USD cap, but it still requires
+  `maxInvocations` and at least one resource cap: `maxBillableTokens` when the
+  host exposes token accounting, or `maxWallSeconds` when token accounting is
+  weak.
+- `local` follows the same resource-cap rule as `subscription`; the cap protects
+  local compute and runaway sessions rather than cloud spend.
+
+The recommended minimum proof cap is derived from the release live calibration
+profile: `13` required lifecycle operations plus `7` scenarios across `2`
+cohorts with one run each, or `27` expected invocations. Add 20 percent headroom
+and set `maxInvocations` to `33`. For the full recommended calibration, use five
+runs per scenario/cohort: `83` expected invocations, capped at `100`.
+
+When a cap is reached, the harness must stop before the next invocation and
+write a blocking receipt. The operator or controller policy then decides whether
+to continue on the same route, reroute to a cheaper/faster class, reroute to a
+stronger class, split the task, or abort. Critical review phases must not be
+silently downgraded.
+
 ## Receipt expectations
 
 The receipt schema is `agent-lifecycle-live-calibration-receipt.v1`. A valid

@@ -94,8 +94,10 @@ def _write_min_docs(root: Path, *, verified_row: bool) -> None:
         f"| Codex | Projection | {maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.3.0.md",
-        "Status: source release.\nAll bundled host projections remain `EXPERIMENTAL`.\n",
+        root / "release/notes/v0.4.0.md",
+        "Status: source release.\n"
+        "Bundled adapters remain `EXPERIMENTAL`.\n"
+        "Budget caps stop runaway execution.\n",
     )
     for host in ("claude", "codex", "cursor", "hermes", "opencode"):
         _write_text(

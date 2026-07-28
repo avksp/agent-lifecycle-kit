@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
+
+from agent_lifecycle.contracts import canonical_digest, write_json_create
+from agent_lifecycle.model_routing import validate_host_model_profile
 
 
 BudgetMode = str
@@ -119,3 +124,104 @@ def _positive_int(value: object) -> bool:
 
 def _positive_number(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+
+
+@dataclass(frozen=True)
+class HostModelSelection:
+    host: str
+    profile_id: str
+    profile_digest: str
+    model_class: str
+    binding_id: str
+    binding_digest: str
+    provider_model: str
+    provider_model_hash: str
+    provider: str | None = None
+    variant: str | None = None
+
+    def redacted_json(self) -> dict[str, object]:
+        return {
+            "host": self.host,
+            "profileId": self.profile_id,
+            "profileDigest": self.profile_digest,
+            "modelClass": self.model_class,
+            "bindingId": self.binding_id,
+            "bindingDigest": self.binding_digest,
+            "providerModelHash": self.provider_model_hash,
+            "providerPresent": self.provider is not None,
+            "variantPresent": self.variant is not None,
+        }
+
+
+def load_host_model_selection(
+    profile_path: Path,
+    *,
+    model_class: str,
+    binding_id: str | None = None,
+) -> HostModelSelection:
+    profile = _read_json_object(profile_path)
+    validation = validate_host_model_profile(profile)
+    bindings = profile.get("bindings", {})
+    binding = bindings.get(model_class)
+    if not isinstance(binding, dict):
+        raise HarnessError("missing-model-binding", f"{model_class} binding is missing from {profile_path}")
+    checked_binding = validation["bindings"][model_class]
+    provider_model = binding.get("providerModel")
+    if not isinstance(provider_model, str) or not provider_model:
+        raise HarnessError("missing-provider-model", f"{model_class} binding has no providerModel")
+    provider = binding.get("provider")
+    variant = binding.get("variant")
+    return HostModelSelection(
+        host=str(profile["host"]),
+        profile_id=str(profile["profileId"]),
+        profile_digest=str(validation["profileDigest"]),
+        model_class=model_class,
+        binding_id=binding_id or model_class,
+        binding_digest=str(checked_binding["bindingDigest"]),
+        provider_model=provider_model,
+        provider_model_hash=str(checked_binding["providerModelHash"]),
+        provider=provider if isinstance(provider, str) and provider else None,
+        variant=variant if isinstance(variant, str) and variant else None,
+    )
+
+
+def write_model_selection_receipt(
+    path: Path,
+    selection: HostModelSelection,
+    *,
+    route_decision_digest: str | None = None,
+    fallback_used: bool = False,
+    fallback_reason: str | None = None,
+) -> dict[str, object]:
+    digest = route_decision_digest or canonical_digest(
+        {
+            "source": "host-harness-standalone-selection",
+            "host": selection.host,
+            "profileDigest": selection.profile_digest,
+            "modelClass": selection.model_class,
+            "bindingId": selection.binding_id,
+        }
+    )
+    receipt = {
+        "schemaVersion": "agent-host-model-selection-receipt.v1",
+        "host": selection.host,
+        "routeDecisionDigest": digest,
+        "modelClass": selection.model_class,
+        "profileDigest": selection.profile_digest,
+        "bindingId": selection.binding_id,
+        "bindingDigest": selection.binding_digest,
+        "providerModelHash": selection.provider_model_hash,
+        "fallbackUsed": fallback_used,
+        "fallbackReason": fallback_reason,
+        "routeDecisionBinding": "host-harness-standalone-selection" if route_decision_digest is None else "route-decision",
+        "productionPromotionClaimed": False,
+    }
+    write_json_create(path, receipt)
+    return receipt
+
+
+def _read_json_object(path: Path) -> dict[str, object]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise HarnessError("invalid-host-model-profile", f"expected JSON object: {path}")
+    return value

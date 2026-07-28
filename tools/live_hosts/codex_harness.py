@@ -18,7 +18,15 @@ if str(SRC) not in sys.path:
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex  # noqa: E402
 from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
-from tools.live_hosts.common import BudgetPolicy, BudgetTracker, CommandResult, HarnessError  # noqa: E402
+from tools.live_hosts.common import (  # noqa: E402
+    BudgetPolicy,
+    BudgetTracker,
+    CommandResult,
+    HarnessError,
+    HostModelSelection,
+    load_host_model_selection,
+    write_model_selection_receipt,
+)
 
 
 HOST = "codex"
@@ -95,6 +103,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profile", default=DEFAULT_PROFILE.as_posix())
     parser.add_argument("--budget-targets", default=DEFAULT_BUDGET_TARGETS.as_posix())
     parser.add_argument("--codex-bin", default="codex")
+    parser.add_argument("--codex-model")
+    parser.add_argument("--host-model-profile")
+    parser.add_argument("--model-class")
+    parser.add_argument("--model-binding")
+    parser.add_argument("--model-selection-receipt")
     parser.add_argument("--worktree")
     parser.add_argument("--budget-mode", choices=["metered", "subscription", "local"], default="metered")
     parser.add_argument("--budget-cap-usd", type=float)
@@ -119,6 +132,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _dispatch(args: argparse.Namespace, blockers: list[dict[str, Any]]) -> dict[str, Any]:
+    model_selection = _model_selection_from_args(args)
     if args.mode == "preflight":
         return run_preflight(
             codex_bin=args.codex_bin,
@@ -126,6 +140,7 @@ def _dispatch(args: argparse.Namespace, blockers: list[dict[str, Any]]) -> dict[
             worktree=Path(args.worktree) if args.worktree else None,
             budget_policy=_budget_policy_from_args(args),
             allow_live=args.allow_live,
+            model_selection=model_selection,
         )
     if args.mode == "fixture-check":
         return run_fixture_check(Path(args.baseline))
@@ -138,6 +153,9 @@ def _dispatch(args: argparse.Namespace, blockers: list[dict[str, Any]]) -> dict[
             allow_live=args.allow_live,
             receipt_path=Path(args.receipt) if args.receipt else None,
             diagnostic_dir=Path(args.diagnostic_dir),
+            codex_model=args.codex_model,
+            model_selection=model_selection,
+            model_selection_receipt_path=Path(args.model_selection_receipt) if args.model_selection_receipt else None,
         )
     if args.mode == "live-calibration":
         return run_live_calibration(
@@ -150,6 +168,9 @@ def _dispatch(args: argparse.Namespace, blockers: list[dict[str, Any]]) -> dict[
             allow_live=args.allow_live,
             receipt_path=Path(args.receipt) if args.receipt else None,
             diagnostic_dir=Path(args.diagnostic_dir),
+            codex_model=args.codex_model,
+            model_selection=model_selection,
+            model_selection_receipt_path=Path(args.model_selection_receipt) if args.model_selection_receipt else None,
         )
     raise HarnessError("invalid-mode", f"unsupported mode: {args.mode}")
 
@@ -164,6 +185,23 @@ def _budget_policy_from_args(args: argparse.Namespace) -> BudgetPolicy:
     )
 
 
+def _model_selection_from_args(args: argparse.Namespace) -> HostModelSelection | None:
+    if not args.host_model_profile:
+        return None
+    if not args.model_class:
+        raise HarnessError("missing-model-class", "--model-class is required with --host-model-profile")
+    return load_host_model_selection(
+        Path(args.host_model_profile),
+        model_class=args.model_class,
+        binding_id=args.model_binding,
+    )
+
+
+def _model_args(codex_model: str | None, model_selection: HostModelSelection | None) -> list[str]:
+    model = codex_model or (model_selection.provider_model if model_selection is not None else None)
+    return ["--model", model] if model else []
+
+
 def run_preflight(
     *,
     codex_bin: str,
@@ -171,6 +209,7 @@ def run_preflight(
     worktree: Path | None,
     budget_policy: BudgetPolicy,
     allow_live: bool,
+    model_selection: HostModelSelection | None = None,
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     checks: list[dict[str, Any]] = []
@@ -208,6 +247,7 @@ def run_preflight(
         "baselineDigest": canonical_digest(baseline),
         "requiredOperationCount": len(operations),
         "budgetPolicy": budget_policy.to_json(),
+        "modelSelection": model_selection.redacted_json() if model_selection else None,
         "budgetMode": budget_policy.mode,
         "budgetCapUsd": budget_policy.budget_cap_usd,
         "liveCallsStarted": False,
@@ -256,6 +296,9 @@ def run_live_host_receipt(
     receipt_path: Path | None,
     diagnostic_dir: Path,
     budget_policy: BudgetPolicy | None = None,
+    codex_model: str | None = None,
+    model_selection: HostModelSelection | None = None,
+    model_selection_receipt_path: Path | None = None,
     runner: Callable[[list[str]], CommandResult] = None,
     clean_worktree_checker: Callable[[Path], dict[str, Any]] = None,
 ) -> dict[str, Any]:
@@ -279,11 +322,14 @@ def run_live_host_receipt(
             blockers.append({"code": "BLOCKED_DIRTY_WORKTREE", "message": "live runs require a clean dedicated worktree"})
     if receipt_path is None:
         blockers.append({"code": "missing-live-host-receipt-path", "message": "--receipt is required in live-host-receipt mode"})
+    if model_selection is not None and model_selection_receipt_path is None:
+        blockers.append({"code": "missing-model-selection-receipt-path", "message": "--model-selection-receipt is required with --host-model-profile"})
     if blockers:
         return {
             **_base_report("FAIL", blockers),
             "checks": checks,
             "budgetPolicy": budget_policy.to_json(),
+            "modelSelection": model_selection.redacted_json() if model_selection else None,
             "budgetMode": budget_policy.mode,
             "liveCallsStarted": False,
             "productionPromotionClaimed": False,
@@ -306,6 +352,7 @@ def run_live_host_receipt(
             codex_bin,
             "exec",
             "--json",
+            *_model_args(codex_model, model_selection),
             "--cd",
             str(worktree),
             "--sandbox",
@@ -351,6 +398,10 @@ def run_live_host_receipt(
         blockers.append({"code": "live-host-operation-missing", "message": "not all baseline operations were executed"})
     status = "PASS" if not blockers else "FAIL"
     if status == "PASS":
+        model_selection_identity = None
+        if model_selection is not None and model_selection_receipt_path is not None:
+            write_model_selection_receipt(model_selection_receipt_path, model_selection)
+            model_selection_identity = _file_identity(model_selection_receipt_path)
         receipt = {
             "schemaVersion": LIVE_HOST_RECEIPT_SCHEMA,
             "status": "PASS",
@@ -362,6 +413,8 @@ def run_live_host_receipt(
             "usageAttested": True,
             "budgetPolicy": budget_policy.to_json(),
             "budgetUsage": budget_tracker.to_json(),
+            "modelSelection": model_selection.redacted_json() if model_selection else None,
+            "modelSelectionReceipt": model_selection_identity,
             "budgetMode": budget_policy.mode,
             "budgetCapUsd": budget_policy.budget_cap_usd,
             "cumulativeCostUsd": budget_tracker.cost_usd,
@@ -377,6 +430,8 @@ def run_live_host_receipt(
         "receipt": _file_identity(receipt_path) if status == "PASS" else None,
         "budgetPolicy": budget_policy.to_json(),
         "budgetUsage": budget_tracker.to_json(),
+        "modelSelection": model_selection.redacted_json() if model_selection else None,
+        "modelSelectionReceipt": _file_identity(model_selection_receipt_path) if status == "PASS" and model_selection_receipt_path else None,
         "budgetMode": budget_policy.mode,
         "budgetCapUsd": budget_policy.budget_cap_usd,
         "cumulativeCostUsd": budget_tracker.cost_usd,
@@ -396,6 +451,9 @@ def run_live_calibration(
     receipt_path: Path | None,
     diagnostic_dir: Path,
     budget_policy: BudgetPolicy | None = None,
+    codex_model: str | None = None,
+    model_selection: HostModelSelection | None = None,
+    model_selection_receipt_path: Path | None = None,
     runner: Callable[[list[str]], CommandResult] = None,
     clean_worktree_checker: Callable[[Path], dict[str, Any]] = None,
 ) -> dict[str, Any]:
@@ -435,11 +493,14 @@ def run_live_calibration(
             blockers.append({"code": "BLOCKED_DIRTY_WORKTREE", "message": "live runs require a clean dedicated worktree"})
     if receipt_path is None:
         blockers.append({"code": "missing-live-calibration-receipt-path", "message": "--receipt is required in live-calibration mode"})
+    if model_selection is not None and model_selection_receipt_path is None:
+        blockers.append({"code": "missing-model-selection-receipt-path", "message": "--model-selection-receipt is required with --host-model-profile"})
     if blockers:
         return {
             **_base_report("FAIL", blockers),
             "checks": checks,
             "budgetPolicy": budget_policy.to_json(),
+            "modelSelection": model_selection.redacted_json() if model_selection else None,
             "budgetMode": budget_policy.mode,
             "liveCallsStarted": False,
             "productionPromotionClaimed": False,
@@ -465,6 +526,7 @@ def run_live_calibration(
                     codex_bin,
                     "exec",
                     "--json",
+                    *_model_args(codex_model, model_selection),
                     "--cd",
                     str(worktree),
                     "--sandbox",
@@ -515,6 +577,10 @@ def run_live_calibration(
 
     status = "PASS" if not blockers else "FAIL"
     if status == "PASS":
+        model_selection_identity = None
+        if model_selection is not None and model_selection_receipt_path is not None:
+            write_model_selection_receipt(model_selection_receipt_path, model_selection)
+            model_selection_identity = _file_identity(model_selection_receipt_path)
         receipt = {
             "schemaVersion": LIVE_CALIBRATION_RECEIPT_SCHEMA,
             "status": "PASS",
@@ -531,6 +597,8 @@ def run_live_calibration(
             "contextByteAccounting": "host-jsonl-or-harness-observed-prompt-and-jsonl-bytes",
             "budgetPolicy": budget_policy.to_json(),
             "budgetUsage": budget_tracker.to_json(),
+            "modelSelection": model_selection.redacted_json() if model_selection else None,
+            "modelSelectionReceipt": model_selection_identity,
             "budgetMode": budget_policy.mode,
             "budgetCapUsd": budget_policy.budget_cap_usd,
             "cumulativeCostUsd": budget_tracker.cost_usd,
@@ -549,6 +617,8 @@ def run_live_calibration(
         "receipt": _file_identity(receipt_path) if status == "PASS" else None,
         "budgetPolicy": budget_policy.to_json(),
         "budgetUsage": budget_tracker.to_json(),
+        "modelSelection": model_selection.redacted_json() if model_selection else None,
+        "modelSelectionReceipt": _file_identity(model_selection_receipt_path) if status == "PASS" and model_selection_receipt_path else None,
         "budgetMode": budget_policy.mode,
         "budgetCapUsd": budget_policy.budget_cap_usd,
         "cumulativeCostUsd": budget_tracker.cost_usd,

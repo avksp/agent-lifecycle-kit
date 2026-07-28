@@ -1,0 +1,16 @@
+{
+  "acceptedEvidence": [],
+  "activeDecisions": [
+    "Use release-0.4 frozen task packets as active-task context.",
+    "Compact context projection preserves traceability IDs and omits long duplicated descriptions."
+  ],
+  "changedFiles": [],
+  "doNotDo": [
+    "Do not paste the full release plan into small-context worker prompts.",
+    "Do not truncate context silently when a task packet overflows.",
+    "Do not expose host-local provider or model names in portable task packets."
+  ],
+  "latestUserIntent": "Implement the active release-0.4 task packet against the frozen plan.",
+  "nextRequiredAction": "Run the assigned packet validation commands and produce evidence.",
+  "openBlockers": []
+}

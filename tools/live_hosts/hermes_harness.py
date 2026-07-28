@@ -19,7 +19,15 @@ if str(SRC) not in sys.path:
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex  # noqa: E402
 from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
-from tools.live_hosts.common import BudgetPolicy, BudgetTracker, CommandResult, HarnessError  # noqa: E402
+from tools.live_hosts.common import (  # noqa: E402
+    BudgetPolicy,
+    BudgetTracker,
+    CommandResult,
+    HarnessError,
+    HostModelSelection,
+    load_host_model_selection,
+    write_model_selection_receipt,
+)
 
 
 HOST = "hermes"
@@ -142,6 +150,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--minimal-direct", action="store_true")
     parser.add_argument("--hermes-provider")
     parser.add_argument("--hermes-model")
+    parser.add_argument("--host-model-profile")
+    parser.add_argument("--model-class")
+    parser.add_argument("--model-binding")
+    parser.add_argument("--model-selection-receipt")
     parser.add_argument("--hermes-toolsets")
     parser.add_argument("--hermes-ignore-rules", action="store_true")
     parser.add_argument("--hermes-safe-mode", action="store_true")
@@ -162,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
+    model_selection = _model_selection_from_args(args)
     budget_policy = BudgetPolicy(
         mode=args.budget_mode,
         budget_cap_usd=args.budget_cap_usd,
@@ -171,8 +184,8 @@ def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
     )
     invocation_options = HermesInvocationOptions(
         minimal_direct=args.minimal_direct,
-        provider=args.hermes_provider,
-        model=args.hermes_model,
+        provider=args.hermes_provider or (model_selection.provider if model_selection is not None else None),
+        model=args.hermes_model or (model_selection.provider_model if model_selection is not None else None),
         toolsets=args.hermes_toolsets,
         ignore_rules=args.hermes_ignore_rules,
         safe_mode=args.hermes_safe_mode,
@@ -185,6 +198,7 @@ def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
             budget_policy=budget_policy,
             allow_live=args.allow_live,
             invocation_options=invocation_options,
+            model_selection=model_selection,
         )
     if args.mode == "fixture-check":
         return run_fixture_check(Path(args.baseline))
@@ -198,6 +212,8 @@ def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
             diagnostic_dir=Path(args.diagnostic_dir),
             budget_policy=budget_policy,
             invocation_options=invocation_options,
+            model_selection=model_selection,
+            model_selection_receipt_path=Path(args.model_selection_receipt) if args.model_selection_receipt else None,
         )
     if args.mode == "live-calibration":
         return run_live_calibration(
@@ -211,8 +227,36 @@ def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
             diagnostic_dir=Path(args.diagnostic_dir),
             budget_policy=budget_policy,
             invocation_options=invocation_options,
+            model_selection=model_selection,
+            model_selection_receipt_path=Path(args.model_selection_receipt) if args.model_selection_receipt else None,
         )
     raise HarnessError("invalid-mode", f"unsupported mode: {args.mode}")
+
+
+def _model_selection_from_args(args: argparse.Namespace) -> HostModelSelection | None:
+    if not args.host_model_profile:
+        return None
+    if not args.model_class:
+        raise HarnessError("missing-model-class", "--model-class is required with --host-model-profile")
+    return load_host_model_selection(
+        Path(args.host_model_profile),
+        model_class=args.model_class,
+        binding_id=args.model_binding,
+    )
+
+
+def _with_model_selection(
+    invocation_options: HermesInvocationOptions | None,
+    model_selection: HostModelSelection | None,
+) -> HermesInvocationOptions:
+    options = (invocation_options or HermesInvocationOptions()).normalized()
+    if model_selection is None:
+        return options
+    return replace(
+        options,
+        provider=options.provider or model_selection.provider,
+        model=options.model or model_selection.provider_model,
+    )
 
 
 def run_preflight(
@@ -223,8 +267,9 @@ def run_preflight(
     budget_policy: BudgetPolicy,
     allow_live: bool,
     invocation_options: HermesInvocationOptions | None = None,
+    model_selection: HostModelSelection | None = None,
 ) -> dict[str, Any]:
-    invocation_options = (invocation_options or HermesInvocationOptions()).normalized()
+    invocation_options = _with_model_selection(invocation_options, model_selection)
     blockers: list[dict[str, Any]] = []
     checks: list[dict[str, Any]] = []
     version = _run_command([hermes_bin, "--version"], checks, "hermes-version")
@@ -259,6 +304,7 @@ def run_preflight(
         "baselineDigest": canonical_digest(baseline),
         "requiredOperationCount": len(operations),
         "budgetPolicy": budget_policy.to_json(),
+        "modelSelection": model_selection.redacted_json() if model_selection else None,
         "budgetMode": budget_policy.mode,
         "budgetCapUsd": budget_policy.budget_cap_usd,
         "hermesInvocationOptions": invocation_options.to_json(),
@@ -303,6 +349,8 @@ def run_live_host_receipt(
     diagnostic_dir: Path,
     budget_policy: BudgetPolicy | None = None,
     invocation_options: HermesInvocationOptions | None = None,
+    model_selection: HostModelSelection | None = None,
+    model_selection_receipt_path: Path | None = None,
     runner: Callable[[list[str], Path | None], CommandResult] = None,
     clean_worktree_checker: Callable[[Path], dict[str, Any]] = None,
     auth_checker: Callable[[str], dict[str, Any]] = None,
@@ -315,11 +363,12 @@ def run_live_host_receipt(
     baseline = _load_json(baseline_path)
     operations = required_operations(baseline)
     budget_policy = budget_policy or BudgetPolicy(mode="metered")
-    invocation_options = (invocation_options or HermesInvocationOptions()).normalized()
+    invocation_options = _with_model_selection(invocation_options, model_selection)
     _validate_live_inputs(blockers, checks, budget_policy, allow_live, len(operations), worktree, clean_worktree_checker, receipt_path, "live-host-receipt")
     _append_auth_check(blockers, checks, auth_checker(hermes_bin))
+    _validate_model_selection_inputs(blockers, model_selection, model_selection_receipt_path)
     if blockers:
-        return _blocked_live_report(blockers, checks, budget_policy)
+        return _blocked_live_report(blockers, checks, budget_policy, model_selection=model_selection)
 
     assert worktree is not None
     assert receipt_path is not None
@@ -353,6 +402,10 @@ def run_live_host_receipt(
     if not blockers and set(operation["name"] for operation in live_operations) != set(operations):
         blockers.append({"code": "live-host-operation-missing", "message": "not all baseline operations were executed"})
     if not blockers:
+        model_selection_identity = None
+        if model_selection is not None and model_selection_receipt_path is not None:
+            write_model_selection_receipt(model_selection_receipt_path, model_selection)
+            model_selection_identity = _file_identity(model_selection_receipt_path)
         _write_json(
             receipt_path,
             {
@@ -366,6 +419,8 @@ def run_live_host_receipt(
                 "usageAttested": True,
                 "budgetPolicy": budget_policy.to_json(),
                 "hermesInvocationOptions": invocation_options.to_json(),
+                "modelSelection": model_selection.redacted_json() if model_selection else None,
+                "modelSelectionReceipt": model_selection_identity,
                 "budgetUsage": budget_tracker.to_json(),
                 "budgetMode": budget_policy.mode,
                 "budgetCapUsd": budget_policy.budget_cap_usd,
@@ -374,7 +429,7 @@ def run_live_host_receipt(
             },
         )
     return {
-        **_live_report("PASS" if not blockers else "FAIL", blockers, checks, budget_policy, budget_tracker, live_calls_started, len(operations), len(live_operations), receipt_path),
+        **_live_report("PASS" if not blockers else "FAIL", blockers, checks, budget_policy, budget_tracker, live_calls_started, len(operations), len(live_operations), receipt_path, model_selection=model_selection, model_selection_receipt_path=model_selection_receipt_path),
         "hermesInvocationOptions": invocation_options.to_json(),
     }
 
@@ -391,6 +446,8 @@ def run_live_calibration(
     diagnostic_dir: Path,
     budget_policy: BudgetPolicy | None = None,
     invocation_options: HermesInvocationOptions | None = None,
+    model_selection: HostModelSelection | None = None,
+    model_selection_receipt_path: Path | None = None,
     runner: Callable[[list[str], Path | None], CommandResult] = None,
     clean_worktree_checker: Callable[[Path], dict[str, Any]] = None,
     auth_checker: Callable[[str], dict[str, Any]] = None,
@@ -408,12 +465,13 @@ def run_live_calibration(
     requested_runs = runs_per_scenario_cohort or minimum_runs
     required_invocations = len(scenarios) * len(cohorts) * requested_runs
     budget_policy = budget_policy or BudgetPolicy(mode="metered")
-    invocation_options = (invocation_options or HermesInvocationOptions()).normalized()
+    invocation_options = _with_model_selection(invocation_options, model_selection)
     _validate_calibration_inputs(profile, targets, blockers, scenarios, cohorts, requested_runs, minimum_runs)
     _validate_live_inputs(blockers, checks, budget_policy, allow_live, required_invocations, worktree, clean_worktree_checker, receipt_path, "live-calibration")
     _append_auth_check(blockers, checks, auth_checker(hermes_bin))
+    _validate_model_selection_inputs(blockers, model_selection, model_selection_receipt_path)
     if blockers:
-        return _blocked_live_report(blockers, checks, budget_policy)
+        return _blocked_live_report(blockers, checks, budget_policy, model_selection=model_selection)
 
     assert worktree is not None
     assert receipt_path is not None
@@ -451,6 +509,10 @@ def run_live_calibration(
             break
 
     if not blockers:
+        model_selection_identity = None
+        if model_selection is not None and model_selection_receipt_path is not None:
+            write_model_selection_receipt(model_selection_receipt_path, model_selection)
+            model_selection_identity = _file_identity(model_selection_receipt_path)
         _write_json(
             receipt_path,
             {
@@ -469,6 +531,8 @@ def run_live_calibration(
                 "contextByteAccounting": "usage-file-or-harness-observed-prompt-stdout-stderr-and-usage-file-bytes",
                 "budgetPolicy": budget_policy.to_json(),
                 "hermesInvocationOptions": invocation_options.to_json(),
+                "modelSelection": model_selection.redacted_json() if model_selection else None,
+                "modelSelectionReceipt": model_selection_identity,
                 "budgetUsage": budget_tracker.to_json(),
                 "budgetMode": budget_policy.mode,
                 "budgetCapUsd": budget_policy.budget_cap_usd,
@@ -476,7 +540,7 @@ def run_live_calibration(
                 "runs": runs,
             },
         )
-    report = _live_report("PASS" if not blockers else "FAIL", blockers, checks, budget_policy, budget_tracker, live_calls_started, required_invocations, len(runs), receipt_path)
+    report = _live_report("PASS" if not blockers else "FAIL", blockers, checks, budget_policy, budget_tracker, live_calls_started, required_invocations, len(runs), receipt_path, model_selection=model_selection, model_selection_receipt_path=model_selection_receipt_path)
     return {**report, "profileDigest": canonical_digest(profile), "budgetTargetsDigest": canonical_digest(targets), "requiredScenarioCount": len(scenarios), "requiredCohortCount": len(cohorts), "runsPerScenarioCohort": requested_runs, "runCount": len(runs), "hermesInvocationOptions": invocation_options.to_json()}
 
 
@@ -681,11 +745,47 @@ def _hermes_command(
     return command
 
 
-def _blocked_live_report(blockers: list[dict[str, Any]], checks: list[dict[str, Any]], budget_policy: BudgetPolicy) -> dict[str, Any]:
-    return {**_base_report("FAIL", blockers), "checks": checks, "budgetPolicy": budget_policy.to_json(), "budgetMode": budget_policy.mode, "liveCallsStarted": False, "productionPromotionClaimed": False}
+def _validate_model_selection_inputs(
+    blockers: list[dict[str, Any]],
+    model_selection: HostModelSelection | None,
+    model_selection_receipt_path: Path | None,
+) -> None:
+    if model_selection is not None and model_selection_receipt_path is None:
+        blockers.append({"code": "missing-model-selection-receipt-path", "message": "--model-selection-receipt is required with --host-model-profile"})
 
 
-def _live_report(status: str, blockers: list[dict[str, Any]], checks: list[dict[str, Any]], budget_policy: BudgetPolicy, budget_tracker: BudgetTracker, live_calls_started: bool, required_count: int, passed_count: int, receipt_path: Path) -> dict[str, Any]:
+def _blocked_live_report(
+    blockers: list[dict[str, Any]],
+    checks: list[dict[str, Any]],
+    budget_policy: BudgetPolicy,
+    *,
+    model_selection: HostModelSelection | None = None,
+) -> dict[str, Any]:
+    return {
+        **_base_report("FAIL", blockers),
+        "checks": checks,
+        "budgetPolicy": budget_policy.to_json(),
+        "modelSelection": model_selection.redacted_json() if model_selection else None,
+        "budgetMode": budget_policy.mode,
+        "liveCallsStarted": False,
+        "productionPromotionClaimed": False,
+    }
+
+
+def _live_report(
+    status: str,
+    blockers: list[dict[str, Any]],
+    checks: list[dict[str, Any]],
+    budget_policy: BudgetPolicy,
+    budget_tracker: BudgetTracker,
+    live_calls_started: bool,
+    required_count: int,
+    passed_count: int,
+    receipt_path: Path,
+    *,
+    model_selection: HostModelSelection | None = None,
+    model_selection_receipt_path: Path | None = None,
+) -> dict[str, Any]:
     return {
         **_base_report(status, blockers),
         "checks": checks,
@@ -694,6 +794,8 @@ def _live_report(status: str, blockers: list[dict[str, Any]], checks: list[dict[
         "receipt": _file_identity(receipt_path) if status == "PASS" else None,
         "budgetPolicy": budget_policy.to_json(),
         "budgetUsage": budget_tracker.to_json(),
+        "modelSelection": model_selection.redacted_json() if model_selection else None,
+        "modelSelectionReceipt": _file_identity(model_selection_receipt_path) if status == "PASS" and model_selection_receipt_path else None,
         "budgetMode": budget_policy.mode,
         "budgetCapUsd": budget_policy.budget_cap_usd,
         "cumulativeCostUsd": budget_tracker.cost_usd,

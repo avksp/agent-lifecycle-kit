@@ -34,10 +34,11 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.3.0.md",
+        "release/notes/v0.4.0.md",
         (
             "Status: source release.",
-            "All bundled host projections remain `EXPERIMENTAL`",
+            "Bundled adapters remain `EXPERIMENTAL`",
+            "Budget caps stop runaway execution",
         ),
     ),
 )

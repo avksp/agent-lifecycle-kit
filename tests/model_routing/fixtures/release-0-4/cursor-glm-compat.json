@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "agent-cursor-glm-compat-fixture.v1",
+  "status": "PASS",
+  "host": "cursor",
+  "source": "release-0-4-stable-fixture",
+  "productionPromotionClaimed": false,
+  "modelSelections": [
+    {
+      "phase": "s2-specification",
+      "modelClass": "strong-reasoning",
+      "providerModel": "glm-5.2-max",
+      "critical": true
+    },
+    {
+      "phase": "independent-review",
+      "modelClass": "strong-reasoning",
+      "providerModel": "glm-5.2-max",
+      "critical": true
+    },
+    {
+      "phase": "security-review",
+      "modelClass": "specialist-review",
+      "providerModel": "glm-5.2-max",
+      "critical": true
+    },
+    {
+      "phase": "final-audit",
+      "modelClass": "strong-reasoning",
+      "providerModel": "glm-5.2-max",
+      "critical": true
+    },
+    {
+      "phase": "implementation-planning",
+      "modelClass": "standard-code",
+      "providerModel": "glm-5.2-high",
+      "critical": false,
+      "fallbackFrom": "glm-5.2-max",
+      "fallbackReason": "non-critical-coding-plan"
+    },
+    {
+      "phase": "task-implementation",
+      "modelClass": "budget",
+      "providerModel": "glm-5.2-high",
+      "critical": false
+    }
+  ]
+}

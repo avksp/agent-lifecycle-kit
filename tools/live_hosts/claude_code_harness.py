@@ -19,7 +19,15 @@ if str(SRC) not in sys.path:
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex  # noqa: E402
 from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
-from tools.live_hosts.common import BudgetPolicy, BudgetTracker, CommandResult, HarnessError  # noqa: E402
+from tools.live_hosts.common import (  # noqa: E402
+    BudgetPolicy,
+    BudgetTracker,
+    CommandResult,
+    HarnessError,
+    HostModelSelection,
+    load_host_model_selection,
+    write_model_selection_receipt,
+)
 
 
 HOST = "claude-code"
@@ -96,6 +104,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profile", default=DEFAULT_PROFILE.as_posix())
     parser.add_argument("--budget-targets", default=DEFAULT_BUDGET_TARGETS.as_posix())
     parser.add_argument("--claude-bin", default="claude")
+    parser.add_argument("--claude-model")
+    parser.add_argument("--claude-fallback-model")
+    parser.add_argument("--host-model-profile")
+    parser.add_argument("--model-class")
+    parser.add_argument("--model-binding")
+    parser.add_argument("--model-selection-receipt")
     parser.add_argument("--worktree")
     parser.add_argument("--budget-mode", choices=["metered", "subscription", "local"], default="metered")
     parser.add_argument("--budget-cap-usd", type=float)
@@ -121,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
+    model_selection = _model_selection_from_args(args)
     budget_policy = BudgetPolicy(
         mode=args.budget_mode,
         budget_cap_usd=args.budget_cap_usd,
@@ -135,6 +150,7 @@ def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
             worktree=Path(args.worktree) if args.worktree else None,
             budget_policy=budget_policy,
             allow_live=args.allow_live,
+            model_selection=model_selection,
         )
     if args.mode == "fixture-check":
         return run_fixture_check(Path(args.baseline))
@@ -148,6 +164,10 @@ def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
             diagnostic_dir=Path(args.diagnostic_dir),
             budget_policy=budget_policy,
             permission_mode=args.permission_mode,
+            claude_model=args.claude_model,
+            claude_fallback_model=args.claude_fallback_model,
+            model_selection=model_selection,
+            model_selection_receipt_path=Path(args.model_selection_receipt) if args.model_selection_receipt else None,
         )
     if args.mode == "live-calibration":
         return run_live_calibration(
@@ -160,8 +180,24 @@ def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
             receipt_path=Path(args.receipt) if args.receipt else None,
             diagnostic_dir=Path(args.diagnostic_dir),
             budget_policy=budget_policy,
+            claude_model=args.claude_model,
+            claude_fallback_model=args.claude_fallback_model,
+            model_selection=model_selection,
+            model_selection_receipt_path=Path(args.model_selection_receipt) if args.model_selection_receipt else None,
         )
     raise HarnessError("invalid-mode", f"unsupported mode: {args.mode}")
+
+
+def _model_selection_from_args(args: argparse.Namespace) -> HostModelSelection | None:
+    if not args.host_model_profile:
+        return None
+    if not args.model_class:
+        raise HarnessError("missing-model-class", "--model-class is required with --host-model-profile")
+    return load_host_model_selection(
+        Path(args.host_model_profile),
+        model_class=args.model_class,
+        binding_id=args.model_binding,
+    )
 
 
 def run_preflight(
@@ -171,6 +207,7 @@ def run_preflight(
     worktree: Path | None,
     budget_policy: BudgetPolicy,
     allow_live: bool,
+    model_selection: HostModelSelection | None = None,
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     checks: list[dict[str, Any]] = []
@@ -200,6 +237,7 @@ def run_preflight(
         "baselineDigest": canonical_digest(baseline),
         "requiredOperationCount": len(operations),
         "budgetPolicy": budget_policy.to_json(),
+        "modelSelection": model_selection.redacted_json() if model_selection else None,
         "budgetMode": budget_policy.mode,
         "budgetCapUsd": budget_policy.budget_cap_usd,
         "liveCallsStarted": False,
@@ -243,6 +281,10 @@ def run_live_host_receipt(
     diagnostic_dir: Path,
     budget_policy: BudgetPolicy | None = None,
     permission_mode: str = "acceptEdits",
+    claude_model: str | None = None,
+    claude_fallback_model: str | None = None,
+    model_selection: HostModelSelection | None = None,
+    model_selection_receipt_path: Path | None = None,
     runner: Callable[[list[str], Path | None], CommandResult] = None,
     clean_worktree_checker: Callable[[Path], dict[str, Any]] = None,
 ) -> dict[str, Any]:
@@ -254,8 +296,9 @@ def run_live_host_receipt(
     operations = required_operations(baseline)
     budget_policy = budget_policy or BudgetPolicy(mode="metered")
     _validate_live_inputs(blockers, checks, budget_policy, allow_live, len(operations), worktree, clean_worktree_checker, receipt_path, "live-host-receipt")
+    _validate_model_selection_inputs(blockers, model_selection, model_selection_receipt_path)
     if blockers:
-        return _blocked_live_report(blockers, checks, budget_policy)
+        return _blocked_live_report(blockers, checks, budget_policy, model_selection=model_selection)
 
     assert worktree is not None
     assert receipt_path is not None
@@ -271,7 +314,7 @@ def run_live_host_receipt(
             break
         invocation_id = f"claude-code-{operation_name}-live-{index:02d}"
         prompt = _prompt_for_operation(operation_name)
-        result = runner(_claude_command(claude_bin, prompt, budget_policy, permission_mode), worktree)
+        result = runner(_claude_command(claude_bin, prompt, budget_policy, permission_mode, claude_model=claude_model, claude_fallback_model=claude_fallback_model, model_selection=model_selection), worktree)
         live_calls_started = True
         transcript = _write_invocation_diagnostic(diagnostic_dir, operation_name, invocation_id, result)
         checks.append({"name": f"claude-code-live-{operation_name}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": _display_path(transcript)}})
@@ -288,6 +331,10 @@ def run_live_host_receipt(
     if not blockers and set(operation["name"] for operation in live_operations) != set(operations):
         blockers.append({"code": "live-host-operation-missing", "message": "not all baseline operations were executed"})
     if not blockers:
+        model_selection_identity = None
+        if model_selection is not None and model_selection_receipt_path is not None:
+            write_model_selection_receipt(model_selection_receipt_path, model_selection)
+            model_selection_identity = _file_identity(model_selection_receipt_path)
         _write_json(
             receipt_path,
             {
@@ -300,6 +347,8 @@ def run_live_host_receipt(
                 "syntheticReplayUsed": False,
                 "usageAttested": True,
                 "budgetPolicy": budget_policy.to_json(),
+                "modelSelection": model_selection.redacted_json() if model_selection else None,
+                "modelSelectionReceipt": model_selection_identity,
                 "budgetUsage": budget_tracker.to_json(),
                 "budgetMode": budget_policy.mode,
                 "budgetCapUsd": budget_policy.budget_cap_usd,
@@ -308,7 +357,7 @@ def run_live_host_receipt(
                 "operations": live_operations,
             },
         )
-    return _live_report("PASS" if not blockers else "FAIL", blockers, checks, budget_policy, budget_tracker, live_calls_started, len(operations), len(live_operations), receipt_path)
+    return _live_report("PASS" if not blockers else "FAIL", blockers, checks, budget_policy, budget_tracker, live_calls_started, len(operations), len(live_operations), receipt_path, model_selection=model_selection, model_selection_receipt_path=model_selection_receipt_path)
 
 
 def run_live_calibration(
@@ -322,6 +371,10 @@ def run_live_calibration(
     receipt_path: Path | None,
     diagnostic_dir: Path,
     budget_policy: BudgetPolicy | None = None,
+    claude_model: str | None = None,
+    claude_fallback_model: str | None = None,
+    model_selection: HostModelSelection | None = None,
+    model_selection_receipt_path: Path | None = None,
     runner: Callable[[list[str], Path | None], CommandResult] = None,
     clean_worktree_checker: Callable[[Path], dict[str, Any]] = None,
 ) -> dict[str, Any]:
@@ -339,8 +392,9 @@ def run_live_calibration(
     budget_policy = budget_policy or BudgetPolicy(mode="metered")
     _validate_calibration_inputs(profile, targets, blockers, scenarios, cohorts, requested_runs, minimum_runs)
     _validate_live_inputs(blockers, checks, budget_policy, allow_live, required_invocations, worktree, clean_worktree_checker, receipt_path, "live-calibration")
+    _validate_model_selection_inputs(blockers, model_selection, model_selection_receipt_path)
     if blockers:
-        return _blocked_live_report(blockers, checks, budget_policy)
+        return _blocked_live_report(blockers, checks, budget_policy, model_selection=model_selection)
 
     assert worktree is not None
     assert receipt_path is not None
@@ -358,7 +412,7 @@ def run_live_calibration(
                     break
                 invocation_id = f"claude-code-{scenario}-{cohort}-{run_index:02d}"
                 prompt = _prompt_for_calibration(scenario, cohort, run_index)
-                result = runner(_claude_command(claude_bin, prompt, budget_policy, "plan"), worktree)
+                result = runner(_claude_command(claude_bin, prompt, budget_policy, "plan", claude_model=claude_model, claude_fallback_model=claude_fallback_model, model_selection=model_selection), worktree)
                 live_calls_started = True
                 transcript = _write_invocation_diagnostic(diagnostic_dir, f"{scenario}-{cohort}-{run_index:02d}", invocation_id, result)
                 checks.append({"name": f"claude-code-calibration-{scenario}-{cohort}-{run_index:02d}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": _display_path(transcript)}})
@@ -377,6 +431,10 @@ def run_live_calibration(
             break
 
     if not blockers:
+        model_selection_identity = None
+        if model_selection is not None and model_selection_receipt_path is not None:
+            write_model_selection_receipt(model_selection_receipt_path, model_selection)
+            model_selection_identity = _file_identity(model_selection_receipt_path)
         _write_json(
             receipt_path,
             {
@@ -394,6 +452,8 @@ def run_live_calibration(
                 "usageAttestationPolicy": budget_policy.usage_attestation_policy("claude-code-stream-json"),
                 "contextByteAccounting": "host-jsonl-or-harness-observed-prompt-and-jsonl-bytes",
                 "budgetPolicy": budget_policy.to_json(),
+                "modelSelection": model_selection.redacted_json() if model_selection else None,
+                "modelSelectionReceipt": model_selection_identity,
                 "budgetUsage": budget_tracker.to_json(),
                 "budgetMode": budget_policy.mode,
                 "budgetCapUsd": budget_policy.budget_cap_usd,
@@ -401,7 +461,7 @@ def run_live_calibration(
                 "runs": runs,
             },
         )
-    report = _live_report("PASS" if not blockers else "FAIL", blockers, checks, budget_policy, budget_tracker, live_calls_started, required_invocations, len(runs), receipt_path)
+    report = _live_report("PASS" if not blockers else "FAIL", blockers, checks, budget_policy, budget_tracker, live_calls_started, required_invocations, len(runs), receipt_path, model_selection=model_selection, model_selection_receipt_path=model_selection_receipt_path)
     return {**report, "profileDigest": canonical_digest(profile), "budgetTargetsDigest": canonical_digest(targets), "requiredScenarioCount": len(scenarios), "requiredCohortCount": len(cohorts), "runsPerScenarioCohort": requested_runs, "runCount": len(runs)}
 
 
@@ -527,19 +587,69 @@ def _calibration_usage_or_block(result: CommandResult, budget_policy: BudgetPoli
     return usage
 
 
-def _claude_command(claude_bin: str, prompt: str, budget_policy: BudgetPolicy, permission_mode: str) -> list[str]:
+def _claude_command(
+    claude_bin: str,
+    prompt: str,
+    budget_policy: BudgetPolicy,
+    permission_mode: str,
+    *,
+    claude_model: str | None = None,
+    claude_fallback_model: str | None = None,
+    model_selection: HostModelSelection | None = None,
+) -> list[str]:
     command = [claude_bin, "--print", "--verbose", "--output-format", "stream-json", "--permission-mode", permission_mode]
+    model = claude_model or (model_selection.provider_model if model_selection is not None else None)
+    if model:
+        command.extend(["--model", model])
+    if claude_fallback_model:
+        command.extend(["--fallback-model", claude_fallback_model])
     if budget_policy.mode == "metered" and budget_policy.budget_cap_usd is not None:
         command.extend(["--max-budget-usd", str(budget_policy.budget_cap_usd)])
     command.append(prompt)
     return command
 
 
-def _blocked_live_report(blockers: list[dict[str, Any]], checks: list[dict[str, Any]], budget_policy: BudgetPolicy) -> dict[str, Any]:
-    return {**_base_report("FAIL", blockers), "checks": checks, "budgetPolicy": budget_policy.to_json(), "budgetMode": budget_policy.mode, "liveCallsStarted": False, "productionPromotionClaimed": False}
+def _validate_model_selection_inputs(
+    blockers: list[dict[str, Any]],
+    model_selection: HostModelSelection | None,
+    model_selection_receipt_path: Path | None,
+) -> None:
+    if model_selection is not None and model_selection_receipt_path is None:
+        blockers.append({"code": "missing-model-selection-receipt-path", "message": "--model-selection-receipt is required with --host-model-profile"})
 
 
-def _live_report(status: str, blockers: list[dict[str, Any]], checks: list[dict[str, Any]], budget_policy: BudgetPolicy, budget_tracker: BudgetTracker, live_calls_started: bool, required_count: int, passed_count: int, receipt_path: Path) -> dict[str, Any]:
+def _blocked_live_report(
+    blockers: list[dict[str, Any]],
+    checks: list[dict[str, Any]],
+    budget_policy: BudgetPolicy,
+    *,
+    model_selection: HostModelSelection | None = None,
+) -> dict[str, Any]:
+    return {
+        **_base_report("FAIL", blockers),
+        "checks": checks,
+        "budgetPolicy": budget_policy.to_json(),
+        "modelSelection": model_selection.redacted_json() if model_selection else None,
+        "budgetMode": budget_policy.mode,
+        "liveCallsStarted": False,
+        "productionPromotionClaimed": False,
+    }
+
+
+def _live_report(
+    status: str,
+    blockers: list[dict[str, Any]],
+    checks: list[dict[str, Any]],
+    budget_policy: BudgetPolicy,
+    budget_tracker: BudgetTracker,
+    live_calls_started: bool,
+    required_count: int,
+    passed_count: int,
+    receipt_path: Path,
+    *,
+    model_selection: HostModelSelection | None = None,
+    model_selection_receipt_path: Path | None = None,
+) -> dict[str, Any]:
     return {
         **_base_report(status, blockers),
         "checks": checks,
@@ -548,6 +658,8 @@ def _live_report(status: str, blockers: list[dict[str, Any]], checks: list[dict[
         "receipt": _file_identity(receipt_path) if status == "PASS" else None,
         "budgetPolicy": budget_policy.to_json(),
         "budgetUsage": budget_tracker.to_json(),
+        "modelSelection": model_selection.redacted_json() if model_selection else None,
+        "modelSelectionReceipt": _file_identity(model_selection_receipt_path) if status == "PASS" and model_selection_receipt_path else None,
         "budgetMode": budget_policy.mode,
         "budgetCapUsd": budget_policy.budget_cap_usd,
         "cumulativeCostUsd": budget_tracker.cost_usd,

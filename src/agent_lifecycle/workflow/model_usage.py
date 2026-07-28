@@ -50,13 +50,14 @@ def validate_task_model_usage_receipt(
     receipt: dict[str, Any],
     *,
     budget_targets: dict[str, Any] | None = None,
+    fail_on_invalid: bool = True,
 ) -> dict[str, Any]:
     route = _attempt_route(task)
     if route is None or not model_usage_receipt_required(task):
         raise LifecycleError("unexpected-model-usage-receipt", "task attempt does not require a model usage receipt")
     _require_lineage(state, task, receipt)
     result = validate_usage_receipt(receipt, budget_targets=budget_targets, route_decision=route)
-    if result["status"] == "FAIL":
+    if result["status"] == "FAIL" and fail_on_invalid:
         raise LifecycleError(
             "model-usage-validation-failed",
             "model usage receipt validation failed",
