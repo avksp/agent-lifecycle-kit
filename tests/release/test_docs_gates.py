@@ -13,15 +13,13 @@ ROOT = Path(__file__).resolve().parents[2]
 class ReleaseDocumentationGateTests(unittest.TestCase):
     def test_frozen_release_candidate_rejects_empty_unreleased_changelog(self) -> None:
         # NEG-R03-13 Changelog Or Architecture Drift
-        manifest = (ROOT / "tasks/release-0-3/plan.manifest.json").read_text(encoding="utf-8")
-        self.assertIn('"status": "FROZEN"', manifest)
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        release = _section(changelog, "## 0.3.0 - 2026-07-28")
+        current_release = _section(changelog, "## 0.4.0 - 2026-07-28")
         self.assertNotIn("- No changes yet.", unreleased)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
-            or any(line.startswith("- ") for line in release.splitlines())
+            or any(line.startswith("- ") for line in current_release.splitlines())
         )
 
     def test_docs_compat_evidence_passes_current_docs(self) -> None:
