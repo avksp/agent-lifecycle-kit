@@ -1,0 +1,375 @@
+{
+  "schemaVersion": "agent-host-operation-examples.v1",
+  "examples": [
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-install",
+        "capability": "install",
+        "inputs": {
+          "adapterId": "synthetic-host"
+        },
+        "outputs": [
+          {
+            "role": "receipt",
+            "path": "out/install-receipt.json"
+          }
+        ],
+        "constraints": {
+          "network": "host-policy"
+        }
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-install",
+        "capability": "install",
+        "status": "PASS",
+        "outputs": [],
+        "usage": {}
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-discover",
+        "capability": "discover",
+        "inputs": {},
+        "outputs": [
+          {
+            "role": "descriptor",
+            "path": "out/adapter-descriptor.json"
+          }
+        ],
+        "constraints": {}
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-discover",
+        "capability": "discover",
+        "status": "PASS",
+        "outputs": [
+          {
+            "role": "descriptor",
+            "path": "out/adapter-descriptor.json"
+          }
+        ],
+        "usage": {}
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-validate-envelope",
+        "capability": "validate-envelope",
+        "inputs": {
+          "schemaVersion": "agent-host-operation-request.v1"
+        },
+        "outputs": [
+          {
+            "role": "validation",
+            "path": "out/envelope-validation.json"
+          }
+        ],
+        "constraints": {}
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-validate-envelope",
+        "capability": "validate-envelope",
+        "status": "PASS",
+        "outputs": [
+          {
+            "role": "validation",
+            "path": "out/envelope-validation.json"
+          }
+        ],
+        "usage": {}
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-launch",
+        "capability": "launch",
+        "inputs": {
+          "taskId": "WS-01"
+        },
+        "outputs": [
+          {
+            "role": "attempt",
+            "path": "tasks/WS-01/attempt-1"
+          }
+        ],
+        "constraints": {
+          "maxWallSeconds": 3600
+        }
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-launch",
+        "capability": "launch",
+        "status": "PASS",
+        "outputs": [],
+        "usage": {}
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-model-route-execution",
+        "capability": "model-route-execution",
+        "inputs": {
+          "taskId": "WS-01"
+        },
+        "outputs": [
+          {
+            "role": "usage-receipt",
+            "path": "tasks/WS-01/attempt-1/model-usage-receipt.json"
+          }
+        ],
+        "constraints": {
+          "usageReceiptRequired": true
+        },
+        "modelRoute": {
+          "schemaVersion": "agent-lifecycle-model-route-decision.v1",
+          "operationId": "route-WS-01",
+          "modelClass": "standard-code",
+          "decisionDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-model-route-execution",
+        "capability": "model-route-execution",
+        "status": "PASS",
+        "outputs": [
+          {
+            "role": "usage-receipt",
+            "path": "tasks/WS-01/attempt-1/model-usage-receipt.json"
+          }
+        ],
+        "usage": {
+          "toolCalls": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-wait",
+        "capability": "wait",
+        "inputs": {
+          "taskId": "WS-01"
+        },
+        "outputs": [],
+        "constraints": {
+          "maxWaitSeconds": 60
+        }
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-wait",
+        "capability": "wait",
+        "status": "PASS",
+        "outputs": [],
+        "usage": {}
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-cancel",
+        "capability": "cancel",
+        "inputs": {
+          "taskId": "WS-01"
+        },
+        "outputs": [],
+        "constraints": {}
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-cancel",
+        "capability": "cancel",
+        "status": "PASS",
+        "outputs": [],
+        "usage": {}
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-resume",
+        "capability": "resume",
+        "inputs": {
+          "taskId": "WS-01"
+        },
+        "outputs": [],
+        "constraints": {}
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-resume",
+        "capability": "resume",
+        "status": "PASS",
+        "outputs": [],
+        "usage": {}
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-tool-execution",
+        "capability": "tool-execution",
+        "inputs": {
+          "toolName": "unittest"
+        },
+        "outputs": [
+          {
+            "role": "tool-output",
+            "path": "out/tool-output.json"
+          }
+        ],
+        "constraints": {
+          "network": "denied"
+        }
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-tool-execution",
+        "capability": "tool-execution",
+        "status": "PASS",
+        "outputs": [
+          {
+            "role": "tool-output",
+            "path": "out/tool-output.json"
+          }
+        ],
+        "usage": {
+          "toolCalls": 1
+        }
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-result-collection",
+        "capability": "result-collection",
+        "inputs": {
+          "taskId": "WS-01"
+        },
+        "outputs": [
+          {
+            "role": "task-result",
+            "path": "tasks/WS-01/attempt-1/task-result.json"
+          }
+        ],
+        "constraints": {}
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-result-collection",
+        "capability": "result-collection",
+        "status": "PASS",
+        "outputs": [
+          {
+            "role": "task-result",
+            "path": "tasks/WS-01/attempt-1/task-result.json"
+          }
+        ],
+        "usage": {}
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-usage-attestation",
+        "capability": "usage-attestation",
+        "inputs": {
+          "taskId": "WS-01"
+        },
+        "outputs": [
+          {
+            "role": "usage-receipt",
+            "path": "tasks/WS-01/attempt-1/model-usage-receipt.json"
+          }
+        ],
+        "constraints": {
+          "usageReceiptRequired": true
+        }
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-usage-attestation",
+        "capability": "usage-attestation",
+        "status": "PASS",
+        "outputs": [
+          {
+            "role": "usage-receipt",
+            "path": "tasks/WS-01/attempt-1/model-usage-receipt.json"
+          }
+        ],
+        "usage": {
+          "billableTokens": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-task-audit",
+        "capability": "task-audit",
+        "inputs": {
+          "taskId": "WS-01"
+        },
+        "outputs": [
+          {
+            "role": "task-review",
+            "path": "tasks/WS-01/attempt-1/task-review.json"
+          }
+        ],
+        "constraints": {}
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-task-audit",
+        "capability": "task-audit",
+        "status": "PASS",
+        "outputs": [
+          {
+            "role": "task-review",
+            "path": "tasks/WS-01/attempt-1/task-review.json"
+          }
+        ],
+        "usage": {}
+      }
+    },
+    {
+      "request": {
+        "schemaVersion": "agent-host-operation-request.v1",
+        "operationId": "example-final-audit",
+        "capability": "final-audit",
+        "inputs": {},
+        "outputs": [
+          {
+            "role": "final-audit",
+            "path": "final/final-audit.json"
+          }
+        ],
+        "constraints": {}
+      },
+      "receipt": {
+        "schemaVersion": "agent-host-operation-receipt.v1",
+        "operationId": "example-final-audit",
+        "capability": "final-audit",
+        "status": "PASS",
+        "outputs": [
+          {
+            "role": "final-audit",
+            "path": "final/final-audit.json"
+          }
+        ],
+        "usage": {}
+      }
+    }
+  ]
+}

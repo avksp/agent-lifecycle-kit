@@ -12,9 +12,9 @@ projections for Codex, Claude Code, Cursor, Hermes, and OpenCode.
 
 ## Current status
 
-`v0.2.0` is a tagged source release. The repository now contains root-level
-publication manifests for Codex, Claude Code, and Cursor, plus Hermes and
-OpenCode projection metadata.
+`v0.3.0` is the current source release. It hardens proof semantics, adapter
+validation, packaging checks, release documentation honesty, and live-host
+promotion gates before any adapter is promoted.
 
 The adapters are still `EXPERIMENTAL`: they have offline contract coverage and
 fail-closed descriptors, but they are not `VERIFIED` until each host has live
@@ -77,18 +77,31 @@ usage-attested receipt validated against
 `conformance/core/live-calibration-profile.v1.json` and
 `conformance/core/budget-targets.v1.json`.
 
+Lifecycle conformance for a promoted host is validated separately:
+
+```bash
+python tools/release/validate_live_host_conformance.py \
+  --profile conformance/core/live-calibration-profile.v1.json \
+  --baseline conformance/core/adapter-baseline.v1.json \
+  --receipt-dir <live-host-receipts-dir> \
+  --promoted-hosts codex \
+  --evidence <live-host-conformance-evidence.json>
+```
+
 ```bash
 python tools/release/validate_live_calibration.py \
   --profile conformance/core/live-calibration-profile.v1.json \
   --budget-targets conformance/core/budget-targets.v1.json \
-  --receipt <signed-live-calibration-receipt.json> \
+  --receipt-dir <live-calibration-receipts-dir> \
+  --promoted-hosts codex \
   --evidence <live-calibration-evidence.json>
 ```
 
 The validator rejects synthetic replay receipts, missing usage attestations,
 unsupported hosts, missing required scenario/cohort coverage for that host,
 quality regressions, and p95 budget overruns. A universal `VERIFIED` claim
-requires one passing live receipt per host listed in the calibration profile.
+requires one passing live host conformance receipt and one passing live cost
+calibration receipt per host listed in the calibration profile.
 See
 [live cost calibration](docs/reference/live-cost-calibration.md).
 
@@ -163,6 +176,8 @@ agent-lifecycle context profile-check --profile profiles/small-context-profile.v
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 4k-strict
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
+agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+agent-lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
@@ -184,6 +199,8 @@ PYTHONPATH=src python -m agent_lifecycle model profile-check --profile profiles/
 PYTHONPATH=src python -m agent_lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
+PYTHONPATH=src python -m agent_lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+PYTHONPATH=src python -m agent_lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
@@ -192,10 +209,11 @@ Implemented core CLI groups are `version`, `schema`, `workflow status`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`specification check`, `plan check`, `task compile`, and `neutrality`.
-Adapter and conformance lifecycle groups remain reserved and fail
-closed with a stable `agent-lifecycle-error.v1` response until their runtime
-core modules land.
+`specification check`, `plan check`, `task compile`, `adapter validate`,
+`adapter scaffold`, and `neutrality`. Adapter scaffold is template-only and can
+only create `EXPERIMENTAL` projection skeletons. Runtime adapter execution and
+conformance lifecycle groups remain reserved and fail closed with a stable
+`agent-lifecycle-error.v1` response until their runtime core modules land.
 
 `context check` and `context render` also fail closed on overflow: if the
 rendered receipt status is `FAIL`, the CLI exits non-zero and returns
@@ -225,7 +243,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.2.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.3.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -290,7 +308,7 @@ from the tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.2.0/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.3.0/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -322,7 +340,7 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 
 The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
-claimed by `v0.2.0`.
+claimed by `v0.3.0`.
 
 ## Usage
 

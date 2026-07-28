@@ -80,3 +80,13 @@ def validate_output_paths(output_paths: list[Path]) -> list[str]:
         seen[key] = path_text
         normalized.append(path_text)
     return normalized
+
+
+def resolve_repository_relative_root(workspace_root: Path, value: str, *, label: str) -> Path:
+    path = Path(value)
+    if path.is_absolute():
+        raise NeutralityError(f"{label} must be repository-relative")
+    resolved = (workspace_root / path).resolve()
+    if not resolved.is_relative_to(workspace_root):
+        raise NeutralityError(f"{label} escapes workspace")
+    return resolved

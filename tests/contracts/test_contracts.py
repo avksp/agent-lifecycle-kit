@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from agent_lifecycle.contracts import (  # noqa: E402
     LifecycleError,
     canonical_digest,
+    is_under_repo_path,
     normalize_repo_path,
     read_json_object,
     write_json_create,
@@ -37,6 +38,11 @@ class ContractTests(unittest.TestCase):
         for bad in ["/tmp/x", "../x", "a/../x", "a\\b", "file://x"]:
             with self.assertRaises(LifecycleError):
                 normalize_repo_path(bad)
+
+    def test_repo_path_under_helper_matches_path_segment_boundaries(self) -> None:
+        self.assertTrue(is_under_repo_path("plans/run/state.json", "plans"))
+        self.assertTrue(is_under_repo_path("plans", "plans"))
+        self.assertFalse(is_under_repo_path("plans-old/state.json", "plans"))
 
     def test_host_operation_request_is_closed(self) -> None:
         request = HostOperationRequest(
@@ -89,7 +95,41 @@ class ContractTests(unittest.TestCase):
         self.assertIn("agent-host-operation-request.v1", ids)
         self.assertIn("agent-lifecycle-model-route-request.v1", ids)
         self.assertIn("agent-lifecycle-model-usage-receipt.v1", ids)
+        for schema_id in [
+            "agent-host-adapter-validation.v1",
+            "agent-release-candidate-inventory.v1",
+            "agent-release-assembly-evidence.v1",
+            "agent-release-verification-evidence.v1",
+            "agent-final-candidate-audit.v1",
+            "agent-support-matrix-contract-evidence.v1",
+            "agent-deferred-promotion-contract-evidence.v1",
+            "agent-neutrality-report.v1",
+            "agent-live-calibration-verification.v1",
+            "agent-lifecycle-live-calibration-receipt.v1",
+            "agent-lifecycle-live-host-conformance-receipt.v1",
+            "agent-live-host-conformance-verification.v1",
+            "agent-live-host-promotion-plan.v1",
+            "agent-live-host-promotion-plan-validation.v1",
+            "agent-digest-authority-evidence.v1",
+            "agent-docs-compat-evidence.v1",
+            "agent-negative-suite-coverage.v1",
+            "agent-task-packet-context-fit.v1",
+            "agent-packaging-smoke-evidence.v1",
+            "agent-adapter-scaffold-result.v1",
+            "agent-workflow-lineage-check.v1",
+        ]:
+            self.assertIn(schema_id, ids)
         self.assertEqual(get_schema("agent-lifecycle-error.v1")["additionalProperties"], False)
+        self.assertIn("status", get_schema("agent-final-candidate-audit.v1")["required"])
+        self.assertEqual(
+            get_schema("agent-release-verification-evidence.v1")["properties"]["productionPromotionClaimed"],
+            {"const": False},
+        )
+        self.assertIn("commands", get_schema("agent-packaging-smoke-evidence.v1")["required"])
+        self.assertEqual(get_schema("agent-adapter-scaffold-result.v1")["properties"]["maturity"], {"const": "EXPERIMENTAL"})
+        self.assertEqual(get_schema("agent-lifecycle-live-host-conformance-receipt.v1")["properties"]["syntheticReplayUsed"], {"const": False})
+        self.assertIn("validationCommands", get_schema("agent-live-host-promotion-plan.v1")["required"])
+        self.assertEqual(get_schema("agent-live-host-promotion-plan-validation.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         with self.assertRaises(LifecycleError):
             get_schema("missing.v1")
 

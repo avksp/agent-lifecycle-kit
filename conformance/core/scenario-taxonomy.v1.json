@@ -14,6 +14,7 @@
     "happy-path",
     "repeated-review",
     "stale-artifacts",
+    "failed-evidence",
     "forged-artifacts",
     "ownership-conflicts",
     "cyclic-dag",
@@ -21,9 +22,12 @@
     "parallel-execution",
     "rejection-remediation",
     "crash-recovery",
+    "recovery-replay",
     "budget-exhaustion",
+    "usage-receipt-mismatch",
     "path-attacks",
     "adapter-failure",
+    "synthetic-live-evidence",
     "final-verdict"
   ],
   "scenarioSchema": {

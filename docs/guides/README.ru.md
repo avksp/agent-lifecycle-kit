@@ -12,9 +12,9 @@ SDD-спецификации до замороженного плана, кон�
 
 ## Текущий статус
 
-`v0.2.0` — tagged source release. В репозитории есть корневые publication
-manifests для Codex, Claude Code и Cursor, а также projection metadata для
-Hermes и OpenCode.
+`v0.3.0` — текущий source release. Он усиливает proof semantics, adapter
+validation, packaging checks, честность release-документации и live-host
+promotion gates до любого promotion адаптеров.
 
 Адаптеры пока имеют статус `EXPERIMENTAL`: есть offline contract coverage и
 fail-closed descriptors, но статуса `VERIFIED` нет до появления live install и
@@ -73,8 +73,19 @@ verbatim user turns, а также запрещает тихое обрезан�
 ## Live cost calibration
 
 Synthetic replay baseline полезен для детерминированных regression checks, но
-не является production-promotion evidence. Для promotion нужен live receipt с
-attested usage, проверенный против
+не является production-promotion evidence. Для promotion нужны отдельные live
+receipts для lifecycle conformance и cost calibration.
+
+```bash
+python tools/release/validate_live_host_conformance.py \
+  --profile conformance/core/live-calibration-profile.v1.json \
+  --baseline conformance/core/adapter-baseline.v1.json \
+  --receipt-dir <live-host-receipts-dir> \
+  --promoted-hosts codex \
+  --evidence <live-host-conformance-evidence.json>
+```
+
+Live cost calibration receipt с attested usage проверяется против
 `conformance/core/live-calibration-profile.v1.json` и
 `conformance/core/budget-targets.v1.json`.
 
@@ -82,14 +93,16 @@ attested usage, проверенный против
 python tools/release/validate_live_calibration.py \
   --profile conformance/core/live-calibration-profile.v1.json \
   --budget-targets conformance/core/budget-targets.v1.json \
-  --receipt <signed-live-calibration-receipt.json> \
+  --receipt-dir <live-calibration-receipts-dir> \
+  --promoted-hosts codex \
   --evidence <live-calibration-evidence.json>
 ```
 
 Validator отклоняет synthetic replay receipts, отсутствие usage attestation,
 unsupported hosts, неполное покрытие required scenario/cohort для этого host,
 quality regressions и p95 budget overruns. Для universal `VERIFIED` claim нужен
-отдельный passing live receipt по каждому host из calibration profile.
+отдельный passing live host conformance receipt и live cost calibration receipt
+по каждому host из calibration profile.
 Подробнее:
 [live cost calibration](../reference/live-cost-calibration.md).
 
@@ -163,6 +176,8 @@ agent-lifecycle context profile-check --profile profiles/small-context-profile.v
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 4k-strict
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
+agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+agent-lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
@@ -184,6 +199,8 @@ PYTHONPATH=src python -m agent_lifecycle model profile-check --profile profiles/
 PYTHONPATH=src python -m agent_lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
+PYTHONPATH=src python -m agent_lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+PYTHONPATH=src python -m agent_lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
@@ -192,10 +209,12 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`specification check`, `plan check`, `task compile` и `neutrality`.
-Lifecycle groups `adapter` и `conformance` остаются
-зарезервированными и fail-closed возвращают стабильный
-`agent-lifecycle-error.v1`, пока их runtime core modules не реализованы.
+`specification check`, `plan check`, `task compile`, `adapter validate`,
+`adapter scaffold` и `neutrality`. Adapter scaffold — только template-only и
+может создавать только `EXPERIMENTAL` projection skeletons. Runtime adapter
+execution и conformance lifecycle groups остаются зарезервированными и
+fail-closed возвращают стабильный `agent-lifecycle-error.v1`, пока их runtime
+core modules не реализованы.
 
 `context check` и `context render` также fail-closed при overflow: если
 rendered receipt получает `status: FAIL`, CLI завершается с non-zero exit и
@@ -225,7 +244,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Установка из tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.2.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.3.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -291,7 +310,7 @@ skills из tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.2.0/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.3.0/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -322,7 +341,7 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 ```
 
 В корне репозитория также есть `opencode.json` для проверки из source
-checkout. Будущий npm package может ссылаться на тот же adapter, но `v0.2.0`
+checkout. Будущий npm package может ссылаться на тот же adapter, но `v0.3.0`
 не заявляет npm publication.
 
 ## Использование

@@ -5,9 +5,9 @@
   "liveModelInvocations": 0,
   "coreProfiles": [
     {
-      "bytes": 2145,
+      "bytes": 2235,
       "path": "conformance/core/adapter-baseline.v1.json",
-      "sha256": "f0e8ea49d1065b4e07ce1f664da38bbc2e4d6edf615f577c0a2db9e8c9701461"
+      "sha256": "18612fb78cb44aeba6cfce28a7c2f33d8c6121e5118540f3fb50a0e8df9e14ec"
     },
     {
       "bytes": 1412,
@@ -20,9 +20,9 @@
       "sha256": "6191e41c0bb8595e456f6da62be1ca167c94b25742a310f743d7910368bba886"
     },
     {
-      "bytes": 783,
+      "bytes": 890,
       "path": "conformance/core/scenario-taxonomy.v1.json",
-      "sha256": "7f1d34485f02ca9e263ef5fbc4f4c37d6e2722ef1224779395576147258f695d"
+      "sha256": "a09c1cc7de3e860da6ba51781100a056c71b29ba1b2915914eca07f3bec7e4e4"
     }
   ],
   "contextProfiles": [
@@ -46,9 +46,9 @@
   ],
   "fixtures": [
     {
-      "bytes": 1281,
+      "bytes": 1763,
       "path": "fixtures/synthetic/negative-matrix-01.json",
-      "sha256": "8237622f973b3d6d40db1df6d342d178b66097b4c98ff9a47401191b4cac2e38"
+      "sha256": "3b678c6f9566c063651b8b522a33c96ca35b35a1f2dd2054948d2762e72e9188"
     },
     {
       "bytes": 876,

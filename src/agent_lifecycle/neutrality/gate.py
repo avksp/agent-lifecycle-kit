@@ -19,6 +19,7 @@ from agent_lifecycle.neutrality.authority import RECEIPT_DOMAIN, load_authority_
 from agent_lifecycle.neutrality.canonical import canonical_bytes, load_json, sha256_hex, write_json_create
 from agent_lifecycle.neutrality.ed25519 import verify as verify_signature
 from agent_lifecycle.neutrality.errors import NeutralityError, write_neutrality_error
+from agent_lifecycle.neutrality.paths import resolve_repository_relative_root
 from agent_lifecycle.neutrality.policy import load_policy
 from agent_lifecycle.neutrality.scanner import scan_repository
 
@@ -56,6 +57,7 @@ def _parser() -> argparse.ArgumentParser:
         gate.add_argument("--plan-digest", required=True)
         gate.add_argument("--source-revision", required=True)
         gate.add_argument("--workspace-root", required=True)
+        gate.add_argument("--artifact-root", default="plans/standalone-v1")
         gate.add_argument("--operation-output", required=True)
         gate.add_argument("--receipt", required=True)
     return parser
@@ -66,7 +68,7 @@ def _produce(args: argparse.Namespace) -> int:
     receipt_path = _receipt_path(workspace_root, args)
     if receipt_path.exists():
         raise NeutralityError("gate receipt path is already occupied")
-    authority = _authority(workspace_root, signing=True)
+    authority = _authority(workspace_root, args, signing=True)
     report = _scan(workspace_root, args, authority)
     _require_zero(report)
     generated_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -126,7 +128,7 @@ def _verify(args: argparse.Namespace) -> int:
     generated_at = receipt.get("generatedAt")
     if not isinstance(generated_at, str) or not generated_at:
         raise NeutralityError("gate receipt generatedAt is missing")
-    authority = _authority(workspace_root, signing=False)
+    authority = _authority(workspace_root, args, signing=False)
     report = _scan(workspace_root, args, authority)
     _require_zero(report)
     claims = _claims(args, report, authority.authority_digest, generated_at)
@@ -153,7 +155,7 @@ def _verify(args: argparse.Namespace) -> int:
     return 0
 
 
-def _authority(workspace_root: Path, *, signing: bool):
+def _authority(workspace_root: Path, args: argparse.Namespace, *, signing: bool):
     return load_authority_bundle(
         deny_authority_path=Path(_env("AGENT_LIFECYCLE_NEUTRALITY_DENY_AUTHORITY")),
         trust_root_path=Path(_env("AGENT_LIFECYCLE_NEUTRALITY_TRUST_ROOT")),
@@ -162,7 +164,7 @@ def _authority(workspace_root: Path, *, signing: bool):
         ),
         expected_signer_fingerprint=_env("AGENT_LIFECYCLE_NEUTRALITY_SIGNER_FINGERPRINT"),
         workspace_root=workspace_root,
-        artifact_root=workspace_root / "plans" / "standalone-v1",
+        artifact_root=_artifact_root(workspace_root, args.artifact_root),
     )
 
 
@@ -244,6 +246,10 @@ def _receipt_path(workspace_root: Path, args: argparse.Namespace) -> Path:
     if not resolved.is_relative_to(workspace_root):
         raise NeutralityError("gate receipt escapes workspace")
     return resolved
+
+
+def _artifact_root(workspace_root: Path, value: str) -> Path:
+    return resolve_repository_relative_root(workspace_root, value, label="artifact root")
 
 
 def _digest_fingerprint(value: str) -> str:

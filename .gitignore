@@ -15,6 +15,7 @@ htmlcov/
 plans/standalone-v1/evidence/
 plans/standalone-v1/workflow/validation/
 plans/standalone-v1/workflow/gates/
+release/candidate/evidence/
 
 # Transient lifecycle controller locks are process-local.
 plans/**/.agent-plan/**/*.lock

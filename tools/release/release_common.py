@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
+import sys
 from typing import Any, Iterable
+
+ROOT = Path(__file__).resolve().parents[2]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from agent_lifecycle.contracts import canonical_digest, sha256_hex  # noqa: E402
 
 
 EXCLUDED_PARTS = {
@@ -28,12 +35,15 @@ PAYLOAD_ROOTS = (
     ".cursor-plugin",
     "adapters",
     "conformance",
+    "evals",
+    "fixtures",
     "docs",
     "policy",
     "profiles",
     "skills",
     "src",
     "tests",
+    "tools/live_hosts",
     "tools/release",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
@@ -50,11 +60,13 @@ PAYLOAD_ROOTS = (
 
 
 def canonical_bytes(value: Any) -> bytes:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    from agent_lifecycle.contracts import canonical_bytes as core_canonical_bytes
+
+    return core_canonical_bytes(value)
 
 
 def digest_value(value: Any) -> str:
-    return hashlib.sha256(canonical_bytes(value)).hexdigest()
+    return canonical_digest(value)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -73,7 +85,7 @@ def file_identity(path: Path) -> dict[str, Any]:
     data = path.read_bytes()
     return {
         "path": path.as_posix(),
-        "sha256": hashlib.sha256(data).hexdigest(),
+        "sha256": sha256_hex(data),
         "bytes": len(data),
     }
 
@@ -103,7 +115,7 @@ def _iter_dir(path: Path, root: Path) -> list[Path]:
             continue
         rel = child.relative_to(root)
         rel_text = rel.as_posix()
-        if any(part in EXCLUDED_PARTS for part in rel.parts):
+        if any(_is_excluded_part(part) for part in rel.parts):
             continue
         if any(rel_text.startswith(prefix) for prefix in EXCLUDED_PREFIXES):
             continue
@@ -111,3 +123,7 @@ def _iter_dir(path: Path, root: Path) -> list[Path]:
             continue
         output.append(rel)
     return output
+
+
+def _is_excluded_part(part: str) -> bool:
+    return part in EXCLUDED_PARTS or part.endswith(".egg-info")
