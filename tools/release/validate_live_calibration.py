@@ -16,6 +16,8 @@ def main() -> int:
     parser.add_argument("--profile", required=True)
     parser.add_argument("--budget-targets", required=True)
     parser.add_argument("--receipt")
+    parser.add_argument("--receipt-dir")
+    parser.add_argument("--promoted-hosts")
     parser.add_argument("--evidence", required=True)
     parser.add_argument("--operation-request")
     args = parser.parse_args()
@@ -23,14 +25,46 @@ def main() -> int:
     profile_path = Path(args.profile)
     targets_path = Path(args.budget_targets)
     receipt_path = Path(args.receipt) if args.receipt else None
+    receipt_dir = Path(args.receipt_dir) if args.receipt_dir else None
+    promoted_hosts = _split_hosts(args.promoted_hosts)
     profile = load_json(profile_path)
     targets = load_json(targets_path)
     blockers: list[dict[str, Any]] = []
     aggregates: list[dict[str, Any]] = []
+    aggregates_by_host: list[dict[str, Any]] = []
+    receipt_identities: list[dict[str, Any]] = []
+    hosts: list[str] = []
     host: str | None = None
 
     _validate_profile(profile, targets, blockers)
-    if receipt_path is None or not receipt_path.is_file():
+    if promoted_hosts:
+        if receipt_path is not None:
+            blockers.append({"code": "live-calibration-mode-conflict", "message": "--receipt cannot be combined with --promoted-hosts"})
+        if receipt_dir is None:
+            blockers.append({"code": "missing-live-calibration-receipt-dir", "message": "--receipt-dir is required with --promoted-hosts"})
+        elif not receipt_dir.is_dir():
+            blockers.append({"code": "missing-live-calibration-receipt-dir", "message": "live calibration receipt directory does not exist"})
+        else:
+            for promoted_host in promoted_hosts:
+                current = receipt_dir / f"{promoted_host}.json"
+                if not current.is_file():
+                    blockers.append({"code": "missing-live-calibration-receipt", "message": f"live calibration receipt is required for {promoted_host}"})
+                    continue
+                receipt = load_json(current)
+                receipt_identities.append(file_identity(current))
+                current_host = _validate_receipt(profile, targets, receipt, blockers)
+                if current_host != promoted_host:
+                    blockers.append({"code": "live-calibration-host-mismatch", "message": f"receipt for {promoted_host} reports {current_host}"})
+                if current_host is not None:
+                    hosts.append(current_host)
+                aggregates_by_host.append(
+                    {
+                        "host": current_host,
+                        "receipt": file_identity(current),
+                        "aggregates": _aggregate_runs(profile, targets, receipt, blockers),
+                    }
+                )
+    elif receipt_path is None or not receipt_path.is_file():
         blockers.append({"code": "missing-live-calibration-receipt", "message": "live calibration receipt is required"})
         receipt_identity = None
     else:
@@ -38,6 +72,8 @@ def main() -> int:
         receipt_identity = file_identity(receipt_path)
         host = _validate_receipt(profile, targets, receipt, blockers)
         aggregates = _aggregate_runs(profile, targets, receipt, blockers)
+        if host is not None:
+            hosts.append(host)
 
     evidence = {
         "schemaVersion": "agent-live-calibration-verification.v1",
@@ -46,9 +82,13 @@ def main() -> int:
         "profileDigest": digest_value(profile),
         "budgetTargets": file_identity(targets_path),
         "budgetTargetsDigest": digest_value(targets),
-        "receipt": receipt_identity,
+        "receipt": None if promoted_hosts else receipt_identity,
+        "receipts": receipt_identities,
         "host": host,
+        "hosts": hosts,
         "aggregates": aggregates,
+        "aggregatesByHost": aggregates_by_host,
+        "promotedHosts": promoted_hosts,
         "blockers": blockers,
         "productionPromotionClaimed": False,
         "operationRequest": args.operation_request,
@@ -94,7 +134,7 @@ def _validate_receipt(
         blockers.append({"code": "live-calibration-budget-digest-mismatch", "message": "receipt budgetTargetsDigest mismatch"})
     if receipt.get("syntheticReplayUsed") is not False:
         blockers.append({"code": "synthetic-live-calibration-receipt", "message": "receipt must not use synthetic replay"})
-    if int(receipt.get("liveModelInvocations", 0)) < 1:
+    if not _positive_int(receipt.get("liveModelInvocations")):
         blockers.append({"code": "missing-live-model-invocations", "message": "receipt must include live model invocations"})
     if receipt.get("qualityRegressionCount") not in (0, None):
         blockers.append({"code": "live-calibration-quality-regression", "message": "quality regressions are not allowed"})
@@ -187,6 +227,16 @@ def _strings(value: Any) -> bool:
 
 def _nonnegative_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0
+
+
+def _positive_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+def _split_hosts(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 if __name__ == "__main__":

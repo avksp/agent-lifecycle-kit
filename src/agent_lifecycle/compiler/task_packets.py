@@ -49,7 +49,7 @@ def _default_output_dir(root: Path, manifest: dict[str, Any]) -> Path:
     artifact_root = manifest.get("package", {}).get("artifactRoot")
     if not isinstance(artifact_root, str) or not artifact_root:
         raise LifecycleError("invalid-plan-manifest", "package.artifactRoot is required")
-    return root / artifact_root / "workflow/task-packets"
+    return Path(artifact_root) / "workflow/task-packets"
 
 
 def _workstreams(manifest: dict[str, Any]) -> list[dict[str, Any]]:
@@ -163,10 +163,20 @@ def _acceptance_projection(
     workstream: dict[str, Any],
 ) -> list[dict[str, Any]]:
     wanted = set(workstream.get("acceptanceIds", []))
-    checks = manifest.get("acceptanceCriteria", manifest.get("acceptance", []))
+    checks = _acceptance_criteria(manifest)
     if not isinstance(checks, list):
         return []
     return [item for item in checks if isinstance(item, dict) and item.get("id") in wanted]
+
+
+def _acceptance_criteria(manifest: dict[str, Any]) -> Any:
+    legacy_checks = manifest.get("acceptanceCriteria")
+    if legacy_checks is not None:
+        return legacy_checks
+    acceptance = manifest.get("acceptance")
+    if isinstance(acceptance, dict):
+        return acceptance.get("criteria")
+    return acceptance
 
 
 def _packet_record(output_dir: Path, packet: dict[str, Any]) -> dict[str, Any]:

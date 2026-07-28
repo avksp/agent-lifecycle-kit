@@ -23,3 +23,9 @@ def normalize_repo_path(path: str, *, label: str = "path") -> str:
     if any(part.endswith(".") or part.endswith(" ") for part in parts):
         raise LifecycleError("invalid-repo-path", f"{label}: path has ambiguous suffix")
     return pure.as_posix()
+
+
+def is_under_repo_path(path: str, root: str) -> bool:
+    """Return whether a normalized repository path is equal to or below root."""
+
+    return path == root or path.startswith(root.rstrip("/") + "/")

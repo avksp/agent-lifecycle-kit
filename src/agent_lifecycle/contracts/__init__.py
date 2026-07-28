@@ -10,12 +10,14 @@ from agent_lifecycle.contracts.canonical import (
 )
 from agent_lifecycle.contracts.errors import LifecycleError
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.paths import is_under_repo_path
 
 __all__ = [
     "LifecycleError",
     "canonical_bytes",
     "canonical_digest",
     "load_json_object",
+    "is_under_repo_path",
     "normalize_repo_path",
     "read_json_object",
     "sha256_hex",

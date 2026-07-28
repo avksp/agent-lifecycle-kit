@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import read_json_object
-from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
 
 
 def build_ownership_report(
@@ -79,21 +79,21 @@ def _classify_path(path: str, classifiers: dict[str, Any]) -> dict[str, Any]:
     if isinstance(manifest_path, str) and normalized == manifest_path:
         return _entry(normalized, "plan-authority", ["controller"])
     plan_root = classifiers["planArtifactRoot"]
-    if isinstance(plan_root, str) and _under(normalized, plan_root):
+    if isinstance(plan_root, str) and is_under_repo_path(normalized, plan_root):
         return _entry(normalized, "plan-authority", ["controller"])
-    lead = [root for root in classifiers["leadOwned"] if _under(normalized, root)]
+    lead = [root for root in classifiers["leadOwned"] if is_under_repo_path(normalized, root)]
     if lead:
         return _entry(normalized, "lead-owned", ["controller"], matched=lead)
-    forbidden = [root for root in classifiers["forbiddenWrites"] if _under(normalized, root)]
+    forbidden = [root for root in classifiers["forbiddenWrites"] if is_under_repo_path(normalized, root)]
     if forbidden:
         return _entry(normalized, "forbidden", [], matched=forbidden)
-    read_only = [root for root in classifiers["readOnly"] if _under(normalized, root)]
+    read_only = [root for root in classifiers["readOnly"] if is_under_repo_path(normalized, root)]
     if read_only:
         return _entry(normalized, "read-only", [], matched=read_only)
     owners = [
         owner
         for owner, roots in classifiers["workstreams"].items()
-        if any(_under(normalized, root) for root in roots)
+        if any(is_under_repo_path(normalized, root) for root in roots)
     ]
     if owners:
         return _entry(normalized, "workstream-owned", owners)
@@ -111,11 +111,6 @@ def _entry(
     if matched:
         value["matched"] = matched
     return value
-
-
-def _under(path: str, root: str) -> bool:
-    return path == root or path.startswith(root.rstrip("/") + "/")
-
 
 def _repo_relative(path: Path) -> str | None:
     try:

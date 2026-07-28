@@ -41,6 +41,133 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["schemaVersion"], "agent-lifecycle-error.v1")
         self.assertEqual(payload["code"], "command-not-implemented")
 
+    def test_adapter_scaffold_dry_run_does_not_write(self) -> None:
+        # NEG-R03-14 Unsafe Adapter Scaffold
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            code, payload = _run_cli(["adapter", "scaffold", "--host", "synthetic-host", "--target", str(root), "--dry-run"])
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-adapter-scaffold-result.v1")
+            self.assertEqual(payload["status"], "DRY_RUN")
+            self.assertFalse((root / "adapters/synthetic-host/adapter.descriptor.json").exists())
+
+    def test_adapter_scaffold_writes_experimental_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            code, payload = _run_cli(["adapter", "scaffold", "--host", "synthetic-host", "--target", str(root)])
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["status"], "PASS")
+            descriptor = root / "adapters/synthetic-host/adapter.descriptor.json"
+            baseline = root / "conformance/adapters/synthetic-host/offline-baseline.json"
+            docs = root / "docs/adapters/synthetic-host.md"
+            self.assertTrue(descriptor.is_file())
+            self.assertTrue(baseline.is_file())
+            self.assertTrue(docs.is_file())
+            descriptor_payload = json.loads(descriptor.read_text(encoding="utf-8"))
+            self.assertEqual(descriptor_payload["maturity"], "EXPERIMENTAL")
+            self.assertIsNone(descriptor_payload["liveTestedHostRange"])
+            self.assertFalse(descriptor_payload["modelRouting"]["providerModelNamesInCore"])
+
+            code, validation = _run_cli(
+                [
+                    "adapter",
+                    "validate",
+                    "--descriptor",
+                    str(descriptor),
+                    "--baseline",
+                    str(ROOT / "conformance/core/adapter-baseline.v1.json"),
+                ]
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(validation["status"], "PASS")
+
+    def test_adapter_scaffold_rejects_existing_files(self) -> None:
+        # NEG-R03-14 Unsafe Adapter Scaffold
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.assertEqual(_run_cli(["adapter", "scaffold", "--host", "synthetic-host", "--target", str(root)])[0], 0)
+
+            code, payload = _run_cli(["adapter", "scaffold", "--host", "synthetic-host", "--target", str(root)])
+
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "adapter-scaffold-target-exists")
+
+    def test_adapter_scaffold_rejects_invalid_host_and_verified_maturity(self) -> None:
+        # NEG-R03-14 Unsafe Adapter Scaffold
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            code, payload = _run_cli(["adapter", "scaffold", "--host", "Bad.Host", "--target", str(root)])
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "invalid-adapter-host")
+
+            code, payload = _run_cli(
+                [
+                    "adapter",
+                    "scaffold",
+                    "--host",
+                    "synthetic-host",
+                    "--target",
+                    str(root),
+                    "--maturity",
+                    "VERIFIED",
+                ]
+            )
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "adapter-scaffold-verified-forbidden")
+
+    def test_adapter_validate_cli_checks_descriptor_and_host_protocol(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            request = root / "request.json"
+            receipt = root / "receipt.json"
+            request.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-host-operation-request.v1",
+                        "operationId": "adapter-op-1",
+                        "capability": "install",
+                        "inputs": {},
+                        "outputs": [],
+                        "constraints": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            receipt.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-host-operation-receipt.v1",
+                        "operationId": "adapter-op-1",
+                        "capability": "install",
+                        "status": "PASS",
+                        "outputs": [],
+                        "usage": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            code, payload = _run_cli(
+                [
+                    "adapter",
+                    "validate",
+                    "--descriptor",
+                    str(ROOT / "adapters/codex/adapter.descriptor.json"),
+                    "--baseline",
+                    str(ROOT / "conformance/core/adapter-baseline.v1.json"),
+                    "--request",
+                    str(request),
+                    "--receipt",
+                    str(receipt),
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-host-adapter-validation.v1")
+            self.assertEqual(payload["status"], "PASS")
+
     def test_workflow_status_outputs_next_action(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_path = _write_state(Path(tmp))

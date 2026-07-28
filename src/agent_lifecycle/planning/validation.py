@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
 
 
 def validate_plan_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
@@ -57,9 +57,5 @@ def _overlaps(owner: str, path: str, seen: list[tuple[str, str]]) -> list[dict[s
     return [
         {"leftOwner": prior_owner, "left": prior_path, "rightOwner": owner, "right": path}
         for prior_owner, prior_path in seen
-        if prior_owner != owner and (_under(path, prior_path) or _under(prior_path, path))
+        if prior_owner != owner and (is_under_repo_path(path, prior_path) or is_under_repo_path(prior_path, path))
     ]
-
-
-def _under(path: str, root: str) -> bool:
-    return path == root or path.startswith(root.rstrip("/") + "/")

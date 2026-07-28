@@ -8,7 +8,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 PLUGIN_NAME = "agent-lifecycle-kit"
 SKILL_NAMES = {
     "agent-first-planning",
@@ -106,6 +106,31 @@ class PublicationManifestTests(unittest.TestCase):
         self.assertEqual(manifest["plugin"], ["./adapters/opencode/plugins/agent-lifecycle-kit.js"])
         for raw_path in manifest["plugin"]:
             self.assertTrue((ROOT / raw_path).is_file())
+
+    def test_adapter_local_projection_semantics_match_root_authority(self) -> None:
+        # NEG-R03-11 Projection Drift
+        pairs = (
+            (ROOT / ".codex-plugin/plugin.json", ROOT / "adapters/codex/.codex-plugin/plugin.json"),
+            (ROOT / ".claude-plugin/plugin.json", ROOT / "adapters/claude/.claude-plugin/plugin.json"),
+            (ROOT / ".cursor-plugin/plugin.json", ROOT / "adapters/cursor/.cursor-plugin/plugin.json"),
+        )
+        for root_path, adapter_path in pairs:
+            with self.subTest(path=adapter_path.relative_to(ROOT).as_posix()):
+                root_manifest = load_json(root_path)
+                adapter_manifest = load_json(adapter_path)
+                self.assertEqual(adapter_manifest["name"], root_manifest["name"])
+                self.assertEqual(adapter_manifest["version"], root_manifest["version"])
+                self.assertEqual(adapter_manifest["license"], root_manifest["license"])
+                self.assertEqual(adapter_manifest["skills"], root_manifest["skills"])
+                self.assertEqual(adapter_manifest["interface"]["displayName"], root_manifest["interface"]["displayName"])
+                self.assertEqual(adapter_manifest["interface"]["developerName"], root_manifest["interface"]["developerName"])
+                self.assertEqual(adapter_manifest["interface"]["category"], root_manifest["interface"]["category"])
+                for optional_field in ("capabilities", "defaultPrompt", "brandColor"):
+                    if optional_field in root_manifest["interface"] or optional_field in adapter_manifest["interface"]:
+                        self.assertEqual(
+                            adapter_manifest["interface"].get(optional_field),
+                            root_manifest["interface"].get(optional_field),
+                        )
 
     def test_release_payload_roots_include_publication_artifacts(self) -> None:
         release_common = runpy.run_path(str(ROOT / "tools" / "release" / "release_common.py"))

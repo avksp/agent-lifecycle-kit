@@ -17,6 +17,9 @@ local model host.
   ceilings by SDD tier.
 - `tools/release/validate_live_calibration.py` — fail-closed verifier that
   writes `agent-live-calibration-verification.v1` evidence.
+- `tools/release/validate_live_host_conformance.py` — fail-closed verifier for
+  per-host lifecycle operation receipts. It validates each embedded host
+  operation envelope through `HostOperationRequest` and `HostOperationReceipt`.
 
 The required scenario set includes both the 8k compact-context path and a
 dedicated `S1-SMALL-CONTEXT-4K-STRICT-01` path for sub-8k local or constrained
@@ -29,6 +32,24 @@ python tools/release/validate_live_calibration.py \
   --profile conformance/core/live-calibration-profile.v1.json \
   --budget-targets conformance/core/budget-targets.v1.json \
   --receipt <signed-live-calibration-receipt.json> \
+  --evidence <live-calibration-evidence.json>
+```
+
+For a `VERIFIED` promotion gate, validate every promoted host explicitly:
+
+```bash
+python tools/release/validate_live_host_conformance.py \
+  --profile conformance/core/live-calibration-profile.v1.json \
+  --baseline conformance/core/adapter-baseline.v1.json \
+  --receipt-dir <live-host-receipts-dir> \
+  --promoted-hosts codex,claude-code \
+  --evidence <live-host-conformance-evidence.json>
+
+python tools/release/validate_live_calibration.py \
+  --profile conformance/core/live-calibration-profile.v1.json \
+  --budget-targets conformance/core/budget-targets.v1.json \
+  --receipt-dir <live-calibration-receipts-dir> \
+  --promoted-hosts codex,claude-code \
   --evidence <live-calibration-evidence.json>
 ```
 
@@ -49,8 +70,14 @@ receipt covers one host and must bind the profile digest, budget-target digest,
 host, source revision, live invocation count and per-run usage metrics.
 
 A universal `VERIFIED` claim requires one passing receipt per host listed in
-`requiredHosts`. The verifier intentionally validates one receipt at a time so
-host-specific CI can publish independent evidence.
+`requiredHosts`. Single-receipt mode supports host-specific CI. Batch
+promotion-gate mode requires one receipt file named `<host>.json` for each host
+listed in `--promoted-hosts`.
+
+The live host conformance receipt schema is
+`agent-lifecycle-live-host-conformance-receipt.v1`. It must include one passing
+operation record for every operation in `conformance/core/adapter-baseline.v1.json`,
+must set `syntheticReplayUsed` to false, and must attest usage.
 
 The verifier does not call models and does not infer billable usage from logs.
 Host adapters or external CI must produce a signed receipt with usage already

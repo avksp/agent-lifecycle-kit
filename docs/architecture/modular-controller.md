@@ -31,14 +31,15 @@ This is the current source map for the standalone package:
 | Compact context profiles and receipts | `context/*` | Implemented |
 | Durable workflow state, operation kernel, event log, task/run transitions, gate checks, finalization | `workflow/*` | Implemented |
 | Neutrality authority, scanning, signed receipts, controller-gate helper | `neutrality/*` | Implemented |
-| Host capability descriptors | `host_protocol/contracts.py`, adapter metadata files | Implemented as offline descriptors |
+| Host capability descriptors | `host_protocol/contracts.py`, `host_protocol/validation.py`, adapter metadata files | Implemented as offline descriptors and validation contracts |
 | Root CLI dispatch | `cli/main.py` | Implemented thin dispatcher; no lifecycle semantics should move here |
 | Release, terminal, live adapter promotion | Metadata/docs only | Reserved until verified host evidence exists |
 
 Current size check: all production Python files are below the hard limits in
-this document. The largest files are `cli/main.py` at roughly 405 lines and
+this document. The largest files are `cli/main.py` at roughly 461 lines and
 `workflow/plan_adoption.py` below 400 lines; both are within the current hard
-limits but remain split candidates if more behavior is added.
+limits. `cli/main.py` remains the highest-priority split candidate before any
+additional command group expansion.
 
 ## Target Shape
 

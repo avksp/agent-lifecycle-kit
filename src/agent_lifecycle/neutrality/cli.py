@@ -15,6 +15,7 @@ if __package__ in (None, ""):
 from agent_lifecycle.neutrality.authority import load_authority_bundle
 from agent_lifecycle.neutrality.canonical import canonical_bytes, load_json, sha256_hex, write_json_create
 from agent_lifecycle.neutrality.errors import NeutralityError, write_neutrality_error
+from agent_lifecycle.neutrality.paths import resolve_repository_relative_root
 from agent_lifecycle.neutrality.policy import load_policy
 from agent_lifecycle.neutrality.receipt import build_claims, build_receipt, verify_existing_receipt
 from agent_lifecycle.neutrality.scanner import scan_repository
@@ -45,6 +46,7 @@ def _build_parser() -> argparse.ArgumentParser:
     bootstrap.add_argument("--profile", required=True)
     bootstrap.add_argument("--scope", required=True, choices=["full-repository", "current-tree-complete"])
     bootstrap.add_argument("--policy", required=True)
+    bootstrap.add_argument("--artifact-root", default="plans/standalone-v1")
     bootstrap.add_argument("--validation-operation-id", required=False)
     bootstrap.add_argument("--command-id", required=False)
     bootstrap.add_argument("--primary-output", required=True)
@@ -85,7 +87,7 @@ def _add_common_lifecycle_args(parser: argparse.ArgumentParser) -> None:
 
 def _bootstrap(args: argparse.Namespace) -> int:
     workspace_root = Path.cwd().resolve()
-    artifact_root = workspace_root / "plans" / "standalone-v1"
+    artifact_root = _artifact_root(workspace_root, args.artifact_root)
     primary_path = _relative_output_path(workspace_root, args.primary_output)
     receipt_path = _relative_output_path(workspace_root, args.receipt)
     operation = _operation_bindings(args)
@@ -275,6 +277,10 @@ def _relative_output_path(workspace_root: Path, value: str) -> Path:
     if not resolved.is_relative_to(workspace_root):
         raise NeutralityError("operation output escapes workspace")
     return resolved
+
+
+def _artifact_root(workspace_root: Path, value: str) -> Path:
+    return resolve_repository_relative_root(workspace_root, value, label="artifact root")
 
 
 def _env_path(name: str) -> Path:

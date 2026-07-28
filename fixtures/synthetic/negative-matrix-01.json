@@ -11,6 +11,13 @@
       "expectedVerdict": "BLOCKED"
     },
     {
+      "caseId": "failed-release-evidence",
+      "tags": [
+        "failed-evidence"
+      ],
+      "expectedVerdict": "BLOCKED"
+    },
+    {
       "caseId": "forged-task-review",
       "tags": [
         "forged-artifacts"
@@ -46,6 +53,20 @@
       "expectedVerdict": "BLOCKED"
     },
     {
+      "caseId": "model-usage-receipt-mismatch",
+      "tags": [
+        "usage-receipt-mismatch"
+      ],
+      "expectedVerdict": "BLOCKED"
+    },
+    {
+      "caseId": "synthetic-live-receipt-promotion",
+      "tags": [
+        "synthetic-live-evidence"
+      ],
+      "expectedVerdict": "BLOCKED"
+    },
+    {
       "caseId": "budget-hard-ceiling",
       "tags": [
         "budget-exhaustion"
@@ -55,7 +76,8 @@
     {
       "caseId": "partial-publication-crash",
       "tags": [
-        "crash-recovery"
+        "crash-recovery",
+        "recovery-replay"
       ],
       "expectedVerdict": "RESUME_OR_BLOCK"
     }

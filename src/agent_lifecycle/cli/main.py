@@ -15,6 +15,7 @@ from agent_lifecycle.contracts import LifecycleError, canonical_bytes, read_json
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.context import check_context, load_context_profile, render_context
 from agent_lifecycle.freeze import verify_plan_lock
+from agent_lifecycle.cli.adapter import add_adapter_parser, dispatch_adapter
 from agent_lifecycle.model_routing import (
     resolve_model_route,
     validate_host_model_profile,
@@ -194,8 +195,8 @@ def _parser() -> argparse.ArgumentParser:
     task_compile.add_argument("--out-dir")
     task_compile.add_argument("--write", action="store_true")
 
-    for name in ("adapter", "conformance"):
-        subparsers.add_parser(name, help=f"{name} commands")
+    add_adapter_parser(subparsers)
+    subparsers.add_parser("conformance", help="conformance commands")
     return parser
 
 
@@ -223,6 +224,8 @@ def _dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] 
         return _dispatch_plan(args)
     if args.command == "task":
         return _dispatch_task(args)
+    if args.command == "adapter":
+        return dispatch_adapter(args)
     raise LifecycleError(
         "command-not-implemented",
         f"{args.command} command group is reserved but not implemented in this build",

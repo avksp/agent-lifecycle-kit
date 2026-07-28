@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import sys
 import tempfile
@@ -17,7 +18,7 @@ class FoundationTests(unittest.TestCase):
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         project = pyproject["project"]
         self.assertEqual(project["name"], "agent-lifecycle-kit")
-        self.assertEqual(project["version"], "0.2.0")
+        self.assertEqual(project["version"], "0.3.0")
         self.assertEqual(project["requires-python"], ">=3.11,<3.14")
         self.assertEqual(project["license"]["text"], "Apache-2.0")
         self.assertEqual(project["dependencies"], [])
@@ -36,8 +37,23 @@ class FoundationTests(unittest.TestCase):
             "LICENSE",
             "uv.lock",
             "profiles/small-context-profile.v1.json",
+            "src/agent_lifecycle/py.typed",
         ]:
             self.assertTrue((ROOT / path).is_file(), path)
+
+    def test_typed_classifier_requires_packaged_type_marker(self) -> None:
+        # NEG-R03-10 Missing Type Marker
+        pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        self.assertIn("Typing :: Typed", pyproject["project"]["classifiers"])
+        package_data = pyproject["tool"]["setuptools"]["package-data"]
+        self.assertIn("py.typed", package_data["agent_lifecycle"])
+        self.assertTrue((ROOT / "src/agent_lifecycle/py.typed").is_file())
+
+    def test_crlf_conversion_changes_content_addressed_fixture_identity(self) -> None:
+        # NEG-R03-18 Windows CRLF Hash Drift
+        lf = b'{"schemaVersion":"fixture.v1","status":"PASS"}\n'
+        crlf = lf.replace(b"\n", b"\r\n")
+        self.assertNotEqual(hashlib.sha256(lf).hexdigest(), hashlib.sha256(crlf).hexdigest())
 
     def test_uv_lock_declares_runtime_graph(self) -> None:
         lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
@@ -45,7 +61,7 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(lock["requires-python"], ">=3.11,<3.14")
         packages = {package["name"]: package for package in lock["package"]}
         self.assertIn("agent-lifecycle-kit", packages)
-        self.assertEqual(packages["agent-lifecycle-kit"]["version"], "0.2.0")
+        self.assertEqual(packages["agent-lifecycle-kit"]["version"], "0.3.0")
 
     def test_foundation_ci_uses_stdlib_unittest(self) -> None:
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
@@ -54,6 +70,23 @@ class FoundationTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/neutrality.yml").read_text(encoding="utf-8")
         self.assertIn("python -m unittest discover", workflow)
         self.assertNotIn("pytest", workflow)
+
+    def test_ci_workflows_lock_line_endings_before_checkout(self) -> None:
+        # NEG-R03-18 Windows CRLF Hash Drift
+        for path in [
+            ROOT / ".github/workflows/ci.yml",
+            ROOT / ".github/workflows/matrix.yml",
+            ROOT / ".github/workflows/release.yml",
+        ]:
+            workflow = path.read_text(encoding="utf-8")
+            self.assertIn("git config --global core.autocrlf false", workflow)
+            self.assertLess(workflow.index("core.autocrlf false"), workflow.index("actions/checkout"))
+
+    def test_release_workflow_has_packaging_smoke_producer(self) -> None:
+        workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        self.assertIn("python -m pip install build", workflow)
+        self.assertIn("tests/package/run_packaging_smoke.py", workflow)
+        self.assertIn("packaging-smoke.json", workflow)
 
     def test_controller_unittest_runner_uses_stdlib_only(self) -> None:
         from agent_lifecycle.neutrality.test_runner import main

@@ -26,12 +26,29 @@ class TaskPacketCompilerTests(unittest.TestCase):
                 os.chdir(previous_cwd)
             self.assertEqual(payload, repeat)
             self.assertEqual(payload["index"]["packetCount"], 1)
+            self.assertEqual(payload["index"]["outputDirectory"], "plans/p/workflow/task-packets")
+            self.assertEqual(
+                payload["index"]["packets"][0]["path"],
+                "plans/p/workflow/task-packets/WS-01.task-packet.json",
+            )
             self.assertEqual(payload["packets"][0]["task"]["id"], "WS-01")
+            self.assertEqual(payload["packets"][0]["acceptance"], [{"id": "AC-1", "evidenceIds": ["EV-1"]}])
             self.assertEqual(payload["packets"][0]["modelRoute"]["modelClass"], "standard-code")
 
+    def test_compile_projects_nested_acceptance_criteria(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            previous_cwd = Path.cwd()
+            os.chdir(tmp)
+            try:
+                manifest = _write_bundle(Path(tmp), nested_acceptance=True)
+                payload = compile_task_packets(manifest, write=False)
+            finally:
+                os.chdir(previous_cwd)
+            self.assertEqual(payload["packets"][0]["acceptance"], [{"id": "AC-1", "evidenceIds": ["EV-1"]}])
 
-def _write_bundle(root: Path) -> Path:
-    manifest = _manifest()
+
+def _write_bundle(root: Path, *, nested_acceptance: bool = False) -> Path:
+    manifest = _manifest(nested_acceptance=nested_acceptance)
     digest = canonical_digest(manifest)
     write_json_create(
         root / "plans/p/.agent-plan/p/plan.lock.json",
@@ -42,8 +59,8 @@ def _write_bundle(root: Path) -> Path:
     return path
 
 
-def _manifest() -> dict:
-    return {
+def _manifest(*, nested_acceptance: bool = False) -> dict:
+    manifest = {
         "status": "FROZEN",
         "planRevision": 1,
         "package": {
@@ -78,8 +95,12 @@ def _manifest() -> dict:
                 },
             }
         ],
-        "acceptanceCriteria": [{"id": "AC-1", "evidenceIds": ["EV-1"]}],
     }
+    if nested_acceptance:
+        manifest["acceptance"] = {"criteria": [{"id": "AC-1", "evidenceIds": ["EV-1"]}]}
+    else:
+        manifest["acceptanceCriteria"] = [{"id": "AC-1", "evidenceIds": ["EV-1"]}]
+    return manifest
 
 
 if __name__ == "__main__":

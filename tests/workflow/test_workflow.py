@@ -16,6 +16,7 @@ from agent_lifecycle.workflow import (  # noqa: E402
     accept_task,
     adopt_plan,
     block_run,
+    check_lineage,
     commit_task_result,
     finalize_run,
     resolve_blocker,
@@ -50,6 +51,33 @@ class WorkflowTests(unittest.TestCase):
             events = (root / "events.jsonl").read_text(encoding="utf-8").splitlines()
             self.assertEqual(len(events), 1)
             self.assertEqual(json.loads(events[0])["eventType"], "run-blocked")
+
+    def test_workflow_update_rejects_event_state_split_brain(self) -> None:
+        # NEG-R03-09 Crash Split-Brain
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            event = {
+                "schemaVersion": "agent-workflow-event.v1",
+                "runId": "run",
+                "packageId": "package",
+                "stateRevision": 2,
+                "operationId": "crash-op",
+                "eventType": "run-blocked",
+                "payload": {},
+                "recordedAt": "2026-07-22T00:00:00Z",
+            }
+            (root / "events.jsonl").write_text(json.dumps(event) + "\n", encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                block_run(
+                    state_path,
+                    operation_id="after-crash",
+                    expected_revision=1,
+                    blocker_code="after-crash",
+                    reason="detect split brain",
+                )
+            self.assertEqual(raised.exception.code, "workflow-split-brain")
 
     def test_block_run_rejects_revision_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -286,6 +314,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(stored_task["modelUsageReceipt"]["validation"]["status"], "PASS")
 
     def test_commit_result_rejects_model_usage_receipt_lineage_drift(self) -> None:
+        # NEG-R03-08 Usage Receipt Drift
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             state_path = _write_state(root, phase="RUNNING")
@@ -467,7 +496,20 @@ class WorkflowTests(unittest.TestCase):
             proof = json.loads((root / "final/proof.json").read_text(encoding="utf-8"))
             self.assertEqual(proof["schemaVersion"], "agent-run-final-proof.v1")
             self.assertFalse(proof["productionPromotionClaimed"])
+            self.assertEqual(proof["operationId"], "finalize-op")
             self.assertEqual(proof["finalAudit"]["path"], "final/final-audit.json")
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=2,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof-replay.json",
+                    reason="replay",
+                )
+            self.assertEqual(raised.exception.code, "duplicate-operation")
 
     def test_finalize_run_rejects_final_audit_with_open_findings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -493,6 +535,54 @@ class WorkflowTests(unittest.TestCase):
                     reason="done",
                 )
 
+    def test_finalize_run_rejects_final_audit_plan_digest_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state["tasks"][0]["attempt"] = 1
+            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            audit = _final_audit()
+            audit["planDigest"] = "9" * 64
+            write_json_create(root / "final/final-audit.json", audit)
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
+            self.assertEqual(raised.exception.code, "final-audit-lineage-mismatch")
+
+    def test_finalize_run_rejects_stale_state_revision(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state["tasks"][0]["attempt"] = 1
+            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=2,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
+            self.assertEqual(raised.exception.code, "state-revision-mismatch")
+
     def test_finalize_run_requires_finalization_gate_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -515,6 +605,53 @@ class WorkflowTests(unittest.TestCase):
                     proof_path="final/proof.json",
                     reason="done",
                 )
+
+    def test_check_lineage_compares_shared_release_and_workflow_identity(self) -> None:
+        manifest = _plan_manifest(include_dependent=True)
+        digest = canonical_digest(manifest)
+        state = {
+            "packageId": "package",
+            "planRevision": 2,
+            "planDigest": digest,
+            "tasks": [
+                {"id": "WS-01", "required": True},
+                {"id": "WS-02", "required": True},
+            ],
+        }
+        packet_index = {"packageId": "package", "manifestDigest": digest}
+        final_audit = {"planRevision": 2, "planDigest": digest}
+        final_proof = {"packageId": "package", "planRevision": 2, "planDigest": digest}
+        release_inventory = {"packageId": "package", "planRevision": 2, "planDigest": digest}
+        lock = {"packageId": "package", "planRevision": 2, "manifestHash": digest}
+
+        payload = check_lineage(
+            manifest,
+            state=state,
+            task_packet_index=packet_index,
+            final_audit=final_audit,
+            final_proof=final_proof,
+            release_inventory=release_inventory,
+            lock=lock,
+        )
+
+        self.assertEqual(payload["status"], "PASS")
+        self.assertTrue(all(item["status"] == "PASS" for item in payload["lineageChecks"]))
+
+    def test_check_lineage_fails_for_required_task_and_digest_drift(self) -> None:
+        manifest = _plan_manifest(include_dependent=True)
+        state = {
+            "packageId": "package",
+            "planRevision": 2,
+            "planDigest": "9" * 64,
+            "tasks": [{"id": "WS-01", "required": True}],
+        }
+
+        payload = check_lineage(manifest, state=state)
+
+        failed = {item["id"] for item in payload["lineageChecks"] if item["status"] == "FAIL"}
+        self.assertEqual(payload["status"], "FAIL")
+        self.assertIn("state.planDigest", failed)
+        self.assertIn("requiredTaskSet", failed)
 
 
 def _write_state(

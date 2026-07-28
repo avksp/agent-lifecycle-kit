@@ -45,6 +45,7 @@ def finalize_run(
     proof_rel = normalize_repo_path(proof_path)
     proof = _proof_body(
         state,
+        operation_id=operation_id,
         final_audit=final_audit_identity,
         finalization_gate_receipts=finalization_gate_receipts,
         reason=reason,
@@ -139,6 +140,7 @@ def _validate_finalization_gates(
 def _proof_body(
     state: dict[str, Any],
     *,
+    operation_id: str,
     final_audit: dict[str, Any],
     finalization_gate_receipts: list[dict[str, Any]],
     reason: str,
@@ -159,6 +161,7 @@ def _proof_body(
         "planRevision": state.get("planRevision"),
         "planDigest": state.get("planDigest"),
         "sourceRevision": state.get("sourceRevision"),
+        "operationId": operation_id,
         "stateRevisionBeforeFinalization": state.get("stateRevision"),
         "semanticStatus": "READY_FOR_FINALIZATION",
         "productionPromotionClaimed": False,

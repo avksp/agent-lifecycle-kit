@@ -177,6 +177,18 @@ class NeutralityTests(unittest.TestCase):
             self.assertTrue((root / "out/report.json").is_file())
             self.assertTrue((root / "out/receipt.json").is_file())
 
+    def test_cli_accepts_configurable_artifact_root(self) -> None:
+        # NEG-R03-12 Hard-Coded Standalone Artifact Root
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = Path(tempfile.mkdtemp())
+            now = datetime.now(UTC).replace(microsecond=0)
+            seed = b"r" * 32
+            paths = _write_authority(root, seed, now, authority_root=outside)
+            result = _run_cli(root, seed, env_paths=paths, artifact_root="tasks/release-0-3")
+            self.assertEqual(result, 0)
+            self.assertTrue((root / "out/report.json").is_file())
+
     def test_zip_entry_limit_breach_is_counted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -320,6 +332,8 @@ class NeutralityTests(unittest.TestCase):
                     "source",
                     "--workspace-root",
                     str(root),
+                    "--artifact-root",
+                    "tasks/release-0-3",
                     "--operation-output",
                     "gates/receipt.json",
                     "--receipt",
@@ -488,11 +502,23 @@ def _write_authority(
     return paths
 
 
-def _run_cli(root: Path, seed: bytes, env_paths: dict[str, Path] | None = None) -> int:
-    return _run_cli_json(root, seed, env_paths=env_paths)[0]
+def _run_cli(
+    root: Path,
+    seed: bytes,
+    env_paths: dict[str, Path] | None = None,
+    *,
+    artifact_root: str | None = None,
+) -> int:
+    return _run_cli_json(root, seed, env_paths=env_paths, artifact_root=artifact_root)[0]
 
 
-def _run_cli_json(root: Path, seed: bytes, env_paths: dict[str, Path] | None = None) -> tuple[int, dict]:
+def _run_cli_json(
+    root: Path,
+    seed: bytes,
+    env_paths: dict[str, Path] | None = None,
+    *,
+    artifact_root: str | None = None,
+) -> tuple[int, dict]:
     from agent_lifecycle.neutrality.cli import main
 
     if env_paths is None:
@@ -515,47 +541,48 @@ def _run_cli_json(root: Path, seed: bytes, env_paths: dict[str, Path] | None = N
     try:
         os.chdir(root)
         with redirect_stdout(stdout):
-            result = main(
-                [
-                    "bootstrap",
-                    "--profile",
-                    "profile.json",
-                    "--scope",
-                    "current-tree-complete",
-                    "--policy",
-                    "policy.json",
-                    "--run-id",
-                    "run",
-                    "--package-id",
-                    "package",
-                    "--task-id",
-                    "task",
-                    "--attempt",
-                    "1",
-                    "--phase",
-                    "task",
-                    "--operation-id",
-                    "operation",
-                    "--plan-digest",
-                    "0" * 64,
-                    "--source-revision",
-                    "source",
-                    "--deny-authority-env",
-                    "AGENT_LIFECYCLE_NEUTRALITY_DENY_AUTHORITY",
-                    "--trust-root-env",
-                    "AGENT_LIFECYCLE_NEUTRALITY_TRUST_ROOT",
-                    "--signing-key-env",
-                    "AGENT_LIFECYCLE_NEUTRALITY_SIGNING_KEY",
-                    "--expected-signer-fingerprint-env",
-                    "AGENT_LIFECYCLE_NEUTRALITY_SIGNER_FINGERPRINT",
-                    "--primary-output",
-                    "out/report.json",
-                    "--receipt",
-                    "out/receipt.json",
-                    "--create-no-replace",
-                    "--require-zero-findings",
-                ]
-            )
+            args = [
+                "bootstrap",
+                "--profile",
+                "profile.json",
+                "--scope",
+                "current-tree-complete",
+                "--policy",
+                "policy.json",
+                "--run-id",
+                "run",
+                "--package-id",
+                "package",
+                "--task-id",
+                "task",
+                "--attempt",
+                "1",
+                "--phase",
+                "task",
+                "--operation-id",
+                "operation",
+                "--plan-digest",
+                "0" * 64,
+                "--source-revision",
+                "source",
+                "--deny-authority-env",
+                "AGENT_LIFECYCLE_NEUTRALITY_DENY_AUTHORITY",
+                "--trust-root-env",
+                "AGENT_LIFECYCLE_NEUTRALITY_TRUST_ROOT",
+                "--signing-key-env",
+                "AGENT_LIFECYCLE_NEUTRALITY_SIGNING_KEY",
+                "--expected-signer-fingerprint-env",
+                "AGENT_LIFECYCLE_NEUTRALITY_SIGNER_FINGERPRINT",
+                "--primary-output",
+                "out/report.json",
+                "--receipt",
+                "out/receipt.json",
+                "--create-no-replace",
+                "--require-zero-findings",
+            ]
+            if artifact_root is not None:
+                args.extend(["--artifact-root", artifact_root])
+            result = main(args)
         text = stdout.getvalue().strip()
         payload = json.loads(text) if text.startswith("{") else {}
         return result, payload

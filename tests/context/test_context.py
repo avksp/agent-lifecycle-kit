@@ -56,6 +56,26 @@ class ContextTests(unittest.TestCase):
             receipt["limits"]["maxRenderedEnvelopeTokens"],
         )
 
+    def test_compact_projection_keeps_trace_ids_without_full_descriptions(self) -> None:
+        packet = _packet()
+        packet["task"]["plannedItems"] = [{"id": "REQ-CONTEXT", "description": "x" * 500}]
+        packet["specification"]["requirements"] = [{"id": "REQ-CONTEXT", "description": "x" * 500}]
+        packet["acceptance"] = [
+            {
+                "id": "AC-CONTEXT",
+                "statement": "x" * 500,
+                "requirementIds": ["REQ-CONTEXT"],
+                "evidenceIds": ["EV-CONTEXT"],
+            }
+        ]
+
+        result = render_context(_profile(), packet, _summary(), window="4k-strict")
+
+        active = result["envelope"]["activeTaskPacket"]
+        self.assertEqual(active["task"]["plannedItems"], ["REQ-CONTEXT"])
+        self.assertEqual(active["specification"]["requirements"], ["REQ-CONTEXT"])
+        self.assertEqual(active["acceptance"], [{"id": "AC-CONTEXT", "requirementIds": ["REQ-CONTEXT"], "evidenceIds": ["EV-CONTEXT"]}])
+
     def test_oversized_packet_fails_closed_without_truncation(self) -> None:
         packet = _packet()
         packet["task"]["plannedItems"] = ["REQ-" + ("x" * 200)] * 300

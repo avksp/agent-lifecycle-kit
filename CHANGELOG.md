@@ -1,8 +1,17 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-07-28
 
-- No changes yet.
+- Added release 0.3 proof hardening: final-candidate verification now parses
+  required evidence, validates schema/status semantics, and checks workflow
+  lineage through the shared core checker.
+- Added release 0.3 task-packet context-fit and negative-suite coverage
+  verifiers.
+- Added host adapter descriptor validation through the provider-neutral
+  `HostOperationRequest` and `HostOperationReceipt` contracts.
+- Added live host conformance receipt validation for future `VERIFIED`
+  promotion gates.
+- Added `py.typed` packaging metadata and a packaging smoke evidence runner.
 
 ## 0.2.0 - 2026-07-23
 

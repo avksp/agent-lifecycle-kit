@@ -1,9 +1,11 @@
 # Adapter support matrix
 
-This matrix is the authoritative `v0.2.0` source-release support claim.
-`EXPERIMENTAL` means the adapter has an offline projection and deterministic
-contract tests. `VERIFIED` is reserved for a later production-promotion release
-with bounded live install and lifecycle conformance evidence.
+This matrix is the authoritative current source-release support claim for
+`v0.3.0`. This source release keeps the same adapter maturity boundary while
+hardening validation and promotion gates. `EXPERIMENTAL`
+means the adapter has an offline projection and deterministic contract tests.
+`VERIFIED` is reserved for a later production-promotion release with bounded
+live install and lifecycle conformance evidence.
 
 ## Runtime support
 
@@ -32,12 +34,16 @@ sub-8k local models.
 
 ## Live cost calibration support
 
-Production-promotion cost claims require a live, usage-attested receipt checked
+Production-promotion claims require two host-bound evidence tracks. Lifecycle
+operation coverage is checked by
+`tools/release/validate_live_host_conformance.py` against
+`conformance/core/adapter-baseline.v1.json`; cost and usage coverage is checked
 by `tools/release/validate_live_calibration.py` against
 `conformance/core/live-calibration-profile.v1.json` and
-`conformance/core/budget-targets.v1.json`. Synthetic replay baselines remain
-offline regression fixtures only and cannot promote an adapter from
-`EXPERIMENTAL` to `VERIFIED`.
+`conformance/core/budget-targets.v1.json`. A promoted host needs one passing
+live host conformance receipt and one passing live calibration receipt.
+Synthetic replay baselines remain offline regression fixtures only and cannot
+promote an adapter from `EXPERIMENTAL` to `VERIFIED`.
 
 ## Model routing support
 
@@ -53,6 +59,10 @@ All current adapters remain `EXPERIMENTAL`: they declare fail-closed support
 for host-local model profiles and model-route execution, but no adapter is
 `VERIFIED` for model routing until it has live usage receipts and quality/cost
 evidence.
+
+`agent-lifecycle adapter scaffold` may create new host projection skeletons, but
+the scaffold is limited to `EXPERIMENTAL` metadata and cannot create
+`VERIFIED`, production-promotion, or concrete provider-model claims.
 
 Critical review phases must not silently downgrade to `budget` or
 `local-compact`. A local-only host can satisfy final/security/performance review

@@ -79,15 +79,40 @@ def _summary_projection(summary: dict[str, Any]) -> dict[str, Any]:
 def _packet_projection(packet: dict[str, Any]) -> dict[str, Any]:
     if packet.get("schemaVersion") != "agent-task-packet.v1":
         raise LifecycleError("invalid-task-packet", "task packet schema is unsupported")
+    task = dict(packet.get("task", {}))
+    task["plannedItems"] = _id_projection(task.get("plannedItems", []))
+    specification = dict(packet.get("specification", {}))
+    specification["requirements"] = _id_projection(specification.get("requirements", []))
     return {
         "plan": dict(packet.get("plan", {})),
-        "task": dict(packet.get("task", {})),
+        "task": task,
         "ownership": dict(packet.get("ownership", {})),
-        "specification": dict(packet.get("specification", {})),
+        "specification": specification,
         "validation": dict(packet.get("validation", {})),
-        "acceptance": list(packet.get("acceptance", [])),
+        "acceptance": _acceptance_projection(packet.get("acceptance", [])),
         "contextRefs": list(packet.get("context", {}).get("refs", [])),
     }
+
+
+def _id_projection(items: Any) -> list[Any]:
+    if not isinstance(items, list):
+        return []
+    return [item.get("id") if isinstance(item, dict) and isinstance(item.get("id"), str) else item for item in items]
+
+
+def _acceptance_projection(items: Any) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    projected: list[dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+            continue
+        value = {"id": item["id"]}
+        for key in ("requirementIds", "evidenceIds"):
+            if isinstance(item.get(key), list):
+                value[key] = list(item[key])
+        projected.append(value)
+    return projected
 
 
 def _omitted(packet: dict[str, Any]) -> list[dict[str, Any]]:
