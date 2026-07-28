@@ -25,6 +25,7 @@ __all__ = [
     "_write_live_calibration_receipt",
     "_write_live_host_conformance_receipt",
     "_write_live_host_promotion_plan_fixture",
+    "_write_r04_candidate_manifest",
     "_write_r04_final_proof",
     "_write_r04_required_evidence",
     "_write_unittest_evidence",
@@ -175,6 +176,28 @@ def _write_r04_required_evidence(evidence_dir: Path) -> None:
             "counters": {"findings": 0, "readErrors": 0, "archiveLimitBreaches": 0},
         },
     )
+
+
+def _write_r04_candidate_manifest(path: Path) -> Path:
+    manifest = {
+        "schemaVersion": "3.0",
+        "status": "FROZEN",
+        "planRevision": 6,
+        "package": {
+            "id": "release-0-4",
+            "artifactRoot": path.parent.as_posix(),
+            "planArtifactRoot": (path.parent / ".agent-plan" / "release-0-4").as_posix(),
+        },
+        "workstreams": [
+            {"id": "WS-01", "required": True},
+            {"id": "WS-02", "required": True},
+            {"id": "WS-03", "required": True},
+            {"id": "WS-04", "required": True},
+            {"id": "WS-05", "required": True},
+        ],
+    }
+    _write_json(path, manifest)
+    return path
 
 
 def _write_r04_final_proof(path: Path, manifest_path: Path) -> None:

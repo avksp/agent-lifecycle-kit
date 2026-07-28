@@ -16,7 +16,7 @@ class CursorCompatCheckTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             evidence = Path(tmp) / "cursor-compat.json"
             result = _run_cursor_compat(
-                ROOT / "tasks/release-0-3/evidence/live-promotion-audit-cursor.json",
+                Path(tmp) / "missing-cursor-audit.json",
                 ROOT / "tests/model_routing/fixtures/release-0-4/cursor-glm-compat.json",
                 evidence,
             )

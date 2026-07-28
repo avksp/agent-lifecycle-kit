@@ -19,14 +19,15 @@ class Release04CandidateValidatorTests(unittest.TestCase):
             evidence_dir = out / "evidence"
             evidence_dir.mkdir()
             _write_r04_required_evidence(evidence_dir)
+            manifest = _write_r04_candidate_manifest(out / "plan.manifest.json")
             final_proof = out / "final-proof.json"
-            _write_r04_final_proof(final_proof, ROOT / "tasks/release-0-4/plan.manifest.json")
+            _write_r04_final_proof(final_proof, manifest)
             evidence = out / "validation.json"
 
             _run(
                 "tools/release/verify_release_0_4_candidate.py",
                 "--manifest",
-                "tasks/release-0-4/plan.manifest.json",
+                str(manifest),
                 "--evidence-dir",
                 str(evidence_dir),
                 "--final-proof",
@@ -46,14 +47,15 @@ class Release04CandidateValidatorTests(unittest.TestCase):
             evidence_dir = out / "evidence"
             evidence_dir.mkdir()
             _write_r04_required_evidence(evidence_dir)
+            manifest = _write_r04_candidate_manifest(out / "plan.manifest.json")
             final_proof = out / "final-proof.json"
-            _write_r04_final_proof(final_proof, ROOT / "tasks/release-0-4/plan.manifest.json")
+            _write_r04_final_proof(final_proof, manifest)
             evidence = out / "validation.json"
 
             result = _run_no_check(
                 "tools/release/verify_release_0_4_candidate.py",
                 "--manifest",
-                "tasks/release-0-4/plan.manifest.json",
+                str(manifest),
                 "--evidence-dir",
                 str(evidence_dir),
                 "--final-proof",
@@ -75,15 +77,16 @@ class Release04CandidateValidatorTests(unittest.TestCase):
             evidence_dir = out / "evidence"
             evidence_dir.mkdir()
             _write_r04_required_evidence(evidence_dir)
+            manifest = _write_r04_candidate_manifest(out / "plan.manifest.json")
             final_proof = out / "final-proof.json"
-            _write_r04_final_proof(final_proof, ROOT / "tasks/release-0-4/plan.manifest.json")
+            _write_r04_final_proof(final_proof, manifest)
             (evidence_dir / "workflow-budget.json").unlink()
             evidence = out / "validation.json"
 
             result = _run_no_check(
                 "tools/release/verify_release_0_4_candidate.py",
                 "--manifest",
-                "tasks/release-0-4/plan.manifest.json",
+                str(manifest),
                 "--evidence-dir",
                 str(evidence_dir),
                 "--final-proof",
@@ -103,12 +106,13 @@ class Release04CandidateValidatorTests(unittest.TestCase):
             evidence_dir = out / "evidence"
             evidence_dir.mkdir()
             _write_r04_required_evidence(evidence_dir)
+            manifest = _write_r04_candidate_manifest(out / "plan.manifest.json")
             evidence = out / "validation.json"
 
             result = _run_no_check(
                 "tools/release/verify_release_0_4_candidate.py",
                 "--manifest",
-                "tasks/release-0-4/plan.manifest.json",
+                str(manifest),
                 "--evidence-dir",
                 str(evidence_dir),
                 "--final-proof",
