@@ -103,6 +103,11 @@ class OpenCodeHarnessTests(unittest.TestCase):
             tmp_path = Path(tmp)
             receipt_dir = tmp_path / "receipts"
             receipt = receipt_dir / "opencode.json"
+            model_selection = opencode_harness.load_host_model_selection(
+                ROOT / "profiles/hosts/opencode-live-profile.v1.json",
+                model_class="standard-code",
+            )
+            selection_receipt = receipt_dir / "opencode-model-selection.json"
             report = opencode_harness.run_live_host_receipt(
                 opencode_bin="opencode",
                 baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json",
@@ -111,11 +116,14 @@ class OpenCodeHarnessTests(unittest.TestCase):
                 receipt_path=receipt,
                 diagnostic_dir=tmp_path / "diagnostics",
                 budget_policy=opencode_harness.BudgetPolicy(mode="metered", budget_cap_usd=1.0),
+                model_selection=model_selection,
+                model_selection_receipt_path=selection_receipt,
                 runner=fake_runner,
                 clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
             )
 
             payload = json.loads(receipt.read_text(encoding="utf-8"))
+            selection_payload = json.loads(selection_receipt.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "PASS")
             self.assertEqual(payload["schemaVersion"], opencode_harness.LIVE_HOST_RECEIPT_SCHEMA)
             self.assertEqual(payload["host"], "opencode")
@@ -123,6 +131,9 @@ class OpenCodeHarnessTests(unittest.TestCase):
             self.assertTrue(payload["usageAttested"])
             self.assertEqual({item["name"] for item in payload["operations"]}, set(baseline["requiredOperations"]))
             self.assertEqual(len(calls), len(baseline["requiredOperations"]))
+            self.assertEqual(calls[0][calls[0].index("--model") + 1], "<opencode-host-local-standard-code-model>")
+            self.assertEqual(selection_payload["schemaVersion"], "agent-host-model-selection-receipt.v1")
+            self.assertNotIn("<opencode-host-local-standard-code-model>", json.dumps(payload["modelSelection"]))
 
             validation_evidence = tmp_path / "host-conformance-validation.json"
             validation = subprocess.run(
@@ -149,6 +160,36 @@ class OpenCodeHarnessTests(unittest.TestCase):
             self.assertEqual(validation.returncode, 0, validation.stderr)
             validation_payload = json.loads(validation_evidence.read_text(encoding="utf-8"))
             self.assertEqual(validation_payload["status"], "PASS")
+
+    def test_profile_model_selection_requires_receipt_path(self) -> None:
+        # NEG-R04-11 Harness Model Selection Receipt Missing
+        baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
+        model_selection = opencode_harness.load_host_model_selection(
+            ROOT / "profiles/hosts/opencode-live-profile.v1.json",
+            model_class="standard-code",
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            report = opencode_harness.run_live_host_receipt(
+                opencode_bin="opencode",
+                baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json",
+                worktree=tmp_path / "clean-worktree",
+                allow_live=True,
+                receipt_path=tmp_path / "receipts/opencode.json",
+                diagnostic_dir=tmp_path / "diagnostics",
+                budget_policy=opencode_harness.BudgetPolicy(
+                    mode="subscription",
+                    max_invocations=len(baseline["requiredOperations"]),
+                    max_billable_tokens=1000,
+                ),
+                model_selection=model_selection,
+                runner=lambda command: opencode_harness.CommandResult(returncode=0, stdout="", stderr="", wall_seconds=0.1),
+                clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
+            )
+
+            self.assertEqual(report["status"], "FAIL")
+            self.assertIn("missing-model-selection-receipt-path", {item["code"] for item in report["blockers"]})
 
     def test_live_host_receipt_subscription_mode_does_not_require_cost_usd(self) -> None:
         baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")

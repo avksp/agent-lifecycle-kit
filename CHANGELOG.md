@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 - 2026-07-28
+
+- Added host-local model selection profiles and redacted model-selection
+  receipts for live host harnesses.
+- Added budget decision workflow controls for manual pause and bounded
+  auto-reroute after budget or resource-cap exhaustion.
+- Split the root CLI dispatcher into thin entrypoint, parser, and dispatch
+  modules.
+- Added release 0.4 validation for Cursor GLM compatibility shape, negative
+  suite coverage, context-fit evidence, and portable provider-model leakage.
+- Updated live host and production-promotion documentation for metered,
+  subscription, and local budget modes.
+
 ## 0.3.0 - 2026-07-28
 
 - Added release 0.3 proof hardening: final-candidate verification now parses

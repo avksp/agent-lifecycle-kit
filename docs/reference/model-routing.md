@@ -40,9 +40,10 @@ Concrete model names belong in host-local profiles:
 
 ```json
 {
-  "schemaVersion": "agent-lifecycle-host-model-profile.v1",
+  "schemaVersion": "agent-host-model-selection-profile.v1",
   "host": "local-host",
   "profileId": "local-host-profile",
+  "budgetModeDefault": "subscription",
   "bindings": {
     "local-strong-review": {
       "providerModel": "<host-specific-local-review-model>",
@@ -57,12 +58,30 @@ Concrete model names belong in host-local profiles:
       "calibrationStatus": "PASSED",
       "reviewStrategy": "large-context-or-sliced-review"
     }
+  },
+  "fallbackPolicies": {
+    "standard-code": ["strong-reasoning"],
+    "strong-reasoning": ["specialist-review"]
+  },
+  "redactionPolicy": {
+    "providerModel": "hash",
+    "provider": "omit",
+    "variant": "omit"
   }
 }
 ```
 
 Profile validation redacts provider model names from validation output. The
 profile can be untracked or stored in host-specific local configuration.
+Release 0.4 also accepts the earlier `agent-lifecycle-host-model-profile.v1`
+shape for compatibility, but new host-local profiles should use
+`agent-host-model-selection-profile.v1` so the budget mode, fallback policy and
+redaction policy are explicit.
+
+Bundled examples live under `profiles/hosts/` and use placeholders such as
+`<codex-host-local-strong-reasoning-model>`. Replace those placeholders only in
+host-local configuration or live evidence. Do not commit personal subscription,
+provider, or local model settings.
 
 ## Local-only critical review
 

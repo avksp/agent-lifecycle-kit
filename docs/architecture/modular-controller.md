@@ -32,14 +32,14 @@ This is the current source map for the standalone package:
 | Durable workflow state, operation kernel, event log, task/run transitions, gate checks, finalization | `workflow/*` | Implemented |
 | Neutrality authority, scanning, signed receipts, controller-gate helper | `neutrality/*` | Implemented |
 | Host capability descriptors | `host_protocol/contracts.py`, `host_protocol/validation.py`, adapter metadata files | Implemented as offline descriptors and validation contracts |
-| Root CLI dispatch | `cli/main.py` | Implemented thin dispatcher; no lifecycle semantics should move here |
+| Root CLI dispatch | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py` | Implemented thin entrypoint with split parser and dispatcher modules; no lifecycle semantics should move here |
 | Release, terminal, live adapter promotion | Metadata/docs only | Reserved until verified host evidence exists |
 
 Current size check: all production Python files are below the hard limits in
-this document. The largest files are `cli/main.py` at roughly 461 lines and
-`workflow/plan_adoption.py` below 400 lines; both are within the current hard
-limits. `cli/main.py` remains the highest-priority split candidate before any
-additional command group expansion.
+this document. `cli/main.py` is now a thin entrypoint at roughly 34 lines after
+the parser/dispatcher split. The largest current controller modules remain
+below 400 lines, including `workflow/plan_adoption.py`; new budget-decision
+behavior lives in its own workflow module rather than expanding the root CLI.
 
 ## Target Shape
 

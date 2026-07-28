@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "agent-host-model-selection-profile.v1",
+  "host": "claude-code",
+  "profileId": "claude-code-live-profile.v1",
+  "budgetModeDefault": "subscription",
+  "bindings": {
+    "budget": {
+      "providerModel": "<claude-code-host-local-budget-model>",
+      "contextWindow": "32k",
+      "capabilities": ["text", "json", "tool-use", "code-edit"],
+      "jsonReliability": "best-effort",
+      "toolUse": "supported",
+      "allowedForTiers": ["S0", "S1"],
+      "allowedForPhases": ["task-triage", "implementation-planning", "task-implementation"],
+      "usageAccounting": "host-attested",
+      "dataPolicy": "cloud-allowed",
+      "calibrationStatus": "PENDING"
+    },
+    "standard-code": {
+      "providerModel": "<claude-code-host-local-standard-code-model>",
+      "contextWindow": "64k",
+      "capabilities": ["text", "json", "tool-use", "code-edit"],
+      "jsonReliability": "strict",
+      "toolUse": "supported",
+      "allowedForTiers": ["S0", "S1", "S2"],
+      "allowedForPhases": ["implementation-planning", "task-implementation", "implementation-review"],
+      "usageAccounting": "host-attested",
+      "dataPolicy": "cloud-allowed",
+      "calibrationStatus": "PENDING"
+    },
+    "strong-reasoning": {
+      "providerModel": "<claude-code-host-local-strong-reasoning-model>",
+      "contextWindow": "64k",
+      "capabilities": ["text", "json", "tool-use", "code-edit", "deep-review"],
+      "jsonReliability": "strict",
+      "toolUse": "supported",
+      "allowedForTiers": ["S1", "S2"],
+      "allowedForPhases": ["s2-specification", "independent-review", "security-review", "performance-review", "release-review", "production-promotion", "final-audit"],
+      "usageAccounting": "host-attested",
+      "dataPolicy": "cloud-allowed",
+      "calibrationStatus": "PENDING",
+      "reviewStrategy": "host-attested-strong-review"
+    }
+  },
+  "fallbackPolicies": {
+    "budget": ["standard-code", "strong-reasoning"],
+    "standard-code": ["strong-reasoning"],
+    "strong-reasoning": ["specialist-review"]
+  },
+  "redactionPolicy": {
+    "providerModel": "hash",
+    "provider": "omit",
+    "variant": "omit"
+  }
+}

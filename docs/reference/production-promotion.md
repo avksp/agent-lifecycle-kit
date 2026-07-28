@@ -44,3 +44,15 @@ receipt must cover every required scenario/cohort, including the
 `S1-SMALL-CONTEXT-4K-STRICT-01` compact-context scenario. Synthetic replay
 receipts, missing usage attestations, host-operation envelope bypasses and
 quality regressions are blocking.
+
+Host-local model pinning can strengthen a per-host promotion claim, but it is
+not portable core routing. Concrete model names, provider keys, subscription
+choices and local runtime settings belong only in host-local profiles or live
+evidence. Portable release artifacts may record the neutral model class and a
+redacted binding digest, not the provider model string.
+
+Budget mode is also host-local evidence. A `metered` run proves cost accounting
+against an approved USD cap; `subscription` and `local` runs prove bounded
+resource use through invocation, token and/or wall-clock caps. None of these
+modes bypasses the requirement for live host conformance, live calibration,
+neutrality, CI matrix and independent final audit evidence.

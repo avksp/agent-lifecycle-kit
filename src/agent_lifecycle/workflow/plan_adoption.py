@@ -356,9 +356,10 @@ def _authorization(start_mode: str, authorized_by: str | None) -> dict[str, Any]
 
 
 def _last_plan_review(root: Path, manifest: dict[str, Any]) -> dict[str, Any]:
-    report = manifest.get("planReview", {}).get("report")
+    review = manifest.get("planReview", {})
+    report = review.get("report") if isinstance(review, dict) else None
     if not isinstance(report, str):
-        raise LifecycleError("invalid-plan-manifest", "planReview.report is required")
+        return _last_plan_lock_review(root, manifest)
     review = read_json_object(root / report, label="plan review")
     identity = _raw_file_identity(root / report)
     return {
@@ -369,6 +370,27 @@ def _last_plan_review(root: Path, manifest: dict[str, Any]) -> dict[str, Any]:
         "reviewerRunId": review.get("reviewer", {}).get("runId"),
         "surface": review.get("reviewer", {}).get("surface"),
         "verdict": review.get("verdict"),
+    }
+
+
+def _last_plan_lock_review(root: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    plan_root = manifest.get("package", {}).get("planArtifactRoot")
+    if not isinstance(plan_root, str) or not plan_root:
+        raise LifecycleError("invalid-plan-manifest", "package.planArtifactRoot is required")
+    lock = read_json_object(root / plan_root / "plan.lock.json", label="plan lock")
+    review_path = lock.get("reviewPath")
+    if not isinstance(review_path, str) or not review_path:
+        raise LifecycleError("invalid-plan-manifest", "planReview.report or plan lock reviewPath is required")
+    identity = _raw_file_identity(root / review_path)
+    return {
+        **identity,
+        "path": review_path,
+        "reviewId": lock.get("reviewId"),
+        "reviewer": lock.get("frozenBy"),
+        "reviewerRunId": None,
+        "surface": "plan-lock",
+        "verdict": manifest.get("planReview", {}).get("requiredVerdict"),
+        "reviewedPlanHash": lock.get("reviewedPlanHash"),
     }
 
 

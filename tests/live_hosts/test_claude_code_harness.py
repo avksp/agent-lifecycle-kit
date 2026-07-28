@@ -107,6 +107,11 @@ class ClaudeCodeHarnessTests(unittest.TestCase):
             tmp_path = Path(tmp)
             receipt_dir = tmp_path / "receipts"
             receipt = receipt_dir / "claude-code.json"
+            model_selection = claude_code_harness.load_host_model_selection(
+                ROOT / "profiles/hosts/claude-code-live-profile.v1.json",
+                model_class="standard-code",
+            )
+            selection_receipt = receipt_dir / "claude-code-model-selection.json"
             report = claude_code_harness.run_live_host_receipt(
                 claude_bin="claude",
                 baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json",
@@ -115,11 +120,14 @@ class ClaudeCodeHarnessTests(unittest.TestCase):
                 receipt_path=receipt,
                 diagnostic_dir=tmp_path / "diagnostics",
                 budget_policy=claude_code_harness.BudgetPolicy(mode="subscription", max_invocations=len(baseline["requiredOperations"]), max_billable_tokens=1000),
+                model_selection=model_selection,
+                model_selection_receipt_path=selection_receipt,
                 runner=fake_runner,
                 clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
             )
 
             payload = json.loads(receipt.read_text(encoding="utf-8"))
+            selection_payload = json.loads(selection_receipt.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "PASS")
             self.assertEqual(payload["schemaVersion"], claude_code_harness.LIVE_HOST_RECEIPT_SCHEMA)
             self.assertEqual(payload["host"], "claude-code")
@@ -127,6 +135,9 @@ class ClaudeCodeHarnessTests(unittest.TestCase):
             self.assertTrue(payload["usageAttested"])
             self.assertEqual({item["name"] for item in payload["operations"]}, set(baseline["requiredOperations"]))
             self.assertEqual(len(calls), len(baseline["requiredOperations"]))
+            self.assertEqual(calls[0][calls[0].index("--model") + 1], "<claude-code-host-local-standard-code-model>")
+            self.assertEqual(selection_payload["schemaVersion"], "agent-host-model-selection-receipt.v1")
+            self.assertNotIn("<claude-code-host-local-standard-code-model>", json.dumps(payload["modelSelection"]))
 
             validation_evidence = tmp_path / "host-conformance-validation.json"
             validation = subprocess.run(

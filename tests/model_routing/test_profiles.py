@@ -28,7 +28,41 @@ class ModelRoutingProfileTests(unittest.TestCase):
         self.assertEqual(result["schemaVersion"], "agent-lifecycle-host-model-profile-validation.v1")
         self.assertEqual(result["host"], "local-host")
         self.assertIn("local-strong-review", result["classes"])
-        self.assertNotIn("providerModel", json.dumps(result))
+        self.assertIn("providerModelHash", result["bindings"]["standard-code"])
+        self.assertNotIn("host-specific-standard", json.dumps(result))
+        self.assertNotIn("host-specific-local-review", json.dumps(result))
+
+    def test_host_model_selection_profile_validation_redacts_provider_model(self) -> None:
+        # NEG-R04-01 Raw Provider Model In Portable Artifact
+        profile = _host_profile()
+        profile["schemaVersion"] = "agent-host-model-selection-profile.v1"
+        profile["budgetModeDefault"] = "subscription"
+        profile["fallbackPolicies"] = {
+            "standard-code": ["strong-reasoning"],
+            "strong-reasoning": ["specialist-review"],
+        }
+        profile["redactionPolicy"] = {"providerModel": "hash", "provider": "omit", "variant": "omit"}
+        result = validate_host_model_profile(profile)
+        self.assertEqual(result["profileSchemaVersion"], "agent-host-model-selection-profile.v1")
+        self.assertEqual(result["budgetModeDefault"], "subscription")
+        self.assertIn("providerModelHash", result["bindings"]["local-strong-review"])
+        self.assertNotIn("host-specific-local-review", json.dumps(result))
+
+    def test_host_model_selection_profile_rejects_unknown_fallback(self) -> None:
+        profile = _host_profile()
+        profile["schemaVersion"] = "agent-host-model-selection-profile.v1"
+        profile["budgetModeDefault"] = "subscription"
+        profile["fallbackPolicies"] = {"standard-code": ["provider-specific"]}
+        profile["redactionPolicy"] = {"providerModel": "hash"}
+        with self.assertRaises(LifecycleError):
+            validate_host_model_profile(profile)
+
+    def test_bundled_host_model_selection_profiles_validate(self) -> None:
+        for path in sorted((ROOT / "profiles/hosts").glob("*.v1.json")):
+            with self.subTest(path=path.name):
+                result = validate_host_model_profile(_load(path))
+                self.assertEqual(result["profileSchemaVersion"], "agent-host-model-selection-profile.v1")
+                self.assertNotIn("<host-local", json.dumps(result))
 
     def test_host_profile_rejects_unknown_class(self) -> None:
         profile = _host_profile()

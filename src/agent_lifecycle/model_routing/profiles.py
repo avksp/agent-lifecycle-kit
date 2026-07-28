@@ -27,6 +27,11 @@ TOOL_USE = {"supported", "unsupported"}
 USAGE_ACCOUNTING = {"host-attested", "required", "unavailable"}
 DATA_POLICIES = {"cloud-allowed", "local-only", "restricted"}
 CALIBRATION_STATUSES = {"PASSED", "PENDING", "FAILED", "UNKNOWN"}
+HOST_MODEL_PROFILE_SCHEMAS = {
+    "agent-lifecycle-host-model-profile.v1",
+    "agent-host-model-selection-profile.v1",
+}
+BUDGET_MODES = {"metered", "subscription", "local"}
 
 
 def load_model_routing_profile(path: Path) -> dict[str, Any]:
@@ -80,13 +85,29 @@ def validate_model_routing_profile(profile: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate_host_model_profile(profile: dict[str, Any]) -> dict[str, Any]:
-    if profile.get("schemaVersion") != "agent-lifecycle-host-model-profile.v1":
+    schema_version = profile.get("schemaVersion")
+    if schema_version not in HOST_MODEL_PROFILE_SCHEMAS:
         raise LifecycleError("invalid-host-model-profile", "unsupported host model profile schema")
     profile_id = _required_str(profile, "profileId", "host model profile")
     host = _required_str(profile, "host", "host model profile")
     bindings = _required_dict(profile, "bindings", "host model profile")
     if not bindings:
         raise LifecycleError("invalid-host-model-profile", "bindings are required")
+    budget_mode_default: str | None = None
+    fallback_policies: dict[str, Any] | None = None
+    redaction_policy: dict[str, Any] | None = None
+    if schema_version == "agent-host-model-selection-profile.v1":
+        budget_mode_default = _required_str(profile, "budgetModeDefault", "host model profile")
+        if budget_mode_default not in BUDGET_MODES:
+            raise LifecycleError(
+                "invalid-host-model-profile",
+                "budgetModeDefault is unsupported",
+                {"budgetModeDefault": budget_mode_default},
+            )
+        fallback_policies = _required_dict(profile, "fallbackPolicies", "host model profile")
+        redaction_policy = _required_dict(profile, "redactionPolicy", "host model profile")
+        _validate_fallback_policies(fallback_policies)
+        _validate_redaction_policy(redaction_policy)
     checked: dict[str, Any] = {}
     for model_class, binding in bindings.items():
         if model_class not in ALLOWED_MODEL_CLASSES:
@@ -104,14 +125,18 @@ def validate_host_model_profile(profile: dict[str, Any]) -> dict[str, Any]:
         "schemaVersion": "agent-lifecycle-host-model-profile-validation.v1",
         "host": host,
         "profileId": profile_id,
+        "profileSchemaVersion": schema_version,
+        "budgetModeDefault": budget_mode_default,
         "classes": sorted(checked),
         "bindings": checked,
+        "fallbackPolicies": sorted(fallback_policies) if fallback_policies is not None else [],
+        "redactionPolicyDigest": canonical_digest(redaction_policy) if redaction_policy is not None else None,
         "profileDigest": canonical_digest(profile),
     }
 
 
 def _validate_binding(model_class: str, binding: dict[str, Any]) -> dict[str, Any]:
-    _required_str(binding, "providerModel", f"{model_class} binding")
+    provider_model = _required_str(binding, "providerModel", f"{model_class} binding")
     context_window = _required_str(binding, "contextWindow", f"{model_class} binding")
     if context_window not in WINDOWS:
         raise LifecycleError(
@@ -143,8 +168,42 @@ def _validate_binding(model_class: str, binding: dict[str, Any]) -> dict[str, An
         "dataPolicy": data_policy,
         "calibrationStatus": calibration_status,
         "reviewStrategy": review_strategy,
+        "providerModelHash": canonical_digest({"providerModel": provider_model}),
         "bindingDigest": canonical_digest(binding),
     }
+
+
+def _validate_fallback_policies(value: dict[str, Any]) -> None:
+    for model_class, fallbacks in value.items():
+        if model_class not in ALLOWED_MODEL_CLASSES or model_class == "no-model":
+            raise LifecycleError(
+                "invalid-host-model-profile",
+                "fallbackPolicies must use routable model classes",
+                {"modelClass": model_class},
+            )
+        if not isinstance(fallbacks, list) or any(not isinstance(item, str) or not item for item in fallbacks):
+            raise LifecycleError(
+                "invalid-host-model-profile",
+                "fallbackPolicies values must be lists of model classes",
+                {"modelClass": model_class},
+            )
+        invalid = sorted(set(fallbacks) - (ALLOWED_MODEL_CLASSES - {"no-model"}))
+        if invalid:
+            raise LifecycleError(
+                "invalid-host-model-profile",
+                "fallbackPolicies contain unsupported model classes",
+                {"modelClass": model_class, "fallbacks": invalid},
+            )
+
+
+def _validate_redaction_policy(value: dict[str, Any]) -> None:
+    provider_model_policy = value.get("providerModel")
+    if provider_model_policy != "hash":
+        raise LifecycleError(
+            "invalid-host-model-profile",
+            "redactionPolicy.providerModel must be hash",
+            {"providerModel": provider_model_policy},
+        )
 
 
 def _validate_token_budgets(value: Any) -> None:

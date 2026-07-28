@@ -5,7 +5,7 @@ import json
 import re
 from pathlib import Path
 
-NEGATIVE_ID_RE = re.compile(r"\bNEG-R03-(\d{2})\b")
+NEGATIVE_ID_RE = re.compile(r"\bNEG-R(\d+)-(\d{2})\b")
 
 
 def main() -> int:
@@ -43,17 +43,19 @@ def main() -> int:
 
 
 def _expected_ids(value: str) -> list[str]:
-    match = re.fullmatch(r"NEG-R03-(\d{2})\.\.NEG-R03-(\d{2})", value)
+    match = re.fullmatch(r"NEG-R(\d+)-(\d{2})\.\.NEG-R\1-(\d{2})", value)
     if match is None:
-        raise SystemExit("expected range must look like NEG-R03-01..NEG-R03-20")
-    start, end = (int(item) for item in match.groups())
+        raise SystemExit("expected range must look like NEG-R04-01..NEG-R04-11")
+    release, start_value, end_value = match.groups()
+    start = int(start_value)
+    end = int(end_value)
     if start < 1 or end < start:
         raise SystemExit("expected range is invalid")
-    return [f"NEG-R03-{index:02d}" for index in range(start, end + 1)]
+    return [f"NEG-R{release}-{index:02d}" for index in range(start, end + 1)]
 
 
 def _ids_in_text(text: str) -> set[str]:
-    return {f"NEG-R03-{match.group(1)}" for match in NEGATIVE_ID_RE.finditer(text)}
+    return {f"NEG-R{match.group(1)}-{match.group(2)}" for match in NEGATIVE_ID_RE.finditer(text)}
 
 
 def _test_refs(root: Path) -> dict[str, list[str]]:

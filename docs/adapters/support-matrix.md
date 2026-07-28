@@ -1,8 +1,8 @@
 # Adapter support matrix
 
 This matrix is the authoritative current source-release support claim for
-`v0.3.0`. This source release keeps the same adapter maturity boundary while
-hardening validation and promotion gates. `EXPERIMENTAL`
+`v0.4.0`. This source release keeps the same adapter maturity boundary while
+adding host-local model selection and budget-mode controls. `EXPERIMENTAL`
 means the adapter has an offline projection and deterministic contract tests.
 `VERIFIED` is reserved for a later production-promotion release with bounded
 live install and lifecycle conformance evidence.
@@ -51,9 +51,11 @@ The core includes provider-neutral model routing through `agent-lifecycle model
 profile-check`, `agent-lifecycle model route`, `agent-lifecycle model
 usage-check`, and workflow-level usage-receipt enforcement on `workflow
 task-result`. Adapters map neutral classes to concrete host/runtime models
-through host-local
-`agent-lifecycle-host-model-profile.v1` files. Concrete provider model names
-must not appear in portable core contracts.
+through host-local `agent-host-model-selection-profile.v1` files, with the
+older `agent-lifecycle-host-model-profile.v1` shape kept for compatibility.
+Concrete provider model names must not appear in portable core contracts; live
+harnesses write `agent-host-model-selection-receipt.v1` with redacted binding
+hashes.
 
 All current adapters remain `EXPERIMENTAL`: they declare fail-closed support
 for host-local model profiles and model-route execution, but no adapter is
@@ -69,6 +71,12 @@ Critical review phases must not silently downgrade to `budget` or
 only with an explicit `local-strong-review` or equivalent review-capable binding
 that passes context, tool-use, JSON, usage-attestation and live-calibration
 gates.
+
+Budget routing supports `metered`, `subscription`, and `local` modes. Metered
+mode requires a USD cap; subscription and local modes require invocation caps
+plus token and/or wall-clock caps. Exceeding a cap pauses for an operator
+decision or follows a bounded auto-reroute policy, but it never upgrades an
+adapter to `VERIFIED` by itself.
 
 ## Neutrality error contract
 
