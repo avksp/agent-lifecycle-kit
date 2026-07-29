@@ -242,7 +242,7 @@ class CliAdapterCommandTests(unittest.TestCase):
         self.assertEqual(payload["status"], "PASS")
         self.assertEqual(payload["adapterId"], "opencode")
         self.assertEqual(payload["host"], "opencode")
-        self.assertEqual(payload["maturity"], "EXPERIMENTAL")
+        self.assertEqual(payload["maturity"], "VERIFIED")
         self.assertFalse(payload["liveCallsStarted"])
         self.assertFalse(payload["productionPromotionClaimed"])
         self.assertEqual(payload["capabilities"]["hostCommands"]["status"], "SKIPPED")

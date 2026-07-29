@@ -23,7 +23,7 @@ class AdapterCapabilityManifestTests(unittest.TestCase):
         self.assertEqual(manifest["schemaVersion"], "agent-adapter-capability-manifest.v1")
         self.assertEqual(manifest["adapterId"], "opencode")
         self.assertEqual(manifest["host"], "opencode")
-        self.assertEqual(manifest["maturity"], "EXPERIMENTAL")
+        self.assertEqual(manifest["maturity"], "VERIFIED")
         self.assertFalse(manifest["promotion"]["productionPromotionClaimed"])
         self.assertEqual(manifest["runtimeBoundary"]["lifecycleSemantics"], "delegated-to-agent-lifecycle-core")
         self.assertFalse(manifest["runtimeBoundary"]["providerModelNamesInCore"])
