@@ -21,6 +21,7 @@ git log --oneline --decorate -5
 
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
+python tools/release/validate_adapter_conformance.py --baseline conformance/core/adapter-baseline.v1.json --evidence <adapter-conformance-evidence.json>
 python tools/release/validate_docs_compat.py --evidence <docs-compat-evidence.json>
 python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json --evidence <support-matrix-evidence.json>
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --report <neutrality-report.json> --require-zero-findings

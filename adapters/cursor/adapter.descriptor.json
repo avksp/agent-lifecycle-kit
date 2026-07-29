@@ -3,6 +3,7 @@
   "adapterId": "cursor",
   "host": "cursor",
   "nativeProjection": "cursor-plugin",
+  "capabilityManifest": "adapters/cursor/capabilities.manifest.json",
   "maturity": "EXPERIMENTAL",
   "liveTestedHostRange": null,
   "releaseAssembly": {

@@ -4,6 +4,7 @@
   "host": "codex",
   "baselineId": "offline-adapter-baseline-v1",
   "adapterDescriptor": "adapters/codex/adapter.descriptor.json",
+  "capabilityManifest": "adapters/codex/capabilities.manifest.json",
   "nativeManifest": "adapters/codex/.codex-plugin/plugin.json",
   "sharedBaseline": "conformance/core/adapter-baseline.v1.json",
   "requiredMaturity": "EXPERIMENTAL",

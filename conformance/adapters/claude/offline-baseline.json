@@ -4,6 +4,7 @@
   "host": "claude-code",
   "baselineId": "offline-adapter-baseline-v1",
   "adapterDescriptor": "adapters/claude/adapter.descriptor.json",
+  "capabilityManifest": "adapters/claude/capabilities.manifest.json",
   "nativeManifest": "adapters/claude/.claude-plugin/plugin.json",
   "sharedBaseline": "conformance/core/adapter-baseline.v1.json",
   "requiredMaturity": "EXPERIMENTAL",

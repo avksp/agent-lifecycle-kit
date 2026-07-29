@@ -1,0 +1,146 @@
+{
+  "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "adapterId": "cursor",
+  "host": "cursor",
+  "maturity": "EXPERIMENTAL",
+  "descriptorDigest": "b29522a9b20f16fbafb3b694d6850f459aabcdb15090eeee17571213575ba2f9",
+  "unsupportedOperationPolicy": "fail-closed",
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
+  "capabilities": [
+    {
+      "name": "install",
+      "mapping": "cursor-plugin-install",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false
+    },
+    {
+      "name": "discover",
+      "mapping": "cursor-agent-discovery",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false
+    },
+    {
+      "name": "validate-envelope",
+      "mapping": "core-schema-validation",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false
+    },
+    {
+      "name": "launch",
+      "mapping": "host-agent-launch",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true
+    },
+    {
+      "name": "model-route-execution",
+      "mapping": "attemptModelRoute-to-host-model",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true
+    },
+    {
+      "name": "wait",
+      "mapping": "host-bounded-wait",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true
+    },
+    {
+      "name": "cancel",
+      "mapping": "host-cancel-request",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true
+    },
+    {
+      "name": "resume",
+      "mapping": "workflow-state-resume",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true
+    },
+    {
+      "name": "tool-execution",
+      "mapping": "host-tool-call",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true
+    },
+    {
+      "name": "result-collection",
+      "mapping": "task-result-artifact",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false
+    },
+    {
+      "name": "usage-attestation",
+      "mapping": "host-usage-ledger",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true
+    },
+    {
+      "name": "task-audit",
+      "mapping": "audit-plan-implementation",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false
+    },
+    {
+      "name": "final-audit",
+      "mapping": "audit-plan-implementation",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false
+    }
+  ],
+  "modelRouting": {
+    "profileSupport": "host-local",
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "usageReceiptRequired": true,
+    "unsupportedClassPolicy": "fail-closed",
+    "providerModelNamesInCore": false,
+    "liveVerified": false
+  },
+  "runtimeBoundary": {
+    "hostSpecificCode": "adapter-owned",
+    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+    "unsupportedOperations": "fail-closed",
+    "providerModelNamesInCore": false
+  },
+  "promotion": {
+    "verifiedRequiresLiveTestedHostRange": true,
+    "productionPromotionClaimed": false
+  }
+}

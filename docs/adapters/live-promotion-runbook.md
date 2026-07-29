@@ -42,6 +42,11 @@ but the evidence contract and release gates stay the same.
 Use these validators instead of prose-only review:
 
 ```bash
+python tools/release/validate_adapter_conformance.py \
+  --baseline conformance/core/adapter-baseline.v1.json \
+  --host <adapter-id> \
+  --evidence <adapter-conformance-evidence.json>
+
 python tools/release/validate_live_host_conformance.py \
   --profile conformance/core/live-calibration-profile.v1.json \
   --baseline conformance/core/adapter-baseline.v1.json \

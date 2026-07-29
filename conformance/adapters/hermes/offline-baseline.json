@@ -4,6 +4,7 @@
   "host": "hermes",
   "baselineId": "offline-adapter-baseline-v1",
   "adapterDescriptor": "adapters/hermes/adapter.descriptor.json",
+  "capabilityManifest": "adapters/hermes/capabilities.manifest.json",
   "nativeManifest": "adapters/hermes/hermes.registry.json",
   "sharedBaseline": "conformance/core/adapter-baseline.v1.json",
   "requiredMaturity": "EXPERIMENTAL",

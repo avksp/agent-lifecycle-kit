@@ -31,27 +31,48 @@ class CliAdapterCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(payload["status"], "PASS")
             descriptor = root / "adapters/synthetic-host/adapter.descriptor.json"
+            capabilities = root / "adapters/synthetic-host/capabilities.manifest.json"
             projection = root / "adapters/synthetic-host/projection.manifest.json"
             event_bridge = root / "adapters/synthetic-host/event-bridge.md"
+            runner = root / "adapters/synthetic-host/runner.py"
+            receipt_normalizer = root / "adapters/synthetic-host/receipt_normalizer.py"
             validation_doc = root / "adapters/synthetic-host/validation.md"
             baseline = root / "conformance/adapters/synthetic-host/offline-baseline.json"
             docs = root / "docs/adapters/synthetic-host.md"
+            support_stub = root / "docs/adapters/synthetic-host.support.md"
+            test_skeleton = root / "tests/adapters/synthetic-host/test_synthetic_host_adapter.py"
             self.assertTrue(descriptor.is_file())
+            self.assertTrue(capabilities.is_file())
             self.assertTrue(projection.is_file())
             self.assertTrue(event_bridge.is_file())
+            self.assertTrue(runner.is_file())
+            self.assertTrue(receipt_normalizer.is_file())
             self.assertTrue(validation_doc.is_file())
             self.assertTrue(baseline.is_file())
             self.assertTrue(docs.is_file())
+            self.assertTrue(support_stub.is_file())
+            self.assertTrue(test_skeleton.is_file())
             descriptor_payload = json.loads(descriptor.read_text(encoding="utf-8"))
+            capabilities_payload = json.loads(capabilities.read_text(encoding="utf-8"))
             projection_payload = json.loads(projection.read_text(encoding="utf-8"))
             self.assertEqual(descriptor_payload["maturity"], "EXPERIMENTAL")
+            self.assertEqual(descriptor_payload["capabilityManifest"], "adapters/synthetic-host/capabilities.manifest.json")
             self.assertIsNone(descriptor_payload["liveTestedHostRange"])
             self.assertFalse(descriptor_payload["modelRouting"]["providerModelNamesInCore"])
+            self.assertEqual(capabilities_payload["schemaVersion"], "agent-adapter-capability-manifest.v1")
+            self.assertEqual(capabilities_payload["adapterId"], "synthetic-host")
+            self.assertFalse(capabilities_payload["promotion"]["productionPromotionClaimed"])
             self.assertEqual(projection_payload["maturity"], "EXPERIMENTAL")
+            self.assertEqual(projection_payload["capabilityManifest"], str(capabilities))
             self.assertEqual(projection_payload["eventBridge"]["status"], "placeholder")
             self.assertEqual(projection_payload["eventBridge"]["runtimeDispatch"], "not-implemented-fail-closed")
+            self.assertEqual(projection_payload["runner"]["status"], "fail-closed-skeleton")
+            self.assertEqual(projection_payload["receiptNormalizer"]["portableReceiptSchema"], "agent-host-operation-receipt.v1")
             self.assertFalse(projection_payload["providerModelNamesInCore"])
+            self.assertIn("adapter-operation-not-implemented", runner.read_text(encoding="utf-8"))
+            self.assertIn("normalize_host_operation_receipt", receipt_normalizer.read_text(encoding="utf-8"))
             self.assertIn("requires bounded live host conformance", validation_doc.read_text(encoding="utf-8"))
+            self.assertIn("adapter inspect", validation_doc.read_text(encoding="utf-8"))
 
             code, validation = _run_cli(
                 [
@@ -75,6 +96,9 @@ class CliAdapterCommandTests(unittest.TestCase):
             self.assertEqual(payload["maturity"], "EXPERIMENTAL")
             roles = {item["role"] for item in payload["files"]}
             self.assertIn("projection-manifest", roles)
+            self.assertIn("capability-manifest", roles)
+            self.assertIn("runner-skeleton", roles)
+            self.assertIn("receipt-normalizer", roles)
             self.assertIn("event-bridge-placeholder", roles)
             self.assertIn("validation-instructions", roles)
 
@@ -201,6 +225,27 @@ class CliAdapterCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(payload["status"], "PASS")
             self.assertEqual(payload["maturity"], "VERIFIED")
+
+    def test_adapter_inspect_cli_reports_descriptor_capabilities_without_host_commands(self) -> None:
+        code, payload = _run_cli(
+            [
+                "adapter",
+                "inspect",
+                "--descriptor",
+                str(ROOT / "adapters/opencode/adapter.descriptor.json"),
+                "--skip-host-commands",
+            ]
+        )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["schemaVersion"], "agent-host-adapter-inspection.v1")
+        self.assertEqual(payload["status"], "PASS")
+        self.assertEqual(payload["adapterId"], "opencode")
+        self.assertEqual(payload["host"], "opencode")
+        self.assertEqual(payload["maturity"], "EXPERIMENTAL")
+        self.assertFalse(payload["liveCallsStarted"])
+        self.assertFalse(payload["productionPromotionClaimed"])
+        self.assertEqual(payload["capabilities"]["hostCommands"]["status"], "SKIPPED")
 
 
 if __name__ == "__main__":

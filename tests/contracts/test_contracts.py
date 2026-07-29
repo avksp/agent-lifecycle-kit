@@ -127,6 +127,10 @@ class ContractTests(unittest.TestCase):
         self.assertIn("agent-lifecycle-model-route-request.v1", ids)
         self.assertIn("agent-lifecycle-model-usage-receipt.v1", ids)
         for schema_id in [
+            "agent-adapter-capability-manifest.v1",
+            "agent-adapter-capability-manifest-validation.v1",
+            "agent-adapter-conformance-verification.v1",
+            "agent-host-adapter-inspection.v1",
             "agent-host-adapter-validation.v1",
             "agent-release-candidate-inventory.v1",
             "agent-release-assembly-evidence.v1",
@@ -156,6 +160,11 @@ class ContractTests(unittest.TestCase):
             get_schema("agent-release-verification-evidence.v1")["properties"]["productionPromotionClaimed"],
             {"const": False},
         )
+        self.assertEqual(get_schema("agent-host-adapter-inspection.v1")["properties"]["liveCallsStarted"], {"const": False})
+        self.assertEqual(get_schema("agent-host-adapter-inspection.v1")["properties"]["productionPromotionClaimed"], {"const": False})
+        self.assertEqual(get_schema("agent-adapter-capability-manifest.v1")["properties"]["unsupportedOperationPolicy"], {"const": "fail-closed"})
+        self.assertEqual(get_schema("agent-adapter-capability-manifest.v1")["properties"]["coreSemantics"], {"const": "delegated-to-agent-lifecycle-core"})
+        self.assertEqual(get_schema("agent-adapter-conformance-verification.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertIn("commands", get_schema("agent-packaging-smoke-evidence.v1")["required"])
         self.assertEqual(get_schema("agent-adapter-scaffold-result.v1")["properties"]["maturity"], {"const": "EXPERIMENTAL"})
         self.assertEqual(get_schema("agent-lifecycle-live-host-conformance-receipt.v1")["properties"]["syntheticReplayUsed"], {"const": False})

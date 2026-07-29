@@ -3,6 +3,7 @@
   "adapterId": "opencode",
   "host": "opencode",
   "nativeProjection": "opencode-plugin",
+  "capabilityManifest": "adapters/opencode/capabilities.manifest.json",
   "maturity": "EXPERIMENTAL",
   "liveTestedHostRange": null,
   "releaseAssembly": {

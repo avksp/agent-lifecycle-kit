@@ -3,6 +3,7 @@
   "adapterId": "codex",
   "host": "codex",
   "nativeProjection": "codex-plugin",
+  "capabilityManifest": "adapters/codex/capabilities.manifest.json",
   "maturity": "VERIFIED",
   "liveTestedHostRange": {
     "host": "codex",
