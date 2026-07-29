@@ -6,8 +6,11 @@
     "codex",
     "claude-code",
     "cursor",
+    "gemini-cli",
     "hermes",
-    "opencode"
+    "kimi-code",
+    "opencode",
+    "qwen-code"
   ],
   "requiredScenarios": [
     "S0-MECHANICAL-01",

@@ -15,9 +15,12 @@ evidence.
 | --- | --- | --- | --- |
 | Codex | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | VERIFIED | Codex CLI 0.145.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; public Plugins Directory review not claimed |
 | Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
-| Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills | EXPERIMENTAL | Source projection exists for local/team validation and public submission; marketplace approval not claimed |
-| Hermes | `skills.sh.json`, shared skills, and Hermes registry/slash-command projection metadata | EXPERIMENTAL | Direct skill install/tap metadata exists; live Hermes verification not claimed |
-| OpenCode | Root `opencode.json`, shared skills, and JS adapter projection metadata | EXPERIMENTAL | Local source projection exists; npm package publication not claimed |
+| Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | Cursor Agent 2026.07.23-e383d2b safe inspection passed on local Free tier; bounded smoke cannot promote without usage/cost calibration and lifecycle proof; marketplace approval not claimed |
+| Gemini CLI | Host-local scaffold projection and capability manifest | EXPERIMENTAL | Gemini CLI 0.46.0 safe inspection passed; live harness, usage calibration, lifecycle proof, and publication not claimed |
+| Hermes | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | EXPERIMENTAL | Hermes Agent v0.19.0 safe inspection passed; live promotion blocked until host-local model bindings are real; live conformance, calibration, and lifecycle proof not claimed |
+| Kimi Code | Host-local scaffold projection and capability manifest | EXPERIMENTAL | Kimi Code 0.30.0 safe inspection passed through the local `kimi` CLI; usage attestation remains unproven; live harness, calibration, lifecycle proof, and publication not claimed |
+| OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | EXPERIMENTAL | OpenCode CLI 1.18.9 safe inspection passed; live promotion blocked until host-local model bindings are real; live conformance, calibration, lifecycle proof, and npm publication not claimed |
+| qwen-code | Host-local scaffold projection and capability manifest | EXPERIMENTAL | qwen-code 0.21.0 safe inspection passed; usage attestation remains unproven and root CLI resource caps were not discovered; live harness, calibration, lifecycle proof, and publication not claimed |
 
 ## Compact context support
 
@@ -62,14 +65,18 @@ hashes.
 Codex is `VERIFIED` for host-local model routing on Codex CLI 0.145.0. Claude
 Code is `VERIFIED` for host-local model routing on Claude Code 2.1.220. Their
 live receipts include host usage attestation, quality pass status, and bounded
-budget evidence. Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`: they
-declare fail-closed support for host-local model profiles and model-route
-execution, but still need live usage receipts and quality/cost evidence before
-a host-specific `VERIFIED` claim.
+budget evidence. Cursor, Gemini CLI, Hermes, Kimi Code, OpenCode, and qwen-code remain
+`EXPERIMENTAL`: they declare fail-closed support for host-local model profiles
+and model-route execution, but still need live usage receipts and quality/cost
+evidence before a host-specific `VERIFIED` claim.
 
-`agent-lifecycle adapter scaffold` may create new host projection skeletons, but
-the scaffold is limited to `EXPERIMENTAL` metadata and cannot create
-`VERIFIED`, production-promotion, or concrete provider-model claims.
+`agent-lifecycle adapter scaffold` creates descriptor, capability manifest,
+fail-closed runner, receipt-normalizer, conformance and documentation
+skeletons for new host projections. The scaffold is limited to `EXPERIMENTAL`
+metadata and cannot create `VERIFIED`, production-promotion, or concrete
+provider-model claims. `agent-lifecycle adapter inspect` records descriptor and
+safe host capability discovery; inspection evidence is not a live conformance
+receipt and does not promote support on its own.
 
 Critical review phases must not silently downgrade to `budget` or
 `local-compact`. A local-only host can satisfy final/security/performance review

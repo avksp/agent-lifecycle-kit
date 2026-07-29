@@ -67,11 +67,12 @@ class SyntheticConformanceTests(unittest.TestCase):
         baseline = load_json(CONFORMANCE_ROOT / "core" / "adapter-baseline.v1.json")
         hosts = {item["host"]: item for item in baseline["hostMatrix"]}
 
-        self.assertEqual(set(hosts), {"codex", "claude-code", "cursor", "hermes", "opencode"})
+        self.assertEqual(set(hosts), {"codex", "claude-code", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "qwen-code"})
         self.assertEqual(baseline["maturityRules"]["requiredReleaseMaturity"], "EXPERIMENTAL")
         self.assertIsNone(baseline["maturityRules"]["liveTestedHostRange"])
         self.assertEqual(baseline["maturityRules"]["unsupportedOperationPolicy"], "fail-closed")
         self.assertEqual(baseline["contractCompatibility"]["rangeKind"], "closed-offline")
+        self.assertIn("agent-adapter-capability-manifest.v1", baseline["requiredProtocolEnvelopes"])
 
         required_operations = set(baseline["requiredOperations"])
         self.assertIn("install", required_operations)

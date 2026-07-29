@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- Added adapter capability manifests, manifest validation helpers, and receipt
+  normalization/redaction helpers for future host adapter work.
+- Added `agent-lifecycle adapter inspect` for safe descriptor and host
+  capability discovery without live model invocation or promotion claims.
+- Extended adapter scaffold output with capability manifests, fail-closed runner
+  skeletons, receipt normalizers, adapter test skeletons, and support stubs.
+- Added offline adapter conformance verification and OpenCode 1.18.9 safe
+  inspection evidence while keeping OpenCode `EXPERIMENTAL`.
+- Added Hermes v0.19.0 safe inspection/preflight evidence and explicit
+  non-promotion blocker while keeping Hermes `EXPERIMENTAL`.
+- Added Cursor Agent 2026.07.23 safe inspection/preflight evidence and explicit
+  Free-tier non-promotion blocker while keeping Cursor `EXPERIMENTAL`.
+- Added the Gemini CLI adapter scaffold, Gemini CLI 0.46.0 safe inspection
+  evidence, and explicit live-harness blocker while keeping Gemini CLI
+  `EXPERIMENTAL`.
+- Added the qwen-code adapter scaffold, qwen-code 0.21.0 safe inspection
+  evidence, and explicit live-harness/resource-cap blockers while keeping
+  qwen-code `EXPERIMENTAL`.
+- Added the Kimi Code adapter scaffold, Kimi Code 0.30.0 safe inspection
+  evidence, and explicit live-harness blocker while keeping Kimi Code
+  `EXPERIMENTAL`.
+
 ## 0.6.1 - 2026-07-29
 
 - Added reusable live-promotion and verified-adapter release checklists.
