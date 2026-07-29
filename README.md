@@ -10,6 +10,21 @@ final verdict.
 It is distributed as one repository with one semantic core and native host
 projections for Codex, Claude Code, Cursor, Hermes, and OpenCode.
 
+## Why it exists
+
+Agentic software work breaks down when the plan, execution budget, writes,
+reviews, and final proof live only in chat history. Agent Lifecycle Kit turns
+those steps into explicit artifacts and gates so a task can be driven to a
+defensible finish without losing control of quality or resource use.
+
+Use it when you need:
+
+- reviewed SDD planning before implementation starts;
+- frozen task packets with bounded ownership and validation contracts;
+- controlled execution with context, budget, and external-action gates;
+- independent implementation audits before acceptance;
+- host-specific adapter evidence instead of broad unsupported claims.
+
 ## Current status
 
 `v0.5.0` is the current source release. It adds the release-0-5 execution
