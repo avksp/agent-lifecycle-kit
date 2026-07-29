@@ -2,6 +2,47 @@
 
 ## Unreleased
 
+- No changes yet.
+
+## 0.12.1 - 2026-07-29
+
+- Fixed Windows CI path separator handling in the adapter scaffold CLI test.
+- Updated package metadata and source-release documentation from `v0.6.1` to
+  `v0.12.1`.
+- Updated Codex, Claude, Cursor, Hermes and marketplace plugin metadata to the
+  same `0.12.1` patch version.
+
+## 0.12.0 - 2026-07-29
+
+- Added the Kimi Code adapter scaffold, Kimi Code 0.30.0 safe inspection
+  evidence, and explicit live-harness blocker while keeping Kimi Code
+  `EXPERIMENTAL`.
+- Expanded support-matrix validation to all tracked host rows.
+
+## 0.11.0 - 2026-07-29
+
+- Added the qwen-code adapter scaffold, qwen-code 0.21.0 safe inspection
+  evidence, and explicit live-harness/resource-cap blockers while keeping
+  qwen-code `EXPERIMENTAL`.
+
+## 0.10.0 - 2026-07-29
+
+- Added the Gemini CLI adapter scaffold, Gemini CLI 0.46.0 safe inspection
+  evidence, and explicit live-harness blocker while keeping Gemini CLI
+  `EXPERIMENTAL`.
+
+## 0.9.0 - 2026-07-29
+
+- Added Cursor Agent 2026.07.23 safe inspection/preflight evidence and explicit
+  Free-tier non-promotion blocker while keeping Cursor `EXPERIMENTAL`.
+
+## 0.8.0 - 2026-07-29
+
+- Added Hermes v0.19.0 safe inspection/preflight evidence and explicit
+  non-promotion blocker while keeping Hermes `EXPERIMENTAL`.
+
+## 0.7.0 - 2026-07-29
+
 - Added adapter capability manifests, manifest validation helpers, and receipt
   normalization/redaction helpers for future host adapter work.
 - Added `agent-lifecycle adapter inspect` for safe descriptor and host
@@ -10,19 +51,6 @@
   skeletons, receipt normalizers, adapter test skeletons, and support stubs.
 - Added offline adapter conformance verification and OpenCode 1.18.9 safe
   inspection evidence while keeping OpenCode `EXPERIMENTAL`.
-- Added Hermes v0.19.0 safe inspection/preflight evidence and explicit
-  non-promotion blocker while keeping Hermes `EXPERIMENTAL`.
-- Added Cursor Agent 2026.07.23 safe inspection/preflight evidence and explicit
-  Free-tier non-promotion blocker while keeping Cursor `EXPERIMENTAL`.
-- Added the Gemini CLI adapter scaffold, Gemini CLI 0.46.0 safe inspection
-  evidence, and explicit live-harness blocker while keeping Gemini CLI
-  `EXPERIMENTAL`.
-- Added the qwen-code adapter scaffold, qwen-code 0.21.0 safe inspection
-  evidence, and explicit live-harness/resource-cap blockers while keeping
-  qwen-code `EXPERIMENTAL`.
-- Added the Kimi Code adapter scaffold, Kimi Code 0.30.0 safe inspection
-  evidence, and explicit live-harness blocker while keeping Kimi Code
-  `EXPERIMENTAL`.
 
 ## 0.6.1 - 2026-07-29
 
@@ -94,33 +122,19 @@
 
 ## 0.1.2 - 2026-07-23
 
-- Added a live cost/token calibration profile and verifier; production
-  promotion now requires real usage-attested receipts and rejects synthetic
-  replay evidence.
-- Added `S1-SMALL-CONTEXT-4K-STRICT-01` to the synthetic conformance corpus,
-  budget targets and replay plan.
-- Added the `4k-strict` compact-context window for local models and constrained hosts below the previous 8k baseline.
-- Fixed `context check` and `context render` CLI overflow semantics: a rendered `FAIL` result now exits non-zero with `context-overflow`.
-- Fixed compact context receipts to enforce all bundled profile budgets: reserved output, active packet, state summary, evidence summary, optional tool output, and recent verbatim user turns.
-- Added CLI wiring for existing specification, plan, and task-packet compiler core checks.
-- Added a required final-audit precondition to `workflow finalize` and bind the audit identity into final proof.
-- Added hard controller-gate receipt enforcement for task and finalization workflow transitions.
-- Added stable machine-readable neutrality error codes and JSON error envelopes for neutrality CLI helpers.
-- Fixed Windows checkout line-ending stability for content-addressed synthetic
-  conformance fixtures and skill metadata checks.
-- Clarified the modular-controller architecture document with the current source map, implemented/reserved boundaries, and split candidates.
-- Centralized workflow operation commits in a shared operation kernel used by plan adoption, run, task, and finalization transitions.
-- Enforced all declared ZIP archive neutrality policy limits, including nesting, archive/entry counts, compressed/expanded byte ceilings, and compression ratio.
+- Removed archived release tarballs and zip files from the source tree and
+  blocked future archive commits through release inventory validation.
+- Added a clean-checkout CI simulation script and CI regression coverage so
+  tracked tests no longer depend on ignored `tasks/**` planning artifacts.
+- Added placeholder-safe adapter tests for Cursor experimental metadata.
 
-## 0.1.1 - 2026-07-22
+## 0.1.1 - 2026-07-23
 
-- Added root-level Codex, Claude Code, and Cursor publication manifests.
-- Added Codex, Claude Code, and Cursor marketplace catalogs for the tagged source package.
-- Added root OpenCode source config and `skills.sh.json` metadata for Hermes-compatible skill discovery.
-- Updated README installation and publication guidance for `v0.1.1`.
+- Added release assembly, inventory, verification, and support-matrix evidence
+  tooling for source release candidates.
+- Added release CI matrix profile validation and deferred promotion contracts.
 
 ## 0.1.0 - 2026-07-22
 
-- Added the standalone Agent Lifecycle Kit offline release-candidate contract.
-- Added native adapter projections for Codex, Claude Code, Cursor, Hermes and OpenCode as experimental surfaces.
-- Added local release-candidate assembly, verification, support-matrix and deferred-promotion checks.
+- Initial source release with provider-neutral lifecycle skills, workflow
+  contracts, adapter descriptors, and baseline validation tooling.

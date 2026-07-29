@@ -1,13 +1,14 @@
 # Adapter support matrix
 
-This matrix is the authoritative current source-tree support claim. `v0.6.1`
+This matrix is the authoritative current source-tree support claim. `v0.12.1`
 is the current tagged source release and includes host-local model selection,
 budget-mode controls, release-0-5 lifecycle gates, Claude Code live promotion
-evidence, Codex CLI live promotion evidence, reusable promotion guidance, and
-future-host scaffold artifacts. `EXPERIMENTAL` means the adapter has an offline
-projection and deterministic contract tests. `VERIFIED` is host-specific and
-requires bounded live host conformance, live calibration, and lifecycle proof
-evidence.
+evidence, Codex CLI live promotion evidence, reusable promotion guidance,
+adapter capability manifests, safe adapter inspection, and ordered terminal
+outcomes for OpenCode, Hermes, Cursor, Gemini CLI, qwen-code, and Kimi Code.
+`EXPERIMENTAL` means the adapter has an offline projection and deterministic
+contract tests. `VERIFIED` is host-specific and requires bounded live host
+conformance, live calibration, and lifecycle proof evidence.
 
 ## Runtime support
 

@@ -7,7 +7,7 @@ capability manifest at `adapters/hermes/capabilities.manifest.json`.
 Install individual skills directly from the tagged source release, for example:
 
 ```bash
-hermes skills install https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.6.1/skills/agent-workflow-orchestrator/SKILL.md
+hermes skills install https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.1/skills/agent-workflow-orchestrator/SKILL.md
 ```
 
 Validate the source projection before any live run:

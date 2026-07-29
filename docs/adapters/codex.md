@@ -1,14 +1,14 @@
 # Codex adapter
 
 The Codex projection packages the shared lifecycle skills and a Codex plugin
-manifest. The root repository is the canonical Codex plugin root for `v0.6.1`;
+manifest. The root repository is the canonical Codex plugin root for `v0.12.1`;
 `adapters/codex/` remains host-specific projection metadata rather than a
 separate lifecycle implementation.
 
 Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.6.1
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.1
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 

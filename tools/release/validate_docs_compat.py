@@ -62,11 +62,11 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.6.1.md",
+        "release/notes/v0.12.1.md",
         (
             "Status: source release.",
-            "Scaffold output now includes projection manifest",
-            "Budget caps stop runaway execution",
+            "Windows CI failure",
+            "Updated package metadata to `0.12.1`",
         ),
     ),
 )
