@@ -29,15 +29,15 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         "docs/adapters/support-matrix.md",
         (
             "authoritative current source-tree support claim",
-            "Claude Code 0.5.1 live evidence",
+            "Claude Code 0.5.0 live evidence",
             "Codex, Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`",
         ),
     ),
     (
-        "release/notes/v0.4.0.md",
+        "release/notes/v0.5.0.md",
         (
             "Status: source release.",
-            "Bundled adapters remain `EXPERIMENTAL`",
+            "Claude Code is host-specific `VERIFIED`",
             "Budget caps stop runaway execution",
         ),
     ),

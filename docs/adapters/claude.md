@@ -13,8 +13,8 @@ claude plugin install agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
 Run `/reload-plugins` after installation in an interactive session. The
-verified claim is local and host-specific: it is backed by release-0-5 patch
-`0.5.1` live conformance, live calibration, and full ALK lifecycle evidence in
+verified claim is local and host-specific: it is backed by release-0-5 live conformance,
+live calibration, and full ALK lifecycle evidence in
 the support matrix. It does not claim official Claude directory approval,
 universal host support, or a broader production-promotion platform matrix pass.
 
@@ -25,7 +25,7 @@ Current verified range:
 - Claude Code 2.1.220.
 - Source revision `6bb3b58ee01d028fe21cef209c284efc79e55ceb`.
 - Committed redacted evidence summary:
-  `docs/adapters/evidence/claude-code-0.5.1.md`.
+  `docs/adapters/evidence/claude-code-0.5.0.md`.
 - Host conformance:
   `tasks/release-0-5/evidence/live-host-conformance-claude-code.json`.
 - Live calibration:

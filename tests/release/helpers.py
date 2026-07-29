@@ -373,7 +373,7 @@ def _write_live_host_promotion_plan_fixture(package_root: Path) -> Path:
         "validationCommands": [
             {
                 "id": "LHP-VAL-PLAN-CHECK",
-                "argv": "PYTHONPATH=src python tools/release/validate_live_host_promotion_plan.py --plan tasks/release-0-5/patches/0.5.1-claude-live-promotion/host-promotion.plan.json --evidence tasks/release-0-5/evidence/live-host-promotion-plan-validation.json",
+                "argv": "PYTHONPATH=src python tools/release/validate_live_host_promotion_plan.py --plan tasks/release-0-5/patches/0.5.0-claude-live-promotion/host-promotion.plan.json --evidence tasks/release-0-5/evidence/live-host-promotion-plan-validation.json",
             }
         ],
         "evidenceArtifacts": [

@@ -1,8 +1,8 @@
 # Adapter support matrix
 
-This matrix is the authoritative current source-tree support claim. `v0.4.0`
-remains the latest tagged source release, while the local `0.5.x` line adds
-host-local model selection, budget-mode controls, and Claude Code live
+This matrix is the authoritative current source-tree support claim. `v0.5.0`
+is the current tagged source release and includes host-local model selection,
+budget-mode controls, release-0-5 lifecycle gates, and Claude Code live
 promotion evidence. `EXPERIMENTAL` means the adapter has an offline projection
 and deterministic contract tests. `VERIFIED` is host-specific and requires
 bounded live host conformance, live calibration, and lifecycle proof evidence.
@@ -59,7 +59,7 @@ hashes.
 
 Claude Code is `VERIFIED` for host-local model routing on Claude Code 2.1.220:
 the live receipts include host usage attestation, quality pass status, and
-budget evidence for the `0.5.1` promotion patch.
+budget evidence for the release-0-5 promotion patch.
 Codex, Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`: they declare
 fail-closed support for host-local model profiles and model-route execution,
 but still need live usage receipts and quality/cost evidence before a
@@ -81,14 +81,14 @@ plus token and/or wall-clock caps. Exceeding a cap pauses for an operator
 decision or follows a bounded auto-reroute policy, but it never upgrades an
 adapter to `VERIFIED` by itself.
 
-## Claude Code 0.5.1 live evidence
+## Claude Code 0.5.0 live evidence
 
 Claude Code is verified only for the tested local host range:
 
 - Host: Claude Code 2.1.220.
 - Source revision: `6bb3b58ee01d028fe21cef209c284efc79e55ceb`.
 - Committed redacted evidence summary:
-  `docs/adapters/evidence/claude-code-0.5.1.md`.
+  `docs/adapters/evidence/claude-code-0.5.0.md`.
 - Plan validation:
   `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/live-host-promotion-plan-validation.json`.
 - Live preflight:
