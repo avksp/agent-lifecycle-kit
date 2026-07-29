@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -142,14 +143,15 @@ def _validate_plan(
     )
     _validate_dependency_graph(host_order, workstreams_by_host, blockers, checks)
     _validate_host_availability(plan, host_order, blockers, checks)
-    _validate_paths(plan, package_root, workstreams, blockers, checks)
+    evidence_root = _evidence_root_for_plan(plan, plan_path)
+    _validate_paths(plan, package_root, workstreams, evidence_root, blockers, checks)
     _validate_shared_inputs(plan, blockers, checks)
     _validate_artifact_root_policy(plan, blockers, checks)
     _validate_budget_policy(plan, profile, blockers, checks)
     _validate_operation_requirements(plan, baseline, blockers, checks)
     _validate_blocker_codes(plan, blockers, checks)
     _validate_acceptance(plan, blockers, checks)
-    _validate_validation_command(plan, blockers, checks)
+    _validate_validation_command(plan, plan_path, evidence_root, blockers, checks)
     _validate_no_local_absolute_paths(plan, blockers, checks)
 
 
@@ -204,6 +206,7 @@ def _validate_paths(
     plan: dict[str, Any],
     package_root: Path,
     workstreams: list[dict[str, Any]],
+    evidence_root: str,
     blockers: list[dict[str, Any]],
     checks: list[dict[str, Any]],
 ) -> None:
@@ -225,7 +228,7 @@ def _validate_paths(
         elif not (package_root / plan_ref).is_file():
             missing_host_plans.append(plan_ref)
         for evidence_path in _string_list(workstream.get("evidence")):
-            if not _repo_path_ok(evidence_path) or not evidence_path.startswith("tasks/release-0-3/evidence/"):
+            if not _repo_path_ok(evidence_path) or not evidence_path.startswith(evidence_root):
                 invalid_evidence.append(evidence_path)
     _record(
         checks,
@@ -242,8 +245,8 @@ def _validate_paths(
         "evidence-paths",
         not invalid_evidence,
         "invalid-live-host-evidence-paths",
-        "host evidence paths must be repository-relative under tasks/release-0-3/evidence",
-        {"invalidEvidencePaths": invalid_evidence},
+        f"host evidence paths must be repository-relative under {evidence_root}",
+        {"invalidEvidencePaths": invalid_evidence, "evidenceRoot": evidence_root},
     )
 
 
@@ -385,20 +388,40 @@ def _validate_acceptance(plan: dict[str, Any], blockers: list[dict[str, Any]], c
     )
 
 
-def _validate_validation_command(plan: dict[str, Any], blockers: list[dict[str, Any]], checks: list[dict[str, Any]]) -> None:
+def _validate_validation_command(
+    plan: dict[str, Any],
+    plan_path: Path,
+    evidence_root: str,
+    blockers: list[dict[str, Any]],
+    checks: list[dict[str, Any]],
+) -> None:
     commands = _object_list(plan.get("validationCommands"))
     command = next((item for item in commands if item.get("id") == "LHP-VAL-PLAN-CHECK"), None)
     artifacts = _object_list(plan.get("evidenceArtifacts"))
     artifact = next((item for item in artifacts if item.get("id") == "LHP-EV-PLAN-CHECK"), None)
     argv = command.get("argv") if isinstance(command, dict) else None
+    plan_arg: str | None = None
+    evidence_arg: str | None = None
+    if isinstance(argv, str):
+        parts = shlex.split(argv)
+        plan_arg = _argument_value(parts, "--plan")
+        evidence_arg = _argument_value(parts, "--evidence")
+    artifact_path = artifact.get("path") if isinstance(artifact, dict) else None
+    logical_plan_path = _repo_logical_path(plan_path)
     ok = (
         isinstance(argv, str)
         and "tools/release/validate_live_host_promotion_plan.py" in argv
-        and "--plan tasks/release-0-3/live-host-promotion/host-promotion.plan.json" in argv
-        and "--evidence tasks/release-0-3/evidence/live-host-promotion-plan-validation.json" in argv
+        and isinstance(plan_arg, str)
+        and _repo_path_ok(plan_arg)
+        and plan_arg.endswith("/host-promotion.plan.json")
+        and (logical_plan_path is None or plan_arg == logical_plan_path)
+        and isinstance(evidence_arg, str)
+        and _repo_path_ok(evidence_arg)
         and isinstance(artifact, dict)
         and artifact.get("schemaVersion") == EVIDENCE_SCHEMA
-        and artifact.get("path") == "tasks/release-0-3/evidence/live-host-promotion-plan-validation.json"
+        and isinstance(artifact_path, str)
+        and artifact_path == evidence_arg
+        and artifact_path.startswith(evidence_root)
     )
     _record(
         checks,
@@ -407,6 +430,7 @@ def _validate_validation_command(plan: dict[str, Any], blockers: list[dict[str, 
         ok,
         "missing-live-host-plan-validation-command",
         "host promotion package must declare its own mechanical validation command and evidence artifact",
+        {"planArg": plan_arg, "evidenceArg": evidence_arg, "artifactPath": artifact_path, "evidenceRoot": evidence_root},
     )
 
 
@@ -437,6 +461,51 @@ def _load_shared_json(plan: dict[str, Any], key: str, blockers: list[dict[str, A
         blockers.append({"code": "missing-live-host-shared-input", "message": f"{key} does not exist: {value}"})
         return None
     return load_json(path)
+
+
+def _evidence_root_for_plan(plan: dict[str, Any], plan_path: Path) -> str:
+    explicit = plan.get("evidenceRoot")
+    if isinstance(explicit, str) and _repo_path_ok(explicit):
+        return explicit.rstrip("/") + "/"
+    logical_plan_path = _repo_logical_path(plan_path)
+    release_root = _release_root_from_repo_path(logical_plan_path)
+    if release_root:
+        return f"{release_root}/evidence/"
+    shared_inputs = plan.get("sharedInputs")
+    if isinstance(shared_inputs, dict):
+        manifest_root = _release_root_from_repo_path(shared_inputs.get("planManifest"))
+        if manifest_root:
+            return f"{manifest_root}/evidence/"
+    return "tasks/release-0-3/evidence/"
+
+
+def _release_root_from_repo_path(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    parts = value.split("/")
+    for index, part in enumerate(parts[:-1]):
+        if part == "tasks" and parts[index + 1].startswith("release-"):
+            return f"tasks/{parts[index + 1]}"
+    return None
+
+
+def _repo_logical_path(path: Path) -> str | None:
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def _argument_value(parts: list[str], name: str) -> str | None:
+    try:
+        index = parts.index(name)
+    except ValueError:
+        return None
+    if index + 1 >= len(parts):
+        return None
+    return parts[index + 1]
 
 
 def _repo_path_ok(value: str) -> bool:
