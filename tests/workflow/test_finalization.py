@@ -79,6 +79,57 @@ class WorkflowFinalizationTests(unittest.TestCase):
                     reason="done",
                 )
 
+    def test_finalize_run_requires_completion_signal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state["tasks"][0]["attempt"] = 1
+            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            audit = _final_audit()
+            audit.pop("completionSignal")
+            write_json_create(root / "final/final-audit.json", audit)
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "completion-signal-required")
+
+    def test_finalize_run_accepts_explicit_completion_signal_waiver(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state["tasks"][0]["attempt"] = 1
+            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            audit = _final_audit()
+            audit["completionSignal"] = _completion_signal("WAIVED")
+            write_json_create(root / "final/final-audit.json", audit)
+
+            payload = finalize_run(
+                state_path,
+                operation_id="finalize-op",
+                expected_revision=1,
+                source_revision="source",
+                final_audit_path="final/final-audit.json",
+                proof_path="final/proof.json",
+                reason="done",
+            )
+
+            self.assertEqual(payload["phase"], "COMPLETE")
+
     def test_finalize_run_rejects_final_audit_plan_digest_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

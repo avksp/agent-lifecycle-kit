@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
+from agent_lifecycle.specification import validate_completion_signal
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
@@ -90,6 +91,8 @@ def _validate_final_audit(state: dict[str, Any], final_audit: dict[str, Any]) ->
             raise LifecycleError("final-audit-lineage-mismatch", f"final audit {key} mismatch")
     if final_audit.get("status") != "PASS" or final_audit.get("semanticStatus") != "READY_FOR_FINALIZATION":
         raise LifecycleError("final-audit-not-ready", "final audit is not ready for finalization")
+    completion_signal_validation = validate_completion_signal(final_audit.get("completionSignal"), state=state)
+    final_audit["completionSignalValidation"] = completion_signal_validation
     if final_audit.get("productionPromotionClaimed") is not False:
         raise LifecycleError("final-audit-production-claim", "final audit must not claim production promotion")
     if final_audit.get("notAcceptedTasks"):

@@ -14,8 +14,10 @@ from agent_lifecycle.workflow import (  # noqa: E402
     check_lineage,
     commit_task_result,
     finalize_run,
+    pause_for_external_action,
     pause_for_budget_decision,
     resolve_blocker,
+    resume_external_action,
     select_auto_budget_action,
     start_execution,
     start_task,
@@ -359,10 +361,33 @@ def _final_audit() -> dict:
         "planRevision": 1,
         "planDigest": "0" * 64,
         "productionPromotionClaimed": False,
+        "completionSignal": _completion_signal("PASS"),
         "notAcceptedTasks": [],
         "missingReleaseEvidence": [],
         "findings": [],
     }
+
+
+def _completion_signal(status: str) -> dict:
+    signal = {
+        "schemaVersion": "agent-completion-signal.v1",
+        "runId": "run",
+        "packageId": "package",
+        "planRevision": 1,
+        "planDigest": "0" * 64,
+        "sourceRevision": "source",
+        "status": status,
+        "evidenceIds": ["EV-FINAL"],
+        "verifier": {"id": "final-auditor", "independent": True},
+        "completedAt": "2026-07-29T08:00:00Z",
+    }
+    if status == "WAIVED":
+        signal["waiver"] = {
+            "reason": "operator-owned external action remains",
+            "approvedBy": "release-lead",
+            "evidenceIds": ["EV-WAIVER"],
+        }
+    return signal
 
 
 __all__ = [
@@ -376,7 +401,9 @@ __all__ = [
     "commit_task_result",
     "finalize_run",
     "pause_for_budget_decision",
+    "pause_for_external_action",
     "resolve_blocker",
+    "resume_external_action",
     "select_auto_budget_action",
     "start_execution",
     "start_task",

@@ -56,6 +56,66 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
             self.assertEqual(payload["manifest"]["schemaVersion"], "agent-plan-validation.v1")
             self.assertEqual(payload["lock"]["schemaVersion"], "agent-plan-lock-verification.v1")
 
+    def test_plan_acceptance_check_cli_validates_markdown_links(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = root / "plan.manifest.json"
+            acceptance_path = root / "acceptance-criteria.md"
+            manifest = _manifest()
+            manifest["acceptance"] = {
+                "criteria": [
+                    {"id": "AC-1", "requirementIds": ["REQ-1"], "evidenceIds": ["EV-1"]},
+                ]
+            }
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            acceptance_path.write_text(
+                "| ID | Requirements | Evidence | Criterion |\n"
+                "|---|---|---|---|\n"
+                "| `AC-1` | `REQ-1` | `EV-1` | checked |\n",
+                encoding="utf-8",
+            )
+            code, payload = _run_cli([
+                "plan",
+                "acceptance-check",
+                "--manifest",
+                str(manifest_path),
+                "--acceptance",
+                str(acceptance_path),
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-acceptance-checklist-validation.v1")
+            self.assertEqual(payload["status"], "PASS")
+
+    def test_plan_acceptance_check_cli_rejects_markdown_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = root / "plan.manifest.json"
+            acceptance_path = root / "acceptance-criteria.md"
+            manifest = _manifest()
+            manifest["acceptance"] = {
+                "criteria": [
+                    {"id": "AC-1", "requirementIds": ["REQ-1"], "evidenceIds": ["EV-1"]},
+                ]
+            }
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            acceptance_path.write_text(
+                "| ID | Requirements | Evidence | Criterion |\n"
+                "|---|---|---|---|\n"
+                "| `AC-1` | `REQ-1` | `EV-X` | drifted |\n",
+                encoding="utf-8",
+            )
+            code, payload = _run_cli([
+                "plan",
+                "acceptance-check",
+                "--manifest",
+                str(manifest_path),
+                "--acceptance",
+                str(acceptance_path),
+            ])
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "acceptance-checklist-mismatch")
+            self.assertEqual(payload["details"]["linkMismatches"][0]["id"], "AC-1")
+
 
 if __name__ == "__main__":
     unittest.main()

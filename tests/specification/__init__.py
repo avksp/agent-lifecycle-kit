@@ -1,0 +1,1 @@
+"""Specification contract tests."""

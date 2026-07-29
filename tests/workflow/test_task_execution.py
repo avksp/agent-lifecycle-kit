@@ -64,6 +64,9 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
             )
             task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
             self.assertEqual(task["status"], "RUNNING")
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            stored_task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(stored_task["attemptBaseRevision"], "source")
             state = json.loads(state_path.read_text(encoding="utf-8"))
             stored = next(item for item in state["tasks"] if item["id"] == "WS-01")
             self.assertEqual(stored["controllerGateReceipts"][0]["gateId"], "G-PRE")
@@ -156,6 +159,9 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
             task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
             self.assertEqual(task["status"], "ACCEPTED")
             self.assertEqual(payload["phase"], "FINAL_AUDIT")
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            stored_task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(stored_task["ownershipReceipt"]["status"], "PASS")
 
     def test_commit_result_requires_model_usage_receipt_for_model_route(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -259,6 +265,238 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 )
 
             self.assertEqual(raised.exception.code, "model-usage-lineage-mismatch")
+
+    def test_commit_result_rejects_stale_attempt_baseline_without_reconciliation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result = _result(attempt=1)
+            result["changeSet"]["baselineSha"] = "older-source"
+            write_json_create(root / result_path, result)
+
+            with self.assertRaises(LifecycleError) as raised:
+                commit_task_result(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="result-op",
+                    expected_revision=2,
+                    source_revision="source",
+                    result_path=result_path,
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "task-result-stale-baseline")
+
+    def test_commit_result_accepts_stale_attempt_baseline_with_reconciliation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result = _result(attempt=1)
+            result["changeSet"]["baselineSha"] = "older-source"
+            result["reconciliationReceipt"] = {
+                "schemaVersion": "agent-baseline-reconciliation-receipt.v1",
+                "status": "PASS",
+                "taskId": "WS-01",
+                "attempt": 1,
+                "expectedBaseRevision": "source",
+                "actualBaseRevision": "older-source",
+                "evidenceIds": ["EV-RECONCILIATION"],
+            }
+            write_json_create(root / result_path, result)
+
+            payload = commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-op",
+                expected_revision=2,
+                source_revision="source",
+                result_path=result_path,
+                reason="done",
+            )
+
+            task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(task["status"], "VERIFYING")
+
+    def test_commit_result_rejects_failed_command_as_complete(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result = _result(attempt=1)
+            result["commands"] = [{"id": "verify", "command": "python -m unittest", "exitCode": 1}]
+            write_json_create(root / result_path, result)
+
+            with self.assertRaises(LifecycleError) as raised:
+                commit_task_result(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="result-op",
+                    expected_revision=2,
+                    source_revision="source",
+                    result_path=result_path,
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "task-result-failed-command")
+
+    def test_accept_task_rejects_unowned_changed_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result = _result(attempt=1)
+            result["changedFiles"] = ["docs/out-of-scope.md"]
+            result["itemOutcomes"][0]["changedFiles"] = ["docs/out-of-scope.md"]
+            write_json_create(root / result_path, result)
+            commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-op",
+                expected_revision=2,
+                source_revision="source",
+                result_path=result_path,
+                reason="done",
+            )
+            review_path = "tasks/WS-01/attempt-1/task-review.json"
+            review = _review(attempt=1, result_hash=canonical_digest(result))
+            write_json_create(root / review_path, review)
+
+            with self.assertRaises(LifecycleError) as raised:
+                accept_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="accept-op",
+                    expected_revision=3,
+                    review_path=review_path,
+                    reason="accepted",
+                )
+
+            self.assertEqual(raised.exception.code, "task-ownership-violation")
+
+    def test_accept_task_rejects_forbidden_changed_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["writePolicy"] = {"forbiddenWrites": [".git"], "readOnly": []}
+            state["tasks"][0]["writes"] = ["src", ".git"]
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result = _result(attempt=1)
+            result["changedFiles"] = [".git/config"]
+            result["itemOutcomes"][0]["changedFiles"] = [".git/config"]
+            write_json_create(root / result_path, result)
+            commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-op",
+                expected_revision=2,
+                source_revision="source",
+                result_path=result_path,
+                reason="done",
+            )
+            review_path = "tasks/WS-01/attempt-1/task-review.json"
+            review = _review(attempt=1, result_hash=canonical_digest(result))
+            write_json_create(root / review_path, review)
+
+            with self.assertRaises(LifecycleError) as raised:
+                accept_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="accept-op",
+                    expected_revision=3,
+                    review_path=review_path,
+                    reason="accepted",
+                )
+
+            self.assertEqual(raised.exception.code, "task-ownership-violation")
+
+    def test_accept_task_rejects_adopted_state_without_write_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["manifestPath"] = "plans/package/plan.manifest.json"
+            state["packetSet"] = {"path": "plans/package/workflow/task-packets/index.json"}
+            state["tasks"][0].pop("writes", None)
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result = _result(attempt=1)
+            write_json_create(root / result_path, result)
+            commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-op",
+                expected_revision=2,
+                source_revision="source",
+                result_path=result_path,
+                reason="done",
+            )
+            review_path = "tasks/WS-01/attempt-1/task-review.json"
+            review = _review(attempt=1, result_hash=canonical_digest(result))
+            write_json_create(root / review_path, review)
+
+            with self.assertRaises(LifecycleError) as raised:
+                accept_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="accept-op",
+                    expected_revision=3,
+                    review_path=review_path,
+                    reason="accepted",
+                )
+
+            self.assertEqual(raised.exception.code, "task-write-scope-missing")
 
     def test_start_task_rejects_critical_review_downgrade_route(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

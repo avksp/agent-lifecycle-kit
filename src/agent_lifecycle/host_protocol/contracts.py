@@ -8,6 +8,16 @@ from typing import Any, Literal
 from agent_lifecycle.contracts.errors import LifecycleError
 
 HostOperationStatus = Literal["PASS", "FAIL", "BLOCKED"]
+HostAdapterEventStatus = Literal["INFO", "PASS", "FAIL", "BLOCKED"]
+HostAdapterEventType = Literal[
+    "session.started",
+    "task.launched",
+    "command.completed",
+    "writes.summarized",
+    "usage.reported",
+    "task.blocked",
+    "task.completed",
+]
 
 
 def _reject_unknown(value: dict[str, Any], allowed: set[str], label: str) -> None:
@@ -112,4 +122,93 @@ class HostOperationReceipt:
             status=status,
             outputs=value["outputs"],
             usage=value["usage"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class HostAdapterEvent:
+    event_id: str
+    host: str
+    adapter_id: str
+    run_id: str
+    task_id: str
+    operation_id: str
+    sequence: int
+    event_type: HostAdapterEventType
+    status: HostAdapterEventStatus
+    recorded_at: str
+    payload: dict[str, Any] = field(default_factory=dict)
+
+    schema_version = "agent-adapter-event.v1"
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "schemaVersion": self.schema_version,
+            "eventId": self.event_id,
+            "host": self.host,
+            "adapterId": self.adapter_id,
+            "runId": self.run_id,
+            "taskId": self.task_id,
+            "operationId": self.operation_id,
+            "sequence": self.sequence,
+            "eventType": self.event_type,
+            "status": self.status,
+            "recordedAt": self.recorded_at,
+            "payload": self.payload,
+        }
+
+    @classmethod
+    def from_json(cls, value: dict[str, Any]) -> "HostAdapterEvent":
+        allowed = {
+            "schemaVersion",
+            "eventId",
+            "host",
+            "adapterId",
+            "runId",
+            "taskId",
+            "operationId",
+            "sequence",
+            "eventType",
+            "status",
+            "recordedAt",
+            "payload",
+        }
+        _reject_unknown(value, allowed, "adapter event")
+        if value.get("schemaVersion") != cls.schema_version:
+            raise LifecycleError("unsupported-schema", "adapter event schemaVersion is unsupported")
+        for key in ("eventId", "host", "adapterId", "runId", "taskId", "operationId", "recordedAt"):
+            if not isinstance(value.get(key), str) or not value[key]:
+                raise LifecycleError("invalid-adapter-event", f"{key} is required")
+        sequence = value.get("sequence")
+        if not isinstance(sequence, int) or isinstance(sequence, bool) or sequence < 1:
+            raise LifecycleError("invalid-adapter-event", "sequence must be a positive integer")
+        event_type = value.get("eventType")
+        if event_type not in {
+            "session.started",
+            "task.launched",
+            "command.completed",
+            "writes.summarized",
+            "usage.reported",
+            "task.blocked",
+            "task.completed",
+        }:
+            raise LifecycleError("invalid-adapter-event", "eventType is unsupported")
+        status = value.get("status")
+        if status not in {"INFO", "PASS", "FAIL", "BLOCKED"}:
+            raise LifecycleError("invalid-adapter-event", "status is unsupported")
+        payload = value.get("payload")
+        if not isinstance(payload, dict):
+            raise LifecycleError("invalid-adapter-event", "payload must be an object")
+        return cls(
+            event_id=value["eventId"],
+            host=value["host"],
+            adapter_id=value["adapterId"],
+            run_id=value["runId"],
+            task_id=value["taskId"],
+            operation_id=value["operationId"],
+            sequence=sequence,
+            event_type=event_type,
+            status=status,
+            recorded_at=value["recordedAt"],
+            payload=payload,
         )

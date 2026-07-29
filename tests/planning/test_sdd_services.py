@@ -9,7 +9,11 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest  # noqa: E402
 from agent_lifecycle.freeze import verify_plan_lock  # noqa: E402
-from agent_lifecycle.planning import resolve_sdd_tier, validate_plan_manifest  # noqa: E402
+from agent_lifecycle.planning import (  # noqa: E402
+    resolve_sdd_tier,
+    validate_acceptance_checklist,
+    validate_plan_manifest,
+)
 from agent_lifecycle.review import validate_independent_review  # noqa: E402
 from agent_lifecycle.specification import validate_specification  # noqa: E402
 
@@ -27,6 +31,42 @@ class SddServiceTests(unittest.TestCase):
     def test_plan_validation_rejects_write_overlap(self) -> None:
         with self.assertRaises(LifecycleError):
             validate_plan_manifest(_manifest(overlap=True))
+
+    def test_acceptance_checklist_validates_manifest_links(self) -> None:
+        result = validate_acceptance_checklist(_manifest(overlap=False), _acceptance_markdown())
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["criterionCount"], 2)
+
+    def test_acceptance_checklist_rejects_link_drift(self) -> None:
+        drifted = _acceptance_markdown().replace("`EV-2`", "`EV-X`")
+        with self.assertRaises(LifecycleError) as caught:
+            validate_acceptance_checklist(_manifest(overlap=False), drifted)
+        self.assertEqual(caught.exception.code, "acceptance-checklist-mismatch")
+        self.assertEqual(caught.exception.details["linkMismatches"][0]["id"], "AC-2")
+
+    def test_acceptance_checklist_rejects_missing_markdown_row(self) -> None:
+        missing = _acceptance_markdown().replace(
+            "| `AC-2` | `REQ-2` | `EV-2` | second criterion |\n",
+            "",
+        )
+        with self.assertRaises(LifecycleError) as caught:
+            validate_acceptance_checklist(_manifest(overlap=False), missing)
+        self.assertEqual(caught.exception.code, "acceptance-checklist-mismatch")
+        self.assertEqual(caught.exception.details["missingInMarkdown"], ["AC-2"])
+
+    def test_acceptance_checklist_rejects_extra_markdown_row(self) -> None:
+        extra = _acceptance_markdown() + "| `AC-X` | `REQ-X` | `EV-X` | extra criterion |\n"
+        with self.assertRaises(LifecycleError) as caught:
+            validate_acceptance_checklist(_manifest(overlap=False), extra)
+        self.assertEqual(caught.exception.code, "acceptance-checklist-mismatch")
+        self.assertEqual(caught.exception.details["extraInMarkdown"], ["AC-X"])
+
+    def test_acceptance_checklist_rejects_duplicate_markdown_row(self) -> None:
+        duplicate = _acceptance_markdown() + "| `AC-2` | `REQ-2` | `EV-2` | duplicate criterion |\n"
+        with self.assertRaises(LifecycleError) as caught:
+            validate_acceptance_checklist(_manifest(overlap=False), duplicate)
+        self.assertEqual(caught.exception.code, "acceptance-checklist-mismatch")
+        self.assertEqual(caught.exception.details["duplicateMarkdownIds"], ["AC-2"])
 
     def test_review_validation_rejects_open_medium_finding(self) -> None:
         with self.assertRaises(LifecycleError):
@@ -69,7 +109,23 @@ def _manifest(*, overlap: bool) -> dict:
             {"id": "WS-01", "writes": ["src/core"]},
             {"id": "WS-02", "writes": [second_write]},
         ],
+        "acceptance": {
+            "criteria": [
+                {"id": "AC-1", "requirementIds": ["REQ-1"], "evidenceIds": ["EV-1"]},
+                {"id": "AC-2", "requirementIds": ["REQ-2"], "evidenceIds": ["EV-2"]},
+            ]
+        },
     }
+
+
+def _acceptance_markdown() -> str:
+    return """# Acceptance
+
+| ID | Requirements | Evidence | Criterion |
+|---|---|---|---|
+| `AC-1` | `REQ-1` | `EV-1` | first criterion |
+| `AC-2` | `REQ-2` | `EV-2` | second criterion |
+"""
 
 
 def _tier_request(

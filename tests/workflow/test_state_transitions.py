@@ -90,6 +90,82 @@ class WorkflowStateTransitionTests(unittest.TestCase):
             self.assertEqual(payload["phase"], "RUNNING")
             self.assertIsNone(payload["blocker"])
 
+    def test_external_action_pause_requires_receipt_before_resume(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            payload = pause_for_external_action(
+                state_path,
+                operation_id="external-pause-op",
+                expected_revision=1,
+                action_id="deploy-preview",
+                receipt_path="external/deploy-preview.json",
+                reason="operator must deploy preview",
+            )
+            self.assertEqual(payload["phase"], "WAITING_FOR_EXTERNAL_ACTION")
+            self.assertEqual(payload["nextAction"]["type"], "record-external-action-receipt")
+
+            with self.assertRaises(LifecycleError):
+                resume_external_action(
+                    state_path,
+                    operation_id="external-resume-missing",
+                    expected_revision=2,
+                    receipt_path="external/deploy-preview.json",
+                    reason="resume",
+                )
+
+            write_json_create(root / "external/deploy-preview.json", _external_action_receipt())
+            payload = resume_external_action(
+                state_path,
+                operation_id="external-resume-op",
+                expected_revision=2,
+                receipt_path="external/deploy-preview.json",
+                reason="external action complete",
+            )
+            self.assertEqual(payload["phase"], "RUNNING")
+
+    def test_external_action_resume_rejects_lineage_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            pause_for_external_action(
+                state_path,
+                operation_id="external-pause-op",
+                expected_revision=1,
+                action_id="deploy-preview",
+                receipt_path="external/deploy-preview.json",
+                reason="operator must deploy preview",
+            )
+            receipt = _external_action_receipt()
+            receipt["actionId"] = "other-action"
+            write_json_create(root / "external/deploy-preview.json", receipt)
+
+            with self.assertRaises(LifecycleError) as raised:
+                resume_external_action(
+                    state_path,
+                    operation_id="external-resume-op",
+                    expected_revision=2,
+                    receipt_path="external/deploy-preview.json",
+                    reason="external action complete",
+                )
+
+            self.assertEqual(raised.exception.code, "external-action-receipt-lineage-mismatch")
+
+
+def _external_action_receipt() -> dict:
+    return {
+        "schemaVersion": "agent-external-action-receipt.v1",
+        "runId": "run",
+        "packageId": "package",
+        "planRevision": 1,
+        "planDigest": "0" * 64,
+        "sourceRevision": "source",
+        "actionId": "deploy-preview",
+        "status": "PASS",
+        "evidenceIds": ["EV-EXTERNAL"],
+        "completedAt": "2026-07-29T08:00:00Z",
+    }
+
 
 if __name__ == "__main__":
     unittest.main()

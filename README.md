@@ -17,6 +17,13 @@ redacted model-selection receipts, budget decision workflow controls, and
 metered/subscription/local budget modes while keeping portable core routing
 provider-neutral.
 
+The current development line adds the release-0-5 execution gates: acceptance
+checklist validation against the frozen manifest, neutral adapter event stream
+validation, task-acceptance write-scope enforcement, per-attempt baseline
+reconciliation, external-action parking, and final completion signals. These
+gates are source-tree capabilities until a tagged release updates the package
+version and plugin manifests.
+
 The adapters are still `EXPERIMENTAL`: they have offline contract coverage and
 fail-closed descriptors, but they are not `VERIFIED` until each host has live
 install and lifecycle conformance evidence. Public directory publication also
@@ -186,6 +193,7 @@ agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle specification check --specification <specification.json>
 agent-lifecycle plan check --manifest <plan.manifest.json> --lock <plan.lock.json>
+agent-lifecycle plan acceptance-check --manifest <plan.manifest.json> --acceptance <acceptance-criteria.md>
 agent-lifecycle task compile --manifest <plan.manifest.json> --out-dir <task-packet-dir> --write
 agent-lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 agent-lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
@@ -195,6 +203,7 @@ agent-lifecycle context check --profile profiles/small-context-profile.v1.json -
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 agent-lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
@@ -212,12 +221,14 @@ PYTHONPATH=src python -m agent_lifecycle audit ownership --manifest <plan.manife
 PYTHONPATH=src python -m agent_lifecycle tier resolve --request <tier-request.json>
 PYTHONPATH=src python -m agent_lifecycle specification check --specification <specification.json>
 PYTHONPATH=src python -m agent_lifecycle plan check --manifest <plan.manifest.json> --lock <plan.lock.json>
+PYTHONPATH=src python -m agent_lifecycle plan acceptance-check --manifest <plan.manifest.json> --acceptance <acceptance-criteria.md>
 PYTHONPATH=src python -m agent_lifecycle task compile --manifest <plan.manifest.json> --out-dir <task-packet-dir> --write
 PYTHONPATH=src python -m agent_lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 PYTHONPATH=src python -m agent_lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 PYTHONPATH=src python -m agent_lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+PYTHONPATH=src python -m agent_lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 PYTHONPATH=src python -m agent_lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
@@ -227,10 +238,11 @@ Implemented core CLI groups are `version`, `schema`, `workflow status`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`specification check`, `plan check`, `task compile`, `adapter validate`,
-`adapter scaffold`, and `neutrality`. Adapter scaffold is template-only and can
-only create `EXPERIMENTAL` projection skeletons. Runtime adapter execution and
-conformance lifecycle groups remain reserved and fail closed with a stable
+`specification check`, `plan check`, `plan acceptance-check`, `task compile`,
+`adapter validate`, `adapter event-check`, `adapter scaffold`, and
+`neutrality`. Adapter scaffold is template-only and can only create
+`EXPERIMENTAL` projection skeletons. Runtime adapter execution and conformance
+lifecycle groups remain reserved and fail closed with a stable
 `agent-lifecycle-error.v1` response until their runtime core modules land.
 
 `context check` and `context render` also fail closed on overflow: if the
@@ -242,7 +254,22 @@ user-turn count.
 
 `workflow finalize` requires `--final-audit`. The audit must pass with
 `READY_FOR_FINALIZATION`, match the run's plan revision and digest, avoid
-production-promotion claims, and contain no unresolved MEDIUM+ findings.
+production-promotion claims, contain no unresolved MEDIUM+ findings, and carry
+a valid `agent-completion-signal.v1` with `PASS` status or an explicit
+evidence-bound `WAIVED` signal.
+
+`workflow task-accept` rechecks changed files from the committed task result
+against the frozen task write scope and root write policy before accepting an
+independent review. Forbidden, read-only or unowned paths fail closed with
+`task-ownership-violation`.
+
+Each task attempt records its own base revision at launch. A task result whose
+`changeSet.baselineSha` differs from that attempt base is rejected unless it
+contains a valid `agent-baseline-reconciliation-receipt.v1`.
+
+Human-only work should be represented as workflow state, not prose completion.
+Core transitions can park a run in `WAITING_FOR_EXTERNAL_ACTION` and resume it
+only from a matching `agent-external-action-receipt.v1`.
 
 Workflow transitions enforce task `controllerGates` for `pre-launch`,
 `post-attempt`, `pre-acceptance`, and `finalization` phases. Expected receipts

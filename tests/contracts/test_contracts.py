@@ -18,7 +18,7 @@ from agent_lifecycle.contracts import (  # noqa: E402
     write_json_create,
 )
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas  # noqa: E402
-from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
+from agent_lifecycle.host_protocol import HostAdapterEvent, HostOperationReceipt, HostOperationRequest  # noqa: E402
 
 
 class ContractTests(unittest.TestCase):
@@ -89,10 +89,36 @@ class ContractTests(unittest.TestCase):
         with self.assertRaises(LifecycleError):
             HostOperationReceipt.from_json(invalid)
 
+    def test_host_adapter_event_is_closed_and_typed(self) -> None:
+        event = HostAdapterEvent(
+            event_id="evt-1",
+            host="claude-code",
+            adapter_id="claude",
+            run_id="run-1",
+            task_id="WS-01",
+            operation_id="op-1",
+            sequence=1,
+            event_type="session.started",
+            status="INFO",
+            recorded_at="2026-07-29T08:00:00Z",
+            payload={"mode": "live"},
+        )
+        self.assertEqual(HostAdapterEvent.from_json(event.to_json()), event)
+        invalid = event.to_json()
+        invalid["providerSpecificShape"] = {}
+        with self.assertRaises(LifecycleError):
+            HostAdapterEvent.from_json(invalid)
+
     def test_schema_registry_is_stable_and_closed(self) -> None:
         index = list_schemas()
         ids = {item["id"] for item in index["schemas"]}
         self.assertIn("agent-host-operation-request.v1", ids)
+        self.assertIn("agent-adapter-event.v1", ids)
+        self.assertIn("agent-adapter-event-stream-validation.v1", ids)
+        self.assertIn("agent-completion-signal.v1", ids)
+        self.assertIn("agent-completion-signal-validation.v1", ids)
+        self.assertIn("agent-baseline-reconciliation-receipt.v1", ids)
+        self.assertIn("agent-external-action-receipt.v1", ids)
         self.assertIn("agent-host-model-selection-profile.v1", ids)
         self.assertIn("agent-host-model-selection-receipt.v1", ids)
         self.assertIn("agent-lifecycle-budget-exceeded-policy.v1", ids)
