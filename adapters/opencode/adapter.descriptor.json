@@ -4,8 +4,22 @@
   "host": "opencode",
   "nativeProjection": "opencode-plugin",
   "capabilityManifest": "adapters/opencode/capabilities.manifest.json",
-  "maturity": "EXPERIMENTAL",
-  "liveTestedHostRange": null,
+  "maturity": "VERIFIED",
+  "liveTestedHostRange": {
+    "host": "opencode",
+    "minimumVersion": "1.18.9",
+    "maximumVersion": "1.18.9",
+    "evidence": [
+      "docs/adapters/evidence/opencode-glm52-live-2026-07-29.md",
+      "tasks/release-0-7/evidence/opencode/live-host-conformance-opencode.json",
+      "tasks/release-0-7/evidence/opencode/live-calibration-verification-opencode.json",
+      "tasks/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json"
+    ],
+    "testedAt": "2026-07-29",
+    "productionPromotionClaimed": false,
+    "publicDirectoryApprovalClaimed": false,
+    "sourceRevision": "6c6b40210ee28de4b6a5993367af89e629fb99ff"
+  },
   "releaseAssembly": {
     "sharedSkillsSource": "skills",
     "materializedSkillsTarget": "adapters/opencode/skills",
@@ -30,21 +44,73 @@
     "usageReceiptRequired": true,
     "unsupportedClassPolicy": "fail-closed",
     "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
-    "liveVerified": false
+    "liveVerified": true
   },
   "operations": [
-    {"name": "install", "mapping": "opencode-plugin-config", "offlineConformance": "deterministic"},
-    {"name": "discover", "mapping": "opencode-plugin-loader", "offlineConformance": "deterministic"},
-    {"name": "validate-envelope", "mapping": "core-schema-validation", "offlineConformance": "deterministic"},
-    {"name": "launch", "mapping": "host-agent-launch", "offlineConformance": "synthetic"},
-    {"name": "model-route-execution", "mapping": "attemptModelRoute-to-host-model", "offlineConformance": "synthetic"},
-    {"name": "wait", "mapping": "host-bounded-wait", "offlineConformance": "synthetic"},
-    {"name": "cancel", "mapping": "host-cancel-request", "offlineConformance": "synthetic"},
-    {"name": "resume", "mapping": "workflow-state-resume", "offlineConformance": "synthetic"},
-    {"name": "tool-execution", "mapping": "host-tool-call", "offlineConformance": "synthetic"},
-    {"name": "result-collection", "mapping": "task-result-artifact", "offlineConformance": "deterministic"},
-    {"name": "usage-attestation", "mapping": "host-usage-ledger", "offlineConformance": "synthetic"},
-    {"name": "task-audit", "mapping": "audit-plan-implementation", "offlineConformance": "deterministic"},
-    {"name": "final-audit", "mapping": "audit-plan-implementation", "offlineConformance": "deterministic"}
+    {
+      "name": "install",
+      "mapping": "opencode-plugin-config",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "discover",
+      "mapping": "opencode-plugin-loader",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "validate-envelope",
+      "mapping": "core-schema-validation",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "launch",
+      "mapping": "host-agent-launch",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "model-route-execution",
+      "mapping": "attemptModelRoute-to-host-model",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "wait",
+      "mapping": "host-bounded-wait",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "cancel",
+      "mapping": "host-cancel-request",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "resume",
+      "mapping": "workflow-state-resume",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "tool-execution",
+      "mapping": "host-tool-call",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "result-collection",
+      "mapping": "task-result-artifact",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "usage-attestation",
+      "mapping": "host-usage-ledger",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "task-audit",
+      "mapping": "audit-plan-implementation",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "final-audit",
+      "mapping": "audit-plan-implementation",
+      "offlineConformance": "deterministic"
+    }
   ]
 }

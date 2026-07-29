@@ -25,8 +25,12 @@ surfaces, headless JSON run mode, model selection, permission flag discovery,
 export and stats command discovery. The redacted summary is
 `docs/adapters/evidence/opencode-0.7.0.md`.
 
-The adapter remains `EXPERIMENTAL` until live OpenCode conformance, usage
-calibration and lifecycle proof evidence are accepted in the support matrix.
-Current blocker: `BLOCKED_HOST_LOCAL_MODEL_BINDING`; the live profile still
-needs real host-local OpenCode model identifiers before a bounded live run can
-produce useful promotion evidence.
+The current source tree is `VERIFIED` for OpenCode CLI `1.18.9` only. The
+accepted live evidence was captured on 2026-07-29 with host-local model
+binding, bounded subscription resource caps, live conformance through the host
+receipt, live calibration, and an ALK lifecycle final proof. The redacted live
+summary is
+`docs/adapters/evidence/opencode-glm52-live-2026-07-29.md`.
+
+This does not claim npm publication, public directory approval, production
+promotion, or compatibility with untested OpenCode versions.

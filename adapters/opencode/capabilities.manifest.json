@@ -2,8 +2,8 @@
   "schemaVersion": "agent-adapter-capability-manifest.v1",
   "adapterId": "opencode",
   "host": "opencode",
-  "maturity": "EXPERIMENTAL",
-  "descriptorDigest": "e0b9c6c4e065740cf92b1cfb006bcd7b458c864575e999e0731b0aecd1d41ac2",
+  "maturity": "VERIFIED",
+  "descriptorDigest": "c9c2c549df5a7da3b297165a2552b5b4c037124f580f5a30d71cb41bae8e7f88",
   "unsupportedOperationPolicy": "fail-closed",
   "coreSemantics": "delegated-to-agent-lifecycle-core",
   "capabilities": [
@@ -131,7 +131,7 @@
     "usageReceiptRequired": true,
     "unsupportedClassPolicy": "fail-closed",
     "providerModelNamesInCore": false,
-    "liveVerified": false
+    "liveVerified": true
   },
   "runtimeBoundary": {
     "hostSpecificCode": "adapter-owned",
