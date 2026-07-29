@@ -67,6 +67,32 @@ class ReleaseInventoryTests(unittest.TestCase):
             self.assertTrue(deferred["deferredProductionPromotion"])
             self.assertFalse(deferred["liveModelExecutionClaimed"])
 
+    def test_support_matrix_rejects_verified_host_missing_descriptor_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            support_matrix = out / "support-matrix.md"
+            evidence = out / "support-matrix-contract.json"
+            marker = "tasks/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json"
+            support_matrix.write_text(
+                (ROOT / "docs/adapters/support-matrix.md")
+                .read_text(encoding="utf-8")
+                .replace(marker, "tasks/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/missing-proof.json"),
+                encoding="utf-8",
+            )
+
+            result = _run_no_check(
+                "tools/release/validate_support_matrix.py",
+                "--support-matrix",
+                str(support_matrix),
+                "--profile",
+                "plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json",
+                "--evidence",
+                str(evidence),
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("requires descriptor evidence markers", result.stderr + result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

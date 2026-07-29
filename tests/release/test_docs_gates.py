@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.6.0 - 2026-07-29")
+        current_release = _section(changelog, "## 0.6.1 - 2026-07-29")
         self.assertNotIn("- No changes yet.", unreleased)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -95,10 +95,29 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.6.0.md",
+        root / "release/notes/v0.6.1.md",
         "Status: source release.\n"
-        "Codex CLI is host-specific `VERIFIED`.\n"
+        "Scaffold output now includes projection manifest.\n"
         "Budget caps stop runaway execution.\n",
+    )
+    _write_text(
+        root / "docs/adapters/live-promotion-runbook.md",
+        "Source release.\n"
+        "Host-specific `VERIFIED`.\n"
+        "Public directory approval.\n"
+        "Production promotion.\n"
+        "validate_live_host_conformance.py.\n"
+        "validate_live_calibration.py.\n"
+        "validate_support_matrix.py.\n",
+    )
+    _write_text(
+        root / "docs/guides/verified-adapter-release-checklist.md",
+        "remote tag.\n"
+        "GitHub Release object.\n"
+        "CI status.\n"
+        "Binary assets are intentionally omitted for a source release.\n"
+        "validate_docs_compat.py.\n"
+        "validate_support_matrix.py.\n",
     )
     for host in ("claude", "codex", "cursor", "hermes", "opencode"):
         _write_text(

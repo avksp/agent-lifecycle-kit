@@ -27,12 +27,13 @@ Use it when you need:
 
 ## Current status
 
-`v0.6.0` is the current source release. It includes the release-0-5 execution
+`v0.6.1` is the current source release. It includes the release-0-5 execution
 gates: acceptance checklist validation against the frozen manifest, neutral
 adapter event stream validation, task-acceptance write-scope enforcement,
 per-attempt baseline reconciliation, external-action parking, and final
 completion signals. It also adds release-0-6 Codex CLI live adapter evidence
-with ephemeral host probes.
+with ephemeral host probes, reusable live-promotion documentation, verified
+adapter release checklist, and future-host scaffold artifacts.
 
 Adapter maturity is host-specific. Codex CLI is `VERIFIED` for Codex CLI
 0.145.0 after the release-0-6 live conformance, live calibration, and full
@@ -302,7 +303,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.6.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.6.1
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -372,7 +373,7 @@ from the tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.6.0/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.6.1/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -404,7 +405,7 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 
 The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
-claimed by `v0.6.0`.
+claimed by `v0.6.1`.
 
 ## Usage
 
@@ -514,6 +515,8 @@ requires resolver and independent review agreement.
 
 - [Russian README](docs/guides/README.ru.md)
 - [Adapter support matrix](docs/adapters/support-matrix.md)
+- [Adapter live-promotion runbook](docs/adapters/live-promotion-runbook.md)
+- [Verified-adapter release checklist](docs/guides/verified-adapter-release-checklist.md)
 - [Modular controller architecture](docs/architecture/modular-controller.md)
 - [Codex plugin documentation](https://learn.chatgpt.com/docs/build-plugins)
 - [Claude Code plugin documentation](https://code.claude.com/docs/en/plugins)

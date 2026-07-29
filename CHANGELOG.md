@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.6.1 - 2026-07-29
+
+- Added reusable live-promotion and verified-adapter release checklists.
+- Extended adapter scaffold output with projection manifest, event bridge
+  placeholder, and validation instructions for future hosts.
+- Generalized the support-matrix maturity gate to bind each `VERIFIED` host row
+  to its adapter descriptor evidence markers and added a missing-evidence
+  regression test.
+
 ## 0.6.0 - 2026-07-29
 
 - Promoted the Codex adapter to host-specific `VERIFIED` for Codex CLI 0.145.0
