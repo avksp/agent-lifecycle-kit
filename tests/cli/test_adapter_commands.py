@@ -31,15 +31,27 @@ class CliAdapterCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(payload["status"], "PASS")
             descriptor = root / "adapters/synthetic-host/adapter.descriptor.json"
+            projection = root / "adapters/synthetic-host/projection.manifest.json"
+            event_bridge = root / "adapters/synthetic-host/event-bridge.md"
+            validation_doc = root / "adapters/synthetic-host/validation.md"
             baseline = root / "conformance/adapters/synthetic-host/offline-baseline.json"
             docs = root / "docs/adapters/synthetic-host.md"
             self.assertTrue(descriptor.is_file())
+            self.assertTrue(projection.is_file())
+            self.assertTrue(event_bridge.is_file())
+            self.assertTrue(validation_doc.is_file())
             self.assertTrue(baseline.is_file())
             self.assertTrue(docs.is_file())
             descriptor_payload = json.loads(descriptor.read_text(encoding="utf-8"))
+            projection_payload = json.loads(projection.read_text(encoding="utf-8"))
             self.assertEqual(descriptor_payload["maturity"], "EXPERIMENTAL")
             self.assertIsNone(descriptor_payload["liveTestedHostRange"])
             self.assertFalse(descriptor_payload["modelRouting"]["providerModelNamesInCore"])
+            self.assertEqual(projection_payload["maturity"], "EXPERIMENTAL")
+            self.assertEqual(projection_payload["eventBridge"]["status"], "placeholder")
+            self.assertEqual(projection_payload["eventBridge"]["runtimeDispatch"], "not-implemented-fail-closed")
+            self.assertFalse(projection_payload["providerModelNamesInCore"])
+            self.assertIn("requires bounded live host conformance", validation_doc.read_text(encoding="utf-8"))
 
             code, validation = _run_cli(
                 [
@@ -53,6 +65,24 @@ class CliAdapterCommandTests(unittest.TestCase):
             )
             self.assertEqual(code, 0)
             self.assertEqual(validation["status"], "PASS")
+
+    def test_adapter_scaffold_accepts_future_host_fixture_without_live_requirements(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            code, payload = _run_cli(["adapter", "scaffold", "--host", "gemini-cli", "--target", str(root)])
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["maturity"], "EXPERIMENTAL")
+            roles = {item["role"] for item in payload["files"]}
+            self.assertIn("projection-manifest", roles)
+            self.assertIn("event-bridge-placeholder", roles)
+            self.assertIn("validation-instructions", roles)
+
+            descriptor = json.loads((root / "adapters/gemini-cli/adapter.descriptor.json").read_text(encoding="utf-8"))
+            self.assertEqual(descriptor["host"], "gemini-cli")
+            self.assertEqual(descriptor["maturity"], "EXPERIMENTAL")
+            self.assertFalse(descriptor["modelRouting"]["liveVerified"])
+            self.assertEqual(descriptor["unsupportedOperationPolicy"], "fail-closed")
 
     def test_adapter_scaffold_rejects_existing_files(self) -> None:
         # NEG-R03-14 Unsafe Adapter Scaffold

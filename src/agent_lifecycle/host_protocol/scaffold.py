@@ -62,10 +62,27 @@ def _validate_options(*, host: str, maturity: str) -> None:
 
 def _scaffold_files(host: str, target: Path) -> list[ScaffoldFile]:
     descriptor_path = target / "adapters" / host / "adapter.descriptor.json"
+    projection_path = target / "adapters" / host / "projection.manifest.json"
+    event_bridge_path = target / "adapters" / host / "event-bridge.md"
+    validation_path = target / "adapters" / host / "validation.md"
     conformance_path = target / "conformance" / "adapters" / host / "offline-baseline.json"
     docs_path = target / "docs" / "adapters" / f"{host}.md"
     return [
         ScaffoldFile(descriptor_path, "adapter-descriptor", _descriptor(host)),
+        ScaffoldFile(
+            projection_path,
+            "projection-manifest",
+            _projection_manifest(
+                host=host,
+                descriptor_path=descriptor_path,
+                conformance_path=conformance_path,
+                docs_path=docs_path,
+                event_bridge_path=event_bridge_path,
+                validation_path=validation_path,
+            ),
+        ),
+        ScaffoldFile(event_bridge_path, "event-bridge-placeholder", _event_bridge(host)),
+        ScaffoldFile(validation_path, "validation-instructions", _validation(host)),
         ScaffoldFile(conformance_path, "offline-conformance-baseline", _offline_baseline(host, descriptor_path)),
         ScaffoldFile(docs_path, "adapter-doc", _docs(host)),
     ]
@@ -111,6 +128,39 @@ def _descriptor(host: str) -> dict[str, Any]:
     }
 
 
+def _projection_manifest(
+    *,
+    host: str,
+    descriptor_path: Path,
+    conformance_path: Path,
+    docs_path: Path,
+    event_bridge_path: Path,
+    validation_path: Path,
+) -> dict[str, Any]:
+    return {
+        "schemaVersion": "agent-adapter-projection-manifest.v1",
+        "host": host,
+        "maturity": "EXPERIMENTAL",
+        "descriptor": descriptor_path.as_posix(),
+        "offlineBaseline": conformance_path.as_posix(),
+        "docs": docs_path.as_posix(),
+        "eventBridge": {
+            "path": event_bridge_path.as_posix(),
+            "status": "placeholder",
+            "portableEventSchema": "agent-adapter-event.v1",
+            "runtimeDispatch": "not-implemented-fail-closed",
+        },
+        "validation": {
+            "path": validation_path.as_posix(),
+            "descriptorCommand": f"agent-lifecycle adapter validate --descriptor adapters/{host}/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json",
+            "supportMatrixCommand": "python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json --evidence <support-matrix-evidence.json>",
+        },
+        "providerModelNamesInCore": False,
+        "productionPromotionClaimed": False,
+        "publicDirectoryApprovalClaimed": False,
+    }
+
+
 def _offline_baseline(host: str, descriptor_path: Path) -> dict[str, Any]:
     return {
         "schemaVersion": "agent-lifecycle-adapter-conformance.v1",
@@ -126,6 +176,32 @@ def _offline_baseline(host: str, descriptor_path: Path) -> dict[str, Any]:
     }
 
 
+def _event_bridge(host: str) -> str:
+    return (
+        f"# {host} event bridge\n\n"
+        "This is an EXPERIMENTAL event bridge placeholder. A real host adapter\n"
+        "must translate host lifecycle callbacks into `agent-adapter-event.v1`\n"
+        "records and validate them with `agent-lifecycle adapter event-check`.\n\n"
+        "The scaffold does not implement runtime dispatch. Unsupported operations\n"
+        "must fail closed until host-specific live conformance evidence exists.\n"
+    )
+
+
+def _validation(host: str) -> str:
+    return (
+        f"# {host} validation\n\n"
+        "Minimum offline checks before committing the projection:\n\n"
+        "```bash\n"
+        f"agent-lifecycle adapter validate --descriptor adapters/{host}/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json\n"
+        "agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>\n"
+        "python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json --evidence <support-matrix-evidence.json>\n"
+        "```\n\n"
+        "These checks prove only an EXPERIMENTAL source projection. Promotion to\n"
+        "`VERIFIED` requires bounded live host conformance, live calibration,\n"
+        "and lifecycle proof evidence bound to the tested host version.\n"
+    )
+
+
 def _docs(host: str) -> str:
     return (
         f"# {host} adapter\n\n"
@@ -133,7 +209,8 @@ def _docs(host: str) -> str:
         "no lifecycle semantics, no concrete provider model names, and no\n"
         "`VERIFIED` or production-promotion claim.\n\n"
         "Before promotion, add host-local runtime evidence and validate it through\n"
-        "the release support matrix and live calibration contract.\n"
+        "the release support matrix, live host conformance validator, live\n"
+        "calibration validator, and final lifecycle proof.\n"
     )
 
 

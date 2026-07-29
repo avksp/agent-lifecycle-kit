@@ -37,10 +37,33 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.6.0.md",
+        "docs/adapters/live-promotion-runbook.md",
+        (
+            "Source release",
+            "Host-specific `VERIFIED`",
+            "Public directory approval",
+            "Production promotion",
+            "validate_live_host_conformance.py",
+            "validate_live_calibration.py",
+            "validate_support_matrix.py",
+        ),
+    ),
+    (
+        "docs/guides/verified-adapter-release-checklist.md",
+        (
+            "remote tag",
+            "GitHub Release object",
+            "CI status",
+            "Binary assets are intentionally omitted for a source release",
+            "validate_docs_compat.py",
+            "validate_support_matrix.py",
+        ),
+    ),
+    (
+        "release/notes/v0.6.1.md",
         (
             "Status: source release.",
-            "Codex CLI is host-specific `VERIFIED`",
+            "Scaffold output now includes projection manifest",
             "Budget caps stop runaway execution",
         ),
     ),
