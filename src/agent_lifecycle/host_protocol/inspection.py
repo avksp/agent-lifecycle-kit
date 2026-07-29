@@ -142,6 +142,7 @@ def _inspect_known_host(
         )
     if host == "hermes":
         return _inspect_hermes(
+            descriptor_maturity=descriptor.get("maturity"),
             descriptor_path=descriptor_path,
             host_bin=host_bin or "hermes",
             project_root=project_root,
@@ -871,6 +872,7 @@ def _inspect_cursor(
 
 def _inspect_hermes(
     *,
+    descriptor_maturity: Any,
     descriptor_path: Path | None,
     host_bin: str,
     project_root: Path,
@@ -903,7 +905,11 @@ def _inspect_hermes(
     capabilities["configuration"]["skillsConfig"] = root_skills["details"]
 
     if descriptor_path is not None:
-        registry = _check_hermes_registry(descriptor_path.parent / "hermes.registry.json", project_root=project_root)
+        registry = _check_hermes_registry(
+            descriptor_path.parent / "hermes.registry.json",
+            project_root=project_root,
+            expected_maturity=str(descriptor_maturity) if isinstance(descriptor_maturity, str) else None,
+        )
         checks.append(registry)
         if registry["status"] == "FAIL":
             blockers.append({"code": "hermes-registry-unavailable", "message": "Hermes registry metadata is missing or invalid"})
@@ -1055,7 +1061,7 @@ def _check_hermes_skills_config(path: Path, *, project_root: Path) -> dict[str, 
     return {"name": "hermes-skills-config", "status": "PASS", "details": details}
 
 
-def _check_hermes_registry(path: Path, *, project_root: Path) -> dict[str, Any]:
+def _check_hermes_registry(path: Path, *, project_root: Path, expected_maturity: str | None) -> dict[str, Any]:
     display_path = _relative_display_path(path, project_root)
     details: dict[str, Any] = {"path": display_path}
     if not path.is_file():
@@ -1078,8 +1084,9 @@ def _check_hermes_registry(path: Path, *, project_root: Path) -> dict[str, Any]:
     if not all(details[key] for key in ("packageMatched", "skillsDirectoryMatched", "descriptorMatched", "commandsMatched")):
         details["reason"] = "registry-metadata-mismatch"
         return {"name": "hermes-registry", "status": "FAIL", "details": details}
-    if payload.get("maturity") != "EXPERIMENTAL":
-        details["reason"] = "registry-maturity-overclaim"
+    if expected_maturity not in {"EXPERIMENTAL", "VERIFIED"} or payload.get("maturity") != expected_maturity:
+        details["reason"] = "registry-maturity-mismatch"
+        details["expectedMaturity"] = expected_maturity
         return {"name": "hermes-registry", "status": "FAIL", "details": details}
     return {"name": "hermes-registry", "status": "PASS", "details": details}
 
@@ -1151,9 +1158,14 @@ def _check_scaffold_projection_files(path: Path, *, project_root: Path, host: st
     projection = read_json_object(path / "projection.manifest.json", label=f"{host} projection manifest")
     details["runnerStatus"] = (projection.get("runner") or {}).get("status") if isinstance(projection.get("runner"), dict) else None
     details["receiptNormalizerStatus"] = (projection.get("receiptNormalizer") or {}).get("status") if isinstance(projection.get("receiptNormalizer"), dict) else None
+    details["eventBridgeStatus"] = (projection.get("eventBridge") or {}).get("status") if isinstance(projection.get("eventBridge"), dict) else None
     details["productionPromotionClaimed"] = projection.get("productionPromotionClaimed")
-    if details["runnerStatus"] != "fail-closed-skeleton" or details["productionPromotionClaimed"] is not False:
+    allowed_runner_statuses = {"fail-closed-skeleton", "bounded-live-runner"}
+    if details["runnerStatus"] not in allowed_runner_statuses or details["productionPromotionClaimed"] is not False:
         details["reason"] = "projection-metadata-mismatch"
+        return {"name": f"{host}-projection-files", "status": "FAIL", "details": details}
+    if details["runnerStatus"] == "bounded-live-runner" and details["receiptNormalizerStatus"] != "contract-normalizer":
+        details["reason"] = "projection-live-runner-normalizer-mismatch"
         return {"name": f"{host}-projection-files", "status": "FAIL", "details": details}
     return {"name": f"{host}-projection-files", "status": "PASS", "details": details}
 

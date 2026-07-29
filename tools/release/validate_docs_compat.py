@@ -12,19 +12,26 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "README.md",
         (
-            "Adapter maturity is host-specific",
-            "Claude Code is `VERIFIED`",
-            "Codex CLI is `VERIFIED`",
-            "production-promotion evidence",
+            "`VERIFIED` for Codex CLI 0.145.0",
+            "`VERIFIED` for Claude Code 2.1.220",
+            "`VERIFIED` for OpenCode CLI 1.18.9",
+            "`VERIFIED` for Hermes Agent v0.19.0",
+            "`VERIFIED` for qwen-code 0.21.0",
+            "`EXPERIMENTAL` means",
+            "bounded live host conformance",
+            "usage/cost",
         ),
     ),
     (
         "docs/guides/README.ru.md",
         (
-            "Maturity адаптеров задаётся по host",
-            "Claude Code имеет статус `VERIFIED`",
-            "Codex CLI имеет статус `VERIFIED`",
-            "production-promotion evidence",
+            "`VERIFIED` для Codex CLI 0.145.0",
+            "`VERIFIED` для Claude Code 2.1.220",
+            "`VERIFIED` для OpenCode CLI 1.18.9",
+            "`VERIFIED` для Hermes Agent v0.19.0",
+            "`VERIFIED` для qwen-code 0.21.0",
+            "`EXPERIMENTAL` означает",
+            "калибровки расхода",
         ),
     ),
     (
@@ -33,7 +40,10 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "authoritative current source-tree support claim",
             "Codex CLI 0.6.0 live evidence",
             "Claude Code 0.5.0 live evidence",
-            "Cursor, Gemini CLI, Hermes, Kimi Code, OpenCode, and qwen-code remain",
+            "OpenCode GLM 5.2 live evidence",
+            "Hermes GLM 5.2 live evidence",
+            "qwen-code GLM 5.2 live evidence",
+            "Cursor, Gemini CLI, and Kimi Code remain",
         ),
     ),
     (
@@ -84,7 +94,7 @@ ADAPTER_DOCS = (
 
 VERIFIED_ROW = re.compile(r"^\|[^|\n]+\|[^|\n]+\|\s*VERIFIED\s*\|", re.MULTILINE)
 PRODUCTION_READY_CLAIM = re.compile(r"\b(production[- ]ready|production ready)\b", re.IGNORECASE)
-VERIFIED_DOC_HOSTS = {"Codex", "Claude Code"}
+VERIFIED_DOC_HOSTS = {"Codex", "Claude Code", "OpenCode", "Hermes", "qwen-code"}
 
 
 def main() -> int:
@@ -137,6 +147,12 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
         required = ("`VERIFIED`", "Claude Code 2.1.220", "live conformance", "does not claim official")
     elif relative == "docs/adapters/codex.md":
         required = ("`VERIFIED`", "Codex CLI 0.145.0", "live conformance", "does not claim public")
+    elif relative == "docs/adapters/opencode.md":
+        required = ("`VERIFIED`", "OpenCode CLI `1.18.9`", "live conformance", "does not claim npm")
+    elif relative == "docs/adapters/hermes.md":
+        required = ("`VERIFIED`", "Hermes Agent `v0.19.0`", "live conformance", "does not claim public")
+    elif relative == "docs/adapters/qwen-code.md":
+        required = ("`VERIFIED`", "qwen-code `0.21.0`", "live conformance", "does not claim public")
     else:
         required = ("`EXPERIMENTAL`", "live", "conformance")
     check = _check_doc(root, relative, required, blockers)
@@ -144,7 +160,14 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
         text = path.read_text(encoding="utf-8")
         if (
             "`VERIFIED`" in text
-            and relative not in {"docs/adapters/claude.md", "docs/adapters/codex.md"}
+            and relative
+            not in {
+                "docs/adapters/claude.md",
+                "docs/adapters/codex.md",
+                "docs/adapters/opencode.md",
+                "docs/adapters/hermes.md",
+                "docs/adapters/qwen-code.md",
+            }
             and "until live" not in text
             and "not `VERIFIED`" not in text
         ):

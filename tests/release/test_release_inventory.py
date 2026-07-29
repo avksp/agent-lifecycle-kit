@@ -63,7 +63,10 @@ class ReleaseInventoryTests(unittest.TestCase):
             self.assertEqual(matrix["adapterMaturity"], "HOST_SPECIFIC")
             self.assertEqual(matrix["adapterMaturityByHost"]["Claude Code"], "VERIFIED")
             self.assertEqual(matrix["adapterMaturityByHost"]["Codex"], "VERIFIED")
-            self.assertEqual(set(matrix["verifiedHosts"]), {"Codex", "Claude Code"})
+            self.assertEqual(matrix["adapterMaturityByHost"]["OpenCode"], "VERIFIED")
+            self.assertEqual(matrix["adapterMaturityByHost"]["Hermes"], "VERIFIED")
+            self.assertEqual(matrix["adapterMaturityByHost"]["qwen-code"], "VERIFIED")
+            self.assertEqual(set(matrix["verifiedHosts"]), {"Codex", "Claude Code", "OpenCode", "Hermes", "qwen-code"})
             self.assertTrue(deferred["deferredProductionPromotion"])
             self.assertFalse(deferred["liveModelExecutionClaimed"])
 

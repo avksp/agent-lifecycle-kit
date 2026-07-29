@@ -26,23 +26,6 @@ Use it when you need:
 - independent implementation audits before acceptance;
 - host-specific adapter evidence instead of broad unsupported claims.
 
-## Current status
-
-`v0.12.1` is the current source release. It includes the release-0-5 execution
-gates, release-0-6 Codex CLI live adapter evidence, adapter capability
-manifests, safe adapter inspection, offline adapter conformance verification,
-and ordered terminal outcomes for OpenCode, Hermes, Cursor, Gemini CLI,
-qwen-code, and Kimi Code.
-
-Adapter maturity is host-specific. Codex CLI is `VERIFIED` for Codex CLI
-0.145.0 after the release-0-6 live conformance, live calibration, and full
-lifecycle proof. Claude Code is `VERIFIED` for Claude Code 2.1.220 after the
-local release-0-5 live conformance, live calibration, and full lifecycle proof.
-Cursor, Gemini CLI, Hermes, Kimi Code, OpenCode, and qwen-code remain
-`EXPERIMENTAL` until each host has matching live evidence.
-Public directory publication still depends on each host marketplace review
-process.
-
 ## What the kit does
 
 The complete lifecycle is:
@@ -170,19 +153,27 @@ See [budget reroute policy](docs/guides/budget-reroute-policy.md).
 
 ## Distribution layout
 
-A universal distribution does not mean one manifest format. The same core is
-projected into each host's native loading model:
+A universal distribution does not mean one manifest format. `v0.12.1` is the
+latest tagged source release; the current source tree additionally contains
+OpenCode, Hermes, and qwen-code live evidence captured on 2026-07-29. The same
+deterministic core is projected into each host's native loading model:
 
-| Host | Release artifact | Status |
-| --- | --- | --- |
-| Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | Verified for Codex CLI 0.145.0 with local release-0-6 live evidence; public Plugins Directory approval not claimed |
-| Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Verified for Claude Code 2.1.220 with local release-0-5 live evidence; public directory approval not claimed |
-| Cursor | `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` | Experimental source projection for public or team marketplace review |
-| Gemini CLI | `adapters/gemini-cli/*` | Experimental host-local scaffold with safe inspection evidence |
-| Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | Experimental direct-skill/tap projection |
-| Kimi Code | `adapters/kimi-code/*` | Experimental host-local scaffold with safe inspection evidence |
-| OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | Experimental local/npm-ready projection metadata |
-| qwen-code | `adapters/qwen-code/*` | Experimental host-local scaffold with safe inspection evidence |
+| Host | Release artifact | Maturity | Why |
+| --- | --- | --- | --- |
+| Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | `VERIFIED` for Codex CLI 0.145.0 | Local release-0-6 live conformance, live usage calibration, and full ALK lifecycle proof passed. Public Plugins Directory approval is not claimed. |
+| Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | `VERIFIED` for Claude Code 2.1.220 | Local release-0-5 live conformance, live usage calibration, and full ALK lifecycle proof passed. Public directory approval is not claimed. |
+| Cursor | `.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json`, and `adapters/cursor/*` | `EXPERIMENTAL` | Safe inspection passed on a local Free tier, but usage/cost attestation and full lifecycle proof are not accepted yet. Marketplace approval is not claimed. |
+| Gemini CLI | `adapters/gemini-cli/*` | `EXPERIMENTAL` | Safe inspection passed, but the bounded live harness that converts `stream-json` output into portable receipts is not implemented yet. |
+| Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | `VERIFIED` for Hermes Agent v0.19.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on 2026-07-29. Public directory/publication approval is not claimed. |
+| Kimi Code | `adapters/kimi-code/*` | `EXPERIMENTAL` | Safe inspection passed through the local `kimi` CLI, but usage attestation and the bounded live harness are not proven yet. |
+| OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | `VERIFIED` for OpenCode CLI 1.18.9 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on 2026-07-29. npm publication is not claimed. |
+| qwen-code | `adapters/qwen-code/*` | `VERIFIED` for qwen-code 0.21.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on GLM 5.2 on 2026-07-29. Public package approval is not claimed. |
+
+`EXPERIMENTAL` means the adapter has source metadata, capability manifests, and
+offline conformance checks, but it is not a live runtime compatibility claim. A
+host becomes `VERIFIED` only after bounded live host conformance, usage/cost
+calibration, and a full lifecycle proof are accepted for that exact host and
+version range. A model smoke test alone is not enough.
 
 The root repository is the canonical plugin root for Codex, Claude Code, and
 Cursor. The older `adapters/<host>/` directories remain offline conformance
@@ -372,6 +363,27 @@ plugin installation, use:
 /add-plugin agent-lifecycle-kit
 ```
 
+The Cursor projection is still `EXPERIMENTAL`; local installation is useful for
+validation and review, not for claiming verified runtime support.
+
+### Gemini CLI
+
+Gemini CLI currently uses a host-local source projection. Install the core from
+a tagged checkout, then validate and inspect the projection:
+
+```bash
+git clone --branch v0.12.1 https://github.com/avksp/agent-lifecycle-kit.git
+cd agent-lifecycle-kit
+python -m pip install -e .
+gemini --version
+agent-lifecycle adapter validate --descriptor adapters/gemini-cli/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+agent-lifecycle adapter inspect --descriptor adapters/gemini-cli/adapter.descriptor.json
+```
+
+There is no published Gemini CLI runtime package in `v0.12.1`; the bundled
+runner remains fail-closed until live receipt normalization and budgeted
+execution are implemented.
+
 ### Hermes
 
 Hermes can install the shared skills directly. To install all lifecycle skills
@@ -387,6 +399,23 @@ The root `skills.sh.json` provides tap/category metadata for hosts that read
 skills.sh-compatible indexes. `adapters/hermes/*` contains experimental
 registry and slash-command projection metadata. It is not a live Hermes plugin
 verification claim.
+
+### Kimi Code
+
+Kimi Code currently uses a host-local source projection. Make sure the `kimi`
+CLI is available on `PATH`, then validate and inspect the projection:
+
+```bash
+git clone --branch v0.12.1 https://github.com/avksp/agent-lifecycle-kit.git
+cd agent-lifecycle-kit
+python -m pip install -e .
+kimi --version
+agent-lifecycle adapter validate --descriptor adapters/kimi-code/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+agent-lifecycle adapter inspect --descriptor adapters/kimi-code/adapter.descriptor.json
+```
+
+No public Kimi Code adapter package or live runtime compatibility claim is
+published in `v0.12.1`.
 
 ### OpenCode
 
@@ -413,6 +442,27 @@ The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
 claimed by `v0.12.1`.
 
+### qwen-code
+
+qwen-code currently uses a host-local source projection. Install the core from
+a tagged checkout, then validate and inspect the projection. The current source
+tree is `VERIFIED` for qwen-code `0.21.0`; `v0.12.1` remains the latest tagged
+source release.
+
+```bash
+git clone --branch v0.12.1 https://github.com/avksp/agent-lifecycle-kit.git
+cd agent-lifecycle-kit
+python -m pip install -e .
+qwen --version
+agent-lifecycle adapter validate --descriptor adapters/qwen-code/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+agent-lifecycle adapter inspect --descriptor adapters/qwen-code/adapter.descriptor.json
+```
+
+The live runner is `adapters/qwen-code/runner.py`; the release harness is
+`tools/live_hosts/qwen_code_harness.py`. No public qwen-code adapter package,
+public directory approval, or production-promotion platform claim is published
+in `v0.12.1`.
+
 ## Usage
 
 Ask the host to run the full lifecycle through `agent-workflow-orchestrator`:
@@ -434,9 +484,16 @@ Host-specific explicit invocation may be used when available:
   `agent-workflow-orchestrator`
 - Claude Code: `/agent-lifecycle-kit:agent-workflow-orchestrator`
 - Cursor: ask Agent to use `agent-workflow-orchestrator`
-- Hermes: run `/agent-workflow-orchestrator` after installing the skill
+- Gemini CLI: use the source projection for validation only until live runtime
+  support is promoted
+- Hermes: run `/agent-workflow-orchestrator` after installing the skill; the
+  current tree is `VERIFIED` for Hermes Agent v0.19.0
+- Kimi Code: use the source projection for validation only until live runtime
+  support is promoted
 - OpenCode: ask the agent to load `agent-workflow-orchestrator` through its
-  native skill tool
+  native skill tool; the current tree is `VERIFIED` for OpenCode CLI 1.18.9
+- qwen-code: use the source projection with qwen-code `0.21.0`; the current
+  tree is `VERIFIED` for host-local GLM 5.2 live receipts
 
 The release support matrix is authoritative for exact namespaced syntax and
 host maturity. An `EXPERIMENTAL` adapter projection is not a live runtime

@@ -1,11 +1,13 @@
 # Adapter support matrix
 
 This matrix is the authoritative current source-tree support claim. `v0.12.1`
-is the current tagged source release and includes host-local model selection,
-budget-mode controls, release-0-5 lifecycle gates, Claude Code live promotion
-evidence, Codex CLI live promotion evidence, reusable promotion guidance,
-adapter capability manifests, safe adapter inspection, and ordered terminal
-outcomes for OpenCode, Hermes, Cursor, Gemini CLI, qwen-code, and Kimi Code.
+is the latest tagged source release; the current tree additionally includes
+host-specific OpenCode, Hermes, and qwen-code live promotion evidence captured
+on 2026-07-29. The source tree includes host-local model selection, budget-mode
+controls, release-0-5 lifecycle gates, Claude Code live promotion evidence,
+Codex CLI live promotion evidence, reusable promotion guidance, adapter
+capability manifests, safe adapter inspection, and ordered terminal outcomes
+for OpenCode, Hermes, Cursor, Gemini CLI, qwen-code, and Kimi Code.
 `EXPERIMENTAL` means the adapter has an offline projection and deterministic
 contract tests. `VERIFIED` is host-specific and requires bounded live host
 conformance, live calibration, and lifecycle proof evidence.
@@ -18,10 +20,10 @@ conformance, live calibration, and lifecycle proof evidence.
 | Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
 | Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | Cursor Agent 2026.07.23-e383d2b safe inspection passed on local Free tier; bounded smoke cannot promote without usage/cost calibration and lifecycle proof; marketplace approval not claimed |
 | Gemini CLI | Host-local scaffold projection and capability manifest | EXPERIMENTAL | Gemini CLI 0.46.0 safe inspection passed; live harness, usage calibration, lifecycle proof, and publication not claimed |
-| Hermes | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | EXPERIMENTAL | Hermes Agent v0.19.0 safe inspection passed; live promotion blocked until host-local model bindings are real; live conformance, calibration, and lifecycle proof not claimed |
+| Hermes | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | VERIFIED | Hermes Agent v0.19.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory/publication review not claimed |
 | Kimi Code | Host-local scaffold projection and capability manifest | EXPERIMENTAL | Kimi Code 0.30.0 safe inspection passed through the local `kimi` CLI; usage attestation remains unproven; live harness, calibration, lifecycle proof, and publication not claimed |
-| OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | EXPERIMENTAL | OpenCode CLI 1.18.9 safe inspection passed; live promotion blocked until host-local model bindings are real; live conformance, calibration, lifecycle proof, and npm publication not claimed |
-| qwen-code | Host-local scaffold projection and capability manifest | EXPERIMENTAL | qwen-code 0.21.0 safe inspection passed; usage attestation remains unproven and root CLI resource caps were not discovered; live harness, calibration, lifecycle proof, and publication not claimed |
+| OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | OpenCode CLI 1.18.9 live host conformance, live calibration, and ALK lifecycle proof passed locally; npm publication not claimed |
+| qwen-code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | qwen-code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on GLM 5.2 locally; public package approval not claimed |
 
 ## Compact context support
 
@@ -64,9 +66,12 @@ harnesses write `agent-host-model-selection-receipt.v1` with redacted binding
 hashes.
 
 Codex is `VERIFIED` for host-local model routing on Codex CLI 0.145.0. Claude
-Code is `VERIFIED` for host-local model routing on Claude Code 2.1.220. Their
-live receipts include host usage attestation, quality pass status, and bounded
-budget evidence. Cursor, Gemini CLI, Hermes, Kimi Code, OpenCode, and qwen-code remain
+Code is `VERIFIED` for host-local model routing on Claude Code 2.1.220.
+OpenCode is `VERIFIED` for host-local model routing on OpenCode CLI 1.18.9.
+Hermes is `VERIFIED` for host-local model routing on Hermes Agent v0.19.0.
+qwen-code is `VERIFIED` for host-local model routing on qwen-code 0.21.0.
+Their live receipts include host usage attestation, quality pass status, and
+bounded budget evidence. Cursor, Gemini CLI, and Kimi Code remain
 `EXPERIMENTAL`: they declare fail-closed support for host-local model profiles
 and model-route execution, but still need live usage receipts and quality/cost
 evidence before a host-specific `VERIFIED` claim.
@@ -139,6 +144,78 @@ Claude Code is verified only for the tested local host range:
   `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`.
 
 This evidence does not claim universal adapter support, public directory
+approval, or a broader production-promotion platform matrix pass.
+
+## OpenCode GLM 5.2 live evidence
+
+OpenCode is verified only for the tested local host range:
+
+- Host: OpenCode CLI 1.18.9.
+- Source revision: `6c6b40210ee28de4b6a5993367af89e629fb99ff`.
+- Committed redacted evidence summary:
+  `docs/adapters/evidence/opencode-glm52-live-2026-07-29.md`.
+- Live preflight:
+  `tasks/release-0-7/evidence/opencode/preflight/opencode-glm52-preflight-report.json`.
+- Live host conformance receipt:
+  `tasks/release-0-7/evidence/opencode/live-host-receipts/opencode.json`.
+- Live host conformance validation:
+  `tasks/release-0-7/evidence/opencode/live-host-conformance-opencode.json`.
+- Live calibration receipt:
+  `tasks/release-0-7/evidence/opencode/live-calibration-receipts/opencode.json`.
+- Live calibration validation:
+  `tasks/release-0-7/evidence/opencode/live-calibration-verification-opencode.json`.
+- ALK lifecycle final proof:
+  `tasks/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json`.
+
+This evidence does not claim universal adapter support, npm publication, public
+directory approval, or a broader production-promotion platform matrix pass.
+
+## Hermes GLM 5.2 live evidence
+
+Hermes is verified only for the tested local host range:
+
+- Host: Hermes Agent v0.19.0.
+- Source revision: `d71033a4`.
+- Committed redacted evidence summary:
+  `docs/adapters/evidence/hermes-glm52-live-2026-07-29.md`.
+- Live preflight:
+  `tasks/release-0-8/evidence/hermes/preflight/hermes-glm52-preflight-report.json`.
+- Live host conformance receipt:
+  `tasks/release-0-8/evidence/hermes/live-host-receipts/hermes.json`.
+- Live host conformance validation:
+  `tasks/release-0-8/evidence/hermes/live-host-conformance-hermes.json`.
+- Live calibration receipt:
+  `tasks/release-0-8/evidence/hermes/live-calibration-receipts/hermes.json`.
+- Live calibration validation:
+  `tasks/release-0-8/evidence/hermes/live-calibration-verification-hermes.json`.
+- ALK lifecycle final proof:
+  `tasks/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json`.
+
+This evidence does not claim universal adapter support, public directory
+approval, or a broader production-promotion platform matrix pass.
+
+## qwen-code GLM 5.2 live evidence
+
+qwen-code is verified only for the tested local host range:
+
+- Host: qwen-code 0.21.0.
+- Source revision: `6c6b40210ee28de4b6a5993367af89e629fb99ff`.
+- Committed redacted evidence summary:
+  `docs/adapters/evidence/qwen-code-glm52-live-2026-07-29.md`.
+- Live preflight:
+  `tasks/release-0-11/evidence/qwen-code/live-preflight/qwen-code-preflight-report.json`.
+- Live host conformance receipt:
+  `tasks/release-0-11/evidence/qwen-code/live-host-receipts/qwen-code.json`.
+- Live host conformance validation:
+  `tasks/release-0-11/evidence/qwen-code/live-host-conformance-qwen-code.json`.
+- Live calibration receipt:
+  `tasks/release-0-11/evidence/qwen-code/live-calibration-receipts/qwen-code.json`.
+- Live calibration validation:
+  `tasks/release-0-11/evidence/qwen-code/live-calibration-verification-qwen-code.json`.
+- ALK lifecycle final proof:
+  `tasks/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json`.
+
+This evidence does not claim universal adapter support, public package
 approval, or a broader production-promotion platform matrix pass.
 
 ## Neutrality error contract

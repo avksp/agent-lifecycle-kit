@@ -77,11 +77,11 @@ def _run_no_check(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "Adapter maturity is host-specific. Claude Code is `VERIFIED`; Codex CLI is `VERIFIED`; production-promotion evidence is required.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for qwen-code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required.\n",
     )
     _write_text(
         root / "docs/guides/README.ru.md",
-        "Maturity адаптеров задаётся по host. Claude Code имеет статус `VERIFIED`; Codex CLI имеет статус `VERIFIED`; production-promotion evidence нужен.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для qwen-code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено.\n",
     )
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
@@ -89,9 +89,15 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "This matrix is the authoritative current source-tree support claim.\n"
         "Codex CLI 0.6.0 live evidence.\n"
         "Claude Code 0.5.0 live evidence.\n"
-        "Cursor, Gemini CLI, Hermes, Kimi Code, OpenCode, and qwen-code remain `EXPERIMENTAL`.\n"
+        "OpenCode GLM 5.2 live evidence.\n"
+        "Hermes GLM 5.2 live evidence.\n"
+        "qwen-code GLM 5.2 live evidence.\n"
+        "Cursor, Gemini CLI, and Kimi Code remain `EXPERIMENTAL`.\n"
         "| Codex | Projection | VERIFIED | Claim |\n"
         "| Claude Code | Projection | VERIFIED | Claim |\n"
+        "| OpenCode | Projection | VERIFIED | Claim |\n"
+        "| Hermes | Projection | VERIFIED | Claim |\n"
+        "| qwen-code | Projection | VERIFIED | Claim |\n"
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
@@ -129,6 +135,12 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
                 if host == "codex"
                 else "This adapter is `VERIFIED` for Claude Code 2.1.220; live conformance exists and it does not claim official approval.\n"
                 if host == "claude"
+                else "This adapter is `VERIFIED` for OpenCode CLI `1.18.9`; live conformance exists and it does not claim npm publication.\n"
+                if host == "opencode"
+                else "This adapter is `VERIFIED` for Hermes Agent `v0.19.0`; live conformance exists and it does not claim public approval.\n"
+                if host == "hermes"
+                else "This adapter is `VERIFIED` for qwen-code `0.21.0`; live conformance exists and it does not claim public approval.\n"
+                if host == "qwen-code"
                 else "This adapter remains `EXPERIMENTAL` until live conformance evidence exists.\n"
             ),
         )

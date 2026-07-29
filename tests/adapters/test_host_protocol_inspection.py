@@ -57,7 +57,7 @@ class HostProtocolInspectionTests(unittest.TestCase):
             self.assertEqual(payload["schemaVersion"], "agent-host-adapter-inspection.v1")
             self.assertEqual(payload["status"], "PASS")
             self.assertEqual(payload["host"], "opencode")
-            self.assertEqual(payload["maturity"], "EXPERIMENTAL")
+            self.assertEqual(payload["maturity"], "VERIFIED")
             self.assertFalse(payload["liveCallsStarted"])
             self.assertFalse(payload["productionPromotionClaimed"])
             self.assertEqual(payload["capabilities"]["hostVersion"], "opencode 1.18.9")
@@ -147,7 +147,7 @@ class HostProtocolInspectionTests(unittest.TestCase):
 
             self.assertEqual(payload["status"], "PASS")
             self.assertEqual(payload["host"], "hermes")
-            self.assertEqual(payload["maturity"], "EXPERIMENTAL")
+            self.assertEqual(payload["maturity"], "VERIFIED")
             self.assertEqual(payload["capabilities"]["hostVersion"], "Hermes Agent v0.19.0 (2026.7.20)")
             self.assertEqual(payload["capabilities"]["headlessExecution"]["command"], "--oneshot")
             self.assertEqual(payload["capabilities"]["usageAttestation"]["source"], "usage-file")
@@ -308,7 +308,7 @@ class HostProtocolInspectionTests(unittest.TestCase):
 
             self.assertEqual(payload["status"], "PASS")
             self.assertEqual(payload["host"], "qwen-code")
-            self.assertEqual(payload["maturity"], "EXPERIMENTAL")
+            self.assertEqual(payload["maturity"], "VERIFIED")
             self.assertEqual(payload["capabilities"]["hostVersion"], "0.21.0")
             self.assertEqual(payload["capabilities"]["headlessExecution"]["command"], "--prompt")
             self.assertEqual(payload["capabilities"]["usageAttestation"]["status"], "UNPROVEN")

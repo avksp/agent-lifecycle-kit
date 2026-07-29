@@ -44,6 +44,8 @@ HOSTS = {
         "commands": "slash-commands.json",
         "skillDiscovery": "skill-directory",
         "slashCommandInvocation": "optional-host-capability",
+        "maturity": "VERIFIED",
+        "modelRouting": True,
     },
     "kimi-code": {
         "descriptorHost": "kimi-code",
@@ -54,11 +56,13 @@ HOSTS = {
         "descriptorHost": "opencode",
         "nativeManifest": "opencode.json",
         "modelRouting": True,
+        "maturity": "VERIFIED",
     },
     "qwen-code": {
         "descriptorHost": "qwen-code",
         "capabilityOnly": True,
         "modelRouting": True,
+        "maturity": "VERIFIED",
     },
 }
 
@@ -84,12 +88,18 @@ class HostAdapterTests(unittest.TestCase):
                     self.assertIn("agent-lifecycle-kit", launcher)
                     self.assertIn("fail-closed", launcher)
                 elif config.get("capabilityOnly"):
+                    expected_maturity = config.get("maturity", "EXPERIMENTAL")
                     projection = load_json(adapter_root / "projection.manifest.json")
-                    self.assertEqual(projection["maturity"], "EXPERIMENTAL")
-                    self.assertEqual(projection["runner"]["status"], "fail-closed-skeleton")
                     self.assertEqual(projection["receiptNormalizer"]["portableReceiptSchema"], "agent-host-operation-receipt.v1")
-                    self.assertEqual(projection["eventBridge"]["runtimeDispatch"], "not-implemented-fail-closed")
-                    self.assertIn("fail closed", (adapter_root / "event-bridge.md").read_text(encoding="utf-8"))
+                    self.assertEqual(projection["maturity"], expected_maturity)
+                    if expected_maturity == "VERIFIED":
+                        self.assertEqual(projection["runner"]["status"], "bounded-live-runner")
+                        self.assertEqual(projection["receiptNormalizer"]["status"], "contract-normalizer")
+                        self.assertEqual(projection["eventBridge"]["runtimeDispatch"], "qwen-stream-json-to-host-operation-receipt")
+                    else:
+                        self.assertEqual(projection["runner"]["status"], "fail-closed-skeleton")
+                        self.assertEqual(projection["eventBridge"]["runtimeDispatch"], "not-implemented-fail-closed")
+                        self.assertIn("fail closed", (adapter_root / "event-bridge.md").read_text(encoding="utf-8"))
                 else:
                     manifest = load_json(adapter_root / config["nativeManifest"])
                     self.assertEqual(manifest["name"], config["nativeChecks"]["name"])
