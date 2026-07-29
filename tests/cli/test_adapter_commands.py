@@ -139,6 +139,39 @@ class CliAdapterCommandTests(unittest.TestCase):
             self.assertEqual(payload["schemaVersion"], "agent-host-adapter-validation.v1")
             self.assertEqual(payload["status"], "PASS")
 
+    def test_adapter_validate_allows_verified_descriptor_with_live_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            descriptor = json.loads((ROOT / "adapters/claude/adapter.descriptor.json").read_text(encoding="utf-8"))
+            descriptor["maturity"] = "VERIFIED"
+            descriptor["liveTestedHostRange"] = {
+                "host": "claude-code",
+                "minimumVersion": "2.1.220",
+                "maximumVersion": "2.1.220",
+                "evidence": [
+                    "tasks/release-0-5/evidence/live-host-conformance-claude-code.json",
+                    "tasks/release-0-5/evidence/live-calibration-verification-claude-code.json",
+                ],
+            }
+            descriptor["modelRouting"]["liveVerified"] = True
+            descriptor_path = root / "claude.verified.descriptor.json"
+            descriptor_path.write_text(json.dumps(descriptor), encoding="utf-8")
+
+            code, payload = _run_cli(
+                [
+                    "adapter",
+                    "validate",
+                    "--descriptor",
+                    str(descriptor_path),
+                    "--baseline",
+                    str(ROOT / "conformance/core/adapter-baseline.v1.json"),
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["status"], "PASS")
+            self.assertEqual(payload["maturity"], "VERIFIED")
+
 
 if __name__ == "__main__":
     unittest.main()

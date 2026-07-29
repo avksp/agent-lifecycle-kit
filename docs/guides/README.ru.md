@@ -12,15 +12,17 @@ SDD-спецификации до замороженного плана, кон�
 
 ## Текущий статус
 
-`v0.4.0` — текущий source release. Он добавляет host-local model selection,
+`v0.4.0` — последний tagged source release. Он добавляет host-local model selection,
 redacted model-selection receipts, workflow-контроль budget decisions и режимы
 бюджета `metered`/`subscription`/`local`, сохраняя portable core routing
 независимым от провайдера.
 
-Адаптеры пока имеют статус `EXPERIMENTAL`: есть offline contract coverage и
-fail-closed descriptors, но статуса `VERIFIED` нет до появления live install и
-lifecycle conformance evidence для каждого host. Публикация в публичных
-директориях также зависит от review-процесса каждой платформы.
+Maturity адаптеров задаётся по host. Claude Code имеет статус `VERIFIED` для
+Claude Code 2.1.220 в текущем source tree после локального `0.5.1` live
+conformance, live calibration и full lifecycle proof. Codex, Cursor, Hermes и
+OpenCode остаются `EXPERIMENTAL`, пока для каждого host нет собственного live
+evidence. Публикация в публичных директориях также зависит от review-процесса
+каждой платформы.
 
 ## Что делает набор
 
@@ -161,7 +163,7 @@ receipt и возвращает task в `RUNNING` или `READY`, либо ос�
 | Система | Release artifact | Статус |
 | --- | --- | --- |
 | Codex | `.codex-plugin/plugin.json` и `.agents/plugins/marketplace.json` | Experimental marketplace-ready source projection |
-| Claude Code | `.claude-plugin/plugin.json` и `.claude-plugin/marketplace.json` | Experimental marketplace-ready source projection |
+| Claude Code | `.claude-plugin/plugin.json` и `.claude-plugin/marketplace.json` | Verified для Claude Code 2.1.220 с локальным 0.5.1 live evidence; public directory approval не заявлен |
 | Cursor | `.cursor-plugin/plugin.json` и `.cursor-plugin/marketplace.json` | Experimental source projection для public/team marketplace review |
 | Hermes | `skills.sh.json`, общий `skills/` и `adapters/hermes/*` | Experimental direct-skill/tap projection |
 | OpenCode | `opencode.json`, общий `skills/` и `adapters/opencode/*` | Experimental local/npm-ready projection metadata |
@@ -298,6 +300,10 @@ claude plugin install agent-lifecycle-kit@agent-lifecycle-kit
 
 Plugin skills используют namespace имени plugin, например
 `/agent-lifecycle-kit:agent-workflow-orchestrator`.
+
+Claude Code verified только для протестированного host range 2.1.220 в текущем
+source tree. Claim подтверждён release-0-5 patch `0.5.1`: live conformance,
+live calibration и ALK lifecycle final proof перечислены в support matrix.
 
 Для включения в Anthropic-managed public directory нужен внешний plugin review
 Claude. Repo-level marketplace достаточно для private/community distribution,

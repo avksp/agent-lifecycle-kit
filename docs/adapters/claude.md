@@ -2,7 +2,8 @@
 
 The Claude Code projection packages the shared lifecycle skills, root
 `.claude-plugin/plugin.json`, and root `.claude-plugin/marketplace.json`.
-`adapters/claude/` remains an offline conformance projection.
+`adapters/claude/` is `VERIFIED` for the tested Claude Code 2.1.220 host range
+recorded in `adapters/claude/adapter.descriptor.json`.
 
 Install from the tagged source marketplace:
 
@@ -11,9 +12,26 @@ claude plugin marketplace add avksp/agent-lifecycle-kit
 claude plugin install agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
-Run `/reload-plugins` after installation in an interactive session. The adapter
-remains `EXPERIMENTAL` until live Claude Code install and lifecycle conformance
-evidence is published in the support matrix.
+Run `/reload-plugins` after installation in an interactive session. The
+verified claim is local and host-specific: it is backed by release-0-5 patch
+`0.5.1` live conformance, live calibration, and full ALK lifecycle evidence in
+the support matrix. It does not claim official Claude directory approval,
+universal host support, or a broader production-promotion platform matrix pass.
+
+## Live evidence
+
+Current verified range:
+
+- Claude Code 2.1.220.
+- Source revision `6bb3b58ee01d028fe21cef209c284efc79e55ceb`.
+- Committed redacted evidence summary:
+  `docs/adapters/evidence/claude-code-0.5.1.md`.
+- Host conformance:
+  `tasks/release-0-5/evidence/live-host-conformance-claude-code.json`.
+- Live calibration:
+  `tasks/release-0-5/evidence/live-calibration-verification-claude-code.json`.
+- Full lifecycle proof:
+  `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`.
 
 ## Event bridge
 

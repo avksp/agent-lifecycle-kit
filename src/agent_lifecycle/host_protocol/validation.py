@@ -97,8 +97,9 @@ def _validate_descriptor_shape(descriptor: dict[str, Any], blockers: list[dict[s
 
 
 def _validate_baseline(descriptor: dict[str, Any], baseline: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
-    expected_maturity = baseline.get("maturityRules", {}).get("requiredReleaseMaturity")
-    if expected_maturity and descriptor.get("maturity") != expected_maturity:
+    rules = baseline.get("maturityRules", {})
+    expected_maturity = rules.get("requiredReleaseMaturity")
+    if expected_maturity and not _maturity_satisfies_baseline(descriptor, expected_maturity, rules):
         blockers.append({"code": "adapter-baseline-maturity-mismatch", "expected": expected_maturity, "actual": descriptor.get("maturity")})
     expected_policy = baseline.get("maturityRules", {}).get("unsupportedOperationPolicy")
     if expected_policy and descriptor.get("unsupportedOperationPolicy") != expected_policy:
@@ -113,6 +114,22 @@ def _validate_baseline(descriptor: dict[str, Any], baseline: dict[str, Any], blo
         missing = sorted(required.difference(provided))
         if missing:
             blockers.append({"code": "adapter-baseline-operation-missing", "operations": missing})
+
+
+def _maturity_satisfies_baseline(
+    descriptor: dict[str, Any],
+    expected_maturity: str,
+    rules: dict[str, Any],
+) -> bool:
+    actual = descriptor.get("maturity")
+    if actual == expected_maturity:
+        return True
+    return (
+        expected_maturity == "EXPERIMENTAL"
+        and actual == "VERIFIED"
+        and rules.get("verifiedRequiresLiveEvidence") is True
+        and bool(descriptor.get("liveTestedHostRange"))
+    )
 
 
 def _validate_request_receipt_pairs(

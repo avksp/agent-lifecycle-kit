@@ -12,6 +12,8 @@ HOSTS = {
         "descriptorHost": "claude-code",
         "nativeManifest": ".claude-plugin/plugin.json",
         "nativeChecks": {"name": "agent-lifecycle-kit", "skills": "./skills"},
+        "maturity": "VERIFIED",
+        "modelRouting": True,
     },
     "codex": {
         "descriptorHost": "codex",
@@ -75,9 +77,14 @@ class HostAdapterTests(unittest.TestCase):
             with self.subTest(host=host):
                 descriptor = load_json(ROOT / "adapters" / host / "adapter.descriptor.json")
                 provided_operations = {item["name"] for item in descriptor["operations"]}
+                expected_maturity = config.get("maturity", "EXPERIMENTAL")
                 self.assertEqual(descriptor["host"], config["descriptorHost"])
-                self.assertEqual(descriptor["maturity"], "EXPERIMENTAL")
-                self.assertIsNone(descriptor["liveTestedHostRange"])
+                self.assertEqual(descriptor["maturity"], expected_maturity)
+                if expected_maturity == "VERIFIED":
+                    self.assertIsInstance(descriptor["liveTestedHostRange"], dict)
+                    self.assertTrue(descriptor["liveTestedHostRange"]["evidence"])
+                else:
+                    self.assertIsNone(descriptor["liveTestedHostRange"])
                 self.assertEqual(descriptor["unsupportedOperationPolicy"], "fail-closed")
                 self.assertEqual(descriptor["contractCompatibility"], baseline["contractCompatibility"])
                 self.assertTrue(required_operations.issubset(provided_operations))
@@ -89,7 +96,7 @@ class HostAdapterTests(unittest.TestCase):
                     self.assertEqual(descriptor["modelRouting"]["status"], "workflow-enforced")
                     self.assertEqual(descriptor["modelRouting"]["attemptRoutePolicy"], "must-execute-or-fail-closed")
                     self.assertTrue(descriptor["modelRouting"]["usageReceiptRequired"])
-                    self.assertFalse(descriptor["modelRouting"]["liveVerified"])
+                    self.assertEqual(descriptor["modelRouting"]["liveVerified"], expected_maturity == "VERIFIED")
                     if host == "codex":
                         self.assertFalse(descriptor["modelRouting"]["providerModelNamesInCore"])
                     if host == "opencode":

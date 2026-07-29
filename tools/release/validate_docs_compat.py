@@ -12,25 +12,25 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "README.md",
         (
-            "adapters are still `EXPERIMENTAL`",
-            "not `VERIFIED`",
+            "Adapter maturity is host-specific",
+            "Claude Code is `VERIFIED`",
             "production-promotion evidence",
         ),
     ),
     (
         "docs/guides/README.ru.md",
         (
-            "Адаптеры пока имеют статус `EXPERIMENTAL`",
-            "статуса `VERIFIED` нет",
+            "Maturity адаптеров задаётся по host",
+            "Claude Code имеет статус `VERIFIED`",
             "production-promotion evidence",
         ),
     ),
     (
         "docs/adapters/support-matrix.md",
         (
-            "authoritative current source-release support claim",
-            "`VERIFIED` is reserved",
-            "All current adapters remain `EXPERIMENTAL`",
+            "authoritative current source-tree support claim",
+            "Claude Code 0.5.1 live evidence",
+            "Codex, Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`",
         ),
     ),
     (
@@ -101,11 +101,19 @@ def _check_doc(root: Path, relative: str, required: tuple[str, ...], blockers: l
 
 def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]) -> dict[str, Any]:
     path = root / relative
-    required = ("`EXPERIMENTAL`", "live", "conformance")
+    if relative == "docs/adapters/claude.md":
+        required = ("`VERIFIED`", "Claude Code 2.1.220", "live conformance", "does not claim official")
+    else:
+        required = ("`EXPERIMENTAL`", "live", "conformance")
     check = _check_doc(root, relative, required, blockers)
     if path.is_file():
         text = path.read_text(encoding="utf-8")
-        if "`VERIFIED`" in text and "until live" not in text and "not `VERIFIED`" not in text:
+        if (
+            "`VERIFIED`" in text
+            and relative != "docs/adapters/claude.md"
+            and "until live" not in text
+            and "not `VERIFIED`" not in text
+        ):
             blockers.append({"code": "docs-compat-adapter-verified-overclaim", "message": f"{relative} mentions VERIFIED without live-evidence qualifier"})
             check["status"] = "FAIL"
     return check
@@ -113,7 +121,12 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
 
 def _contains_overclaim(relative: str, text: str, blockers: list[dict[str, Any]]) -> bool:
     failed = False
-    if VERIFIED_ROW.search(text):
+    invalid_verified_rows = [
+        row
+        for row in VERIFIED_ROW.findall(text)
+        if not row.startswith("| Claude Code |")
+    ]
+    if invalid_verified_rows:
         blockers.append({"code": "docs-compat-verified-row", "message": f"{relative} contains a VERIFIED current-maturity row"})
         failed = True
     if "offline source release" in text.lower() and PRODUCTION_READY_CLAIM.search(text):
