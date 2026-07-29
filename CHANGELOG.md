@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.0 - 2026-07-29
+
 - Promoted the Codex adapter to host-specific `VERIFIED` for Codex CLI 0.145.0
   with local live host conformance, live calibration, and full ALK lifecycle
   proof evidence.

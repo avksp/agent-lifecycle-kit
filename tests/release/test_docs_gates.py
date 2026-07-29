@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.5.0 - 2026-07-29")
+        current_release = _section(changelog, "## 0.6.0 - 2026-07-29")
         self.assertNotIn("- No changes yet.", unreleased)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -95,9 +95,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.5.0.md",
+        root / "release/notes/v0.6.0.md",
         "Status: source release.\n"
-        "Claude Code is host-specific `VERIFIED`.\n"
+        "Codex CLI is host-specific `VERIFIED`.\n"
         "Budget caps stop runaway execution.\n",
     )
     for host in ("claude", "codex", "cursor", "hermes", "opencode"):

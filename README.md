@@ -27,18 +27,19 @@ Use it when you need:
 
 ## Current status
 
-`v0.5.0` is the current source release. It adds the release-0-5 execution
+`v0.6.0` is the current source release. It includes the release-0-5 execution
 gates: acceptance checklist validation against the frozen manifest, neutral
 adapter event stream validation, task-acceptance write-scope enforcement,
-per-attempt baseline reconciliation, external-action parking, final completion
-signals, and live Claude Code adapter evidence.
+per-attempt baseline reconciliation, external-action parking, and final
+completion signals. It also adds release-0-6 Codex CLI live adapter evidence
+with ephemeral host probes.
 
-Adapter maturity is host-specific. Claude Code is `VERIFIED` for Claude Code
-2.1.220 after the local release-0-5 live conformance, live calibration, and
-full lifecycle proof. Codex CLI is `VERIFIED` for Codex CLI 0.145.0 in the
-current source tree after the release-0-6 live conformance, live calibration,
-and full lifecycle proof. Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`
-until each host has matching live evidence.
+Adapter maturity is host-specific. Codex CLI is `VERIFIED` for Codex CLI
+0.145.0 after the release-0-6 live conformance, live calibration, and full
+lifecycle proof. Claude Code is `VERIFIED` for Claude Code 2.1.220 after the
+local release-0-5 live conformance, live calibration, and full lifecycle proof.
+Cursor, Hermes, and OpenCode remain `EXPERIMENTAL` until each host has matching
+live evidence.
 Public directory publication still depends on each host marketplace review
 process.
 
@@ -301,7 +302,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.5.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.6.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -371,7 +372,7 @@ from the tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.5.0/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.6.0/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -403,7 +404,7 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 
 The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
-claimed by `v0.5.0`.
+claimed by `v0.6.0`.
 
 ## Usage
 
