@@ -37,10 +37,10 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.5.0.md",
+        "release/notes/v0.6.0.md",
         (
             "Status: source release.",
-            "Claude Code is host-specific `VERIFIED`",
+            "Codex CLI is host-specific `VERIFIED`",
             "Budget caps stop runaway execution",
         ),
     ),

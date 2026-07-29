@@ -28,18 +28,18 @@ Lifecycle Kit превращает эти шаги в явные artifacts и ga
 
 ## Текущий статус
 
-`v0.5.0` — текущий source release. Он добавляет release-0-5 execution gates:
+`v0.6.0` — текущий source release. Он включает release-0-5 execution gates:
 acceptance checklist validation по frozen manifest, neutral adapter event
 stream validation, task-acceptance write-scope enforcement, per-attempt baseline
-reconciliation, external-action parking, final completion signals и live
-Claude Code adapter evidence.
+reconciliation, external-action parking и final completion signals. Также он
+добавляет release-0-6 Codex CLI live adapter evidence с ephemeral host probes.
 
-Maturity адаптеров задаётся по host. Claude Code имеет статус `VERIFIED` для
-Claude Code 2.1.220 после локального release-0-5 live conformance, live
-calibration и full lifecycle proof. Codex CLI имеет статус `VERIFIED` для
-Codex CLI 0.145.0 в текущем source tree после release-0-6 live conformance,
-live calibration и full lifecycle proof. Cursor, Hermes и OpenCode остаются
-`EXPERIMENTAL`, пока для каждого host нет собственного live evidence.
+Maturity адаптеров задаётся по host. Codex CLI имеет статус `VERIFIED` для
+Codex CLI 0.145.0 после release-0-6 live conformance, live calibration и full
+lifecycle proof. Claude Code имеет статус `VERIFIED` для Claude Code 2.1.220
+после локального release-0-5 live conformance, live calibration и full
+lifecycle proof. Cursor, Hermes и OpenCode остаются `EXPERIMENTAL`, пока для
+каждого host нет собственного live evidence.
 Публикация в публичных директориях также зависит от review-процесса каждой
 платформы.
 
@@ -288,7 +288,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Установка из tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.5.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.6.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -359,7 +359,7 @@ skills из tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.5.0/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.6.0/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -390,7 +390,7 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 ```
 
 В корне репозитория также есть `opencode.json` для проверки из source
-checkout. Будущий npm package может ссылаться на тот же adapter, но `v0.5.0`
+checkout. Будущий npm package может ссылаться на тот же adapter, но `v0.6.0`
 не заявляет npm publication.
 
 ## Использование
