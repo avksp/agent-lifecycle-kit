@@ -1,6 +1,7 @@
 # OpenCode 0.7.0 adapter evidence
 
-Status: inspection passed; support remains `EXPERIMENTAL`.
+Status: inspection passed; this historical non-promotion note is superseded by
+the 2026-07-29 live evidence.
 
 Scope:
 
@@ -35,15 +36,22 @@ Discovered surfaces:
 - auth command surface is discovered, but local credential state is intentionally
   not disclosed in committed evidence.
 
-Non-promotion decision:
+Historical non-promotion decision:
 
-OpenCode is not promoted in this evidence note. No live host conformance
-receipt, usage/calibration receipt, or lifecycle final proof has been accepted
-for OpenCode. The support matrix must remain `EXPERIMENTAL` until those gates
-pass for a concrete OpenCode version range.
+OpenCode was not promoted by this evidence note. At the time, no live host
+conformance receipt, usage/calibration receipt, or lifecycle final proof had
+been accepted for OpenCode. The support matrix therefore had to remain
+`EXPERIMENTAL` until those gates passed for a concrete OpenCode version range.
 
-Blocker class: `BLOCKED_HOST_LOCAL_MODEL_BINDING`.
+Historical blocker class: `BLOCKED_HOST_LOCAL_MODEL_BINDING`.
 
 Next action: bind `profiles/hosts/opencode-live-profile.v1.json` to real
 host-local OpenCode model identifiers, then rerun bounded live host conformance,
 usage calibration and lifecycle proof with explicit live-run budget caps.
+
+Superseding evidence:
+
+- `docs/adapters/evidence/opencode-glm52-live-2026-07-29.md`;
+- `tasks/release-0-7/evidence/opencode/live-host-conformance-opencode.json`;
+- `tasks/release-0-7/evidence/opencode/live-calibration-verification-opencode.json`;
+- `tasks/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json`.
