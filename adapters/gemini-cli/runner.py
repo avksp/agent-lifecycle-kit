@@ -89,7 +89,7 @@ def _gemini_command(
     model: str | None,
     fallback_model: str | None,
 ) -> list[str]:
-    command = [gemini_bin, "--approval-mode", "plan", "--output-format", "stream-json"]
+    command = [gemini_bin, "--skip-trust", "--approval-mode", "plan", "--output-format", "stream-json"]
     if model:
         command.extend(["--model", model])
     _ = fallback_model

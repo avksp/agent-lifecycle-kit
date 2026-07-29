@@ -149,7 +149,7 @@ class KimiCodeHarnessTests(unittest.TestCase):
             self.assertEqual({item["name"] for item in payload["operations"]}, set(baseline["requiredOperations"]))
             self.assertEqual(len(calls), len(baseline["requiredOperations"]))
             self.assertEqual(calls[0][calls[0].index("--model") + 1], "glm-5.2")
-            self.assertIn("--plan", calls[0])
+            self.assertNotIn("--plan", calls[0])
             self.assertNotIn("--approval-mode", calls[0])
             self.assertNotIn("--safe-mode", calls[0])
 
@@ -228,9 +228,53 @@ class KimiCodeHarnessTests(unittest.TestCase):
             first_usage = payload["runs"][0]["usage"]
             self.assertGreater(first_usage["cumulativeContextBytes"], 0)
             self.assertEqual(first_usage["cumulativeContextBytesSource"], "harness-observed-prompt-and-jsonl-bytes")
-            self.assertIn("--plan", calls[0])
+            self.assertNotIn("--plan", calls[0])
             self.assertNotIn("--approval-mode", calls[0])
             self.assertNotIn("--safe-mode", calls[0])
+
+    def test_live_host_receipt_blocks_when_kimi_mutates_worktree(self) -> None:
+        checks = iter(
+            [
+                {"clean": True, "dirtyEntryCount": 0},
+                {"clean": False, "dirtyEntryCount": 1},
+            ]
+        )
+
+        def fake_runner(command: list[str]) -> kimi_code_harness.CommandResult:
+            stdout = "\n".join(
+                [
+                    json.dumps({"type": "system", "session_id": "session-mutated", "model": "GLM-5.2"}),
+                    json.dumps(
+                        {
+                            "type": "result",
+                            "duration_ms": 100,
+                            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+                        }
+                    ),
+                ]
+            )
+            return kimi_code_harness.CommandResult(returncode=0, stdout=stdout, stderr="", wall_seconds=0.1)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            report = kimi_code_harness.run_live_host_receipt(
+                kimi_bin="kimi",
+                baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json",
+                worktree=tmp_path / "clean-worktree",
+                allow_live=True,
+                receipt_path=tmp_path / "receipts/kimi-code.json",
+                diagnostic_dir=tmp_path / "diagnostics",
+                budget_policy=kimi_code_harness.BudgetPolicy(
+                    mode="subscription",
+                    max_invocations=13,
+                    max_billable_tokens=1000,
+                ),
+                runner=fake_runner,
+                clean_worktree_checker=lambda _: next(checks),
+            )
+
+        self.assertEqual(report["status"], "FAIL")
+        self.assertIn("BLOCKED_WORKTREE_MUTATED", {item["code"] for item in report["blockers"]})
 
 
 def _load_json(path: Path) -> dict:

@@ -23,6 +23,9 @@ configuration validation. The summary is
 
 The adapter remains `EXPERIMENTAL` until live Kimi Code conformance, usage
 calibration and lifecycle proof evidence are accepted in the support matrix.
-Current blocker: `BLOCKED_LIVE_RECEIPTS_NOT_CAPTURED`; the harness exists, but
-usage-attested live host receipts, calibration receipts, and lifecycle final
-proof have not been accepted.
+The bounded harness uses headless `--prompt` with post-invocation clean-worktree
+checks because Kimi Code does not allow `--prompt` and `--plan` together.
+Current blocker: `BLOCKED_HOST_MODEL_NOT_CONFIGURED`; the current local Kimi
+Code 0.30.0 setup has no configured providers/model aliases, so no
+usage-attested live host receipt, calibration receipt, or lifecycle final proof
+can be captured yet.

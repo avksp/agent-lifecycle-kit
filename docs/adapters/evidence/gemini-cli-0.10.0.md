@@ -29,7 +29,10 @@ Discovered surfaces:
 - permission behavior exposes `--yolo`, `--approval-mode` and `--sandbox`, with
   ALK policy still fail-closed;
 - skills, extensions, MCP and local Gemma routing command surfaces are present;
-- no safe auth-status command was discovered in the inspected help surface.
+- no safe auth-status command was discovered in the inspected help surface;
+- a bounded live canary on the current local setup returns an unsupported
+  Gemini Code Assist individual-client tier error before a receipt can be
+  captured.
 
 Non-promotion decision:
 
@@ -37,9 +40,9 @@ Gemini CLI is not promoted in this evidence note. No live host conformance
 receipt, usage/calibration receipt, or lifecycle final proof has been accepted
 for Gemini CLI.
 
-Blocker class: `BLOCKED_LIVE_RECEIPTS_NOT_CAPTURED`.
+Blocker class: `BLOCKED_UNSUPPORTED_CLIENT_TIER`.
 
-Next action: run the bounded Gemini CLI live harness with explicit invocation,
-token and wall-clock caps, then validate the live host receipt, live
-calibration receipt and lifecycle final proof before any support-matrix
-promotion.
+Next action: configure a supported Gemini/Antigravity setup, then rerun the
+bounded Gemini CLI live harness with explicit invocation, token and wall-clock
+caps and validate the live host receipt, live calibration receipt and lifecycle
+final proof before any support-matrix promotion.

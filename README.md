@@ -153,7 +153,7 @@ See [budget reroute policy](docs/guides/budget-reroute-policy.md).
 
 ## Distribution layout
 
-A universal distribution does not mean one manifest format. `v0.12.3` is the
+A universal distribution does not mean one manifest format. `v0.12.4` is the
 latest tagged source release and includes OpenCode, Hermes, and qwen-code live
 evidence captured on 2026-07-29. The same deterministic core is projected into
 each host's native loading model:
@@ -163,9 +163,9 @@ each host's native loading model:
 | Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | `VERIFIED` for Codex CLI 0.145.0 | Local release-0-6 live conformance, live usage calibration, and full ALK lifecycle proof passed. Public Plugins Directory approval is not claimed. |
 | Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | `VERIFIED` for Claude Code 2.1.220 | Local release-0-5 live conformance, live usage calibration, and full ALK lifecycle proof passed. Public directory approval is not claimed. |
 | Cursor | `.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json`, and `adapters/cursor/*` | `EXPERIMENTAL` | Safe inspection passed on a local Free tier, but usage/cost attestation and full lifecycle proof are not accepted yet. Marketplace approval is not claimed. |
-| Gemini CLI | `adapters/gemini-cli/*` | `EXPERIMENTAL` | Safe inspection and bounded harness shape passed, but live receipts, calibration and lifecycle proof are not accepted yet. |
+| Gemini CLI | `adapters/gemini-cli/*` | `EXPERIMENTAL` | Safe inspection and bounded harness shape passed, but local live canary is blocked by the current unsupported Gemini Code Assist client tier. |
 | Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | `VERIFIED` for Hermes Agent v0.19.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on 2026-07-29. Public directory/publication approval is not claimed. |
-| Kimi Code | `adapters/kimi-code/*` | `EXPERIMENTAL` | Safe inspection and bounded harness shape passed, but live receipts, calibration and lifecycle proof are not accepted yet. |
+| Kimi Code | `adapters/kimi-code/*` | `EXPERIMENTAL` | Safe inspection and bounded harness shape passed, but local live canary is blocked until a provider/model alias is configured. |
 | OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | `VERIFIED` for OpenCode CLI 1.18.9 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on 2026-07-29. npm publication is not claimed. |
 | qwen-code | `adapters/qwen-code/*` | `VERIFIED` for qwen-code 0.21.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on GLM 5.2 on 2026-07-29. Public package approval is not claimed. |
 
@@ -300,7 +300,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.3
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.4
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -372,7 +372,7 @@ Gemini CLI currently uses a host-local source projection. Install the core from
 a tagged checkout, then validate and inspect the projection:
 
 ```bash
-git clone --branch v0.12.3 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 gemini --version
@@ -380,11 +380,13 @@ agent-lifecycle adapter validate --descriptor adapters/gemini-cli/adapter.descri
 agent-lifecycle adapter inspect --descriptor adapters/gemini-cli/adapter.descriptor.json
 ```
 
-There is no published Gemini CLI runtime package in `v0.12.3`. The source tree
+There is no published Gemini CLI runtime package in `v0.12.4`. The source tree
 includes `adapters/gemini-cli/runner.py` and
 `tools/live_hosts/gemini_cli_harness.py` for bounded receipt normalization, but
 Gemini CLI remains `EXPERIMENTAL` until live conformance, calibration and
-lifecycle proof receipts are accepted.
+lifecycle proof receipts are accepted. On the current local host, Gemini CLI
+0.46.0 returns an unsupported Gemini Code Assist individual-client tier error,
+so promotion cannot proceed without a supported Gemini/Antigravity setup.
 
 ### Hermes
 
@@ -393,7 +395,7 @@ from the tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.3/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.4/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -408,7 +410,7 @@ Kimi Code currently uses a host-local source projection. Make sure the `kimi`
 CLI is available on `PATH`, then validate and inspect the projection:
 
 ```bash
-git clone --branch v0.12.3 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 kimi --version
@@ -416,11 +418,13 @@ agent-lifecycle adapter validate --descriptor adapters/kimi-code/adapter.descrip
 agent-lifecycle adapter inspect --descriptor adapters/kimi-code/adapter.descriptor.json
 ```
 
-There is no published Kimi Code runtime package in `v0.12.3`. The source tree
+There is no published Kimi Code runtime package in `v0.12.4`. The source tree
 includes `adapters/kimi-code/runner.py` and
 `tools/live_hosts/kimi_code_harness.py` for bounded receipt normalization, but
 Kimi Code remains `EXPERIMENTAL` until live conformance, calibration and
-lifecycle proof receipts are accepted.
+lifecycle proof receipts are accepted. On the current local host, `kimi
+provider list` reports no configured providers, so promotion cannot proceed
+until a provider/model alias is configured outside the portable ALK core.
 
 ### OpenCode
 
@@ -445,16 +449,16 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 
 The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
-claimed by `v0.12.3`.
+claimed by `v0.12.4`.
 
 ### qwen-code
 
 qwen-code currently uses a host-local source projection. Install the core from
-a tagged checkout, then validate and inspect the projection. `v0.12.3` is
+a tagged checkout, then validate and inspect the projection. `v0.12.4` is
 `VERIFIED` for qwen-code `0.21.0`.
 
 ```bash
-git clone --branch v0.12.3 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 qwen --version
@@ -465,7 +469,7 @@ agent-lifecycle adapter inspect --descriptor adapters/qwen-code/adapter.descript
 The live runner is `adapters/qwen-code/runner.py`; the release harness is
 `tools/live_hosts/qwen_code_harness.py`. No public qwen-code adapter package,
 public directory approval, or production-promotion platform claim is published
-in `v0.12.3`.
+in `v0.12.4`.
 
 ## Usage
 

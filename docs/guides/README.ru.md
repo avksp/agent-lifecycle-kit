@@ -169,7 +169,7 @@ agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-d
 
 ## Структура поставки
 
-Универсальная поставка не означает единый формат манифеста. `v0.12.3` —
+Универсальная поставка не означает единый формат манифеста. `v0.12.4` —
 последний тегированный исходный релиз и содержит реальные доказательства для
 OpenCode, Hermes и qwen-code, полученные 2026-07-29. Одно детерминированное
 ядро проецируется в нативную модель загрузки каждой системы:
@@ -179,9 +179,9 @@ OpenCode, Hermes и qwen-code, полученные 2026-07-29. Одно дет�
 | Codex | `.codex-plugin/plugin.json` и `.agents/plugins/marketplace.json` | `VERIFIED` для Codex CLI 0.145.0 | Локально прошли реальная проверка совместимости release-0-6, калибровка расхода и полный жизненный цикл ALK. Одобрение публичного Plugins Directory не заявлено. |
 | Claude Code | `.claude-plugin/plugin.json` и `.claude-plugin/marketplace.json` | `VERIFIED` для Claude Code 2.1.220 | Локально прошли реальная проверка совместимости release-0-5, калибровка расхода и полный жизненный цикл ALK. Одобрение публичного каталога не заявлено. |
 | Cursor | `.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json` и `adapters/cursor/*` | `EXPERIMENTAL` | Безопасная проверка прошла на локальной бесплатной подписке, но подтверждение расхода и полный жизненный цикл ещё не приняты. Одобрение Marketplace не заявлено. |
-| Gemini CLI | `adapters/gemini-cli/*` | `EXPERIMENTAL` | Безопасная проверка и форма ограниченного запуска прошли, но живые квитанции, калибровка и полный жизненный цикл ещё не приняты. |
+| Gemini CLI | `adapters/gemini-cli/*` | `EXPERIMENTAL` | Безопасная проверка и форма ограниченного запуска прошли, но локальная живая проверка заблокирована неподдерживаемым уровнем Gemini Code Assist. |
 | Hermes | `skills.sh.json`, общий `skills/` и `adapters/hermes/*` | `VERIFIED` для Hermes Agent v0.19.0 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK 2026-07-29. Одобрение публичного каталога или публикация не заявлены. |
-| Kimi Code | `adapters/kimi-code/*` | `EXPERIMENTAL` | Безопасная проверка и форма ограниченного запуска прошли, но живые квитанции, калибровка и полный жизненный цикл ещё не приняты. |
+| Kimi Code | `adapters/kimi-code/*` | `EXPERIMENTAL` | Безопасная проверка и форма ограниченного запуска прошли, но локальная живая проверка заблокирована до настройки provider/model alias. |
 | OpenCode | `opencode.json`, общий `skills/` и `adapters/opencode/*` | `VERIFIED` для OpenCode CLI 1.18.9 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK 2026-07-29. Публикация в npm не заявлена. |
 | qwen-code | `adapters/qwen-code/*` | `VERIFIED` для qwen-code 0.21.0 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK на GLM 5.2 2026-07-29. Одобрение публичного пакета не заявлено. |
 
@@ -301,7 +301,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Установка из тегированного исходного marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.3
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.4
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -377,7 +377,7 @@ Gemini CLI сейчас использует исходную проекцию �
 проинспектируйте проекцию:
 
 ```bash
-git clone --branch v0.12.3 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 gemini --version
@@ -385,11 +385,14 @@ agent-lifecycle adapter validate --descriptor adapters/gemini-cli/adapter.descri
 agent-lifecycle adapter inspect --descriptor adapters/gemini-cli/adapter.descriptor.json
 ```
 
-В `v0.12.3` нет опубликованного пакета среды выполнения для Gemini CLI.
+В `v0.12.4` нет опубликованного пакета среды выполнения для Gemini CLI.
 Исходное дерево содержит `adapters/gemini-cli/runner.py` и
 `tools/live_hosts/gemini_cli_harness.py` для ограниченной нормализации
 квитанций, но Gemini CLI остаётся `EXPERIMENTAL`, пока не приняты живые
 квитанции совместимости, калибровка и доказательство полного жизненного цикла.
+На текущей локальной среде Gemini CLI 0.46.0 возвращает ошибку
+неподдерживаемого уровня Gemini Code Assist для individual-client, поэтому
+продвижение невозможно без поддерживаемой настройки Gemini/Antigravity.
 
 ### Hermes
 
@@ -398,7 +401,7 @@ Hermes может устанавливать общие skills напрямую.
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.3/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.4/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -413,7 +416,7 @@ Kimi Code сейчас использует исходную проекцию д
 что CLI `kimi` доступен в `PATH`, затем проверьте и проинспектируйте проекцию:
 
 ```bash
-git clone --branch v0.12.3 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 kimi --version
@@ -421,11 +424,14 @@ agent-lifecycle adapter validate --descriptor adapters/kimi-code/adapter.descrip
 agent-lifecycle adapter inspect --descriptor adapters/kimi-code/adapter.descriptor.json
 ```
 
-В `v0.12.3` нет опубликованного пакета среды выполнения для Kimi Code.
+В `v0.12.4` нет опубликованного пакета среды выполнения для Kimi Code.
 Исходное дерево содержит `adapters/kimi-code/runner.py` и
 `tools/live_hosts/kimi_code_harness.py` для ограниченной нормализации
 квитанций, но Kimi Code остаётся `EXPERIMENTAL`, пока не приняты живые
 квитанции совместимости, калибровка и доказательство полного жизненного цикла.
+На текущей локальной среде `kimi provider list` показывает, что providers не
+настроены, поэтому продвижение невозможно до настройки provider/model alias вне
+переносимого ядра ALK.
 
 ### OpenCode
 
@@ -449,17 +455,17 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 ```
 
 В корне репозитория также есть `opencode.json` для проверки из рабочего дерева.
-Будущий npm-пакет может ссылаться на тот же адаптер, но `v0.12.3` не заявляет
+Будущий npm-пакет может ссылаться на тот же адаптер, но `v0.12.4` не заявляет
 публикацию в npm.
 
 ### qwen-code
 
 qwen-code сейчас использует исходную проекцию для локальной среды. Установите
 ядро из рабочего дерева, полученного по тегу, затем проверьте и
-проинспектируйте проекцию. `v0.12.3` имеет `VERIFIED` для qwen-code `0.21.0`.
+проинспектируйте проекцию. `v0.12.4` имеет `VERIFIED` для qwen-code `0.21.0`.
 
 ```bash
-git clone --branch v0.12.3 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 qwen --version
@@ -468,7 +474,7 @@ agent-lifecycle adapter inspect --descriptor adapters/qwen-code/adapter.descript
 ```
 
 Живой runner находится в `adapters/qwen-code/runner.py`, проверочный скрипт
-релиза - в `tools/live_hosts/qwen_code_harness.py`. В `v0.12.3` нет публичного
+релиза - в `tools/live_hosts/qwen_code_harness.py`. В `v0.12.4` нет публичного
 пакета адаптера qwen-code, одобрения публичного каталога или заявления о
 прохождении производственной матрицы.
 

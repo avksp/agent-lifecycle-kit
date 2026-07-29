@@ -72,15 +72,16 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.12.3.md",
+        "release/notes/v0.12.4.md",
         (
             "Status: source release.",
-            "Updated package metadata to `0.12.3`",
-            "bounded Gemini CLI",
-            "Kimi Code runners",
-            "stream-json",
-            "remain",
-            "`EXPERIMENTAL`",
+            "Updated package metadata to `0.12.4`",
+            "Gemini CLI headless",
+            "`--skip-trust`",
+            "Kimi Code headless",
+            "post-invocation clean-worktree",
+            "unsupported Gemini Code Assist client tier",
+            "provider/model alias",
         ),
     ),
 )

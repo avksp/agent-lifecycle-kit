@@ -149,6 +149,7 @@ class GeminiCliHarnessTests(unittest.TestCase):
             self.assertEqual({item["name"] for item in payload["operations"]}, set(baseline["requiredOperations"]))
             self.assertEqual(len(calls), len(baseline["requiredOperations"]))
             self.assertEqual(calls[0][calls[0].index("--model") + 1], "glm-5.2")
+            self.assertIn("--skip-trust", calls[0])
             self.assertIn("--approval-mode", calls[0])
             self.assertNotIn("--safe-mode", calls[0])
 
@@ -227,6 +228,7 @@ class GeminiCliHarnessTests(unittest.TestCase):
             first_usage = payload["runs"][0]["usage"]
             self.assertGreater(first_usage["cumulativeContextBytes"], 0)
             self.assertEqual(first_usage["cumulativeContextBytesSource"], "harness-observed-prompt-and-jsonl-bytes")
+            self.assertIn("--skip-trust", calls[0])
             self.assertIn("--approval-mode", calls[0])
             self.assertNotIn("--safe-mode", calls[0])
 

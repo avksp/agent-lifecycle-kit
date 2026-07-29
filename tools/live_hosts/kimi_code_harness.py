@@ -325,6 +325,15 @@ def run_live_host_receipt(
         live_calls_started = True
         transcript = _write_invocation_diagnostic(diagnostic_dir, operation_name, invocation_id, result)
         checks.append({"name": f"kimi-code-live-{operation_name}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": _display_path(transcript)}})
+        _record_post_invocation_cleanliness(
+            checks,
+            blockers,
+            worktree,
+            clean_worktree_checker,
+            f"kimi-code-post-live-{operation_name}",
+        )
+        if blockers:
+            break
         usage = _usage_or_block(result, budget_policy, blockers, operation_name)
         if usage is None:
             break
@@ -423,6 +432,15 @@ def run_live_calibration(
                 live_calls_started = True
                 transcript = _write_invocation_diagnostic(diagnostic_dir, f"{scenario}-{cohort}-{run_index:02d}", invocation_id, result)
                 checks.append({"name": f"kimi-code-calibration-{scenario}-{cohort}-{run_index:02d}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": _display_path(transcript)}})
+                _record_post_invocation_cleanliness(
+                    checks,
+                    blockers,
+                    worktree,
+                    clean_worktree_checker,
+                    f"kimi-code-post-calibration-{scenario}-{cohort}-{run_index:02d}",
+                )
+                if blockers:
+                    break
                 usage = _calibration_usage_or_block(
                     result,
                     budget_policy,
@@ -672,7 +690,7 @@ def _operation_command(
     model_selection: HostModelSelection | None = None,
 ) -> list[str]:
     _ = worktree
-    command = [kimi_bin, "--plan", "--output-format", "stream-json"]
+    command = [kimi_bin, "--output-format", "stream-json"]
     command.extend(_model_args(kimi_model, kimi_fallback_model, model_selection))
     command.extend(["--prompt", _prompt_for_operation(operation_name)])
     return command
@@ -688,7 +706,20 @@ def _calibration_command(
     model_selection: HostModelSelection | None = None,
 ) -> list[str]:
     _ = worktree
-    return [kimi_bin, "--plan", "--output-format", "stream-json", *_model_args(kimi_model, kimi_fallback_model, model_selection), "--prompt", prompt]
+    return [kimi_bin, "--output-format", "stream-json", *_model_args(kimi_model, kimi_fallback_model, model_selection), "--prompt", prompt]
+
+
+def _record_post_invocation_cleanliness(
+    checks: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
+    worktree: Path,
+    clean_worktree_checker: Callable[[Path], dict[str, Any]],
+    name: str,
+) -> None:
+    clean = clean_worktree_checker(worktree)
+    checks.append({"name": name, "status": "PASS" if clean.get("clean") else "FAIL", "details": clean})
+    if not clean.get("clean"):
+        blockers.append({"code": "BLOCKED_WORKTREE_MUTATED", "message": "kimi-code live invocation left the worktree dirty"})
 
 
 def _model_args(
