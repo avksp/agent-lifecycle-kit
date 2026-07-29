@@ -1,7 +1,7 @@
 # Kimi Code adapter
 
-The Kimi Code projection is an `EXPERIMENTAL` host projection scaffold. It
-contains no lifecycle semantics, no concrete provider model names, and no
+The Kimi Code projection is an `EXPERIMENTAL` host projection with a bounded
+runner and live harness. It contains no portable provider model names and no
 production-promotion claim. It is not `VERIFIED`.
 
 Validate the source projection before any live run:
@@ -10,6 +10,8 @@ Validate the source projection before any live run:
 agent-lifecycle adapter validate --descriptor adapters/kimi-code/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
 agent-lifecycle adapter inspect --descriptor adapters/kimi-code/adapter.descriptor.json --skip-host-commands
 python tools/release/validate_adapter_conformance.py --baseline conformance/core/adapter-baseline.v1.json --host kimi-code --evidence <adapter-conformance-evidence.json>
+python tools/live_hosts/kimi_code_harness.py --mode fixture-check --baseline conformance/core/adapter-baseline.v1.json --report <kimi-code-fixture-check.json>
+python tools/live_hosts/kimi_code_harness.py --mode preflight --baseline conformance/core/adapter-baseline.v1.json --budget-mode subscription --max-invocations 1 --report <kimi-code-preflight-report.json>
 ```
 
 Kimi Code `0.30.0` has passed safe local inspection through the local `kimi`
@@ -21,6 +23,6 @@ configuration validation. The summary is
 
 The adapter remains `EXPERIMENTAL` until live Kimi Code conformance, usage
 calibration and lifecycle proof evidence are accepted in the support matrix.
-Current blocker: `BLOCKED_LIVE_HARNESS_NOT_IMPLEMENTED`; usage attestation is
-still unproven until a bounded live harness normalizes `stream-json` output into
-portable host-operation receipts.
+Current blocker: `BLOCKED_LIVE_RECEIPTS_NOT_CAPTURED`; the harness exists, but
+usage-attested live host receipts, calibration receipts, and lifecycle final
+proof have not been accepted.

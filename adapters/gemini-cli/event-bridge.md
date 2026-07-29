@@ -1,8 +1,10 @@
 # gemini-cli event bridge
 
-This is an EXPERIMENTAL event bridge placeholder. A real host adapter
-must translate host lifecycle callbacks into `agent-adapter-event.v1`
-records and validate them with `agent-lifecycle adapter event-check`.
+This is an EXPERIMENTAL bounded event bridge for Gemini CLI `stream-json`
+output. It translates host-operation invocations into portable
+`agent-host-operation-receipt.v1` receipts through
+`tools/live_hosts/gemini_cli_harness.py` and `adapters/gemini-cli/runner.py`.
 
-The scaffold does not implement runtime dispatch. Unsupported operations
-must fail closed until host-specific live conformance evidence exists.
+This bridge does not promote Gemini CLI to `VERIFIED`. Unsupported or
+unattested operations still fail closed until host-specific live conformance,
+live calibration and lifecycle proof evidence are accepted.

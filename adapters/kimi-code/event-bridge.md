@@ -1,8 +1,9 @@
-# kimi-code event bridge
+# Kimi Code event bridge
 
-This is an EXPERIMENTAL event bridge placeholder. A real host adapter
-must translate host lifecycle callbacks into `agent-adapter-event.v1`
-records and validate them with `agent-lifecycle adapter event-check`.
+This is an EXPERIMENTAL bounded event bridge. The source runner normalizes
+Kimi Code `stream-json` output into `agent-host-operation-receipt.v1` records
+for live-harness validation.
 
-The scaffold does not implement runtime dispatch. Unsupported operations
-must fail closed until host-specific live conformance evidence exists.
+Runtime dispatch remains fail-closed for unsupported operations. Host-specific
+`VERIFIED` support still requires accepted live host conformance, calibration,
+and lifecycle final proof evidence.

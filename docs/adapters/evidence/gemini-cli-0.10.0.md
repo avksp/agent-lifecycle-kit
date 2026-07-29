@@ -37,9 +37,9 @@ Gemini CLI is not promoted in this evidence note. No live host conformance
 receipt, usage/calibration receipt, or lifecycle final proof has been accepted
 for Gemini CLI.
 
-Blocker class: `BLOCKED_LIVE_HARNESS_NOT_IMPLEMENTED`.
+Blocker class: `BLOCKED_LIVE_RECEIPTS_NOT_CAPTURED`.
 
-Next action: implement a bounded Gemini CLI live harness that converts
-`stream-json` output into portable host-operation receipts, proves usage
-attestation, and enforces invocation, token and wall-clock caps before any
-support-matrix promotion.
+Next action: run the bounded Gemini CLI live harness with explicit invocation,
+token and wall-clock caps, then validate the live host receipt, live
+calibration receipt and lifecycle final proof before any support-matrix
+promotion.

@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 0.12.3 - 2026-07-29
+
+- Added bounded Gemini CLI and Kimi Code runners plus live harnesses for
+  `stream-json` receipt normalization while keeping both adapters
+  `EXPERIMENTAL`.
+- Updated adapter projection manifests, README, Russian README, support matrix,
+  validation docs, and release inventory checks for the new harness files.
+- Confirmed Gemini CLI 0.46.0 and Kimi Code 0.30.0 safe preflight without live
+  model calls; live conformance, calibration, and lifecycle proof remain
+  required before any `VERIFIED` promotion.
+
 ## 0.12.2 - 2026-07-29
 
 - Promoted the OpenCode adapter to host-specific `VERIFIED` for OpenCode CLI

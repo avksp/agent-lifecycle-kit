@@ -72,14 +72,15 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.12.2.md",
+        "release/notes/v0.12.3.md",
         (
             "Status: source release.",
-            "Updated package metadata to `0.12.2`",
-            "Promoted OpenCode",
-            "Promoted Hermes",
-            "Promoted qwen-code",
-            "bounded qwen-code runner",
+            "Updated package metadata to `0.12.3`",
+            "bounded Gemini CLI",
+            "Kimi Code runners",
+            "stream-json",
+            "remain",
+            "`EXPERIMENTAL`",
         ),
     ),
 )
