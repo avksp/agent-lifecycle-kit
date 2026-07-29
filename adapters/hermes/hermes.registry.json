@@ -4,6 +4,6 @@
   "version": "0.12.1",
   "skillsDirectory": "./skills",
   "adapterDescriptor": "./adapter.descriptor.json",
-  "maturity": "EXPERIMENTAL",
+  "maturity": "VERIFIED",
   "commands": "./slash-commands.json"
 }

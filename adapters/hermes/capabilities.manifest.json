@@ -2,8 +2,8 @@
   "schemaVersion": "agent-adapter-capability-manifest.v1",
   "adapterId": "hermes",
   "host": "hermes",
-  "maturity": "EXPERIMENTAL",
-  "descriptorDigest": "fee2b04e6973a09a572645c17c4729252e592206948660a700782caef62e2405",
+  "maturity": "VERIFIED",
+  "descriptorDigest": "43e57e292ffc105bbc19130bf4913fdf041163a19fefb1f3bc30408e35468a80",
   "unsupportedOperationPolicy": "fail-closed",
   "coreSemantics": "delegated-to-agent-lifecycle-core",
   "capabilities": [
@@ -131,7 +131,7 @@
     "usageReceiptRequired": true,
     "unsupportedClassPolicy": "fail-closed",
     "providerModelNamesInCore": false,
-    "liveVerified": false
+    "liveVerified": true
   },
   "runtimeBoundary": {
     "hostSpecificCode": "adapter-owned",

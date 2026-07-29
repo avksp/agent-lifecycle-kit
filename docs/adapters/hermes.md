@@ -23,9 +23,12 @@ surfaces, headless oneshot mode, usage-file support, model/provider selection,
 permission flags, skills, auth and status command discovery. The redacted
 summary is `docs/adapters/evidence/hermes-0.8.0.md`.
 
-Hermes availability is part of the standalone release target, but remains
-`EXPERIMENTAL` until live Hermes conformance, usage calibration and lifecycle
-proof evidence are accepted in the support matrix. Current blocker:
-`BLOCKED_HOST_LOCAL_MODEL_BINDING`; the live profile still needs real
-host-local Hermes provider/model identifiers before a bounded live run can
-produce useful promotion evidence.
+The current source tree is `VERIFIED` for Hermes Agent `v0.19.0` only. The
+accepted live evidence was captured on 2026-07-29 with host-local model
+binding, bounded subscription resource caps, live conformance through the host
+receipt, live calibration, and an ALK lifecycle final proof. The redacted live
+summary is
+`docs/adapters/evidence/hermes-glm52-live-2026-07-29.md`.
+
+This does not claim public directory approval, production promotion, or
+compatibility with untested Hermes versions.
