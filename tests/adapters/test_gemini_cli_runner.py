@@ -59,6 +59,7 @@ class GeminiCliRunnerTests(unittest.TestCase):
         self.assertEqual(parsed.usage["billableTokens"], 16)
         self.assertEqual(parsed.usage["sessionId"], "runner-session")
         self.assertEqual(calls[0][0][calls[0][0].index("--model") + 1], "glm-5.2")
+        self.assertIn("--skip-trust", calls[0][0])
         self.assertIn("--approval-mode", calls[0][0])
         self.assertNotIn("--safe-mode", calls[0][0])
         self.assertEqual(calls[0][2], 30)

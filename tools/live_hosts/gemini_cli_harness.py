@@ -672,7 +672,7 @@ def _operation_command(
     model_selection: HostModelSelection | None = None,
 ) -> list[str]:
     _ = worktree
-    command = [gemini_bin, "--approval-mode", "plan", "--output-format", "stream-json"]
+    command = [gemini_bin, "--skip-trust", "--approval-mode", "plan", "--output-format", "stream-json"]
     command.extend(_model_args(gemini_model, gemini_fallback_model, model_selection))
     command.extend(["--prompt", _prompt_for_operation(operation_name)])
     return command
@@ -688,7 +688,17 @@ def _calibration_command(
     model_selection: HostModelSelection | None = None,
 ) -> list[str]:
     _ = worktree
-    return [gemini_bin, "--approval-mode", "plan", "--output-format", "stream-json", *_model_args(gemini_model, gemini_fallback_model, model_selection), "--prompt", prompt]
+    return [
+        gemini_bin,
+        "--skip-trust",
+        "--approval-mode",
+        "plan",
+        "--output-format",
+        "stream-json",
+        *_model_args(gemini_model, gemini_fallback_model, model_selection),
+        "--prompt",
+        prompt,
+    ]
 
 
 def _model_args(

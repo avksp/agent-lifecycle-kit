@@ -15,6 +15,7 @@ from agent_lifecycle.host_protocol import (
 )
 from tools.live_hosts.kimi_code_harness import (
     CommandResult,
+    check_clean_worktree,
     parse_kimi_code_stream_json,
 )
 
@@ -51,6 +52,7 @@ def run_operation(
     )
     runner = command_runner or _run_command
     result = runner(command, worktree, timeout_seconds)
+    _require_clean_git_worktree_after_invocation(worktree, operation.capability)
     if result.returncode != 0:
         raise LifecycleError(
             "kimi-code-live-invocation-failed",
@@ -89,7 +91,7 @@ def _kimi_command(
     model: str | None,
     fallback_model: str | None,
 ) -> list[str]:
-    command = [kimi_bin, "--plan", "--output-format", "stream-json"]
+    command = [kimi_bin, "--output-format", "stream-json"]
     if model:
         command.extend(["--model", model])
     _ = fallback_model
@@ -123,6 +125,18 @@ def _run_command(command: list[str], cwd: Path | None, timeout_seconds: float) -
         stderr=result.stderr,
         wall_seconds=round(time.monotonic() - started, 3),
     )
+
+
+def _require_clean_git_worktree_after_invocation(worktree: Path | None, capability: str) -> None:
+    if worktree is None or not (worktree / ".git").exists():
+        return
+    clean = check_clean_worktree(worktree)
+    if not clean.get("clean"):
+        raise LifecycleError(
+            "kimi-code-worktree-mutated",
+            "kimi-code CLI left the worktree dirty",
+            {"host": HOST, "capability": capability, "details": clean},
+        )
 
 
 def _string_from_sources(*keys: str, sources: tuple[dict[str, Any] | None, ...]) -> str | None:

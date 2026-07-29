@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 0.12.4 - 2026-07-29
+
+- Hardened Gemini CLI headless live commands with `--skip-trust` so clean
+  worktree canaries fail on real host/auth blockers instead of workspace trust.
+- Corrected Kimi Code headless live commands by removing the incompatible
+  `--plan` flag and adding post-invocation clean-worktree checks.
+- Recorded current non-promotion blockers: Gemini CLI is blocked by the current
+  unsupported Gemini Code Assist client tier, and Kimi Code is blocked until a
+  provider/model alias is configured.
+
 ## 0.12.3 - 2026-07-29
 
 - Added bounded Gemini CLI and Kimi Code runners plus live harnesses for

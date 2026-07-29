@@ -32,8 +32,11 @@ Discovered surfaces:
 - skills directory selection, provider discovery, session export, ACP stdio
   server discovery and configuration validation command surfaces are present;
 - bounded receipt normalization is implemented in
-  `tools/live_hosts/kimi_code_harness.py`, but usage attestation remains
-  unproven until a live receipt is captured and validated.
+  `tools/live_hosts/kimi_code_harness.py`, using headless `--prompt` and
+  post-invocation clean-worktree checks;
+- local `kimi provider list` reports no configured providers, so usage
+  attestation remains unproven until a provider/model alias is configured and a
+  live receipt is captured and validated.
 
 Non-promotion decision:
 
@@ -41,9 +44,9 @@ Kimi Code is not promoted in this evidence note. No live host conformance
 receipt, usage/calibration receipt, or lifecycle final proof has been accepted
 for Kimi Code.
 
-Blocker class: `BLOCKED_LIVE_RECEIPTS_NOT_CAPTURED`.
+Blocker class: `BLOCKED_HOST_MODEL_NOT_CONFIGURED`.
 
-Next action: run the bounded Kimi Code live harness with explicit invocation,
-token and wall-clock caps, then validate the resulting live host conformance
-receipt, live calibration receipt, and lifecycle proof before any support-matrix
-promotion.
+Next action: configure a Kimi Code provider/model alias outside the portable
+core, then run the bounded live harness with explicit invocation, token and
+wall-clock caps and validate the resulting live host conformance receipt, live
+calibration receipt, and lifecycle proof before any support-matrix promotion.
