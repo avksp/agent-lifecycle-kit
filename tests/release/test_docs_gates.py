@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.12.2 - 2026-07-29")
+        current_release = _section(changelog, "## 0.12.3 - 2026-07-29")
         self.assertNotIn("- No changes yet.", current_release)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -101,13 +101,14 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.12.2.md",
+        root / "release/notes/v0.12.3.md",
         "Status: source release.\n"
-        "Updated package metadata to `0.12.2`.\n"
-        "Promoted OpenCode.\n"
-        "Promoted Hermes.\n"
-        "Promoted qwen-code.\n"
-        "bounded qwen-code runner.\n",
+        "Updated package metadata to `0.12.3`.\n"
+        "bounded Gemini CLI.\n"
+        "Kimi Code runners.\n"
+        "stream-json.\n"
+        "remain.\n"
+        "`EXPERIMENTAL`.\n",
     )
     _write_text(
         root / "docs/adapters/live-promotion-runbook.md",

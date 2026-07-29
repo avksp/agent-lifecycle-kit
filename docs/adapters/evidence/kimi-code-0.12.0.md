@@ -1,6 +1,7 @@
 # Kimi Code 0.12.0 adapter evidence
 
-Status: scaffold and inspection passed; support is `EXPERIMENTAL`.
+Status: inspection and bounded harness shape passed; support is
+`EXPERIMENTAL`.
 
 Scope:
 
@@ -30,8 +31,9 @@ Discovered surfaces:
   still fail-closed;
 - skills directory selection, provider discovery, session export, ACP stdio
   server discovery and configuration validation command surfaces are present;
-- usage attestation remains unproven until a live receipt is normalized and
-  validated.
+- bounded receipt normalization is implemented in
+  `tools/live_hosts/kimi_code_harness.py`, but usage attestation remains
+  unproven until a live receipt is captured and validated.
 
 Non-promotion decision:
 
@@ -39,9 +41,9 @@ Kimi Code is not promoted in this evidence note. No live host conformance
 receipt, usage/calibration receipt, or lifecycle final proof has been accepted
 for Kimi Code.
 
-Blocker class: `BLOCKED_LIVE_HARNESS_NOT_IMPLEMENTED`.
+Blocker class: `BLOCKED_LIVE_RECEIPTS_NOT_CAPTURED`.
 
-Next action: implement a bounded Kimi Code live harness that converts
-`stream-json` output into portable host-operation receipts, proves usage
-attestation, and enforces invocation, token and wall-clock caps before any
-support-matrix promotion.
+Next action: run the bounded Kimi Code live harness with explicit invocation,
+token and wall-clock caps, then validate the resulting live host conformance
+receipt, live calibration receipt, and lifecycle proof before any support-matrix
+promotion.

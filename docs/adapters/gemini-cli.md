@@ -19,6 +19,10 @@ summary is `docs/adapters/evidence/gemini-cli-0.10.0.md`.
 
 The adapter remains `EXPERIMENTAL` until live Gemini CLI conformance, usage
 calibration and lifecycle proof evidence are accepted in the support matrix.
-Current blocker: `BLOCKED_LIVE_HARNESS_NOT_IMPLEMENTED`; ALK still needs a
-bounded Gemini CLI harness that turns `stream-json` output into portable
-host-operation receipts with usage attestation.
+ALK now includes a bounded Gemini CLI runner and live harness that use
+`--approval-mode plan`, `--prompt`, `--output-format stream-json` and optional
+`--model` to turn host output into portable host-operation receipts.
+
+Current blocker: `BLOCKED_LIVE_RECEIPTS_NOT_CAPTURED`; the harness exists, but
+no accepted Gemini CLI live host receipt, live calibration receipt or ALK
+lifecycle final proof has been captured yet.
