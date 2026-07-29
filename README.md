@@ -34,9 +34,11 @@ per-attempt baseline reconciliation, external-action parking, final completion
 signals, and live Claude Code adapter evidence.
 
 Adapter maturity is host-specific. Claude Code is `VERIFIED` for Claude Code
-2.1.220 in the current source tree after the local release-0-5 live
-conformance, live calibration, and full lifecycle proof. Codex, Cursor, Hermes,
-and OpenCode remain `EXPERIMENTAL` until each host has matching live evidence.
+2.1.220 after the local release-0-5 live conformance, live calibration, and
+full lifecycle proof. Codex CLI is `VERIFIED` for Codex CLI 0.145.0 in the
+current source tree after the release-0-6 live conformance, live calibration,
+and full lifecycle proof. Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`
+until each host has matching live evidence.
 Public directory publication still depends on each host marketplace review
 process.
 
@@ -172,7 +174,7 @@ projected into each host's native loading model:
 
 | Host | Release artifact | Status |
 | --- | --- | --- |
-| Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | Experimental marketplace-ready source projection |
+| Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | Verified for Codex CLI 0.145.0 with local release-0-6 live evidence; public Plugins Directory approval not claimed |
 | Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Verified for Claude Code 2.1.220 with local release-0-5 live evidence; public directory approval not claimed |
 | Cursor | `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` | Experimental source projection for public or team marketplace review |
 | Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | Experimental direct-skill/tap projection |
@@ -307,9 +309,10 @@ You can also browse configured marketplaces with `/plugins`. Start a new Codex
 session after installation so the bundled skills are loaded.
 
 For public Plugins Directory publication, submit the root package as a
-skills-only plugin through the OpenAI plugin submission portal. Do not claim
-`VERIFIED` until live Codex install and lifecycle conformance evidence is
-published in the support matrix.
+skills-only plugin through the OpenAI plugin submission portal. Codex CLI is
+verified only for the tested 0.145.0 host range in the current source tree; do
+not claim public directory approval or broader Codex host support until the
+external review and matching evidence exist.
 
 ### Claude Code
 

@@ -161,6 +161,7 @@ class CodexHarnessTests(unittest.TestCase):
             self.assertTrue(payload["usageAttested"])
             self.assertEqual({item["name"] for item in payload["operations"]}, set(baseline["requiredOperations"]))
             self.assertEqual(len(calls), len(baseline["requiredOperations"]))
+            self.assertIn("--ephemeral", calls[0])
             self.assertEqual(calls[0][calls[0].index("--model") + 1], "<codex-host-local-standard-code-model>")
             self.assertEqual(selection_payload["schemaVersion"], "agent-host-model-selection-receipt.v1")
             self.assertEqual(selection_payload["modelClass"], "standard-code")
@@ -317,6 +318,7 @@ class CodexHarnessTests(unittest.TestCase):
             self.assertEqual(payload["liveModelInvocations"], expected_runs)
             self.assertEqual(len(payload["runs"]), expected_runs)
             self.assertEqual(len(calls), expected_runs)
+            self.assertIn("--ephemeral", calls[0])
             self.assertEqual(payload["runs"][0]["usage"]["sessionId"], "session-1")
             validation_evidence = tmp_path / "calibration-validation.json"
             validation = subprocess.run(

@@ -3,8 +3,22 @@
   "adapterId": "codex",
   "host": "codex",
   "nativeProjection": "codex-plugin",
-  "maturity": "EXPERIMENTAL",
-  "liveTestedHostRange": null,
+  "maturity": "VERIFIED",
+  "liveTestedHostRange": {
+    "host": "codex",
+    "minimumVersion": "0.145.0",
+    "maximumVersion": "0.145.0",
+    "sourceRevision": "b01a1793e42f52e20077a7aa26b8e4e25c3bd216",
+    "testedAt": "2026-07-29",
+    "evidence": [
+      "docs/adapters/evidence/codex-cli-0.6.0.md",
+      "tasks/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json",
+      "tasks/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json",
+      "tasks/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json"
+    ],
+    "productionPromotionClaimed": false,
+    "publicDirectoryApprovalClaimed": false
+  },
   "releaseAssembly": {
     "sharedSkillsSource": "skills",
     "materializedSkillsTarget": "adapters/codex/skills",
@@ -29,7 +43,7 @@
     "usageReceiptRequired": true,
     "unsupportedClassPolicy": "fail-closed",
     "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
-    "liveVerified": false
+    "liveVerified": true
   },
   "operations": [
     {

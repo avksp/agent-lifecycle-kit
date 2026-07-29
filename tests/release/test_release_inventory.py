@@ -62,7 +62,8 @@ class ReleaseInventoryTests(unittest.TestCase):
             deferred = json.loads(deferred_evidence.read_text(encoding="utf-8"))
             self.assertEqual(matrix["adapterMaturity"], "HOST_SPECIFIC")
             self.assertEqual(matrix["adapterMaturityByHost"]["Claude Code"], "VERIFIED")
-            self.assertEqual(matrix["adapterMaturityByHost"]["Codex"], "EXPERIMENTAL")
+            self.assertEqual(matrix["adapterMaturityByHost"]["Codex"], "VERIFIED")
+            self.assertEqual(set(matrix["verifiedHosts"]), {"Codex", "Claude Code"})
             self.assertTrue(deferred["deferredProductionPromotion"])
             self.assertFalse(deferred["liveModelExecutionClaimed"])
 

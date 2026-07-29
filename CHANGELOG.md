@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Promoted the Codex adapter to host-specific `VERIFIED` for Codex CLI 0.145.0
+  with local live host conformance, live calibration, and full ALK lifecycle
+  proof evidence.
+- Made Codex live harness invocations ephemeral so release probes do not leave
+  reusable host session state.
+
 ## 0.5.0 - 2026-07-29
 
 - Added release-0-5 lifecycle gates for frozen acceptance checklist validation,

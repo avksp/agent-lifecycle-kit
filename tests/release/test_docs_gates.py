@@ -32,10 +32,10 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertEqual(payload["status"], "PASS")
             self.assertFalse(payload["productionPromotionClaimed"])
 
-    def test_docs_compat_rejects_verified_current_maturity_row(self) -> None:
+    def test_docs_compat_rejects_unsupported_verified_current_maturity_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            _write_min_docs(root, verified_row=True)
+            _write_min_docs(root, unsupported_verified_row=True)
             evidence = root / "docs-compat.json"
 
             result = _run_no_check(
@@ -74,22 +74,25 @@ def _run_no_check(script: str, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run([sys.executable, script, *args], cwd=ROOT, check=False, text=True, capture_output=True)
 
 
-def _write_min_docs(root: Path, *, verified_row: bool) -> None:
+def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "Adapter maturity is host-specific. Claude Code is `VERIFIED`; production-promotion evidence is required.\n",
+        "Adapter maturity is host-specific. Claude Code is `VERIFIED`; Codex CLI is `VERIFIED`; production-promotion evidence is required.\n",
     )
     _write_text(
         root / "docs/guides/README.ru.md",
-        "Maturity адаптеров задаётся по host. Claude Code имеет статус `VERIFIED`; production-promotion evidence нужен.\n",
+        "Maturity адаптеров задаётся по host. Claude Code имеет статус `VERIFIED`; Codex CLI имеет статус `VERIFIED`; production-promotion evidence нужен.\n",
     )
-    maturity = "VERIFIED" if verified_row else "EXPERIMENTAL"
+    cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
         root / "docs/adapters/support-matrix.md",
         "This matrix is the authoritative current source-tree support claim.\n"
+        "Codex CLI 0.6.0 live evidence.\n"
         "Claude Code 0.5.0 live evidence.\n"
-        "Codex, Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`.\n"
-        f"| Codex | Projection | {maturity} | Claim |\n",
+        "Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`.\n"
+        "| Codex | Projection | VERIFIED | Claim |\n"
+        "| Claude Code | Projection | VERIFIED | Claim |\n"
+        f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
         root / "release/notes/v0.5.0.md",
@@ -100,7 +103,13 @@ def _write_min_docs(root: Path, *, verified_row: bool) -> None:
     for host in ("claude", "codex", "cursor", "hermes", "opencode"):
         _write_text(
             root / f"docs/adapters/{host}.md",
-            "This adapter remains `EXPERIMENTAL` until live conformance evidence exists.\n",
+            (
+                "This adapter is `VERIFIED` for Codex CLI 0.145.0; live conformance exists and it does not claim public approval.\n"
+                if host == "codex"
+                else "This adapter is `VERIFIED` for Claude Code 2.1.220; live conformance exists and it does not claim official approval.\n"
+                if host == "claude"
+                else "This adapter remains `EXPERIMENTAL` until live conformance evidence exists.\n"
+            ),
         )
 
 

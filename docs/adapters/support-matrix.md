@@ -3,15 +3,17 @@
 This matrix is the authoritative current source-tree support claim. `v0.5.0`
 is the current tagged source release and includes host-local model selection,
 budget-mode controls, release-0-5 lifecycle gates, and Claude Code live
-promotion evidence. `EXPERIMENTAL` means the adapter has an offline projection
-and deterministic contract tests. `VERIFIED` is host-specific and requires
-bounded live host conformance, live calibration, and lifecycle proof evidence.
+promotion evidence. The current source tree also includes Codex CLI live
+promotion evidence for the next release line. `EXPERIMENTAL` means the adapter
+has an offline projection and deterministic contract tests. `VERIFIED` is
+host-specific and requires bounded live host conformance, live calibration, and
+lifecycle proof evidence.
 
 ## Runtime support
 
 | Host | Projection | Current maturity | Install/publication claim |
 | --- | --- | --- | --- |
-| Codex | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | EXPERIMENTAL | Tagged source marketplace manifest exists; public Plugins Directory review not claimed |
+| Codex | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | VERIFIED | Codex CLI 0.145.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; public Plugins Directory review not claimed |
 | Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
 | Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills | EXPERIMENTAL | Source projection exists for local/team validation and public submission; marketplace approval not claimed |
 | Hermes | `skills.sh.json`, shared skills, and Hermes registry/slash-command projection metadata | EXPERIMENTAL | Direct skill install/tap metadata exists; live Hermes verification not claimed |
@@ -57,13 +59,13 @@ Concrete provider model names must not appear in portable core contracts; live
 harnesses write `agent-host-model-selection-receipt.v1` with redacted binding
 hashes.
 
-Claude Code is `VERIFIED` for host-local model routing on Claude Code 2.1.220:
-the live receipts include host usage attestation, quality pass status, and
-budget evidence for the release-0-5 promotion patch.
-Codex, Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`: they declare
-fail-closed support for host-local model profiles and model-route execution,
-but still need live usage receipts and quality/cost evidence before a
-host-specific `VERIFIED` claim.
+Codex is `VERIFIED` for host-local model routing on Codex CLI 0.145.0. Claude
+Code is `VERIFIED` for host-local model routing on Claude Code 2.1.220. Their
+live receipts include host usage attestation, quality pass status, and bounded
+budget evidence. Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`: they
+declare fail-closed support for host-local model profiles and model-route
+execution, but still need live usage receipts and quality/cost evidence before
+a host-specific `VERIFIED` claim.
 
 `agent-lifecycle adapter scaffold` may create new host projection skeletons, but
 the scaffold is limited to `EXPERIMENTAL` metadata and cannot create
@@ -80,6 +82,30 @@ mode requires a USD cap; subscription and local modes require invocation caps
 plus token and/or wall-clock caps. Exceeding a cap pauses for an operator
 decision or follows a bounded auto-reroute policy, but it never upgrades an
 adapter to `VERIFIED` by itself.
+
+## Codex CLI 0.6.0 live evidence
+
+Codex is verified only for the tested local host range:
+
+- Host: Codex CLI 0.145.0.
+- Source revision: `b01a1793e42f52e20077a7aa26b8e4e25c3bd216`.
+- Committed redacted evidence summary:
+  `docs/adapters/evidence/codex-cli-0.6.0.md`.
+- Live preflight:
+  `tasks/release-0-6/evidence/codex-live-promotion/preflight/codex-preflight-report.json`.
+- Live host conformance receipt:
+  `tasks/release-0-6/evidence/codex-live-promotion/live-host-receipts/codex.json`.
+- Live host conformance validation:
+  `tasks/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json`.
+- Live calibration receipt:
+  `tasks/release-0-6/evidence/codex-live-promotion/live-calibration-receipts/codex.json`.
+- Live calibration validation:
+  `tasks/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json`.
+- ALK lifecycle final proof:
+  `tasks/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json`.
+
+This evidence does not claim universal adapter support, public directory
+approval, or a broader production-promotion platform matrix pass.
 
 ## Claude Code 0.5.0 live evidence
 
