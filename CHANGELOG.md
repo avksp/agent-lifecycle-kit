@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 0.12.2 - 2026-07-29
+
+- Promoted the OpenCode adapter to host-specific `VERIFIED` for OpenCode CLI
+  1.18.9 with GLM 5.2 live host conformance, usage calibration, and full ALK
+  lifecycle proof evidence.
+- Promoted the Hermes adapter to host-specific `VERIFIED` for Hermes Agent
+  v0.19.0 with GLM 5.2 live host conformance, usage calibration, and full ALK
+  lifecycle proof evidence.
+- Promoted the qwen-code adapter to host-specific `VERIFIED` for qwen-code
+  0.21.0, added the bounded qwen-code runner and live harness, and synchronized
+  adapter docs, support matrix checks, and package metadata to `0.12.2`.
+
 ## 0.12.1 - 2026-07-29
 
 - Fixed Windows CI path separator handling in the adapter scaffold CLI test.

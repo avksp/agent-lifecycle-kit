@@ -153,10 +153,10 @@ See [budget reroute policy](docs/guides/budget-reroute-policy.md).
 
 ## Distribution layout
 
-A universal distribution does not mean one manifest format. `v0.12.1` is the
-latest tagged source release; the current source tree additionally contains
-OpenCode, Hermes, and qwen-code live evidence captured on 2026-07-29. The same
-deterministic core is projected into each host's native loading model:
+A universal distribution does not mean one manifest format. `v0.12.2` is the
+latest tagged source release and includes OpenCode, Hermes, and qwen-code live
+evidence captured on 2026-07-29. The same deterministic core is projected into
+each host's native loading model:
 
 | Host | Release artifact | Maturity | Why |
 | --- | --- | --- | --- |
@@ -300,7 +300,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.1
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.2
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -372,7 +372,7 @@ Gemini CLI currently uses a host-local source projection. Install the core from
 a tagged checkout, then validate and inspect the projection:
 
 ```bash
-git clone --branch v0.12.1 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.2 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 gemini --version
@@ -380,7 +380,7 @@ agent-lifecycle adapter validate --descriptor adapters/gemini-cli/adapter.descri
 agent-lifecycle adapter inspect --descriptor adapters/gemini-cli/adapter.descriptor.json
 ```
 
-There is no published Gemini CLI runtime package in `v0.12.1`; the bundled
+There is no published Gemini CLI runtime package in `v0.12.2`; the bundled
 runner remains fail-closed until live receipt normalization and budgeted
 execution are implemented.
 
@@ -391,7 +391,7 @@ from the tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.1/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.2/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -406,7 +406,7 @@ Kimi Code currently uses a host-local source projection. Make sure the `kimi`
 CLI is available on `PATH`, then validate and inspect the projection:
 
 ```bash
-git clone --branch v0.12.1 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.2 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 kimi --version
@@ -415,7 +415,7 @@ agent-lifecycle adapter inspect --descriptor adapters/kimi-code/adapter.descript
 ```
 
 No public Kimi Code adapter package or live runtime compatibility claim is
-published in `v0.12.1`.
+published in `v0.12.2`.
 
 ### OpenCode
 
@@ -440,17 +440,16 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 
 The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
-claimed by `v0.12.1`.
+claimed by `v0.12.2`.
 
 ### qwen-code
 
 qwen-code currently uses a host-local source projection. Install the core from
-a tagged checkout, then validate and inspect the projection. The current source
-tree is `VERIFIED` for qwen-code `0.21.0`; `v0.12.1` remains the latest tagged
-source release.
+a tagged checkout, then validate and inspect the projection. `v0.12.2` is
+`VERIFIED` for qwen-code `0.21.0`.
 
 ```bash
-git clone --branch v0.12.1 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.2 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 qwen --version
@@ -461,7 +460,7 @@ agent-lifecycle adapter inspect --descriptor adapters/qwen-code/adapter.descript
 The live runner is `adapters/qwen-code/runner.py`; the release harness is
 `tools/live_hosts/qwen_code_harness.py`. No public qwen-code adapter package,
 public directory approval, or production-promotion platform claim is published
-in `v0.12.1`.
+in `v0.12.2`.
 
 ## Usage
 

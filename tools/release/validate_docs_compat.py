@@ -72,11 +72,14 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.12.1.md",
+        "release/notes/v0.12.2.md",
         (
             "Status: source release.",
-            "Windows CI failure",
-            "Updated package metadata to `0.12.1`",
+            "Updated package metadata to `0.12.2`",
+            "Promoted OpenCode",
+            "Promoted Hermes",
+            "Promoted qwen-code",
+            "bounded qwen-code runner",
         ),
     ),
 )

@@ -1,6 +1,6 @@
 # Adapter support matrix
 
-This matrix is the authoritative current source-tree support claim. `v0.12.1`
+This matrix is the authoritative current source-tree support claim. `v0.12.2`
 is the latest tagged source release; the current tree additionally includes
 host-specific OpenCode, Hermes, and qwen-code live promotion evidence captured
 on 2026-07-29. The source tree includes host-local model selection, budget-mode

@@ -169,11 +169,10 @@ agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-d
 
 ## Структура поставки
 
-Универсальная поставка не означает единый формат манифеста. `v0.12.1` —
-последний тегированный исходный релиз; текущее дерево исходного кода также
-содержит реальные доказательства для OpenCode, Hermes и qwen-code, полученные
-2026-07-29. Одно детерминированное ядро проецируется в нативную модель
-загрузки каждой системы:
+Универсальная поставка не означает единый формат манифеста. `v0.12.2` —
+последний тегированный исходный релиз и содержит реальные доказательства для
+OpenCode, Hermes и qwen-code, полученные 2026-07-29. Одно детерминированное
+ядро проецируется в нативную модель загрузки каждой системы:
 
 | Система | Артефакт релиза | Зрелость | Причина |
 | --- | --- | --- | --- |
@@ -302,7 +301,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Установка из тегированного исходного marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.1
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.2
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -378,7 +377,7 @@ Gemini CLI сейчас использует исходную проекцию �
 проинспектируйте проекцию:
 
 ```bash
-git clone --branch v0.12.1 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.2 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 gemini --version
@@ -386,7 +385,7 @@ agent-lifecycle adapter validate --descriptor adapters/gemini-cli/adapter.descri
 agent-lifecycle adapter inspect --descriptor adapters/gemini-cli/adapter.descriptor.json
 ```
 
-В `v0.12.1` нет опубликованного пакета среды выполнения для Gemini CLI.
+В `v0.12.2` нет опубликованного пакета среды выполнения для Gemini CLI.
 Поставляемый запускатель намеренно завершается отказом, пока не реализованы
 нормализация живых квитанций и выполнение с бюджетными ограничениями.
 
@@ -397,7 +396,7 @@ Hermes может устанавливать общие skills напрямую.
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.1/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.2/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -412,7 +411,7 @@ Kimi Code сейчас использует исходную проекцию д
 что CLI `kimi` доступен в `PATH`, затем проверьте и проинспектируйте проекцию:
 
 ```bash
-git clone --branch v0.12.1 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.2 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 kimi --version
@@ -420,7 +419,7 @@ agent-lifecycle adapter validate --descriptor adapters/kimi-code/adapter.descrip
 agent-lifecycle adapter inspect --descriptor adapters/kimi-code/adapter.descriptor.json
 ```
 
-В `v0.12.1` нет публичного пакета адаптера Kimi Code и нет заявления о живой
+В `v0.12.2` нет публичного пакета адаптера Kimi Code и нет заявления о живой
 совместимости.
 
 ### OpenCode
@@ -445,18 +444,17 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 ```
 
 В корне репозитория также есть `opencode.json` для проверки из рабочего дерева.
-Будущий npm-пакет может ссылаться на тот же адаптер, но `v0.12.1` не заявляет
+Будущий npm-пакет может ссылаться на тот же адаптер, но `v0.12.2` не заявляет
 публикацию в npm.
 
 ### qwen-code
 
 qwen-code сейчас использует исходную проекцию для локальной среды. Установите
 ядро из рабочего дерева, полученного по тегу, затем проверьте и
-проинспектируйте проекцию. Текущее дерево имеет `VERIFIED` для qwen-code
-`0.21.0`; `v0.12.1` остаётся последним тегированным исходным релизом.
+проинспектируйте проекцию. `v0.12.2` имеет `VERIFIED` для qwen-code `0.21.0`.
 
 ```bash
-git clone --branch v0.12.1 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch v0.12.2 https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 qwen --version
@@ -465,7 +463,7 @@ agent-lifecycle adapter inspect --descriptor adapters/qwen-code/adapter.descript
 ```
 
 Живой runner находится в `adapters/qwen-code/runner.py`, проверочный скрипт
-релиза - в `tools/live_hosts/qwen_code_harness.py`. В `v0.12.1` нет публичного
+релиза - в `tools/live_hosts/qwen_code_harness.py`. В `v0.12.2` нет публичного
 пакета адаптера qwen-code, одобрения публичного каталога или заявления о
 прохождении производственной матрицы.
 
