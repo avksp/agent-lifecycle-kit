@@ -35,11 +35,13 @@ reconciliation, external-action parking, final completion signals и live
 Claude Code adapter evidence.
 
 Maturity адаптеров задаётся по host. Claude Code имеет статус `VERIFIED` для
-Claude Code 2.1.220 в текущем source tree после локального release-0-5 live
-conformance, live calibration и full lifecycle proof. Codex, Cursor, Hermes и
-OpenCode остаются `EXPERIMENTAL`, пока для каждого host нет собственного live
-evidence. Публикация в публичных директориях также зависит от review-процесса
-каждой платформы.
+Claude Code 2.1.220 после локального release-0-5 live conformance, live
+calibration и full lifecycle proof. Codex CLI имеет статус `VERIFIED` для
+Codex CLI 0.145.0 в текущем source tree после release-0-6 live conformance,
+live calibration и full lifecycle proof. Cursor, Hermes и OpenCode остаются
+`EXPERIMENTAL`, пока для каждого host нет собственного live evidence.
+Публикация в публичных директориях также зависит от review-процесса каждой
+платформы.
 
 ## Что делает набор
 
@@ -179,7 +181,7 @@ receipt и возвращает task в `RUNNING` или `READY`, либо ос�
 
 | Система | Release artifact | Статус |
 | --- | --- | --- |
-| Codex | `.codex-plugin/plugin.json` и `.agents/plugins/marketplace.json` | Experimental marketplace-ready source projection |
+| Codex | `.codex-plugin/plugin.json` и `.agents/plugins/marketplace.json` | Verified для Codex CLI 0.145.0 с локальным release-0-6 live evidence; public Plugins Directory approval не заявлен |
 | Claude Code | `.claude-plugin/plugin.json` и `.claude-plugin/marketplace.json` | Verified для Claude Code 2.1.220 с локальным release-0-5 live evidence; public directory approval не заявлен |
 | Cursor | `.cursor-plugin/plugin.json` и `.cursor-plugin/marketplace.json` | Experimental source projection для public/team marketplace review |
 | Hermes | `skills.sh.json`, общий `skills/` и `adapters/hermes/*` | Experimental direct-skill/tap projection |
@@ -294,9 +296,10 @@ codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 нужно начать новую сессию Codex, чтобы загрузились bundled skills.
 
 Для публикации в публичный OpenAI Plugins Directory нужно отправить root
-package как skills-only plugin через OpenAI plugin submission portal. Не
-заявляйте статус `VERIFIED`, пока в support matrix нет live Codex install и
-lifecycle conformance evidence.
+package как skills-only plugin через OpenAI plugin submission portal. Codex CLI
+verified только для протестированного host range 0.145.0 в текущем source tree;
+не заявляйте public directory approval или более широкий Codex host support,
+пока нет внешнего review и соответствующего evidence.
 
 ### Claude Code
 

@@ -14,6 +14,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "Adapter maturity is host-specific",
             "Claude Code is `VERIFIED`",
+            "Codex CLI is `VERIFIED`",
             "production-promotion evidence",
         ),
     ),
@@ -22,6 +23,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "Maturity адаптеров задаётся по host",
             "Claude Code имеет статус `VERIFIED`",
+            "Codex CLI имеет статус `VERIFIED`",
             "production-promotion evidence",
         ),
     ),
@@ -29,8 +31,9 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         "docs/adapters/support-matrix.md",
         (
             "authoritative current source-tree support claim",
+            "Codex CLI 0.6.0 live evidence",
             "Claude Code 0.5.0 live evidence",
-            "Codex, Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`",
+            "Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`",
         ),
     ),
     (
@@ -53,6 +56,7 @@ ADAPTER_DOCS = (
 
 VERIFIED_ROW = re.compile(r"^\|[^|\n]+\|[^|\n]+\|\s*VERIFIED\s*\|", re.MULTILINE)
 PRODUCTION_READY_CLAIM = re.compile(r"\b(production[- ]ready|production ready)\b", re.IGNORECASE)
+VERIFIED_DOC_HOSTS = {"Codex", "Claude Code"}
 
 
 def main() -> int:
@@ -103,6 +107,8 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
     path = root / relative
     if relative == "docs/adapters/claude.md":
         required = ("`VERIFIED`", "Claude Code 2.1.220", "live conformance", "does not claim official")
+    elif relative == "docs/adapters/codex.md":
+        required = ("`VERIFIED`", "Codex CLI 0.145.0", "live conformance", "does not claim public")
     else:
         required = ("`EXPERIMENTAL`", "live", "conformance")
     check = _check_doc(root, relative, required, blockers)
@@ -110,7 +116,7 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
         text = path.read_text(encoding="utf-8")
         if (
             "`VERIFIED`" in text
-            and relative != "docs/adapters/claude.md"
+            and relative not in {"docs/adapters/claude.md", "docs/adapters/codex.md"}
             and "until live" not in text
             and "not `VERIFIED`" not in text
         ):
@@ -124,7 +130,7 @@ def _contains_overclaim(relative: str, text: str, blockers: list[dict[str, Any]]
     invalid_verified_rows = [
         row
         for row in VERIFIED_ROW.findall(text)
-        if not row.startswith("| Claude Code |")
+        if _verified_row_host(row) not in VERIFIED_DOC_HOSTS
     ]
     if invalid_verified_rows:
         blockers.append({"code": "docs-compat-verified-row", "message": f"{relative} contains a VERIFIED current-maturity row"})
@@ -133,6 +139,11 @@ def _contains_overclaim(relative: str, text: str, blockers: list[dict[str, Any]]
         blockers.append({"code": "docs-compat-production-ready-overclaim", "message": f"{relative} overclaims offline source release readiness"})
         failed = True
     return failed
+
+
+def _verified_row_host(row: str) -> str:
+    cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+    return cells[0] if cells else ""
 
 
 if __name__ == "__main__":

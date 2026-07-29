@@ -19,6 +19,7 @@ HOSTS = {
         "descriptorHost": "codex",
         "nativeManifest": ".codex-plugin/plugin.json",
         "nativeChecks": {"name": "agent-lifecycle-kit", "skills": "./skills"},
+        "maturity": "VERIFIED",
         "modelRouting": True,
     },
     "cursor": {
