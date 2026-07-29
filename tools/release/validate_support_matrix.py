@@ -7,6 +7,11 @@ from release_common import digest_value, file_identity, load_json, require_conta
 
 
 REQUIRED_HOSTS = ("Codex", "Claude Code", "Cursor", "Hermes", "OpenCode")
+CLAUDE_LIVE_EVIDENCE = (
+    "tasks/release-0-5/evidence/live-host-conformance-claude-code.json",
+    "tasks/release-0-5/evidence/live-calibration-verification-claude-code.json",
+    "tasks/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json",
+)
 
 
 def main() -> int:
@@ -22,8 +27,12 @@ def main() -> int:
     leg_ids = [item["id"] for item in profile.get("legProfiles", [])]
     require_contains(support_matrix, [*REQUIRED_HOSTS, *leg_ids, "EXPERIMENTAL"])
     text = support_matrix.read_text(encoding="utf-8")
-    if any("| VERIFIED |" in line for line in text.splitlines()):
-        raise SystemExit("offline support matrix must not claim VERIFIED maturity in a support row")
+    verified_rows = [line for line in text.splitlines() if "| VERIFIED |" in line]
+    invalid_verified = [line for line in verified_rows if not line.startswith("| Claude Code |")]
+    if invalid_verified:
+        raise SystemExit("support matrix can only claim VERIFIED for evidence-bound host rows")
+    if verified_rows and not all(marker in text for marker in CLAUDE_LIVE_EVIDENCE):
+        raise SystemExit("Claude Code VERIFIED row requires live conformance, calibration, and lifecycle proof evidence")
     evidence = {
         "schemaVersion": "agent-support-matrix-contract-evidence.v1",
         "status": "PASS",
@@ -32,7 +41,14 @@ def main() -> int:
         "profileDigest": digest_value(profile),
         "hostCount": len(REQUIRED_HOSTS),
         "legCount": len(leg_ids),
-        "adapterMaturity": "EXPERIMENTAL",
+        "adapterMaturity": "HOST_SPECIFIC",
+        "adapterMaturityByHost": {
+            "Codex": "EXPERIMENTAL",
+            "Claude Code": "VERIFIED" if verified_rows else "EXPERIMENTAL",
+            "Cursor": "EXPERIMENTAL",
+            "Hermes": "EXPERIMENTAL",
+            "OpenCode": "EXPERIMENTAL",
+        },
         "productionPromotionClaimed": False,
         "operationRequest": args.operation_request,
     }

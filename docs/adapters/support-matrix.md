@@ -1,18 +1,18 @@
 # Adapter support matrix
 
-This matrix is the authoritative current source-release support claim for
-`v0.4.0`. This source release keeps the same adapter maturity boundary while
-adding host-local model selection and budget-mode controls. `EXPERIMENTAL`
-means the adapter has an offline projection and deterministic contract tests.
-`VERIFIED` is reserved for a later production-promotion release with bounded
-live install and lifecycle conformance evidence.
+This matrix is the authoritative current source-tree support claim. `v0.4.0`
+remains the latest tagged source release, while the local `0.5.x` line adds
+host-local model selection, budget-mode controls, and Claude Code live
+promotion evidence. `EXPERIMENTAL` means the adapter has an offline projection
+and deterministic contract tests. `VERIFIED` is host-specific and requires
+bounded live host conformance, live calibration, and lifecycle proof evidence.
 
 ## Runtime support
 
 | Host | Projection | Current maturity | Install/publication claim |
 | --- | --- | --- | --- |
 | Codex | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | EXPERIMENTAL | Tagged source marketplace manifest exists; public Plugins Directory review not claimed |
-| Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | EXPERIMENTAL | Tagged source marketplace manifest exists; official directory review not claimed |
+| Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
 | Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills | EXPERIMENTAL | Source projection exists for local/team validation and public submission; marketplace approval not claimed |
 | Hermes | `skills.sh.json`, shared skills, and Hermes registry/slash-command projection metadata | EXPERIMENTAL | Direct skill install/tap metadata exists; live Hermes verification not claimed |
 | OpenCode | Root `opencode.json`, shared skills, and JS adapter projection metadata | EXPERIMENTAL | Local source projection exists; npm package publication not claimed |
@@ -57,10 +57,13 @@ Concrete provider model names must not appear in portable core contracts; live
 harnesses write `agent-host-model-selection-receipt.v1` with redacted binding
 hashes.
 
-All current adapters remain `EXPERIMENTAL`: they declare fail-closed support
-for host-local model profiles and model-route execution, but no adapter is
-`VERIFIED` for model routing until it has live usage receipts and quality/cost
-evidence.
+Claude Code is `VERIFIED` for host-local model routing on Claude Code 2.1.220:
+the live receipts include host usage attestation, quality pass status, and
+budget evidence for the `0.5.1` promotion patch.
+Codex, Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`: they declare
+fail-closed support for host-local model profiles and model-route execution,
+but still need live usage receipts and quality/cost evidence before a
+host-specific `VERIFIED` claim.
 
 `agent-lifecycle adapter scaffold` may create new host projection skeletons, but
 the scaffold is limited to `EXPERIMENTAL` metadata and cannot create
@@ -77,6 +80,32 @@ mode requires a USD cap; subscription and local modes require invocation caps
 plus token and/or wall-clock caps. Exceeding a cap pauses for an operator
 decision or follows a bounded auto-reroute policy, but it never upgrades an
 adapter to `VERIFIED` by itself.
+
+## Claude Code 0.5.1 live evidence
+
+Claude Code is verified only for the tested local host range:
+
+- Host: Claude Code 2.1.220.
+- Source revision: `6bb3b58ee01d028fe21cef209c284efc79e55ceb`.
+- Committed redacted evidence summary:
+  `docs/adapters/evidence/claude-code-0.5.1.md`.
+- Plan validation:
+  `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/live-host-promotion-plan-validation.json`.
+- Live preflight:
+  `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/preflight/claude-code-preflight-report.json`.
+- Live host conformance receipt:
+  `tasks/release-0-5/evidence/live-host-receipts/claude-code.json`.
+- Live host conformance validation:
+  `tasks/release-0-5/evidence/live-host-conformance-claude-code.json`.
+- Live calibration receipt:
+  `tasks/release-0-5/evidence/live-calibration/claude-code.json`.
+- Live calibration validation:
+  `tasks/release-0-5/evidence/live-calibration-verification-claude-code.json`.
+- ALK lifecycle final proof:
+  `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`.
+
+This evidence does not claim universal adapter support, public directory
+approval, or a broader production-promotion platform matrix pass.
 
 ## Neutrality error contract
 

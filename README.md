@@ -12,9 +12,9 @@ projections for Codex, Claude Code, Cursor, Hermes, and OpenCode.
 
 ## Current status
 
-`v0.4.0` is the current source release. It adds host-local model selection,
-redacted model-selection receipts, budget decision workflow controls, and
-metered/subscription/local budget modes while keeping portable core routing
+`v0.4.0` is the latest tagged source release. It adds host-local model
+selection, redacted model-selection receipts, budget decision workflow controls,
+and metered/subscription/local budget modes while keeping portable core routing
 provider-neutral.
 
 The current development line adds the release-0-5 execution gates: acceptance
@@ -24,10 +24,11 @@ reconciliation, external-action parking, and final completion signals. These
 gates are source-tree capabilities until a tagged release updates the package
 version and plugin manifests.
 
-The adapters are still `EXPERIMENTAL`: they have offline contract coverage and
-fail-closed descriptors, but they are not `VERIFIED` until each host has live
-install and lifecycle conformance evidence. Public directory publication also
-depends on each host marketplace review process.
+Adapter maturity is host-specific. Claude Code is `VERIFIED` for Claude Code
+2.1.220 in the current source tree after the local `0.5.1` live conformance,
+live calibration, and full lifecycle proof. Codex, Cursor, Hermes, and OpenCode
+remain `EXPERIMENTAL` until each host has matching live evidence. Public
+directory publication still depends on each host marketplace review process.
 
 ## What the kit does
 
@@ -162,7 +163,7 @@ projected into each host's native loading model:
 | Host | Release artifact | Status |
 | --- | --- | --- |
 | Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | Experimental marketplace-ready source projection |
-| Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Experimental marketplace-ready source projection |
+| Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Verified for Claude Code 2.1.220 with local 0.5.1 live evidence; public directory approval not claimed |
 | Cursor | `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` | Experimental source projection for public or team marketplace review |
 | Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | Experimental direct-skill/tap projection |
 | OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | Experimental local/npm-ready projection metadata |
@@ -320,6 +321,10 @@ In an interactive Claude Code session, the equivalent slash flow is:
 Plugin skills are namespaced by plugin name, for example
 `/agent-lifecycle-kit:agent-workflow-orchestrator`.
 
+Claude Code is verified for the tested 2.1.220 host range in the current source
+tree. The claim is backed by release-0-5 patch `0.5.1` live conformance, live
+calibration, and ALK lifecycle final proof listed in the support matrix.
+
 For inclusion in the Anthropic-managed public directory, submit the plugin for
 Claude's external plugin review. The repo-level marketplace is enough for
 private or community distribution, but not a public-directory approval claim.
@@ -412,8 +417,9 @@ Host-specific explicit invocation may be used when available:
 - OpenCode: ask the agent to load `agent-workflow-orchestrator` through its
   native skill tool
 
-The release support matrix is authoritative for exact namespaced syntax. An
-experimental adapter projection is not a live runtime compatibility claim.
+The release support matrix is authoritative for exact namespaced syntax and
+host maturity. An `EXPERIMENTAL` adapter projection is not a live runtime
+compatibility claim.
 
 ### Stage-specific skills
 

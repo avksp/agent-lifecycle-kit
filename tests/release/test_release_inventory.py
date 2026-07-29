@@ -60,7 +60,9 @@ class ReleaseInventoryTests(unittest.TestCase):
             _run("tools/release/validate_deferred_promotion.py", "--profile", "plans/standalone-v1/.agent-plan/standalone-v1/benchmark-authority-profile.v1.json", "--evidence", str(deferred_evidence))
             matrix = json.loads(matrix_evidence.read_text(encoding="utf-8"))
             deferred = json.loads(deferred_evidence.read_text(encoding="utf-8"))
-            self.assertEqual(matrix["adapterMaturity"], "EXPERIMENTAL")
+            self.assertEqual(matrix["adapterMaturity"], "HOST_SPECIFIC")
+            self.assertEqual(matrix["adapterMaturityByHost"]["Claude Code"], "VERIFIED")
+            self.assertEqual(matrix["adapterMaturityByHost"]["Codex"], "EXPERIMENTAL")
             self.assertTrue(deferred["deferredProductionPromotion"])
             self.assertFalse(deferred["liveModelExecutionClaimed"])
 
