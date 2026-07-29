@@ -8,7 +8,16 @@ from typing import Any
 from release_common import digest_value, file_identity, load_json, require_contains, write_json
 
 
-REQUIRED_HOSTS = ("Codex", "Claude Code", "Cursor", "Hermes", "OpenCode")
+REQUIRED_HOSTS = (
+    "Codex",
+    "Claude Code",
+    "Cursor",
+    "Gemini CLI",
+    "Hermes",
+    "Kimi Code",
+    "OpenCode",
+    "qwen-code",
+)
 REQUIRED_LIVE_EVIDENCE_LABELS = (
     "Committed redacted evidence summary:",
     "Live host conformance receipt:",

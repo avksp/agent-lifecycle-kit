@@ -8,7 +8,8 @@ controlled implementation, independent implementation audit, and reproducible
 final verdict.
 
 It is distributed as one repository with one semantic core and native host
-projections for Codex, Claude Code, Cursor, Hermes, and OpenCode.
+projections for Codex, Claude Code, Cursor, Gemini CLI, Hermes, Kimi Code,
+OpenCode, and qwen-code.
 
 ## Why it exists
 
@@ -39,8 +40,8 @@ Adapter maturity is host-specific. Codex CLI is `VERIFIED` for Codex CLI
 0.145.0 after the release-0-6 live conformance, live calibration, and full
 lifecycle proof. Claude Code is `VERIFIED` for Claude Code 2.1.220 after the
 local release-0-5 live conformance, live calibration, and full lifecycle proof.
-Cursor, Hermes, and OpenCode remain `EXPERIMENTAL` until each host has matching
-live evidence.
+Cursor, Gemini CLI, Hermes, Kimi Code, OpenCode, and qwen-code remain
+`EXPERIMENTAL` until each host has matching live evidence.
 Public directory publication still depends on each host marketplace review
 process.
 
@@ -179,8 +180,11 @@ projected into each host's native loading model:
 | Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | Verified for Codex CLI 0.145.0 with local release-0-6 live evidence; public Plugins Directory approval not claimed |
 | Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Verified for Claude Code 2.1.220 with local release-0-5 live evidence; public directory approval not claimed |
 | Cursor | `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` | Experimental source projection for public or team marketplace review |
+| Gemini CLI | `adapters/gemini-cli/*` | Experimental host-local scaffold with safe inspection evidence |
 | Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | Experimental direct-skill/tap projection |
+| Kimi Code | `adapters/kimi-code/*` | Experimental host-local scaffold with safe inspection evidence |
 | OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | Experimental local/npm-ready projection metadata |
+| qwen-code | `adapters/qwen-code/*` | Experimental host-local scaffold with safe inspection evidence |
 
 The root repository is the canonical plugin root for Codex, Claude Code, and
 Cursor. The older `adapters/<host>/` directories remain offline conformance
@@ -218,6 +222,7 @@ agent-lifecycle context check --profile profiles/small-context-profile.v1.json -
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+agent-lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
 agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 agent-lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
@@ -243,6 +248,7 @@ PYTHONPATH=src python -m agent_lifecycle model route --profile profiles/model-ro
 PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 PYTHONPATH=src python -m agent_lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
+PYTHONPATH=src python -m agent_lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
 PYTHONPATH=src python -m agent_lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 PYTHONPATH=src python -m agent_lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
@@ -254,11 +260,13 @@ Implemented core CLI groups are `version`, `schema`, `workflow status`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
 `specification check`, `plan check`, `plan acceptance-check`, `task compile`,
-`adapter validate`, `adapter event-check`, `adapter scaffold`, and
-`neutrality`. Adapter scaffold is template-only and can only create
-`EXPERIMENTAL` projection skeletons. Runtime adapter execution and conformance
-lifecycle groups remain reserved and fail closed with a stable
-`agent-lifecycle-error.v1` response until their runtime core modules land.
+`adapter validate`, `adapter inspect`, `adapter event-check`, `adapter
+scaffold`, and `neutrality`. Adapter scaffold is template-only and can only
+create `EXPERIMENTAL` projection skeletons. Adapter inspect records descriptor
+and safe host capability discovery without live model invocation. Runtime
+adapter execution and conformance lifecycle groups remain reserved and fail
+closed with a stable `agent-lifecycle-error.v1` response until their runtime
+core modules land.
 
 `context check` and `context render` also fail closed on overflow: if the
 rendered receipt status is `FAIL`, the CLI exits non-zero and returns

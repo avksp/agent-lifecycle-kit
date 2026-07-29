@@ -89,7 +89,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "This matrix is the authoritative current source-tree support claim.\n"
         "Codex CLI 0.6.0 live evidence.\n"
         "Claude Code 0.5.0 live evidence.\n"
-        "Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`.\n"
+        "Cursor, Gemini CLI, Hermes, Kimi Code, OpenCode, and qwen-code remain `EXPERIMENTAL`.\n"
         "| Codex | Projection | VERIFIED | Claim |\n"
         "| Claude Code | Projection | VERIFIED | Claim |\n"
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
@@ -106,6 +106,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Host-specific `VERIFIED`.\n"
         "Public directory approval.\n"
         "Production promotion.\n"
+        "validate_adapter_conformance.py.\n"
         "validate_live_host_conformance.py.\n"
         "validate_live_calibration.py.\n"
         "validate_support_matrix.py.\n",
@@ -116,10 +117,11 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "GitHub Release object.\n"
         "CI status.\n"
         "Binary assets are intentionally omitted for a source release.\n"
+        "validate_adapter_conformance.py.\n"
         "validate_docs_compat.py.\n"
         "validate_support_matrix.py.\n",
     )
-    for host in ("claude", "codex", "cursor", "hermes", "opencode"):
+    for host in ("claude", "codex", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "qwen-code"):
         _write_text(
             root / f"docs/adapters/{host}.md",
             (

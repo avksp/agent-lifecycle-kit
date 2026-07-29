@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import json
+import sys
 import unittest
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
+
+from agent_lifecycle.host_protocol import validate_capability_manifest  # noqa: E402
 
 HOSTS = {
     "claude": {
@@ -27,6 +33,11 @@ HOSTS = {
         "nativeManifest": ".cursor-plugin/plugin.json",
         "nativeChecks": {"name": "agent-lifecycle-kit", "skills": "./skills"},
     },
+    "gemini-cli": {
+        "descriptorHost": "gemini-cli",
+        "capabilityOnly": True,
+        "modelRouting": True,
+    },
     "hermes": {
         "descriptorHost": "hermes",
         "registry": "hermes.registry.json",
@@ -34,9 +45,19 @@ HOSTS = {
         "skillDiscovery": "skill-directory",
         "slashCommandInvocation": "optional-host-capability",
     },
+    "kimi-code": {
+        "descriptorHost": "kimi-code",
+        "capabilityOnly": True,
+        "modelRouting": True,
+    },
     "opencode": {
         "descriptorHost": "opencode",
         "nativeManifest": "opencode.json",
+        "modelRouting": True,
+    },
+    "qwen-code": {
+        "descriptorHost": "qwen-code",
+        "capabilityOnly": True,
         "modelRouting": True,
     },
 }
@@ -62,6 +83,13 @@ class HostAdapterTests(unittest.TestCase):
                     launcher = (adapter_root / "plugins/agent-lifecycle-kit.js").read_text(encoding="utf-8")
                     self.assertIn("agent-lifecycle-kit", launcher)
                     self.assertIn("fail-closed", launcher)
+                elif config.get("capabilityOnly"):
+                    projection = load_json(adapter_root / "projection.manifest.json")
+                    self.assertEqual(projection["maturity"], "EXPERIMENTAL")
+                    self.assertEqual(projection["runner"]["status"], "fail-closed-skeleton")
+                    self.assertEqual(projection["receiptNormalizer"]["portableReceiptSchema"], "agent-host-operation-receipt.v1")
+                    self.assertEqual(projection["eventBridge"]["runtimeDispatch"], "not-implemented-fail-closed")
+                    self.assertIn("fail closed", (adapter_root / "event-bridge.md").read_text(encoding="utf-8"))
                 else:
                     manifest = load_json(adapter_root / config["nativeManifest"])
                     self.assertEqual(manifest["name"], config["nativeChecks"]["name"])
@@ -77,10 +105,16 @@ class HostAdapterTests(unittest.TestCase):
         for host, config in HOSTS.items():
             with self.subTest(host=host):
                 descriptor = load_json(ROOT / "adapters" / host / "adapter.descriptor.json")
+                capability_manifest = load_json(ROOT / "adapters" / host / "capabilities.manifest.json")
                 provided_operations = {item["name"] for item in descriptor["operations"]}
                 expected_maturity = config.get("maturity", "EXPERIMENTAL")
                 self.assertEqual(descriptor["host"], config["descriptorHost"])
                 self.assertEqual(descriptor["maturity"], expected_maturity)
+                self.assertEqual(descriptor["capabilityManifest"], f"adapters/{host}/capabilities.manifest.json")
+                self.assertEqual(capability_manifest["host"], config["descriptorHost"])
+                self.assertEqual(capability_manifest["maturity"], expected_maturity)
+                self.assertFalse(capability_manifest["promotion"]["productionPromotionClaimed"])
+                self.assertEqual(validate_capability_manifest(capability_manifest, descriptor=descriptor)["status"], "PASS")
                 if expected_maturity == "VERIFIED":
                     self.assertIsInstance(descriptor["liveTestedHostRange"], dict)
                     self.assertTrue(descriptor["liveTestedHostRange"]["evidence"])
@@ -109,6 +143,7 @@ class HostAdapterTests(unittest.TestCase):
             with self.subTest(host=host):
                 conformance = load_json(ROOT / "conformance" / "adapters" / host / "offline-baseline.json")
                 self.assertEqual(conformance["adapterId"], host)
+                self.assertEqual(conformance["capabilityManifest"], f"adapters/{host}/capabilities.manifest.json")
                 self.assertFalse(conformance["liveRuntimeRequired"])
                 self.assertEqual(conformance["expectedResult"], "PASS")
 

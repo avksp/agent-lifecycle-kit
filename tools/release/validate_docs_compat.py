@@ -33,7 +33,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "authoritative current source-tree support claim",
             "Codex CLI 0.6.0 live evidence",
             "Claude Code 0.5.0 live evidence",
-            "Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`",
+            "Cursor, Gemini CLI, Hermes, Kimi Code, OpenCode, and qwen-code remain",
         ),
     ),
     (
@@ -43,6 +43,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "Host-specific `VERIFIED`",
             "Public directory approval",
             "Production promotion",
+            "validate_adapter_conformance.py",
             "validate_live_host_conformance.py",
             "validate_live_calibration.py",
             "validate_support_matrix.py",
@@ -55,6 +56,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "GitHub Release object",
             "CI status",
             "Binary assets are intentionally omitted for a source release",
+            "validate_adapter_conformance.py",
             "validate_docs_compat.py",
             "validate_support_matrix.py",
         ),
@@ -73,8 +75,11 @@ ADAPTER_DOCS = (
     "docs/adapters/claude.md",
     "docs/adapters/codex.md",
     "docs/adapters/cursor.md",
+    "docs/adapters/gemini-cli.md",
     "docs/adapters/hermes.md",
+    "docs/adapters/kimi-code.md",
     "docs/adapters/opencode.md",
+    "docs/adapters/qwen-code.md",
 )
 
 VERIFIED_ROW = re.compile(r"^\|[^|\n]+\|[^|\n]+\|\s*VERIFIED\s*\|", re.MULTILINE)
