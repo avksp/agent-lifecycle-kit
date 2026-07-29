@@ -4,6 +4,7 @@
   "host": "opencode",
   "baselineId": "offline-adapter-baseline-v1",
   "adapterDescriptor": "adapters/opencode/adapter.descriptor.json",
+  "capabilityManifest": "adapters/opencode/capabilities.manifest.json",
   "nativeManifest": "adapters/opencode/opencode.json",
   "sharedBaseline": "conformance/core/adapter-baseline.v1.json",
   "requiredMaturity": "EXPERIMENTAL",

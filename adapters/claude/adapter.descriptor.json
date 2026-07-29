@@ -3,6 +3,7 @@
   "adapterId": "claude",
   "host": "claude-code",
   "nativeProjection": "claude-plugin",
+  "capabilityManifest": "adapters/claude/capabilities.manifest.json",
   "maturity": "VERIFIED",
   "liveTestedHostRange": {
     "host": "claude-code",

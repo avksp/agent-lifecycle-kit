@@ -3,6 +3,7 @@
   "adapterId": "hermes",
   "host": "hermes",
   "nativeProjection": "hermes-registry",
+  "capabilityManifest": "adapters/hermes/capabilities.manifest.json",
   "maturity": "EXPERIMENTAL",
   "liveTestedHostRange": null,
   "skillDiscovery": "skill-directory",

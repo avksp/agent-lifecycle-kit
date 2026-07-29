@@ -4,6 +4,7 @@
   "host": "cursor",
   "baselineId": "offline-adapter-baseline-v1",
   "adapterDescriptor": "adapters/cursor/adapter.descriptor.json",
+  "capabilityManifest": "adapters/cursor/capabilities.manifest.json",
   "nativeManifest": "adapters/cursor/.cursor-plugin/plugin.json",
   "sharedBaseline": "conformance/core/adapter-baseline.v1.json",
   "requiredMaturity": "EXPERIMENTAL",

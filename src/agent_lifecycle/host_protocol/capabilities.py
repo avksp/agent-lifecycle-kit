@@ -1,0 +1,161 @@
+"""Adapter capability manifests derived from host descriptors."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.host_protocol.validation import REQUIRED_OPERATION_NAMES, validate_adapter_descriptor
+
+CAPABILITY_MANIFEST_SCHEMA_VERSION = "agent-adapter-capability-manifest.v1"
+CAPABILITY_MANIFEST_VALIDATION_SCHEMA_VERSION = "agent-adapter-capability-manifest-validation.v1"
+
+
+def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
+    """Build a stable capability manifest from an adapter descriptor."""
+
+    model_routing = descriptor.get("modelRouting") if isinstance(descriptor.get("modelRouting"), dict) else {}
+    operations = descriptor.get("operations") if isinstance(descriptor.get("operations"), list) else []
+    return {
+        "schemaVersion": CAPABILITY_MANIFEST_SCHEMA_VERSION,
+        "adapterId": descriptor.get("adapterId"),
+        "host": descriptor.get("host"),
+        "maturity": descriptor.get("maturity"),
+        "descriptorDigest": canonical_digest(descriptor),
+        "unsupportedOperationPolicy": descriptor.get("unsupportedOperationPolicy"),
+        "coreSemantics": descriptor.get("coreSemantics"),
+        "capabilities": [_capability_from_operation(item, descriptor) for item in operations if isinstance(item, dict)],
+        "modelRouting": {
+            "profileSupport": model_routing.get("profileSupport"),
+            "attemptRoutePolicy": model_routing.get("attemptRoutePolicy"),
+            "usageReceiptRequired": model_routing.get("usageReceiptRequired"),
+            "unsupportedClassPolicy": model_routing.get("unsupportedClassPolicy"),
+            "providerModelNamesInCore": model_routing.get("providerModelNamesInCore"),
+            "liveVerified": model_routing.get("liveVerified"),
+        },
+        "runtimeBoundary": {
+            "hostSpecificCode": "adapter-owned",
+            "lifecycleSemantics": descriptor.get("coreSemantics"),
+            "unsupportedOperations": descriptor.get("unsupportedOperationPolicy"),
+            "providerModelNamesInCore": model_routing.get("providerModelNamesInCore"),
+        },
+        "promotion": {
+            "verifiedRequiresLiveTestedHostRange": True,
+            "productionPromotionClaimed": False,
+        },
+    }
+
+
+def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[str, Any]) -> dict[str, Any]:
+    """Validate that a capability manifest still matches its descriptor."""
+
+    blockers: list[dict[str, Any]] = []
+    descriptor_validation = validate_adapter_descriptor(descriptor)
+    if descriptor_validation["status"] == "FAIL":
+        blockers.append(
+            {
+                "code": "adapter-descriptor-invalid",
+                "message": "capability manifest cannot pass while descriptor validation fails",
+                "descriptorBlockers": descriptor_validation["blockers"],
+            }
+        )
+    if manifest.get("schemaVersion") != CAPABILITY_MANIFEST_SCHEMA_VERSION:
+        blockers.append({"code": "invalid-capability-manifest-schema", "message": "unsupported capability manifest schemaVersion"})
+    for key in ("adapterId", "host", "maturity", "unsupportedOperationPolicy", "coreSemantics"):
+        if manifest.get(key) != descriptor.get(key):
+            blockers.append(
+                {
+                    "code": "capability-manifest-descriptor-mismatch",
+                    "field": key,
+                    "expected": descriptor.get(key),
+                    "actual": manifest.get(key),
+                }
+            )
+    expected_digest = canonical_digest(descriptor)
+    if manifest.get("descriptorDigest") != expected_digest:
+        blockers.append(
+            {
+                "code": "capability-manifest-descriptor-digest-mismatch",
+                "expected": expected_digest,
+                "actual": manifest.get("descriptorDigest"),
+            }
+        )
+    _validate_manifest_capabilities(manifest, descriptor, blockers)
+    _validate_runtime_boundary(manifest, descriptor, blockers)
+    status = "PASS" if not blockers else "FAIL"
+    return {
+        "schemaVersion": CAPABILITY_MANIFEST_VALIDATION_SCHEMA_VERSION,
+        "status": status,
+        "adapterId": descriptor.get("adapterId"),
+        "host": descriptor.get("host"),
+        "maturity": descriptor.get("maturity"),
+        "capabilityCount": len(manifest.get("capabilities", [])) if isinstance(manifest.get("capabilities"), list) else 0,
+        "blockers": blockers,
+    }
+
+
+def _capability_from_operation(operation: dict[str, Any], descriptor: dict[str, Any]) -> dict[str, Any]:
+    offline_conformance = operation.get("offlineConformance")
+    return {
+        "name": operation.get("name"),
+        "mapping": operation.get("mapping"),
+        "offlineConformance": offline_conformance,
+        "support": "declared",
+        "unsupportedOperationPolicy": descriptor.get("unsupportedOperationPolicy"),
+        "lifecycleSemantics": descriptor.get("coreSemantics"),
+        "liveEvidenceRequiredForVerified": offline_conformance != "deterministic",
+    }
+
+
+def _validate_manifest_capabilities(
+    manifest: dict[str, Any],
+    descriptor: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> None:
+    capabilities = manifest.get("capabilities")
+    if not isinstance(capabilities, list):
+        blockers.append({"code": "invalid-capability-manifest", "message": "capabilities must be an array"})
+        return
+    descriptor_operations = descriptor.get("operations")
+    if not isinstance(descriptor_operations, list):
+        return
+    descriptor_names = {item.get("name") for item in descriptor_operations if isinstance(item, dict)}
+    manifest_names = {item.get("name") for item in capabilities if isinstance(item, dict)}
+    missing_required = sorted(REQUIRED_OPERATION_NAMES.difference(manifest_names))
+    extra = sorted(manifest_names.difference(descriptor_names))
+    missing_descriptor = sorted(descriptor_names.difference(manifest_names))
+    if missing_required:
+        blockers.append({"code": "capability-required-operation-missing", "operations": missing_required})
+    if missing_descriptor or extra:
+        blockers.append(
+            {
+                "code": "capability-manifest-operation-drift",
+                "missingFromManifest": missing_descriptor,
+                "extraInManifest": extra,
+            }
+        )
+    for item in capabilities:
+        if not isinstance(item, dict):
+            blockers.append({"code": "invalid-capability-entry", "message": "capability entries must be objects"})
+            continue
+        if item.get("unsupportedOperationPolicy") != "fail-closed":
+            blockers.append({"code": "capability-unsupported-operation-policy", "capability": item.get("name")})
+        if item.get("lifecycleSemantics") != "delegated-to-agent-lifecycle-core":
+            blockers.append({"code": "capability-core-semantics-overclaim", "capability": item.get("name")})
+
+
+def _validate_runtime_boundary(
+    manifest: dict[str, Any],
+    descriptor: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> None:
+    boundary = manifest.get("runtimeBoundary")
+    if not isinstance(boundary, dict):
+        blockers.append({"code": "capability-runtime-boundary-missing", "message": "runtimeBoundary must be an object"})
+        return
+    if boundary.get("lifecycleSemantics") != descriptor.get("coreSemantics"):
+        blockers.append({"code": "capability-runtime-boundary-drift", "field": "lifecycleSemantics"})
+    if boundary.get("unsupportedOperations") != "fail-closed":
+        blockers.append({"code": "capability-runtime-boundary-policy", "field": "unsupportedOperations"})
+    if boundary.get("providerModelNamesInCore") is not False:
+        blockers.append({"code": "capability-provider-model-boundary", "message": "provider model names must stay out of core contracts"})

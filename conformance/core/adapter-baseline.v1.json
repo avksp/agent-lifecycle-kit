@@ -14,12 +14,16 @@
     "codex",
     "claude-code",
     "cursor",
+    "gemini-cli",
     "hermes",
-    "opencode"
+    "kimi-code",
+    "opencode",
+    "qwen-code"
   ],
   "requiredProtocolEnvelopes": [
     "adapter-discovery.v1",
     "adapter-capability-descriptor.v1",
+    "agent-adapter-capability-manifest.v1",
     "host-operation-request.v1",
     "host-operation-receipt.v1",
     "model-route-decision.v1",
@@ -71,14 +75,32 @@
       "declaredMaturity": "EXPERIMENTAL"
     },
     {
+      "host": "gemini-cli",
+      "nativeProjection": "host-local-projection",
+      "offlineInstallDiscoveryRequired": true,
+      "declaredMaturity": "EXPERIMENTAL"
+    },
+    {
       "host": "hermes",
       "nativeProjection": "hermes-registry",
       "offlineInstallDiscoveryRequired": true,
       "declaredMaturity": "EXPERIMENTAL"
     },
     {
+      "host": "kimi-code",
+      "nativeProjection": "host-local-projection",
+      "offlineInstallDiscoveryRequired": true,
+      "declaredMaturity": "EXPERIMENTAL"
+    },
+    {
       "host": "opencode",
       "nativeProjection": "opencode-plugin",
+      "offlineInstallDiscoveryRequired": true,
+      "declaredMaturity": "EXPERIMENTAL"
+    },
+    {
+      "host": "qwen-code",
+      "nativeProjection": "host-local-projection",
       "offlineInstallDiscoveryRequired": true,
       "declaredMaturity": "EXPERIMENTAL"
     }
