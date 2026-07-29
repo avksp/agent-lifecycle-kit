@@ -7,7 +7,13 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, read_json_object
-from agent_lifecycle.host_protocol import require_adapter_validation_pass, scaffold_adapter, validate_adapter_descriptor
+from agent_lifecycle.host_protocol import (
+    require_adapter_event_stream_pass,
+    require_adapter_validation_pass,
+    scaffold_adapter,
+    validate_adapter_descriptor,
+    validate_adapter_event_stream,
+)
 
 
 def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -18,6 +24,8 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     adapter_validate.add_argument("--baseline")
     adapter_validate.add_argument("--request", action="append", default=[])
     adapter_validate.add_argument("--receipt", action="append", default=[])
+    adapter_event = adapter_sub.add_parser("event-check")
+    adapter_event.add_argument("--event", action="append", required=True)
     adapter_scaffold = adapter_sub.add_parser("scaffold")
     adapter_scaffold.add_argument("--host", required=True)
     adapter_scaffold.add_argument("--target", required=True)
@@ -39,6 +47,9 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
                 receipts=receipts,
             )
         )
+    if args.adapter_command == "event-check":
+        events = [read_json_object(Path(path), label="adapter event") for path in args.event]
+        return require_adapter_event_stream_pass(validate_adapter_event_stream(events))
     if args.adapter_command == "scaffold":
         return scaffold_adapter(
             host=args.host,

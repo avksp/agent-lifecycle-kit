@@ -33,6 +33,8 @@ def next_action(state: dict[str, Any]) -> dict[str, Any]:
         return {"type": "request-human-decision", "blocker": state.get("blocker")}
     if phase == "WAITING_FOR_BUDGET_DECISION":
         return {"type": "record-budget-decision", "blocker": state.get("blocker")}
+    if phase == "WAITING_FOR_EXTERNAL_ACTION":
+        return {"type": "record-external-action-receipt", "externalAction": state.get("externalAction")}
     if phase == "AWAITING_AUTHORIZATION":
         return {"type": "request-execution-authorization"}
     if phase == "READY":

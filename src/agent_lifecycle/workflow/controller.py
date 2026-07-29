@@ -12,7 +12,12 @@ from agent_lifecycle.workflow.budget_decisions import (
 )
 from agent_lifecycle.workflow.query import next_action, status
 from agent_lifecycle.workflow.plan_adoption import adopt_plan, start_execution
-from agent_lifecycle.workflow.run_transitions import block_run, resolve_blocker
+from agent_lifecycle.workflow.run_transitions import (
+    block_run,
+    pause_for_external_action,
+    resolve_blocker,
+    resume_external_action,
+)
 from agent_lifecycle.workflow.task_transitions import (
     accept_task,
     commit_task_result,
@@ -29,7 +34,9 @@ __all__ = [
     "finalize_run",
     "next_action",
     "pause_for_budget_decision",
+    "pause_for_external_action",
     "resolve_blocker",
+    "resume_external_action",
     "select_auto_budget_action",
     "start_execution",
     "start_task",

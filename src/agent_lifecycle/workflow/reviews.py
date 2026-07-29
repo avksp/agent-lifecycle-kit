@@ -38,13 +38,77 @@ def validate_task_result(
             "task-result-not-acceptable",
             "blocking task result cannot enter review acceptance path",
         )
+    _validate_attempt_baseline(task, result)
     item_outcomes = result.get("itemOutcomes")
     if not isinstance(item_outcomes, list) or not item_outcomes:
         raise LifecycleError("task-result-invalid", "task result itemOutcomes are required")
     if any(item.get("status") != "COMPLETE" for item in item_outcomes if isinstance(item, dict)):
         raise LifecycleError("task-result-not-complete", "task result has incomplete items")
+    _validate_commands(result)
     if not identity["sha256"]:
         raise LifecycleError("task-result-invalid", "task result identity missing")
+
+
+def _validate_attempt_baseline(task: dict[str, Any], result: dict[str, Any]) -> None:
+    attempt_base = task.get("attemptBaseRevision")
+    if not isinstance(attempt_base, str) or not attempt_base:
+        return
+    change_set = result.get("changeSet")
+    if not isinstance(change_set, dict) or not isinstance(change_set.get("baselineSha"), str):
+        raise LifecycleError("task-result-invalid", "task result changeSet.baselineSha is required")
+    actual_base = change_set["baselineSha"]
+    if actual_base == attempt_base:
+        return
+    reconciliation = result.get("reconciliationReceipt")
+    if not _valid_reconciliation(reconciliation, task=task, expected=attempt_base, actual=actual_base):
+        raise LifecycleError(
+            "task-result-stale-baseline",
+            "task result baseline does not match attempt base revision",
+            {"expectedBaseRevision": attempt_base, "actualBaseRevision": actual_base},
+        )
+
+
+def _valid_reconciliation(
+    value: Any,
+    *,
+    task: dict[str, Any],
+    expected: str,
+    actual: str,
+) -> bool:
+    return (
+        isinstance(value, dict)
+        and value.get("schemaVersion") == "agent-baseline-reconciliation-receipt.v1"
+        and value.get("status") == "PASS"
+        and value.get("taskId") == task.get("id")
+        and value.get("attempt") == task.get("attempt")
+        and value.get("expectedBaseRevision") == expected
+        and value.get("actualBaseRevision") == actual
+        and isinstance(value.get("evidenceIds"), list)
+        and bool(value.get("evidenceIds"))
+        and all(isinstance(item, str) and item for item in value.get("evidenceIds", []))
+    )
+
+
+def _validate_commands(result: dict[str, Any]) -> None:
+    commands = result.get("commands")
+    if commands is None:
+        return
+    if not isinstance(commands, list):
+        raise LifecycleError("task-result-invalid", "task result commands must be an array")
+    failed = []
+    for command in commands:
+        if not isinstance(command, dict):
+            raise LifecycleError("task-result-invalid", "task result command entries must be objects")
+        status = command.get("status")
+        exit_code = command.get("exitCode")
+        if status in {"FAIL", "FAILED"} or (isinstance(exit_code, int) and not isinstance(exit_code, bool) and exit_code != 0):
+            failed.append(command.get("id") or command.get("command") or "<unknown>")
+    if failed:
+        raise LifecycleError(
+            "task-result-failed-command",
+            "task result cannot report completion over failed commands",
+            {"commands": failed},
+        )
 
 
 def validate_task_review(

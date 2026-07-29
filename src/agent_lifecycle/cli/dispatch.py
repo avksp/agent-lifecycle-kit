@@ -22,7 +22,11 @@ from agent_lifecycle.model_routing import (
     validate_model_routing_profile,
     validate_usage_receipt,
 )
-from agent_lifecycle.planning import resolve_sdd_tier, validate_plan_manifest
+from agent_lifecycle.planning import (
+    resolve_sdd_tier,
+    validate_acceptance_checklist,
+    validate_plan_manifest,
+)
 from agent_lifecycle.specification import validate_specification
 from agent_lifecycle.workflow import (
     accept_task,
@@ -303,6 +307,13 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
             "manifest": validate_plan_manifest(manifest),
             "lock": verify_plan_lock(manifest, lock) if lock else None,
         }
+    if args.plan_command == "acceptance-check":
+        manifest_path = Path(args.manifest)
+        acceptance_path = Path(args.acceptance)
+        return validate_acceptance_checklist(
+            read_json_object(manifest_path, label="plan manifest"),
+            acceptance_path.read_text(encoding="utf-8"),
+        )
     raise LifecycleError("command-not-implemented", "plan command is not implemented")
 
 

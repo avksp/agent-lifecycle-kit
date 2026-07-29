@@ -41,6 +41,7 @@
     {"name": "cancel", "mapping": "host-cancel-request", "offlineConformance": "synthetic"},
     {"name": "resume", "mapping": "workflow-state-resume", "offlineConformance": "synthetic"},
     {"name": "tool-execution", "mapping": "host-tool-call", "offlineConformance": "synthetic"},
+    {"name": "adapter-event-stream", "mapping": "agent-adapter-event.v1", "offlineConformance": "deterministic"},
     {"name": "result-collection", "mapping": "task-result-artifact", "offlineConformance": "deterministic"},
     {"name": "usage-attestation", "mapping": "host-usage-ledger", "offlineConformance": "synthetic"},
     {"name": "task-audit", "mapping": "audit-plan-implementation", "offlineConformance": "deterministic"},

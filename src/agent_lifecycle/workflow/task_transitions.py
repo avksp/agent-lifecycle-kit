@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, read_json_object
-from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
 from agent_lifecycle.workflow.artifacts import (
     artifact_identity,
     artifact_path,
@@ -187,7 +187,10 @@ def accept_task(
     review = read_json_object(root / expected_path, label="task review")
     identity = artifact_identity(root, expected_path, review)
     validate_task_review(state, task, review)
+    result = _read_committed_result(root, task)
+    ownership_receipt = _validate_task_write_scope(state, task, result)
     record_gate_receipts(task, gate_receipts)
+    task["ownershipReceipt"] = ownership_receipt
     _mark_task_accepted(state, task, review, identity, reason)
     commit_state(
         state_path,
@@ -251,6 +254,7 @@ def _mark_task_running(
     task.pop("review", None)
     task.pop("modelUsageReceipt", None)
     task["attemptStartedAt"] = now_iso()
+    task["attemptBaseRevision"] = state.get("sourceRevision")
     task["attemptDeadlineAt"] = deadline_after(
         task["attemptStartedAt"],
         int(state.get("budgets", {}).get("maxTaskWallSeconds", 3600)),
@@ -295,3 +299,91 @@ def _mark_task_accepted(
     task.pop("attemptDeadlineAt", None)
     unlock_ready_tasks(state)
     state["phase"] = "RUNNING" if ready_tasks(state) else "FINAL_AUDIT"
+
+
+def _read_committed_result(root: Path, task: dict[str, Any]) -> dict[str, Any]:
+    result_identity = task.get("result")
+    if not isinstance(result_identity, dict) or not isinstance(result_identity.get("path"), str):
+        raise LifecycleError("missing-task-result", "task acceptance requires committed result")
+    return read_json_object(root / normalize_repo_path(result_identity["path"]), label="task result")
+
+
+def _validate_task_write_scope(
+    state: dict[str, Any],
+    task: dict[str, Any],
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    changed_files = result.get("changedFiles")
+    if not isinstance(changed_files, list) or not all(isinstance(path, str) for path in changed_files):
+        raise LifecycleError("task-result-invalid", "task result changedFiles must be a list of strings")
+    writes = [
+        normalize_repo_path(path)
+        for path in task.get("writes", [])
+        if isinstance(path, str)
+    ]
+    if not writes:
+        if changed_files and (state.get("manifestPath") or state.get("packetSet")):
+            raise LifecycleError(
+                "task-write-scope-missing",
+                "adopted task state has changed files but no write scope",
+                {"taskId": task.get("id"), "changedFiles": changed_files},
+            )
+        return {
+            "schemaVersion": "agent-task-ownership-receipt.v1",
+            "status": "SKIPPED_NO_WRITE_SCOPE",
+            "runId": state.get("runId"),
+            "packageId": state.get("packageId"),
+            "taskId": task.get("id"),
+            "attempt": task.get("attempt"),
+            "planDigest": state.get("planDigest"),
+            "sourceRevision": state.get("sourceRevision"),
+            "changedFileCount": len(changed_files),
+            "entries": [],
+            "blockers": [],
+        }
+    policy = state.get("writePolicy", {}) if isinstance(state.get("writePolicy"), dict) else {}
+    forbidden_roots = [
+        normalize_repo_path(path)
+        for path in policy.get("forbiddenWrites", [])
+        if isinstance(path, str)
+    ]
+    read_only_roots = [
+        normalize_repo_path(path)
+        for path in policy.get("readOnly", [])
+        if isinstance(path, str)
+    ]
+    entries: list[dict[str, Any]] = []
+    for raw_path in sorted(set(changed_files)):
+        path = normalize_repo_path(raw_path)
+        forbidden = [root for root in forbidden_roots if is_under_repo_path(path, root)]
+        read_only = [root for root in read_only_roots if is_under_repo_path(path, root)]
+        owned = [root for root in writes if is_under_repo_path(path, root)]
+        if forbidden:
+            entries.append({"path": path, "category": "forbidden", "matched": forbidden})
+        elif read_only:
+            entries.append({"path": path, "category": "read-only", "matched": read_only})
+        elif owned:
+            entries.append({"path": path, "category": "task-owned", "matched": owned})
+        else:
+            entries.append({"path": path, "category": "unowned"})
+    blockers = [
+        entry
+        for entry in entries
+        if entry["category"] in {"forbidden", "read-only", "unowned"}
+    ]
+    receipt = {
+        "schemaVersion": "agent-task-ownership-receipt.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "runId": state.get("runId"),
+        "packageId": state.get("packageId"),
+        "taskId": task.get("id"),
+        "attempt": task.get("attempt"),
+        "planDigest": state.get("planDigest"),
+        "sourceRevision": state.get("sourceRevision"),
+        "changedFileCount": len(entries),
+        "entries": entries,
+        "blockers": blockers,
+    }
+    if blockers:
+        raise LifecycleError("task-ownership-violation", "task result changed files are outside task write scope", {"ownership": receipt})
+    return receipt

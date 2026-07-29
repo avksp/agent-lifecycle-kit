@@ -21,3 +21,19 @@ contracts and validators; production promotion supplies signed live receipts.
 The verifiers reject synthetic replay data, missing usage attestations,
 host-operation envelope bypasses, incomplete scenario/cohort coverage and budget
 overruns, including the dedicated 4k-strict compact-context scenario.
+
+## Release 0.5 execution gates
+
+The 0.5 line adds local execution gates before any production-promotion claim:
+
+- human acceptance checklists are validated against the frozen manifest;
+- adapter progress is captured as neutral `agent-adapter-event.v1` streams;
+- task acceptance rejects unowned, read-only or forbidden changed files;
+- each attempt binds to its launch baseline and requires reconciliation on
+  drift;
+- finalization requires a completion signal or explicit evidence-bound waiver;
+- human-only actions pause the run until an external-action receipt is present.
+
+These gates make local completion more honest, but they do not promote an
+adapter to `VERIFIED`. Promotion still requires the separate live host
+conformance and calibration receipts described above.

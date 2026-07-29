@@ -331,6 +331,11 @@ def _replace_plan_state(
     state["sourceRevision"] = source_revision
     state["startMode"] = start_mode
     state["budgets"] = dict(manifest.get("orchestration", {}))
+    state["writePolicy"] = {
+        "readOnly": list(manifest.get("readOnly", [])),
+        "forbiddenWrites": list(manifest.get("forbiddenWrites", [])),
+        "leadOwned": list(manifest.get("leadOwned", [])),
+    }
     state["runDeadlineAt"] = deadline_after(state["runStartedAt"], int(state["budgets"].get("maxRunWallSeconds", 86400)))
     state["packetSet"] = packet_set
     state["tasks"] = tasks

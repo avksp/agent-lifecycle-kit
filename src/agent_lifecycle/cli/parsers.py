@@ -194,6 +194,9 @@ def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     plan_check = plan_sub.add_parser("check")
     plan_check.add_argument("--manifest", required=True)
     plan_check.add_argument("--lock")
+    acceptance_check = plan_sub.add_parser("acceptance-check")
+    acceptance_check.add_argument("--manifest", required=True)
+    acceptance_check.add_argument("--acceptance", required=True)
 
 
 def _add_task_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
