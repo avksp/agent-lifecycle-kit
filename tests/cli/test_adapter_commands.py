@@ -63,7 +63,7 @@ class CliAdapterCommandTests(unittest.TestCase):
             self.assertEqual(capabilities_payload["adapterId"], "synthetic-host")
             self.assertFalse(capabilities_payload["promotion"]["productionPromotionClaimed"])
             self.assertEqual(projection_payload["maturity"], "EXPERIMENTAL")
-            self.assertEqual(projection_payload["capabilityManifest"], str(capabilities))
+            self.assertEqual(projection_payload["capabilityManifest"], capabilities.as_posix())
             self.assertEqual(projection_payload["eventBridge"]["status"], "placeholder")
             self.assertEqual(projection_payload["eventBridge"]["runtimeDispatch"], "not-implemented-fail-closed")
             self.assertEqual(projection_payload["runner"]["status"], "fail-closed-skeleton")

@@ -1,7 +1,7 @@
 {
   "name": "agent-lifecycle-kit",
-  "version": "0.6.1",
-  "description": "Provider-neutral lifecycle skills and adapter metadata for reviewed agent planning, execution, audit, and final proof.",
+  "version": "0.12.1",
+  "description": "Provider-neutral lifecycle kit and adapter metadata for reviewed planning, budgeted execution, adapter conformance, audit, and final proof.",
   "author": {
     "name": "Agent Lifecycle Kit contributors"
   },
@@ -16,8 +16,8 @@
   "skills": "./skills",
   "interface": {
     "displayName": "Agent Lifecycle Kit",
-    "shortDescription": "Reviewed planning, execution, audit, and proof workflow.",
-    "longDescription": "Run a host-neutral lifecycle from clarification through SDD planning, freeze, task packets, implementation review, and final audit.",
+    "shortDescription": "Reviewed planning, budgeted execution, audit, and proof workflow.",
+    "longDescription": "Run a host-neutral lifecycle from clarification through SDD planning, freeze, task packets, budgeted implementation, adapter conformance checks, implementation review, and final audit.",
     "developerName": "Agent Lifecycle Kit contributors",
     "category": "Productivity",
     "capabilities": [
