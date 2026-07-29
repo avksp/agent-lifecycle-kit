@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0 - 2026-07-29
+
+- Added release-0-5 lifecycle gates for frozen acceptance checklist validation,
+  neutral adapter event streams, write-scope-enforced task acceptance,
+  per-attempt baseline reconciliation, external-action parking, and final
+  completion signals.
+- Promoted the Claude Code adapter to host-specific `VERIFIED` for Claude Code
+  2.1.220 with local live host conformance, live calibration, and full ALK
+  lifecycle proof evidence.
+- Updated package, plugin, marketplace, support-matrix, release-note, and
+  install references for `v0.5.0`.
+
 ## 0.4.0 - 2026-07-28
 
 - Added host-local model selection profiles and redacted model-selection

@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.4.0 - 2026-07-28")
+        current_release = _section(changelog, "## 0.5.0 - 2026-07-29")
         self.assertNotIn("- No changes yet.", unreleased)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -77,24 +77,24 @@ def _run_no_check(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 def _write_min_docs(root: Path, *, verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "The adapters are still `EXPERIMENTAL` and not `VERIFIED`; production-promotion evidence is required.\n",
+        "Adapter maturity is host-specific. Claude Code is `VERIFIED`; production-promotion evidence is required.\n",
     )
     _write_text(
         root / "docs/guides/README.ru.md",
-        "Адаптеры пока имеют статус `EXPERIMENTAL`, статуса `VERIFIED` нет; production-promotion evidence нужен.\n",
+        "Maturity адаптеров задаётся по host. Claude Code имеет статус `VERIFIED`; production-promotion evidence нужен.\n",
     )
     maturity = "VERIFIED" if verified_row else "EXPERIMENTAL"
     _write_text(
         root / "docs/adapters/support-matrix.md",
-        "This matrix is the authoritative current source-release support claim.\n"
-        "`VERIFIED` is reserved.\n"
-        "All current adapters remain `EXPERIMENTAL`.\n"
+        "This matrix is the authoritative current source-tree support claim.\n"
+        "Claude Code 0.5.0 live evidence.\n"
+        "Codex, Cursor, Hermes, and OpenCode remain `EXPERIMENTAL`.\n"
         f"| Codex | Projection | {maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.4.0.md",
+        root / "release/notes/v0.5.0.md",
         "Status: source release.\n"
-        "Bundled adapters remain `EXPERIMENTAL`.\n"
+        "Claude Code is host-specific `VERIFIED`.\n"
         "Budget caps stop runaway execution.\n",
     )
     for host in ("claude", "codex", "cursor", "hermes", "opencode"):

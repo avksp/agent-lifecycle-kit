@@ -12,23 +12,18 @@ projections for Codex, Claude Code, Cursor, Hermes, and OpenCode.
 
 ## Current status
 
-`v0.4.0` is the latest tagged source release. It adds host-local model
-selection, redacted model-selection receipts, budget decision workflow controls,
-and metered/subscription/local budget modes while keeping portable core routing
-provider-neutral.
-
-The current development line adds the release-0-5 execution gates: acceptance
-checklist validation against the frozen manifest, neutral adapter event stream
-validation, task-acceptance write-scope enforcement, per-attempt baseline
-reconciliation, external-action parking, and final completion signals. These
-gates are source-tree capabilities until a tagged release updates the package
-version and plugin manifests.
+`v0.5.0` is the current source release. It adds the release-0-5 execution
+gates: acceptance checklist validation against the frozen manifest, neutral
+adapter event stream validation, task-acceptance write-scope enforcement,
+per-attempt baseline reconciliation, external-action parking, final completion
+signals, and live Claude Code adapter evidence.
 
 Adapter maturity is host-specific. Claude Code is `VERIFIED` for Claude Code
-2.1.220 in the current source tree after the local `0.5.1` live conformance,
-live calibration, and full lifecycle proof. Codex, Cursor, Hermes, and OpenCode
-remain `EXPERIMENTAL` until each host has matching live evidence. Public
-directory publication still depends on each host marketplace review process.
+2.1.220 in the current source tree after the local release-0-5 live
+conformance, live calibration, and full lifecycle proof. Codex, Cursor, Hermes,
+and OpenCode remain `EXPERIMENTAL` until each host has matching live evidence.
+Public directory publication still depends on each host marketplace review
+process.
 
 ## What the kit does
 
@@ -163,7 +158,7 @@ projected into each host's native loading model:
 | Host | Release artifact | Status |
 | --- | --- | --- |
 | Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | Experimental marketplace-ready source projection |
-| Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Verified for Claude Code 2.1.220 with local 0.5.1 live evidence; public directory approval not claimed |
+| Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | Verified for Claude Code 2.1.220 with local release-0-5 live evidence; public directory approval not claimed |
 | Cursor | `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` | Experimental source projection for public or team marketplace review |
 | Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | Experimental direct-skill/tap projection |
 | OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | Experimental local/npm-ready projection metadata |
@@ -289,7 +284,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Install from the tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.4.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.5.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -322,7 +317,7 @@ Plugin skills are namespaced by plugin name, for example
 `/agent-lifecycle-kit:agent-workflow-orchestrator`.
 
 Claude Code is verified for the tested 2.1.220 host range in the current source
-tree. The claim is backed by release-0-5 patch `0.5.1` live conformance, live
+tree. The claim is backed by release-0-5 live conformance, live
 calibration, and ALK lifecycle final proof listed in the support matrix.
 
 For inclusion in the Anthropic-managed public directory, submit the plugin for
@@ -358,7 +353,7 @@ from the tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.4.0/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.5.0/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -390,7 +385,7 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 
 The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
-claimed by `v0.4.0`.
+claimed by `v0.5.0`.
 
 ## Usage
 

@@ -1,4 +1,4 @@
-# Claude Code 0.5.1 Evidence Summary
+# Claude Code 0.5.0 Evidence Summary
 
 This is the committed, redacted summary for the Claude Code host-specific
 `VERIFIED` claim. Raw receipts and diagnostics remain local release evidence

@@ -11,7 +11,7 @@
     "sourceRevision": "6bb3b58ee01d028fe21cef209c284efc79e55ceb",
     "testedAt": "2026-07-29",
     "evidence": [
-      "docs/adapters/evidence/claude-code-0.5.1.md",
+      "docs/adapters/evidence/claude-code-0.5.0.md",
       "tasks/release-0-5/evidence/live-host-conformance-claude-code.json",
       "tasks/release-0-5/evidence/live-calibration-verification-claude-code.json",
       "tasks/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json"

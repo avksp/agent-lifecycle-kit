@@ -48,7 +48,7 @@ a separate materialized adapter package.
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.4.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.5.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
