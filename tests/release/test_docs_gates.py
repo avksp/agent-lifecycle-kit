@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.18.0 - 2026-07-30")
+        current_release = _section(changelog, "## 0.19.0 - 2026-07-30")
         self.assertNotIn("- No changes yet.", current_release)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -97,11 +97,11 @@ def _run_no_check(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`.\n",
     )
     _write_text(
         root / "docs/guides/README.ru.md",
-        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`.\n",
     )
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
@@ -123,15 +123,16 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.18.0.md",
+        root / "release/notes/v0.19.0.md",
         "Status: source release.\n"
-        "Updated package metadata to `0.18.0`.\n"
-        "`agent-adapter-event-stream-receipt.v1`.\n"
-        "`agent-adapter-event-capture-validation.v1`.\n"
-        "`agent-review-verdict.v1`.\n"
-        "`agent-review-verdict-validation.v1`.\n"
-        "`agent-lifecycle adapter event-capture-check`.\n"
-        "`agent-lifecycle audit review-check`.\n"
+        "Updated package metadata to `0.19.0`.\n"
+        "`agent-optional-quality-pack.v1`.\n"
+        "`agent-behavior-check-run.v1`.\n"
+        "`agent-diagnostic-bundle.v1`.\n"
+        "`agent-readonly-status-view.v1`.\n"
+        "`agent-lifecycle quality pack-check`.\n"
+        "`agent-lifecycle diagnostics bundle`.\n"
+        "`agent-lifecycle report status-view`.\n"
         "productionPromotionClaimed.\n",
     )
     _write_text(
@@ -205,6 +206,31 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-review-routing-summary.v1`.\n"
         "fails closed.\n"
         "`agent-lifecycle audit review-check`.\n",
+    )
+    _write_text(
+        root / "docs/reference/optional-quality-packs.md",
+        "`agent-optional-quality-pack.v1`.\n"
+        "`agent-optional-quality-pack-validation.v1`.\n"
+        "`agent-behavior-check-fixture.v1`.\n"
+        "`agent-behavior-check-run.v1`.\n"
+        "resource caps.\n"
+        "agent-lifecycle quality pack-check.\n"
+        "agent-lifecycle quality behavior-check.\n",
+    )
+    _write_text(
+        root / "docs/reference/diagnostic-bundles.md",
+        "`agent-diagnostic-bundle.v1`.\n"
+        "redacted.\n"
+        "source of truth.\n"
+        "artifact count.\n"
+        "agent-lifecycle diagnostics bundle.\n",
+    )
+    _write_text(
+        root / "docs/reference/read-only-status-view.md",
+        "`agent-readonly-status-view.v1`.\n"
+        "not source of truth.\n"
+        "small local model.\n"
+        "agent-lifecycle report status-view.\n",
     )
     for host in ("claude", "codex", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "qwen-code"):
         _write_text(

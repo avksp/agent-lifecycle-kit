@@ -4,6 +4,14 @@
 
 - No changes yet.
 
+## 0.19.0 - 2026-07-30
+
+- Added optional quality pack validation and fixture-based behavior checks for
+  concrete lifecycle outcomes.
+- Added redacted diagnostic bundle export from existing evidence artifacts.
+- Added compact read-only status views for small local models without changing
+  source-of-truth evidence.
+
 ## 0.18.0 - 2026-07-30
 
 - Added neutral adapter event capture declarations, event stream receipts and

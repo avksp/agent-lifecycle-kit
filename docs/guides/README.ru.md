@@ -165,6 +165,32 @@ Skills остаются тонкими точками входа. Специфи
 
 Подробнее: [вердикты проверки](../reference/review-verdict.md).
 
+## Дополнительные проверки качества и наблюдаемости
+
+Дополнительные наборы проверок качества помогают оператору быстро увидеть
+качество, доказательства и расход ресурсов. Они выключены по умолчанию через
+`agent-optional-quality-pack.v1`; каждая команда должна объявлять входные
+схемы, ожидаемые доказательства и лимиты ресурсов. `agent-behavior-check-run.v1`
+проверяет конкретные ситуации жизненного цикла: ложное завершение, устаревшее
+состояние, перерасход, отсутствующий захват событий и блокировку внешним
+действием.
+
+`agent-diagnostic-bundle.v1` экспортирует очищенные сводки из существующих
+артефактов, а `agent-readonly-status-view.v1` готовит краткий вид для маленьких
+локальных моделей. Эти выводы не становятся источником истины: финальная
+проверка всё равно использует исходные квитанции, планы и доказательства.
+
+```bash
+agent-lifecycle quality pack-check
+agent-lifecycle quality behavior-check --fixture <behavior-fixture.json>
+agent-lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
+agent-lifecycle report status-view --artifact <evidence.json> --target-window 4k-strict
+```
+
+Подробнее: [дополнительные наборы качества](../reference/optional-quality-packs.md),
+[диагностические пакеты](../reference/diagnostic-bundles.md) и
+[вид состояния только для чтения](../reference/read-only-status-view.md).
+
 ## Контролируемый цикл выполнения
 
 Команда `runner` ведёт узкое состояние цикла выполнения
@@ -341,6 +367,10 @@ agent-lifecycle task compile --manifest <plan.manifest.json> --out-dir <task-pac
 agent-lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 agent-lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
+agent-lifecycle quality pack-check
+agent-lifecycle quality behavior-check --fixture <behavior-fixture.json>
+agent-lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
+agent-lifecycle report status-view --artifact <evidence.json> --target-window 4k-strict --out <status-view.json>
 agent-lifecycle context profile-check --profile profiles/small-context-profile.v1.json
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 4k-strict
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
@@ -380,6 +410,10 @@ PYTHONPATH=src python -m agent_lifecycle task compile --manifest <plan.manifest.
 PYTHONPATH=src python -m agent_lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 PYTHONPATH=src python -m agent_lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
+PYTHONPATH=src python -m agent_lifecycle quality pack-check
+PYTHONPATH=src python -m agent_lifecycle quality behavior-check --fixture <behavior-fixture.json>
+PYTHONPATH=src python -m agent_lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
+PYTHONPATH=src python -m agent_lifecycle report status-view --artifact <evidence.json> --target-window 4k-strict --out <status-view.json>
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 PYTHONPATH=src python -m agent_lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
 PYTHONPATH=src python -m agent_lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
@@ -394,6 +428,8 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `audit review-check`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
+`quality pack-check`, `quality behavior-check`, `diagnostics bundle`,
+`report status-view`,
 `goal check`, `goal summarize`, `goal update`, `followup check`,
 `followup add`, `followup close`, `followup sweep`, `worktree policy-check`,
 `worktree receipt`, `worktree check`, `runner start`,
