@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 0.15.0 - 2026-07-30
+
+- Added schema-backed goal records for binding user intent, owner-visible
+  outcome, constraints, evidence ids and workflow lineage across long tasks.
+- Added compact objective snapshots plus `agent-lifecycle goal check`,
+  `goal summarize` and `goal update` commands for low-token continuation
+  without replacing workflow state.
+- Added optional `workflow finalize --goal-record` proof binding and
+  fail-closed validation for stale, mismatched or contradictory goal records.
+
 ## 0.14.0 - 2026-07-30
 
 - Added `completionCheck` support for specifications, plan adoption and final

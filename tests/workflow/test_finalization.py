@@ -234,6 +234,74 @@ class WorkflowFinalizationTests(unittest.TestCase):
             proof = json.loads((root / "final/proof.json").read_text(encoding="utf-8"))
             self.assertEqual(proof["completionCheck"]["validation"]["checkKind"], "external-action")
 
+    def test_finalize_run_records_current_goal_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            check = _completion_check()
+            check_digest = canonical_digest(check)
+            state["completionCheck"] = check
+            state["completionCheckValidation"] = {
+                "schemaVersion": "agent-completion-check-validation.v1",
+                "status": "PASS",
+                "checkId": check["checkId"],
+                "checkKind": check["kind"],
+                "receiptPath": check["receiptPath"],
+                "requiredEvidenceIds": check["requiredEvidenceIds"],
+                "checkDigest": check_digest,
+            }
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+            write_json_create(root / "final/completion-check-receipt.json", _completion_check_receipt("PASS"))
+            write_json_create(root / "final/goal-record.json", _goal_record(state, check_digest=check_digest))
+
+            payload = finalize_run(
+                state_path,
+                operation_id="finalize-op",
+                expected_revision=1,
+                source_revision="source",
+                final_audit_path="final/final-audit.json",
+                proof_path="final/proof.json",
+                goal_record_path="final/goal-record.json",
+                reason="done",
+            )
+
+            self.assertEqual(payload["phase"], "COMPLETE")
+            proof = json.loads((root / "final/proof.json").read_text(encoding="utf-8"))
+            self.assertEqual(proof["goalRecord"]["record"]["path"], "final/goal-record.json")
+            self.assertEqual(proof["goalRecord"]["validation"]["goalStatus"], "READY_FOR_FINALIZATION")
+            self.assertEqual(proof["completionCheck"]["validation"]["checkDigest"], check_digest)
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(stored["goalRecord"]["path"], "final/goal-record.json")
+
+    def test_finalize_run_rejects_stale_goal_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+            record = _goal_record(state)
+            record["lineage"]["stateRevision"] = 2
+            write_json_create(root / "final/goal-record.json", record)
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    goal_record_path="final/goal-record.json",
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "goal-state-stale")
+
     def test_finalize_run_rejects_final_audit_plan_digest_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -338,6 +406,30 @@ def _completion_check_receipt(status: str) -> dict:
         "verifier": {"id": "observable-check"},
         "checkedAt": "2026-07-30T08:00:00Z",
     }
+
+
+def _goal_record(state: dict, *, check_digest: str | None = None) -> dict:
+    record = {
+        "schemaVersion": "agent-goal-record.v1",
+        "goalId": "release-015",
+        "userIntent": "Finish the requested release with validation.",
+        "ownerOutcome": "Final proof links accepted work, completion evidence and continuity context.",
+        "constraints": ["Do not commit tasks/", "Fail closed on stale state"],
+        "status": "READY_FOR_FINALIZATION",
+        "lineage": {
+            "runId": state["runId"],
+            "packageId": state["packageId"],
+            "planRevision": state["planRevision"],
+            "planDigest": state["planDigest"],
+            "sourceRevision": state["sourceRevision"],
+            "stateRevision": state["stateRevision"],
+        },
+        "evidenceIds": ["EV-FINAL"],
+        "updatedAt": "2026-07-30T08:00:00Z",
+    }
+    if check_digest is not None:
+        record["completionCheck"] = {"checkId": "done-check", "checkDigest": check_digest}
+    return record
 
 
 if __name__ == "__main__":

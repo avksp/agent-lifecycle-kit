@@ -11,12 +11,13 @@ from agent_lifecycle.audit import build_ownership_report
 from agent_lifecycle.audit.ownership import report_has_category
 from agent_lifecycle.changesets import changed_files
 from agent_lifecycle.compiler import compile_task_packets
-from agent_lifecycle.contracts import LifecycleError, read_json_object
+from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.context import check_context, load_context_profile, render_context
 from agent_lifecycle.diagnostics import build_readiness_report
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.cli.adapter import dispatch_adapter
+from agent_lifecycle.goal import build_objective_snapshot, update_goal_record, validate_goal_record
 from agent_lifecycle.model_routing import (
     resolve_model_route,
     validate_host_model_profile,
@@ -72,6 +73,8 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         return _dispatch_audit(args)
     if args.command == "context":
         return _dispatch_context(args)
+    if args.command == "goal":
+        return _dispatch_goal(args)
     if args.command == "model":
         return _dispatch_model(args)
     if args.command == "tier":
@@ -126,6 +129,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             source_revision=args.source_revision,
             final_audit_path=args.final_audit,
             proof_path=args.proof,
+            goal_record_path=args.goal_record,
             reason=args.reason,
         )
     return _dispatch_workflow_task(args, state_path)
@@ -258,6 +262,30 @@ def _dispatch_context(args: argparse.Namespace) -> dict[str, Any]:
         )
         return _require_context_pass(result)
     raise LifecycleError("command-not-implemented", "context command is not implemented")
+
+
+def _dispatch_goal(args: argparse.Namespace) -> dict[str, Any]:
+    record = read_json_object(Path(args.record), label="goal record")
+    if args.goal_command == "check":
+        state = read_json_object(Path(args.state), label="workflow state") if args.state else None
+        return validate_goal_record(record, state=state, require_current=args.current)
+    if args.goal_command == "summarize":
+        state = read_json_object(Path(args.state), label="workflow state")
+        profile = read_json_object(Path(args.profile), label="context profile") if args.profile else None
+        return build_objective_snapshot(record, state, profile=profile, window=args.target_window)
+    if args.goal_command == "update":
+        state = read_json_object(Path(args.state), label="workflow state")
+        updated = update_goal_record(
+            record,
+            state,
+            status=args.status,
+            reason=args.reason,
+            evidence_ids=args.evidence_id,
+        )
+        if args.out:
+            write_json_create(Path(args.out), updated)
+        return updated
+    raise LifecycleError("command-not-implemented", "goal command is not implemented")
 
 
 def _dispatch_model(args: argparse.Namespace) -> dict[str, Any]:

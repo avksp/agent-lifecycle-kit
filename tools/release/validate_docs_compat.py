@@ -22,6 +22,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "usage/cost",
             "`completionCheck`",
             "`agent-completion-check-receipt.v1`",
+            "`agent-goal-record.v1`",
+            "`agent-objective-snapshot.v1`",
         ),
     ),
     (
@@ -36,6 +38,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "калибровки расхода",
             "`completionCheck`",
             "`agent-completion-check-receipt.v1`",
+            "`agent-goal-record.v1`",
+            "`agent-objective-snapshot.v1`",
         ),
     ),
     (
@@ -85,15 +89,23 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.14.0.md",
+        "docs/reference/goal-continuity.md",
+        (
+            "`agent-goal-record.v1`",
+            "`agent-objective-snapshot.v1`",
+            "fails closed",
+            "`workflow finalize`",
+        ),
+    ),
+    (
+        "release/notes/v0.15.0.md",
         (
             "Status: source release.",
-            "Updated package metadata to `0.14.0`",
+            "Updated package metadata to `0.15.0`",
+            "`agent-goal-record.v1`",
+            "`agent-goal-record-validation.v1`",
+            "`agent-objective-snapshot.v1`",
             "`completionCheck`",
-            "`agent-completion-check.v1`",
-            "`agent-completion-check-receipt.v1`",
-            "`agent-external-action-receipt.v1`",
-            "`qualityCheck`",
             "productionPromotionClaimed",
         ),
     ),

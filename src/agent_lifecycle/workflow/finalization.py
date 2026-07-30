@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
+from agent_lifecycle.goal import validate_goal_record
 from agent_lifecycle.specification import (
     validate_completion_check,
     validate_completion_check_receipt,
@@ -27,6 +28,7 @@ def finalize_run(
     source_revision: str,
     final_audit_path: str,
     proof_path: str,
+    goal_record_path: str | None = None,
     reason: str,
 ) -> dict[str, Any]:
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
@@ -43,6 +45,7 @@ def finalize_run(
     final_audit_identity = artifact_identity(root, final_audit_rel, final_audit)
     _validate_final_audit(state, final_audit)
     completion_check_receipt = _validate_completion_check(state, root)
+    goal_record = _validate_goal_record(state, root, goal_record_path)
     finalization_gate_receipts = _validate_finalization_gates(
         state_path,
         state,
@@ -54,6 +57,7 @@ def finalize_run(
         operation_id=operation_id,
         final_audit=final_audit_identity,
         completion_check_receipt=completion_check_receipt,
+        goal_record=goal_record,
         finalization_gate_receipts=finalization_gate_receipts,
         reason=reason,
     )
@@ -63,6 +67,8 @@ def finalize_run(
     state["finalAudit"] = final_audit_identity
     if completion_check_receipt is not None:
         state["completionCheckReceipt"] = completion_check_receipt["receipt"]
+    if goal_record is not None:
+        state["goalRecord"] = goal_record["record"]
     state["phase"] = "COMPLETE"
     commit_state(
         state_path,
@@ -72,6 +78,7 @@ def finalize_run(
         payload={
             "finalAudit": final_audit_identity,
             "completionCheckReceipt": completion_check_receipt,
+            "goalRecord": goal_record,
             "finalizationGateReceipts": finalization_gate_receipts,
             "proof": state["finalProof"],
             "reason": reason,
@@ -170,12 +177,23 @@ def _validate_completion_check(state: dict[str, Any], root: Path) -> dict[str, A
     return {"check": check_validation, "receipt": identity, "validation": validation}
 
 
+def _validate_goal_record(state: dict[str, Any], root: Path, goal_record_path: str | None) -> dict[str, Any] | None:
+    if goal_record_path is None:
+        return None
+    goal_record_rel = normalize_repo_path(goal_record_path, label="goal record")
+    record = read_json_object(root / goal_record_rel, label="goal record")
+    validation = validate_goal_record(record, state=state, require_current=True)
+    identity = artifact_identity(root, goal_record_rel, record)
+    return {"record": identity, "validation": validation}
+
+
 def _proof_body(
     state: dict[str, Any],
     *,
     operation_id: str,
     final_audit: dict[str, Any],
     completion_check_receipt: dict[str, Any] | None,
+    goal_record: dict[str, Any] | None,
     finalization_gate_receipts: list[dict[str, Any]],
     reason: str,
 ) -> dict[str, Any]:
@@ -202,6 +220,7 @@ def _proof_body(
         "acceptedTasks": accepted,
         "finalAudit": final_audit,
         "completionCheck": completion_check_receipt,
+        "goalRecord": goal_record,
         "finalizationGateReceipts": finalization_gate_receipts,
         "reason": reason,
         "createdAt": now_iso(),
