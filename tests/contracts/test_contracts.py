@@ -190,6 +190,8 @@ class ContractTests(unittest.TestCase):
             "agent-public-contract-policy-validation.v1",
             "agent-lifecycle-cost-report.v1",
             "agent-lifecycle-cost-validation.v1",
+            "agent-lifecycle-cost-generation.v1",
+            "agent-lifecycle-cost-summary.v1",
             "agent-plan-reference-validation.v1",
             "agent-plan-snapshot.v1",
             "agent-plan-reconciliation.v1",
