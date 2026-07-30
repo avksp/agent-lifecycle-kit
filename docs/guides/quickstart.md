@@ -1,0 +1,70 @@
+# Quickstart
+
+This guide shows the smallest useful source-checkout flow. It performs no live
+model calls and does not write host configuration.
+
+## Install From Source
+
+```bash
+python -m pip install -e .
+agent-lifecycle version
+```
+
+Without installation, run from the checkout:
+
+```bash
+PYTHONPATH=src python -m agent_lifecycle version
+```
+
+## Check Readiness
+
+```bash
+agent-lifecycle diagnose --no-install-plans
+```
+
+The report is redacted. It validates package metadata, profiles, adapter
+descriptors, safe adapter inspection state, tracked evidence summaries, and
+declared local raw receipt availability. It does not start live calls.
+
+For one adapter:
+
+```bash
+agent-lifecycle diagnose \
+  --adapter adapters/codex/adapter.descriptor.json \
+  --no-install-plans
+```
+
+## Preview Adapter Setup
+
+```bash
+agent-lifecycle adapter install-plan \
+  --descriptor adapters/opencode/adapter.descriptor.json
+```
+
+The output is a dry run. It lists files, commands, and operator actions, but it
+does not mutate the host and does not change adapter maturity.
+
+## Run A Plan Gate
+
+For a frozen plan:
+
+```bash
+agent-lifecycle plan check \
+  --manifest path/to/plan.manifest.json \
+  --lock path/to/plan.lock.json
+```
+
+The plan remains the source of truth for ownership, write scope, acceptance,
+validation, and evidence expectations.
+
+## Keep Context Small
+
+Use the compact profile before handing work to a constrained model:
+
+```bash
+agent-lifecycle context check \
+  --profile profiles/small-context-profile.v1.json
+```
+
+The profile keeps summaries short and explicit while preserving the gates that
+protect final quality.

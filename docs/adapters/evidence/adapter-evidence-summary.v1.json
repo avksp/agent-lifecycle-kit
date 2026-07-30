@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "agent-adapter-evidence-summary-index.v1",
+  "status": "PASS",
+  "productionPromotionClaimed": false,
+  "maturityChangesClaimed": false,
+  "adapters": [
+    {
+      "adapterId": "codex",
+      "host": "codex",
+      "maturity": "VERIFIED",
+      "testedHostRange": "0.145.0",
+      "summaryPath": "docs/adapters/evidence/codex-cli-0.6.0.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "live-host-conformance",
+        "live-usage-calibration",
+        "lifecycle-final-proof"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "claude",
+      "host": "claude-code",
+      "maturity": "VERIFIED",
+      "testedHostRange": "2.1.220",
+      "summaryPath": "docs/adapters/evidence/claude-code-0.5.0.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "live-host-conformance",
+        "live-usage-calibration",
+        "lifecycle-final-proof"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "opencode",
+      "host": "opencode",
+      "maturity": "VERIFIED",
+      "testedHostRange": "1.18.9",
+      "summaryPath": "docs/adapters/evidence/opencode-glm52-live-2026-07-29.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "live-host-conformance",
+        "live-usage-calibration",
+        "lifecycle-final-proof"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "hermes",
+      "host": "hermes",
+      "maturity": "VERIFIED",
+      "testedHostRange": "0.19.0",
+      "summaryPath": "docs/adapters/evidence/hermes-glm52-live-2026-07-29.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "live-host-conformance",
+        "live-usage-calibration",
+        "lifecycle-final-proof"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "qwen-code",
+      "host": "qwen-code",
+      "maturity": "VERIFIED",
+      "testedHostRange": "0.21.0",
+      "summaryPath": "docs/adapters/evidence/qwen-code-glm52-live-2026-07-29.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "live-host-conformance",
+        "live-usage-calibration",
+        "lifecycle-final-proof"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "cursor",
+      "host": "cursor",
+      "maturity": "EXPERIMENTAL",
+      "testedHostRange": null,
+      "summaryPath": "docs/adapters/evidence/cursor-0.9.0.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "safe-inspection",
+        "preflight"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "gemini-cli",
+      "host": "gemini-cli",
+      "maturity": "EXPERIMENTAL",
+      "testedHostRange": null,
+      "summaryPath": "docs/adapters/evidence/gemini-cli-0.10.0.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "safe-inspection",
+        "bounded-harness-shape"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "kimi-code",
+      "host": "kimi-code",
+      "maturity": "EXPERIMENTAL",
+      "testedHostRange": null,
+      "summaryPath": "docs/adapters/evidence/kimi-code-0.12.0.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "safe-inspection",
+        "bounded-harness-shape"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    }
+  ]
+}
