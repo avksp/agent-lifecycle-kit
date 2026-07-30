@@ -121,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-live", action="store_true")
     parser.add_argument("--report", required=True)
     parser.add_argument("--receipt")
-    parser.add_argument("--diagnostic-dir", default="tasks/release-0-12/evidence/live-host-diagnostics/kimi-code")
+    parser.add_argument("--diagnostic-dir", default="work/release-0-12/evidence/live-host-diagnostics/kimi-code")
     args = parser.parse_args(argv)
 
     blockers: list[dict[str, Any]] = []

@@ -45,7 +45,7 @@ class CliWorkflowCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(_task(payload)["status"], "RUNNING")
 
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             result = _result()
             write_json_create(root / result_path, result)
             code, payload = _run_cli(
@@ -71,7 +71,7 @@ class CliWorkflowCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(_task(payload)["status"], "VERIFYING")
 
-            review_path = "tasks/WS-01/attempt-1/task-review.json"
+            review_path = "work/WS-01/attempt-1/task-review.json"
             write_json_create(root / review_path, _review(canonical_digest(result)))
             code, payload = _run_cli(
                 [
@@ -121,8 +121,8 @@ class CliWorkflowCommandTests(unittest.TestCase):
                 ]
             )
             self.assertEqual(code, 0)
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
-            usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
+            usage_path = "work/WS-01/attempt-1/model-usage-receipt.json"
             write_json_create(root / result_path, _result())
             write_json_create(root / usage_path, _model_usage_receipt(route))
 
@@ -190,7 +190,7 @@ class CliWorkflowCommandTests(unittest.TestCase):
                 ]
             )
             self.assertEqual(code, 0)
-            usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            usage_path = "work/WS-01/attempt-1/model-usage-receipt.json"
             receipt = _model_usage_receipt(route)
             receipt["usage"]["billableTokens"] = route["maxBillableTokens"] + 1
             write_json_create(root / usage_path, receipt)
@@ -216,7 +216,7 @@ class CliWorkflowCommandTests(unittest.TestCase):
                     "--budget-policy",
                     policy_path,
                     "--receipt",
-                    "tasks/WS-01/attempt-1/budget-decision.json",
+                    "work/WS-01/attempt-1/budget-decision.json",
                     "--reason",
                     "operator decision required",
                 ]
@@ -225,7 +225,7 @@ class CliWorkflowCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(payload["phase"], "WAITING_FOR_BUDGET_DECISION")
             self.assertEqual(payload["nextAction"]["type"], "record-budget-decision")
-            self.assertTrue((root / "tasks/WS-01/attempt-1/budget-decision.json").is_file())
+            self.assertTrue((root / "work/WS-01/attempt-1/budget-decision.json").is_file())
 
     def test_workflow_budget_decision_cli_applies_reroute(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -256,7 +256,7 @@ class CliWorkflowCommandTests(unittest.TestCase):
                 )[0],
                 0,
             )
-            usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            usage_path = "work/WS-01/attempt-1/model-usage-receipt.json"
             receipt = _model_usage_receipt(route)
             receipt["usage"]["billableTokens"] = route["maxBillableTokens"] + 1
             write_json_create(root / usage_path, receipt)
@@ -282,7 +282,7 @@ class CliWorkflowCommandTests(unittest.TestCase):
                         "--budget-policy",
                         policy_path,
                         "--receipt",
-                        "tasks/WS-01/attempt-1/budget-decision.json",
+                        "work/WS-01/attempt-1/budget-decision.json",
                         "--reason",
                         "operator decision required",
                     ]
@@ -313,11 +313,11 @@ class CliWorkflowCommandTests(unittest.TestCase):
                     "--action",
                     "reroute-stronger",
                     "--decision-receipt",
-                    "tasks/WS-01/attempt-1/budget-decision.json",
+                    "work/WS-01/attempt-1/budget-decision.json",
                     "--route-decision",
                     route_path,
                     "--receipt",
-                    "tasks/WS-01/attempt-1/budget-decision-applied.json",
+                    "work/WS-01/attempt-1/budget-decision-applied.json",
                     "--operator-identity-hash",
                     "operator-hash",
                     "--reason",
@@ -328,7 +328,7 @@ class CliWorkflowCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(payload["phase"], "RUNNING")
             self.assertEqual(_task(payload)["status"], "READY")
-            applied = json.loads((root / "tasks/WS-01/attempt-1/budget-decision-applied.json").read_text(encoding="utf-8"))
+            applied = json.loads((root / "work/WS-01/attempt-1/budget-decision-applied.json").read_text(encoding="utf-8"))
             self.assertEqual(applied["selectedAction"], "reroute-stronger")
             self.assertEqual(applied["nextRouteDecisionDigest"], "8" * 64)
 

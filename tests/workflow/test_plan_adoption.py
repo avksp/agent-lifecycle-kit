@@ -88,8 +88,8 @@ class WorkflowPlanAdoptionTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["result"] = {"path": "tasks/WS-01/attempt-1/task-result.json", "sha256": "2" * 64, "bytes": 10}
-            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["result"] = {"path": "work/WS-01/attempt-1/task-result.json", "sha256": "2" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state_path.write_text(json.dumps(state), encoding="utf-8")
             _write_plan_bundle(root)
 

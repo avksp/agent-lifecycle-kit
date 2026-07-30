@@ -1,19 +1,9 @@
 {
-  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
-  "status": "PASS",
   "adapterId": "codex",
-  "host": "codex",
-  "runId": "offline-conformance",
-  "taskId": "adapter-event-capture",
-  "operationId": "offline-event-capture-codex",
-  "producer": {
-    "id": "codex-neutral-event-producer",
-    "boundary": "adapter-owned",
-    "portableEventSchema": "agent-adapter-event.v1"
-  },
-  "descriptorDigest": "07c3d992414a62578849f4cbcde01b7426f5a7e509d8ef275ed45d09b1c5cf31",
-  "eventStreamDigest": "bb71b139dfb4bf3d922b6932b62d7c30974bed0b1f40c138434c923cf2a2a27a",
+  "descriptorDigest": "12571ef6019aa1d4fa5d8d79fb8d80b499b8e4b2300eb5fa0661336b1bdd4760",
+  "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
+  "eventStreamDigest": "bb71b139dfb4bf3d922b6932b62d7c30974bed0b1f40c138434c923cf2a2a27a",
   "eventTypes": [
     "session.started",
     "task.launched",
@@ -22,8 +12,18 @@
     "usage.reported",
     "task.completed"
   ],
-  "terminalEvent": "task.completed",
-  "emittedAt": "2026-07-30T00:18:01Z",
+  "host": "codex",
+  "operationId": "offline-event-capture-codex",
+  "producer": {
+    "boundary": "adapter-owned",
+    "id": "codex-neutral-event-producer",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
   "productionPromotionClaimed": false,
-  "receiptDigest": "d9b3f4910d9267e92c3ac5bfe19c48b763342a813ebebeb42ef0d2c714255fb1"
+  "receiptDigest": "0a2414bf9dd3450e433ee54879354ad90b2d578ba00f926b9b358d5171ea2b36",
+  "runId": "offline-conformance",
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "taskId": "adapter-event-capture",
+  "terminalEvent": "task.completed"
 }

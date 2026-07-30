@@ -297,7 +297,7 @@ def _task_gates(gates: list[Any], task_id: str) -> list[dict[str, Any]]:
 
 def _default_artifacts(manifest: dict[str, Any], task_id: str) -> dict[str, str]:
     artifact_root = manifest["package"]["artifactRoot"].rstrip("/")
-    base = f"{artifact_root}/workflow/tasks/{task_id}/attempt-{{attempt}}"
+    base = f"{artifact_root}/workflow/work/{task_id}/attempt-{{attempt}}"
     return {"result": f"{base}/task-result.json", "review": f"{base}/task-review.json"}
 
 

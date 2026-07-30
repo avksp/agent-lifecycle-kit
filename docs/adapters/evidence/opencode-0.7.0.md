@@ -9,9 +9,9 @@ Scope:
 - Adapter descriptor: `adapters/opencode/adapter.descriptor.json`.
 - Capability manifest: `adapters/opencode/capabilities.manifest.json`.
 - Raw inspection report:
-  `tasks/release-0-7/evidence/opencode/inspection/opencode-inspection-report.json`.
+  `work/release-0-7/evidence/opencode/inspection/opencode-inspection-report.json`.
 - Offline conformance report:
-  `tasks/release-0-7/evidence/conformance/adapter-conformance-verification.json`.
+  `work/release-0-7/evidence/conformance/adapter-conformance-verification.json`.
 
 Safe inspection result:
 
@@ -52,6 +52,6 @@ usage calibration and lifecycle proof with explicit live-run budget caps.
 Superseding evidence:
 
 - `docs/adapters/evidence/opencode-glm52-live-2026-07-29.md`;
-- `tasks/release-0-7/evidence/opencode/live-host-conformance-opencode.json`;
-- `tasks/release-0-7/evidence/opencode/live-calibration-verification-opencode.json`;
-- `tasks/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json`.
+- `work/release-0-7/evidence/opencode/live-host-conformance-opencode.json`;
+- `work/release-0-7/evidence/opencode/live-calibration-verification-opencode.json`;
+- `work/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json`.

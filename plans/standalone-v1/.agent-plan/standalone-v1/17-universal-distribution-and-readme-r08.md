@@ -30,7 +30,7 @@ They are not silently declared supported because they can read `SKILL.md`.
 ## Shared-core boundary
 
 Adapters own only native discovery, installation metadata, invocation,
-questions, approvals, native tasks/subagents, cancellation, usage import and
+questions, approvals, native work/subagents, cancellation, usage import and
 typed host-operation transport. They must not reimplement SDD, freeze,
 compilation, workflow transitions, audit verdicts, context authority, budgets
 or final proof.

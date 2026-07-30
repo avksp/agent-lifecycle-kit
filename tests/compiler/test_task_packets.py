@@ -84,8 +84,8 @@ def _manifest(*, nested_acceptance: bool = False) -> dict:
                 "acceptanceIds": ["AC-1"],
                 "evidenceIds": ["EV-1"],
                 "artifactPaths": {
-                    "result": "tasks/WS-01/attempt-{attempt}/task-result.json",
-                    "review": "tasks/WS-01/attempt-{attempt}/task-review.json",
+                    "result": "work/WS-01/attempt-{attempt}/task-result.json",
+                    "review": "work/WS-01/attempt-{attempt}/task-review.json",
                 },
                 "modelRoute": {
                     "schemaVersion": "agent-lifecycle-model-route-decision.v1",

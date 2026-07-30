@@ -61,6 +61,25 @@ Skills остаются тонкими точками входа. Специфи
 аудита управляет общее детерминированное ядро, а не отдельная реализация в
 каждом адаптере.
 
+## Политика публичных контрактов
+
+Публичные схемы и JSON-вывод CLI описаны политикой
+`agent-public-contract-policy.v1`. Она перечисляет стабильные идентификаторы
+схем, устаревшие, но всё ещё принимаемые входные формы, JSON-оболочки команд и
+правила ошибок.
+
+```bash
+agent-lifecycle contract policy --out <public-contract-policy.json>
+agent-lifecycle contract check --policy <public-contract-policy.json>
+```
+
+Адаптеры и сценарии выпуска должны ориентироваться на `schemaVersion` и
+стабильный `code` ошибки, а не на текстовое описание. Маленькая локальная
+модель может использовать краткую квитанцию политики, а крупная модель при
+необходимости читает полную схему через `schema show`.
+
+Подробнее: [публичные контракты](../reference/public-contracts.md).
+
 ## Режим компактного контекста
 
 Системы с маленьким контекстным окном поддерживаются через детерминированный
@@ -295,6 +314,25 @@ agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-d
 
 Подробнее: [политика переключения по бюджету](budget-reroute-policy.md).
 
+## Учёт стоимости жизненного цикла
+
+Отчёт о стоимости жизненного цикла делит запуск на `implementation`,
+`productValidation`, `pipelineCompliance` и `coordination`. Так видно, сколько
+ресурсов ушло на решение задачи, сколько на проверку продукта, а сколько на
+соблюдение самого процесса ALK.
+
+```bash
+agent-lifecycle metrics cost-check --receipt <lifecycle-cost-report.json>
+```
+
+Режимы: `light`, `standard`, `strict` и `release`. Если строгий или выпускной
+режим тратит больше обычного бюджета на процессные проверки, отчёт должен
+объяснить причину. Дорогой процесс сам по себе не означает успех: реализация и
+проверка продукта всё равно должны пройти.
+
+Подробнее: [учёт стоимости жизненного цикла](../reference/lifecycle-cost.md)
+и [ресурсы и безопасность в производственном режиме](production-resource-security.md).
+
 ## Структура поставки
 
 Универсальная поставка не означает единый формат манифеста. Исходная поставка
@@ -338,6 +376,8 @@ python -m pip install -e .
 agent-lifecycle version
 agent-lifecycle diagnose
 agent-lifecycle schema list
+agent-lifecycle contract policy --out <public-contract-policy.json>
+agent-lifecycle contract check --policy <public-contract-policy.json>
 agent-lifecycle workflow status --state <path-to-run.state.json>
 agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
@@ -367,6 +407,7 @@ agent-lifecycle task compile --manifest <plan.manifest.json> --out-dir <task-pac
 agent-lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 agent-lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
+agent-lifecycle metrics cost-check --receipt <lifecycle-cost-report.json>
 agent-lifecycle quality pack-check
 agent-lifecycle quality behavior-check --fixture <behavior-fixture.json>
 agent-lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
@@ -390,6 +431,8 @@ agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/ne
 PYTHONPATH=src python -m agent_lifecycle version
 PYTHONPATH=src python -m agent_lifecycle diagnose
 PYTHONPATH=src python -m agent_lifecycle schema list
+PYTHONPATH=src python -m agent_lifecycle contract policy --out <public-contract-policy.json>
+PYTHONPATH=src python -m agent_lifecycle contract check --policy <public-contract-policy.json>
 PYTHONPATH=src python -m agent_lifecycle workflow status --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow next --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
@@ -410,6 +453,7 @@ PYTHONPATH=src python -m agent_lifecycle task compile --manifest <plan.manifest.
 PYTHONPATH=src python -m agent_lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 PYTHONPATH=src python -m agent_lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
+PYTHONPATH=src python -m agent_lifecycle metrics cost-check --receipt <lifecycle-cost-report.json>
 PYTHONPATH=src python -m agent_lifecycle quality pack-check
 PYTHONPATH=src python -m agent_lifecycle quality behavior-check --fixture <behavior-fixture.json>
 PYTHONPATH=src python -m agent_lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
@@ -423,12 +467,13 @@ PYTHONPATH=src python -m agent_lifecycle adapter scaffold --host synthetic-host 
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
-Сейчас реализованы группы команд `version`, `diagnose`, `schema`, `workflow status`,
+Сейчас реализованы группы команд `version`, `diagnose`, `schema`,
+`contract policy`, `contract check`, `workflow status`,
 `workflow next`, `workflow block`, `workflow resolve`, `workflow task-start`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `audit review-check`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`quality pack-check`, `quality behavior-check`, `diagnostics bundle`,
+`metrics cost-check`, `quality pack-check`, `quality behavior-check`, `diagnostics bundle`,
 `report status-view`,
 `goal check`, `goal summarize`, `goal update`, `followup check`,
 `followup add`, `followup close`, `followup sweep`, `worktree policy-check`,

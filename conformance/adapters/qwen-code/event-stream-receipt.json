@@ -1,19 +1,9 @@
 {
-  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
-  "status": "PASS",
   "adapterId": "qwen-code",
-  "host": "qwen-code",
-  "runId": "offline-conformance",
-  "taskId": "adapter-event-capture",
-  "operationId": "offline-event-capture-qwen-code",
-  "producer": {
-    "id": "qwen-code-neutral-event-producer",
-    "boundary": "adapter-owned",
-    "portableEventSchema": "agent-adapter-event.v1"
-  },
-  "descriptorDigest": "d975ccb0e1feb96656b602556945507f1e9006bd94bc237b0352fca395ef33c7",
-  "eventStreamDigest": "c23a411fab3dd994eb2898cb483eac3eb8fb19109812881844fa728dd464df0f",
+  "descriptorDigest": "f229b5d7ba31ac9cd838e7050bdc3752606751bdd361f0eee997089aab799c7a",
+  "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
+  "eventStreamDigest": "c23a411fab3dd994eb2898cb483eac3eb8fb19109812881844fa728dd464df0f",
   "eventTypes": [
     "session.started",
     "task.launched",
@@ -22,8 +12,18 @@
     "usage.reported",
     "task.completed"
   ],
-  "terminalEvent": "task.completed",
-  "emittedAt": "2026-07-30T00:18:01Z",
+  "host": "qwen-code",
+  "operationId": "offline-event-capture-qwen-code",
+  "producer": {
+    "boundary": "adapter-owned",
+    "id": "qwen-code-neutral-event-producer",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
   "productionPromotionClaimed": false,
-  "receiptDigest": "d6e5d37a3276092c0fa955f923fe671787ae03553c1a7b2632404db331b759f4"
+  "receiptDigest": "dad0d27d4941b3d5213fcb4dd4cef7ac49e30ce110722019c2a932243892202b",
+  "runId": "offline-conformance",
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "taskId": "adapter-event-capture",
+  "terminalEvent": "task.completed"
 }

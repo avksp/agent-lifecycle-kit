@@ -1,1 +1,169 @@
-{"schemaVersion":"agent-adapter-capability-manifest.v1","adapterId":"qwen-code","host":"qwen-code","maturity":"VERIFIED","descriptorDigest":"d975ccb0e1feb96656b602556945507f1e9006bd94bc237b0352fca395ef33c7","unsupportedOperationPolicy":"fail-closed","coreSemantics":"delegated-to-agent-lifecycle-core","capabilities":[{"name":"cancel","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"discover","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"final-audit","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"install","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"launch","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"model-route-execution","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"result-collection","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"resume","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"task-audit","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"tool-execution","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"adapter-event-stream","mapping":"agent-adapter-event.v1","offlineConformance":"deterministic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":false},{"name":"usage-attestation","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"validate-envelope","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true},{"name":"wait","mapping":"host-local-fail-closed","offlineConformance":"synthetic","support":"declared","unsupportedOperationPolicy":"fail-closed","lifecycleSemantics":"delegated-to-agent-lifecycle-core","liveEvidenceRequiredForVerified":true}],"modelRouting":{"profileSupport":"host-local","attemptRoutePolicy":"must-execute-or-fail-closed","usageReceiptRequired":true,"unsupportedClassPolicy":"fail-closed","providerModelNamesInCore":false,"liveVerified":true},"runtimeBoundary":{"hostSpecificCode":"adapter-owned","lifecycleSemantics":"delegated-to-agent-lifecycle-core","unsupportedOperations":"fail-closed","providerModelNamesInCore":false},"eventCapture":{"status":"DECLARED","portableEventSchema":"agent-adapter-event.v1","categories":["command","file-change","lifecycle-transition","model-usage","user-decision","validation"],"producerBoundary":"adapter-owned","promotionRequired":false},"promotion":{"verifiedRequiresLiveTestedHostRange":true,"productionPromotionClaimed":false}}
+{
+  "adapterId": "qwen-code",
+  "capabilities": [
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "cancel",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "discover",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "final-audit",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "install",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "launch",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "model-route-execution",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "result-collection",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "resume",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "task-audit",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "tool-execution",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "agent-adapter-event.v1",
+      "name": "adapter-event-stream",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "usage-attestation",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "validate-envelope",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-local-fail-closed",
+      "name": "wait",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    }
+  ],
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
+  "descriptorDigest": "f229b5d7ba31ac9cd838e7050bdc3752606751bdd361f0eee997089aab799c7a",
+  "eventCapture": {
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "portableEventSchema": "agent-adapter-event.v1",
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false,
+    "status": "DECLARED"
+  },
+  "host": "qwen-code",
+  "maturity": "VERIFIED",
+  "modelRouting": {
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "liveVerified": true,
+    "profileSupport": "host-local",
+    "providerModelNamesInCore": false,
+    "unsupportedClassPolicy": "fail-closed",
+    "usageReceiptRequired": true
+  },
+  "promotion": {
+    "productionPromotionClaimed": false,
+    "verifiedRequiresLiveTestedHostRange": true
+  },
+  "runtimeBoundary": {
+    "hostSpecificCode": "adapter-owned",
+    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+    "providerModelNamesInCore": false,
+    "unsupportedOperations": "fail-closed"
+  },
+  "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "unsupportedOperationPolicy": "fail-closed"
+}
