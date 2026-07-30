@@ -118,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-live", action="store_true")
     parser.add_argument("--report", required=True)
     parser.add_argument("--receipt")
-    parser.add_argument("--diagnostic-dir", default="tasks/release-0-3/evidence/live-host-diagnostics/codex")
+    parser.add_argument("--diagnostic-dir", default="work/release-0-3/evidence/live-host-diagnostics/codex")
     args = parser.parse_args(argv)
 
     blockers: list[dict[str, Any]] = []

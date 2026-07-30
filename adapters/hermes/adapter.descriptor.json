@@ -12,9 +12,9 @@
     "sourceRevision": "d71033a4",
     "evidence": [
       "docs/adapters/evidence/hermes-glm52-live-2026-07-29.md",
-      "tasks/release-0-8/evidence/hermes/live-host-conformance-hermes.json",
-      "tasks/release-0-8/evidence/hermes/live-calibration-verification-hermes.json",
-      "tasks/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json"
+      "work/release-0-8/evidence/hermes/live-host-conformance-hermes.json",
+      "work/release-0-8/evidence/hermes/live-calibration-verification-hermes.json",
+      "work/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json"
     ],
     "testedAt": "2026-07-29",
     "productionPromotionClaimed": false,

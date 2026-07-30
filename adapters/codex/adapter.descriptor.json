@@ -13,9 +13,9 @@
     "testedAt": "2026-07-29",
     "evidence": [
       "docs/adapters/evidence/codex-cli-0.6.0.md",
-      "tasks/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json",
-      "tasks/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json",
-      "tasks/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json"
+      "work/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json",
+      "work/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json",
+      "work/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json"
     ],
     "productionPromotionClaimed": false,
     "publicDirectoryApprovalClaimed": false

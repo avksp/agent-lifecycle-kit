@@ -203,8 +203,8 @@ class CliAdapterCommandTests(unittest.TestCase):
                 "minimumVersion": "2.1.220",
                 "maximumVersion": "2.1.220",
                 "evidence": [
-                    "tasks/release-0-5/evidence/live-host-conformance-claude-code.json",
-                    "tasks/release-0-5/evidence/live-calibration-verification-claude-code.json",
+                    "work/release-0-5/evidence/live-host-conformance-claude-code.json",
+                    "work/release-0-5/evidence/live-calibration-verification-claude-code.json",
                 ],
             }
             descriptor["modelRouting"]["liveVerified"] = True

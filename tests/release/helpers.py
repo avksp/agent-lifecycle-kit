@@ -310,11 +310,11 @@ def _write_live_host_promotion_plan_fixture(package_root: Path) -> Path:
                 "dependsOn": [] if previous_id is None else [previous_id],
                 "plan": f"hosts/{host}.md",
                 "evidence": [
-                    f"tasks/release-0-5/evidence/live-host-receipts/{host}.json",
-                    f"tasks/release-0-5/evidence/live-calibration/{host}.json",
-                    f"tasks/release-0-5/evidence/live-host-conformance-{host}.json",
-                    f"tasks/release-0-5/evidence/live-calibration-verification-{host}.json",
-                    f"tasks/release-0-5/evidence/live-promotion-audit-{host}.json",
+                    f"work/release-0-5/evidence/live-host-receipts/{host}.json",
+                    f"work/release-0-5/evidence/live-calibration/{host}.json",
+                    f"work/release-0-5/evidence/live-host-conformance-{host}.json",
+                    f"work/release-0-5/evidence/live-calibration-verification-{host}.json",
+                    f"work/release-0-5/evidence/live-promotion-audit-{host}.json",
                 ],
             }
         )
@@ -332,7 +332,7 @@ def _write_live_host_promotion_plan_fixture(package_root: Path) -> Path:
         },
         "status": "DRAFT",
         "intent": "Produce host-bound live receipts.",
-        "evidenceRoot": "tasks/release-0-5/evidence",
+        "evidenceRoot": "work/release-0-5/evidence",
         "hostOrder": hosts,
         "sequencingPolicy": {"kind": "operational-one-host-at-a-time"},
         "hostAvailabilitySnapshot": {host: "test" for host in hosts},
@@ -373,14 +373,14 @@ def _write_live_host_promotion_plan_fixture(package_root: Path) -> Path:
         "validationCommands": [
             {
                 "id": "LHP-VAL-PLAN-CHECK",
-                "argv": "PYTHONPATH=src python tools/release/validate_live_host_promotion_plan.py --plan tasks/release-0-5/patches/0.5.0-claude-live-promotion/host-promotion.plan.json --evidence tasks/release-0-5/evidence/live-host-promotion-plan-validation.json",
+                "argv": "PYTHONPATH=src python tools/release/validate_live_host_promotion_plan.py --plan work/release-0-5/patches/0.5.0-claude-live-promotion/host-promotion.plan.json --evidence work/release-0-5/evidence/live-host-promotion-plan-validation.json",
             }
         ],
         "evidenceArtifacts": [
             {
                 "id": "LHP-EV-PLAN-CHECK",
                 "schemaVersion": "agent-live-host-promotion-plan-validation.v1",
-                "path": "tasks/release-0-5/evidence/live-host-promotion-plan-validation.json",
+                "path": "work/release-0-5/evidence/live-host-promotion-plan-validation.json",
             }
         ],
         "sharedNonGoals": [],

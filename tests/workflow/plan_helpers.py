@@ -88,8 +88,8 @@ def _plan_manifest(
             "evidenceIds": [],
             "executionPolicy": {"network": "denied", "approvals": "none"},
             "artifactPaths": {
-                "result": "tasks/WS-01/attempt-{attempt}/task-result.json",
-                "review": "tasks/WS-01/attempt-{attempt}/task-review.json",
+                "result": "work/WS-01/attempt-{attempt}/task-result.json",
+                "review": "work/WS-01/attempt-{attempt}/task-review.json",
             },
             "required": True,
         }
@@ -116,8 +116,8 @@ def _plan_manifest(
             "evidenceIds": [],
             "executionPolicy": {"network": "denied", "approvals": "none"},
             "artifactPaths": {
-                "result": "tasks/WS-02/attempt-{attempt}/task-result.json",
-                "review": "tasks/WS-02/attempt-{attempt}/task-review.json",
+                "result": "work/WS-02/attempt-{attempt}/task-result.json",
+                "review": "work/WS-02/attempt-{attempt}/task-review.json",
             },
             "required": True,
         })

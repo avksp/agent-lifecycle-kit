@@ -17,8 +17,8 @@ agent-lifecycle diagnose --adapter adapters/codex/adapter.descriptor.json --no-i
 ```
 
 The output schema is `agent-readiness-report.v1`. A `WARN` status can still be
-actionable, for example when verified adapter descriptors reference local
-ignored evidence under `tasks/`. A `FAIL` status means a deterministic check
+actionable, for example when verified adapter descriptors reference local-only
+evidence under `work/`. A `FAIL` status means a deterministic check
 failed and the report includes a concrete next action.
 
 Host command probes are opt-in and bounded:

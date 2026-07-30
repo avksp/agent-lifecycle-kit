@@ -11,6 +11,11 @@ Gemini CLI, Qwen Code, and Kimi Code.
 contract tests. `VERIFIED` is host-specific and requires bounded live host
 conformance, live calibration, and lifecycle proof evidence.
 
+Public contract compatibility is checked through
+`agent-public-contract-policy.v1`. That policy stabilizes schema ids, accepted
+deprecated inputs, CLI JSON envelopes and error codes. It does not promote an
+adapter by itself.
+
 ## Runtime support
 
 | Host | Projection | Current maturity | Install/publication claim |
@@ -110,6 +115,12 @@ plus token and/or wall-clock caps. Exceeding a cap pauses for an operator
 decision or follows a bounded auto-reroute policy, but it never upgrades an
 adapter to `VERIFIED` by itself.
 
+Lifecycle cost reports add one more resource check: they separate
+implementation, product validation, pipeline compliance and coordination cost.
+This makes it visible when lifecycle checks are consuming more than the chosen
+task mode allows. Cost accounting is not adapter maturity evidence; it is a
+resource-control receipt for the run.
+
 ## Codex CLI 0.6.0 live evidence
 
 Codex is verified only for the tested local host range:
@@ -119,17 +130,17 @@ Codex is verified only for the tested local host range:
 - Committed redacted evidence summary:
   `docs/adapters/evidence/codex-cli-0.6.0.md`.
 - Live preflight:
-  `tasks/release-0-6/evidence/codex-live-promotion/preflight/codex-preflight-report.json`.
+  `work/release-0-6/evidence/codex-live-promotion/preflight/codex-preflight-report.json`.
 - Live host conformance receipt:
-  `tasks/release-0-6/evidence/codex-live-promotion/live-host-receipts/codex.json`.
+  `work/release-0-6/evidence/codex-live-promotion/live-host-receipts/codex.json`.
 - Live host conformance validation:
-  `tasks/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json`.
+  `work/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json`.
 - Live calibration receipt:
-  `tasks/release-0-6/evidence/codex-live-promotion/live-calibration-receipts/codex.json`.
+  `work/release-0-6/evidence/codex-live-promotion/live-calibration-receipts/codex.json`.
 - Live calibration validation:
-  `tasks/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json`.
+  `work/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json`.
 - ALK lifecycle final proof:
-  `tasks/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json`.
+  `work/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json`.
 
 This evidence does not claim universal adapter support, public directory
 approval, or a broader production-promotion platform matrix pass.
@@ -143,19 +154,19 @@ Claude Code is verified only for the tested local host range:
 - Committed redacted evidence summary:
   `docs/adapters/evidence/claude-code-0.5.0.md`.
 - Plan validation:
-  `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/live-host-promotion-plan-validation.json`.
+  `work/release-0-5/evidence/0.5.1-claude-live-promotion/live-host-promotion-plan-validation.json`.
 - Live preflight:
-  `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/preflight/claude-code-preflight-report.json`.
+  `work/release-0-5/evidence/0.5.1-claude-live-promotion/preflight/claude-code-preflight-report.json`.
 - Live host conformance receipt:
-  `tasks/release-0-5/evidence/live-host-receipts/claude-code.json`.
+  `work/release-0-5/evidence/live-host-receipts/claude-code.json`.
 - Live host conformance validation:
-  `tasks/release-0-5/evidence/live-host-conformance-claude-code.json`.
+  `work/release-0-5/evidence/live-host-conformance-claude-code.json`.
 - Live calibration receipt:
-  `tasks/release-0-5/evidence/live-calibration/claude-code.json`.
+  `work/release-0-5/evidence/live-calibration/claude-code.json`.
 - Live calibration validation:
-  `tasks/release-0-5/evidence/live-calibration-verification-claude-code.json`.
+  `work/release-0-5/evidence/live-calibration-verification-claude-code.json`.
 - ALK lifecycle final proof:
-  `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`.
+  `work/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`.
 
 This evidence does not claim universal adapter support, public directory
 approval, or a broader production-promotion platform matrix pass.
@@ -169,17 +180,17 @@ OpenCode is verified only for the tested local host range:
 - Committed redacted evidence summary:
   `docs/adapters/evidence/opencode-glm52-live-2026-07-29.md`.
 - Live preflight:
-  `tasks/release-0-7/evidence/opencode/preflight/opencode-glm52-preflight-report.json`.
+  `work/release-0-7/evidence/opencode/preflight/opencode-glm52-preflight-report.json`.
 - Live host conformance receipt:
-  `tasks/release-0-7/evidence/opencode/live-host-receipts/opencode.json`.
+  `work/release-0-7/evidence/opencode/live-host-receipts/opencode.json`.
 - Live host conformance validation:
-  `tasks/release-0-7/evidence/opencode/live-host-conformance-opencode.json`.
+  `work/release-0-7/evidence/opencode/live-host-conformance-opencode.json`.
 - Live calibration receipt:
-  `tasks/release-0-7/evidence/opencode/live-calibration-receipts/opencode.json`.
+  `work/release-0-7/evidence/opencode/live-calibration-receipts/opencode.json`.
 - Live calibration validation:
-  `tasks/release-0-7/evidence/opencode/live-calibration-verification-opencode.json`.
+  `work/release-0-7/evidence/opencode/live-calibration-verification-opencode.json`.
 - ALK lifecycle final proof:
-  `tasks/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json`.
+  `work/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json`.
 
 This evidence does not claim universal adapter support, npm publication, public
 directory approval, or a broader production-promotion platform matrix pass.
@@ -193,17 +204,17 @@ Hermes is verified only for the tested local host range:
 - Committed redacted evidence summary:
   `docs/adapters/evidence/hermes-glm52-live-2026-07-29.md`.
 - Live preflight:
-  `tasks/release-0-8/evidence/hermes/preflight/hermes-glm52-preflight-report.json`.
+  `work/release-0-8/evidence/hermes/preflight/hermes-glm52-preflight-report.json`.
 - Live host conformance receipt:
-  `tasks/release-0-8/evidence/hermes/live-host-receipts/hermes.json`.
+  `work/release-0-8/evidence/hermes/live-host-receipts/hermes.json`.
 - Live host conformance validation:
-  `tasks/release-0-8/evidence/hermes/live-host-conformance-hermes.json`.
+  `work/release-0-8/evidence/hermes/live-host-conformance-hermes.json`.
 - Live calibration receipt:
-  `tasks/release-0-8/evidence/hermes/live-calibration-receipts/hermes.json`.
+  `work/release-0-8/evidence/hermes/live-calibration-receipts/hermes.json`.
 - Live calibration validation:
-  `tasks/release-0-8/evidence/hermes/live-calibration-verification-hermes.json`.
+  `work/release-0-8/evidence/hermes/live-calibration-verification-hermes.json`.
 - ALK lifecycle final proof:
-  `tasks/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json`.
+  `work/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json`.
 
 This evidence does not claim universal adapter support, public directory
 approval, or a broader production-promotion platform matrix pass.
@@ -217,17 +228,17 @@ Qwen Code is verified only for the tested local host range:
 - Committed redacted evidence summary:
   `docs/adapters/evidence/qwen-code-glm52-live-2026-07-29.md`.
 - Live preflight:
-  `tasks/release-0-11/evidence/qwen-code/live-preflight/qwen-code-preflight-report.json`.
+  `work/release-0-11/evidence/qwen-code/live-preflight/qwen-code-preflight-report.json`.
 - Live host conformance receipt:
-  `tasks/release-0-11/evidence/qwen-code/live-host-receipts/qwen-code.json`.
+  `work/release-0-11/evidence/qwen-code/live-host-receipts/qwen-code.json`.
 - Live host conformance validation:
-  `tasks/release-0-11/evidence/qwen-code/live-host-conformance-qwen-code.json`.
+  `work/release-0-11/evidence/qwen-code/live-host-conformance-qwen-code.json`.
 - Live calibration receipt:
-  `tasks/release-0-11/evidence/qwen-code/live-calibration-receipts/qwen-code.json`.
+  `work/release-0-11/evidence/qwen-code/live-calibration-receipts/qwen-code.json`.
 - Live calibration validation:
-  `tasks/release-0-11/evidence/qwen-code/live-calibration-verification-qwen-code.json`.
+  `work/release-0-11/evidence/qwen-code/live-calibration-verification-qwen-code.json`.
 - ALK lifecycle final proof:
-  `tasks/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json`.
+  `work/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json`.
 
 This evidence does not claim universal adapter support, public package
 approval, or a broader production-promotion platform matrix pass.

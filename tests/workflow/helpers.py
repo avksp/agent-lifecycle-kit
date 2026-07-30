@@ -69,8 +69,8 @@ def _write_state(
                         "executionPolicy": {"network": "denied", "approvals": "none"},
                         "required": True,
                         "artifactPaths": {
-                            "result": "tasks/WS-01/attempt-{attempt}/task-result.json",
-                            "review": "tasks/WS-01/attempt-{attempt}/task-review.json",
+                            "result": "work/WS-01/attempt-{attempt}/task-result.json",
+                            "review": "work/WS-01/attempt-{attempt}/task-review.json",
                         },
                         "packet": {
                             "sha256": "1" * 64,
@@ -257,7 +257,7 @@ def _pause_budget_overrun(
         source_revision="source",
         reason="launch",
     )
-    usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+    usage_path = "work/WS-01/attempt-1/model-usage-receipt.json"
     receipt = _model_usage_receipt(route)
     receipt["usage"]["billableTokens"] = route["maxBillableTokens"] + 1
     write_json_create(root / usage_path, receipt)
@@ -271,7 +271,7 @@ def _pause_budget_overrun(
         source_revision="source",
         usage_receipt_path=usage_path,
         budget_policy_path=policy_path,
-        decision_receipt_path="tasks/WS-01/attempt-1/budget-decision.json",
+        decision_receipt_path="work/WS-01/attempt-1/budget-decision.json",
         reason="budget overrun",
     )
 

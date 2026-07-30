@@ -476,7 +476,7 @@ def _evidence_root_for_plan(plan: dict[str, Any], plan_path: Path) -> str:
         manifest_root = _release_root_from_repo_path(shared_inputs.get("planManifest"))
         if manifest_root:
             return f"{manifest_root}/evidence/"
-    return "tasks/release-0-3/evidence/"
+    return "work/release-0-3/evidence/"
 
 
 def _release_root_from_repo_path(value: Any) -> str | None:
@@ -485,7 +485,7 @@ def _release_root_from_repo_path(value: Any) -> str | None:
     parts = value.split("/")
     for index, part in enumerate(parts[:-1]):
         if part == "tasks" and parts[index + 1].startswith("release-"):
-            return f"tasks/{parts[index + 1]}"
+            return f"work/{parts[index + 1]}"
     return None
 
 

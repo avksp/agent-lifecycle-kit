@@ -16,6 +16,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_diagnose_parser(subparsers)
     _add_diagnostics_parser(subparsers)
     _add_schema_parser(subparsers)
+    _add_contract_parser(subparsers)
     subparsers.add_parser("neutrality", help="run neutrality subcommands")
     _add_quality_parser(subparsers)
     _add_report_parser(subparsers)
@@ -26,6 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_followup_parser(subparsers)
     add_worktree_parser(subparsers)
     _add_model_parser(subparsers)
+    _add_metrics_parser(subparsers)
     _add_runner_parser(subparsers)
     _add_tier_parser(subparsers)
     _add_specification_parser(subparsers)
@@ -66,6 +68,15 @@ def _add_schema_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     schema_sub.add_parser("list")
     show = schema_sub.add_parser("show")
     show.add_argument("schema_id")
+
+
+def _add_contract_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    contract = subparsers.add_parser("contract", help="public contract commands")
+    contract_sub = contract.add_subparsers(dest="contract_command", required=True)
+    policy = contract_sub.add_parser("policy")
+    policy.add_argument("--out")
+    check = contract_sub.add_parser("check")
+    check.add_argument("--policy")
 
 
 def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -252,6 +263,13 @@ def _add_model_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     model_usage_check.add_argument("--receipt", required=True)
     model_usage_check.add_argument("--route-decision")
     model_usage_check.add_argument("--budget-targets")
+
+
+def _add_metrics_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    metrics = subparsers.add_parser("metrics", help="resource and lifecycle metrics commands")
+    metrics_sub = metrics.add_subparsers(dest="metrics_command", required=True)
+    cost_check = metrics_sub.add_parser("cost-check")
+    cost_check.add_argument("--receipt", required=True)
 
 
 def _add_runner_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

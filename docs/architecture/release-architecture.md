@@ -9,6 +9,8 @@ The offline candidate is local and reproducible. It assembles a
 content-addressed inventory from the source tree, documentation, shared skills,
 adapters, conformance data, tests and governance files. It validates support
 matrix and deferred-promotion contracts without claiming external execution.
+It also validates the public contract policy so schema ids, CLI JSON envelopes
+and stable error codes remain predictable for adapters and release scripts.
 
 Production promotion is intentionally separate. It requires signed external
 receipts for platform matrix execution, release neutrality, live host lifecycle
@@ -39,3 +41,14 @@ Local execution gates run before any production-promotion claim:
 These gates make local completion more honest, but they do not promote an
 adapter to `VERIFIED`. Promotion still requires the separate live host
 conformance and calibration receipts described above.
+
+## Resource Evidence
+
+Lifecycle cost accounting is release evidence for resource discipline. A cost
+report separates implementation, product validation, pipeline compliance and
+coordination so a release can show that ALK is helping task delivery instead of
+spending hidden effort on its own process.
+
+Strict and release modes may run deeper checks, but over-limit pipeline cost
+needs an explicit reason. The cost receipt does not replace tests, review,
+support matrix validation or final proof.

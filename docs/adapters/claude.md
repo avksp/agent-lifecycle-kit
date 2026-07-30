@@ -27,11 +27,11 @@ Current verified range:
 - Committed redacted evidence summary:
   `docs/adapters/evidence/claude-code-0.5.0.md`.
 - Host conformance:
-  `tasks/release-0-5/evidence/live-host-conformance-claude-code.json`.
+  `work/release-0-5/evidence/live-host-conformance-claude-code.json`.
 - Live calibration:
-  `tasks/release-0-5/evidence/live-calibration-verification-claude-code.json`.
+  `work/release-0-5/evidence/live-calibration-verification-claude-code.json`.
 - Full lifecycle proof:
-  `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`.
+  `work/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`.
 
 ## Event bridge
 

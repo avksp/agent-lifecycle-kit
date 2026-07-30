@@ -7,14 +7,14 @@ is explicitly refreshed and locked.
 
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -v
-PYTHONPATH=src python -m agent_lifecycle plan check --manifest tasks/release-0-3/plan.manifest.json --lock tasks/release-0-3/plan.lock.json
-PYTHONPATH=src python tests/contracts/run_digest_authority_check.py --evidence tasks/release-0-3/evidence/digest-authority-tests.json
-PYTHONPATH=src python tools/release/verify_negative_suite_coverage.py --catalog tasks/release-0-3/05-validation-and-evidence.md --tests-root tests --expected-range NEG-R03-01..NEG-R03-20 --evidence tasks/release-0-3/evidence/negative-suite-coverage.json
-PYTHONPATH=src python tools/release/verify_task_packet_context.py --manifest tasks/release-0-3/plan.manifest.json --profile profiles/small-context-profile.v1.json --summary tests/release/fixtures/release-0-3/context-summary.json --out-dir tasks/release-0-3/workflow/task-packets --target-windows 4k-strict,8k --evidence tasks/release-0-3/evidence/context-fit.json
+PYTHONPATH=src python -m agent_lifecycle plan check --manifest work/release-0-3/plan.manifest.json --lock work/release-0-3/plan.lock.json
+PYTHONPATH=src python tests/contracts/run_digest_authority_check.py --evidence work/release-0-3/evidence/digest-authority-tests.json
+PYTHONPATH=src python tools/release/verify_negative_suite_coverage.py --catalog work/release-0-3/05-validation-and-evidence.md --tests-root tests --expected-range NEG-R03-01..NEG-R03-20 --evidence work/release-0-3/evidence/negative-suite-coverage.json
+PYTHONPATH=src python tools/release/verify_task_packet_context.py --manifest work/release-0-3/plan.manifest.json --profile profiles/small-context-profile.v1.json --summary tests/release/fixtures/release-0-3/context-summary.json --out-dir work/release-0-3/workflow/task-packets --target-windows 4k-strict,8k --evidence work/release-0-3/evidence/context-fit.json
 
-EVIDENCE_DIR=tasks/release-0-3/evidence/release-candidate
-CANDIDATE_DIR=tasks/release-0-3/evidence/release-candidate
-RELEASE_NEUTRALITY_REPORT=tasks/release-0-3/evidence/release-candidate/release-neutrality-report.json
+EVIDENCE_DIR=work/release-0-3/evidence/release-candidate
+CANDIDATE_DIR=work/release-0-3/evidence/release-candidate
+RELEASE_NEUTRALITY_REPORT=work/release-0-3/evidence/release-candidate/release-neutrality-report.json
 rm -rf "$EVIDENCE_DIR" "$CANDIDATE_DIR"
 mkdir -p "$EVIDENCE_DIR" "$CANDIDATE_DIR" "$(dirname "$RELEASE_NEUTRALITY_REPORT")"
 PYTHONPATH=src python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json --evidence "$EVIDENCE_DIR"/support-matrix-contract.json
@@ -23,7 +23,7 @@ PYTHONPATH=src python tools/release/assemble_release_candidate.py --manifest pla
 PYTHONPATH=src python tools/release/verify_release_candidate.py --inventory "$CANDIDATE_DIR"/inventory.json --evidence "$EVIDENCE_DIR"/release-verification.json
 python -c "from pathlib import Path; Path('$RELEASE_NEUTRALITY_REPORT').unlink(missing_ok=True)"
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --report "$RELEASE_NEUTRALITY_REPORT" --require-zero-findings
-PYTHONPATH=src python tests/package/run_packaging_smoke.py --dist-dir /tmp/agent-lifecycle-r03-dist --evidence tasks/release-0-3/evidence/packaging-smoke.json
+PYTHONPATH=src python tests/package/run_packaging_smoke.py --dist-dir /tmp/agent-lifecycle-r03-dist --evidence work/release-0-3/evidence/packaging-smoke.json
 ```
 
 The current `plans/standalone-v1` directory is historical release evidence. It
@@ -41,7 +41,7 @@ python - <<'PY'
 import json
 from pathlib import Path
 
-payload = json.loads(Path("tasks/release-0-3/evidence/release-candidate/final-candidate-audit.json").read_text(encoding="utf-8"))
+payload = json.loads(Path("work/release-0-3/evidence/release-candidate/final-candidate-audit.json").read_text(encoding="utf-8"))
 codes = {item.get("code") for item in payload.get("blockers", [])}
 assert payload.get("status") == "FAIL", payload
 assert "lineage-check-failed" in codes, payload

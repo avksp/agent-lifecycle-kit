@@ -63,7 +63,7 @@ class ContractTests(unittest.TestCase):
             operation_id="op-1",
             capability="task-attempt",
             inputs={"taskId": "WS-01"},
-            outputs=[{"role": "task-result", "path": "tasks/WS-01/attempt-1/task-result.json"}],
+            outputs=[{"role": "task-result", "path": "work/WS-01/attempt-1/task-result.json"}],
             constraints={"usageReceiptRequired": True},
             model_route={
                 "schemaVersion": "agent-lifecycle-model-route-decision.v1",
@@ -113,6 +113,8 @@ class ContractTests(unittest.TestCase):
         index = list_schemas()
         ids = {item["id"] for item in index["schemas"]}
         self.assertIn("agent-host-operation-request.v1", ids)
+        self.assertIn("agent-lifecycle-version.v1", ids)
+        self.assertIn("agent-lifecycle-schema-index.v1", ids)
         self.assertIn("agent-adapter-event.v1", ids)
         self.assertIn("agent-adapter-event-stream-validation.v1", ids)
         self.assertIn("agent-adapter-event-stream-receipt.v1", ids)
@@ -184,6 +186,10 @@ class ContractTests(unittest.TestCase):
             "agent-packaging-smoke-evidence.v1",
             "agent-adapter-scaffold-result.v1",
             "agent-workflow-lineage-check.v1",
+            "agent-public-contract-policy.v1",
+            "agent-public-contract-policy-validation.v1",
+            "agent-lifecycle-cost-report.v1",
+            "agent-lifecycle-cost-validation.v1",
         ]:
             self.assertIn(schema_id, ids)
         self.assertEqual(get_schema("agent-lifecycle-error.v1")["additionalProperties"], False)

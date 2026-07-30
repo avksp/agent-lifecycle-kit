@@ -21,4 +21,5 @@ release/candidate/evidence/
 plans/**/.agent-plan/**/*.lock
 plans/**/workflow/*.lock
 
+work/
 tasks/
