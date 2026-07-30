@@ -27,11 +27,43 @@ class ReadinessDiagnosticsTests(unittest.TestCase):
         self.assertFalse(report["productionPromotionClaimed"])
         self.assertFalse(report["maturityChangesClaimed"])
         self.assertEqual(report["summary"]["adapterCount"], 1)
+        self.assertEqual(report["summary"]["missingTrackedEvidenceSummaryCount"], 0)
+        self.assertGreater(report["summary"]["missingLocalRawReceiptCount"], 0)
         self.assertEqual(report["adapters"][0]["host"], "codex")
         self.assertFalse(report["adapters"][0]["productionPromotionClaimed"])
         self.assertFalse(report["adapters"][0]["maturityChangeClaimed"])
         self.assertEqual(report["installPlans"][0]["status"], "DRY_RUN")
         self.assertNotIn(str(ROOT), rendered)
+
+    def test_tracked_evidence_summary_and_local_raw_receipts_are_classified_separately(self) -> None:
+        report = build_readiness_report(
+            project_root=ROOT,
+            adapter_paths=[Path("adapters/codex/adapter.descriptor.json")],
+            include_install_plans=False,
+        )
+
+        evidence = report["adapters"][0]["liveEvidence"]
+        self.assertEqual(evidence["trackedSummaryStatus"], "AVAILABLE")
+        self.assertEqual(evidence["trackedSummaryPath"], "docs/adapters/evidence/codex-cli-0.6.0.md")
+        self.assertEqual(evidence["missingTrackedEvidencePaths"], [])
+        self.assertGreater(evidence["missingLocalRawReceiptCount"], 0)
+        self.assertTrue(all(path.startswith("work/") for path in evidence["missingLocalRawReceiptPaths"]))
+        self.assertEqual(report["evidence"]["missingTrackedEvidenceSummaryCount"], 0)
+        self.assertGreater(report["evidence"]["missingLocalRawReceiptCount"], 0)
+
+    def test_missing_tracked_evidence_summary_is_release_warning(self) -> None:
+        report = build_readiness_report(
+            project_root=ROOT,
+            adapter_paths=[Path("adapters/codex/adapter.descriptor.json")],
+            include_install_plans=False,
+            evidence_summary_index=Path("docs/adapters/evidence/missing-index.json"),
+        )
+
+        evidence = report["adapters"][0]["liveEvidence"]
+        self.assertEqual(report["status"], "WARN")
+        self.assertEqual(evidence["trackedSummaryStatus"], "MISSING")
+        self.assertGreater(report["evidence"]["missingTrackedEvidenceSummaryCount"], 0)
+        self.assertIn("restore tracked redacted evidence summaries before a release claim", report["nextActions"])
 
     def test_host_probe_cap_is_recorded_without_expanding_to_all_adapters(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
