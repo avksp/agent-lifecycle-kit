@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 0.18.0 - 2026-07-30
+
+- Added neutral adapter event capture declarations, event stream receipts and
+  conformance checks for declared event producers.
+- Added negative coverage for hidden failed commands and false completion
+  claims in adapter event streams.
+- Added structured review verdict validation with separate requirement fit,
+  implementation quality, evidence quality and residual risk dimensions.
+
 ## 0.17.0 - 2026-07-30
 
 - Added schema-backed follow-up registers with validation, close results and

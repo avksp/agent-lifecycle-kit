@@ -3,7 +3,7 @@
   "adapterId": "hermes",
   "host": "hermes",
   "maturity": "VERIFIED",
-  "descriptorDigest": "43e57e292ffc105bbc19130bf4913fdf041163a19fefb1f3bc30408e35468a80",
+  "descriptorDigest": "602e11df02941c9d6b9241ec754778d74d8abfe4778f44adb80832a00fa522cc",
   "unsupportedOperationPolicy": "fail-closed",
   "coreSemantics": "delegated-to-agent-lifecycle-core",
   "capabilities": [
@@ -89,6 +89,15 @@
       "liveEvidenceRequiredForVerified": true
     },
     {
+      "name": "adapter-event-stream",
+      "mapping": "agent-adapter-event.v1",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false
+    },
+    {
       "name": "result-collection",
       "mapping": "task-result-artifact",
       "offlineConformance": "deterministic",
@@ -138,6 +147,20 @@
     "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
     "unsupportedOperations": "fail-closed",
     "providerModelNamesInCore": false
+  },
+  "eventCapture": {
+    "status": "DECLARED",
+    "portableEventSchema": "agent-adapter-event.v1",
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false
   },
   "promotion": {
     "verifiedRequiresLiveTestedHostRange": true,

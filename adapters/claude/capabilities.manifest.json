@@ -3,7 +3,7 @@
   "adapterId": "claude",
   "host": "claude-code",
   "maturity": "VERIFIED",
-  "descriptorDigest": "121e3398824055c6deb947ebdf12d141cc458d18ffe02240c52be693058fd2e3",
+  "descriptorDigest": "e37b94274b8e2ba471c525b901fbefa0e9340bd2f3955fe71cbb2924b6a761db",
   "unsupportedOperationPolicy": "fail-closed",
   "coreSemantics": "delegated-to-agent-lifecycle-core",
   "capabilities": [
@@ -147,6 +147,20 @@
     "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
     "unsupportedOperations": "fail-closed",
     "providerModelNamesInCore": false
+  },
+  "eventCapture": {
+    "status": "DECLARED",
+    "portableEventSchema": "agent-adapter-event.v1",
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false
   },
   "promotion": {
     "verifiedRequiresLiveTestedHostRange": true,

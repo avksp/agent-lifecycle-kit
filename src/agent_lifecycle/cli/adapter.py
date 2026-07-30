@@ -11,11 +11,13 @@ from agent_lifecycle.diagnostics import build_adapter_install_plan
 from agent_lifecycle.host_protocol import (
     inspect_adapter_descriptor,
     require_adapter_event_stream_pass,
+    require_event_capture_pass,
     require_adapter_inspection_pass,
     require_adapter_validation_pass,
     scaffold_adapter,
     validate_adapter_descriptor,
     validate_adapter_event_stream,
+    validate_event_capture_conformance,
 )
 
 
@@ -38,6 +40,12 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     adapter_install_plan.add_argument("--project-root", default=".")
     adapter_event = adapter_sub.add_parser("event-check")
     adapter_event.add_argument("--event", action="append", required=True)
+    adapter_event_capture = adapter_sub.add_parser("event-capture-check")
+    adapter_event_capture.add_argument("--descriptor", required=True)
+    adapter_event_capture.add_argument("--projection")
+    adapter_event_capture.add_argument("--capability-manifest")
+    adapter_event_capture.add_argument("--event", action="append", required=True)
+    adapter_event_capture.add_argument("--receipt", required=True)
     adapter_scaffold = adapter_sub.add_parser("scaffold")
     adapter_scaffold.add_argument("--host", required=True)
     adapter_scaffold.add_argument("--target", required=True)
@@ -80,6 +88,21 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
     if args.adapter_command == "event-check":
         events = [read_json_object(Path(path), label="adapter event") for path in args.event]
         return require_adapter_event_stream_pass(validate_adapter_event_stream(events))
+    if args.adapter_command == "event-capture-check":
+        descriptor = read_json_object(Path(args.descriptor), label="adapter descriptor")
+        projection = read_json_object(Path(args.projection), label="adapter projection") if args.projection else None
+        capability_manifest = read_json_object(Path(args.capability_manifest), label="capability manifest") if args.capability_manifest else None
+        receipt = read_json_object(Path(args.receipt), label="adapter event stream receipt")
+        events = [read_json_object(Path(path), label="adapter event") for path in args.event]
+        return require_event_capture_pass(
+            validate_event_capture_conformance(
+                descriptor=descriptor,
+                projection=projection,
+                capability_manifest=capability_manifest,
+                events=events,
+                receipt=receipt,
+            )
+        )
     if args.adapter_command == "scaffold":
         return scaffold_adapter(
             host=args.host,

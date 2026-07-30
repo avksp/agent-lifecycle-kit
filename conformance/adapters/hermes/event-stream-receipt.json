@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "adapterId": "hermes",
+  "host": "hermes",
+  "runId": "offline-conformance",
+  "taskId": "adapter-event-capture",
+  "operationId": "offline-event-capture-hermes",
+  "producer": {
+    "id": "hermes-neutral-event-producer",
+    "boundary": "adapter-owned",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
+  "descriptorDigest": "602e11df02941c9d6b9241ec754778d74d8abfe4778f44adb80832a00fa522cc",
+  "eventStreamDigest": "81576ea72843f6cc49c60ff113d3977f35cacab32555ee1df67a6f04d6fc7f2b",
+  "eventCount": 6,
+  "eventTypes": [
+    "session.started",
+    "task.launched",
+    "command.completed",
+    "writes.summarized",
+    "usage.reported",
+    "task.completed"
+  ],
+  "terminalEvent": "task.completed",
+  "emittedAt": "2026-07-30T00:18:01Z",
+  "productionPromotionClaimed": false,
+  "receiptDigest": "e5965da3cbdcf7613691098d22e7e29612a85179cdf28f1b9ad3bbb99990c4a7"
+}

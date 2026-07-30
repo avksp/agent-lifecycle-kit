@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_lifecycle.audit import validate_review_verdict
 from agent_lifecycle.contracts import LifecycleError
 
 
@@ -147,6 +148,11 @@ def validate_task_review(
     findings = review.get("findings")
     if not isinstance(findings, list):
         raise LifecycleError("task-review-invalid", "task review findings must be an array")
+    structured_verdict = review.get("reviewVerdict")
+    if structured_verdict is not None:
+        validation = validate_review_verdict(structured_verdict, findings=findings)
+        if validation["status"] == "FAIL":
+            raise LifecycleError("task-review-verdict-invalid", "task review structured verdict is invalid", {"validation": validation})
     open_medium_plus = [
         finding.get("id")
         for finding in findings

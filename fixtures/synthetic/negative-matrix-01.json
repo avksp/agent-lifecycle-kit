@@ -80,6 +80,22 @@
         "recovery-replay"
       ],
       "expectedVerdict": "RESUME_OR_BLOCK"
+    },
+    {
+      "caseId": "hidden-failed-command-event",
+      "tags": [
+        "adapter-events",
+        "failed-command"
+      ],
+      "expectedVerdict": "BLOCKED"
+    },
+    {
+      "caseId": "false-completion-event-claim",
+      "tags": [
+        "adapter-events",
+        "false-completion"
+      ],
+      "expectedVerdict": "BLOCKED"
     }
   ]
 }

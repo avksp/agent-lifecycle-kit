@@ -61,5 +61,19 @@
     {"name": "usage-attestation", "mapping": "host-usage-ledger", "offlineConformance": "synthetic"},
     {"name": "task-audit", "mapping": "audit-plan-implementation", "offlineConformance": "deterministic"},
     {"name": "final-audit", "mapping": "audit-plan-implementation", "offlineConformance": "deterministic"}
-  ]
+  ],
+  "eventCapture": {
+    "status": "DECLARED",
+    "portableEventSchema": "agent-adapter-event.v1",
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false
+  }
 }

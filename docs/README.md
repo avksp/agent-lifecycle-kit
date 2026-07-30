@@ -15,6 +15,8 @@ and does not depend on a source project.
 - [Goal continuity](reference/goal-continuity.md)
 - [Follow-up register](reference/follow-up-register.md)
 - [Worktree isolation receipts](reference/worktree-isolation.md)
+- [Adapter event capture](reference/adapter-event-capture.md)
+- [Review verdicts](reference/review-verdict.md)
 - [Controlled runner](reference/runner.md)
 - [Production promotion contract](reference/production-promotion.md)
 - [Live cost calibration](reference/live-cost-calibration.md)

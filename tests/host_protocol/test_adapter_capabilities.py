@@ -27,7 +27,8 @@ class AdapterCapabilityManifestTests(unittest.TestCase):
         self.assertFalse(manifest["promotion"]["productionPromotionClaimed"])
         self.assertEqual(manifest["runtimeBoundary"]["lifecycleSemantics"], "delegated-to-agent-lifecycle-core")
         self.assertFalse(manifest["runtimeBoundary"]["providerModelNamesInCore"])
-        self.assertEqual(len(manifest["capabilities"]), 13)
+        self.assertEqual(len(manifest["capabilities"]), len(descriptor["operations"]))
+        self.assertIn("adapter-event-stream", {item["name"] for item in manifest["capabilities"]})
         self.assertEqual(validation["status"], "PASS")
 
     def test_manifest_validation_fails_on_descriptor_drift(self) -> None:

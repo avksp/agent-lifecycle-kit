@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
 from release_common import file_identity, load_json, write_json
 
-from agent_lifecycle.host_protocol import validate_adapter_descriptor, validate_capability_manifest
+from agent_lifecycle.host_protocol import validate_adapter_descriptor, validate_capability_manifest, validate_event_capture_conformance
 
 
 def main() -> int:
@@ -60,12 +61,18 @@ def _check_adapter(
     conformance_path = conformance_root / adapter_id / "offline-baseline.json"
     descriptor_path = adapter_dir / "adapter.descriptor.json"
     capability_path = adapter_dir / "capabilities.manifest.json"
+    projection_path = adapter_dir / "projection.manifest.json"
+    event_stream_path = conformance_root / adapter_id / "event-stream.json"
+    event_receipt_path = conformance_root / adapter_id / "event-stream-receipt.json"
     check: dict[str, Any] = {
         "adapterId": adapter_id,
         "status": "PASS",
         "descriptor": _identity_if_file(descriptor_path),
         "capabilityManifest": _identity_if_file(capability_path),
+        "projection": _identity_if_file(projection_path),
         "offlineBaseline": _identity_if_file(conformance_path),
+        "eventStream": _identity_if_file(event_stream_path),
+        "eventStreamReceipt": _identity_if_file(event_receipt_path),
         "validations": {},
     }
     before = len(blockers)
@@ -82,16 +89,28 @@ def _check_adapter(
     descriptor = load_json(descriptor_path)
     manifest = load_json(capability_path)
     conformance = load_json(conformance_path)
+    projection = load_json(projection_path) if projection_path.is_file() else None
+    events = _load_json_array(event_stream_path) if event_stream_path.is_file() else None
+    event_receipt = load_json(event_receipt_path) if event_receipt_path.is_file() else None
     descriptor_validation = validate_adapter_descriptor(descriptor, baseline=baseline)
     capability_validation = validate_capability_manifest(manifest, descriptor=descriptor)
+    event_capture_validation = validate_event_capture_conformance(
+        descriptor=descriptor,
+        projection=projection,
+        capability_manifest=manifest,
+        events=events,
+        receipt=event_receipt,
+    )
     check["host"] = descriptor.get("host")
     check["maturity"] = descriptor.get("maturity")
     check["validations"] = {
         "descriptor": descriptor_validation["status"],
         "capabilityManifest": capability_validation["status"],
+        "eventCapture": event_capture_validation["status"],
     }
     _collect_validation_blockers(adapter_id, descriptor_validation, blockers)
     _collect_validation_blockers(adapter_id, capability_validation, blockers)
+    _collect_validation_blockers(adapter_id, event_capture_validation, blockers)
     _validate_offline_baseline(adapter_id, conformance, descriptor, manifest, baseline, blockers)
     _validate_native_manifest(adapter_id, conformance, blockers)
     check["status"] = "PASS" if len(blockers) == before else "FAIL"
@@ -151,6 +170,13 @@ def _collect_validation_blockers(adapter_id: str, validation: dict[str, Any], bl
             item = dict(blocker)
             item["adapterId"] = adapter_id
             blockers.append(item)
+
+
+def _load_json_array(path: Path) -> list[dict[str, Any]]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+        raise SystemExit(f"expected JSON array of objects: {path}")
+    return value
 
 
 def _selected_hosts(adapter_root: Path, requested: list[str]) -> list[str]:

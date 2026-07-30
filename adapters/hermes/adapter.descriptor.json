@@ -95,6 +95,11 @@
       "offlineConformance": "synthetic"
     },
     {
+      "name": "adapter-event-stream",
+      "mapping": "agent-adapter-event.v1",
+      "offlineConformance": "deterministic"
+    },
+    {
       "name": "result-collection",
       "mapping": "task-result-artifact",
       "offlineConformance": "deterministic"
@@ -114,5 +119,19 @@
       "mapping": "audit-plan-implementation",
       "offlineConformance": "deterministic"
     }
-  ]
+  ],
+  "eventCapture": {
+    "status": "DECLARED",
+    "portableEventSchema": "agent-adapter-event.v1",
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false
+  }
 }

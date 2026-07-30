@@ -159,6 +159,8 @@ def _add_audit_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     ownership.add_argument("--path", action="append", default=[])
     ownership.add_argument("--fail-on-unowned", action="store_true")
     ownership.add_argument("--fail-on-forbidden", action="store_true")
+    review_check = audit_sub.add_parser("review-check")
+    review_check.add_argument("--review", required=True)
 
 
 def _add_context_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

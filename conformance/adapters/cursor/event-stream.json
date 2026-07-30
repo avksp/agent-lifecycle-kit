@@ -1,0 +1,106 @@
+[
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-cursor-01",
+    "host": "cursor",
+    "adapterId": "cursor",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-cursor",
+    "sequence": 1,
+    "eventType": "session.started",
+    "status": "INFO",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "lifecycle-transition"
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-cursor-02",
+    "host": "cursor",
+    "adapterId": "cursor",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-cursor",
+    "sequence": 2,
+    "eventType": "task.launched",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "lifecycle-transition"
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-cursor-03",
+    "host": "cursor",
+    "adapterId": "cursor",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-cursor",
+    "sequence": 3,
+    "eventType": "command.completed",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "command",
+      "command": "agent-lifecycle adapter event-check",
+      "exitCode": 0
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-cursor-04",
+    "host": "cursor",
+    "adapterId": "cursor",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-cursor",
+    "sequence": 4,
+    "eventType": "writes.summarized",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "file-change",
+      "changedFiles": [
+        "adapters/cursor/adapter.descriptor.json"
+      ]
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-cursor-05",
+    "host": "cursor",
+    "adapterId": "cursor",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-cursor",
+    "sequence": 5,
+    "eventType": "usage.reported",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "model-usage",
+      "inputTokens": 64,
+      "outputTokens": 16
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-cursor-06",
+    "host": "cursor",
+    "adapterId": "cursor",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-cursor",
+    "sequence": 6,
+    "eventType": "task.completed",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "lifecycle-transition",
+      "resultPath": "conformance/adapters/cursor/offline-baseline.json"
+    }
+  }
+]

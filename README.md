@@ -121,6 +121,38 @@ validates the receipt and records its digest in transition history.
 
 See [worktree isolation receipts](docs/reference/worktree-isolation.md).
 
+## Adapter event capture
+
+Adapter event capture records host activity as neutral ALK evidence without
+putting provider-specific callback names in core. Adapter manifests declare
+`adapter-event-stream` support and use the existing `agent-adapter-event.v1`
+schema. `agent-adapter-event-stream-receipt.v1` binds the stream to descriptor
+and event digests, while `agent-adapter-event-capture-validation.v1` fails
+closed when declared capture has no stream, no receipt, malformed events or
+stale digests.
+
+The event stream catches false completion claims: a failed command cannot be
+hidden behind `task.completed`. Compact event summaries help small local models
+route remediation quickly, while full event and receipt artifacts remain
+available for stronger review.
+
+See [adapter event capture](docs/reference/adapter-event-capture.md).
+
+## Review verdicts
+
+Structured review verdicts split acceptance into requirement fit,
+implementation quality, evidence quality and residual risk. The compact
+`agent-review-verdict.v1` fields route remediation without a long essay, and
+`agent-review-routing-summary.v1` gives small local models the next action
+without hiding full review evidence from larger models.
+
+When a task review includes `reviewVerdict`, workflow task acceptance validates
+it before accepting the task. A review cannot be accepted if a verdict dimension
+fails, MEDIUM+ findings remain open or the remediation route contradicts the
+overall verdict.
+
+See [review verdicts](docs/reference/review-verdict.md).
+
 ## Controlled runner
 
 The runner keeps a narrow `agent-runner-state.v1` execution-loop state around
@@ -278,6 +310,7 @@ agent-lifecycle runner transition --runner <runner.state.json> --state <path-to-
 agent-lifecycle runner stop --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
 agent-lifecycle runner resume --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
+agent-lifecycle audit review-check --review <task-review.json>
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle specification check --specification <specification.json>
 agent-lifecycle plan check --manifest <plan.manifest.json> --lock <plan.lock.json>
@@ -330,6 +363,7 @@ PYTHONPATH=src python -m agent_lifecycle adapter validate --descriptor adapters/
 PYTHONPATH=src python -m agent_lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
 PYTHONPATH=src python -m agent_lifecycle adapter install-plan --descriptor adapters/opencode/adapter.descriptor.json
 PYTHONPATH=src python -m agent_lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
+PYTHONPATH=src python -m agent_lifecycle adapter event-capture-check --descriptor adapters/opencode/adapter.descriptor.json --capability-manifest adapters/opencode/capabilities.manifest.json --receipt conformance/adapters/opencode/event-stream-receipt.json --event <adapter-event-1.json>
 PYTHONPATH=src python -m agent_lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
@@ -337,15 +371,15 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 Implemented core CLI groups are `version`, `diagnose`, `schema`, `workflow status`,
 `workflow next`, `workflow block`, `workflow resolve`, `workflow task-start`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
-`audit ownership`, `tier resolve`, `context profile-check`, `context check`,
+`audit ownership`, `audit review-check`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
 `goal check`, `goal summarize`, `goal update`, `followup check`,
 `followup add`, `followup close`, `followup sweep`, `worktree policy-check`,
 `worktree receipt`, `worktree check`, `runner start`, `runner status`,
 `runner transition`, `runner stop`, `runner resume`, `specification check`,
 `plan check`, `plan acceptance-check`, `task compile`,
-`adapter validate`, `adapter inspect`, `adapter install-plan`, `adapter event-check`, `adapter
-scaffold`, and `neutrality`. Adapter scaffold is template-only and can only
+`adapter validate`, `adapter inspect`, `adapter install-plan`, `adapter event-check`,
+`adapter event-capture-check`, `adapter scaffold`, and `neutrality`. Adapter scaffold is template-only and can only
 create `EXPERIMENTAL` projection skeletons. Adapter inspect records descriptor
 and safe host capability discovery without live model invocation. Runtime
 adapter execution and conformance lifecycle groups remain reserved and fail

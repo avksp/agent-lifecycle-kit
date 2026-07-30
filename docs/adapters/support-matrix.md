@@ -24,6 +24,15 @@ conformance, live calibration, and lifecycle proof evidence.
 | OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | OpenCode CLI 1.18.9 live host conformance, live calibration, and ALK lifecycle proof passed locally; npm publication not claimed |
 | Qwen Code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | Qwen Code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on GLM 5.2 locally; public package approval not claimed |
 
+## Event capture support
+
+Current adapter descriptors and capability manifests declare
+`adapter-event-stream` with the portable `agent-adapter-event.v1` schema.
+Offline conformance checks require `agent-adapter-event-stream-receipt.v1`
+fixtures that bind event stream digests to descriptor digests. This is an
+evidence-quality contract and does not change adapter maturity or claim
+production promotion.
+
 ## Compact context support
 
 The source release includes `profiles/small-context-profile.v1.json` and a
