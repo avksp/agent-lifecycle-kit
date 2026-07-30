@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.6.0 - 2026-07-30
+
+- Added read-only lifecycle policy proposals built from recommendation reports
+  and regression signals.
+- Added `agent-lifecycle policy tune` with explicit `--apply --output` policy
+  artifact writes and compact proposal summaries.
+- Added fail-closed safeguards for invalid recommendations, low-confidence
+  recommendations, protected downgrades and blocking regression signals.
+- Added public contracts for policy proposals, tuned policy artifacts, apply
+  receipts, tune results and regression signal summaries.
+
 ## 1.5.0 - 2026-07-30
 
 - Added advisory lifecycle mode recommendations from accumulated cost reports,

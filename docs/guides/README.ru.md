@@ -22,6 +22,7 @@ CLI и плагинов.
   координация.
 - Детерминированные отчеты о расходе по явным артефактам жизненного цикла.
 - Советы по режиму жизненного цикла на основе накопленных отчетов о расходе.
+- Явные предложения по настройке правил жизненного цикла с откатом.
 - Диагностика готовности без записи файлов и без запуска живых модельных
   вызовов по умолчанию.
 
@@ -56,6 +57,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - `agent-lifecycle workflow`: квитанции задач и финальное доказательство.
 - `agent-lifecycle audit`: проверка плана и реализации.
 - `agent-lifecycle metrics`: отчеты о расходе и их проверка.
+- `agent-lifecycle policy`: предложения по настройке правил жизненного цикла.
 - `agent-lifecycle diagnostics`: редактированные пакеты доказательств.
 - `agent-lifecycle diagnose`: готовность исходного дерева без записи и живых
   вызовов.
@@ -114,6 +116,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
   `agent-behavior-check-run.v1`.
 - Диагностика и статус: `agent-diagnostic-bundle.v1`,
   `agent-readonly-status-view.v1`.
+- Предложения по правилам цикла: `agent-lifecycle-policy-proposal.v1`,
+  `agent-lifecycle-policy-tune-result.v1`.
 
 Полный список: [Public Contracts](../reference/public-contracts.md).
 
