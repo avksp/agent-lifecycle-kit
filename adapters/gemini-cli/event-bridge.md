@@ -1,4 +1,4 @@
-# gemini-cli event bridge
+# Gemini CLI event bridge
 
 This is an EXPERIMENTAL bounded event bridge for Gemini CLI `stream-json`
 output. It translates host-operation invocations into portable

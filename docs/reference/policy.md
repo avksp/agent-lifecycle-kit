@@ -1,4 +1,4 @@
-# Lifecycle Policy Proposals
+# Lifecycle policy proposals
 
 Policy proposals let ALK reduce avoidable lifecycle overhead only after the
 recommendation data is strong enough and the required quality floor is still

@@ -1,4 +1,4 @@
-# Review Verdicts
+# Review verdicts
 
 Structured review verdicts give ALK a compact remediation route without
 replacing the full review artifact. `agent-review-verdict.v1` separates four

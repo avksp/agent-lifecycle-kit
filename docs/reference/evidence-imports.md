@@ -1,4 +1,4 @@
-# Evidence Index and Imports
+# Evidence index and imports
 
 Evidence indexes are optional, disposable summaries over existing lifecycle
 artifacts. They are useful when a reviewer or small local model needs to find

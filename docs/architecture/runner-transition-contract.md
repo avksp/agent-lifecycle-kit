@@ -1,4 +1,4 @@
-# Runner Transition Contract
+# Runner transition contract
 
 The runner defines a provider-neutral state machine that controls task
 execution decisions without replacing workflow state.
@@ -13,7 +13,7 @@ execution decisions without replacing workflow state.
 - Host adapters execute capabilities and produce receipts. They do not own the
   runner transition table.
 
-## Transition Table
+## Transition table
 
 | From | Allowed actions |
 | --- | --- |
@@ -32,7 +32,7 @@ execution decisions without replacing workflow state.
 Every mutating command carries an operation id and expected runner revision.
 Duplicate operations and stale revisions fail closed.
 
-## Resource Rules
+## Resource rules
 
 The runner policy bounds:
 
@@ -44,7 +44,7 @@ The runner policy bounds:
 When any cap would be exceeded, the transition is rejected before state is
 written.
 
-## Patch Restoration
+## Patch restoration
 
 Remediation may reference patch metadata, but the runner only accepts it when:
 
@@ -55,7 +55,7 @@ Remediation may reference patch metadata, but the runner only accepts it when:
 The runner validates patch metadata. It does not apply patches itself and does
 not bypass ownership checks.
 
-## Context Rule
+## Context rule
 
 `agent-runner-snapshot.v1` is the compact continuation view. It carries runner
 status, next allowed actions, budget counters, lineage and recent transitions.

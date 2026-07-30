@@ -1,4 +1,4 @@
-# Budget Reroute Policy
+# Budget reroute policy
 
 Budget caps are safety guards, not task-completion criteria. If a model-backed
 attempt exceeds a route, token, wall-clock, invocation, or metered spend cap, the
@@ -21,7 +21,7 @@ Budget accounting supports three resource modes:
 - `local`: uses the same resource caps as `subscription`, but does not require
   a USD cap.
 
-## Manual Pause
+## Manual pause
 
 ```bash
 agent-lifecycle workflow budget-decision \
@@ -40,7 +40,7 @@ The command writes `agent-lifecycle-budget-decision-receipt.v1`, moves the run
 to `WAITING_FOR_BUDGET_DECISION`, and sets `blocker.code` to
 `BUDGET_DECISION_REQUIRED`.
 
-## Apply A Decision
+## Apply a decision
 
 ```bash
 agent-lifecycle workflow budget-decision \
@@ -62,7 +62,7 @@ The applied receipt is a second immutable
 decision receipt, selected action, operator identity for manual mode, and either
 the next route decision, split packet identity, or explicit cap deltas.
 
-## Critical Reviews
+## Critical reviews
 
 Critical review phases must not automatically downgrade to `budget` or
 `local-compact`. If `forbidDowngradeForCriticalReview` is true and the default
@@ -70,7 +70,7 @@ auto action is a cheaper reroute, the controller selects a stronger route,
 splits the task, continues the same route, or aborts according to the allowed
 actions.
 
-## Local Configuration
+## Local configuration
 
 Concrete provider names, subscription tiers, local model names, and personal
 limits belong in host-local policy files or live evidence. Portable plans and

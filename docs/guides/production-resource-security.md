@@ -1,10 +1,10 @@
-# Production Resource And Security Guide
+# Production resource and security guide
 
 ALK should help finish the user's task with evidence, not spend most of the run
 proving its own process. Use the lightest lifecycle mode that still matches
 task risk.
 
-## Resource Mode
+## Resource mode
 
 - Use `light` for small, low-risk edits with narrow ownership and quick checks.
 - Use `standard` for ordinary feature and bug-fix work.
@@ -24,7 +24,7 @@ If pipeline compliance exceeds the mode limits, record why the stricter path
 was needed. Do not treat an expensive lifecycle run as success by itself; the
 implementation and product validation still have to pass.
 
-## Small Local Models
+## Small local models
 
 Small models should receive compact snapshots and receipts first:
 
@@ -36,7 +36,7 @@ Small models should receive compact snapshots and receipts first:
 These compact artifacts guide execution. They do not replace full evidence for
 final review.
 
-## Security Boundary
+## Security boundary
 
 Release and production checks must keep these boundaries:
 

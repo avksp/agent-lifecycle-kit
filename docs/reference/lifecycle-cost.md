@@ -1,4 +1,4 @@
-# Lifecycle Cost Accounting
+# Lifecycle cost accounting
 
 Lifecycle cost accounting separates work that solves the user task from work
 that proves the lifecycle was followed. This keeps ALK useful instead of
