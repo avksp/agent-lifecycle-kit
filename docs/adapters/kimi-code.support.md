@@ -1,4 +1,4 @@
-# kimi-code support matrix stub
+# Kimi Code support matrix stub
 
 Initial maturity: `EXPERIMENTAL`.
 

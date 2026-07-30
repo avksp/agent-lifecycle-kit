@@ -1,4 +1,4 @@
-# Security Policy
+# Security policy
 
 Agent Lifecycle Kit is pre-release software. Treat all native host adapters as
 experimental unless the release support matrix marks a host as `VERIFIED`.

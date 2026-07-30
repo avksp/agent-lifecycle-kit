@@ -1,4 +1,4 @@
-# gemini-cli validation
+# Gemini CLI validation
 
 Minimum offline checks before committing the projection:
 

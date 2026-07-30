@@ -1,4 +1,4 @@
-# Public Contracts
+# Public contracts
 
 Public contract policy keeps ALK outputs predictable for adapters, release
 checks and operator scripts.

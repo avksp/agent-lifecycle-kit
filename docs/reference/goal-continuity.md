@@ -34,7 +34,7 @@ When supplied, the record must match the same run, package, plan revision, plan
 digest, source revision, state revision and `completionCheck` identity before
 the final proof is written.
 
-## Fail-Closed Rules
+## Fail-closed rules
 
 Validation fails when:
 

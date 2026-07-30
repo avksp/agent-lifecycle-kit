@@ -1,0 +1,76 @@
+# Быстрый старт
+
+Этот пример показывает минимальный полезный запуск из исходного дерева. Он не
+делает реальных вызовов модели и не меняет настройки хоста.
+
+## Установка из исходников
+
+```bash
+python -m pip install -e .
+agent-lifecycle version
+```
+
+Без установки можно запустить команду прямо из дерева:
+
+```bash
+PYTHONPATH=src python -m agent_lifecycle version
+```
+
+## Проверка готовности
+
+```bash
+agent-lifecycle diagnose --no-install-plans
+```
+
+Отчёт не раскрывает локальные абсолютные пути и секреты. Команда проверяет
+метаданные пакета, профили, дескрипторы адаптеров, безопасный осмотр и
+публичные резюме подтверждений. Реальные вызовы моделей не запускаются.
+
+Для одного адаптера:
+
+```bash
+agent-lifecycle diagnose \
+  --adapter adapters/codex/adapter.descriptor.json \
+  --no-install-plans
+```
+
+## Пробный план установки адаптера
+
+```bash
+agent-lifecycle adapter install-plan \
+  --descriptor adapters/opencode/adapter.descriptor.json
+```
+
+Команда показывает, какие файлы, команды и действия оператора понадобятся. Она
+не меняет настройки хоста и не повышает зрелость адаптера.
+
+## Проверка плана
+
+Для зафиксированного плана:
+
+```bash
+agent-lifecycle plan check \
+  --manifest path/to/plan.manifest.json \
+  --lock path/to/plan.lock.json
+```
+
+План остаётся источником правды для владельца, границ записи, критериев
+приёмки, проверок и подтверждающих артефактов.
+
+## Компактный контекст
+
+Перед передачей задачи небольшой модели проверьте профиль:
+
+```bash
+agent-lifecycle context check \
+  --profile profiles/small-context-profile.v1.json
+```
+
+Профиль удерживает контекст коротким и явным, но не отключает обязательные
+проверки качества.
+
+## Что дальше
+
+- [Установка адаптеров](adapters/install.md)
+- [Справочник команд](reference/cli.md)
+- [Диагностика готовности](reference/readiness-diagnostics.md)

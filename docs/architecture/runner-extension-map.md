@@ -1,10 +1,10 @@
-# Runner Extension Map
+# Runner extension map
 
 The runner is intentionally narrow. It records transition state and resource
 counters, then delegates actual lifecycle mutations to existing workflow
 commands and future adapters.
 
-## Worktree Preservation
+## Worktree preservation
 
 Planned integration point:
 
@@ -14,7 +14,7 @@ Planned integration point:
 
 The runner must not delete worktrees or rewrite user files directly.
 
-## Host Event Injection
+## Host event injection
 
 Planned integration point:
 
@@ -25,14 +25,14 @@ Planned integration point:
 
 The runner must not depend on one host's hook or stream format.
 
-## Review Quality
+## Review quality
 
 The runner may route remediation from structured review results once those
 contracts exist. Until then, it records the selected transition and evidence ids
 only. Full review artifacts remain authoritative for larger-model review and
 final audit.
 
-## Non-Goals
+## Non-goals
 
 - no background daemon;
 - no task scheduler product UI;

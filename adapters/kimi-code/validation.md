@@ -1,4 +1,4 @@
-# kimi-code validation
+# Kimi Code validation
 
 Minimum offline checks before committing the projection:
 

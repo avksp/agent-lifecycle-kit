@@ -1,4 +1,4 @@
-# Cursor Adapter Projection
+# Cursor adapter projection
 
 This directory contains the Cursor projection for Agent Lifecycle Kit. It is a
 host-specific adapter layer over the shared lifecycle skills and controller

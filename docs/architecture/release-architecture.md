@@ -24,7 +24,7 @@ The verifiers reject synthetic replay data, missing usage attestations,
 host-operation envelope bypasses, incomplete scenario/cohort coverage and budget
 overruns, including the dedicated 4k-strict compact-context scenario.
 
-## Execution Gates
+## Execution gates
 
 Local execution gates run before any production-promotion claim:
 
@@ -42,7 +42,7 @@ These gates make local completion more honest, but they do not promote an
 adapter to `VERIFIED`. Promotion still requires the separate live host
 conformance and calibration receipts described above.
 
-## Resource Evidence
+## Resource evidence
 
 Lifecycle cost accounting is release evidence for resource discipline. A cost
 report separates implementation, product validation, pipeline compliance and
