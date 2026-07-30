@@ -65,6 +65,9 @@ when splitting prevents a file/context limit breach:
   currently limited to run authorization fields in `workflow/plan_adoption.py`.
 - `task_runtime`: launch, status, attempt, remediation, and acceptance flow;
   currently `workflow/task_transitions.py` plus selectors.
+- `runner`: bounded execution loop over existing workflow primitives; the
+  transition-state contract and extension points are documented in
+  `runner-transition-contract.md` and `runner-extension-map.md`.
 - `validation`: controller gates, command receipts, and validation indexes;
   currently `workflow/gates.py` and `neutrality/gate.py`.
 - `audit`: ownership, task review, final audit validators; currently

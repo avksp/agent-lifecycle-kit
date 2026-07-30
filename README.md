@@ -94,6 +94,22 @@ also bind a current goal record into the final proof through `--goal-record`.
 
 See [goal continuity](docs/reference/goal-continuity.md).
 
+## Controlled runner
+
+The runner keeps a narrow `agent-runner-state.v1` execution-loop state around
+existing workflow primitives. It validates allowed transitions,
+attempt/reroute/split caps, billable-token caps, stop/resume requests and
+remediation patch metadata. It does not replace workflow state and does not
+execute host-specific code.
+
+`agent-runner-snapshot.v1` gives small local models a compact view of runner
+status, next allowed actions, budget counters and recent transitions. The
+snapshot must fit the selected small-context profile, including `4k-strict`.
+Larger models can still inspect the full workflow state, runner state, evidence
+and reviews for quality-sensitive work.
+
+See [controlled runner](docs/reference/runner.md).
+
 ## Live cost calibration
 
 Synthetic replay baselines are useful for deterministic regression checks, but
@@ -173,21 +189,21 @@ See [budget reroute policy](docs/guides/budget-reroute-policy.md).
 
 ## Distribution layout
 
-A universal distribution does not mean one manifest format. The current tagged
-source release carries the support claims and evidence references summarized
+A universal distribution does not mean one manifest format. The source
+distribution carries the support claims and evidence references summarized
 below. The same deterministic core is projected into each host's native loading
 model:
 
 | Host | Release artifact | Maturity | Why |
 | --- | --- | --- | --- |
-| Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | `VERIFIED` for Codex CLI 0.145.0 | Local release-0-6 live conformance, live usage calibration, and full ALK lifecycle proof passed. Public Plugins Directory approval is not claimed. |
-| Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | `VERIFIED` for Claude Code 2.1.220 | Local release-0-5 live conformance, live usage calibration, and full ALK lifecycle proof passed. Public directory approval is not claimed. |
+| Codex | `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` | `VERIFIED` for Codex CLI 0.145.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed. Public Plugins Directory approval is not claimed. |
+| Claude Code | `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` | `VERIFIED` for Claude Code 2.1.220 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed. Public directory approval is not claimed. |
 | Cursor | `.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json`, and `adapters/cursor/*` | `EXPERIMENTAL` | Safe inspection passed on a local Free tier, but usage/cost attestation and full lifecycle proof are not accepted yet. Marketplace approval is not claimed. |
 | Gemini CLI | `adapters/gemini-cli/*` | `EXPERIMENTAL` | Safe inspection and bounded harness shape passed, but local live canary is blocked by the current unsupported Gemini Code Assist client tier. |
-| Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | `VERIFIED` for Hermes Agent v0.19.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on 2026-07-29. Public directory/publication approval is not claimed. |
+| Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | `VERIFIED` for Hermes Agent v0.19.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed. Public directory/publication approval is not claimed. |
 | Kimi Code | `adapters/kimi-code/*` | `EXPERIMENTAL` | Safe inspection and bounded harness shape passed, but local live canary is blocked until a provider/model alias is configured. |
-| OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | `VERIFIED` for OpenCode CLI 1.18.9 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on 2026-07-29. npm publication is not claimed. |
-| qwen-code | `adapters/qwen-code/*` | `VERIFIED` for qwen-code 0.21.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on GLM 5.2 on 2026-07-29. Public package approval is not claimed. |
+| OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | `VERIFIED` for OpenCode CLI 1.18.9 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed. npm publication is not claimed. |
+| qwen-code | `adapters/qwen-code/*` | `VERIFIED` for qwen-code 0.21.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on GLM 5.2. Public package approval is not claimed. |
 
 `EXPERIMENTAL` means the adapter has source metadata, capability manifests, and
 offline conformance checks, but it is not a live runtime compatibility claim. A
@@ -223,6 +239,11 @@ agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-i
 agent-lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
 agent-lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
 agent-lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
+agent-lifecycle runner start --state <path-to-run.state.json> --runner <runner.state.json> --operation-id <id> --reason "<reason>"
+agent-lifecycle runner status --runner <runner.state.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 4k-strict
+agent-lifecycle runner transition --runner <runner.state.json> --state <path-to-run.state.json> --request <runner-transition-request.json>
+agent-lifecycle runner stop --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
+agent-lifecycle runner resume --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle specification check --specification <specification.json>
@@ -257,6 +278,11 @@ PYTHONPATH=src python -m agent_lifecycle workflow finalize --state <path-to-run.
 PYTHONPATH=src python -m agent_lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
 PYTHONPATH=src python -m agent_lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
 PYTHONPATH=src python -m agent_lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
+PYTHONPATH=src python -m agent_lifecycle runner start --state <path-to-run.state.json> --runner <runner.state.json> --operation-id <id> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle runner status --runner <runner.state.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 4k-strict
+PYTHONPATH=src python -m agent_lifecycle runner transition --runner <runner.state.json> --state <path-to-run.state.json> --request <runner-transition-request.json>
+PYTHONPATH=src python -m agent_lifecycle runner stop --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle runner resume --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
 PYTHONPATH=src python -m agent_lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 PYTHONPATH=src python -m agent_lifecycle tier resolve --request <tier-request.json>
 PYTHONPATH=src python -m agent_lifecycle specification check --specification <specification.json>
@@ -280,7 +306,8 @@ Implemented core CLI groups are `version`, `diagnose`, `schema`, `workflow statu
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`goal check`, `goal summarize`, `goal update`, `specification check`,
+`goal check`, `goal summarize`, `goal update`, `runner start`, `runner status`,
+`runner transition`, `runner stop`, `runner resume`, `specification check`,
 `plan check`, `plan acceptance-check`, `task compile`,
 `adapter validate`, `adapter inspect`, `adapter install-plan`, `adapter event-check`, `adapter
 scaffold`, and `neutrality`. Adapter scaffold is template-only and can only

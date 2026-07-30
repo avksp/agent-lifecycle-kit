@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 0.16.0 - 2026-07-30
+
+- Added provider-neutral runner state, policy, transition request/result and
+  compact snapshot contracts.
+- Added `agent-lifecycle runner start/status/transition/stop/resume` commands
+  for bounded execution-loop control without replacing workflow state.
+- Added attempt, reroute, split, token-budget and patch write-scope guards plus
+  architecture docs for future worktree and host-event integration.
+
 ## 0.15.0 - 2026-07-30
 
 - Added schema-backed goal records for binding user intent, owner-visible

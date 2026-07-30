@@ -73,8 +73,8 @@ Concrete model names belong in host-local profiles:
 
 Profile validation redacts provider model names from validation output. The
 profile can be untracked or stored in host-specific local configuration.
-Release 0.4 also accepts the earlier `agent-lifecycle-host-model-profile.v1`
-shape for compatibility, but new host-local profiles should use
+The validator also accepts the earlier `agent-lifecycle-host-model-profile.v1`
+shape for compatibility, but host-local profiles should use
 `agent-host-model-selection-profile.v1` so the budget mode, fallback policy and
 redaction policy are explicit.
 

@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.15.0 - 2026-07-30")
+        current_release = _section(changelog, "## 0.16.0 - 2026-07-30")
         self.assertNotIn("- No changes yet.", current_release)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -51,6 +51,26 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertEqual(payload["status"], "FAIL")
             self.assertIn("docs-compat-verified-row", {item["code"] for item in payload["blockers"]})
 
+    def test_docs_compat_rejects_versioned_feature_prose(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_min_docs(root, unsupported_verified_row=False)
+            _write_text(root / "docs/reference/feature.md", "Release 0.16 adds a runtime feature.\n")
+            evidence = root / "docs-compat.json"
+
+            result = _run_no_check(
+                "tools/release/validate_docs_compat.py",
+                "--root",
+                str(root),
+                "--evidence",
+                str(evidence),
+            )
+
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(payload["status"], "FAIL")
+            self.assertIn("docs-compat-versioned-feature-prose", {item["code"] for item in payload["blockers"]})
+
 
 def _section(text: str, heading: str) -> str:
     lines = text.splitlines()
@@ -77,16 +97,16 @@ def _run_no_check(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for qwen-code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for qwen-code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`.\n",
     )
     _write_text(
         root / "docs/guides/README.ru.md",
-        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для qwen-code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для qwen-code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`.\n",
     )
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
         root / "docs/adapters/support-matrix.md",
-        "This matrix is the authoritative current source-tree support claim.\n"
+        "This matrix is the authoritative source-tree support claim.\n"
         "Codex CLI 0.6.0 live evidence.\n"
         "Claude Code 0.5.0 live evidence.\n"
         "OpenCode GLM 5.2 live evidence.\n"
@@ -101,13 +121,14 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.15.0.md",
+        root / "release/notes/v0.16.0.md",
         "Status: source release.\n"
-        "Updated package metadata to `0.15.0`.\n"
-        "`completionCheck`.\n"
-        "`agent-goal-record.v1`.\n"
-        "`agent-goal-record-validation.v1`.\n"
-        "`agent-objective-snapshot.v1`.\n"
+        "Updated package metadata to `0.16.0`.\n"
+        "`agent-runner-policy.v1`.\n"
+        "`agent-runner-state.v1`.\n"
+        "`agent-runner-transition-request.v1`.\n"
+        "`agent-runner-transition-result.v1`.\n"
+        "`agent-runner-snapshot.v1`.\n"
         "productionPromotionClaimed.\n",
     )
     _write_text(
@@ -144,6 +165,13 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-objective-snapshot.v1`.\n"
         "fails closed.\n"
         "`workflow finalize`.\n",
+    )
+    _write_text(
+        root / "docs/reference/runner.md",
+        "`agent-runner-policy.v1`.\n"
+        "`agent-runner-transition-request.v1`.\n"
+        "`agent-runner-snapshot.v1`.\n"
+        "fails closed.\n",
     )
     for host in ("claude", "codex", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "qwen-code"):
         _write_text(

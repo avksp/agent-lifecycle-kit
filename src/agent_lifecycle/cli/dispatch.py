@@ -29,6 +29,17 @@ from agent_lifecycle.planning import (
     validate_acceptance_checklist,
     validate_plan_manifest,
 )
+from agent_lifecycle.runner import (
+    build_runner_snapshot,
+    initialize_runner_state,
+    load_runner_policy,
+    load_runner_state,
+    request_runner_stop,
+    resume_runner,
+    transition_runner,
+    validate_runner_state,
+)
+from agent_lifecycle.runner.core import write_runner_state, write_runner_state_create
 from agent_lifecycle.specification import validate_specification
 from agent_lifecycle.workflow import (
     accept_task,
@@ -77,6 +88,8 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         return _dispatch_goal(args)
     if args.command == "model":
         return _dispatch_model(args)
+    if args.command == "runner":
+        return _dispatch_runner(args)
     if args.command == "tier":
         return _dispatch_tier(args)
     if args.command == "specification":
@@ -315,6 +328,57 @@ def _dispatch_model(args: argparse.Namespace) -> dict[str, Any]:
             raise LifecycleError("model-usage-validation-failed", "model usage receipt validation failed", {"validation": result})
         return result
     raise LifecycleError("command-not-implemented", "model command is not implemented")
+
+
+def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
+    runner_path = Path(args.runner)
+    if args.runner_command == "start":
+        workflow_state = read_json_object(Path(args.state), label="workflow state")
+        policy = load_runner_policy(Path(args.policy) if args.policy else None)
+        runner_state = initialize_runner_state(
+            workflow_state,
+            policy=policy,
+            operation_id=args.operation_id,
+            reason=args.reason,
+        )
+        write_runner_state_create(runner_path, runner_state)
+        return validate_runner_state(runner_state, workflow_state=workflow_state)
+    runner_state = load_runner_state(runner_path)
+    if args.runner_command == "status":
+        workflow_state = read_json_object(Path(args.state), label="workflow state") if args.state else None
+        if args.profile:
+            if workflow_state is None:
+                raise LifecycleError("missing-cli-argument", "runner status with --profile requires --state")
+            profile = read_json_object(Path(args.profile), label="context profile")
+            return build_runner_snapshot(runner_state, workflow_state, profile=profile, window=args.target_window)
+        return validate_runner_state(runner_state, workflow_state=workflow_state)
+    workflow_state = read_json_object(Path(args.state), label="workflow state")
+    if args.runner_command == "transition":
+        request = read_json_object(Path(args.request), label="runner transition request")
+        payload = transition_runner(runner_state, workflow_state, request)
+        write_runner_state(runner_path, payload["state"])
+        return payload["result"]
+    if args.runner_command == "stop":
+        payload = request_runner_stop(
+            runner_state,
+            workflow_state,
+            operation_id=args.operation_id,
+            expected_runner_revision=args.expected_runner_revision,
+            reason=args.reason,
+        )
+        write_runner_state(runner_path, payload["state"])
+        return payload["result"]
+    if args.runner_command == "resume":
+        payload = resume_runner(
+            runner_state,
+            workflow_state,
+            operation_id=args.operation_id,
+            expected_runner_revision=args.expected_runner_revision,
+            reason=args.reason,
+        )
+        write_runner_state(runner_path, payload["state"])
+        return payload["result"]
+    raise LifecycleError("command-not-implemented", "runner command is not implemented")
 
 
 def _require_context_pass(result: dict[str, Any]) -> dict[str, Any]:
