@@ -9,17 +9,30 @@ rules:
 - model-routing profile validation;
 - adapter descriptor validation against the shared baseline;
 - safe adapter inspection without live model calls by default;
-- declared live evidence availability.
+- tracked redacted evidence summaries;
+- declared local raw receipt availability.
 
 ```bash
 agent-lifecycle diagnose
 agent-lifecycle diagnose --adapter adapters/codex/adapter.descriptor.json --no-install-plans
 ```
 
-The output schema is `agent-readiness-report.v1`. A `WARN` status can still be
-actionable, for example when verified adapter descriptors reference local-only
-evidence under `work/`. A `FAIL` status means a deterministic check
-failed and the report includes a concrete next action.
+The output schema is `agent-readiness-report.v1`. A `FAIL` status means a
+deterministic check failed and the report includes a concrete next action. A
+`WARN` status means a release-facing source artifact is missing or malformed,
+or another non-mutating readiness check needs operator attention.
+
+Verified adapter evidence is split into two classes:
+
+- tracked redacted summaries under `docs/adapters/evidence/`;
+- local raw receipts, usually under ignored `work/` paths.
+
+The tracked summary proves what the source release can claim. Local raw receipts
+are useful when re-running a live promotion review, but they may be absent from
+a fresh checkout by design. `diagnose` therefore reports
+`missingTrackedEvidenceSummaryCount` separately from
+`missingLocalRawReceiptCount`. Missing local raw receipts alone do not turn a
+source checkout into a release warning when the tracked summary is present.
 
 Host command probes are opt-in and bounded:
 

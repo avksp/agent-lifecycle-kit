@@ -17,6 +17,8 @@ from agent_lifecycle.model_routing import validate_model_routing_profile
 
 READINESS_SCHEMA_VERSION = "agent-readiness-report.v1"
 INSTALL_PLAN_SCHEMA_VERSION = "agent-adapter-install-plan.v1"
+EVIDENCE_SUMMARY_INDEX_SCHEMA_VERSION = "agent-adapter-evidence-summary-index.v1"
+DEFAULT_EVIDENCE_SUMMARY_INDEX = Path("docs/adapters/evidence/adapter-evidence-summary.v1.json")
 
 
 def build_readiness_report(
@@ -30,6 +32,7 @@ def build_readiness_report(
     context_profile: Path | None = None,
     model_profile: Path | None = None,
     adapter_baseline: Path | None = None,
+    evidence_summary_index: Path | None = None,
 ) -> dict[str, Any]:
     """Build one redacted readiness report without mutating the checkout."""
 
@@ -42,6 +45,7 @@ def build_readiness_report(
     context_profile_path = _resolve(root, context_profile or Path("profiles/small-context-profile.v1.json"))
     model_profile_path = _resolve(root, model_profile or Path("profiles/model-routing-profile.v1.json"))
     baseline_path = _resolve(root, adapter_baseline or Path("conformance/core/adapter-baseline.v1.json"))
+    evidence_index_path = _resolve(root, evidence_summary_index or DEFAULT_EVIDENCE_SUMMARY_INDEX)
     descriptors = [_resolve(root, item) for item in adapter_paths] if adapter_paths else _discover_adapters(root)
 
     checks: list[dict[str, Any]] = []
@@ -51,6 +55,7 @@ def build_readiness_report(
     checks.append(_model_profile_check(root, model_profile_path))
 
     baseline = _read_optional_json(root, baseline_path, "adapter baseline", checks)
+    tracked_evidence = _read_tracked_evidence_index(root, evidence_index_path, checks)
     adapters: list[dict[str, Any]] = []
     install_plans: list[dict[str, Any]] = []
     host_probe_count = 0
@@ -59,6 +64,7 @@ def build_readiness_report(
             root,
             descriptor_path,
             baseline=baseline,
+            tracked_evidence=tracked_evidence,
             include_host_probe=include_host_probes and host_probe_count < max_host_probes,
             timeout_seconds=timeout_seconds,
         )
@@ -137,6 +143,7 @@ def _adapter_record(
     descriptor_path: Path,
     *,
     baseline: dict[str, Any] | None,
+    tracked_evidence: dict[str, dict[str, Any]],
     include_host_probe: bool,
     timeout_seconds: float,
 ) -> tuple[dict[str, Any], bool]:
@@ -158,7 +165,13 @@ def _adapter_record(
     maturity = descriptor.get("maturity")
     live_range = descriptor.get("liveTestedHostRange")
     evidence_paths = _evidence_paths(live_range)
-    local_evidence = _local_evidence_status(root, evidence_paths)
+    adapter_id = descriptor.get("adapterId")
+    local_evidence = _local_evidence_status(
+        root,
+        evidence_paths,
+        tracked_summary=tracked_evidence.get(adapter_id) if isinstance(adapter_id, str) else None,
+        tracked_summary_required=maturity == "VERIFIED",
+    )
     validation_summary = {
         "name": f"adapter:{descriptor.get('host') or descriptor_path.parent.name}",
         "status": validation["status"],
@@ -232,7 +245,12 @@ def _unavailable_adapter_record(display_path: str, descriptor_path: Path, reason
             "declaredPaths": [],
             "existingPaths": [],
             "missingPaths": [],
+            "missingTrackedEvidencePaths": [],
+            "missingLocalRawReceiptPaths": [],
             "localOnlyEvidenceCount": 0,
+            "missingLocalRawReceiptCount": 0,
+            "trackedSummaryPath": None,
+            "trackedSummaryStatus": "NOT_REQUIRED",
             "status": "SKIPPED",
         },
         "validationSummary": validation_summary,
@@ -319,6 +337,58 @@ def _read_optional_json(root: Path, path: Path, label: str, checks: list[dict[st
     return payload
 
 
+def _read_tracked_evidence_index(root: Path, path: Path, checks: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    display_path = _display_path(path, root)
+    try:
+        payload = read_json_object(path, label=display_path)
+    except OSError as exc:
+        checks.append({"name": "evidence:tracked-summary-index", "status": "WARN", "details": {"path": display_path, "reason": type(exc).__name__}})
+        return {}
+    except LifecycleError as exc:
+        checks.append({"name": "evidence:tracked-summary-index", "status": "WARN", "details": {"path": display_path, "reason": exc.code}})
+        return {}
+
+    invalid: list[dict[str, Any]] = []
+    entries = payload.get("adapters")
+    if payload.get("schemaVersion") != EVIDENCE_SUMMARY_INDEX_SCHEMA_VERSION:
+        invalid.append({"code": "invalid-schema-version", "value": payload.get("schemaVersion")})
+    if not isinstance(entries, list):
+        invalid.append({"code": "invalid-adapters", "message": "adapters must be a list"})
+        entries = []
+
+    by_adapter: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(entries):
+        if not isinstance(item, dict):
+            invalid.append({"code": "invalid-adapter-entry", "index": index})
+            continue
+        adapter_id = item.get("adapterId")
+        summary_path = item.get("summaryPath")
+        if not isinstance(adapter_id, str) or not adapter_id:
+            invalid.append({"code": "invalid-adapter-id", "index": index})
+            continue
+        if not isinstance(summary_path, str) or not summary_path:
+            invalid.append({"code": "invalid-summary-path", "adapterId": adapter_id})
+            continue
+        if not (root / summary_path).is_file():
+            invalid.append({"code": "missing-summary-path", "adapterId": adapter_id, "path": summary_path})
+        by_adapter[adapter_id] = item
+
+    checks.append(
+        {
+            "name": "evidence:tracked-summary-index",
+            "status": "PASS" if not invalid else "WARN",
+            "details": {
+                "path": display_path,
+                "schemaVersion": payload.get("schemaVersion"),
+                "adapterCount": len(by_adapter),
+                "invalidCount": len(invalid),
+                "invalid": invalid,
+            },
+        }
+    )
+    return by_adapter
+
+
 def _discover_adapters(root: Path) -> list[Path]:
     adapters = root / "adapters"
     if not adapters.is_dir():
@@ -328,27 +398,46 @@ def _discover_adapters(root: Path) -> list[Path]:
 
 def _evidence_summary(root: Path, adapters: list[dict[str, Any]]) -> dict[str, Any]:
     verified = [item for item in adapters if item.get("maturity") == "VERIFIED"]
-    missing = []
+    missing_local_raw = []
+    missing_tracked = []
     local_only = 0
+    tracked_summary_count = 0
     for item in verified:
         evidence = item["liveEvidence"]
-        missing.extend(
+        missing_local_raw.extend(
             {
                 "host": item["host"],
                 "path": path,
-                "nextAction": "restore local ignored evidence or rely on tracked redacted docs summary before promotion review",
+                "kind": "local-raw-receipt",
+                "nextAction": "restore local raw receipt only when re-running live promotion review",
             }
-            for path in evidence["missingPaths"]
+            for path in evidence["missingLocalRawReceiptPaths"]
+        )
+        missing_tracked.extend(
+            {
+                "host": item["host"],
+                "path": path,
+                "kind": "tracked-redacted-summary",
+                "nextAction": "restore the tracked redacted evidence summary before a release claim",
+            }
+            for path in evidence["missingTrackedEvidencePaths"]
         )
         if evidence["localOnlyEvidenceCount"]:
             local_only += evidence["localOnlyEvidenceCount"]
-    status = "WARN" if missing else "PASS"
+        if evidence["trackedSummaryStatus"] == "AVAILABLE":
+            tracked_summary_count += 1
+    status = "WARN" if missing_tracked else "PASS"
     return {
         "status": status,
         "verifiedAdapterCount": len(verified),
-        "missingLocalEvidenceCount": len(missing),
+        "trackedSummaryCount": tracked_summary_count,
+        "missingTrackedEvidenceSummaryCount": len(missing_tracked),
+        "missingLocalEvidenceCount": len(missing_local_raw),
+        "missingLocalRawReceiptCount": len(missing_local_raw),
         "localOnlyEvidenceCount": local_only,
-        "missing": missing,
+        "missingTrackedEvidenceSummaries": missing_tracked,
+        "missingLocalRawReceipts": missing_local_raw,
+        "missing": missing_tracked + missing_local_raw,
         "productionPromotionClaimed": False,
     }
 
@@ -362,11 +451,21 @@ def _evidence_paths(live_range: Any) -> list[str]:
     return [item for item in evidence if isinstance(item, str)]
 
 
-def _local_evidence_status(root: Path, evidence_paths: list[str]) -> dict[str, Any]:
+def _local_evidence_status(
+    root: Path,
+    evidence_paths: list[str],
+    *,
+    tracked_summary: dict[str, Any] | None,
+    tracked_summary_required: bool,
+) -> dict[str, Any]:
     existing = []
     missing = []
+    missing_tracked = []
+    missing_local_raw = []
     local_only = 0
+    tracked_summary_path = tracked_summary.get("summaryPath") if isinstance(tracked_summary, dict) else None
     for raw_path in evidence_paths:
+        is_local_raw = raw_path.startswith("work/")
         if raw_path.startswith("work/"):
             local_only += 1
         path = root / raw_path
@@ -374,12 +473,35 @@ def _local_evidence_status(root: Path, evidence_paths: list[str]) -> dict[str, A
             existing.append(raw_path)
         else:
             missing.append(raw_path)
+            if is_local_raw:
+                missing_local_raw.append(raw_path)
+            else:
+                missing_tracked.append(raw_path)
+    tracked_summary_status = "NOT_REQUIRED"
+    if tracked_summary_required:
+        if isinstance(tracked_summary_path, str) and (root / tracked_summary_path).is_file():
+            tracked_summary_status = "AVAILABLE"
+        else:
+            tracked_summary_status = "MISSING"
+            if isinstance(tracked_summary_path, str):
+                if tracked_summary_path not in missing_tracked:
+                    missing_tracked.append(tracked_summary_path)
+            else:
+                missing_tracked.append("<tracked-summary-index-entry>")
+    status = "WARN" if missing_tracked else "PASS"
+    if not evidence_paths and not tracked_summary_required:
+        status = "SKIPPED"
     return {
         "declaredPaths": evidence_paths,
         "existingPaths": existing,
         "missingPaths": missing,
+        "missingTrackedEvidencePaths": missing_tracked,
+        "missingLocalRawReceiptPaths": missing_local_raw,
         "localOnlyEvidenceCount": local_only,
-        "status": "PASS" if not missing else "WARN",
+        "missingLocalRawReceiptCount": len(missing_local_raw),
+        "trackedSummaryPath": tracked_summary_path if isinstance(tracked_summary_path, str) else None,
+        "trackedSummaryStatus": tracked_summary_status,
+        "status": status,
     }
 
 
@@ -400,6 +522,8 @@ def _summary(checks: list[dict[str, Any]], adapters: list[dict[str, Any]], evide
         "verifiedAdapterCount": sum(1 for item in adapters if item.get("maturity") == "VERIFIED"),
         "experimentalAdapterCount": sum(1 for item in adapters if item.get("maturity") == "EXPERIMENTAL"),
         "missingLocalEvidenceCount": evidence.get("missingLocalEvidenceCount", 0),
+        "missingLocalRawReceiptCount": evidence.get("missingLocalRawReceiptCount", 0),
+        "missingTrackedEvidenceSummaryCount": evidence.get("missingTrackedEvidenceSummaryCount", 0),
     }
 
 
@@ -411,8 +535,8 @@ def _next_actions(checks: list[dict[str, Any]], adapters: list[dict[str, Any]], 
     for adapter in adapters:
         if adapter.get("validationStatus") == "FAIL":
             actions.append(f"fix adapter descriptor {adapter['descriptorPath']}")
-    if evidence.get("missingLocalEvidenceCount"):
-        actions.append("restore or regenerate missing local live evidence before a promotion/release claim")
+    if evidence.get("missingTrackedEvidenceSummaryCount"):
+        actions.append("restore tracked redacted evidence summaries before a release claim")
     if not actions:
         actions.append("continue with the next lifecycle step")
     return actions
