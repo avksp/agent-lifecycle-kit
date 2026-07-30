@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.12.4 - 2026-07-29")
+        current_release = _section(changelog, "## 0.13.0 - 2026-07-30")
         self.assertNotIn("- No changes yet.", current_release)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -101,15 +101,14 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.12.4.md",
+        root / "release/notes/v0.13.0.md",
         "Status: source release.\n"
-        "Updated package metadata to `0.12.4`.\n"
-        "Gemini CLI headless.\n"
-        "`--skip-trust`.\n"
-        "Kimi Code headless.\n"
-        "post-invocation clean-worktree.\n"
-        "unsupported Gemini Code Assist client tier.\n"
-        "provider/model alias.\n",
+        "Updated package metadata to `0.13.0`.\n"
+        "`agent-lifecycle diagnose`.\n"
+        "`agent-readiness-report.v1`.\n"
+        "`agent-lifecycle adapter install-plan`.\n"
+        "`agent-adapter-install-plan.v1`.\n"
+        "productionPromotionClaimed.\n",
     )
     _write_text(
         root / "docs/adapters/live-promotion-runbook.md",

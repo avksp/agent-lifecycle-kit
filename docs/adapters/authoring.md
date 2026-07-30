@@ -48,8 +48,13 @@ descriptor, rebuild the manifest, then run validation.
 agent-lifecycle adapter scaffold --host <host-id> --target .
 agent-lifecycle adapter validate --descriptor adapters/<host-id>/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
 agent-lifecycle adapter inspect --descriptor adapters/<host-id>/adapter.descriptor.json --skip-host-commands
+agent-lifecycle adapter install-plan --descriptor adapters/<host-id>/adapter.descriptor.json
 agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 ```
+
+`adapter install-plan` is a dry run. It previews files, commands and operator
+actions for the host projection, but it does not write host configuration,
+launch a model, promote maturity, or claim production support.
 
 For a live host closure, replace `--skip-host-commands` with a bounded safe
 inspection profile only after the host binary is installed locally. Inspection

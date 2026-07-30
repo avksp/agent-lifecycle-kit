@@ -11,6 +11,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agent-lifecycle")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("version", help="print package version as compact JSON")
+    _add_diagnose_parser(subparsers)
     _add_schema_parser(subparsers)
     subparsers.add_parser("neutrality", help="run neutrality subcommands")
     _add_workflow_parser(subparsers)
@@ -24,6 +25,19 @@ def build_parser() -> argparse.ArgumentParser:
     add_adapter_parser(subparsers)
     subparsers.add_parser("conformance", help="conformance commands")
     return parser
+
+
+def _add_diagnose_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    diagnose = subparsers.add_parser("diagnose", help="build a redacted readiness report")
+    diagnose.add_argument("--project-root", default=".")
+    diagnose.add_argument("--adapter", action="append", default=[])
+    diagnose.add_argument("--context-profile")
+    diagnose.add_argument("--model-profile")
+    diagnose.add_argument("--adapter-baseline")
+    diagnose.add_argument("--no-install-plans", action="store_true")
+    diagnose.add_argument("--include-host-probes", action="store_true")
+    diagnose.add_argument("--timeout-seconds", type=float, default=5.0)
+    diagnose.add_argument("--max-host-probes", type=int, default=1)
 
 
 def _add_schema_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

@@ -1,13 +1,12 @@
 # Adapter support matrix
 
-This matrix is the authoritative current source-tree support claim. `v0.12.4`
-is the latest tagged source release; the current tree additionally includes
-host-specific OpenCode, Hermes, and qwen-code live promotion evidence captured
-on 2026-07-29. The source tree includes host-local model selection, budget-mode
-controls, release-0-5 lifecycle gates, Claude Code live promotion evidence,
-Codex CLI live promotion evidence, reusable promotion guidance, adapter
-capability manifests, safe adapter inspection, and ordered terminal outcomes
-for OpenCode, Hermes, Cursor, Gemini CLI, qwen-code, and Kimi Code.
+This matrix is the authoritative current source-tree support claim. The current
+tagged source release carries the support claims and evidence references below.
+The source tree includes host-local model selection, budget-mode controls,
+release-0-5 lifecycle gates, Claude Code live promotion evidence, Codex CLI live
+promotion evidence, reusable promotion guidance, adapter capability manifests,
+safe adapter inspection, and ordered terminal outcomes for OpenCode, Hermes,
+Cursor, Gemini CLI, qwen-code, and Kimi Code.
 `EXPERIMENTAL` means the adapter has an offline projection and deterministic
 contract tests. `VERIFIED` is host-specific and requires bounded live host
 conformance, live calibration, and lifecycle proof evidence.
@@ -86,6 +85,9 @@ metadata and cannot create `VERIFIED`, production-promotion, or concrete
 provider-model claims. `agent-lifecycle adapter inspect` records descriptor and
 safe host capability discovery; inspection evidence is not a live conformance
 receipt and does not promote support on its own.
+`agent-lifecycle diagnose` composes these checks into one redacted readiness
+report, and `agent-lifecycle adapter install-plan` previews host-local setup
+without writing configuration or changing maturity labels.
 
 Critical review phases must not silently downgrade to `budget` or
 `local-compact`. A local-only host can satisfy final/security/performance review
