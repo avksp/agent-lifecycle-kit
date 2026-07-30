@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.1.0 - 2026-07-30
+
+- Added optional plan continuity contracts for repository-reference validation,
+  immutable frozen-plan snapshots, snapshot reconciliation and compact reviewer
+  handoff packets.
+- Added `agent-lifecycle plan refs-check/snapshot/reconcile/handoff`.
+- Added documentation for team-scale planning continuity while keeping
+  single-repository lifecycle behavior unchanged by default.
+
 ## 1.0.0 - 2026-07-30
 
 - Stabilized public schema and CLI JSON compatibility policy with

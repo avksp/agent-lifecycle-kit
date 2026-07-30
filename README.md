@@ -75,6 +75,26 @@ receipt; larger models can inspect full schemas through `schema show`.
 
 See [public contracts](docs/reference/public-contracts.md).
 
+## Plan continuity
+
+Team-scale work can declare optional repository references without changing the
+single-repository default. `agent-lifecycle plan refs-check` validates explicit
+owners, access modes and relative paths. `plan snapshot` creates an immutable
+content-addressed receipt for a frozen plan, `plan reconcile` blocks stale or
+contradictory state, and `plan handoff` renders a compact reviewer packet.
+
+```bash
+agent-lifecycle plan refs-check --manifest <plan.manifest.json>
+agent-lifecycle plan snapshot --manifest <plan.manifest.json> --out <plan-snapshot.json>
+agent-lifecycle plan reconcile --manifest <plan.manifest.json> --snapshot <plan-snapshot.json>
+agent-lifecycle plan handoff --manifest <plan.manifest.json> --snapshot <plan-snapshot.json> --out <handoff.json>
+```
+
+The handoff packet is for routing and audit context; the frozen plan,
+snapshot, receipts and evidence remain the source of truth.
+
+See [plan continuity](docs/reference/plan-continuity.md).
+
 ## Compact context mode
 
 Small-context hosts are supported through a deterministic context profile, not
