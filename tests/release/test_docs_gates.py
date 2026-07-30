@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -15,12 +16,65 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.19.0 - 2026-07-30")
+        current_release = _section(changelog, "## 1.3.0 - 2026-07-30")
         self.assertNotIn("- No changes yet.", current_release)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
             or any(line.startswith("- ") for line in current_release.splitlines())
         )
+
+    def test_root_readmes_are_compact_and_delegate_reference_detail(self) -> None:
+        english = (ROOT / "README.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/guides/README.ru.md").read_text(encoding="utf-8")
+
+        self.assertLessEqual(len(english.splitlines()), 180)
+        self.assertLessEqual(len(russian.splitlines()), 190)
+        for required in (
+            "docs/guides/quickstart.md",
+            "docs/adapters/install.md",
+            "docs/reference/cli.md",
+            "docs/reference/source-of-truth.md",
+        ):
+            self.assertIn(required, english)
+        self.assertIn("quickstart.ru.md", russian)
+
+    def test_release_entry_docs_have_resolving_links(self) -> None:
+        for relative in (
+            "README.md",
+            "docs/README.md",
+            "docs/guides/README.ru.md",
+            "docs/guides/quickstart.md",
+            "docs/guides/quickstart.ru.md",
+            "docs/adapters/install.md",
+            "docs/reference/cli.md",
+            "docs/reference/source-of-truth.md",
+            "docs/reference/readiness-diagnostics.md",
+        ):
+            with self.subTest(path=relative):
+                _assert_links_resolve(ROOT / relative)
+
+    def test_quickstart_and_adapter_docs_cover_bounded_commands(self) -> None:
+        quickstart = (ROOT / "docs/guides/quickstart.md").read_text(encoding="utf-8")
+        quickstart_ru = (ROOT / "docs/guides/quickstart.ru.md").read_text(encoding="utf-8")
+        install = (ROOT / "docs/adapters/install.md").read_text(encoding="utf-8")
+
+        for text in (quickstart, quickstart_ru):
+            self.assertIn("```bash", text)
+            self.assertIn("agent-lifecycle diagnose --no-install-plans", text)
+            self.assertIn("agent-lifecycle adapter install-plan", text)
+            self.assertIn("agent-lifecycle plan check", text)
+            self.assertIn("agent-lifecycle context check", text)
+        for command in (
+            "agent-lifecycle adapter validate",
+            "agent-lifecycle adapter inspect",
+            "agent-lifecycle adapter install-plan",
+            "codex plugin",
+            "claude plugin",
+            "qwen --version",
+            "gemini --version",
+            "kimi --version",
+        ):
+            self.assertIn(command, install)
 
     def test_docs_compat_evidence_passes_current_docs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -92,6 +146,22 @@ def _run(script: str, *args: str) -> None:
 
 def _run_no_check(script: str, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run([sys.executable, script, *args], cwd=ROOT, check=False, text=True, capture_output=True)
+
+
+def _assert_links_resolve(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    missing = []
+    for match in re.finditer(r"\[[^\]]+\]\(([^)]+)\)", text):
+        target = match.group(1).strip()
+        if not target or target.startswith(("#", "http://", "https://", "mailto:")):
+            continue
+        target_path = target.split("#", 1)[0]
+        if not target_path:
+            continue
+        if not (path.parent / target_path).resolve().exists():
+            missing.append(target)
+    if missing:
+        raise AssertionError(f"{path.relative_to(ROOT).as_posix()} has missing links: {missing}")
 
 
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
