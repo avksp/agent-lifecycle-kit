@@ -185,7 +185,7 @@ class NeutralityTests(unittest.TestCase):
             now = datetime.now(UTC).replace(microsecond=0)
             seed = b"r" * 32
             paths = _write_authority(root, seed, now, authority_root=outside)
-            result = _run_cli(root, seed, env_paths=paths, artifact_root="tasks/release-0-3")
+            result = _run_cli(root, seed, env_paths=paths, artifact_root="work/release-0-3")
             self.assertEqual(result, 0)
             self.assertTrue((root / "out/report.json").is_file())
 
@@ -333,7 +333,7 @@ class NeutralityTests(unittest.TestCase):
                     "--workspace-root",
                     str(root),
                     "--artifact-root",
-                    "tasks/release-0-3",
+                    "work/release-0-3",
                     "--operation-output",
                     "gates/receipt.json",
                     "--receipt",

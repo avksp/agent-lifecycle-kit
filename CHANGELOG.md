@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.0.0 - 2026-07-30
+
+- Stabilized public schema and CLI JSON compatibility policy with
+  `agent-lifecycle contract policy/check`.
+- Added lifecycle cost validation with separate implementation, product
+  validation, pipeline compliance and coordination categories.
+- Added resource/security guidance and release security tests for local-path
+  leakage, secret markers and host-bound adapter claims.
+- Updated package and plugin metadata to stable `1.0.0`.
+
 ## 0.19.0 - 2026-07-30
 
 - Added optional quality pack validation and fixture-based behavior checks for
@@ -226,7 +236,7 @@
 - Removed archived release tarballs and zip files from the source tree and
   blocked future archive commits through release inventory validation.
 - Added a clean-checkout CI simulation script and CI regression coverage so
-  tracked tests no longer depend on ignored `tasks/**` planning artifacts.
+  tracked tests no longer depend on ignored `work/**` planning artifacts.
 - Added placeholder-safe adapter tests for Cursor experimental metadata.
 
 ## 0.1.1 - 2026-07-23

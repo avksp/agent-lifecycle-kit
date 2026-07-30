@@ -77,11 +77,11 @@ class ReleaseInventoryTests(unittest.TestCase):
             out = Path(tmp)
             support_matrix = out / "support-matrix.md"
             evidence = out / "support-matrix-contract.json"
-            marker = "tasks/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json"
+            marker = "work/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json"
             support_matrix.write_text(
                 (ROOT / "docs/adapters/support-matrix.md")
                 .read_text(encoding="utf-8")
-                .replace(marker, "tasks/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/missing-proof.json"),
+                .replace(marker, "work/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/missing-proof.json"),
                 encoding="utf-8",
             )
 

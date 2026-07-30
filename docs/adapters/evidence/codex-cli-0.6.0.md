@@ -2,7 +2,7 @@
 
 This is the committed, redacted summary for the Codex host-specific `VERIFIED`
 claim. Raw receipts and diagnostics remain local release evidence under
-`tasks/release-0-6/evidence/` because that tree is intentionally ignored.
+`work/release-0-6/evidence/` because that tree is intentionally ignored.
 
 ## Claim
 
@@ -30,14 +30,14 @@ claim. Raw receipts and diagnostics remain local release evidence under
 
 ## Local Raw Evidence
 
-- `tasks/release-0-6/evidence/codex-live-promotion/preflight/codex-preflight-report.json`
-- `tasks/release-0-6/evidence/codex-live-promotion/preflight/codex-fixture-check-report.json`
-- `tasks/release-0-6/evidence/codex-live-promotion/preflight/codex-canary.jsonl`
-- `tasks/release-0-6/evidence/codex-live-promotion/live-host-receipts/codex.json`
-- `tasks/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json`
-- `tasks/release-0-6/evidence/codex-live-promotion/live-calibration-receipts/codex.json`
-- `tasks/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json`
-- `tasks/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json`
+- `work/release-0-6/evidence/codex-live-promotion/preflight/codex-preflight-report.json`
+- `work/release-0-6/evidence/codex-live-promotion/preflight/codex-fixture-check-report.json`
+- `work/release-0-6/evidence/codex-live-promotion/preflight/codex-canary.jsonl`
+- `work/release-0-6/evidence/codex-live-promotion/live-host-receipts/codex.json`
+- `work/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json`
+- `work/release-0-6/evidence/codex-live-promotion/live-calibration-receipts/codex.json`
+- `work/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json`
+- `work/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json`
 
 Raw Codex JSONL transcripts are not committed. The retained local diagnostics
 store hashes, byte counts, return codes, and redacted summaries.

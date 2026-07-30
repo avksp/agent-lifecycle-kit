@@ -18,7 +18,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             state_path = _write_state(root, phase="RUNNING", max_attempts=2)
-            occupied = root / "tasks/WS-01/attempt-1"
+            occupied = root / "work/WS-01/attempt-1"
             occupied.mkdir(parents=True)
             (occupied / "task-result.json").write_text("{}", encoding="utf-8")
             payload = start_task(
@@ -108,7 +108,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             write_json_create(root / result_path, _result(attempt=1))
             with self.assertRaises(LifecycleError):
                 commit_task_result(
@@ -133,7 +133,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             result = _result(attempt=1)
             write_json_create(root / result_path, result)
             commit_task_result(
@@ -145,7 +145,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 result_path=result_path,
                 reason="done",
             )
-            review_path = "tasks/WS-01/attempt-1/task-review.json"
+            review_path = "work/WS-01/attempt-1/task-review.json"
             review = _review(attempt=1, result_hash=canonical_digest(result))
             write_json_create(root / review_path, review)
             payload = accept_task(
@@ -176,7 +176,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             write_json_create(root / result_path, _result(attempt=1))
 
             with self.assertRaises(LifecycleError) as raised:
@@ -206,8 +206,8 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
-            usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
+            usage_path = "work/WS-01/attempt-1/model-usage-receipt.json"
             result = _result(attempt=1)
             write_json_create(root / result_path, result)
             write_json_create(root / usage_path, _model_usage_receipt(route))
@@ -245,8 +245,8 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
-            usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
+            usage_path = "work/WS-01/attempt-1/model-usage-receipt.json"
             receipt = _model_usage_receipt(route)
             receipt["taskId"] = "WS-OTHER"
             write_json_create(root / result_path, _result(attempt=1))
@@ -278,7 +278,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             result = _result(attempt=1)
             result["changeSet"]["baselineSha"] = "older-source"
             write_json_create(root / result_path, result)
@@ -308,7 +308,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             result = _result(attempt=1)
             result["changeSet"]["baselineSha"] = "older-source"
             result["reconciliationReceipt"] = {
@@ -347,7 +347,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             result = _result(attempt=1)
             result["commands"] = [{"id": "verify", "command": "python -m unittest", "exitCode": 1}]
             write_json_create(root / result_path, result)
@@ -377,7 +377,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             result = _result(attempt=1)
             result["changedFiles"] = ["docs/out-of-scope.md"]
             result["itemOutcomes"][0]["changedFiles"] = ["docs/out-of-scope.md"]
@@ -391,7 +391,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 result_path=result_path,
                 reason="done",
             )
-            review_path = "tasks/WS-01/attempt-1/task-review.json"
+            review_path = "work/WS-01/attempt-1/task-review.json"
             review = _review(attempt=1, result_hash=canonical_digest(result))
             write_json_create(root / review_path, review)
 
@@ -423,7 +423,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             result = _result(attempt=1)
             result["changedFiles"] = [".git/config"]
             result["itemOutcomes"][0]["changedFiles"] = [".git/config"]
@@ -437,7 +437,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 result_path=result_path,
                 reason="done",
             )
-            review_path = "tasks/WS-01/attempt-1/task-review.json"
+            review_path = "work/WS-01/attempt-1/task-review.json"
             review = _review(attempt=1, result_hash=canonical_digest(result))
             write_json_create(root / review_path, review)
 
@@ -470,7 +470,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            result_path = "tasks/WS-01/attempt-1/task-result.json"
+            result_path = "work/WS-01/attempt-1/task-result.json"
             result = _result(attempt=1)
             write_json_create(root / result_path, result)
             commit_task_result(
@@ -482,7 +482,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 result_path=result_path,
                 reason="done",
             )
-            review_path = "tasks/WS-01/attempt-1/task-review.json"
+            review_path = "work/WS-01/attempt-1/task-review.json"
             review = _review(attempt=1, result_hash=canonical_digest(result))
             write_json_create(root / review_path, review)
 

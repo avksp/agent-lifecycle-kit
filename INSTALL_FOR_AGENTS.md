@@ -27,10 +27,10 @@ PYTHONPATH=src python -m agent_lifecycle schema list
 Before an agent executes work from a plan package:
 
 ```bash
-agent-lifecycle plan check --manifest tasks/release-0-5/plan.manifest.json --lock tasks/release-0-5/plan.lock.json
-agent-lifecycle plan acceptance-check --manifest tasks/release-0-5/plan.manifest.json --acceptance tasks/release-0-5/acceptance-criteria.md
-agent-lifecycle task compile --manifest tasks/release-0-5/plan.manifest.json --out-dir tasks/release-0-5/workflow/task-packets
-agent-lifecycle audit ownership --manifest tasks/release-0-5/plan.manifest.json --base HEAD --fail-on-unowned --fail-on-forbidden
+agent-lifecycle plan check --manifest work/release-0-5/plan.manifest.json --lock work/release-0-5/plan.lock.json
+agent-lifecycle plan acceptance-check --manifest work/release-0-5/plan.manifest.json --acceptance work/release-0-5/acceptance-criteria.md
+agent-lifecycle task compile --manifest work/release-0-5/plan.manifest.json --out-dir work/release-0-5/workflow/task-packets
+agent-lifecycle audit ownership --manifest work/release-0-5/plan.manifest.json --base HEAD --fail-on-unowned --fail-on-forbidden
 ```
 
 For adapter evidence:

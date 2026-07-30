@@ -49,7 +49,7 @@ class AdapterCapabilityManifestTests(unittest.TestCase):
             "operationId": "op-1",
             "capability": "launch",
             "status": "PASS",
-            "outputs": [{"path": "tasks/out.json", "apiKey": "secret-value"}],
+            "outputs": [{"path": "work/out.json", "apiKey": "secret-value"}],
             "usage": {"inputTokens": 10, "provider": {"session-token": "abc"}},
         }
 

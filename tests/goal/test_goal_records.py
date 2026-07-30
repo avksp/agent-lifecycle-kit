@@ -105,7 +105,7 @@ def _goal_record(state: dict, *, completion_check: dict | None = None) -> dict:
         "goalId": "release-015",
         "userIntent": "Implement release 0.15 and ship it with validation.",
         "ownerOutcome": "Release is complete with evidence and no copied names.",
-        "constraints": ["Do not commit tasks/", "Keep token usage compact", "Fail closed on stale state"],
+        "constraints": ["Do not commit work/", "Keep token usage compact", "Fail closed on stale state"],
         "status": "ACTIVE",
         "lineage": {
             "runId": state["runId"],

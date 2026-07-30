@@ -8,7 +8,7 @@ Scope:
 - Adapter descriptor: `adapters/gemini-cli/adapter.descriptor.json`.
 - Capability manifest: `adapters/gemini-cli/capabilities.manifest.json`.
 - Raw inspection report:
-  `tasks/release-0-10/evidence/gemini-cli/inspection/gemini-cli-inspection-report.json`.
+  `work/release-0-10/evidence/gemini-cli/inspection/gemini-cli-inspection-report.json`.
 
 Safe inspection result:
 

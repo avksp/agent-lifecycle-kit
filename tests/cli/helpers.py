@@ -44,8 +44,8 @@ def _write_state(root: Path) -> Path:
                         "dependsOn": [],
                         "required": True,
                         "artifactPaths": {
-                            "result": "tasks/WS-01/attempt-{attempt}/task-result.json",
-                            "review": "tasks/WS-01/attempt-{attempt}/task-review.json",
+                            "result": "work/WS-01/attempt-{attempt}/task-result.json",
+                            "review": "work/WS-01/attempt-{attempt}/task-review.json",
                         },
                         "packet": {
                             "sha256": "1" * 64,
@@ -142,8 +142,8 @@ def _write_task_compile_bundle(root: Path) -> Path:
                 "acceptanceIds": ["AC-1"],
                 "evidenceIds": ["EV-1"],
                 "artifactPaths": {
-                    "result": "tasks/WS-01/attempt-{attempt}/task-result.json",
-                    "review": "tasks/WS-01/attempt-{attempt}/task-review.json",
+                    "result": "work/WS-01/attempt-{attempt}/task-result.json",
+                    "review": "work/WS-01/attempt-{attempt}/task-review.json",
                 },
             }
         ],
