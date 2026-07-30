@@ -14,6 +14,7 @@ from agent_lifecycle.compiler import compile_task_packets
 from agent_lifecycle.contracts import LifecycleError, read_json_object
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.context import check_context, load_context_profile, render_context
+from agent_lifecycle.diagnostics import build_readiness_report
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.cli.adapter import dispatch_adapter
 from agent_lifecycle.model_routing import (
@@ -53,6 +54,18 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
             return list_schemas()
         if args.schema_command == "show":
             return get_schema(args.schema_id)
+    if args.command == "diagnose":
+        return build_readiness_report(
+            project_root=Path(args.project_root),
+            adapter_paths=[Path(item) for item in args.adapter] if args.adapter else None,
+            include_install_plans=not args.no_install_plans,
+            include_host_probes=args.include_host_probes,
+            timeout_seconds=args.timeout_seconds,
+            max_host_probes=args.max_host_probes,
+            context_profile=Path(args.context_profile) if args.context_profile else None,
+            model_profile=Path(args.model_profile) if args.model_profile else None,
+            adapter_baseline=Path(args.adapter_baseline) if args.adapter_baseline else None,
+        )
     if args.command == "workflow":
         return _dispatch_workflow(args)
     if args.command == "audit":

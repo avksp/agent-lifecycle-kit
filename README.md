@@ -153,10 +153,10 @@ See [budget reroute policy](docs/guides/budget-reroute-policy.md).
 
 ## Distribution layout
 
-A universal distribution does not mean one manifest format. `v0.12.4` is the
-latest tagged source release and includes OpenCode, Hermes, and qwen-code live
-evidence captured on 2026-07-29. The same deterministic core is projected into
-each host's native loading model:
+A universal distribution does not mean one manifest format. The current tagged
+source release carries the support claims and evidence references summarized
+below. The same deterministic core is projected into each host's native loading
+model:
 
 | Host | Release artifact | Maturity | Why |
 | --- | --- | --- | --- |
@@ -183,6 +183,8 @@ package.
 
 ## Installation and publication
 
+Examples that use `vX.Y.Z` expect a trusted GitHub release tag.
+
 ### Source-mode core CLI
 
 For local development of the current repository:
@@ -190,6 +192,7 @@ For local development of the current repository:
 ```bash
 python -m pip install -e .
 agent-lifecycle version
+agent-lifecycle diagnose
 agent-lifecycle schema list
 agent-lifecycle workflow status --state <path-to-run.state.json>
 agent-lifecycle workflow next --state <path-to-run.state.json>
@@ -212,6 +215,7 @@ agent-lifecycle context check --profile profiles/small-context-profile.v1.json -
 agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
 agent-lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
+agent-lifecycle adapter install-plan --descriptor adapters/opencode/adapter.descriptor.json
 agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 agent-lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
@@ -221,6 +225,7 @@ The same commands can run without installation from a checkout:
 
 ```bash
 PYTHONPATH=src python -m agent_lifecycle version
+PYTHONPATH=src python -m agent_lifecycle diagnose
 PYTHONPATH=src python -m agent_lifecycle schema list
 PYTHONPATH=src python -m agent_lifecycle workflow status --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow next --state <path-to-run.state.json>
@@ -238,24 +243,30 @@ PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usag
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 PYTHONPATH=src python -m agent_lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
 PYTHONPATH=src python -m agent_lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
+PYTHONPATH=src python -m agent_lifecycle adapter install-plan --descriptor adapters/opencode/adapter.descriptor.json
 PYTHONPATH=src python -m agent_lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 PYTHONPATH=src python -m agent_lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
-Implemented core CLI groups are `version`, `schema`, `workflow status`,
+Implemented core CLI groups are `version`, `diagnose`, `schema`, `workflow status`,
 `workflow next`, `workflow block`, `workflow resolve`, `workflow task-start`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
 `specification check`, `plan check`, `plan acceptance-check`, `task compile`,
-`adapter validate`, `adapter inspect`, `adapter event-check`, `adapter
+`adapter validate`, `adapter inspect`, `adapter install-plan`, `adapter event-check`, `adapter
 scaffold`, and `neutrality`. Adapter scaffold is template-only and can only
 create `EXPERIMENTAL` projection skeletons. Adapter inspect records descriptor
 and safe host capability discovery without live model invocation. Runtime
 adapter execution and conformance lifecycle groups remain reserved and fail
 closed with a stable `agent-lifecycle-error.v1` response until their runtime
 core modules land.
+
+`diagnose` builds a single redacted `agent-readiness-report.v1` view over the
+checkout, package metadata, profiles, adapters and evidence availability. It is
+read-only by default, includes dry-run install plans unless disabled, and never
+changes maturity labels or creates a `VERIFIED` claim.
 
 `context check` and `context render` also fail closed on overflow: if the
 rendered receipt status is `FAIL`, the CLI exits non-zero and returns
@@ -297,10 +308,10 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 
 ### Codex
 
-Install from the tagged source marketplace:
+Install from a tagged source marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.4
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref vX.Y.Z
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -372,7 +383,7 @@ Gemini CLI currently uses a host-local source projection. Install the core from
 a tagged checkout, then validate and inspect the projection:
 
 ```bash
-git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch vX.Y.Z https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 gemini --version
@@ -380,8 +391,8 @@ agent-lifecycle adapter validate --descriptor adapters/gemini-cli/adapter.descri
 agent-lifecycle adapter inspect --descriptor adapters/gemini-cli/adapter.descriptor.json
 ```
 
-There is no published Gemini CLI runtime package in `v0.12.4`. The source tree
-includes `adapters/gemini-cli/runner.py` and
+There is no published Gemini CLI runtime package in the current source tree.
+The source tree includes `adapters/gemini-cli/runner.py` and
 `tools/live_hosts/gemini_cli_harness.py` for bounded receipt normalization, but
 Gemini CLI remains `EXPERIMENTAL` until live conformance, calibration and
 lifecycle proof receipts are accepted. On the current local host, Gemini CLI
@@ -395,7 +406,7 @@ from the tagged release:
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.4/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/vX.Y.Z/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -410,7 +421,7 @@ Kimi Code currently uses a host-local source projection. Make sure the `kimi`
 CLI is available on `PATH`, then validate and inspect the projection:
 
 ```bash
-git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch vX.Y.Z https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 kimi --version
@@ -418,8 +429,8 @@ agent-lifecycle adapter validate --descriptor adapters/kimi-code/adapter.descrip
 agent-lifecycle adapter inspect --descriptor adapters/kimi-code/adapter.descriptor.json
 ```
 
-There is no published Kimi Code runtime package in `v0.12.4`. The source tree
-includes `adapters/kimi-code/runner.py` and
+There is no published Kimi Code runtime package in the current source tree. The
+source tree includes `adapters/kimi-code/runner.py` and
 `tools/live_hosts/kimi_code_harness.py` for bounded receipt normalization, but
 Kimi Code remains `EXPERIMENTAL` until live conformance, calibration and
 lifecycle proof receipts are accepted. On the current local host, `kimi
@@ -449,16 +460,16 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 
 The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
-claimed by `v0.12.4`.
+claimed by the current source tree.
 
 ### qwen-code
 
 qwen-code currently uses a host-local source projection. Install the core from
-a tagged checkout, then validate and inspect the projection. `v0.12.4` is
-`VERIFIED` for qwen-code `0.21.0`.
+a tagged checkout, then validate and inspect the projection. The current source
+tree is `VERIFIED` for qwen-code `0.21.0`.
 
 ```bash
-git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch vX.Y.Z https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 qwen --version
@@ -469,7 +480,7 @@ agent-lifecycle adapter inspect --descriptor adapters/qwen-code/adapter.descript
 The live runner is `adapters/qwen-code/runner.py`; the release harness is
 `tools/live_hosts/qwen_code_harness.py`. No public qwen-code adapter package,
 public directory approval, or production-promotion platform claim is published
-in `v0.12.4`.
+for the current source tree.
 
 ## Usage
 
@@ -586,6 +597,7 @@ requires resolver and independent review agreement.
 
 - [Russian README](docs/guides/README.ru.md)
 - [Adapter support matrix](docs/adapters/support-matrix.md)
+- [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
 - [Adapter live-promotion runbook](docs/adapters/live-promotion-runbook.md)
 - [Verified-adapter release checklist](docs/guides/verified-adapter-release-checklist.md)
 - [Modular controller architecture](docs/architecture/modular-controller.md)

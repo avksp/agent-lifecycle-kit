@@ -169,10 +169,10 @@ agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-d
 
 ## Структура поставки
 
-Универсальная поставка не означает единый формат манифеста. `v0.12.4` —
-последний тегированный исходный релиз и содержит реальные доказательства для
-OpenCode, Hermes и qwen-code, полученные 2026-07-29. Одно детерминированное
-ядро проецируется в нативную модель загрузки каждой системы:
+Универсальная поставка не означает единый формат манифеста. Текущий
+тегированный исходный релиз содержит заявления поддержки и ссылки на
+доказательства, перечисленные ниже. Одно детерминированное ядро проецируется в
+родную модель загрузки каждой системы:
 
 | Система | Артефакт релиза | Зрелость | Причина |
 | --- | --- | --- | --- |
@@ -199,6 +199,8 @@ Cursor. Каталоги `adapters/<host>/` остаются офлайн-про
 
 ## Установка и публикация
 
+В примерах `vX.Y.Z` означает доверенный тег GitHub Release.
+
 ### Ядро из исходного кода
 
 Для локальной разработки текущего репозитория:
@@ -206,6 +208,7 @@ Cursor. Каталоги `adapters/<host>/` остаются офлайн-про
 ```bash
 python -m pip install -e .
 agent-lifecycle version
+agent-lifecycle diagnose
 agent-lifecycle schema list
 agent-lifecycle workflow status --state <path-to-run.state.json>
 agent-lifecycle workflow next --state <path-to-run.state.json>
@@ -227,6 +230,7 @@ agent-lifecycle context check --profile profiles/small-context-profile.v1.json -
 agent-lifecycle context render --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
 agent-lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
+agent-lifecycle adapter install-plan --descriptor adapters/opencode/adapter.descriptor.json
 agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 agent-lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
@@ -236,6 +240,7 @@ agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/ne
 
 ```bash
 PYTHONPATH=src python -m agent_lifecycle version
+PYTHONPATH=src python -m agent_lifecycle diagnose
 PYTHONPATH=src python -m agent_lifecycle schema list
 PYTHONPATH=src python -m agent_lifecycle workflow status --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow next --state <path-to-run.state.json>
@@ -252,23 +257,29 @@ PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usag
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 PYTHONPATH=src python -m agent_lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
 PYTHONPATH=src python -m agent_lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
+PYTHONPATH=src python -m agent_lifecycle adapter install-plan --descriptor adapters/opencode/adapter.descriptor.json
 PYTHONPATH=src python -m agent_lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 PYTHONPATH=src python -m agent_lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
-Сейчас реализованы группы команд `version`, `schema`, `workflow status`,
+Сейчас реализованы группы команд `version`, `diagnose`, `schema`, `workflow status`,
 `workflow next`, `workflow block`, `workflow resolve`, `workflow task-start`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
 `specification check`, `plan check`, `task compile`, `adapter validate`,
-`adapter inspect`, `adapter event-check`, `adapter scaffold` и `neutrality`.
+`adapter inspect`, `adapter install-plan`, `adapter event-check`, `adapter scaffold` и `neutrality`.
 `adapter scaffold` — только заготовка и может создавать только
 `EXPERIMENTAL`-проекции. `adapter inspect` записывает дескриптор и безопасно
 обнаруживает возможности среды без запуска модели. Выполнение адаптера и
 группы команд живой совместимости пока зарезервированы и завершаются отказом
 со стабильным `agent-lifecycle-error.v1`.
+
+`diagnose` собирает один сокращённый `agent-readiness-report.v1` по рабочему
+дереву, метаданным пакета, профилям, адаптерам и доступности доказательств. По
+умолчанию команда только читает состояние, включает сухие планы установки и не
+меняет метки зрелости адаптеров.
 
 `context check` и `context render` тоже завершаются отказом при переполнении:
 если подготовленная квитанция получает `status: FAIL`, CLI завершается с
@@ -301,7 +312,7 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 Установка из тегированного исходного marketplace:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v0.12.4
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref vX.Y.Z
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
@@ -377,7 +388,7 @@ Gemini CLI сейчас использует исходную проекцию �
 проинспектируйте проекцию:
 
 ```bash
-git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch vX.Y.Z https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 gemini --version
@@ -385,8 +396,8 @@ agent-lifecycle adapter validate --descriptor adapters/gemini-cli/adapter.descri
 agent-lifecycle adapter inspect --descriptor adapters/gemini-cli/adapter.descriptor.json
 ```
 
-В `v0.12.4` нет опубликованного пакета среды выполнения для Gemini CLI.
-Исходное дерево содержит `adapters/gemini-cli/runner.py` и
+В текущем исходном дереве нет опубликованного пакета среды выполнения для
+Gemini CLI. Исходное дерево содержит `adapters/gemini-cli/runner.py` и
 `tools/live_hosts/gemini_cli_harness.py` для ограниченной нормализации
 квитанций, но Gemini CLI остаётся `EXPERIMENTAL`, пока не приняты живые
 квитанции совместимости, калибровка и доказательство полного жизненного цикла.
@@ -401,7 +412,7 @@ Hermes может устанавливать общие skills напрямую.
 
 ```bash
 for skill in agent-first-planning audit-agent-plan agent-plan-to-workers agent-workflow-orchestrator audit-plan-implementation; do
-  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/v0.12.4/skills/${skill}/SKILL.md"
+  hermes skills install "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/vX.Y.Z/skills/${skill}/SKILL.md"
 done
 ```
 
@@ -416,7 +427,7 @@ Kimi Code сейчас использует исходную проекцию д
 что CLI `kimi` доступен в `PATH`, затем проверьте и проинспектируйте проекцию:
 
 ```bash
-git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch vX.Y.Z https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 kimi --version
@@ -424,8 +435,8 @@ agent-lifecycle adapter validate --descriptor adapters/kimi-code/adapter.descrip
 agent-lifecycle adapter inspect --descriptor adapters/kimi-code/adapter.descriptor.json
 ```
 
-В `v0.12.4` нет опубликованного пакета среды выполнения для Kimi Code.
-Исходное дерево содержит `adapters/kimi-code/runner.py` и
+В текущем исходном дереве нет опубликованного пакета среды выполнения для Kimi
+Code. Исходное дерево содержит `adapters/kimi-code/runner.py` и
 `tools/live_hosts/kimi_code_harness.py` для ограниченной нормализации
 квитанций, но Kimi Code остаётся `EXPERIMENTAL`, пока не приняты живые
 квитанции совместимости, калибровка и доказательство полного жизненного цикла.
@@ -455,17 +466,18 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 ```
 
 В корне репозитория также есть `opencode.json` для проверки из рабочего дерева.
-Будущий npm-пакет может ссылаться на тот же адаптер, но `v0.12.4` не заявляет
-публикацию в npm.
+Будущий npm-пакет может ссылаться на тот же адаптер, но текущее исходное дерево
+не заявляет публикацию в npm.
 
 ### qwen-code
 
 qwen-code сейчас использует исходную проекцию для локальной среды. Установите
 ядро из рабочего дерева, полученного по тегу, затем проверьте и
-проинспектируйте проекцию. `v0.12.4` имеет `VERIFIED` для qwen-code `0.21.0`.
+проинспектируйте проекцию. Текущее исходное дерево имеет `VERIFIED` для
+qwen-code `0.21.0`.
 
 ```bash
-git clone --branch v0.12.4 https://github.com/avksp/agent-lifecycle-kit.git
+git clone --branch vX.Y.Z https://github.com/avksp/agent-lifecycle-kit.git
 cd agent-lifecycle-kit
 python -m pip install -e .
 qwen --version
@@ -474,9 +486,9 @@ agent-lifecycle adapter inspect --descriptor adapters/qwen-code/adapter.descript
 ```
 
 Живой runner находится в `adapters/qwen-code/runner.py`, проверочный скрипт
-релиза - в `tools/live_hosts/qwen_code_harness.py`. В `v0.12.4` нет публичного
-пакета адаптера qwen-code, одобрения публичного каталога или заявления о
-прохождении производственной матрицы.
+релиза - в `tools/live_hosts/qwen_code_harness.py`. Для текущего исходного
+дерева не заявлены публичный пакет адаптера qwen-code, одобрение публичного
+каталога или прохождение производственной матрицы.
 
 ## Использование
 
@@ -600,6 +612,7 @@ SDD-план и независимо проверяй его до готовно
 
 - [English README](../../README.md)
 - [Матрица поддержки адаптеров](../adapters/support-matrix.md)
+- [Диагностика готовности](../reference/readiness-diagnostics.md)
 - [Инструкция по продвижению адаптера](../adapters/live-promotion-runbook.md)
 - [Проверочный список релиза проверенного адаптера](verified-adapter-release-checklist.md)
 - [Modular controller architecture](../architecture/modular-controller.md)

@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 0.13.0 - 2026-07-30
+
+- Added `agent-lifecycle diagnose` for one redacted readiness report covering
+  checkout state, package version, compact-context and model-routing profiles,
+  adapter descriptor validation, safe inspection status, and local evidence
+  availability.
+- Added `agent-lifecycle adapter install-plan` for dry-run host setup plans
+  that preview files, commands and operator actions without writing host
+  configuration or changing adapter maturity.
+- Added schemas, tests, and documentation for readiness diagnostics and
+  promotion-safe setup planning.
+
 ## 0.12.4 - 2026-07-29
 
 - Hardened Gemini CLI headless live commands with `--skip-trust` so clean

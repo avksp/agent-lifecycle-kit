@@ -238,6 +238,33 @@ _SCHEMAS: dict[str, dict[str, Any]] = {
             "blockers": {"type": "array", "items": {"type": "object"}},
         },
     ),
+    "agent-readiness-report.v1": _open_object_schema(
+        "agent-readiness-report.v1",
+        required=["schemaVersion", "status", "summary", "checks", "adapters", "evidence"],
+        properties={
+            "status": {"enum": ["PASS", "WARN", "FAIL"]},
+            "summary": {"type": "object"},
+            "checks": {"type": "array", "items": {"type": "object"}},
+            "adapters": {"type": "array", "items": {"type": "object"}},
+            "evidence": {"type": "object"},
+            "productionPromotionClaimed": {"const": False},
+            "maturityChangesClaimed": {"const": False},
+        },
+    ),
+    "agent-adapter-install-plan.v1": _open_object_schema(
+        "agent-adapter-install-plan.v1",
+        required=["schemaVersion", "status", "host", "maturity", "files", "commands"],
+        properties={
+            "status": {"const": "DRY_RUN"},
+            "host": {"type": "string", "minLength": 1},
+            "maturity": {"enum": ["EXPERIMENTAL", "VERIFIED"]},
+            "files": {"type": "array", "items": {"type": "object"}},
+            "commands": {"type": "array", "items": {"type": "object"}},
+            "writesStarted": {"const": False},
+            "productionPromotionClaimed": {"const": False},
+            "maturityChangeClaimed": {"const": False},
+        },
+    ),
     "agent-host-adapter-inspection.v1": _open_object_schema(
         "agent-host-adapter-inspection.v1",
         required=[
