@@ -6,6 +6,7 @@ import argparse
 
 from agent_lifecycle.cli.adapter import add_adapter_parser
 from agent_lifecycle.cli.followup import add_followup_parser
+from agent_lifecycle.cli.metrics_parser import add_metrics_parser
 from agent_lifecycle.cli.worktree import add_worktree_parser
 
 
@@ -29,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_followup_parser(subparsers)
     add_worktree_parser(subparsers)
     _add_model_parser(subparsers)
-    _add_metrics_parser(subparsers)
+    add_metrics_parser(subparsers)
     _add_runner_parser(subparsers)
     _add_tier_parser(subparsers)
     _add_specification_parser(subparsers)
@@ -298,19 +299,6 @@ def _add_model_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     model_usage_check.add_argument("--receipt", required=True)
     model_usage_check.add_argument("--route-decision")
     model_usage_check.add_argument("--budget-targets")
-
-
-def _add_metrics_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    metrics = subparsers.add_parser("metrics", help="resource and lifecycle metrics commands")
-    metrics_sub = metrics.add_subparsers(dest="metrics_command", required=True)
-    cost_check = metrics_sub.add_parser("cost-check")
-    cost_check.add_argument("--receipt", required=True)
-    cost_report = metrics_sub.add_parser("cost-report")
-    cost_report.add_argument("--artifact", action="append", default=[])
-    cost_report.add_argument("--mode", choices=["light", "standard", "strict", "release"], default="standard")
-    cost_report.add_argument("--project-root", default=".")
-    cost_report.add_argument("--out", required=True)
-    cost_report.add_argument("--summary-out")
 
 
 def _add_runner_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
