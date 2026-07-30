@@ -28,6 +28,7 @@ REQUIRED_OPERATION_NAMES = {
     "cancel",
     "resume",
     "tool-execution",
+    "adapter-event-stream",
     "result-collection",
     "usage-attestation",
     "task-audit",

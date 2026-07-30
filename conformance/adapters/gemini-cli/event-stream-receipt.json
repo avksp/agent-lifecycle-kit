@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "adapterId": "gemini-cli",
+  "host": "gemini-cli",
+  "runId": "offline-conformance",
+  "taskId": "adapter-event-capture",
+  "operationId": "offline-event-capture-gemini-cli",
+  "producer": {
+    "id": "gemini-cli-neutral-event-producer",
+    "boundary": "adapter-owned",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
+  "descriptorDigest": "48e6c1a0329f80b702de3cba5aa2adb529c8c96991d379a4ffb4714b7eb9c938",
+  "eventStreamDigest": "eda59557bd6e6a5da397ec27a3bc7accf81ca9aa00e9454c5f0d3b6c9c295855",
+  "eventCount": 6,
+  "eventTypes": [
+    "session.started",
+    "task.launched",
+    "command.completed",
+    "writes.summarized",
+    "usage.reported",
+    "task.completed"
+  ],
+  "terminalEvent": "task.completed",
+  "emittedAt": "2026-07-30T00:18:01Z",
+  "productionPromotionClaimed": false,
+  "receiptDigest": "e365b7faf8e7f2403cf4fbec0c3a8ccae9ca068506c29a456678346e475523d0"
+}

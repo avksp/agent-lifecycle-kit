@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "adapterId": "claude",
+  "host": "claude-code",
+  "runId": "offline-conformance",
+  "taskId": "adapter-event-capture",
+  "operationId": "offline-event-capture-claude",
+  "producer": {
+    "id": "claude-neutral-event-producer",
+    "boundary": "adapter-owned",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
+  "descriptorDigest": "e37b94274b8e2ba471c525b901fbefa0e9340bd2f3955fe71cbb2924b6a761db",
+  "eventStreamDigest": "48cd8b568dff5dcae91b27ed93cbdb37c4dd4409aa11294877b9e9d60362ec08",
+  "eventCount": 6,
+  "eventTypes": [
+    "session.started",
+    "task.launched",
+    "command.completed",
+    "writes.summarized",
+    "usage.reported",
+    "task.completed"
+  ],
+  "terminalEvent": "task.completed",
+  "emittedAt": "2026-07-30T00:18:01Z",
+  "productionPromotionClaimed": false,
+  "receiptDigest": "252a53bdddf7c638169fccfe0f7c36f3c3ef0669e49554fba9157768a07f7143"
+}

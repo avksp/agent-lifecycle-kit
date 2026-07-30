@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError
@@ -10,6 +11,7 @@ from agent_lifecycle.host_protocol.contracts import HostAdapterEvent
 TERMINAL_EVENTS = {"task.blocked", "task.completed"}
 REQUIRED_COMMON_EVENTS = {"session.started", "task.launched"}
 REQUIRED_COMPLETED_EVENTS = {"command.completed", "writes.summarized", "task.completed"}
+EVENT_CATEGORIES = {"command", "file-change", "lifecycle-transition", "model-usage", "user-decision", "validation"}
 
 
 def validate_adapter_event_stream(events: list[dict[str, Any]]) -> dict[str, Any]:
@@ -32,6 +34,8 @@ def validate_adapter_event_stream(events: list[dict[str, Any]]) -> dict[str, Any
         _validate_lineage(parsed, blockers)
         _validate_required_events(parsed, blockers)
         _validate_event_statuses(parsed, blockers)
+        _validate_event_payloads(parsed, blockers)
+        _validate_time_order(parsed, blockers)
     status = "PASS" if not blockers else "FAIL"
     return {
         "schemaVersion": "agent-adapter-event-stream-validation.v1",
@@ -131,6 +135,60 @@ def _validate_event_statuses(events: list[HostAdapterEvent], blockers: list[dict
                     "actual": event.status,
                 }
             )
+
+
+def _validate_event_payloads(events: list[HostAdapterEvent], blockers: list[dict[str, Any]]) -> None:
+    command_failures: list[str] = []
+    for event in events:
+        category = event.payload.get("category")
+        if category is not None and category not in EVENT_CATEGORIES:
+            blockers.append(
+                {
+                    "code": "adapter-event-category-unsupported",
+                    "eventId": event.event_id,
+                    "category": category,
+                }
+            )
+        if event.event_type == "command.completed":
+            command = event.payload.get("command")
+            exit_code = event.payload.get("exitCode")
+            if not isinstance(command, str) or not command:
+                blockers.append({"code": "adapter-event-command-missing", "eventId": event.event_id})
+            if not isinstance(exit_code, int) or isinstance(exit_code, bool):
+                blockers.append({"code": "adapter-event-exit-code-missing", "eventId": event.event_id})
+                continue
+            if event.status == "PASS" and exit_code != 0:
+                blockers.append({"code": "adapter-event-command-status-mismatch", "eventId": event.event_id, "exitCode": exit_code})
+            if event.status == "FAIL" and exit_code == 0:
+                blockers.append({"code": "adapter-event-command-status-mismatch", "eventId": event.event_id, "exitCode": exit_code})
+            if exit_code != 0 or event.status == "FAIL":
+                command_failures.append(event.event_id)
+        if event.event_type == "writes.summarized" and not isinstance(event.payload.get("changedFiles"), list):
+            blockers.append({"code": "adapter-event-writes-missing", "eventId": event.event_id})
+        if event.event_type == "task.blocked":
+            blocker = event.payload.get("blocker")
+            if not isinstance(blocker, str) or not blocker:
+                blockers.append({"code": "adapter-event-blocker-missing", "eventId": event.event_id})
+        if event.event_type == "task.completed":
+            result_path = event.payload.get("resultPath")
+            if not isinstance(result_path, str) or not result_path:
+                blockers.append({"code": "adapter-event-result-missing", "eventId": event.event_id})
+    terminal = _terminal_event_type(events)
+    if terminal == "task.completed" and command_failures:
+        blockers.append({"code": "adapter-event-failed-command-completed", "eventIds": command_failures})
+
+
+def _validate_time_order(events: list[HostAdapterEvent], blockers: list[dict[str, Any]]) -> None:
+    previous: datetime | None = None
+    for event in events:
+        try:
+            recorded_at = datetime.fromisoformat(event.recorded_at.replace("Z", "+00:00"))
+        except ValueError:
+            blockers.append({"code": "adapter-event-recorded-at-invalid", "eventId": event.event_id})
+            continue
+        if previous is not None and recorded_at < previous:
+            blockers.append({"code": "adapter-event-recorded-at-regressed", "eventId": event.event_id})
+        previous = recorded_at
 
 
 def _terminal_event_type(events: list[HostAdapterEvent]) -> str | None:

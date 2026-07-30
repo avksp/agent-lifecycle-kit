@@ -3,7 +3,7 @@
   "adapterId": "opencode",
   "host": "opencode",
   "maturity": "VERIFIED",
-  "descriptorDigest": "c9c2c549df5a7da3b297165a2552b5b4c037124f580f5a30d71cb41bae8e7f88",
+  "descriptorDigest": "007543f5ac26b0689250b838f870bfb1eb6695e5d1350c9739659926dffc06c1",
   "unsupportedOperationPolicy": "fail-closed",
   "coreSemantics": "delegated-to-agent-lifecycle-core",
   "capabilities": [
@@ -89,6 +89,15 @@
       "liveEvidenceRequiredForVerified": true
     },
     {
+      "name": "adapter-event-stream",
+      "mapping": "agent-adapter-event.v1",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false
+    },
+    {
       "name": "result-collection",
       "mapping": "task-result-artifact",
       "offlineConformance": "deterministic",
@@ -138,6 +147,20 @@
     "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
     "unsupportedOperations": "fail-closed",
     "providerModelNamesInCore": false
+  },
+  "eventCapture": {
+    "status": "DECLARED",
+    "portableEventSchema": "agent-adapter-event.v1",
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false
   },
   "promotion": {
     "verifiedRequiresLiveTestedHostRange": true,

@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.17.0 - 2026-07-30")
+        current_release = _section(changelog, "## 0.18.0 - 2026-07-30")
         self.assertNotIn("- No changes yet.", current_release)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -97,11 +97,11 @@ def _run_no_check(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`.\n",
     )
     _write_text(
         root / "docs/guides/README.ru.md",
-        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`.\n",
     )
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
@@ -113,6 +113,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Hermes GLM 5.2 live evidence.\n"
         "Qwen Code GLM 5.2 live evidence.\n"
         "Cursor, Gemini CLI, and Kimi Code remain `EXPERIMENTAL`.\n"
+        "`adapter-event-stream`.\n"
+        "`agent-adapter-event-stream-receipt.v1`.\n"
         "| Codex | Projection | VERIFIED | Claim |\n"
         "| Claude Code | Projection | VERIFIED | Claim |\n"
         "| OpenCode | Projection | VERIFIED | Claim |\n"
@@ -121,14 +123,15 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.17.0.md",
+        root / "release/notes/v0.18.0.md",
         "Status: source release.\n"
-        "Updated package metadata to `0.17.0`.\n"
-        "`agent-follow-up-register.v1`.\n"
-        "`agent-follow-up-summary.v1`.\n"
-        "`agent-worktree-isolation-policy.v1`.\n"
-        "`agent-worktree-attempt-receipt.v1`.\n"
-        "`workflow finalize --follow-up-register`.\n"
+        "Updated package metadata to `0.18.0`.\n"
+        "`agent-adapter-event-stream-receipt.v1`.\n"
+        "`agent-adapter-event-capture-validation.v1`.\n"
+        "`agent-review-verdict.v1`.\n"
+        "`agent-review-verdict-validation.v1`.\n"
+        "`agent-lifecycle adapter event-capture-check`.\n"
+        "`agent-lifecycle audit review-check`.\n"
         "productionPromotionClaimed.\n",
     )
     _write_text(
@@ -186,6 +189,22 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-worktree-attempt-receipt.v1`.\n"
         "preserved unless.\n"
         "`runner transition`.\n",
+    )
+    _write_text(
+        root / "docs/reference/adapter-event-capture.md",
+        "`adapter-event-stream`.\n"
+        "`agent-adapter-event.v1`.\n"
+        "`agent-adapter-event-stream-receipt.v1`.\n"
+        "`agent-adapter-event-capture-validation.v1`.\n"
+        "fails closed.\n",
+    )
+    _write_text(
+        root / "docs/reference/review-verdict.md",
+        "`agent-review-verdict.v1`.\n"
+        "`agent-review-verdict-validation.v1`.\n"
+        "`agent-review-routing-summary.v1`.\n"
+        "fails closed.\n"
+        "`agent-lifecycle audit review-check`.\n",
     )
     for host in ("claude", "codex", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "qwen-code"):
         _write_text(

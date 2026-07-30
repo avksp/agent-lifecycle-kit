@@ -52,6 +52,34 @@ class AdapterConformanceToolTests(unittest.TestCase):
             self.assertEqual(payload["status"], "FAIL")
             self.assertIn("missing-capability-manifest", {item["code"] for item in payload["blockers"]})
 
+    def test_tool_fails_closed_when_declared_event_capture_lacks_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            adapter_dir = root / "adapters/opencode"
+            conformance_dir = root / "conformance/adapters/opencode"
+            adapter_dir.mkdir(parents=True)
+            conformance_dir.mkdir(parents=True)
+            for filename in ("adapter.descriptor.json", "capabilities.manifest.json"):
+                shutil.copyfile(ROOT / f"adapters/opencode/{filename}", adapter_dir / filename)
+            shutil.copyfile(ROOT / "conformance/adapters/opencode/offline-baseline.json", conformance_dir / "offline-baseline.json")
+            evidence = root / "adapter-conformance.json"
+
+            result = _run_tool(
+                "--adapter-root",
+                str(root / "adapters"),
+                "--conformance-root",
+                str(root / "conformance/adapters"),
+                "--host",
+                "opencode",
+                "--evidence",
+                str(evidence),
+            )
+
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(payload["status"], "FAIL")
+            self.assertIn("adapter-event-capture-receipt-missing", {item["code"] for item in payload["blockers"]})
+
 
 def _run_tool(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(

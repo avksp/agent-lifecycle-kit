@@ -136,6 +136,11 @@ class HostAdapterTests(unittest.TestCase):
                 self.assertEqual(capability_manifest["host"], config["descriptorHost"])
                 self.assertEqual(capability_manifest["maturity"], expected_maturity)
                 self.assertFalse(capability_manifest["promotion"]["productionPromotionClaimed"])
+                self.assertEqual(descriptor["eventCapture"]["status"], "DECLARED")
+                self.assertEqual(descriptor["eventCapture"]["portableEventSchema"], "agent-adapter-event.v1")
+                self.assertFalse(descriptor["eventCapture"]["promotionRequired"])
+                self.assertEqual(capability_manifest["eventCapture"]["status"], "DECLARED")
+                self.assertFalse(capability_manifest["eventCapture"]["promotionRequired"])
                 self.assertEqual(validate_capability_manifest(capability_manifest, descriptor=descriptor)["status"], "PASS")
                 if expected_maturity == "VERIFIED":
                     self.assertIsInstance(descriptor["liveTestedHostRange"], dict)

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "adapterId": "cursor",
+  "host": "cursor",
+  "runId": "offline-conformance",
+  "taskId": "adapter-event-capture",
+  "operationId": "offline-event-capture-cursor",
+  "producer": {
+    "id": "cursor-neutral-event-producer",
+    "boundary": "adapter-owned",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
+  "descriptorDigest": "02c3915d526fc28dbe8af596bc35a54a11a9c345d9483f95898c1f225bffa9bf",
+  "eventStreamDigest": "f93f100d087f0d95b57bdf023b14a912bed5cfb5b795cb7f8ee006f63cf409a9",
+  "eventCount": 6,
+  "eventTypes": [
+    "session.started",
+    "task.launched",
+    "command.completed",
+    "writes.summarized",
+    "usage.reported",
+    "task.completed"
+  ],
+  "terminalEvent": "task.completed",
+  "emittedAt": "2026-07-30T00:18:01Z",
+  "productionPromotionClaimed": false,
+  "receiptDigest": "43b0c6ae8483ca9a6891e46baf3fd0aebae8d516e601b2c60f21625f31b85986"
+}

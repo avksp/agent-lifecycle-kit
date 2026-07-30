@@ -133,6 +133,38 @@ Skills остаются тонкими точками входа. Специфи
 
 Подробнее: [квитанции изоляции рабочих деревьев](../reference/worktree-isolation.md).
 
+## Захват событий адаптера
+
+Захват событий адаптера записывает действия хоста как нейтральные
+доказательства ALK, не добавляя в ядро названия обратных вызовов конкретного
+поставщика. Манифесты адаптера заявляют поддержку `adapter-event-stream` и
+используют существующую схему `agent-adapter-event.v1`.
+`agent-adapter-event-stream-receipt.v1` связывает поток с отпечатками
+дескриптора и событий, а `agent-adapter-event-capture-validation.v1`
+завершается отказом, если заявленный захват не имеет потока, квитанции, имеет
+повреждённые события или устаревшие отпечатки.
+
+Поток событий ловит ложные заявления о завершении: неудачную команду нельзя
+спрятать за `task.completed`. Краткие сводки событий помогают маленьким
+локальным моделям быстро выбрать исправление, а полные события и квитанции
+остаются доступны для более сильной проверки.
+
+Подробнее: [захват событий адаптера](../reference/adapter-event-capture.md).
+
+## Вердикты проверки
+
+Структурированные вердикты проверки разделяют приёмку на соответствие
+требованиям, качество реализации, качество доказательств и остаточный риск.
+Краткие поля `agent-review-verdict.v1` задают маршрут исправления без длинного
+описания, а `agent-review-routing-summary.v1` даёт маленьким локальным моделям
+следующее действие, не скрывая полные доказательства от крупных моделей.
+
+Если проверка задачи содержит `reviewVerdict`, приёмка задачи проверяет его до
+принятия. Задачу нельзя принять, если одно из измерений провалено, остаются
+открытые находки MEDIUM+ или маршрут исправления противоречит общему вердикту.
+
+Подробнее: [вердикты проверки](../reference/review-verdict.md).
+
 ## Контролируемый цикл выполнения
 
 Команда `runner` ведёт узкое состояние цикла выполнения
@@ -301,6 +333,7 @@ agent-lifecycle runner transition --runner <runner.state.json> --state <path-to-
 agent-lifecycle runner stop --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
 agent-lifecycle runner resume --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
+agent-lifecycle audit review-check --review <task-review.json>
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle specification check --specification <specification.json>
 agent-lifecycle plan check --manifest <plan.manifest.json> --lock <plan.lock.json>
@@ -316,6 +349,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 agent-lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
 agent-lifecycle adapter install-plan --descriptor adapters/opencode/adapter.descriptor.json
 agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
+agent-lifecycle adapter event-capture-check --descriptor adapters/opencode/adapter.descriptor.json --capability-manifest adapters/opencode/capabilities.manifest.json --receipt conformance/adapters/opencode/event-stream-receipt.json --event <adapter-event-1.json>
 agent-lifecycle adapter scaffold --host synthetic-host --target /tmp/agent-lifecycle-adapter-scaffold --dry-run
 agent-lifecycle-neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
@@ -358,7 +392,7 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 Сейчас реализованы группы команд `version`, `diagnose`, `schema`, `workflow status`,
 `workflow next`, `workflow block`, `workflow resolve`, `workflow task-start`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
-`audit ownership`, `tier resolve`, `context profile-check`, `context check`,
+`audit ownership`, `audit review-check`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
 `goal check`, `goal summarize`, `goal update`, `followup check`,
 `followup add`, `followup close`, `followup sweep`, `worktree policy-check`,
@@ -367,7 +401,7 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 `specification check`,
 `plan check`, `plan acceptance-check`, `task compile`, `adapter validate`,
 `adapter inspect`, `adapter install-plan`, `adapter event-check`,
-`adapter scaffold` и `neutrality`.
+`adapter event-capture-check`, `adapter scaffold` и `neutrality`.
 `adapter scaffold` — только заготовка и может создавать только
 `EXPERIMENTAL`-проекции. `adapter inspect` записывает дескриптор и безопасно
 обнаруживает возможности среды без запуска модели. Выполнение адаптера и

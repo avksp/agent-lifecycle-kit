@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "adapterId": "opencode",
+  "host": "opencode",
+  "runId": "offline-conformance",
+  "taskId": "adapter-event-capture",
+  "operationId": "offline-event-capture-opencode",
+  "producer": {
+    "id": "opencode-neutral-event-producer",
+    "boundary": "adapter-owned",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
+  "descriptorDigest": "007543f5ac26b0689250b838f870bfb1eb6695e5d1350c9739659926dffc06c1",
+  "eventStreamDigest": "2660e01336059be098c7787788f6e87a05441efd05c85b650900b742dd01071e",
+  "eventCount": 6,
+  "eventTypes": [
+    "session.started",
+    "task.launched",
+    "command.completed",
+    "writes.summarized",
+    "usage.reported",
+    "task.completed"
+  ],
+  "terminalEvent": "task.completed",
+  "emittedAt": "2026-07-30T00:18:01Z",
+  "productionPromotionClaimed": false,
+  "receiptDigest": "0b1a84a52dba03c9d20e408091925d4137134dd4f06c421229d1c241f35e058d"
+}

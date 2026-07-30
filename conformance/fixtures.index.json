@@ -5,9 +5,9 @@
   "liveModelInvocations": 0,
   "coreProfiles": [
     {
-      "bytes": 2235,
       "path": "conformance/core/adapter-baseline.v1.json",
-      "sha256": "18612fb78cb44aeba6cfce28a7c2f33d8c6121e5118540f3fb50a0e8df9e14ec"
+      "sha256": "8a411920115322764174af9baeee76d1fa23545ecdc597e3dfaddeb459b1f086",
+      "bytes": 2897
     },
     {
       "bytes": 1412,
@@ -46,9 +46,9 @@
   ],
   "fixtures": [
     {
-      "bytes": 1763,
       "path": "fixtures/synthetic/negative-matrix-01.json",
-      "sha256": "3b678c6f9566c063651b8b522a33c96ca35b35a1f2dd2054948d2762e72e9188"
+      "sha256": "5c14787ab6ef9c59547ee9cd20262680db870531ec0cbcd7b96fc22ee563a87c",
+      "bytes": 2108
     },
     {
       "bytes": 876,

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.host_protocol.event_capture import EVENT_CAPTURE_OPERATION, adapter_declares_event_capture, event_capture_declaration
 from agent_lifecycle.host_protocol.validation import REQUIRED_OPERATION_NAMES, validate_adapter_descriptor
 
 CAPABILITY_MANIFEST_SCHEMA_VERSION = "agent-adapter-capability-manifest.v1"
@@ -39,6 +40,7 @@ def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
             "unsupportedOperations": descriptor.get("unsupportedOperationPolicy"),
             "providerModelNamesInCore": model_routing.get("providerModelNamesInCore"),
         },
+        "eventCapture": _event_capture_from_descriptor(descriptor),
         "promotion": {
             "verifiedRequiresLiveTestedHostRange": True,
             "productionPromotionClaimed": False,
@@ -82,6 +84,7 @@ def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[s
         )
     _validate_manifest_capabilities(manifest, descriptor, blockers)
     _validate_runtime_boundary(manifest, descriptor, blockers)
+    _validate_event_capture(manifest, descriptor, blockers)
     status = "PASS" if not blockers else "FAIL"
     return {
         "schemaVersion": CAPABILITY_MANIFEST_VALIDATION_SCHEMA_VERSION,
@@ -104,6 +107,18 @@ def _capability_from_operation(operation: dict[str, Any], descriptor: dict[str, 
         "unsupportedOperationPolicy": descriptor.get("unsupportedOperationPolicy"),
         "lifecycleSemantics": descriptor.get("coreSemantics"),
         "liveEvidenceRequiredForVerified": offline_conformance != "deterministic",
+    }
+
+
+def _event_capture_from_descriptor(descriptor: dict[str, Any]) -> dict[str, Any]:
+    if adapter_declares_event_capture(descriptor=descriptor):
+        return event_capture_declaration()
+    return {
+        "status": "NOT_DECLARED",
+        "portableEventSchema": "agent-adapter-event.v1",
+        "categories": [],
+        "producerBoundary": None,
+        "promotionRequired": False,
     }
 
 
@@ -159,3 +174,28 @@ def _validate_runtime_boundary(
         blockers.append({"code": "capability-runtime-boundary-policy", "field": "unsupportedOperations"})
     if boundary.get("providerModelNamesInCore") is not False:
         blockers.append({"code": "capability-provider-model-boundary", "message": "provider model names must stay out of core contracts"})
+
+
+def _validate_event_capture(
+    manifest: dict[str, Any],
+    descriptor: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> None:
+    capture = manifest.get("eventCapture")
+    if not isinstance(capture, dict):
+        blockers.append({"code": "capability-event-capture-missing", "message": "eventCapture must be an object"})
+        return
+    expected_declared = adapter_declares_event_capture(descriptor=descriptor)
+    actual_declared = capture.get("status") == "DECLARED"
+    if actual_declared != expected_declared:
+        blockers.append({"code": "capability-event-capture-drift", "expectedDeclared": expected_declared, "actualStatus": capture.get("status")})
+    if actual_declared:
+        operations = descriptor.get("operations", [])
+        if not any(isinstance(item, dict) and item.get("name") == EVENT_CAPTURE_OPERATION for item in operations):
+            blockers.append({"code": "capability-event-capture-operation-missing", "operation": EVENT_CAPTURE_OPERATION})
+        if capture.get("portableEventSchema") != "agent-adapter-event.v1":
+            blockers.append({"code": "capability-event-capture-schema", "message": "event capture must use agent-adapter-event.v1"})
+        if capture.get("producerBoundary") != "adapter-owned":
+            blockers.append({"code": "capability-event-capture-boundary", "message": "event producer boundary must be adapter-owned"})
+    if capture.get("promotionRequired") is not False:
+        blockers.append({"code": "capability-event-capture-promotion-overclaim", "message": "event capture declaration must not imply promotion"})

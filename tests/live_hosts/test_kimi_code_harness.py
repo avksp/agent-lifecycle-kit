@@ -233,6 +233,7 @@ class KimiCodeHarnessTests(unittest.TestCase):
             self.assertNotIn("--safe-mode", calls[0])
 
     def test_live_host_receipt_blocks_when_kimi_mutates_worktree(self) -> None:
+        baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
         checks = iter(
             [
                 {"clean": True, "dirtyEntryCount": 0},
@@ -266,7 +267,7 @@ class KimiCodeHarnessTests(unittest.TestCase):
                 diagnostic_dir=tmp_path / "diagnostics",
                 budget_policy=kimi_code_harness.BudgetPolicy(
                     mode="subscription",
-                    max_invocations=13,
+                    max_invocations=len(baseline["requiredOperations"]),
                     max_billable_tokens=1000,
                 ),
                 runner=fake_runner,

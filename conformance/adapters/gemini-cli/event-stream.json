@@ -1,0 +1,106 @@
+[
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-gemini-cli-01",
+    "host": "gemini-cli",
+    "adapterId": "gemini-cli",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-gemini-cli",
+    "sequence": 1,
+    "eventType": "session.started",
+    "status": "INFO",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "lifecycle-transition"
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-gemini-cli-02",
+    "host": "gemini-cli",
+    "adapterId": "gemini-cli",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-gemini-cli",
+    "sequence": 2,
+    "eventType": "task.launched",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "lifecycle-transition"
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-gemini-cli-03",
+    "host": "gemini-cli",
+    "adapterId": "gemini-cli",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-gemini-cli",
+    "sequence": 3,
+    "eventType": "command.completed",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "command",
+      "command": "agent-lifecycle adapter event-check",
+      "exitCode": 0
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-gemini-cli-04",
+    "host": "gemini-cli",
+    "adapterId": "gemini-cli",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-gemini-cli",
+    "sequence": 4,
+    "eventType": "writes.summarized",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "file-change",
+      "changedFiles": [
+        "adapters/gemini-cli/adapter.descriptor.json"
+      ]
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-gemini-cli-05",
+    "host": "gemini-cli",
+    "adapterId": "gemini-cli",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-gemini-cli",
+    "sequence": 5,
+    "eventType": "usage.reported",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "model-usage",
+      "inputTokens": 64,
+      "outputTokens": 16
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-gemini-cli-06",
+    "host": "gemini-cli",
+    "adapterId": "gemini-cli",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-gemini-cli",
+    "sequence": 6,
+    "eventType": "task.completed",
+    "status": "PASS",
+    "recordedAt": "2026-07-30T00:18:00Z",
+    "payload": {
+      "category": "lifecycle-transition",
+      "resultPath": "conformance/adapters/gemini-cli/offline-baseline.json"
+    }
+  }
+]
