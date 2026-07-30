@@ -95,6 +95,31 @@ snapshot, receipts and evidence remain the source of truth.
 
 See [plan continuity](docs/reference/plan-continuity.md).
 
+## Evidence Index and Imports
+
+Evidence indexes are optional, rebuildable summaries over existing lifecycle
+artifacts. They help reviewers and small local models find the right receipt
+without reading every artifact in full. The index stores source digests,
+schema/status fields and compact summaries; it is not a source of truth and
+does not return raw artifact content.
+
+```bash
+agent-lifecycle evidence index --project-root . --artifact evidence/final-proof.json --out evidence-index.json
+agent-lifecycle evidence search --index evidence-index.json --query final --out evidence-search.json
+```
+
+Planning imports convert one untrusted input file into a draft ALK candidate.
+The candidate remains `DRAFT`, is marked as requiring review, and is blocked
+from freeze until the normal ALK checks and independent review pass.
+
+```bash
+agent-lifecycle import plan --source incoming-plan.md --out imported-plan.json
+agent-lifecycle import check --candidate imported-plan.json
+agent-lifecycle import proposal-check --proposal skill-proposal.json
+```
+
+See [evidence index and imports](docs/reference/evidence-imports.md).
+
 ## Compact context mode
 
 Small-context hosts are supported through a deterministic context profile, not
@@ -470,8 +495,9 @@ Implemented core CLI groups are `version`, `diagnose`, `schema`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `audit review-check`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`metrics cost-check`, `quality pack-check`, `quality behavior-check`, `diagnostics bundle`,
-`report status-view`,
+`metrics cost-check`, `evidence index`, `evidence search`, `import plan`,
+`import check`, `import proposal-check`, `quality pack-check`,
+`quality behavior-check`, `diagnostics bundle`, `report status-view`,
 `goal check`, `goal summarize`, `goal update`, `followup check`,
 `followup add`, `followup close`, `followup sweep`, `worktree policy-check`,
 `worktree receipt`, `worktree check`, `runner start`, `runner status`,

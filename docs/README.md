@@ -25,6 +25,7 @@ and does not depend on a source project.
 - [Public contracts](reference/public-contracts.md)
 - [Lifecycle cost accounting](reference/lifecycle-cost.md)
 - [Plan continuity](reference/plan-continuity.md)
+- [Evidence index and imports](reference/evidence-imports.md)
 - [Production promotion contract](reference/production-promotion.md)
 - [Live cost calibration](reference/live-cost-calibration.md)
 - [Release security](security/release-security.md)

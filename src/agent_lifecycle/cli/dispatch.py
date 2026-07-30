@@ -20,11 +20,25 @@ from agent_lifecycle.contracts.compatibility import (
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.context import check_context, load_context_profile, render_context
 from agent_lifecycle.diagnostics import build_diagnostic_bundle, build_readiness_report
+from agent_lifecycle.evidence_index import (
+    build_evidence_index,
+    require_evidence_index_pass,
+    require_evidence_search_pass,
+    search_evidence_index,
+    validate_evidence_index,
+)
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.cli.adapter import dispatch_adapter
 from agent_lifecycle.cli.followup import dispatch_followup
 from agent_lifecycle.cli.worktree import dispatch_worktree
 from agent_lifecycle.goal import build_objective_snapshot, update_goal_record, validate_goal_record
+from agent_lifecycle.imports import (
+    import_planning_input,
+    require_import_validation_pass,
+    require_skill_proposal_pass,
+    validate_import_result,
+    validate_skill_improvement_proposal,
+)
 from agent_lifecycle.model_routing import (
     resolve_model_route,
     validate_host_model_profile,
@@ -104,6 +118,10 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         )
     if args.command == "diagnostics":
         return _dispatch_diagnostics(args)
+    if args.command == "evidence":
+        return _dispatch_evidence(args)
+    if args.command == "import":
+        return _dispatch_import(args)
     if args.command == "quality":
         return _dispatch_quality(args)
     if args.command == "report":
@@ -166,6 +184,53 @@ def _dispatch_contract(args: argparse.Namespace) -> dict[str, Any]:
         policy = read_json_object(Path(args.policy), label="public contract policy") if args.policy else build_contract_policy()
         return require_contract_policy_pass(validate_contract_policy(policy))
     raise LifecycleError("command-not-implemented", "contract command is not implemented")
+
+
+def _dispatch_evidence(args: argparse.Namespace) -> dict[str, Any]:
+    if args.evidence_command == "index":
+        payload = build_evidence_index(
+            Path(args.project_root),
+            list(args.artifact),
+            max_artifacts=args.max_artifacts,
+            max_input_bytes=args.max_input_bytes,
+            target_tokens=args.target_tokens,
+        )
+        require_evidence_index_pass(validate_evidence_index(payload))
+        require_evidence_index_pass(payload)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.evidence_command == "search":
+        payload = search_evidence_index(
+            read_json_object(Path(args.index), label="evidence index"),
+            query=args.query or "",
+            max_results=args.max_results,
+            target_tokens=args.target_tokens,
+        )
+        require_evidence_search_pass(payload)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    raise LifecycleError("command-not-implemented", "evidence command is not implemented")
+
+
+def _dispatch_import(args: argparse.Namespace) -> dict[str, Any]:
+    if args.import_command == "plan":
+        payload = import_planning_input(
+            Path(args.source),
+            package_id=args.package_id,
+            max_input_bytes=args.max_input_bytes,
+            target_tokens=args.target_tokens,
+        )
+        require_import_validation_pass(validate_import_result(payload))
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.import_command == "check":
+        return require_import_validation_pass(validate_import_result(read_json_object(Path(args.candidate), label="planning import result")))
+    if args.import_command == "proposal-check":
+        return require_skill_proposal_pass(validate_skill_improvement_proposal(read_json_object(Path(args.proposal), label="skill proposal")))
+    raise LifecycleError("command-not-implemented", "import command is not implemented")
 
 
 def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
