@@ -3,7 +3,7 @@ name: agent-workflow-orchestrator
 description: Run or resume the full lifecycle from request clarification through reviewed planning, freeze, authorized execution, per-task audits, and final proof.
 ---
 
-# Agent Workflow Orchestrator
+# Agent workflow orchestrator
 
 Use `agent-workflow-orchestrator` to drive the complete lifecycle. The
 controller is host-neutral: skills define semantics, while each host adapter
@@ -33,7 +33,7 @@ cancellation, and telemetry.
 12. After all required tasks are accepted, run final implementation audit and
     publish completion only from a reproducible proof.
 
-## State Rules
+## State rules
 
 - Immutable authority: plan manifest, plan lock, frozen packets.
 - Mutable runtime: workflow state, journal, task results, task reviews,
@@ -45,7 +45,7 @@ cancellation, and telemetry.
 - Budget exhaustion, missing receipts, stale evidence, or unverifiable
   telemetry cannot produce a pass.
 
-## Context Policy
+## Context policy
 
 - Keep the latest user instructions and active packet verbatim.
 - Summarize older context into structured state.

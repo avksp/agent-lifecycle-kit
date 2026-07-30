@@ -1,4 +1,4 @@
-# Controlled Runner
+# Controlled runner
 
 The runner is a provider-neutral execution-loop controller. It records a narrow
 state for task attempts, validations, reviews, remediation, reroutes, splits,
@@ -19,7 +19,7 @@ agent-lifecycle runner stop --runner <runner.state.json> --state <run.state.json
 agent-lifecycle runner resume --runner <runner.state.json> --state <run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
 ```
 
-## Transition Request
+## Transition request
 
 Transitions are described by `agent-runner-transition-request.v1` documents.
 
@@ -37,7 +37,7 @@ Transitions are described by `agent-runner-transition-request.v1` documents.
 Supported actions are `attempt`, `validate`, `review`, `accept`, `remediate`,
 `reroute`, `split`, `block` and `abort`.
 
-## Resource Guards
+## Resource guards
 
 `agent-runner-policy.v1` bounds attempts, reroutes, splits and billable tokens.
 The runner rejects transitions that would exceed these caps before writing
@@ -51,7 +51,7 @@ Attempt transitions may include an `isolationReceipt`. When present, the
 runner validates `agent-worktree-attempt-receipt.v1` and records the receipt
 digest in transition history.
 
-## Small And Large Models
+## Small and large models
 
 `agent-runner-snapshot.v1` is a compact status view for continuation prompts.
 It fits the selected small-context profile or fails closed. Small local models

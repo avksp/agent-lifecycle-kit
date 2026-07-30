@@ -1,4 +1,4 @@
-# Claude Code Adapter Projection
+# Claude Code adapter projection
 
 This directory contains the Claude Code projection for Agent Lifecycle Kit.
 It is an offline release artifact that points to the shared lifecycle skills

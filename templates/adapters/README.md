@@ -1,4 +1,4 @@
-# Adapter Scaffold Templates
+# Adapter scaffold templates
 
 `agent-lifecycle adapter scaffold` creates a minimal host projection skeleton:
 

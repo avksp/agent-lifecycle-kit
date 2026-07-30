@@ -3,7 +3,7 @@ name: audit-agent-plan
 description: Independently audit SDD specifications and agent-ready plans before freeze, returning findings, readiness verdicts, and required refinements.
 ---
 
-# Audit Agent Plan
+# Audit agent plan
 
 Use this skill for independent review of a candidate specification or
 agent-ready plan. The default action is audit only.
@@ -14,7 +14,7 @@ Read the developer overview first, then the specification, plan manifest,
 write-set contract, worker DAG, acceptance checklist, evidence plan, budget
 profile, and previous review if this is a revision.
 
-## Review Matrix
+## Review matrix
 
 Check every item for:
 

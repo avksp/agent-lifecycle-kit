@@ -1,4 +1,4 @@
-# Adapter Authoring
+# Adapter authoring
 
 This guide defines the source-tree contract for adding or updating host
 adapters. Adapter code may translate host-local mechanics, but lifecycle

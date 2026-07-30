@@ -4,7 +4,7 @@ This runbook promotes one host adapter from `EXPERIMENTAL` to host-specific
 `VERIFIED`. It is host-neutral: each adapter supplies its own host commands,
 but the evidence contract and release gates stay the same.
 
-## Claim Boundaries
+## Claim boundaries
 
 - Source release: tagged repository contents plus offline checks. It does not
   prove public directory approval or broader production-promotion coverage.
@@ -16,7 +16,7 @@ but the evidence contract and release gates stay the same.
   calibration, and independent final-audit receipts. It is outside the offline
   source-release proof.
 
-## Promotion Phases
+## Promotion phases
 
 1. Preflight: record host CLI version, auth/session readiness, clean worktree
    status, invocation cap, token cap, and wall-clock cap.
@@ -37,7 +37,7 @@ but the evidence contract and release gates stay the same.
    neutrality, packaging, and CI checks before publishing the tag and GitHub
    Release object.
 
-## Required Validators
+## Required validators
 
 Use these validators instead of prose-only review:
 
@@ -70,7 +70,7 @@ python tools/release/validate_docs_compat.py \
   --evidence <docs-compat-evidence.json>
 ```
 
-## Fail-Closed Blockers
+## Fail-closed blockers
 
 Promotion is blocked when any required receipt is missing, synthetic replay is
 used as live evidence, usage is unattested, quality status is not `PASS`, a

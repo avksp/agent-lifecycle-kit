@@ -1,4 +1,4 @@
-# Follow-Up Register
+# Follow-up register
 
 The follow-up register is a schema-backed record for work that is explicitly
 outside the current scope, blocked by external action, or scheduled after an

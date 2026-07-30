@@ -1,4 +1,4 @@
-# Neutrality Authority Contract
+# Neutrality authority contract
 
 The neutrality boundary prevents origin-specific repository information,
 secrets, injected deny values, trust roots, and signing keys from becoming part
