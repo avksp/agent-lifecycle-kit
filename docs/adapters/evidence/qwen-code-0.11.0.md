@@ -15,7 +15,7 @@ Scope:
 - Adapter descriptor: `adapters/qwen-code/adapter.descriptor.json`.
 - Capability manifest: `adapters/qwen-code/capabilities.manifest.json`.
 - Raw inspection report:
-  `tasks/release-0-11/evidence/qwen-code/inspection/qwen-code-inspection-report.json`.
+  `work/release-0-11/evidence/qwen-code/inspection/qwen-code-inspection-report.json`.
 
 Safe inspection result:
 
@@ -46,7 +46,7 @@ Discovered surfaces:
 - host usage fields were present in the stream result:
   `input_tokens=13476`, `output_tokens=15`, `total_tokens=13491`;
 - redacted summary:
-  `tasks/release-0-11/evidence/qwen-code/glm52-smoke/qwen-glm52-smoke-summary.json`;
+  `work/release-0-11/evidence/qwen-code/glm52-smoke/qwen-glm52-smoke-summary.json`;
 - this was a bounded model smoke only, not a live host conformance receipt,
   live calibration receipt, adapter runner proof, or ALK lifecycle final proof.
 

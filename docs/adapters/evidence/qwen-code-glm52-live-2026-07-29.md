@@ -14,23 +14,23 @@ Scope:
 Accepted evidence:
 
 - Preflight: `PASS`.
-  `tasks/release-0-11/evidence/qwen-code/live-preflight/qwen-code-preflight-report.json`
+  `work/release-0-11/evidence/qwen-code/live-preflight/qwen-code-preflight-report.json`
   (`sha256:c08dad562daf65f908510bbb035fa589d4bdc19d8b4d9e5384029c203d3a3f82`).
 - Live host conformance: `PASS`, 13/13 baseline operations.
-  `tasks/release-0-11/evidence/qwen-code/live-host-conformance-qwen-code.json`
+  `work/release-0-11/evidence/qwen-code/live-host-conformance-qwen-code.json`
   (`sha256:f74ae247b79a8f689a97f1fdfa045af52eafc3072c17d884e634d2ee4d267ec0`).
 - Live host receipt:
-  `tasks/release-0-11/evidence/qwen-code/live-host-receipts/qwen-code.json`
+  `work/release-0-11/evidence/qwen-code/live-host-receipts/qwen-code.json`
   (`sha256:7b719a03ce1daac56e120bbdea312b8dc25c23b95c7a2fba33781aa9ec1fc8d1`).
 - Live calibration: `PASS`, 14/14 scenario/cohort runs,
   `qualityRegressionCount=0`.
-  `tasks/release-0-11/evidence/qwen-code/live-calibration-verification-qwen-code.json`
+  `work/release-0-11/evidence/qwen-code/live-calibration-verification-qwen-code.json`
   (`sha256:96d10f9d39d17287a34bdc345e6715f98cab7ebc25809e460abdda6dcb6fb236`).
 - Live calibration receipt:
-  `tasks/release-0-11/evidence/qwen-code/live-calibration-receipts/qwen-code.json`
+  `work/release-0-11/evidence/qwen-code/live-calibration-receipts/qwen-code.json`
   (`sha256:0bcc375ceafad1e5ce4ed5d3dab076101f8a26d6c6038f8c19603c10b15d37d8`).
 - ALK lifecycle final proof:
-  `tasks/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json`
+  `work/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json`
   (`sha256:5576e94553b8bf7f50a865db73f4ac8cd50f31a5f5ed16e5f309227768e3cee8`).
 
 Resource accounting:

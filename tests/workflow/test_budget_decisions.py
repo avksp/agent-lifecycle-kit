@@ -31,7 +31,7 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
                 source_revision="source",
                 reason="launch",
             )
-            usage_path = "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            usage_path = "work/WS-01/attempt-1/model-usage-receipt.json"
             receipt = _model_usage_receipt(route)
             receipt["usage"]["billableTokens"] = route["maxBillableTokens"] + 1
             write_json_create(root / usage_path, receipt)
@@ -46,7 +46,7 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
                 source_revision="source",
                 usage_receipt_path=usage_path,
                 budget_policy_path=policy_path,
-                decision_receipt_path="tasks/WS-01/attempt-1/budget-decision.json",
+                decision_receipt_path="work/WS-01/attempt-1/budget-decision.json",
                 reason="budget overrun",
             )
 
@@ -56,7 +56,7 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
             self.assertEqual(task["status"], "WAITING_FOR_BUDGET_DECISION")
             stored = json.loads(state_path.read_text(encoding="utf-8"))
             self.assertEqual(stored["blocker"]["code"], "BUDGET_DECISION_REQUIRED")
-            decision = json.loads((root / "tasks/WS-01/attempt-1/budget-decision.json").read_text(encoding="utf-8"))
+            decision = json.loads((root / "work/WS-01/attempt-1/budget-decision.json").read_text(encoding="utf-8"))
             self.assertEqual(decision["schemaVersion"], "agent-lifecycle-budget-decision-receipt.v1")
             self.assertEqual(decision["selectedAction"], "await-operator")
             self.assertEqual(decision["priorRouteDecisionDigest"], route["decisionDigest"])
@@ -69,7 +69,7 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
             policy = _budget_policy(mode="manual")
             policy["allowedActions"].insert(0, "continue-same-route")
             _pause_budget_overrun(root, state_path, policy=policy)
-            cap_deltas_path = "tasks/WS-01/attempt-1/cap-deltas.json"
+            cap_deltas_path = "work/WS-01/attempt-1/cap-deltas.json"
             write_json_create(root / cap_deltas_path, {"maxBillableTokens": 240000})
 
             payload = apply_budget_decision(
@@ -78,9 +78,9 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
                 operation_id="budget-apply-op",
                 expected_revision=3,
                 source_revision="source",
-                decision_receipt_path="tasks/WS-01/attempt-1/budget-decision.json",
+                decision_receipt_path="work/WS-01/attempt-1/budget-decision.json",
                 action="continue-same-route",
-                applied_receipt_path="tasks/WS-01/attempt-1/budget-decision-applied.json",
+                applied_receipt_path="work/WS-01/attempt-1/budget-decision-applied.json",
                 cap_deltas_path=cap_deltas_path,
                 operator_identity_hash="operator-hash",
                 reason="operator approved cap increase",
@@ -90,7 +90,7 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
             self.assertIsNone(payload["blocker"])
             task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
             self.assertEqual(task["status"], "RUNNING")
-            applied = json.loads((root / "tasks/WS-01/attempt-1/budget-decision-applied.json").read_text(encoding="utf-8"))
+            applied = json.loads((root / "work/WS-01/attempt-1/budget-decision-applied.json").read_text(encoding="utf-8"))
             self.assertEqual(applied["selectedAction"], "continue-same-route")
             self.assertEqual(applied["operatorIdentityHash"], "operator-hash")
             self.assertEqual(applied["capDeltas"], {"maxBillableTokens": 240000})
@@ -113,9 +113,9 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
                 operation_id="budget-reroute-op",
                 expected_revision=3,
                 source_revision="source",
-                decision_receipt_path="tasks/WS-01/attempt-1/budget-decision.json",
+                decision_receipt_path="work/WS-01/attempt-1/budget-decision.json",
                 action="reroute-stronger",
-                applied_receipt_path="tasks/WS-01/attempt-1/budget-decision-applied.json",
+                applied_receipt_path="work/WS-01/attempt-1/budget-decision-applied.json",
                 route_decision_path=route_path,
                 operator_identity_hash="operator-hash",
                 reason="operator selected stronger route",
@@ -128,7 +128,7 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
             stored_task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
             self.assertEqual(stored_task["modelRoute"]["modelClass"], "strong-reasoning")
             self.assertNotIn("attemptModelRoute", stored_task)
-            applied = json.loads((root / "tasks/WS-01/attempt-1/budget-decision-applied.json").read_text(encoding="utf-8"))
+            applied = json.loads((root / "work/WS-01/attempt-1/budget-decision-applied.json").read_text(encoding="utf-8"))
             self.assertEqual(applied["nextRouteDecisionDigest"], "8" * 64)
             self.assertEqual(applied["nextRouteDecision"]["path"], route_path)
 
@@ -155,9 +155,9 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
                     operation_id="budget-cheaper-op",
                     expected_revision=3,
                     source_revision="source",
-                    decision_receipt_path="tasks/WS-01/attempt-1/budget-decision.json",
+                    decision_receipt_path="work/WS-01/attempt-1/budget-decision.json",
                     action="reroute-cheaper",
-                    applied_receipt_path="tasks/WS-01/attempt-1/budget-decision-applied.json",
+                    applied_receipt_path="work/WS-01/attempt-1/budget-decision-applied.json",
                     route_decision_path=route_path,
                     operator_identity_hash="operator-hash",
                     reason="unsafe downgrade",

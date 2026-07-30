@@ -90,7 +90,7 @@ class AdapterEventStreamTests(unittest.TestCase):
             exit_code=0,
             changed_files=["src/agent_lifecycle/example.py"],
             usage={"inputTokens": 100, "outputTokens": 20},
-            result_path="tasks/WS-01/attempt-1/task-result.json",
+            result_path="work/WS-01/attempt-1/task-result.json",
             recorded_at="2026-07-29T08:00:00Z",
         )
         receipt = build_event_stream_receipt(stream, descriptor=descriptor, producer_id="claude-event-producer")
@@ -173,14 +173,14 @@ def _completed_stream() -> list[dict[str, object]]:
         _event(3, "command.completed", "PASS", payload={"command": "python -m unittest", "exitCode": 0}),
         _event(4, "writes.summarized", "PASS", payload={"changedFiles": ["src/agent_lifecycle/example.py"]}),
         _event(5, "usage.reported", "PASS", payload={"inputTokens": 100, "outputTokens": 20}),
-        _event(6, "task.completed", "PASS", payload={"resultPath": "tasks/WS-01/attempt-1/task-result.json"}),
+        _event(6, "task.completed", "PASS", payload={"resultPath": "work/WS-01/attempt-1/task-result.json"}),
     ]
 
 
 def _base_stream() -> list[dict[str, object]]:
     return [
         _event(1, "session.started", "INFO", payload={"surface": "claude-code"}),
-        _event(2, "task.launched", "PASS", payload={"packet": "tasks/release-0-5/workflow/task-packets/WS05-01.task-packet.json"}),
+        _event(2, "task.launched", "PASS", payload={"packet": "work/release-0-5/workflow/task-packets/WS05-01.task-packet.json"}),
     ]
 
 

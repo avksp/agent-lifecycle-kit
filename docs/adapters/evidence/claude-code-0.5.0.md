@@ -2,7 +2,7 @@
 
 This is the committed, redacted summary for the Claude Code host-specific
 `VERIFIED` claim. Raw receipts and diagnostics remain local release evidence
-under `tasks/release-0-5/evidence/` because that tree is intentionally ignored.
+under `work/release-0-5/evidence/` because that tree is intentionally ignored.
 
 ## Claim
 
@@ -29,15 +29,15 @@ under `tasks/release-0-5/evidence/` because that tree is intentionally ignored.
 
 ## Local Raw Evidence
 
-- `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/live-host-promotion-plan-validation.json`
-- `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/preflight/claude-code-preflight-report.json`
-- `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/canary/claude-code-canary-summary.json`
-- `tasks/release-0-5/evidence/live-host-receipts/claude-code.json`
-- `tasks/release-0-5/evidence/live-host-conformance-claude-code.json`
-- `tasks/release-0-5/evidence/live-calibration/claude-code.json`
-- `tasks/release-0-5/evidence/live-calibration-verification-claude-code.json`
-- `tasks/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`
-- `tasks/release-0-5/evidence/live-promotion-audit-claude-code.json`
+- `work/release-0-5/evidence/0.5.1-claude-live-promotion/live-host-promotion-plan-validation.json`
+- `work/release-0-5/evidence/0.5.1-claude-live-promotion/preflight/claude-code-preflight-report.json`
+- `work/release-0-5/evidence/0.5.1-claude-live-promotion/canary/claude-code-canary-summary.json`
+- `work/release-0-5/evidence/live-host-receipts/claude-code.json`
+- `work/release-0-5/evidence/live-host-conformance-claude-code.json`
+- `work/release-0-5/evidence/live-calibration/claude-code.json`
+- `work/release-0-5/evidence/live-calibration-verification-claude-code.json`
+- `work/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`
+- `work/release-0-5/evidence/live-promotion-audit-claude-code.json`
 
 Raw Claude stream-json transcripts were not committed because host init
 metadata includes machine-local absolute paths. The retained local diagnostics

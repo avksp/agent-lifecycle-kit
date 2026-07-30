@@ -1,19 +1,9 @@
 {
-  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
-  "status": "PASS",
   "adapterId": "kimi-code",
-  "host": "kimi-code",
-  "runId": "offline-conformance",
-  "taskId": "adapter-event-capture",
-  "operationId": "offline-event-capture-kimi-code",
-  "producer": {
-    "id": "kimi-code-neutral-event-producer",
-    "boundary": "adapter-owned",
-    "portableEventSchema": "agent-adapter-event.v1"
-  },
   "descriptorDigest": "3fe15d5ca133e2940ca2f357e1f02a8b29ee7287bf39d32ccb4342dbb0ff4b94",
-  "eventStreamDigest": "3c84ff6836ea5436f873b557cbef735660d0134e1326791025e2b2253cc70f88",
+  "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
+  "eventStreamDigest": "3c84ff6836ea5436f873b557cbef735660d0134e1326791025e2b2253cc70f88",
   "eventTypes": [
     "session.started",
     "task.launched",
@@ -22,8 +12,18 @@
     "usage.reported",
     "task.completed"
   ],
-  "terminalEvent": "task.completed",
-  "emittedAt": "2026-07-30T00:18:01Z",
+  "host": "kimi-code",
+  "operationId": "offline-event-capture-kimi-code",
+  "producer": {
+    "boundary": "adapter-owned",
+    "id": "kimi-code-neutral-event-producer",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
   "productionPromotionClaimed": false,
-  "receiptDigest": "67a8d38a37c570ffcc80016763d7a128da5c43f23658d314a2cd35df92120b2e"
+  "receiptDigest": "67a8d38a37c570ffcc80016763d7a128da5c43f23658d314a2cd35df92120b2e",
+  "runId": "offline-conformance",
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "taskId": "adapter-event-capture",
+  "terminalEvent": "task.completed"
 }

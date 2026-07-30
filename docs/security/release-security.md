@@ -14,3 +14,9 @@ Security-sensitive release rules:
 - no private key, token, cookie or credential in release artifacts;
 - no source-project path or local-machine path in release artifacts;
 - no host-specific lifecycle semantics in the shared core.
+
+Security and resource checks are separate gates. A run can pass lifecycle cost
+accounting and still fail release security if it leaks local paths, secrets or
+unsupported adapter claims. A run can pass security and still fail resource
+discipline if pipeline compliance cost exceeds the selected mode without a
+reason.

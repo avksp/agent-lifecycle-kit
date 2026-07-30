@@ -21,7 +21,7 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state_path.write_text(json.dumps(state), encoding="utf-8")
             write_json_create(root / "final/final-audit.json", _final_audit())
 
@@ -62,7 +62,7 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state_path.write_text(json.dumps(state), encoding="utf-8")
             audit = _final_audit()
             audit["findings"] = [{"id": "F-1", "status": "open", "severity": "MEDIUM"}]
@@ -86,7 +86,7 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state_path.write_text(json.dumps(state), encoding="utf-8")
             audit = _final_audit()
             audit.pop("completionSignal")
@@ -112,7 +112,7 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state_path.write_text(json.dumps(state), encoding="utf-8")
             audit = _final_audit()
             audit["completionSignal"] = _completion_signal("WAIVED")
@@ -355,7 +355,7 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state_path.write_text(json.dumps(state), encoding="utf-8")
             audit = _final_audit()
             audit["planDigest"] = "9" * 64
@@ -380,7 +380,7 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state_path.write_text(json.dumps(state), encoding="utf-8")
             write_json_create(root / "final/final-audit.json", _final_audit())
 
@@ -403,7 +403,7 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state["tasks"][0]["controllerGates"] = [_gate("G-FINAL", ["finalization"])]
             state_path.write_text(json.dumps(state), encoding="utf-8")
             write_json_create(root / "final/final-audit.json", _final_audit())
@@ -423,7 +423,7 @@ def _accept_only_task(state_path: Path) -> None:
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["tasks"][0]["status"] = "ACCEPTED"
     state["tasks"][0]["attempt"] = 1
-    state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+    state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
     state_path.write_text(json.dumps(state), encoding="utf-8")
 
 
@@ -460,7 +460,7 @@ def _goal_record(state: dict, *, check_digest: str | None = None) -> dict:
         "goalId": "release-015",
         "userIntent": "Finish the requested release with validation.",
         "ownerOutcome": "Final proof links accepted work, completion evidence and continuity context.",
-        "constraints": ["Do not commit tasks/", "Fail closed on stale state"],
+        "constraints": ["Do not commit work/", "Fail closed on stale state"],
         "status": "READY_FOR_FINALIZATION",
         "lineage": {
             "runId": state["runId"],
