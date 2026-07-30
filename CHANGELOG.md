@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 1.4.0 - 2026-07-30
+
+- Added deterministic lifecycle cost report generation from explicit JSON
+  artifacts with source digests, lineage, usage-confidence accounting and a
+  compact summary for small-context review.
+- Added `agent-lifecycle metrics cost-report` for write-once report generation
+  plus validation through the existing cost-check rules.
+- Kept manually authored lifecycle cost reports compatible with
+  `metrics cost-check`.
+- Split the built-in schema registry into smaller domain modules while keeping
+  `schema list/show` compatibility.
+- Split safe host inspection probes by adapter so `inspection.py` stays a small
+  public dispatcher.
+
 ## 1.3.0 - 2026-07-30
 
 - Compact root README and Russian README into navigable entry points while

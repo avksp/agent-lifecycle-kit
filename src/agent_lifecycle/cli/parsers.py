@@ -305,6 +305,12 @@ def _add_metrics_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     metrics_sub = metrics.add_subparsers(dest="metrics_command", required=True)
     cost_check = metrics_sub.add_parser("cost-check")
     cost_check.add_argument("--receipt", required=True)
+    cost_report = metrics_sub.add_parser("cost-report")
+    cost_report.add_argument("--artifact", action="append", default=[])
+    cost_report.add_argument("--mode", choices=["light", "standard", "strict", "release"], default="standard")
+    cost_report.add_argument("--project-root", default=".")
+    cost_report.add_argument("--out", required=True)
+    cost_report.add_argument("--summary-out")
 
 
 def _add_runner_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
