@@ -23,6 +23,9 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn("agent-lifecycle-error.v1", schema_ids)
         self.assertIn("agent-completion-check.v1", schema_ids)
         self.assertIn("agent-lifecycle-cost-report.v1", schema_ids)
+        self.assertIn("agent-lifecycle-cost-generation.v1", schema_ids)
+        cli_outputs = {(item["command"], item["schemaVersion"]) for item in policy["cliOutputs"]}
+        self.assertIn(("metrics cost-report", "agent-lifecycle-cost-generation.v1"), cli_outputs)
         self.assertFalse(policy["productionPromotionClaimed"])
 
     def test_public_contract_policy_keeps_deprecated_schema_readable(self) -> None:

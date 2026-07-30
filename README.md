@@ -17,6 +17,7 @@ visible and bounded.
   in the core.
 - Compact context profiles and objective snapshots for small local models.
 - Cost and usage accounting that separates product work from lifecycle checks.
+- Deterministic cost reports from explicit lifecycle artifacts.
 - Read-only diagnostics for the current checkout and adapter readiness.
 
 ## Quick Start
@@ -47,6 +48,7 @@ Useful command groups:
 - `agent-lifecycle plan`: plan checks, locks, snapshots, and handoffs.
 - `agent-lifecycle workflow`: task execution receipts and final proof.
 - `agent-lifecycle audit`: plan and implementation review gates.
+- `agent-lifecycle metrics`: lifecycle cost reports and validation.
 - `agent-lifecycle diagnostics`: redacted evidence bundles.
 - `agent-lifecycle diagnose`: checkout readiness without writes or live calls.
 - `agent-lifecycle adapter`: descriptor validation, inspection, scaffolding,
