@@ -10,6 +10,7 @@ from agent_lifecycle.context.profiles import resolve_window, validate_context_pr
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, read_json_object
 from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
+from agent_lifecycle.worktree import validate_attempt_isolation_receipt
 
 RUNNER_PHASES = {
     "READY",
@@ -181,6 +182,7 @@ def transition_runner(
         )
     task_id = _request_task_id(request, state)
     task = _workflow_task(workflow_state, task_id)
+    isolation_validation = _validate_isolation_receipt(request, workflow_state=workflow_state, action=action)
     _apply_action_guards(state, task, action, request)
     updated = _copy_state(state)
     from_status = str(updated["status"])
@@ -188,7 +190,13 @@ def transition_runner(
     updated["currentTaskId"] = task_id
     updated["runnerRevision"] = int(updated["runnerRevision"]) + 1
     updated["counters"] = _updated_counters(updated["counters"], action, task_id, request)
-    event = _history_event(request, from_status=from_status, to_status=updated["status"], task_id=task_id)
+    event = _history_event(
+        request,
+        from_status=from_status,
+        to_status=updated["status"],
+        task_id=task_id,
+        isolation_validation=isolation_validation,
+    )
     updated["history"] = [*updated["history"], event]
     updated["operations"] = {
         **updated["operations"],
@@ -372,6 +380,23 @@ def _apply_action_guards(state: dict[str, Any], task: dict[str, Any], action: st
         _validate_patch(request["patch"], task)
 
 
+def _validate_isolation_receipt(
+    request: dict[str, Any],
+    *,
+    workflow_state: dict[str, Any],
+    action: str,
+) -> dict[str, Any] | None:
+    receipt = request.get("isolationReceipt")
+    if receipt is None:
+        return None
+    if action != "attempt":
+        raise LifecycleError("runner-isolation-receipt-not-allowed", "isolationReceipt is only valid for attempt transitions")
+    policy = request.get("worktreePolicy")
+    if policy is not None and not isinstance(policy, dict):
+        raise LifecycleError("invalid-runner-transition-request", "worktreePolicy must be an object")
+    return validate_attempt_isolation_receipt(receipt, workflow_state=workflow_state, policy=policy)
+
+
 def _validate_patch(patch: Any, task: dict[str, Any]) -> None:
     if not isinstance(patch, dict):
         raise LifecycleError("invalid-runner-patch", "runner patch must be an object")
@@ -425,7 +450,14 @@ def _updated_counters(counters: dict[str, Any], action: str, task_id: str, reque
     return updated
 
 
-def _history_event(request: dict[str, Any], *, from_status: str, to_status: str, task_id: str) -> dict[str, Any]:
+def _history_event(
+    request: dict[str, Any],
+    *,
+    from_status: str,
+    to_status: str,
+    task_id: str,
+    isolation_validation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     event = {
         "operationId": request["operationId"],
         "action": request["action"],
@@ -441,6 +473,8 @@ def _history_event(request: dict[str, Any], *, from_status: str, to_status: str,
         event["usage"] = request["usage"]
     if request.get("patch"):
         event["patchDigest"] = request["patch"].get("patchDigest")
+    if isolation_validation is not None:
+        event["isolationReceiptDigest"] = isolation_validation["receiptDigest"]
     return event
 
 

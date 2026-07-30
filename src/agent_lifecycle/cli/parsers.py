@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 
 from agent_lifecycle.cli.adapter import add_adapter_parser
+from agent_lifecycle.cli.followup import add_followup_parser
+from agent_lifecycle.cli.worktree import add_worktree_parser
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -18,6 +20,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_audit_parser(subparsers)
     _add_context_parser(subparsers)
     _add_goal_parser(subparsers)
+    add_followup_parser(subparsers)
+    add_worktree_parser(subparsers)
     _add_model_parser(subparsers)
     _add_runner_parser(subparsers)
     _add_tier_parser(subparsers)
@@ -142,6 +146,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_finalize.add_argument("--final-audit", required=True)
     workflow_finalize.add_argument("--proof", required=True)
     workflow_finalize.add_argument("--goal-record")
+    workflow_finalize.add_argument("--follow-up-register")
     workflow_finalize.add_argument("--reason", required=True)
 
 

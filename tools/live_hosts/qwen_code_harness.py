@@ -619,7 +619,7 @@ def _validate_calibration_inputs(
     if profile.get("requiredReceiptSchemaVersion") != LIVE_CALIBRATION_RECEIPT_SCHEMA:
         blockers.append({"code": "invalid-live-calibration-profile", "message": "profile requires an unsupported receipt schema"})
     if HOST not in _strings(profile.get("requiredHosts")):
-        blockers.append({"code": "live-calibration-host-unsupported", "message": "qwen-code is not in requiredHosts"})
+        blockers.append({"code": "live-calibration-host-unsupported", "message": "Qwen Code is not in requiredHosts"})
     if set(scenarios) != set(_strings(targets.get("corpus"))):
         blockers.append({"code": "live-calibration-corpus-mismatch", "message": "profile scenarios must match budget target corpus"})
     if set(cohorts) != set(_strings(targets.get("cohorts"))):
@@ -777,7 +777,7 @@ def _write_invocation_diagnostic(diagnostic_dir: Path, operation_name: str, invo
 
 def _prompt_for_operation(operation_name: str) -> str:
     return (
-        "ALK qwen-code live conformance probe. "
+        "ALK Qwen Code live conformance probe. "
         f"Operation: {operation_name}. "
         "Do not modify files. Reply only with compact JSON: {\"operation\":\"<operation>\",\"status\":\"PASS\"}."
     )
@@ -785,7 +785,7 @@ def _prompt_for_operation(operation_name: str) -> str:
 
 def _prompt_for_calibration(scenario: str, cohort: str, run_index: int) -> str:
     return (
-        "ALK qwen-code live calibration probe. "
+        "ALK Qwen Code live calibration probe. "
         f"Scenario: {scenario}. Cohort: {cohort}. Run: {run_index}. "
         "Do not modify files. Reply only with compact JSON: {\"status\":\"PASS\"}."
     )

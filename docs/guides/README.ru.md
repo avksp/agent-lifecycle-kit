@@ -9,7 +9,7 @@ SDD-спецификации до зафиксированного плана, �
 
 Набор распространяется как один репозиторий с единым семантическим ядром и
 нативными проекциями для Codex, Claude Code, Cursor, Gemini CLI, Hermes,
-Kimi Code, OpenCode и qwen-code.
+Kimi Code, OpenCode и Qwen Code.
 
 ## Зачем он нужен
 
@@ -102,6 +102,36 @@ Skills остаются тонкими точками входа. Специфи
 доказательство через `--goal-record`.
 
 Подробнее: [непрерывность цели](../reference/goal-continuity.md).
+
+## Реестр последующих работ
+
+Реестр последующих работ фиксирует отложенную или заблокированную внешним
+действием работу, не ослабляя текущую приёмку. Записи
+`agent-follow-up-register.v1` содержат исходные требования, критерии или
+доказательства, владельца, статус, целевой релиз или блокер и требования к
+доказательствам закрытия. `agent-follow-up-summary.v1` даёт небольшой
+локальной модели краткий вид открытых пунктов и блокеров финализации.
+
+`workflow finalize --follow-up-register` проверяет реестр и завершается
+отказом, если открытый пункт противоречит текущей приёмке или доказательству
+завершения. Закрытые пункты должны ссылаться на обязательные доказательства и
+актуальные артефакты.
+
+Подробнее: [реестр последующих работ](../reference/follow-up-register.md).
+
+## Изоляция рабочих деревьев
+
+Квитанции изоляции рабочих деревьев описывают ограниченные попытки задачи, не
+позволяя ядру создавать или удалять рабочие деревья. Политика
+`agent-worktree-isolation-policy.v1` задаёт правила путей и очистки;
+`agent-worktree-attempt-receipt.v1` связывает линию жизненного цикла, задачу,
+попытку, базовую ревизию, изменённые файлы и решение по очистке. Неудачные
+попытки сохраняются по умолчанию, пока оператор явно не разрешит удаление.
+
+Переход `attempt` в `runner` может включать квитанцию изоляции. `runner`
+проверяет её и записывает отпечаток в историю переходов.
+
+Подробнее: [квитанции изоляции рабочих деревьев](../reference/worktree-isolation.md).
 
 ## Контролируемый цикл выполнения
 
@@ -223,7 +253,7 @@ agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-d
 | Hermes | `skills.sh.json`, общий `skills/` и `adapters/hermes/*` | `VERIFIED` для Hermes Agent v0.19.0 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK. Одобрение публичного каталога или публикация не заявлены. |
 | Kimi Code | `adapters/kimi-code/*` | `EXPERIMENTAL` | Безопасная проверка и форма ограниченного запуска прошли, но локальная живая проверка заблокирована до настройки provider/model alias. |
 | OpenCode | `opencode.json`, общий `skills/` и `adapters/opencode/*` | `VERIFIED` для OpenCode CLI 1.18.9 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK. Публикация в npm не заявлена. |
-| qwen-code | `adapters/qwen-code/*` | `VERIFIED` для qwen-code 0.21.0 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK на GLM 5.2. Одобрение публичного пакета не заявлено. |
+| Qwen Code | `adapters/qwen-code/*` | `VERIFIED` для Qwen Code 0.21.0 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK на GLM 5.2. Одобрение публичного пакета не заявлено. |
 
 `EXPERIMENTAL` означает, что у адаптера есть исходные метаданные, манифест
 возможностей и офлайн-проверки совместимости, но это не заявление о готовой
@@ -255,10 +285,16 @@ agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
 agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --model-usage-receipt <model-usage-receipt.json> --reason "<reason>"
 agent-lifecycle workflow task-accept --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --review <task-review.json> --reason "<reason>"
-agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --goal-record <goal-record.json> --reason "<reason>"
+agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --goal-record <goal-record.json> --follow-up-register <follow-up-register.json> --reason "<reason>"
 agent-lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
 agent-lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
 agent-lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
+agent-lifecycle followup check --register <follow-up-register.json> --state <path-to-run.state.json> --fail-on-finalization-blockers
+agent-lifecycle followup close --register <follow-up-register.json> --item-id <id> --evidence-id <evidence-id> --artifact <path> --verifier <id> --reason "<reason>"
+agent-lifecycle followup sweep --register <follow-up-register.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 4k-strict
+agent-lifecycle worktree policy-check --policy <worktree-policy.json>
+agent-lifecycle worktree receipt --state <path-to-run.state.json> --policy <worktree-policy.json> --task <task-id> --attempt <n> --worktree-path <relative-path> --baseline-ref <ref> --baseline-sha <sha> --changed-file <path> --reason "<reason>" --out <worktree-receipt.json>
+agent-lifecycle worktree check --receipt <worktree-receipt.json> --state <path-to-run.state.json> --policy <worktree-policy.json>
 agent-lifecycle runner start --state <path-to-run.state.json> --runner <runner.state.json> --operation-id <id> --reason "<reason>"
 agent-lifecycle runner status --runner <runner.state.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 4k-strict
 agent-lifecycle runner transition --runner <runner.state.json> --state <path-to-run.state.json> --request <runner-transition-request.json>
@@ -324,7 +360,9 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`goal check`, `goal summarize`, `goal update`, `runner start`,
+`goal check`, `goal summarize`, `goal update`, `followup check`,
+`followup add`, `followup close`, `followup sweep`, `worktree policy-check`,
+`worktree receipt`, `worktree check`, `runner start`,
 `runner status`, `runner transition`, `runner stop`, `runner resume`,
 `specification check`,
 `plan check`, `plan acceptance-check`, `task compile`, `adapter validate`,
@@ -541,12 +579,12 @@ cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js ~/.config/opencode/pl
 Будущий npm-пакет может ссылаться на тот же адаптер, но текущее исходное дерево
 не заявляет публикацию в npm.
 
-### qwen-code
+### Qwen Code
 
-qwen-code сейчас использует исходную проекцию для локальной среды. Установите
+Qwen Code сейчас использует исходную проекцию для локальной среды. Установите
 ядро из рабочего дерева, полученного по тегу, затем проверьте и
 проинспектируйте проекцию. Текущее исходное дерево имеет `VERIFIED` для
-qwen-code `0.21.0`.
+Qwen Code `0.21.0`.
 
 ```bash
 git clone --branch vX.Y.Z https://github.com/avksp/agent-lifecycle-kit.git
@@ -557,9 +595,9 @@ agent-lifecycle adapter validate --descriptor adapters/qwen-code/adapter.descrip
 agent-lifecycle adapter inspect --descriptor adapters/qwen-code/adapter.descriptor.json
 ```
 
-Живой runner находится в `adapters/qwen-code/runner.py`, проверочный скрипт
+Исполняющий модуль для живой проверки находится в `adapters/qwen-code/runner.py`, проверочный скрипт
 релиза - в `tools/live_hosts/qwen_code_harness.py`. Для текущего исходного
-дерева не заявлены публичный пакет адаптера qwen-code, одобрение публичного
+дерева не заявлены публичный пакет адаптера Qwen Code, одобрение публичного
 каталога или прохождение производственной матрицы.
 
 ## Использование
@@ -593,7 +631,7 @@ SDD-план и независимо проверяй его до готовно
 - OpenCode: попросите агента загрузить `agent-workflow-orchestrator` через
   нативный механизм skills; текущее дерево имеет `VERIFIED` для OpenCode CLI
   1.18.9
-- qwen-code: используйте исходную проекцию с qwen-code `0.21.0`; текущее
+- Qwen Code: используйте исходную проекцию с Qwen Code `0.21.0`; текущее
   дерево имеет `VERIFIED` для живых квитанций GLM 5.2
 
 Точный синтаксис с пространствами имён определяется матрицей поддержки

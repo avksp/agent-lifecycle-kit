@@ -1,4 +1,4 @@
-# qwen-code 0.11.0 adapter evidence
+# Qwen Code 0.11.0 adapter evidence
 
 Status: historical scaffold and inspection checkpoint; support was
 `EXPERIMENTAL` at this checkpoint.
@@ -6,12 +6,12 @@ Status: historical scaffold and inspection checkpoint; support was
 Superseded by:
 
 - `docs/adapters/evidence/qwen-code-glm52-live-2026-07-29.md`.
-- qwen-code `0.21.0` is now host-specific `VERIFIED` in the current source tree
+- Qwen Code `0.21.0` is now host-specific `VERIFIED` in the current source tree
   after live conformance, live calibration, and ALK lifecycle proof passed.
 
 Scope:
 
-- Host: qwen-code `0.21.0`.
+- Host: Qwen Code `0.21.0`.
 - Adapter descriptor: `adapters/qwen-code/adapter.descriptor.json`.
 - Capability manifest: `adapters/qwen-code/capabilities.manifest.json`.
 - Raw inspection report:
@@ -52,15 +52,15 @@ Discovered surfaces:
 
 Historical non-promotion decision:
 
-qwen-code is not promoted in this evidence note. No live host conformance
+Qwen Code is not promoted in this evidence note. No live host conformance
 receipt, usage/calibration receipt, or lifecycle final proof has been accepted
-for qwen-code at this historical checkpoint.
+for Qwen Code at this historical checkpoint.
 
 Blocker classes: `BLOCKED_LIVE_HARNESS_NOT_IMPLEMENTED`,
 `BLOCKED_ADAPTER_RUNNER_NOT_IMPLEMENTED`.
 
 The next action from this checkpoint was completed on 2026-07-29 by
-implementing a bounded qwen-code adapter runner and live harness that convert
+implementing a bounded Qwen Code adapter runner and live harness that convert
 `stream-json` output into portable host-operation receipts, prove usage
 attestation across the conformance and calibration profiles, and enforce
 invocation, token and wall-clock caps.

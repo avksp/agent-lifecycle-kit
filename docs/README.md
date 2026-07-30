@@ -13,6 +13,8 @@ and does not depend on a source project.
 - [Runner extension map](architecture/runner-extension-map.md)
 - [Completion check](reference/completion-check.md)
 - [Goal continuity](reference/goal-continuity.md)
+- [Follow-up register](reference/follow-up-register.md)
+- [Worktree isolation receipts](reference/worktree-isolation.md)
 - [Controlled runner](reference/runner.md)
 - [Production promotion contract](reference/production-promotion.md)
 - [Live cost calibration](reference/live-cost-calibration.md)

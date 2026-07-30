@@ -1,4 +1,4 @@
-"""Bounded qwen-code runner for host-operation requests."""
+"""Bounded Qwen Code runner for host-operation requests."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def run_operation(
     timeout_seconds: float = 120.0,
     command_runner: CommandRunner | None = None,
 ) -> dict[str, Any]:
-    """Execute one request through qwen-code and return a portable receipt."""
+    """Execute one request through Qwen Code and return a portable receipt."""
 
     operation = HostOperationRequest.from_json(request)
     worktree = Path(cwd) if cwd is not None else None
@@ -54,14 +54,14 @@ def run_operation(
     if result.returncode != 0:
         raise LifecycleError(
             "qwen-code-live-invocation-failed",
-            "qwen-code CLI returned a non-zero status",
+            "Qwen Code CLI returned a non-zero status",
             {"host": HOST, "capability": operation.capability, "returncode": result.returncode},
         )
     usage = parse_qwen_code_stream_json(result.stdout, wall_seconds=result.wall_seconds)
     if not usage.has_usage_attestation:
         raise LifecycleError(
             "adapter-usage-attestation-missing",
-            "qwen-code stream-json did not expose trustworthy usage",
+            "Qwen Code stream-json did not expose trustworthy usage",
             {"host": HOST, "capability": operation.capability},
         )
     output = {
@@ -98,7 +98,7 @@ def _qwen_command(
         [
             "--prompt",
             (
-                "Agent Lifecycle Kit qwen-code adapter operation. "
+                "Agent Lifecycle Kit Qwen Code adapter operation. "
                 f"Operation: {capability}. "
                 "Do not modify files. Return a compact JSON object with operation and status PASS."
             ),

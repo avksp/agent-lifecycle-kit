@@ -16,7 +16,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`VERIFIED` for Claude Code 2.1.220",
             "`VERIFIED` for OpenCode CLI 1.18.9",
             "`VERIFIED` for Hermes Agent v0.19.0",
-            "`VERIFIED` for qwen-code 0.21.0",
+            "`VERIFIED` for Qwen Code 0.21.0",
             "`EXPERIMENTAL` means",
             "bounded live host conformance",
             "usage/cost",
@@ -26,6 +26,10 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-objective-snapshot.v1`",
             "`agent-runner-state.v1`",
             "`agent-runner-snapshot.v1`",
+            "`agent-follow-up-register.v1`",
+            "`agent-follow-up-summary.v1`",
+            "`agent-worktree-isolation-policy.v1`",
+            "`agent-worktree-attempt-receipt.v1`",
         ),
     ),
     (
@@ -35,7 +39,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`VERIFIED` для Claude Code 2.1.220",
             "`VERIFIED` для OpenCode CLI 1.18.9",
             "`VERIFIED` для Hermes Agent v0.19.0",
-            "`VERIFIED` для qwen-code 0.21.0",
+            "`VERIFIED` для Qwen Code 0.21.0",
             "`EXPERIMENTAL` означает",
             "калибровки расхода",
             "`completionCheck`",
@@ -44,6 +48,10 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-objective-snapshot.v1`",
             "`agent-runner-state.v1`",
             "`agent-runner-snapshot.v1`",
+            "`agent-follow-up-register.v1`",
+            "`agent-follow-up-summary.v1`",
+            "`agent-worktree-isolation-policy.v1`",
+            "`agent-worktree-attempt-receipt.v1`",
         ),
     ),
     (
@@ -54,7 +62,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "Claude Code 0.5.0 live evidence",
             "OpenCode GLM 5.2 live evidence",
             "Hermes GLM 5.2 live evidence",
-            "qwen-code GLM 5.2 live evidence",
+            "Qwen Code GLM 5.2 live evidence",
             "Cursor, Gemini CLI, and Kimi Code remain",
         ),
     ),
@@ -111,15 +119,33 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.16.0.md",
+        "docs/reference/follow-up-register.md",
+        (
+            "`agent-follow-up-register.v1`",
+            "`agent-follow-up-summary.v1`",
+            "fails closed",
+            "`workflow finalize`",
+        ),
+    ),
+    (
+        "docs/reference/worktree-isolation.md",
+        (
+            "`agent-worktree-isolation-policy.v1`",
+            "`agent-worktree-attempt-receipt.v1`",
+            "preserved unless",
+            "`runner transition`",
+        ),
+    ),
+    (
+        "release/notes/v0.17.0.md",
         (
             "Status: source release.",
-            "Updated package metadata to `0.16.0`",
-            "`agent-runner-policy.v1`",
-            "`agent-runner-state.v1`",
-            "`agent-runner-transition-request.v1`",
-            "`agent-runner-transition-result.v1`",
-            "`agent-runner-snapshot.v1`",
+            "Updated package metadata to `0.17.0`",
+            "`agent-follow-up-register.v1`",
+            "`agent-follow-up-summary.v1`",
+            "`agent-worktree-isolation-policy.v1`",
+            "`agent-worktree-attempt-receipt.v1`",
+            "`workflow finalize --follow-up-register`",
             "productionPromotionClaimed",
         ),
     ),
@@ -143,7 +169,7 @@ VERSIONED_FEATURE_PROSE = re.compile(
     r"0\.\d+\s+line\s+adds|^#{2,}\s+0\.\d+\s+)",
     re.MULTILINE,
 )
-VERIFIED_DOC_HOSTS = {"Codex", "Claude Code", "OpenCode", "Hermes", "qwen-code"}
+VERIFIED_DOC_HOSTS = {"Codex", "Claude Code", "OpenCode", "Hermes", "Qwen Code"}
 
 
 def main() -> int:
@@ -202,7 +228,7 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
     elif relative == "docs/adapters/hermes.md":
         required = ("`VERIFIED`", "Hermes Agent `v0.19.0`", "live conformance", "does not claim public")
     elif relative == "docs/adapters/qwen-code.md":
-        required = ("`VERIFIED`", "qwen-code `0.21.0`", "live conformance", "does not claim public")
+        required = ("`VERIFIED`", "Qwen Code `0.21.0`", "live conformance", "does not claim public")
     else:
         required = ("`EXPERIMENTAL`", "live", "conformance")
     check = _check_doc(root, relative, required, blockers)

@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.16.0 - 2026-07-30")
+        current_release = _section(changelog, "## 0.17.0 - 2026-07-30")
         self.assertNotIn("- No changes yet.", current_release)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -97,11 +97,11 @@ def _run_no_check(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for qwen-code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`.\n",
     )
     _write_text(
         root / "docs/guides/README.ru.md",
-        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для qwen-code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`.\n",
     )
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
@@ -111,24 +111,24 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Claude Code 0.5.0 live evidence.\n"
         "OpenCode GLM 5.2 live evidence.\n"
         "Hermes GLM 5.2 live evidence.\n"
-        "qwen-code GLM 5.2 live evidence.\n"
+        "Qwen Code GLM 5.2 live evidence.\n"
         "Cursor, Gemini CLI, and Kimi Code remain `EXPERIMENTAL`.\n"
         "| Codex | Projection | VERIFIED | Claim |\n"
         "| Claude Code | Projection | VERIFIED | Claim |\n"
         "| OpenCode | Projection | VERIFIED | Claim |\n"
         "| Hermes | Projection | VERIFIED | Claim |\n"
-        "| qwen-code | Projection | VERIFIED | Claim |\n"
+        "| Qwen Code | Projection | VERIFIED | Claim |\n"
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.16.0.md",
+        root / "release/notes/v0.17.0.md",
         "Status: source release.\n"
-        "Updated package metadata to `0.16.0`.\n"
-        "`agent-runner-policy.v1`.\n"
-        "`agent-runner-state.v1`.\n"
-        "`agent-runner-transition-request.v1`.\n"
-        "`agent-runner-transition-result.v1`.\n"
-        "`agent-runner-snapshot.v1`.\n"
+        "Updated package metadata to `0.17.0`.\n"
+        "`agent-follow-up-register.v1`.\n"
+        "`agent-follow-up-summary.v1`.\n"
+        "`agent-worktree-isolation-policy.v1`.\n"
+        "`agent-worktree-attempt-receipt.v1`.\n"
+        "`workflow finalize --follow-up-register`.\n"
         "productionPromotionClaimed.\n",
     )
     _write_text(
@@ -173,6 +173,20 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-runner-snapshot.v1`.\n"
         "fails closed.\n",
     )
+    _write_text(
+        root / "docs/reference/follow-up-register.md",
+        "`agent-follow-up-register.v1`.\n"
+        "`agent-follow-up-summary.v1`.\n"
+        "fails closed.\n"
+        "`workflow finalize`.\n",
+    )
+    _write_text(
+        root / "docs/reference/worktree-isolation.md",
+        "`agent-worktree-isolation-policy.v1`.\n"
+        "`agent-worktree-attempt-receipt.v1`.\n"
+        "preserved unless.\n"
+        "`runner transition`.\n",
+    )
     for host in ("claude", "codex", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "qwen-code"):
         _write_text(
             root / f"docs/adapters/{host}.md",
@@ -185,7 +199,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
                 if host == "opencode"
                 else "This adapter is `VERIFIED` for Hermes Agent `v0.19.0`; live conformance exists and it does not claim public approval.\n"
                 if host == "hermes"
-                else "This adapter is `VERIFIED` for qwen-code `0.21.0`; live conformance exists and it does not claim public approval.\n"
+                else "This adapter is `VERIFIED` for Qwen Code `0.21.0`; live conformance exists and it does not claim public approval.\n"
                 if host == "qwen-code"
                 else "This adapter remains `EXPERIMENTAL` until live conformance evidence exists.\n"
             ),

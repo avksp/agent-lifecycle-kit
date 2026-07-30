@@ -1,4 +1,4 @@
-# qwen-code support matrix stub
+# Qwen Code support matrix stub
 
 Initial maturity: `EXPERIMENTAL`.
 

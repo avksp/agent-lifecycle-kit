@@ -1,6 +1,6 @@
-# qwen-code adapter
+# Qwen Code adapter
 
-The qwen-code projection is `VERIFIED` for qwen-code `0.21.0` on the tested
+The Qwen Code projection is `VERIFIED` for Qwen Code `0.21.0` on the tested
 local GLM 5.2 binding. This is a host-specific source-tree compatibility claim,
 not a public package, public directory approval, or production-promotion
 platform claim. It does not claim public approval. The adapter has accepted
@@ -17,7 +17,7 @@ python tools/release/validate_live_calibration.py --profile conformance/core/liv
 
 Live evidence accepted on 2026-07-29:
 
-- qwen-code version: `0.21.0`;
+- Qwen Code version: `0.21.0`;
 - model binding used by the live harness: GLM 5.2;
 - live host conformance: 13/13 baseline operations passed;
 - live calibration: 14/14 scenario/cohort runs passed;

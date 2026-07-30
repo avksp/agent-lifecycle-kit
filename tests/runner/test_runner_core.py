@@ -17,6 +17,7 @@ from agent_lifecycle.runner import (  # noqa: E402
     transition_runner,
     validate_runner_state,
 )
+from agent_lifecycle.worktree import build_attempt_isolation_receipt  # noqa: E402
 
 
 class RunnerCoreTests(unittest.TestCase):
@@ -175,6 +176,33 @@ class RunnerCoreTests(unittest.TestCase):
         self.assertEqual(snapshot["runner"]["allowedNextActions"], ["abort", "block", "reroute", "validate"])
         self.assertLessEqual(snapshot["estimatedTokens"], 450)
 
+    def test_runner_records_worktree_isolation_receipt_digest(self) -> None:
+        workflow_state = _workflow_state()
+        runner = initialize_runner_state(workflow_state, policy=_policy(), operation_id="runner-init", reason="start")
+        isolation_receipt = build_attempt_isolation_receipt(
+            workflow_state,
+            task_id="WS-01",
+            attempt=1,
+            policy=_worktree_policy(),
+            worktree_path=".alk/worktrees/run-ws-01-1",
+            baseline_ref="main",
+            baseline_sha="source",
+            changed_files=["src/example.py"],
+            outcome="PASS",
+            reason="isolated attempt",
+        )
+
+        runner, _ = _step(
+            runner,
+            workflow_state,
+            "attempt",
+            1,
+            isolation_receipt=isolation_receipt,
+            worktree_policy=_worktree_policy(),
+        )
+
+        self.assertEqual(runner["history"][-1]["isolationReceiptDigest"], isolation_receipt["receiptDigest"])
+
 
 def _step(runner: dict, workflow_state: dict, action: str, revision: int, **overrides: object) -> tuple[dict, dict]:
     payload = transition_runner(runner, workflow_state, _request(action, revision, **overrides))
@@ -188,6 +216,8 @@ def _request(
     usage: dict | None = None,
     patch: dict | None = None,
     blocker_code: str | None = None,
+    isolation_receipt: dict | None = None,
+    worktree_policy: dict | None = None,
 ) -> dict:
     request = {
         "schemaVersion": "agent-runner-transition-request.v1",
@@ -203,6 +233,10 @@ def _request(
         request["patch"] = patch
     if blocker_code is not None:
         request["blockerCode"] = blocker_code
+    if isolation_receipt is not None:
+        request["isolationReceipt"] = isolation_receipt
+    if worktree_policy is not None:
+        request["worktreePolicy"] = worktree_policy
     return request
 
 
@@ -243,6 +277,16 @@ def _patch(*, changed_files: list[str] | None = None) -> dict:
         "status": "PASS",
         "patchDigest": "a" * 64,
         "changedFiles": changed_files or ["src/example.py"],
+    }
+
+
+def _worktree_policy() -> dict:
+    return {
+        "schemaVersion": "agent-worktree-isolation-policy.v1",
+        "worktreeRoot": ".alk/worktrees",
+        "allowedWriteRoots": ["src"],
+        "preserveFailedAttempts": True,
+        "cleanupRequiresOperator": True,
     }
 
 

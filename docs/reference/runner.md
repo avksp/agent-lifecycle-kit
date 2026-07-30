@@ -47,6 +47,10 @@ Remediation patch metadata is accepted only when the patch reports `PASS`, has
 a digest and every changed file is inside the task write scope from workflow
 state. The runner validates this metadata; it does not apply patches itself.
 
+Attempt transitions may include an `isolationReceipt`. When present, the
+runner validates `agent-worktree-attempt-receipt.v1` and records the receipt
+digest in transition history.
+
 ## Small And Large Models
 
 `agent-runner-snapshot.v1` is a compact status view for continuation prompts.

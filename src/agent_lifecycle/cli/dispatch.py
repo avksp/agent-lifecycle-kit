@@ -17,6 +17,8 @@ from agent_lifecycle.context import check_context, load_context_profile, render_
 from agent_lifecycle.diagnostics import build_readiness_report
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.cli.adapter import dispatch_adapter
+from agent_lifecycle.cli.followup import dispatch_followup
+from agent_lifecycle.cli.worktree import dispatch_worktree
 from agent_lifecycle.goal import build_objective_snapshot, update_goal_record, validate_goal_record
 from agent_lifecycle.model_routing import (
     resolve_model_route,
@@ -86,6 +88,10 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         return _dispatch_context(args)
     if args.command == "goal":
         return _dispatch_goal(args)
+    if args.command == "followup":
+        return dispatch_followup(args)
+    if args.command == "worktree":
+        return dispatch_worktree(args)
     if args.command == "model":
         return _dispatch_model(args)
     if args.command == "runner":
@@ -143,6 +149,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             final_audit_path=args.final_audit,
             proof_path=args.proof,
             goal_record_path=args.goal_record,
+            follow_up_register_path=args.follow_up_register,
             reason=args.reason,
         )
     return _dispatch_workflow_task(args, state_path)

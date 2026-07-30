@@ -302,6 +302,52 @@ class WorkflowFinalizationTests(unittest.TestCase):
 
             self.assertEqual(raised.exception.code, "goal-state-stale")
 
+    def test_finalize_run_rejects_blocking_follow_up_register(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            write_json_create(root / "final/final-audit.json", _final_audit())
+            write_json_create(root / "final/follow-up-register.json", _follow_up_register(current_scope_impact="completion-proof"))
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    follow_up_register_path="final/follow-up-register.json",
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "follow-up-finalization-blocked")
+
+    def test_finalize_run_records_checked_follow_up_register(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            write_json_create(root / "final/final-audit.json", _final_audit())
+            write_json_create(root / "final/follow-up-register.json", _follow_up_register(status="SCHEDULED"))
+
+            payload = finalize_run(
+                state_path,
+                operation_id="finalize-op",
+                expected_revision=1,
+                source_revision="source",
+                final_audit_path="final/final-audit.json",
+                proof_path="final/proof.json",
+                follow_up_register_path="final/follow-up-register.json",
+                reason="done",
+            )
+
+            self.assertEqual(payload["phase"], "COMPLETE")
+            proof = json.loads((root / "final/proof.json").read_text(encoding="utf-8"))
+            self.assertEqual(proof["followUpRegister"]["register"]["path"], "final/follow-up-register.json")
+            self.assertEqual(proof["followUpRegister"]["validation"]["status"], "PASS")
+
     def test_finalize_run_rejects_final_audit_plan_digest_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -430,6 +476,45 @@ def _goal_record(state: dict, *, check_digest: str | None = None) -> dict:
     if check_digest is not None:
         record["completionCheck"] = {"checkId": "done-check", "checkDigest": check_digest}
     return record
+
+
+def _follow_up_register(*, status: str = "SCHEDULED", current_scope_impact: str = "none") -> dict:
+    item = {
+        "id": "FU-01",
+        "title": "Deferred documentation polish",
+        "owner": {"id": "release-lead"},
+        "status": status,
+        "source": {
+            "requirementIds": ["R-1"],
+            "acceptanceIds": ["AC-1"],
+            "outOfScopeReason": "Outside current release boundary.",
+        },
+        "targetRelease": "next",
+        "currentScopeImpact": current_scope_impact,
+        "closureEvidence": {"requiredEvidenceIds": ["EV-FOLLOWUP"], "requiredArtifacts": []},
+        "reason": "scheduled outside current scope",
+    }
+    if status == "CLOSED":
+        item["closure"] = {
+            "status": "PASS",
+            "evidenceIds": ["EV-FOLLOWUP"],
+            "artifacts": [],
+            "verifier": {"id": "reviewer"},
+            "reason": "closed",
+            "closedAt": "2026-07-30T09:30:00Z",
+        }
+    return {
+        "schemaVersion": "agent-follow-up-register.v1",
+        "lineage": {
+            "runId": "run",
+            "packageId": "package",
+            "planRevision": 1,
+            "planDigest": "0" * 64,
+            "sourceRevision": "source",
+        },
+        "items": [item],
+        "updatedAt": "2026-07-30T09:30:00Z",
+    }
 
 
 if __name__ == "__main__":

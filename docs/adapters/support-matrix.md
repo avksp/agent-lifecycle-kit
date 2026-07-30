@@ -6,7 +6,7 @@ source tree includes host-local model selection, budget-mode controls,
 lifecycle gates, Claude Code live promotion evidence, Codex CLI live promotion
 evidence, reusable promotion guidance, adapter capability manifests, safe
 adapter inspection, and ordered terminal outcomes for OpenCode, Hermes, Cursor,
-Gemini CLI, qwen-code, and Kimi Code.
+Gemini CLI, Qwen Code, and Kimi Code.
 `EXPERIMENTAL` means the adapter has an offline projection and deterministic
 contract tests. `VERIFIED` is host-specific and requires bounded live host
 conformance, live calibration, and lifecycle proof evidence.
@@ -22,7 +22,7 @@ conformance, live calibration, and lifecycle proof evidence.
 | Hermes | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | VERIFIED | Hermes Agent v0.19.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory/publication review not claimed |
 | Kimi Code | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Kimi Code 0.30.0 safe inspection and bounded harness shape passed; local live canary is blocked until a provider/model alias is configured; live receipts, usage calibration, lifecycle proof, and publication not claimed |
 | OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | OpenCode CLI 1.18.9 live host conformance, live calibration, and ALK lifecycle proof passed locally; npm publication not claimed |
-| qwen-code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | qwen-code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on GLM 5.2 locally; public package approval not claimed |
+| Qwen Code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | Qwen Code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on GLM 5.2 locally; public package approval not claimed |
 
 ## Compact context support
 
@@ -68,7 +68,7 @@ Codex is `VERIFIED` for host-local model routing on Codex CLI 0.145.0. Claude
 Code is `VERIFIED` for host-local model routing on Claude Code 2.1.220.
 OpenCode is `VERIFIED` for host-local model routing on OpenCode CLI 1.18.9.
 Hermes is `VERIFIED` for host-local model routing on Hermes Agent v0.19.0.
-qwen-code is `VERIFIED` for host-local model routing on qwen-code 0.21.0.
+Qwen Code is `VERIFIED` for host-local model routing on Qwen Code 0.21.0.
 Their live receipts include host usage attestation, quality pass status, and
 bounded budget evidence. Cursor, Gemini CLI, and Kimi Code remain
 `EXPERIMENTAL`: Cursor declares fail-closed support for host-local model
@@ -199,11 +199,11 @@ Hermes is verified only for the tested local host range:
 This evidence does not claim universal adapter support, public directory
 approval, or a broader production-promotion platform matrix pass.
 
-## qwen-code GLM 5.2 live evidence
+## Qwen Code GLM 5.2 live evidence
 
-qwen-code is verified only for the tested local host range:
+Qwen Code is verified only for the tested local host range:
 
-- Host: qwen-code 0.21.0.
+- Host: Qwen Code 0.21.0.
 - Source revision: `6c6b40210ee28de4b6a5993367af89e629fb99ff`.
 - Committed redacted evidence summary:
   `docs/adapters/evidence/qwen-code-glm52-live-2026-07-29.md`.

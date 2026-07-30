@@ -492,7 +492,7 @@ def _inspect_qwen_code(
         projection = _check_scaffold_projection_files(descriptor_path.parent, project_root=project_root, host="qwen-code")
         checks.append(projection)
         if projection["status"] == "FAIL":
-            blockers.append({"code": "qwen-code-projection-unavailable", "message": "qwen-code scaffold projection files are missing or invalid"})
+            blockers.append({"code": "qwen-code-projection-unavailable", "message": "Qwen Code scaffold projection files are missing or invalid"})
         capabilities["configuration"]["projection"] = projection["details"]
 
     version_check, version_text = _run_command_check(
@@ -503,7 +503,7 @@ def _inspect_qwen_code(
     )
     checks.append(version_check)
     if version_check["status"] == "FAIL":
-        blockers.append({"code": "qwen-code-binary-unavailable", "message": "qwen-code binary is unavailable or failed version probing"})
+        blockers.append({"code": "qwen-code-binary-unavailable", "message": "Qwen Code binary is unavailable or failed version probing"})
     capabilities["hostVersion"] = version_text
 
     help_check, _ = _run_command_check(
@@ -529,7 +529,7 @@ def _inspect_qwen_code(
     )
     checks.append(help_check)
     if help_check["status"] == "FAIL":
-        blockers.append({"code": "qwen-code-help-unavailable", "message": "qwen-code help does not expose required adapter surfaces"})
+        blockers.append({"code": "qwen-code-help-unavailable", "message": "Qwen Code help does not expose required adapter surfaces"})
     else:
         capabilities["headlessExecution"] = {"status": "SUPPORTED", "command": "--prompt", "streamJson": "--output-format stream-json"}
         capabilities["eventStream"] = {"status": "DISCOVERED", "source": "stream-json-output", "requiresReceiptValidation": True}
@@ -561,7 +561,7 @@ def _inspect_qwen_code(
     )
     checks.append(extensions_help)
     if extensions_help["status"] == "FAIL":
-        blockers.append({"code": "qwen-code-extensions-surface-unavailable", "message": "qwen-code extensions command surface is unavailable"})
+        blockers.append({"code": "qwen-code-extensions-surface-unavailable", "message": "Qwen Code extensions command surface is unavailable"})
     else:
         capabilities["extensionDiscovery"] = {"status": "DISCOVERED", "source": "extensions-command"}
 
@@ -574,7 +574,7 @@ def _inspect_qwen_code(
     )
     checks.append(mcp_help)
     if mcp_help["status"] == "FAIL":
-        blockers.append({"code": "qwen-code-mcp-surface-unavailable", "message": "qwen-code MCP command surface is unavailable"})
+        blockers.append({"code": "qwen-code-mcp-surface-unavailable", "message": "Qwen Code MCP command surface is unavailable"})
     else:
         capabilities["mcpDiscovery"] = {"status": "DISCOVERED", "source": "mcp-command"}
 
