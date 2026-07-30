@@ -8,8 +8,11 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest
 
 COST_REPORT_SCHEMA = "agent-lifecycle-cost-report.v1"
 COST_VALIDATION_SCHEMA = "agent-lifecycle-cost-validation.v1"
+COST_GENERATION_SCHEMA = "agent-lifecycle-cost-generation.v1"
+COST_SUMMARY_SCHEMA = "agent-lifecycle-cost-summary.v1"
 
 COST_CATEGORIES = ("implementation", "productValidation", "pipelineCompliance", "coordination")
+USAGE_CONFIDENCE_STATES = ("ATTESTED", "ESTIMATED", "MISSING")
 
 DEFAULT_MODE_LIMITS: dict[str, dict[str, float | int]] = {
     "light": {"maxPipelineTokenShare": 0.20, "maxPipelineStepShare": 0.30, "maxPipelineTokens": 1500, "maxPipelineSteps": 3},
@@ -42,8 +45,9 @@ def validate_lifecycle_cost_report(report: dict[str, Any]) -> dict[str, Any]:
         "tokens": sum(totals[category]["tokens"] for category in COST_CATEGORIES),
         "steps": sum(totals[category]["steps"] for category in COST_CATEGORIES),
     }
+    usage_confidence = summarize_usage_confidence(entries)
     limits = _limits(report.get("limits"), mode)
-    ratios = _ratios(totals)
+    ratios = cost_ratios(totals)
     if mode is not None:
         _check_pipeline_limits(totals, ratios, limits, report.get("overLimitReason"), blockers)
     body = {
@@ -52,6 +56,7 @@ def validate_lifecycle_cost_report(report: dict[str, Any]) -> dict[str, Any]:
         "mode": mode,
         "totals": totals,
         "ratios": ratios,
+        "usageConfidence": usage_confidence,
         "limits": limits,
         "blockers": blockers,
         "reportDigest": canonical_digest(report),
@@ -69,6 +74,24 @@ def _empty_totals() -> dict[str, dict[str, int]]:
     return {category: {"tokens": 0, "steps": 0} for category in COST_CATEGORIES}
 
 
+def cost_entry_totals(entries: list[Any]) -> dict[str, dict[str, int]]:
+    totals = _empty_totals()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        category = entry.get("category")
+        tokens = entry.get("tokens")
+        steps = entry.get("steps")
+        if category in COST_CATEGORIES and isinstance(tokens, int) and isinstance(steps, int):
+            totals[category]["tokens"] += max(0, tokens)
+            totals[category]["steps"] += max(0, steps)
+    totals["overall"] = {
+        "tokens": sum(totals[category]["tokens"] for category in COST_CATEGORIES),
+        "steps": sum(totals[category]["steps"] for category in COST_CATEGORIES),
+    }
+    return totals
+
+
 def _add_entry(index: int, entry: Any, totals: dict[str, dict[str, int]], blockers: list[dict[str, Any]]) -> None:
     if not isinstance(entry, dict):
         blockers.append({"code": "cost-entry-type", "index": index, "message": "entry must be an object"})
@@ -79,6 +102,9 @@ def _add_entry(index: int, entry: Any, totals: dict[str, dict[str, int]], blocke
         return
     tokens = _non_negative_int(entry.get("tokens"), field="tokens", index=index, blockers=blockers)
     steps = _non_negative_int(entry.get("steps"), field="steps", index=index, blockers=blockers)
+    confidence = entry.get("usageConfidence")
+    if confidence is not None and confidence not in USAGE_CONFIDENCE_STATES:
+        blockers.append({"code": "cost-entry-usage-confidence", "index": index, "usageConfidence": confidence})
     if tokens is None or steps is None:
         return
     if tokens == 0 and steps == 0:
@@ -93,6 +119,37 @@ def _non_negative_int(value: Any, *, field: str, index: int, blockers: list[dict
         blockers.append({"code": "cost-entry-numeric", "index": index, "field": field, "value": value})
         return None
     return value
+
+
+def summarize_usage_confidence(entries: list[Any]) -> dict[str, int]:
+    summary = {
+        "attestedEntries": 0,
+        "attestedTokens": 0,
+        "estimatedEntries": 0,
+        "estimatedTokens": 0,
+        "missingEntries": 0,
+        "missingTokens": 0,
+        "unspecifiedEntries": 0,
+        "unspecifiedTokens": 0,
+    }
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        confidence = entry.get("usageConfidence")
+        tokens = entry.get("tokens") if isinstance(entry.get("tokens"), int) else 0
+        if confidence == "ATTESTED":
+            summary["attestedEntries"] += 1
+            summary["attestedTokens"] += max(0, tokens)
+        elif confidence == "ESTIMATED":
+            summary["estimatedEntries"] += 1
+            summary["estimatedTokens"] += max(0, tokens)
+        elif confidence == "MISSING":
+            summary["missingEntries"] += 1
+            summary["missingTokens"] += max(0, tokens)
+        else:
+            summary["unspecifiedEntries"] += 1
+            summary["unspecifiedTokens"] += max(0, tokens)
+    return summary
 
 
 def _limits(raw_limits: Any, mode: str | None) -> dict[str, float | int]:
@@ -113,7 +170,7 @@ def _limits(raw_limits: Any, mode: str | None) -> dict[str, float | int]:
     return defaults
 
 
-def _ratios(totals: dict[str, dict[str, int]]) -> dict[str, float]:
+def cost_ratios(totals: dict[str, dict[str, int]]) -> dict[str, float]:
     overall_tokens = totals["overall"]["tokens"]
     overall_steps = totals["overall"]["steps"]
     pipeline_tokens = totals["pipelineCompliance"]["tokens"]

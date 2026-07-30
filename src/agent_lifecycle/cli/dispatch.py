@@ -11,7 +11,7 @@ from agent_lifecycle.audit import build_ownership_report, require_review_verdict
 from agent_lifecycle.audit.ownership import report_has_category
 from agent_lifecycle.changesets import changed_files
 from agent_lifecycle.compiler import compile_task_packets
-from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.contracts.compatibility import (
     build_contract_policy,
     require_contract_policy_pass,
@@ -45,7 +45,12 @@ from agent_lifecycle.model_routing import (
     validate_model_routing_profile,
     validate_usage_receipt,
 )
-from agent_lifecycle.metrics import require_lifecycle_cost_pass, validate_lifecycle_cost_report
+from agent_lifecycle.metrics import (
+    build_lifecycle_cost_summary,
+    generate_lifecycle_cost_report,
+    require_lifecycle_cost_pass,
+    validate_lifecycle_cost_report,
+)
 from agent_lifecycle.planning import (
     build_plan_snapshot,
     reconcile_plan_snapshot,
@@ -492,6 +497,33 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
     if args.metrics_command == "cost-check":
         report = read_json_object(Path(args.receipt), label="lifecycle cost report")
         return require_lifecycle_cost_pass(validate_lifecycle_cost_report(report))
+    if args.metrics_command == "cost-report":
+        report = generate_lifecycle_cost_report(
+            artifact_paths=[Path(item) for item in args.artifact],
+            mode=args.mode,
+            root=Path(args.project_root),
+        )
+        validation = require_lifecycle_cost_pass(validate_lifecycle_cost_report(report))
+        report_bytes = write_json_create(Path(args.out), report)
+        summary_path = None
+        summary_digest = None
+        if args.summary_out:
+            summary = build_lifecycle_cost_summary(report)
+            write_json_create(Path(args.summary_out), summary)
+            summary_path = args.summary_out
+            summary_digest = canonical_digest(summary)
+        return {
+            "schemaVersion": "agent-lifecycle-cost-generation.v1",
+            "status": validation["status"],
+            "reportPath": args.out,
+            "reportBytes": len(report_bytes),
+            "reportDigest": canonical_digest(report),
+            "summaryPath": summary_path,
+            "summaryDigest": summary_digest,
+            "validation": validation,
+            "liveCallsStarted": False,
+            "productionPromotionClaimed": False,
+        }
     raise LifecycleError("command-not-implemented", "metrics command is not implemented")
 
 
