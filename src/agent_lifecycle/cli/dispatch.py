@@ -30,6 +30,7 @@ from agent_lifecycle.evidence_index import (
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.cli.adapter import dispatch_adapter
 from agent_lifecycle.cli.followup import dispatch_followup
+from agent_lifecycle.cli.policy import dispatch_policy
 from agent_lifecycle.cli.worktree import dispatch_worktree
 from agent_lifecycle.goal import build_objective_snapshot, update_goal_record, validate_goal_record
 from agent_lifecycle.imports import (
@@ -134,6 +135,8 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         return _dispatch_quality(args)
     if args.command == "report":
         return _dispatch_report(args)
+    if args.command == "policy":
+        return dispatch_policy(args)
     if args.command == "workflow":
         return _dispatch_workflow(args)
     if args.command == "audit":
