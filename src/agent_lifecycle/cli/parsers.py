@@ -327,6 +327,20 @@ def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     acceptance_check = plan_sub.add_parser("acceptance-check")
     acceptance_check.add_argument("--manifest", required=True)
     acceptance_check.add_argument("--acceptance", required=True)
+    refs_check = plan_sub.add_parser("refs-check")
+    refs_check.add_argument("--manifest", required=True)
+    snapshot = plan_sub.add_parser("snapshot")
+    snapshot.add_argument("--manifest", required=True)
+    snapshot.add_argument("--out")
+    reconcile = plan_sub.add_parser("reconcile")
+    reconcile.add_argument("--manifest", required=True)
+    reconcile.add_argument("--snapshot", required=True)
+    handoff = plan_sub.add_parser("handoff")
+    handoff.add_argument("--manifest", required=True)
+    handoff.add_argument("--snapshot")
+    handoff.add_argument("--max-workstreams", type=int, default=12)
+    handoff.add_argument("--target-tokens", type=int, default=4096)
+    handoff.add_argument("--out")
 
 
 def _add_task_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
