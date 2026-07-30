@@ -1,4 +1,4 @@
-# Install For Agents
+# Install for agents
 
 This guide is for agent hosts and operators installing Agent Lifecycle Kit from
 a source checkout or tagged repository release.
@@ -22,7 +22,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 PYTHONPATH=src python -m agent_lifecycle schema list
 ```
 
-## Required Operator Checks
+## Required operator checks
 
 Before an agent executes work from a plan package:
 
@@ -40,7 +40,7 @@ agent-lifecycle adapter validate --descriptor adapters/claude/adapter.descriptor
 agent-lifecycle adapter event-check --event events/001-session-started.json --event events/002-task-launched.json --event events/003-task-completed.json
 ```
 
-## Host Plugins
+## Host plugins
 
 Install host projections from the repository root unless a future release ships
 a separate materialized adapter package.
@@ -75,7 +75,7 @@ cp -R "$KIT"/skills/* .opencode/skills/
 cp "$KIT"/adapters/opencode/plugins/agent-lifecycle-kit.js .opencode/plugins/
 ```
 
-## Status Boundary
+## Status boundary
 
 Adapters remain `EXPERIMENTAL` until live install, lifecycle conformance, usage
 attestation and support-matrix evidence are published for that host. A green

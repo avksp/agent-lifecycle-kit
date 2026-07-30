@@ -1,4 +1,4 @@
-# Source Of Truth
+# Source of truth
 
 This project keeps each lifecycle claim in one authoritative layer. Reference
 documents may summarize the state, but they should link back to these files
@@ -18,12 +18,12 @@ instead of duplicating long rules.
 | Release history | `CHANGELOG.md` and `release/notes/` |
 | Release security boundaries | `docs/security/release-security.md` and security tests |
 
-## Documentation Rule
+## Documentation rule
 
 Ordinary docs describe the current behavior. They should not say when a feature
 was introduced; the changelog and release notes carry that history.
 
-## Evidence Rule
+## Evidence rule
 
 Tracked evidence summaries are suitable for source releases. Local raw receipts
 are useful for re-running live promotion review, but they may be absent from a

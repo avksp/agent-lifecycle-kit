@@ -1,4 +1,4 @@
-# CLI Reference
+# CLI reference
 
 The CLI prints JSON for machine-readable commands. Commands that mutate state
 record receipts or require explicit input files; diagnostic commands stay
@@ -30,7 +30,7 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle runner start/status/transition/stop/resume`: control
   bounded execution state.
 
-## Review And Quality
+## Review and quality
 
 - `agent-lifecycle audit review-check`: validate review verdicts.
 - `agent-lifecycle quality pack-check`: validate optional quality packs.
@@ -43,7 +43,7 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle policy tune`: build a read-only policy proposal or write an
   approved policy artifact with `--apply --output`.
 
-## Context And Continuity
+## Context and continuity
 
 - `agent-lifecycle context check/render`: validate and render compact context.
 - `agent-lifecycle goal check/summarize/update`: keep user intent traceable.
@@ -61,7 +61,7 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle adapter install-plan`: preview host setup without writes.
 - `agent-lifecycle adapter event-check`: validate event capture receipts.
 
-## Diagnostics And Evidence
+## Diagnostics and evidence
 
 - `agent-lifecycle diagnose`: build one redacted checkout readiness report.
 - `agent-lifecycle diagnostics bundle`: collect selected evidence into a

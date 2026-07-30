@@ -41,7 +41,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "docs/guides/README.ru.md",
+        "docs/ru/README.md",
         (
             "`VERIFIED` для Codex CLI 0.145.0",
             "`VERIFIED` для Claude Code 2.1.220",

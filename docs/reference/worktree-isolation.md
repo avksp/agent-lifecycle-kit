@@ -1,4 +1,4 @@
-# Worktree Isolation Receipts
+# Worktree isolation receipts
 
 Worktree isolation receipts document that a task attempt ran in a bounded
 attempt workspace and did not overwrite unrelated local changes. The core

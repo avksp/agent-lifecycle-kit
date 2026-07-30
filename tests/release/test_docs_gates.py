@@ -25,7 +25,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
 
     def test_root_readmes_are_compact_and_delegate_reference_detail(self) -> None:
         english = (ROOT / "README.md").read_text(encoding="utf-8")
-        russian = (ROOT / "docs/guides/README.ru.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/README.md").read_text(encoding="utf-8")
 
         self.assertLessEqual(len(english.splitlines()), 180)
         self.assertLessEqual(len(russian.splitlines()), 190)
@@ -36,7 +36,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/source-of-truth.md",
         ):
             self.assertIn(required, english)
-        self.assertIn("quickstart.ru.md", russian)
+        self.assertIn("quickstart.md", russian)
+        self.assertIn("reference/cli.md", russian)
 
     def test_release_entry_docs_have_resolving_links(self) -> None:
         for relative in (
@@ -45,6 +46,16 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/guides/README.ru.md",
             "docs/guides/quickstart.md",
             "docs/guides/quickstart.ru.md",
+            "docs/ru/README.md",
+            "docs/ru/quickstart.md",
+            "docs/ru/adapters/install.md",
+            "docs/ru/adapters/support-matrix.md",
+            "docs/ru/reference/cli.md",
+            "docs/ru/reference/source-of-truth.md",
+            "docs/ru/reference/public-contracts.md",
+            "docs/ru/reference/readiness-diagnostics.md",
+            "docs/ru/reference/lifecycle-cost.md",
+            "docs/ru/security/release-security.md",
             "docs/adapters/install.md",
             "docs/reference/cli.md",
             "docs/reference/source-of-truth.md",
@@ -55,7 +66,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
 
     def test_quickstart_and_adapter_docs_cover_bounded_commands(self) -> None:
         quickstart = (ROOT / "docs/guides/quickstart.md").read_text(encoding="utf-8")
-        quickstart_ru = (ROOT / "docs/guides/quickstart.ru.md").read_text(encoding="utf-8")
+        quickstart_ru = (ROOT / "docs/ru/quickstart.md").read_text(encoding="utf-8")
         install = (ROOT / "docs/adapters/install.md").read_text(encoding="utf-8")
 
         for text in (quickstart, quickstart_ru):
@@ -75,6 +86,22 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "kimi --version",
         ):
             self.assertIn(command, install)
+
+    def test_russian_docs_link_to_russian_docs(self) -> None:
+        for path in sorted((ROOT / "docs/ru").rglob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            for match in re.finditer(r"\[[^\]]+\]\(([^)]+)\)", text):
+                target = match.group(1).strip()
+                if not target or target.startswith(("#", "http://", "https://", "mailto:")):
+                    continue
+                target_path = target.split("#", 1)[0]
+                if not target_path:
+                    continue
+                resolved = (path.parent / target_path).resolve()
+                self.assertTrue(
+                    resolved.is_relative_to((ROOT / "docs/ru").resolve()),
+                    f"{path.relative_to(ROOT)} links outside Russian locale: {target}",
+                )
 
     def test_docs_compat_evidence_passes_current_docs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -170,7 +197,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`.\n",
     )
     _write_text(
-        root / "docs/guides/README.ru.md",
+        root / "docs/ru/README.md",
         "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`.\n",
     )
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"

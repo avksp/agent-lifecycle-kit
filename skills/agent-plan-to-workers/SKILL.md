@@ -3,7 +3,7 @@ name: agent-plan-to-workers
 description: Compile a frozen reviewed plan into deterministic worker packets with dependency waves, ownership, validation, evidence, and result contracts.
 ---
 
-# Agent Plan To Workers
+# Agent plan to workers
 
 Use this skill after a plan is reviewed and frozen. The task is compilation:
 project a frozen plan into worker packets without redesigning it.

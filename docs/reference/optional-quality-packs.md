@@ -1,4 +1,4 @@
-# Optional Quality Packs
+# Optional quality packs
 
 Optional quality packs describe extra checks that can be enabled by an
 operator without changing the normal lifecycle path. `agent-optional-quality-pack.v1`

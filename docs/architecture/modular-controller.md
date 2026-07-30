@@ -1,4 +1,4 @@
-# Modular Controller Architecture
+# Modular controller architecture
 
 This document defines the production shape of the Agent Lifecycle Kit
 controller. It is intentionally host-neutral and applies to Codex, Claude Code,
@@ -16,7 +16,7 @@ the full target boundary map below: missing packages are reserved seams, not a
 release requirement unless their responsibility becomes implemented runtime
 logic.
 
-## Current Implementation Map
+## Current implementation map
 
 This is the current source map for the standalone package:
 
@@ -41,7 +41,7 @@ the parser/dispatcher split. The largest current controller modules remain
 below 400 lines, including `workflow/plan_adoption.py`; new budget-decision
 behavior lives in its own workflow module rather than expanding the root CLI.
 
-## Target Shape
+## Target shape
 
 The long-term production controller is organized around these boundaries. A
 boundary should become a package only when runtime behavior exists for it or
@@ -86,7 +86,7 @@ The dependency direction is one-way: lower layers cannot import CLI, API, or
 surface adapters; adapters cannot import controller domain services directly.
 Controller services depend on ports and contracts rather than native host APIs.
 
-## Size And Context Limits
+## Size and context limits
 
 The standalone implementation must be usable by small-context models. File and
 function limits are therefore release gates, not style preferences.
@@ -172,7 +172,7 @@ state, WAL, immutable locks, independent review, evidence binding, authority
 checks, bounded context, crash recovery, and final proof because those are core
 product requirements.
 
-## Acceptance Gate
+## Acceptance gate
 
 A release candidate fails if any of these are true:
 

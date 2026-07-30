@@ -1,4 +1,4 @@
-# Codex CLI 0.6.0 Evidence Summary
+# Codex CLI 0.6.0 evidence summary
 
 This is the committed, redacted summary for the Codex host-specific `VERIFIED`
 claim. Raw receipts and diagnostics remain local release evidence under
@@ -17,7 +17,7 @@ claim. Raw receipts and diagnostics remain local release evidence under
 - Public directory approval claimed: false.
 - Universal adapter support claimed: false.
 
-## Gate Results
+## Gate results
 
 | Gate | Result | Key metrics |
 | --- | --- | --- |
@@ -28,7 +28,7 @@ claim. Raw receipts and diagnostics remain local release evidence under
 | Live calibration | `PASS` | 14 invocations, 229558 billable tokens, 126.324 seconds |
 | Full ALK lifecycle | `PASS` | `task-start` -> `task-result` -> `task-accept` -> `finalize`, final proof hash `0258063d29c09444c08ee555bea53bd8fa14899bd95598daddc992b4877a6c3c` |
 
-## Local Raw Evidence
+## Local raw evidence
 
 - `work/release-0-6/evidence/codex-live-promotion/preflight/codex-preflight-report.json`
 - `work/release-0-6/evidence/codex-live-promotion/preflight/codex-fixture-check-report.json`
