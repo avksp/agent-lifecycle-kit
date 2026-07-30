@@ -279,7 +279,10 @@ user-turn count.
 `READY_FOR_FINALIZATION`, match the run's plan revision and digest, avoid
 production-promotion claims, contain no unresolved MEDIUM+ findings, and carry
 a valid `agent-completion-signal.v1` with `PASS` status or an explicit
-evidence-bound `WAIVED` signal.
+evidence-bound `WAIVED` signal. If the adopted specification declares
+`completionCheck`, finalization also requires the configured
+`agent-completion-check-receipt.v1` to bind the same run, plan digest, source
+revision, evidence ids and verifier before final proof can be written.
 
 `workflow task-accept` rechecks changed files from the committed task result
 against the frozen task write scope and root write policy before accepting an
@@ -292,7 +295,9 @@ contains a valid `agent-baseline-reconciliation-receipt.v1`.
 
 Human-only work should be represented as workflow state, not prose completion.
 Core transitions can park a run in `WAITING_FOR_EXTERNAL_ACTION` and resume it
-only from a matching `agent-external-action-receipt.v1`.
+only from a matching `agent-external-action-receipt.v1`. A human-decision
+`completionCheck` must reference that existing external-action receipt instead
+of inventing a second approval path.
 
 Workflow transitions enforce task `controllerGates` for `pre-launch`,
 `post-attempt`, `pre-acceptance`, and `finalization` phases. Expected receipts
@@ -598,6 +603,7 @@ requires resolver and independent review agreement.
 - [Russian README](docs/guides/README.ru.md)
 - [Adapter support matrix](docs/adapters/support-matrix.md)
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
+- [Completion check](docs/reference/completion-check.md)
 - [Adapter live-promotion runbook](docs/adapters/live-promotion-runbook.md)
 - [Verified-adapter release checklist](docs/guides/verified-adapter-release-checklist.md)
 - [Modular controller architecture](docs/architecture/modular-controller.md)

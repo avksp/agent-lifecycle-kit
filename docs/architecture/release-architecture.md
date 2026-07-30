@@ -32,6 +32,8 @@ The 0.5 line adds local execution gates before any production-promotion claim:
 - each attempt binds to its launch baseline and requires reconciliation on
   drift;
 - finalization requires a completion signal or explicit evidence-bound waiver;
+- an adopted `completionCheck` requires a matching completion-check receipt
+  before final proof can be written;
 - human-only actions pause the run until an external-action receipt is present.
 
 These gates make local completion more honest, but they do not promote an

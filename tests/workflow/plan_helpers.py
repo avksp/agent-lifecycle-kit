@@ -10,6 +10,7 @@ def _write_plan_bundle(
     *,
     include_dependent: bool = False,
     include_model_route: bool = False,
+    include_completion_check: bool = False,
     include_plan_review_report: bool = True,
 ) -> None:
     plan_root = root / "plans/package/.agent-plan/package"
@@ -28,6 +29,7 @@ def _write_plan_bundle(
     manifest = _plan_manifest(
         include_dependent=include_dependent,
         include_model_route=include_model_route,
+        include_completion_check=include_completion_check,
         include_plan_review_report=include_plan_review_report,
     )
     digest = canonical_digest(manifest)
@@ -68,6 +70,7 @@ def _plan_manifest(
     *,
     include_dependent: bool = False,
     include_model_route: bool = False,
+    include_completion_check: bool = False,
     include_plan_review_report: bool = True,
 ) -> dict:
     workstreams = [
@@ -118,7 +121,7 @@ def _plan_manifest(
             },
             "required": True,
         })
-    return {
+    manifest = {
         "schemaVersion": "3.0",
         "status": "FROZEN",
         "planRevision": 2,
@@ -136,6 +139,18 @@ def _plan_manifest(
         },
         "workstreams": workstreams,
     }
+    if include_completion_check:
+        manifest["specification"] = {
+            "completionCheck": {
+                "schemaVersion": "agent-completion-check.v1",
+                "checkId": "done-check",
+                "kind": "verification",
+                "description": "Observable completion evidence for the requested outcome.",
+                "receiptPath": "final/completion-check-receipt.json",
+                "requiredEvidenceIds": ["EV-FINAL"],
+            }
+        }
+    return manifest
 
 
 def _plan_review_block(*, include_report: bool) -> dict:

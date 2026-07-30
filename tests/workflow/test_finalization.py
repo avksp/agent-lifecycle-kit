@@ -130,6 +130,110 @@ class WorkflowFinalizationTests(unittest.TestCase):
 
             self.assertEqual(payload["phase"], "COMPLETE")
 
+    def test_finalize_run_records_passing_completion_check_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["completionCheck"] = _completion_check()
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+            write_json_create(root / "final/completion-check-receipt.json", _completion_check_receipt("PASS"))
+
+            payload = finalize_run(
+                state_path,
+                operation_id="finalize-op",
+                expected_revision=1,
+                source_revision="source",
+                final_audit_path="final/final-audit.json",
+                proof_path="final/proof.json",
+                reason="done",
+            )
+
+            self.assertEqual(payload["phase"], "COMPLETE")
+            proof = json.loads((root / "final/proof.json").read_text(encoding="utf-8"))
+            self.assertEqual(proof["completionCheck"]["receipt"]["path"], "final/completion-check-receipt.json")
+            self.assertEqual(proof["completionCheck"]["validation"]["status"], "PASS")
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(stored["completionCheckReceipt"]["path"], "final/completion-check-receipt.json")
+
+    def test_finalize_run_fails_closed_when_completion_check_receipt_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["completionCheck"] = _completion_check()
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "completion-check-receipt-missing")
+
+    def test_finalize_run_rejects_failed_completion_check_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["completionCheck"] = _completion_check()
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+            write_json_create(root / "final/completion-check-receipt.json", _completion_check_receipt("FAIL"))
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "completion-check-not-satisfied")
+
+    def test_finalize_run_external_action_check_binds_existing_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            external_identity = {"path": "human/approval.json", "sha256": "a" * 64, "bytes": 100}
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["completionCheck"] = _completion_check(kind="external-action")
+            state["externalActionReceipt"] = external_identity
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+            receipt = _completion_check_receipt("PASS")
+            receipt["externalActionReceipt"] = external_identity
+            write_json_create(root / "final/completion-check-receipt.json", receipt)
+
+            payload = finalize_run(
+                state_path,
+                operation_id="finalize-op",
+                expected_revision=1,
+                source_revision="source",
+                final_audit_path="final/final-audit.json",
+                proof_path="final/proof.json",
+                reason="done",
+            )
+
+            self.assertEqual(payload["phase"], "COMPLETE")
+            proof = json.loads((root / "final/proof.json").read_text(encoding="utf-8"))
+            self.assertEqual(proof["completionCheck"]["validation"]["checkKind"], "external-action")
+
     def test_finalize_run_rejects_final_audit_plan_digest_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -200,6 +304,40 @@ class WorkflowFinalizationTests(unittest.TestCase):
                     proof_path="final/proof.json",
                     reason="done",
                 )
+
+def _accept_only_task(state_path: Path) -> None:
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["tasks"][0]["status"] = "ACCEPTED"
+    state["tasks"][0]["attempt"] = 1
+    state["tasks"][0]["review"] = {"path": "tasks/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+
+def _completion_check(*, kind: str = "verification") -> dict:
+    return {
+        "schemaVersion": "agent-completion-check.v1",
+        "checkId": "done-check",
+        "kind": kind,
+        "description": "Observable completion evidence for the requested outcome.",
+        "receiptPath": "final/completion-check-receipt.json",
+        "requiredEvidenceIds": ["EV-FINAL"],
+    }
+
+
+def _completion_check_receipt(status: str) -> dict:
+    return {
+        "schemaVersion": "agent-completion-check-receipt.v1",
+        "checkId": "done-check",
+        "runId": "run",
+        "packageId": "package",
+        "planRevision": 1,
+        "planDigest": "0" * 64,
+        "sourceRevision": "source",
+        "status": status,
+        "evidenceIds": ["EV-FINAL"],
+        "verifier": {"id": "observable-check"},
+        "checkedAt": "2026-07-30T08:00:00Z",
+    }
 
 
 if __name__ == "__main__":

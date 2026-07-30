@@ -15,7 +15,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = _section(changelog, "## Unreleased")
-        current_release = _section(changelog, "## 0.13.0 - 2026-07-30")
+        current_release = _section(changelog, "## 0.14.0 - 2026-07-30")
         self.assertNotIn("- No changes yet.", current_release)
         self.assertTrue(
             any(line.startswith("- ") for line in unreleased.splitlines())
@@ -77,11 +77,11 @@ def _run_no_check(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for qwen-code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for qwen-code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`.\n",
     )
     _write_text(
         root / "docs/guides/README.ru.md",
-        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для qwen-code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для qwen-code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`.\n",
     )
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
@@ -101,13 +101,14 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
     )
     _write_text(
-        root / "release/notes/v0.13.0.md",
+        root / "release/notes/v0.14.0.md",
         "Status: source release.\n"
-        "Updated package metadata to `0.13.0`.\n"
-        "`agent-lifecycle diagnose`.\n"
-        "`agent-readiness-report.v1`.\n"
-        "`agent-lifecycle adapter install-plan`.\n"
-        "`agent-adapter-install-plan.v1`.\n"
+        "Updated package metadata to `0.14.0`.\n"
+        "`completionCheck`.\n"
+        "`agent-completion-check.v1`.\n"
+        "`agent-completion-check-receipt.v1`.\n"
+        "`agent-external-action-receipt.v1`.\n"
+        "`qualityCheck`.\n"
         "productionPromotionClaimed.\n",
     )
     _write_text(
@@ -130,6 +131,13 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "validate_adapter_conformance.py.\n"
         "validate_docs_compat.py.\n"
         "validate_support_matrix.py.\n",
+    )
+    _write_text(
+        root / "docs/reference/completion-check.md",
+        "`completionCheck`.\n"
+        "`agent-completion-check-receipt.v1`.\n"
+        "`agent-external-action-receipt.v1`.\n"
+        "fails closed.\n",
     )
     for host in ("claude", "codex", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "qwen-code"):
         _write_text(

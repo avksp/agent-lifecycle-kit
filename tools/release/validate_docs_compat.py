@@ -20,6 +20,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`EXPERIMENTAL` means",
             "bounded live host conformance",
             "usage/cost",
+            "`completionCheck`",
+            "`agent-completion-check-receipt.v1`",
         ),
     ),
     (
@@ -32,6 +34,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`VERIFIED` для qwen-code 0.21.0",
             "`EXPERIMENTAL` означает",
             "калибровки расхода",
+            "`completionCheck`",
+            "`agent-completion-check-receipt.v1`",
         ),
     ),
     (
@@ -72,14 +76,24 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.13.0.md",
+        "docs/reference/completion-check.md",
+        (
+            "`completionCheck`",
+            "`agent-completion-check-receipt.v1`",
+            "`agent-external-action-receipt.v1`",
+            "fails closed",
+        ),
+    ),
+    (
+        "release/notes/v0.14.0.md",
         (
             "Status: source release.",
-            "Updated package metadata to `0.13.0`",
-            "`agent-lifecycle diagnose`",
-            "`agent-readiness-report.v1`",
-            "`agent-lifecycle adapter install-plan`",
-            "`agent-adapter-install-plan.v1`",
+            "Updated package metadata to `0.14.0`",
+            "`completionCheck`",
+            "`agent-completion-check.v1`",
+            "`agent-completion-check-receipt.v1`",
+            "`agent-external-action-receipt.v1`",
+            "`qualityCheck`",
             "productionPromotionClaimed",
         ),
     ),

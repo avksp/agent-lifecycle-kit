@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 0.14.0 - 2026-07-30
+
+- Added `completionCheck` support for specifications, plan adoption and final
+  proof generation.
+- Added `agent-completion-check.v1` and
+  `agent-completion-check-receipt.v1` schemas with fail-closed finalization
+  when a declared completion check is missing or reports `FAIL`.
+- Replaced the older synthetic replay quality key with `qualityCheck` and
+  added regression coverage to keep copied terminology out of tracked source.
+
 ## 0.13.0 - 2026-07-30
 
 - Added `agent-lifecycle diagnose` for one redacted readiness report covering
