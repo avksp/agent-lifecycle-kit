@@ -17,6 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_workflow_parser(subparsers)
     _add_audit_parser(subparsers)
     _add_context_parser(subparsers)
+    _add_goal_parser(subparsers)
     _add_model_parser(subparsers)
     _add_tier_parser(subparsers)
     _add_specification_parser(subparsers)
@@ -139,6 +140,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_finalize.add_argument("--source-revision", required=True)
     workflow_finalize.add_argument("--final-audit", required=True)
     workflow_finalize.add_argument("--proof", required=True)
+    workflow_finalize.add_argument("--goal-record")
     workflow_finalize.add_argument("--reason", required=True)
 
 
@@ -170,6 +172,27 @@ def _add_context_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     context_render.add_argument("--summary", required=True)
     context_render.add_argument("--target-window")
     context_render.add_argument("--latest-user", default="")
+
+
+def _add_goal_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    goal = subparsers.add_parser("goal", help="goal continuity commands")
+    goal_sub = goal.add_subparsers(dest="goal_command", required=True)
+    goal_check = goal_sub.add_parser("check")
+    goal_check.add_argument("--record", required=True)
+    goal_check.add_argument("--state")
+    goal_check.add_argument("--current", action="store_true")
+    goal_summarize = goal_sub.add_parser("summarize")
+    goal_summarize.add_argument("--record", required=True)
+    goal_summarize.add_argument("--state", required=True)
+    goal_summarize.add_argument("--profile")
+    goal_summarize.add_argument("--target-window")
+    goal_update = goal_sub.add_parser("update")
+    goal_update.add_argument("--record", required=True)
+    goal_update.add_argument("--state", required=True)
+    goal_update.add_argument("--reason", required=True)
+    goal_update.add_argument("--status", choices=["ACTIVE", "BLOCKED", "READY_FOR_FINALIZATION", "COMPLETE"])
+    goal_update.add_argument("--evidence-id", action="append", default=[])
+    goal_update.add_argument("--out")
 
 
 def _add_model_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

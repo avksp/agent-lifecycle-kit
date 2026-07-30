@@ -81,6 +81,28 @@ Skills остаются тонкими точками входа. Специфи
 поддержка локальных моделей с контекстом меньше 8k проверяется отдельным
 контрактным путём.
 
+## Непрерывность цели
+
+Для долгих задач можно вести отдельную запись цели `agent-goal-record.v1`.
+Она связывает намерение пользователя, ожидаемый результат для владельца,
+ограничения, доказательства и линию жизненного цикла, но не копирует всю
+историю диалога в каждый следующий запрос.
+
+`agent-lifecycle goal summarize` строит краткий снимок
+`agent-objective-snapshot.v1` с кратким намерением, ожидаемым результатом,
+ограничениями, отпечатками и следующим действием процесса. Снимок проверяется
+тем же профилем маленького контекста, что и пакеты задач, включая
+`4k-strict`, поэтому небольшая локальная модель получает достаточный рабочий
+контекст без полной истории. Крупные модели при этом могут читать полное
+состояние, план, доказательства и финальный аудит: краткий снимок помогает
+продолжению, но не заменяет проверку. Если запись устарела, относится к
+другому запуску или противоречит текущему `completionCheck`, проверка
+завершается отказом до расхода новых токенов.
+`workflow finalize` также может включить текущую запись цели в финальное
+доказательство через `--goal-record`.
+
+Подробнее: [непрерывность цели](../reference/goal-continuity.md).
+
 ## Калибровка расхода
 
 Синтетический повтор полезен для детерминированных проверок регрессий, но не
@@ -215,7 +237,10 @@ agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
 agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --model-usage-receipt <model-usage-receipt.json> --reason "<reason>"
 agent-lifecycle workflow task-accept --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --review <task-review.json> --reason "<reason>"
-agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --reason "<reason>"
+agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --goal-record <goal-record.json> --reason "<reason>"
+agent-lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
+agent-lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
+agent-lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle specification check --specification <specification.json>
@@ -245,7 +270,10 @@ PYTHONPATH=src python -m agent_lifecycle schema list
 PYTHONPATH=src python -m agent_lifecycle workflow status --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow next --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
-PYTHONPATH=src python -m agent_lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --goal-record <goal-record.json> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
+PYTHONPATH=src python -m agent_lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
+PYTHONPATH=src python -m agent_lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
 PYTHONPATH=src python -m agent_lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 PYTHONPATH=src python -m agent_lifecycle tier resolve --request <tier-request.json>
 PYTHONPATH=src python -m agent_lifecycle specification check --specification <specification.json>
@@ -268,8 +296,10 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`specification check`, `plan check`, `task compile`, `adapter validate`,
-`adapter inspect`, `adapter install-plan`, `adapter event-check`, `adapter scaffold` и `neutrality`.
+`goal check`, `goal summarize`, `goal update`, `specification check`,
+`plan check`, `plan acceptance-check`, `task compile`, `adapter validate`,
+`adapter inspect`, `adapter install-plan`, `adapter event-check`,
+`adapter scaffold` и `neutrality`.
 `adapter scaffold` — только заготовка и может создавать только
 `EXPERIMENTAL`-проекции. `adapter inspect` записывает дескриптор и безопасно
 обнаруживает возможности среды без запуска модели. Выполнение адаптера и
@@ -296,6 +326,8 @@ MEDIUM и выше и иметь корректный `agent-completion-signal.v
 спецификация объявляет `completionCheck`, завершение дополнительно требует
 квитанцию `agent-completion-check-receipt.v1`, связанную с тем же запуском,
 отпечатком плана, исходной ревизией, доказательствами и проверяющим.
+Если указан `--goal-record`, запись `agent-goal-record.v1` должна быть
+актуальной для той же линии жизненного цикла и той же проверки завершения.
 
 Действия, которые должен выполнить человек, фиксируются состоянием процесса, а
 не текстовым обещанием о завершении. Запуск можно поставить в

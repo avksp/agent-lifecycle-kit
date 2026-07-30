@@ -74,6 +74,26 @@ The conformance corpus includes a dedicated `4k-strict` scenario
 (`S1-SMALL-CONTEXT-4K-STRICT-01`) in addition to the 8k baseline, so support for
 sub-8k local models is verified as a separate contract path.
 
+## Goal continuity
+
+Long-running tasks can carry an optional `agent-goal-record.v1` artifact. It
+binds the user's intent, the owner-visible outcome, constraints, evidence ids
+and lifecycle lineage without copying the whole conversation into every
+continuation prompt.
+
+`agent-lifecycle goal summarize` renders an `agent-objective-snapshot.v1`
+compact snapshot with the concise intent, owner outcome, constraints, digests
+and the next workflow action. The snapshot is validated against the same
+small-context profile as task packets, including `4k-strict`, so small local
+models get enough working context without the full history. Larger models can
+still inspect the full state, plan, evidence and final audit; the compact
+snapshot is a continuation aid, not a replacement for review. If the record is
+stale, points at another run or contradicts the current `completionCheck`,
+validation fails closed before more tokens are spent. `workflow finalize` can
+also bind a current goal record into the final proof through `--goal-record`.
+
+See [goal continuity](docs/reference/goal-continuity.md).
+
 ## Live cost calibration
 
 Synthetic replay baselines are useful for deterministic regression checks, but
@@ -199,7 +219,10 @@ agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
 agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --model-usage-receipt <model-usage-receipt.json> --reason "<reason>"
 agent-lifecycle workflow task-accept --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --review <task-review.json> --reason "<reason>"
-agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --reason "<reason>"
+agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --goal-record <goal-record.json> --reason "<reason>"
+agent-lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
+agent-lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
+agent-lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle specification check --specification <specification.json>
@@ -230,7 +253,10 @@ PYTHONPATH=src python -m agent_lifecycle schema list
 PYTHONPATH=src python -m agent_lifecycle workflow status --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow next --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
-PYTHONPATH=src python -m agent_lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --goal-record <goal-record.json> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
+PYTHONPATH=src python -m agent_lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
+PYTHONPATH=src python -m agent_lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
 PYTHONPATH=src python -m agent_lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 PYTHONPATH=src python -m agent_lifecycle tier resolve --request <tier-request.json>
 PYTHONPATH=src python -m agent_lifecycle specification check --specification <specification.json>
@@ -254,7 +280,8 @@ Implemented core CLI groups are `version`, `diagnose`, `schema`, `workflow statu
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`specification check`, `plan check`, `plan acceptance-check`, `task compile`,
+`goal check`, `goal summarize`, `goal update`, `specification check`,
+`plan check`, `plan acceptance-check`, `task compile`,
 `adapter validate`, `adapter inspect`, `adapter install-plan`, `adapter event-check`, `adapter
 scaffold`, and `neutrality`. Adapter scaffold is template-only and can only
 create `EXPERIMENTAL` projection skeletons. Adapter inspect records descriptor
@@ -283,6 +310,9 @@ evidence-bound `WAIVED` signal. If the adopted specification declares
 `completionCheck`, finalization also requires the configured
 `agent-completion-check-receipt.v1` to bind the same run, plan digest, source
 revision, evidence ids and verifier before final proof can be written.
+If `--goal-record` is supplied, that `agent-goal-record.v1` must be current for
+the same lifecycle lineage and completion check before final proof can be
+written.
 
 `workflow task-accept` rechecks changed files from the committed task result
 against the frozen task write scope and root write policy before accepting an
