@@ -38,6 +38,8 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle metrics cost-check`: validate lifecycle cost receipts.
 - `agent-lifecycle metrics cost-report`: generate and validate a lifecycle
   cost report from explicit JSON artifact paths.
+- `agent-lifecycle metrics recommend`: suggest the lightest lifecycle mode that
+  preserves the required quality floor.
 
 ## Context And Continuity
 

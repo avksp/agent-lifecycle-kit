@@ -113,6 +113,62 @@ class CliContractMetricsCommandTests(unittest.TestCase):
         self.assertEqual(context_code, 0)
         self.assertEqual(context_payload["status"], "PASS")
 
+    def test_metrics_recommend_cli_writes_report_and_compact_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            report_a = root / "cost-a.json"
+            report_b = root / "cost-b.json"
+            recommendation_path = root / "recommendation.json"
+            summary_path = root / "recommendation-summary.json"
+            task_packet = root / "task-packet.json"
+            report_a.write_text(json.dumps(_cost_report()), encoding="utf-8")
+            report_b.write_text(json.dumps(_cost_report()), encoding="utf-8")
+            task_packet.write_text(json.dumps(_recommendation_summary_task_packet()), encoding="utf-8")
+
+            code, payload = _run_cli(
+                [
+                    "metrics",
+                    "recommend",
+                    "--report",
+                    str(report_a),
+                    "--report",
+                    str(report_b),
+                    "--task-shape",
+                    "feature",
+                    "--current-mode",
+                    "standard",
+                    "--out",
+                    str(recommendation_path),
+                    "--summary-out",
+                    str(summary_path),
+                ]
+            )
+            context_code, context_payload = _run_cli(
+                [
+                    "context",
+                    "check",
+                    "--profile",
+                    str(ROOT / "profiles/small-context-profile.v1.json"),
+                    "--task-packet",
+                    str(task_packet),
+                    "--summary",
+                    str(summary_path),
+                    "--target-window",
+                    "4k-strict",
+                ]
+            )
+            self.assertTrue(recommendation_path.is_file())
+            self.assertTrue(summary_path.is_file())
+
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["schemaVersion"], "agent-lifecycle-recommendation.v1")
+        self.assertEqual(payload["status"], "PASS")
+        self.assertEqual(payload["recommendedMode"], "standard")
+        self.assertFalse(payload["autoApply"])
+        self.assertTrue(payload["qualityFloorPreserved"])
+        self.assertEqual(context_code, 0)
+        self.assertEqual(context_payload["status"], "PASS")
+
 
 def _cost_report() -> dict[str, object]:
     return {
@@ -187,6 +243,19 @@ def _cost_summary_task_packet() -> dict[str, object]:
         "validation": {"acceptanceIds": ["AC-COST"], "evidenceIds": ["EV-COST"]},
         "acceptance": [{"id": "AC-COST", "statement": "cost summary fits"}],
     }
+
+
+def _recommendation_summary_task_packet() -> dict[str, object]:
+    packet = _cost_summary_task_packet()
+    packet["task"]["title"] = "Review lifecycle recommendation"
+    packet["task"]["plannedItems"] = ["R-RECOMMENDATION"]
+    packet["task"]["acceptanceIds"] = ["AC-RECOMMENDATION"]
+    packet["task"]["evidenceIds"] = ["EV-RECOMMENDATION"]
+    packet["specification"]["requirements"] = ["R-RECOMMENDATION"]
+    packet["validation"]["acceptanceIds"] = ["AC-RECOMMENDATION"]
+    packet["validation"]["evidenceIds"] = ["EV-RECOMMENDATION"]
+    packet["acceptance"] = [{"id": "AC-RECOMMENDATION", "statement": "recommendation summary fits"}]
+    return packet
 
 
 if __name__ == "__main__":
