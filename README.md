@@ -8,7 +8,18 @@ The project is built for one practical outcome: finish the user's task with the
 highest quality the selected model can provide while keeping lifecycle overhead
 visible and bounded.
 
-## What It Provides
+```mermaid
+flowchart LR
+  request[Task request] --> spec[Reviewed specification]
+  spec --> plan[Frozen plan]
+  plan --> work[Bounded work packets]
+  work --> review[Implementation review]
+  review --> proof[Final proof]
+  proof --> done[Done or tracked follow-up]
+  review -->|blocker| plan
+```
+
+## What it provides
 
 - Reviewed specification and plan flow before implementation starts.
 - Deterministic task packets for splitting work across agents.
@@ -22,7 +33,7 @@ visible and bounded.
 - Explicit lifecycle policy proposals with reversible apply artifacts.
 - Read-only diagnostics for the current checkout and adapter readiness.
 
-## Quick Start
+## Quick start
 
 From a source checkout:
 
@@ -34,9 +45,9 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 ```
 
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md). The
-Russian guide is [here](docs/guides/README.ru.md).
+Russian documentation starts at [Документация на русском](docs/ru/README.md).
 
-## Daily Flow
+## Daily flow
 
 1. Write or refine the specification.
 2. Review the plan and freeze it.
@@ -60,10 +71,10 @@ Useful command groups:
   `runner`, `metrics`, `quality`, `report`, `evidence`, `import`, `contract`,
   and `schema`: supporting lifecycle controls.
 
-The CLI reference is in [CLI Reference](docs/reference/cli.md). Source-of-truth
-ownership is in [Source Of Truth](docs/reference/source-of-truth.md).
+The CLI reference is in [CLI reference](docs/reference/cli.md). Source-of-truth
+ownership is in [Source of truth](docs/reference/source-of-truth.md).
 
-## Adapter Maturity
+## Adapter maturity
 
 `EXPERIMENTAL` means the adapter has source projection metadata and deterministic
 offline checks, but it is not promoted. `VERIFIED` is host-specific and requires
@@ -82,10 +93,10 @@ evidence, and lifecycle final proof for the tested host range.
 | Kimi Code | `EXPERIMENTAL`; live proof requires a configured provider and model alias. |
 
 Adapter installation and maturity details live in
-[Adapter Install](docs/adapters/install.md) and
-[Adapter Support Matrix](docs/adapters/support-matrix.md).
+[Adapter install](docs/adapters/install.md) and
+[Adapter support matrix](docs/adapters/support-matrix.md).
 
-## Contract Map
+## Contract map
 
 The public lifecycle surface is schema-backed. These names are intentionally
 stable and are the compact vocabulary used by the docs, tests, and receipts:
@@ -111,9 +122,9 @@ stable and are the compact vocabulary used by the docs, tests, and receipts:
 - Lifecycle policy proposals: `agent-lifecycle-policy-proposal.v1`,
   `agent-lifecycle-policy-tune-result.v1`.
 
-Full contract details are listed in [Public Contracts](docs/reference/public-contracts.md).
+Full contract details are listed in [Public contracts](docs/reference/public-contracts.md).
 
-## Design Boundaries
+## Design boundaries
 
 - The core stays provider-neutral. Concrete host commands and model bindings
   belong to adapters or host-local profiles.
@@ -127,9 +138,9 @@ Full contract details are listed in [Public Contracts](docs/reference/public-con
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
+- [English documentation](docs/README.md)
+- [Русская документация](docs/ru/README.md)
 - [Quickstart](docs/guides/quickstart.md)
-- [Russian guide](docs/guides/README.ru.md)
 - [Adapter install](docs/adapters/install.md)
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
 - [Lifecycle cost accounting](docs/reference/lifecycle-cost.md)

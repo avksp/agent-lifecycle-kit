@@ -1,4 +1,4 @@
-# Historical Standalone Plan
+# Historical standalone plan
 
 `plans/standalone-v1` is preserved as historical release evidence and as a
 lineage-regression fixture.

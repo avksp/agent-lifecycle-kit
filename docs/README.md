@@ -3,15 +3,20 @@
 This documentation describes the standalone lifecycle kit. It is host-neutral
 and does not depend on a source project.
 
+## Locales
+
+- [English documentation](README.md)
+- [Русская документация](ru/README.md)
+
+## English documentation
+
 - [Adapter support matrix](adapters/support-matrix.md)
 - [Adapter install](adapters/install.md)
 - [Adapter live-promotion runbook](adapters/live-promotion-runbook.md)
 - [Quickstart](guides/quickstart.md)
-- [Russian quickstart](guides/quickstart.ru.md)
 - [Offline source-release checks](guides/release-candidate.md)
 - [Verified-adapter release checklist](guides/verified-adapter-release-checklist.md)
 - [Production resource and security guide](guides/production-resource-security.md)
-- [Russian README](guides/README.ru.md)
 - [Release architecture](architecture/release-architecture.md)
 - [Runner transition contract](architecture/runner-transition-contract.md)
 - [Runner extension map](architecture/runner-extension-map.md)

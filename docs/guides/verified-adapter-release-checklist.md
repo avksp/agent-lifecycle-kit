@@ -4,7 +4,7 @@ Use this checklist after a host adapter has new or changed `VERIFIED` evidence.
 It keeps tag, GitHub Release, CI, docs, version metadata, and evidence claims
 separate.
 
-## Local Readiness
+## Local readiness
 
 1. Confirm the working tree and current branch:
 
@@ -70,7 +70,7 @@ gh release view <tag> --json tagName,isDraft,isPrerelease,url,name,publishedAt
 gh run list --branch main --limit 8 --json databaseId,headSha,name,status,conclusion,url
 ```
 
-## Source-release Assets
+## Source-release assets
 
 Binary assets are intentionally omitted for a source release when packaging
 smoke proves the wheel can be built from the tag and the release notes state

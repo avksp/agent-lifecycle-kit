@@ -1,4 +1,4 @@
-# gemini-cli support matrix stub
+# Gemini CLI support matrix stub
 
 Initial maturity: `EXPERIMENTAL`.
 

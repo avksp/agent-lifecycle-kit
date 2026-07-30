@@ -1,4 +1,4 @@
-# Hermes Adapter Projection
+# Hermes adapter projection
 
 This directory contains the Hermes projection for Agent Lifecycle Kit. It
 describes skill-directory discovery, optional slash-command invocation, and

@@ -1,4 +1,4 @@
-# Adapter Install
+# Adapter install
 
 Adapter setup is intentionally split into two steps:
 
@@ -15,7 +15,7 @@ agent-lifecycle adapter install-plan \
 The planner records `writesStarted: false`, `liveCallsStarted: false`, and
 `maturityChangeClaimed: false`.
 
-## Common Checks
+## Common checks
 
 ```bash
 agent-lifecycle adapter validate \
@@ -172,7 +172,7 @@ kimi --version
 Kimi Code remains `EXPERIMENTAL` until provider/model configuration, live
 conformance, usage calibration, and lifecycle proof are accepted.
 
-## Promotion Boundary
+## Promotion boundary
 
 Installation is not a maturity change. A host-specific `VERIFIED` claim needs
 accepted live host conformance, live usage calibration, tracked redacted

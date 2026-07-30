@@ -3,7 +3,7 @@ name: audit-plan-implementation
 description: Independently audit a task attempt or completed run against a frozen plan, checking ownership, evidence, acceptance, and final readiness.
 ---
 
-# Audit Plan Implementation
+# Audit plan implementation
 
 Use this skill for findings-first verification after implementation work. The
 default action is audit only; fixes require an explicit remediation request or
@@ -16,7 +16,7 @@ contract, acceptance criteria, evidence rules, task result, implementation
 diff, and previous reviews. In final mode, read all accepted task results,
 reviews, evidence receipts, and the workflow state.
 
-## Task Audit
+## Task audit
 
 For each planned item, verify:
 
@@ -39,7 +39,7 @@ For each planned item, verify:
   proof rules must be reopened and refrozen.
 - `BLOCKED`: external state prevents a safe verdict.
 
-## Final Audit
+## Final audit
 
 Before completion, verify that every required task is accepted, every required
 requirement and acceptance criterion is covered exactly, external writers are

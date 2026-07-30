@@ -1,4 +1,4 @@
-# Codex Adapter Projection
+# Codex adapter projection
 
 This directory contains the Codex-native projection for Agent Lifecycle Kit.
 It is an offline release artifact, not a separate lifecycle implementation.

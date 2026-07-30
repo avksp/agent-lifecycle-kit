@@ -1,4 +1,4 @@
-# Plan Continuity
+# Plan continuity
 
 Plan continuity covers coordinated work where a lifecycle plan references more
 than one repository or needs a compact handoff for independent review. The
