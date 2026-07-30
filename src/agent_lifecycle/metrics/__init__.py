@@ -14,6 +14,7 @@ from agent_lifecycle.metrics.recommendations import (
     summarize_lifecycle_overhead,
     validate_lifecycle_baselines,
 )
+from agent_lifecycle.metrics.regression_signals import summarize_regression_signals
 
 __all__ = [
     "COST_CATEGORIES",
@@ -25,6 +26,7 @@ __all__ = [
     "require_lifecycle_cost_pass",
     "require_lifecycle_recommendation_pass",
     "summarize_lifecycle_overhead",
+    "summarize_regression_signals",
     "validate_lifecycle_baselines",
     "validate_lifecycle_cost_report",
 ]
