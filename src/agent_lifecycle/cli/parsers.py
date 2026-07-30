@@ -7,6 +7,7 @@ import argparse
 from agent_lifecycle.cli.adapter import add_adapter_parser
 from agent_lifecycle.cli.followup import add_followup_parser
 from agent_lifecycle.cli.metrics_parser import add_metrics_parser
+from agent_lifecycle.cli.policy import add_policy_parser
 from agent_lifecycle.cli.worktree import add_worktree_parser
 
 
@@ -23,6 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_import_parser(subparsers)
     _add_quality_parser(subparsers)
     _add_report_parser(subparsers)
+    add_policy_parser(subparsers)
     _add_workflow_parser(subparsers)
     _add_audit_parser(subparsers)
     _add_context_parser(subparsers)

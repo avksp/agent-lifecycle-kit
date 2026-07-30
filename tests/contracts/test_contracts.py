@@ -197,6 +197,12 @@ class ContractTests(unittest.TestCase):
             "agent-lifecycle-overhead-statistics.v1",
             "agent-lifecycle-recommendation.v1",
             "agent-lifecycle-recommendation-summary.v1",
+            "agent-lifecycle-regression-signals.v1",
+            "agent-lifecycle-policy-proposal.v1",
+            "agent-lifecycle-policy-summary.v1",
+            "agent-lifecycle-tuned-policy.v1",
+            "agent-lifecycle-policy-apply-result.v1",
+            "agent-lifecycle-policy-tune-result.v1",
             "agent-plan-reference-validation.v1",
             "agent-plan-snapshot.v1",
             "agent-plan-reconciliation.v1",
@@ -246,6 +252,9 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-lifecycle-recommendation.v1")["properties"]["advisoryOnly"], {"const": True})
         self.assertEqual(get_schema("agent-lifecycle-recommendation.v1")["properties"]["autoApply"], {"const": False})
         self.assertEqual(get_schema("agent-lifecycle-recommendation.v1")["properties"]["qualityFloorPreserved"], {"const": True})
+        self.assertEqual(get_schema("agent-lifecycle-policy-proposal.v1")["properties"]["advisoryOnly"], {"const": True})
+        self.assertEqual(get_schema("agent-lifecycle-policy-proposal.v1")["properties"]["autoApply"], {"const": False})
+        self.assertEqual(get_schema("agent-lifecycle-tuned-policy.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-adapter-scaffold-result.v1")["properties"]["maturity"], {"const": "EXPERIMENTAL"})
         self.assertEqual(get_schema("agent-lifecycle-live-host-conformance-receipt.v1")["properties"]["syntheticReplayUsed"], {"const": False})
         self.assertIn("validationCommands", get_schema("agent-live-host-promotion-plan.v1")["required"])

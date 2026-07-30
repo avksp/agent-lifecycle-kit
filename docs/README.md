@@ -29,6 +29,7 @@ and does not depend on a source project.
 - [Controlled runner](reference/runner.md)
 - [Public contracts](reference/public-contracts.md)
 - [Lifecycle cost accounting](reference/lifecycle-cost.md)
+- [Lifecycle policy proposals](reference/policy.md)
 - [Plan continuity](reference/plan-continuity.md)
 - [Evidence index and imports](reference/evidence-imports.md)
 - [Readiness diagnostics](reference/readiness-diagnostics.md)
