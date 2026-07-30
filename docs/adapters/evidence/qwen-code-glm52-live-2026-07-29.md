@@ -1,10 +1,10 @@
-# qwen-code GLM 5.2 live evidence
+# Qwen Code GLM 5.2 live evidence
 
-Status: `VERIFIED` for qwen-code `0.21.0` on the tested local GLM 5.2 binding.
+Status: `VERIFIED` for Qwen Code `0.21.0` on the tested local GLM 5.2 binding.
 
 Scope:
 
-- Host: qwen-code `0.21.0`.
+- Host: Qwen Code `0.21.0`.
 - Adapter descriptor: `adapters/qwen-code/adapter.descriptor.json`.
 - Capability manifest: `adapters/qwen-code/capabilities.manifest.json`.
 - Source revision: `6c6b40210ee28de4b6a5993367af89e629fb99ff`.
@@ -45,8 +45,8 @@ Resource accounting:
 
 Decision:
 
-qwen-code is promoted from `EXPERIMENTAL` to host-specific `VERIFIED` for
-qwen-code `0.21.0` in this source tree. This decision is limited to the tested
+Qwen Code is promoted from `EXPERIMENTAL` to host-specific `VERIFIED` for
+Qwen Code `0.21.0` in this source tree. This decision is limited to the tested
 host range and the committed evidence above. It does not claim public package
 approval, public directory approval, universal adapter support, or broader
 production-promotion platform readiness.

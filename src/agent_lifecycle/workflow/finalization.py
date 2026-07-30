@@ -13,6 +13,7 @@ from agent_lifecycle.specification import (
     validate_completion_signal,
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.followup import validate_followup_register
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
@@ -29,6 +30,7 @@ def finalize_run(
     final_audit_path: str,
     proof_path: str,
     goal_record_path: str | None = None,
+    follow_up_register_path: str | None = None,
     reason: str,
 ) -> dict[str, Any]:
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
@@ -46,6 +48,7 @@ def finalize_run(
     _validate_final_audit(state, final_audit)
     completion_check_receipt = _validate_completion_check(state, root)
     goal_record = _validate_goal_record(state, root, goal_record_path)
+    follow_up_register = _validate_follow_up_register(state, root, follow_up_register_path)
     finalization_gate_receipts = _validate_finalization_gates(
         state_path,
         state,
@@ -58,6 +61,7 @@ def finalize_run(
         final_audit=final_audit_identity,
         completion_check_receipt=completion_check_receipt,
         goal_record=goal_record,
+        follow_up_register=follow_up_register,
         finalization_gate_receipts=finalization_gate_receipts,
         reason=reason,
     )
@@ -69,6 +73,8 @@ def finalize_run(
         state["completionCheckReceipt"] = completion_check_receipt["receipt"]
     if goal_record is not None:
         state["goalRecord"] = goal_record["record"]
+    if follow_up_register is not None:
+        state["followUpRegister"] = follow_up_register["register"]
     state["phase"] = "COMPLETE"
     commit_state(
         state_path,
@@ -79,6 +85,7 @@ def finalize_run(
             "finalAudit": final_audit_identity,
             "completionCheckReceipt": completion_check_receipt,
             "goalRecord": goal_record,
+            "followUpRegister": follow_up_register,
             "finalizationGateReceipts": finalization_gate_receipts,
             "proof": state["finalProof"],
             "reason": reason,
@@ -187,6 +194,26 @@ def _validate_goal_record(state: dict[str, Any], root: Path, goal_record_path: s
     return {"record": identity, "validation": validation}
 
 
+def _validate_follow_up_register(state: dict[str, Any], root: Path, follow_up_register_path: str | None) -> dict[str, Any] | None:
+    path = follow_up_register_path
+    existing = state.get("followUpRegister")
+    if path is None and isinstance(existing, dict) and existing.get("path"):
+        path = existing["path"]
+    if path is None:
+        return None
+    register_rel = normalize_repo_path(path, label="follow-up register")
+    register = read_json_object(root / register_rel, label="follow-up register")
+    validation = validate_followup_register(register, state=state, root=root)
+    if validation["finalizationBlockers"]:
+        raise LifecycleError(
+            "follow-up-finalization-blocked",
+            "open follow-up items contradict current finalization",
+            {"items": validation["finalizationBlockers"]},
+        )
+    identity = artifact_identity(root, register_rel, register)
+    return {"register": identity, "validation": validation}
+
+
 def _proof_body(
     state: dict[str, Any],
     *,
@@ -194,6 +221,7 @@ def _proof_body(
     final_audit: dict[str, Any],
     completion_check_receipt: dict[str, Any] | None,
     goal_record: dict[str, Any] | None,
+    follow_up_register: dict[str, Any] | None,
     finalization_gate_receipts: list[dict[str, Any]],
     reason: str,
 ) -> dict[str, Any]:
@@ -221,6 +249,7 @@ def _proof_body(
         "finalAudit": final_audit,
         "completionCheck": completion_check_receipt,
         "goalRecord": goal_record,
+        "followUpRegister": follow_up_register,
         "finalizationGateReceipts": finalization_gate_receipts,
         "reason": reason,
         "createdAt": now_iso(),

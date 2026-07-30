@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 0.17.0 - 2026-07-30
+
+- Added schema-backed follow-up registers with validation, close results and
+  compact summaries for postponed or externally blocked work.
+- Added `agent-lifecycle followup check/add/close/sweep` and optional
+  `workflow finalize --follow-up-register` blocking for open items that
+  contradict current acceptance or completion proof.
+- Added worktree isolation policy and attempt receipt contracts plus
+  `agent-lifecycle worktree policy-check/receipt/check`.
+
 ## 0.16.0 - 2026-07-30
 
 - Added provider-neutral runner state, policy, transition request/result and
@@ -74,8 +84,8 @@
 - Promoted the Hermes adapter to host-specific `VERIFIED` for Hermes Agent
   v0.19.0 with GLM 5.2 live host conformance, usage calibration, and full ALK
   lifecycle proof evidence.
-- Promoted the qwen-code adapter to host-specific `VERIFIED` for qwen-code
-  0.21.0, added the bounded qwen-code runner and live harness, and synchronized
+- Promoted the Qwen Code adapter to host-specific `VERIFIED` for Qwen Code
+  0.21.0, added the bounded Qwen Code runner and live harness, and synchronized
   adapter docs, support matrix checks, and package metadata to `0.12.2`.
 
 ## 0.12.1 - 2026-07-29
@@ -95,9 +105,9 @@
 
 ## 0.11.0 - 2026-07-29
 
-- Added the qwen-code adapter scaffold, qwen-code 0.21.0 safe inspection
+- Added the Qwen Code adapter scaffold, Qwen Code 0.21.0 safe inspection
   evidence, and explicit live-harness/resource-cap blockers while keeping
-  qwen-code `EXPERIMENTAL`.
+  Qwen Code `EXPERIMENTAL`.
 
 ## 0.10.0 - 2026-07-29
 

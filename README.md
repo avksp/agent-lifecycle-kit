@@ -9,7 +9,7 @@ final verdict.
 
 It is distributed as one repository with one semantic core and native host
 projections for Codex, Claude Code, Cursor, Gemini CLI, Hermes, Kimi Code,
-OpenCode, and qwen-code.
+OpenCode, and Qwen Code.
 
 ## Why it exists
 
@@ -93,6 +93,33 @@ validation fails closed before more tokens are spent. `workflow finalize` can
 also bind a current goal record into the final proof through `--goal-record`.
 
 See [goal continuity](docs/reference/goal-continuity.md).
+
+## Follow-up register
+
+The follow-up register records postponed or externally blocked work without
+weakening current acceptance. `agent-follow-up-register.v1` items carry source
+trace ids, owner, status, target release or blocker, and closure evidence
+requirements. `agent-follow-up-summary.v1` gives small local models a compact
+view of open items and finalization blockers.
+
+`workflow finalize --follow-up-register` validates the register and fails
+closed when an open item contradicts current acceptance or completion proof.
+Closed items must bind required evidence ids and current artifact identities.
+
+See [follow-up register](docs/reference/follow-up-register.md).
+
+## Worktree isolation
+
+Worktree isolation receipts document bounded task attempts without letting the
+core create or delete worktrees. `agent-worktree-isolation-policy.v1` defines
+path and cleanup rules; `agent-worktree-attempt-receipt.v1` binds lineage,
+task id, attempt, baseline, changed files and cleanup decision. Failed attempts
+are preserved by default unless an operator explicitly authorizes removal.
+
+Runner `attempt` transitions can carry an isolation receipt. The runner
+validates the receipt and records its digest in transition history.
+
+See [worktree isolation receipts](docs/reference/worktree-isolation.md).
 
 ## Controlled runner
 
@@ -203,7 +230,7 @@ model:
 | Hermes | `skills.sh.json`, shared `skills/`, and `adapters/hermes/*` | `VERIFIED` for Hermes Agent v0.19.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed. Public directory/publication approval is not claimed. |
 | Kimi Code | `adapters/kimi-code/*` | `EXPERIMENTAL` | Safe inspection and bounded harness shape passed, but local live canary is blocked until a provider/model alias is configured. |
 | OpenCode | `opencode.json`, shared `skills/`, and `adapters/opencode/*` | `VERIFIED` for OpenCode CLI 1.18.9 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed. npm publication is not claimed. |
-| qwen-code | `adapters/qwen-code/*` | `VERIFIED` for qwen-code 0.21.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on GLM 5.2. Public package approval is not claimed. |
+| Qwen Code | `adapters/qwen-code/*` | `VERIFIED` for Qwen Code 0.21.0 | Local live conformance, live usage calibration, and full ALK lifecycle proof passed on GLM 5.2. Public package approval is not claimed. |
 
 `EXPERIMENTAL` means the adapter has source metadata, capability manifests, and
 offline conformance checks, but it is not a live runtime compatibility claim. A
@@ -235,10 +262,16 @@ agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
 agent-lifecycle workflow task-result --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --result <task-result.json> --model-usage-receipt <model-usage-receipt.json> --reason "<reason>"
 agent-lifecycle workflow task-accept --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --review <task-review.json> --reason "<reason>"
-agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --goal-record <goal-record.json> --reason "<reason>"
+agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-id <id> --expected-revision <n> --source-revision <sha> --final-audit <final-audit.json> --proof <final-proof.json> --goal-record <goal-record.json> --follow-up-register <follow-up-register.json> --reason "<reason>"
 agent-lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
 agent-lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
 agent-lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
+agent-lifecycle followup check --register <follow-up-register.json> --state <path-to-run.state.json> --fail-on-finalization-blockers
+agent-lifecycle followup close --register <follow-up-register.json> --item-id <id> --evidence-id <evidence-id> --artifact <path> --verifier <id> --reason "<reason>"
+agent-lifecycle followup sweep --register <follow-up-register.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 4k-strict
+agent-lifecycle worktree policy-check --policy <worktree-policy.json>
+agent-lifecycle worktree receipt --state <path-to-run.state.json> --policy <worktree-policy.json> --task <task-id> --attempt <n> --worktree-path <relative-path> --baseline-ref <ref> --baseline-sha <sha> --changed-file <path> --reason "<reason>" --out <worktree-receipt.json>
+agent-lifecycle worktree check --receipt <worktree-receipt.json> --state <path-to-run.state.json> --policy <worktree-policy.json>
 agent-lifecycle runner start --state <path-to-run.state.json> --runner <runner.state.json> --operation-id <id> --reason "<reason>"
 agent-lifecycle runner status --runner <runner.state.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 4k-strict
 agent-lifecycle runner transition --runner <runner.state.json> --state <path-to-run.state.json> --request <runner-transition-request.json>
@@ -306,7 +339,9 @@ Implemented core CLI groups are `version`, `diagnose`, `schema`, `workflow statu
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`goal check`, `goal summarize`, `goal update`, `runner start`, `runner status`,
+`goal check`, `goal summarize`, `goal update`, `followup check`,
+`followup add`, `followup close`, `followup sweep`, `worktree policy-check`,
+`worktree receipt`, `worktree check`, `runner start`, `runner status`,
 `runner transition`, `runner stop`, `runner resume`, `specification check`,
 `plan check`, `plan acceptance-check`, `task compile`,
 `adapter validate`, `adapter inspect`, `adapter install-plan`, `adapter event-check`, `adapter
@@ -524,11 +559,11 @@ The repository root also includes `opencode.json` for source checkout testing.
 A future npm package can point to the same adapter, but no npm publication is
 claimed by the current source tree.
 
-### qwen-code
+### Qwen Code
 
-qwen-code currently uses a host-local source projection. Install the core from
+Qwen Code currently uses a host-local source projection. Install the core from
 a tagged checkout, then validate and inspect the projection. The current source
-tree is `VERIFIED` for qwen-code `0.21.0`.
+tree is `VERIFIED` for Qwen Code `0.21.0`.
 
 ```bash
 git clone --branch vX.Y.Z https://github.com/avksp/agent-lifecycle-kit.git
@@ -540,7 +575,7 @@ agent-lifecycle adapter inspect --descriptor adapters/qwen-code/adapter.descript
 ```
 
 The live runner is `adapters/qwen-code/runner.py`; the release harness is
-`tools/live_hosts/qwen_code_harness.py`. No public qwen-code adapter package,
+`tools/live_hosts/qwen_code_harness.py`. No public Qwen Code adapter package,
 public directory approval, or production-promotion platform claim is published
 for the current source tree.
 
@@ -573,7 +608,7 @@ Host-specific explicit invocation may be used when available:
   support is promoted
 - OpenCode: ask the agent to load `agent-workflow-orchestrator` through its
   native skill tool; the current tree is `VERIFIED` for OpenCode CLI 1.18.9
-- qwen-code: use the source projection with qwen-code `0.21.0`; the current
+- Qwen Code: use the source projection with Qwen Code `0.21.0`; the current
   tree is `VERIFIED` for host-local GLM 5.2 live receipts
 
 The release support matrix is authoritative for exact namespaced syntax and

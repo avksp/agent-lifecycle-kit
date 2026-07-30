@@ -16,7 +16,7 @@ REQUIRED_HOSTS = (
     "Hermes",
     "Kimi Code",
     "OpenCode",
-    "qwen-code",
+    "Qwen Code",
 )
 REQUIRED_LIVE_EVIDENCE_LABELS = (
     "Committed redacted evidence summary:",
