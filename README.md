@@ -19,6 +19,7 @@ visible and bounded.
 - Cost and usage accounting that separates product work from lifecycle checks.
 - Deterministic cost reports from explicit lifecycle artifacts.
 - Advisory lifecycle mode recommendations from accumulated cost reports.
+- Explicit lifecycle policy proposals with reversible apply artifacts.
 - Read-only diagnostics for the current checkout and adapter readiness.
 
 ## Quick Start
@@ -50,6 +51,7 @@ Useful command groups:
 - `agent-lifecycle workflow`: task execution receipts and final proof.
 - `agent-lifecycle audit`: plan and implementation review gates.
 - `agent-lifecycle metrics`: lifecycle cost reports and validation.
+- `agent-lifecycle policy`: opt-in lifecycle policy proposals.
 - `agent-lifecycle diagnostics`: redacted evidence bundles.
 - `agent-lifecycle diagnose`: checkout readiness without writes or live calls.
 - `agent-lifecycle adapter`: descriptor validation, inspection, scaffolding,
@@ -106,6 +108,8 @@ stable and are the compact vocabulary used by the docs, tests, and receipts:
   `agent-behavior-check-run.v1`.
 - Diagnostics and status views: `agent-diagnostic-bundle.v1`,
   `agent-readonly-status-view.v1`.
+- Lifecycle policy proposals: `agent-lifecycle-policy-proposal.v1`,
+  `agent-lifecycle-policy-tune-result.v1`.
 
 Full contract details are listed in [Public Contracts](docs/reference/public-contracts.md).
 

@@ -12,6 +12,7 @@ from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.evidence_import_schemas import EVIDENCE_IMPORT_SCHEMAS
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
+from agent_lifecycle.contracts.policy_schemas import POLICY_SCHEMAS
 from agent_lifecycle.contracts.release_contract_schemas import RELEASE_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHEMAS
 from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SCHEMAS
@@ -31,6 +32,7 @@ _SCHEMA_GROUPS = (
     RELEASE_CONTRACT_SCHEMAS,
     PLAN_CONTRACT_SCHEMAS,
     METRIC_SCHEMAS,
+    POLICY_SCHEMAS,
 )
 
 _SCHEMAS: dict[str, dict[str, Any]] = {}
