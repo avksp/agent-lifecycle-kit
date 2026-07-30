@@ -80,6 +80,28 @@ agent-lifecycle contract check --policy <public-contract-policy.json>
 
 Подробнее: [публичные контракты](../reference/public-contracts.md).
 
+## Непрерывность плана
+
+Командная работа может описывать дополнительные ссылки на репозитории, не
+меняя обычный сценарий для одного репозитория. Команда
+`agent-lifecycle plan refs-check` проверяет явных владельцев, режим доступа и
+относительные пути.
+`plan snapshot` создаёт неизменяемую квитанцию зафиксированного плана,
+`plan reconcile` останавливает продолжение при устаревшем или противоречивом
+состоянии, а `plan handoff` строит краткий пакет для независимой проверки.
+
+```bash
+agent-lifecycle plan refs-check --manifest <plan.manifest.json>
+agent-lifecycle plan snapshot --manifest <plan.manifest.json> --out <plan-snapshot.json>
+agent-lifecycle plan reconcile --manifest <plan.manifest.json> --snapshot <plan-snapshot.json>
+agent-lifecycle plan handoff --manifest <plan.manifest.json> --snapshot <plan-snapshot.json> --out <handoff.json>
+```
+
+Пакет передачи нужен для маршрутизации и проверки. Источником истины остаются
+зафиксированный план, снимок, квитанции и доказательства.
+
+Подробнее: [непрерывность плана](../reference/plan-continuity.md).
+
 ## Режим компактного контекста
 
 Системы с маленьким контекстным окном поддерживаются через детерминированный

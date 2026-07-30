@@ -190,6 +190,10 @@ class ContractTests(unittest.TestCase):
             "agent-public-contract-policy-validation.v1",
             "agent-lifecycle-cost-report.v1",
             "agent-lifecycle-cost-validation.v1",
+            "agent-plan-reference-validation.v1",
+            "agent-plan-snapshot.v1",
+            "agent-plan-reconciliation.v1",
+            "agent-plan-handoff.v1",
         ]:
             self.assertIn(schema_id, ids)
         self.assertEqual(get_schema("agent-lifecycle-error.v1")["additionalProperties"], False)
@@ -219,6 +223,8 @@ class ContractTests(unittest.TestCase):
         self.assertIn("cleanupDecision", get_schema("agent-worktree-attempt-receipt-validation.v1")["required"])
         self.assertIn("attempt", get_schema("agent-runner-transition-request.v1")["properties"]["action"]["enum"])
         self.assertEqual(get_schema("agent-runner-policy.v1")["properties"]["maxAttemptsPerTask"]["minimum"], 0)
+        self.assertEqual(get_schema("agent-plan-snapshot.v1")["properties"]["immutable"], {"const": True})
+        self.assertEqual(get_schema("agent-plan-reconciliation.v1")["properties"]["classification"]["enum"], ["MATCH", "REQUIRES_NEW_PLAN", "BLOCKED"])
         self.assertEqual(get_schema("agent-adapter-scaffold-result.v1")["properties"]["maturity"], {"const": "EXPERIMENTAL"})
         self.assertEqual(get_schema("agent-lifecycle-live-host-conformance-receipt.v1")["properties"]["syntheticReplayUsed"], {"const": False})
         self.assertIn("validationCommands", get_schema("agent-live-host-promotion-plan.v1")["required"])

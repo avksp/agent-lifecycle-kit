@@ -33,9 +33,15 @@ from agent_lifecycle.model_routing import (
 )
 from agent_lifecycle.metrics import require_lifecycle_cost_pass, validate_lifecycle_cost_report
 from agent_lifecycle.planning import (
+    build_plan_snapshot,
+    reconcile_plan_snapshot,
+    render_plan_handoff,
+    require_reconciliation_pass,
+    require_repository_references_pass,
     resolve_sdd_tier,
     validate_acceptance_checklist,
     validate_plan_manifest,
+    validate_repository_references,
 )
 from agent_lifecycle.quality import (
     build_default_quality_pack,
@@ -513,6 +519,33 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
             read_json_object(manifest_path, label="plan manifest"),
             acceptance_path.read_text(encoding="utf-8"),
         )
+    if args.plan_command == "refs-check":
+        manifest = read_json_object(Path(args.manifest), label="plan manifest")
+        return require_repository_references_pass(validate_repository_references(manifest))
+    if args.plan_command == "snapshot":
+        manifest = read_json_object(Path(args.manifest), label="plan manifest")
+        payload = build_plan_snapshot(manifest)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.plan_command == "reconcile":
+        manifest = read_json_object(Path(args.manifest), label="plan manifest")
+        snapshot = read_json_object(Path(args.snapshot), label="plan snapshot")
+        return require_reconciliation_pass(reconcile_plan_snapshot(snapshot, manifest))
+    if args.plan_command == "handoff":
+        manifest = read_json_object(Path(args.manifest), label="plan manifest")
+        snapshot = read_json_object(Path(args.snapshot), label="plan snapshot") if args.snapshot else None
+        payload = render_plan_handoff(
+            manifest,
+            snapshot=snapshot,
+            max_workstreams=args.max_workstreams,
+            target_tokens=args.target_tokens,
+        )
+        if payload.get("status") != "PASS":
+            raise LifecycleError("plan-handoff-render-failed", "plan handoff did not fit the requested limits", {"handoff": payload})
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     raise LifecycleError("command-not-implemented", "plan command is not implemented")
 
 

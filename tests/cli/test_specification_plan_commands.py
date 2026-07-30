@@ -116,6 +116,68 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
             self.assertEqual(payload["code"], "acceptance-checklist-mismatch")
             self.assertEqual(payload["details"]["linkMismatches"][0]["id"], "AC-1")
 
+    def test_plan_continuity_cli_snapshot_reconcile_and_handoff(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = root / "plan.manifest.json"
+            snapshot_path = root / "snapshot.json"
+            handoff_path = root / "handoff.json"
+            manifest = _manifest()
+            manifest["repositoryReferences"] = [
+                {
+                    "id": "api",
+                    "repoId": "api-service",
+                    "owner": "api-worker",
+                    "access": "write-scoped",
+                    "paths": ["src/api"],
+                }
+            ]
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            code, refs = _run_cli(["plan", "refs-check", "--manifest", str(manifest_path)])
+            self.assertEqual(code, 0)
+            self.assertEqual(refs["schemaVersion"], "agent-plan-reference-validation.v1")
+
+            code, snapshot = _run_cli(["plan", "snapshot", "--manifest", str(manifest_path), "--out", str(snapshot_path)])
+            self.assertEqual(code, 0)
+            self.assertEqual(snapshot["schemaVersion"], "agent-plan-snapshot.v1")
+            self.assertTrue(snapshot_path.exists())
+
+            code, reconciliation = _run_cli(["plan", "reconcile", "--manifest", str(manifest_path), "--snapshot", str(snapshot_path)])
+            self.assertEqual(code, 0)
+            self.assertEqual(reconciliation["classification"], "MATCH")
+
+            code, handoff = _run_cli([
+                "plan",
+                "handoff",
+                "--manifest",
+                str(manifest_path),
+                "--snapshot",
+                str(snapshot_path),
+                "--out",
+                str(handoff_path),
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(handoff["schemaVersion"], "agent-plan-handoff.v1")
+            self.assertTrue(handoff_path.exists())
+
+    def test_plan_reconcile_cli_fails_on_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = root / "plan.manifest.json"
+            snapshot_path = root / "snapshot.json"
+            manifest = _manifest()
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            code, _snapshot = _run_cli(["plan", "snapshot", "--manifest", str(manifest_path), "--out", str(snapshot_path)])
+            self.assertEqual(code, 0)
+            manifest["planRevision"] = 2
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            code, payload = _run_cli(["plan", "reconcile", "--manifest", str(manifest_path), "--snapshot", str(snapshot_path)])
+
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "plan-reconciliation-failed")
+
 
 if __name__ == "__main__":
     unittest.main()
