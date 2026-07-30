@@ -103,6 +103,24 @@ Skills остаются тонкими точками входа. Специфи
 
 Подробнее: [непрерывность цели](../reference/goal-continuity.md).
 
+## Контролируемый цикл выполнения
+
+Команда `runner` ведёт узкое состояние цикла выполнения
+`agent-runner-state.v1` поверх существующих команд рабочего процесса
+(`workflow`). Она проверяет допустимые переходы, лимиты попыток,
+переключений, разделений, расхода токенов, остановку и продолжение, а также
+метаданные патча для исправления. `runner` не заменяет состояние рабочего
+процесса и не выполняет код конкретной среды.
+
+`agent-runner-snapshot.v1` даёт небольшой локальной модели краткий вид
+состояния цикла выполнения: статус, следующие разрешённые действия, счётчики
+бюджета и последние переходы. Снимок должен помещаться в выбранный профиль
+маленького контекста, включая `4k-strict`. Крупные модели по-прежнему могут
+читать полное состояние рабочего процесса, состояние `runner`, доказательства
+и проверки для задач, где важна глубина анализа.
+
+Подробнее: [контролируемый цикл выполнения](../reference/runner.md).
+
 ## Калибровка расхода
 
 Синтетический повтор полезен для детерминированных проверок регрессий, но не
@@ -191,21 +209,21 @@ agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-d
 
 ## Структура поставки
 
-Универсальная поставка не означает единый формат манифеста. Текущий
-тегированный исходный релиз содержит заявления поддержки и ссылки на
-доказательства, перечисленные ниже. Одно детерминированное ядро проецируется в
-родную модель загрузки каждой системы:
+Универсальная поставка не означает единый формат манифеста. Исходная поставка
+содержит заявления поддержки и ссылки на доказательства, перечисленные ниже.
+Одно детерминированное ядро проецируется в родную модель загрузки каждой
+системы:
 
-| Система | Артефакт релиза | Зрелость | Причина |
+| Система | Артефакт поставки | Зрелость | Причина |
 | --- | --- | --- | --- |
-| Codex | `.codex-plugin/plugin.json` и `.agents/plugins/marketplace.json` | `VERIFIED` для Codex CLI 0.145.0 | Локально прошли реальная проверка совместимости release-0-6, калибровка расхода и полный жизненный цикл ALK. Одобрение публичного Plugins Directory не заявлено. |
-| Claude Code | `.claude-plugin/plugin.json` и `.claude-plugin/marketplace.json` | `VERIFIED` для Claude Code 2.1.220 | Локально прошли реальная проверка совместимости release-0-5, калибровка расхода и полный жизненный цикл ALK. Одобрение публичного каталога не заявлено. |
+| Codex | `.codex-plugin/plugin.json` и `.agents/plugins/marketplace.json` | `VERIFIED` для Codex CLI 0.145.0 | Локально прошли реальная проверка совместимости, калибровка расхода и полный жизненный цикл ALK. Одобрение публичного Plugins Directory не заявлено. |
+| Claude Code | `.claude-plugin/plugin.json` и `.claude-plugin/marketplace.json` | `VERIFIED` для Claude Code 2.1.220 | Локально прошли реальная проверка совместимости, калибровка расхода и полный жизненный цикл ALK. Одобрение публичного каталога не заявлено. |
 | Cursor | `.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json` и `adapters/cursor/*` | `EXPERIMENTAL` | Безопасная проверка прошла на локальной бесплатной подписке, но подтверждение расхода и полный жизненный цикл ещё не приняты. Одобрение Marketplace не заявлено. |
 | Gemini CLI | `adapters/gemini-cli/*` | `EXPERIMENTAL` | Безопасная проверка и форма ограниченного запуска прошли, но локальная живая проверка заблокирована неподдерживаемым уровнем Gemini Code Assist. |
-| Hermes | `skills.sh.json`, общий `skills/` и `adapters/hermes/*` | `VERIFIED` для Hermes Agent v0.19.0 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK 2026-07-29. Одобрение публичного каталога или публикация не заявлены. |
+| Hermes | `skills.sh.json`, общий `skills/` и `adapters/hermes/*` | `VERIFIED` для Hermes Agent v0.19.0 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK. Одобрение публичного каталога или публикация не заявлены. |
 | Kimi Code | `adapters/kimi-code/*` | `EXPERIMENTAL` | Безопасная проверка и форма ограниченного запуска прошли, но локальная живая проверка заблокирована до настройки provider/model alias. |
-| OpenCode | `opencode.json`, общий `skills/` и `adapters/opencode/*` | `VERIFIED` для OpenCode CLI 1.18.9 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK 2026-07-29. Публикация в npm не заявлена. |
-| qwen-code | `adapters/qwen-code/*` | `VERIFIED` для qwen-code 0.21.0 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK на GLM 5.2 2026-07-29. Одобрение публичного пакета не заявлено. |
+| OpenCode | `opencode.json`, общий `skills/` и `adapters/opencode/*` | `VERIFIED` для OpenCode CLI 1.18.9 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK. Публикация в npm не заявлена. |
+| qwen-code | `adapters/qwen-code/*` | `VERIFIED` для qwen-code 0.21.0 | Локально прошли реальная совместимость, калибровка расхода и полный жизненный цикл ALK на GLM 5.2. Одобрение публичного пакета не заявлено. |
 
 `EXPERIMENTAL` означает, что у адаптера есть исходные метаданные, манифест
 возможностей и офлайн-проверки совместимости, но это не заявление о готовой
@@ -241,6 +259,11 @@ agent-lifecycle workflow finalize --state <path-to-run.state.json> --operation-i
 agent-lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
 agent-lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
 agent-lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
+agent-lifecycle runner start --state <path-to-run.state.json> --runner <runner.state.json> --operation-id <id> --reason "<reason>"
+agent-lifecycle runner status --runner <runner.state.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 4k-strict
+agent-lifecycle runner transition --runner <runner.state.json> --state <path-to-run.state.json> --request <runner-transition-request.json>
+agent-lifecycle runner stop --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
+agent-lifecycle runner resume --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
 agent-lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 agent-lifecycle tier resolve --request <tier-request.json>
 agent-lifecycle specification check --specification <specification.json>
@@ -274,6 +297,11 @@ PYTHONPATH=src python -m agent_lifecycle workflow finalize --state <path-to-run.
 PYTHONPATH=src python -m agent_lifecycle goal check --record <goal-record.json> --state <path-to-run.state.json> --current
 PYTHONPATH=src python -m agent_lifecycle goal summarize --record <goal-record.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
 PYTHONPATH=src python -m agent_lifecycle goal update --record <goal-record.json> --state <path-to-run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
+PYTHONPATH=src python -m agent_lifecycle runner start --state <path-to-run.state.json> --runner <runner.state.json> --operation-id <id> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle runner status --runner <runner.state.json> --state <path-to-run.state.json> --profile profiles/small-context-profile.v1.json --target-window 4k-strict
+PYTHONPATH=src python -m agent_lifecycle runner transition --runner <runner.state.json> --state <path-to-run.state.json> --request <runner-transition-request.json>
+PYTHONPATH=src python -m agent_lifecycle runner stop --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
+PYTHONPATH=src python -m agent_lifecycle runner resume --runner <runner.state.json> --state <path-to-run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
 PYTHONPATH=src python -m agent_lifecycle audit ownership --manifest <plan.manifest.json> --base <base-ref> --fail-on-unowned --fail-on-forbidden
 PYTHONPATH=src python -m agent_lifecycle tier resolve --request <tier-request.json>
 PYTHONPATH=src python -m agent_lifecycle specification check --specification <specification.json>
@@ -296,7 +324,9 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`goal check`, `goal summarize`, `goal update`, `specification check`,
+`goal check`, `goal summarize`, `goal update`, `runner start`,
+`runner status`, `runner transition`, `runner stop`, `runner resume`,
+`specification check`,
 `plan check`, `plan acceptance-check`, `task compile`, `adapter validate`,
 `adapter inspect`, `adapter install-plan`, `adapter event-check`,
 `adapter scaffold` и `neutrality`.

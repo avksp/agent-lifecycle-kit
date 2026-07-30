@@ -22,9 +22,9 @@ The verifiers reject synthetic replay data, missing usage attestations,
 host-operation envelope bypasses, incomplete scenario/cohort coverage and budget
 overruns, including the dedicated 4k-strict compact-context scenario.
 
-## Release 0.5 execution gates
+## Execution Gates
 
-The 0.5 line adds local execution gates before any production-promotion claim:
+Local execution gates run before any production-promotion claim:
 
 - human acceptance checklists are validated against the frozen manifest;
 - adapter progress is captured as neutral `agent-adapter-event.v1` streams;

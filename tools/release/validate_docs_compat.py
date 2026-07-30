@@ -24,6 +24,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-completion-check-receipt.v1`",
             "`agent-goal-record.v1`",
             "`agent-objective-snapshot.v1`",
+            "`agent-runner-state.v1`",
+            "`agent-runner-snapshot.v1`",
         ),
     ),
     (
@@ -40,12 +42,14 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-completion-check-receipt.v1`",
             "`agent-goal-record.v1`",
             "`agent-objective-snapshot.v1`",
+            "`agent-runner-state.v1`",
+            "`agent-runner-snapshot.v1`",
         ),
     ),
     (
         "docs/adapters/support-matrix.md",
         (
-            "authoritative current source-tree support claim",
+            "authoritative source-tree support claim",
             "Codex CLI 0.6.0 live evidence",
             "Claude Code 0.5.0 live evidence",
             "OpenCode GLM 5.2 live evidence",
@@ -98,14 +102,24 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "release/notes/v0.15.0.md",
+        "docs/reference/runner.md",
+        (
+            "`agent-runner-policy.v1`",
+            "`agent-runner-transition-request.v1`",
+            "`agent-runner-snapshot.v1`",
+            "fails closed",
+        ),
+    ),
+    (
+        "release/notes/v0.16.0.md",
         (
             "Status: source release.",
-            "Updated package metadata to `0.15.0`",
-            "`agent-goal-record.v1`",
-            "`agent-goal-record-validation.v1`",
-            "`agent-objective-snapshot.v1`",
-            "`completionCheck`",
+            "Updated package metadata to `0.16.0`",
+            "`agent-runner-policy.v1`",
+            "`agent-runner-state.v1`",
+            "`agent-runner-transition-request.v1`",
+            "`agent-runner-transition-result.v1`",
+            "`agent-runner-snapshot.v1`",
             "productionPromotionClaimed",
         ),
     ),
@@ -124,6 +138,11 @@ ADAPTER_DOCS = (
 
 VERIFIED_ROW = re.compile(r"^\|[^|\n]+\|[^|\n]+\|\s*VERIFIED\s*\|", re.MULTILINE)
 PRODUCTION_READY_CLAIM = re.compile(r"\b(production[- ]ready|production ready)\b", re.IGNORECASE)
+VERSIONED_FEATURE_PROSE = re.compile(
+    r"(?i)(?:release\s+0\.\d+\s+(?:adds?|defines?|introduces?|implements?|ships?|also\s+accepts)|"
+    r"0\.\d+\s+line\s+adds|^#{2,}\s+0\.\d+\s+)",
+    re.MULTILINE,
+)
 VERIFIED_DOC_HOSTS = {"Codex", "Claude Code", "OpenCode", "Hermes", "qwen-code"}
 
 
@@ -141,6 +160,7 @@ def main() -> int:
         checks.append(_check_doc(root, relative, required, blockers))
     for relative in ADAPTER_DOCS:
         checks.append(_check_adapter_doc(root, relative, blockers))
+    checks.append(_check_versioned_feature_prose(root, blockers))
 
     evidence = {
         "schemaVersion": "agent-docs-compat-evidence.v1",
@@ -220,6 +240,36 @@ def _contains_overclaim(relative: str, text: str, blockers: list[dict[str, Any]]
         blockers.append({"code": "docs-compat-production-ready-overclaim", "message": f"{relative} overclaims offline source release readiness"})
         failed = True
     return failed
+
+
+def _check_versioned_feature_prose(root: Path, blockers: list[dict[str, Any]]) -> dict[str, Any]:
+    checked: list[str] = []
+    matches: list[dict[str, Any]] = []
+    paths = [root / "README.md"]
+    docs_root = root / "docs"
+    if docs_root.is_dir():
+        paths.extend(sorted(docs_root.rglob("*.md")))
+    for path in paths:
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root).as_posix()
+        if relative.startswith("docs/adapters/evidence/"):
+            continue
+        checked.append(relative)
+        text = path.read_text(encoding="utf-8")
+        for match in VERSIONED_FEATURE_PROSE.finditer(text):
+            matches.append({"path": relative, "text": match.group(0).strip()})
+    check: dict[str, Any] = {"path": "ordinary-docs", "status": "PASS", "checked": checked}
+    if matches:
+        blockers.append(
+            {
+                "code": "docs-compat-versioned-feature-prose",
+                "message": "ordinary docs must describe behavior without release-version introduction prose",
+                "matches": matches,
+            }
+        )
+        check["status"] = "FAIL"
+    return check
 
 
 def _verified_row_host(row: str) -> str:
