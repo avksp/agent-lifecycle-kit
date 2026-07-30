@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.2.0 - 2026-07-30
+
+- Added optional evidence index contracts and `agent-lifecycle evidence
+  index/search` for compact, rebuildable summaries over validated artifacts.
+- Added untrusted planning input import contracts and `agent-lifecycle import
+  plan/check` so imported work remains draft-only until ALK review and freeze.
+- Added reviewed skill improvement proposal validation without automatic skill
+  edits.
+
 ## 1.1.0 - 2026-07-30
 
 - Added optional plan continuity contracts for repository-reference validation,

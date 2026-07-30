@@ -18,6 +18,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_schema_parser(subparsers)
     _add_contract_parser(subparsers)
     subparsers.add_parser("neutrality", help="run neutrality subcommands")
+    _add_evidence_parser(subparsers)
+    _add_import_parser(subparsers)
     _add_quality_parser(subparsers)
     _add_report_parser(subparsers)
     _add_workflow_parser(subparsers)
@@ -77,6 +79,39 @@ def _add_contract_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     policy.add_argument("--out")
     check = contract_sub.add_parser("check")
     check.add_argument("--policy")
+
+
+def _add_evidence_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    evidence = subparsers.add_parser("evidence", help="optional evidence index commands")
+    evidence_sub = evidence.add_subparsers(dest="evidence_command", required=True)
+    index = evidence_sub.add_parser("index")
+    index.add_argument("--project-root", default=".")
+    index.add_argument("--artifact", action="append", default=[])
+    index.add_argument("--max-artifacts", type=int, default=64)
+    index.add_argument("--max-input-bytes", type=int, default=65536)
+    index.add_argument("--target-tokens", type=int, default=2048)
+    index.add_argument("--out")
+    search = evidence_sub.add_parser("search")
+    search.add_argument("--index", required=True)
+    search.add_argument("--query", default="")
+    search.add_argument("--max-results", type=int, default=8)
+    search.add_argument("--target-tokens", type=int, default=2048)
+    search.add_argument("--out")
+
+
+def _add_import_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    imports = subparsers.add_parser("import", help="optional import commands for untrusted planning inputs")
+    import_sub = imports.add_subparsers(dest="import_command", required=True)
+    plan = import_sub.add_parser("plan")
+    plan.add_argument("--source", required=True)
+    plan.add_argument("--package-id", default="imported-plan")
+    plan.add_argument("--max-input-bytes", type=int, default=32768)
+    plan.add_argument("--target-tokens", type=int, default=4096)
+    plan.add_argument("--out")
+    check = import_sub.add_parser("check")
+    check.add_argument("--candidate", required=True)
+    proposal_check = import_sub.add_parser("proposal-check")
+    proposal_check.add_argument("--proposal", required=True)
 
 
 def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
