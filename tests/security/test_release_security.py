@@ -14,12 +14,12 @@ class ReleaseSecurityTests(unittest.TestCase):
         forbidden = (
             "/" + "Volumes/",
             "/" + "Users/",
-            "BEGIN RSA PRIVATE KEY",
-            "BEGIN OPENSSH PRIVATE KEY",
-            "BEGIN PRIVATE KEY",
-            "github_pat_",
-            "ghp_",
-            "xoxb-",
+            "BEGIN " + "RSA PRIVATE KEY",
+            "BEGIN " + "OPENSSH PRIVATE KEY",
+            "BEGIN " + "PRIVATE KEY",
+            "github" + "_pat_",
+            "gh" + "p_",
+            "xo" + "xb-",
         )
         offenders: list[str] = []
         for rel_path in _git_ls_files():

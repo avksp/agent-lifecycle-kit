@@ -194,6 +194,13 @@ class ContractTests(unittest.TestCase):
             "agent-plan-snapshot.v1",
             "agent-plan-reconciliation.v1",
             "agent-plan-handoff.v1",
+            "agent-evidence-index.v1",
+            "agent-evidence-index-validation.v1",
+            "agent-evidence-search-summary.v1",
+            "agent-planning-import-result.v1",
+            "agent-planning-import-validation.v1",
+            "agent-skill-improvement-proposal.v1",
+            "agent-skill-improvement-proposal-validation.v1",
         ]:
             self.assertIn(schema_id, ids)
         self.assertEqual(get_schema("agent-lifecycle-error.v1")["additionalProperties"], False)
@@ -225,6 +232,10 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-runner-policy.v1")["properties"]["maxAttemptsPerTask"]["minimum"], 0)
         self.assertEqual(get_schema("agent-plan-snapshot.v1")["properties"]["immutable"], {"const": True})
         self.assertEqual(get_schema("agent-plan-reconciliation.v1")["properties"]["classification"]["enum"], ["MATCH", "REQUIRES_NEW_PLAN", "BLOCKED"])
+        self.assertEqual(get_schema("agent-evidence-index.v1")["properties"]["sourceOfTruth"], {"const": False})
+        self.assertEqual(get_schema("agent-evidence-index.v1")["properties"]["enabledByDefault"], {"const": False})
+        self.assertEqual(get_schema("agent-planning-import-result.v1")["properties"]["freezeBlocked"], {"const": True})
+        self.assertEqual(get_schema("agent-skill-improvement-proposal.v1")["properties"]["autoApply"], {"const": False})
         self.assertEqual(get_schema("agent-adapter-scaffold-result.v1")["properties"]["maturity"], {"const": "EXPERIMENTAL"})
         self.assertEqual(get_schema("agent-lifecycle-live-host-conformance-receipt.v1")["properties"]["syntheticReplayUsed"], {"const": False})
         self.assertIn("validationCommands", get_schema("agent-live-host-promotion-plan.v1")["required"])
