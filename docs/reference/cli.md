@@ -36,6 +36,8 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle quality pack-check`: validate optional quality packs.
 - `agent-lifecycle quality behavior-check`: run fixture-backed behavior checks.
 - `agent-lifecycle metrics cost-check`: validate lifecycle cost receipts.
+- `agent-lifecycle metrics cost-report`: generate and validate a lifecycle
+  cost report from explicit JSON artifact paths.
 
 ## Context And Continuity
 
