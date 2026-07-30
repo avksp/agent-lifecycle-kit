@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.5.0 - 2026-07-30
+
+- Added advisory lifecycle mode recommendations from accumulated cost reports,
+  task-shape baselines and risk floors.
+- Added `agent-lifecycle metrics recommend` with write-once full output and
+  compact summary output for small-context review.
+- Added fail-closed baseline validation so weak or invalid statistics cannot
+  lower the required lifecycle quality floor.
+- Added public contracts for lifecycle baselines, overhead statistics,
+  recommendations and compact recommendation summaries.
+
 ## 1.4.0 - 2026-07-30
 
 - Added deterministic lifecycle cost report generation from explicit JSON
