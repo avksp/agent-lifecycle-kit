@@ -14,8 +14,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("version", help="print package version as compact JSON")
     _add_diagnose_parser(subparsers)
+    _add_diagnostics_parser(subparsers)
     _add_schema_parser(subparsers)
     subparsers.add_parser("neutrality", help="run neutrality subcommands")
+    _add_quality_parser(subparsers)
+    _add_report_parser(subparsers)
     _add_workflow_parser(subparsers)
     _add_audit_parser(subparsers)
     _add_context_parser(subparsers)
@@ -46,12 +49,44 @@ def _add_diagnose_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     diagnose.add_argument("--max-host-probes", type=int, default=1)
 
 
+def _add_diagnostics_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    diagnostics = subparsers.add_parser("diagnostics", help="optional diagnostics commands")
+    diagnostics_sub = diagnostics.add_subparsers(dest="diagnostics_command", required=True)
+    bundle = diagnostics_sub.add_parser("bundle")
+    bundle.add_argument("--project-root", default=".")
+    bundle.add_argument("--artifact", action="append", default=[])
+    bundle.add_argument("--max-artifacts", type=int, default=8)
+    bundle.add_argument("--max-input-bytes", type=int, default=20000)
+    bundle.add_argument("--out")
+
+
 def _add_schema_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     schema = subparsers.add_parser("schema", help="inspect bundled JSON schemas")
     schema_sub = schema.add_subparsers(dest="schema_command", required=True)
     schema_sub.add_parser("list")
     show = schema_sub.add_parser("show")
     show.add_argument("schema_id")
+
+
+def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    quality = subparsers.add_parser("quality", help="optional quality commands")
+    quality_sub = quality.add_subparsers(dest="quality_command", required=True)
+    pack_check = quality_sub.add_parser("pack-check")
+    pack_check.add_argument("--manifest")
+    behavior_check = quality_sub.add_parser("behavior-check")
+    behavior_check.add_argument("--manifest")
+    behavior_check.add_argument("--fixture", action="append", default=[])
+
+
+def _add_report_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    report = subparsers.add_parser("report", help="read-only report commands")
+    report_sub = report.add_subparsers(dest="report_command", required=True)
+    status_view = report_sub.add_parser("status-view")
+    status_view.add_argument("--project-root", default=".")
+    status_view.add_argument("--artifact", action="append", default=[])
+    status_view.add_argument("--max-items", type=int, default=12)
+    status_view.add_argument("--target-window", default="8k")
+    status_view.add_argument("--out")
 
 
 def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

@@ -153,6 +153,31 @@ overall verdict.
 
 See [review verdicts](docs/reference/review-verdict.md).
 
+## Optional quality and observability
+
+Optional quality packs describe extra checks that operators can enable when
+they need a faster view of quality, evidence and resource use. They are disabled
+by default through `agent-optional-quality-pack.v1`; every command must declare
+input schemas, expected evidence and resource caps. `agent-behavior-check-run.v1`
+uses concrete lifecycle fixtures such as false completion, stale state,
+over-budget retry, missing event capture and blocked external action.
+
+`agent-diagnostic-bundle.v1` exports redacted summaries from existing
+artifacts, and `agent-readonly-status-view.v1` renders a compact view for small
+local models. These outputs are not source of truth; final review still uses
+the original receipts, plans and evidence.
+
+```bash
+agent-lifecycle quality pack-check
+agent-lifecycle quality behavior-check --fixture <behavior-fixture.json>
+agent-lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
+agent-lifecycle report status-view --artifact <evidence.json> --target-window 4k-strict
+```
+
+See [optional quality packs](docs/reference/optional-quality-packs.md),
+[diagnostic bundles](docs/reference/diagnostic-bundles.md), and
+[read-only status views](docs/reference/read-only-status-view.md).
+
 ## Controlled runner
 
 The runner keeps a narrow `agent-runner-state.v1` execution-loop state around
@@ -319,6 +344,10 @@ agent-lifecycle task compile --manifest <plan.manifest.json> --out-dir <task-pac
 agent-lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 agent-lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
+agent-lifecycle quality pack-check
+agent-lifecycle quality behavior-check --fixture <behavior-fixture.json>
+agent-lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
+agent-lifecycle report status-view --artifact <evidence.json> --target-window 4k-strict --out <status-view.json>
 agent-lifecycle context profile-check --profile profiles/small-context-profile.v1.json
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 4k-strict
 agent-lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
@@ -358,6 +387,10 @@ PYTHONPATH=src python -m agent_lifecycle task compile --manifest <plan.manifest.
 PYTHONPATH=src python -m agent_lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 PYTHONPATH=src python -m agent_lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
+PYTHONPATH=src python -m agent_lifecycle quality pack-check
+PYTHONPATH=src python -m agent_lifecycle quality behavior-check --fixture <behavior-fixture.json>
+PYTHONPATH=src python -m agent_lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
+PYTHONPATH=src python -m agent_lifecycle report status-view --artifact <evidence.json> --target-window 4k-strict --out <status-view.json>
 PYTHONPATH=src python -m agent_lifecycle context check --profile profiles/small-context-profile.v1.json --task-packet <task-packet.json> --summary <compact-summary.json> --target-window 8k
 PYTHONPATH=src python -m agent_lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json
 PYTHONPATH=src python -m agent_lifecycle adapter inspect --descriptor adapters/opencode/adapter.descriptor.json --skip-host-commands
@@ -373,6 +406,8 @@ Implemented core CLI groups are `version`, `diagnose`, `schema`, `workflow statu
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `audit review-check`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
+`quality pack-check`, `quality behavior-check`, `diagnostics bundle`,
+`report status-view`,
 `goal check`, `goal summarize`, `goal update`, `followup check`,
 `followup add`, `followup close`, `followup sweep`, `worktree policy-check`,
 `worktree receipt`, `worktree check`, `runner start`, `runner status`,

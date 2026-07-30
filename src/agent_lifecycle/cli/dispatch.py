@@ -14,7 +14,7 @@ from agent_lifecycle.compiler import compile_task_packets
 from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.context import check_context, load_context_profile, render_context
-from agent_lifecycle.diagnostics import build_readiness_report
+from agent_lifecycle.diagnostics import build_diagnostic_bundle, build_readiness_report
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.cli.adapter import dispatch_adapter
 from agent_lifecycle.cli.followup import dispatch_followup
@@ -31,6 +31,14 @@ from agent_lifecycle.planning import (
     validate_acceptance_checklist,
     validate_plan_manifest,
 )
+from agent_lifecycle.quality import (
+    build_default_quality_pack,
+    require_behavior_checks_pass,
+    require_quality_pack_pass,
+    run_behavior_checks,
+    validate_quality_pack,
+)
+from agent_lifecycle.reporting import build_status_view
 from agent_lifecycle.runner import (
     build_runner_snapshot,
     initialize_runner_state,
@@ -80,6 +88,12 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
             model_profile=Path(args.model_profile) if args.model_profile else None,
             adapter_baseline=Path(args.adapter_baseline) if args.adapter_baseline else None,
         )
+    if args.command == "diagnostics":
+        return _dispatch_diagnostics(args)
+    if args.command == "quality":
+        return _dispatch_quality(args)
+    if args.command == "report":
+        return _dispatch_report(args)
     if args.command == "workflow":
         return _dispatch_workflow(args)
     if args.command == "audit":
@@ -110,6 +124,45 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         "command-not-implemented",
         f"{args.command} command group is reserved but not implemented in this build",
     )
+
+
+def _dispatch_diagnostics(args: argparse.Namespace) -> dict[str, Any]:
+    if args.diagnostics_command == "bundle":
+        payload = build_diagnostic_bundle(
+            project_root=Path(args.project_root),
+            artifact_paths=[Path(item) for item in args.artifact],
+            max_artifacts=args.max_artifacts,
+            max_input_bytes=args.max_input_bytes,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    raise LifecycleError("command-not-implemented", "diagnostics command is not implemented")
+
+
+def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
+    if args.quality_command == "pack-check":
+        manifest = read_json_object(Path(args.manifest), label="quality pack") if args.manifest else build_default_quality_pack()
+        return require_quality_pack_pass(validate_quality_pack(manifest))
+    if args.quality_command == "behavior-check":
+        manifest = read_json_object(Path(args.manifest), label="quality pack") if args.manifest else build_default_quality_pack()
+        fixtures = [read_json_object(Path(item), label="behavior fixture") for item in args.fixture]
+        return require_behavior_checks_pass(run_behavior_checks(manifest, fixtures))
+    raise LifecycleError("command-not-implemented", "quality command is not implemented")
+
+
+def _dispatch_report(args: argparse.Namespace) -> dict[str, Any]:
+    if args.report_command == "status-view":
+        payload = build_status_view(
+            project_root=Path(args.project_root),
+            artifact_paths=[Path(item) for item in args.artifact],
+            max_items=args.max_items,
+            target_window=args.target_window,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    raise LifecycleError("command-not-implemented", "report command is not implemented")
 
 
 def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
