@@ -47,8 +47,11 @@ from agent_lifecycle.model_routing import (
 )
 from agent_lifecycle.metrics import (
     build_lifecycle_cost_summary,
+    build_lifecycle_recommendation_summary,
     generate_lifecycle_cost_report,
+    recommend_lifecycle_mode,
     require_lifecycle_cost_pass,
+    require_lifecycle_recommendation_pass,
     validate_lifecycle_cost_report,
 )
 from agent_lifecycle.planning import (
@@ -524,6 +527,23 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
             "liveCallsStarted": False,
             "productionPromotionClaimed": False,
         }
+    if args.metrics_command == "recommend":
+        reports = [read_json_object(Path(item), label="lifecycle cost report") for item in args.report]
+        baseline_profile = read_json_object(Path(args.baseline_profile), label="lifecycle baseline profile")
+        recommendation = recommend_lifecycle_mode(
+            reports=reports,
+            baseline_profile=baseline_profile,
+            task_shape=args.task_shape,
+            current_mode=args.current_mode,
+            sdd_tier=args.sdd_tier,
+            risk_flags=args.risk,
+        )
+        require_lifecycle_recommendation_pass(recommendation)
+        if args.out:
+            write_json_create(Path(args.out), recommendation)
+        if args.summary_out:
+            write_json_create(Path(args.summary_out), build_lifecycle_recommendation_summary(recommendation))
+        return recommendation
     raise LifecycleError("command-not-implemented", "metrics command is not implemented")
 
 

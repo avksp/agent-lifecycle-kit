@@ -1,0 +1,29 @@
+"""Argparse construction for lifecycle metrics commands."""
+
+from __future__ import annotations
+
+import argparse
+
+MODES = ("light", "standard", "strict", "release")
+
+
+def add_metrics_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    metrics = subparsers.add_parser("metrics", help="resource and lifecycle metrics commands")
+    metrics_sub = metrics.add_subparsers(dest="metrics_command", required=True)
+    cost_check = metrics_sub.add_parser("cost-check")
+    cost_check.add_argument("--receipt", required=True)
+    cost_report = metrics_sub.add_parser("cost-report")
+    cost_report.add_argument("--artifact", action="append", default=[])
+    cost_report.add_argument("--mode", choices=MODES, default="standard")
+    cost_report.add_argument("--project-root", default=".")
+    cost_report.add_argument("--out", required=True)
+    cost_report.add_argument("--summary-out")
+    recommend = metrics_sub.add_parser("recommend")
+    recommend.add_argument("--report", action="append", default=[])
+    recommend.add_argument("--baseline-profile", default="profiles/lifecycle-baselines.v1.json")
+    recommend.add_argument("--task-shape", default="feature")
+    recommend.add_argument("--current-mode", choices=MODES)
+    recommend.add_argument("--sdd-tier")
+    recommend.add_argument("--risk", action="append", default=[])
+    recommend.add_argument("--out")
+    recommend.add_argument("--summary-out")
