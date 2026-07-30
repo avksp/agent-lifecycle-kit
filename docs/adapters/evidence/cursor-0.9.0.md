@@ -9,9 +9,9 @@ Scope:
 - Adapter descriptor: `adapters/cursor/adapter.descriptor.json`.
 - Capability manifest: `adapters/cursor/capabilities.manifest.json`.
 - Raw inspection report:
-  `tasks/release-0-9/evidence/cursor/inspection/cursor-inspection-report.json`.
+  `work/release-0-9/evidence/cursor/inspection/cursor-inspection-report.json`.
 - Raw preflight report:
-  `tasks/release-0-9/evidence/cursor/inspection/cursor-preflight-report.json`.
+  `work/release-0-9/evidence/cursor/inspection/cursor-preflight-report.json`.
 
 Safe inspection result:
 

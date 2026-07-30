@@ -527,8 +527,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-01/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-01/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-01/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-01/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -584,8 +584,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-02/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-02/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-02/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-02/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -636,8 +636,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-03/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-03/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-03/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-03/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -686,8 +686,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-04/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-04/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-04/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-04/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -748,8 +748,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-05/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-05/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-05/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-05/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -830,8 +830,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-06/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-06/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-06/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-06/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -883,8 +883,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-07/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-07/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-07/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-07/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -939,8 +939,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-08/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-08/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-08/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-08/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -994,8 +994,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-09/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-09/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-09/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-09/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -1058,8 +1058,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-10/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-10/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-10/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-10/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -1110,8 +1110,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-11/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-11/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-11/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-11/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -1162,8 +1162,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-12/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-12/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-12/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-12/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -1214,8 +1214,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-13/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-13/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-13/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-13/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -1266,8 +1266,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-16/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-16/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-16/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-16/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -1351,8 +1351,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-14/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-14/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-14/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-14/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {
@@ -1421,8 +1421,8 @@
         "approvals": "none"
       },
       "artifactPaths": {
-        "result": "plans/standalone-v1/workflow/tasks/WS-15/attempt-{attempt}/task-result.json",
-        "review": "plans/standalone-v1/workflow/tasks/WS-15/attempt-{attempt}/task-review.json"
+        "result": "plans/standalone-v1/workflow/work/WS-15/attempt-{attempt}/task-result.json",
+        "review": "plans/standalone-v1/workflow/work/WS-15/attempt-{attempt}/task-review.json"
       },
       "plannedItems": [
         {

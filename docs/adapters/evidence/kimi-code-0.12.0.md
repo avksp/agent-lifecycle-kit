@@ -9,7 +9,7 @@ Scope:
 - Adapter descriptor: `adapters/kimi-code/adapter.descriptor.json`.
 - Capability manifest: `adapters/kimi-code/capabilities.manifest.json`.
 - Raw inspection report:
-  `tasks/release-0-12/evidence/kimi-code/inspection/kimi-code-inspection-report.json`.
+  `work/release-0-12/evidence/kimi-code/inspection/kimi-code-inspection-report.json`.
 
 Safe inspection result:
 

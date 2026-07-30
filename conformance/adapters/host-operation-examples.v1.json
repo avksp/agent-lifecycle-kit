@@ -97,7 +97,7 @@
         "outputs": [
           {
             "role": "attempt",
-            "path": "tasks/WS-01/attempt-1"
+            "path": "work/WS-01/attempt-1"
           }
         ],
         "constraints": {
@@ -124,7 +124,7 @@
         "outputs": [
           {
             "role": "usage-receipt",
-            "path": "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            "path": "work/WS-01/attempt-1/model-usage-receipt.json"
           }
         ],
         "constraints": {
@@ -145,7 +145,7 @@
         "outputs": [
           {
             "role": "usage-receipt",
-            "path": "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            "path": "work/WS-01/attempt-1/model-usage-receipt.json"
           }
         ],
         "usage": {
@@ -260,7 +260,7 @@
         "outputs": [
           {
             "role": "task-result",
-            "path": "tasks/WS-01/attempt-1/task-result.json"
+            "path": "work/WS-01/attempt-1/task-result.json"
           }
         ],
         "constraints": {}
@@ -273,7 +273,7 @@
         "outputs": [
           {
             "role": "task-result",
-            "path": "tasks/WS-01/attempt-1/task-result.json"
+            "path": "work/WS-01/attempt-1/task-result.json"
           }
         ],
         "usage": {}
@@ -290,7 +290,7 @@
         "outputs": [
           {
             "role": "usage-receipt",
-            "path": "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            "path": "work/WS-01/attempt-1/model-usage-receipt.json"
           }
         ],
         "constraints": {
@@ -305,7 +305,7 @@
         "outputs": [
           {
             "role": "usage-receipt",
-            "path": "tasks/WS-01/attempt-1/model-usage-receipt.json"
+            "path": "work/WS-01/attempt-1/model-usage-receipt.json"
           }
         ],
         "usage": {
@@ -324,7 +324,7 @@
         "outputs": [
           {
             "role": "task-review",
-            "path": "tasks/WS-01/attempt-1/task-review.json"
+            "path": "work/WS-01/attempt-1/task-review.json"
           }
         ],
         "constraints": {}
@@ -337,7 +337,7 @@
         "outputs": [
           {
             "role": "task-review",
-            "path": "tasks/WS-01/attempt-1/task-review.json"
+            "path": "work/WS-01/attempt-1/task-review.json"
           }
         ],
         "usage": {}

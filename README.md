@@ -57,6 +57,24 @@ The skills are thin entry points. Specifications, plans, locks, task packets,
 run state, evidence, budgets, and audit semantics are owned by the shared
 deterministic core rather than reimplemented in each host adapter.
 
+## Public contract policy
+
+Public schemas and CLI JSON outputs are covered by
+`agent-public-contract-policy.v1`. The policy lists stable schema ids,
+accepted-compatible deprecated inputs, CLI output envelopes and fail-closed
+error behavior.
+
+```bash
+agent-lifecycle contract policy --out <public-contract-policy.json>
+agent-lifecycle contract check --policy <public-contract-policy.json>
+```
+
+Adapters and release scripts should branch on `schemaVersion` and stable error
+`code` values, not prose output. Small local models can read the compact policy
+receipt; larger models can inspect full schemas through `schema show`.
+
+See [public contracts](docs/reference/public-contracts.md).
+
 ## Compact context mode
 
 Small-context hosts are supported through a deterministic context profile, not
@@ -271,6 +289,25 @@ Budget modes are:
 
 See [budget reroute policy](docs/guides/budget-reroute-policy.md).
 
+## Lifecycle cost accounting
+
+Lifecycle cost reports split a run into `implementation`,
+`productValidation`, `pipelineCompliance`, and `coordination`. This shows how
+much effort solved the task, how much validated the product, and how much was
+spent proving ALK's own lifecycle.
+
+```bash
+agent-lifecycle metrics cost-check --receipt <lifecycle-cost-report.json>
+```
+
+Modes are `light`, `standard`, `strict`, and `release`. If strict or release
+work spends more than the mode's normal pipeline budget, the report must
+explain why. A costly process run is not success by itself; implementation and
+product validation still have to pass.
+
+See [lifecycle cost accounting](docs/reference/lifecycle-cost.md) and the
+[production resource and security guide](docs/guides/production-resource-security.md).
+
 ## Distribution layout
 
 A universal distribution does not mean one manifest format. The source
@@ -314,6 +351,8 @@ python -m pip install -e .
 agent-lifecycle version
 agent-lifecycle diagnose
 agent-lifecycle schema list
+agent-lifecycle contract policy --out <public-contract-policy.json>
+agent-lifecycle contract check --policy <public-contract-policy.json>
 agent-lifecycle workflow status --state <path-to-run.state.json>
 agent-lifecycle workflow next --state <path-to-run.state.json>
 agent-lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
@@ -344,6 +383,7 @@ agent-lifecycle task compile --manifest <plan.manifest.json> --out-dir <task-pac
 agent-lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 agent-lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
+agent-lifecycle metrics cost-check --receipt <lifecycle-cost-report.json>
 agent-lifecycle quality pack-check
 agent-lifecycle quality behavior-check --fixture <behavior-fixture.json>
 agent-lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
@@ -366,6 +406,8 @@ The same commands can run without installation from a checkout:
 PYTHONPATH=src python -m agent_lifecycle version
 PYTHONPATH=src python -m agent_lifecycle diagnose
 PYTHONPATH=src python -m agent_lifecycle schema list
+PYTHONPATH=src python -m agent_lifecycle contract policy --out <public-contract-policy.json>
+PYTHONPATH=src python -m agent_lifecycle contract check --policy <public-contract-policy.json>
 PYTHONPATH=src python -m agent_lifecycle workflow status --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow next --state <path-to-run.state.json>
 PYTHONPATH=src python -m agent_lifecycle workflow task-start --state <path-to-run.state.json> --task <task-id> --operation-id <id> --expected-revision <n> --source-revision <sha> --reason "<reason>"
@@ -387,6 +429,7 @@ PYTHONPATH=src python -m agent_lifecycle task compile --manifest <plan.manifest.
 PYTHONPATH=src python -m agent_lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
 PYTHONPATH=src python -m agent_lifecycle model route --profile profiles/model-routing-profile.v1.json --request <model-route-request.json>
 PYTHONPATH=src python -m agent_lifecycle model usage-check --receipt <model-usage-receipt.json> --route-decision <model-route-decision.json> --budget-targets conformance/core/budget-targets.v1.json
+PYTHONPATH=src python -m agent_lifecycle metrics cost-check --receipt <lifecycle-cost-report.json>
 PYTHONPATH=src python -m agent_lifecycle quality pack-check
 PYTHONPATH=src python -m agent_lifecycle quality behavior-check --fixture <behavior-fixture.json>
 PYTHONPATH=src python -m agent_lifecycle diagnostics bundle --artifact <evidence.json> --out <diagnostic-bundle.json>
@@ -401,12 +444,13 @@ PYTHONPATH=src python -m agent_lifecycle adapter scaffold --host synthetic-host 
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
 
-Implemented core CLI groups are `version`, `diagnose`, `schema`, `workflow status`,
+Implemented core CLI groups are `version`, `diagnose`, `schema`,
+`contract policy`, `contract check`, `workflow status`,
 `workflow next`, `workflow block`, `workflow resolve`, `workflow task-start`,
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `audit review-check`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`quality pack-check`, `quality behavior-check`, `diagnostics bundle`,
+`metrics cost-check`, `quality pack-check`, `quality behavior-check`, `diagnostics bundle`,
 `report status-view`,
 `goal check`, `goal summarize`, `goal update`, `followup check`,
 `followup add`, `followup close`, `followup sweep`, `worktree policy-check`,

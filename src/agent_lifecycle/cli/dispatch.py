@@ -12,6 +12,11 @@ from agent_lifecycle.audit.ownership import report_has_category
 from agent_lifecycle.changesets import changed_files
 from agent_lifecycle.compiler import compile_task_packets
 from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
+from agent_lifecycle.contracts.compatibility import (
+    build_contract_policy,
+    require_contract_policy_pass,
+    validate_contract_policy,
+)
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.context import check_context, load_context_profile, render_context
 from agent_lifecycle.diagnostics import build_diagnostic_bundle, build_readiness_report
@@ -26,6 +31,7 @@ from agent_lifecycle.model_routing import (
     validate_model_routing_profile,
     validate_usage_receipt,
 )
+from agent_lifecycle.metrics import require_lifecycle_cost_pass, validate_lifecycle_cost_report
 from agent_lifecycle.planning import (
     resolve_sdd_tier,
     validate_acceptance_checklist,
@@ -76,6 +82,8 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
             return list_schemas()
         if args.schema_command == "show":
             return get_schema(args.schema_id)
+    if args.command == "contract":
+        return _dispatch_contract(args)
     if args.command == "diagnose":
         return build_readiness_report(
             project_root=Path(args.project_root),
@@ -108,6 +116,8 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         return dispatch_worktree(args)
     if args.command == "model":
         return _dispatch_model(args)
+    if args.command == "metrics":
+        return _dispatch_metrics(args)
     if args.command == "runner":
         return _dispatch_runner(args)
     if args.command == "tier":
@@ -138,6 +148,18 @@ def _dispatch_diagnostics(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         return payload
     raise LifecycleError("command-not-implemented", "diagnostics command is not implemented")
+
+
+def _dispatch_contract(args: argparse.Namespace) -> dict[str, Any]:
+    if args.contract_command == "policy":
+        payload = build_contract_policy()
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.contract_command == "check":
+        policy = read_json_object(Path(args.policy), label="public contract policy") if args.policy else build_contract_policy()
+        return require_contract_policy_pass(validate_contract_policy(policy))
+    raise LifecycleError("command-not-implemented", "contract command is not implemented")
 
 
 def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
@@ -393,6 +415,13 @@ def _dispatch_model(args: argparse.Namespace) -> dict[str, Any]:
             raise LifecycleError("model-usage-validation-failed", "model usage receipt validation failed", {"validation": result})
         return result
     raise LifecycleError("command-not-implemented", "model command is not implemented")
+
+
+def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
+    if args.metrics_command == "cost-check":
+        report = read_json_object(Path(args.receipt), label="lifecycle cost report")
+        return require_lifecycle_cost_pass(validate_lifecycle_cost_report(report))
+    raise LifecycleError("command-not-implemented", "metrics command is not implemented")
 
 
 def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:

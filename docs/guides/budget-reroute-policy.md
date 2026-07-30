@@ -25,14 +25,14 @@ Budget accounting supports three resource modes:
 
 ```bash
 agent-lifecycle workflow budget-decision \
-  --state tasks/<run>/workflow/run.state.json \
+  --state work/<run>/workflow/run.state.json \
   --task WS-01 \
   --operation-id budget-decision-WS-01-attempt-1 \
   --expected-revision 7 \
   --source-revision <git-sha> \
-  --model-usage-receipt tasks/WS-01/attempt-1/model-usage-receipt.json \
+  --model-usage-receipt work/WS-01/attempt-1/model-usage-receipt.json \
   --budget-policy policies/budget-exceeded-policy.json \
-  --receipt tasks/WS-01/attempt-1/budget-decision.json \
+  --receipt work/WS-01/attempt-1/budget-decision.json \
   --reason "route token cap exceeded"
 ```
 
@@ -44,15 +44,15 @@ to `WAITING_FOR_BUDGET_DECISION`, and sets `blocker.code` to
 
 ```bash
 agent-lifecycle workflow budget-decision \
-  --state tasks/<run>/workflow/run.state.json \
+  --state work/<run>/workflow/run.state.json \
   --task WS-01 \
   --operation-id budget-apply-WS-01-attempt-1 \
   --expected-revision 8 \
   --source-revision <git-sha> \
   --action reroute-stronger \
-  --decision-receipt tasks/WS-01/attempt-1/budget-decision.json \
-  --route-decision tasks/WS-01/attempt-1/reroute-decision.json \
-  --receipt tasks/WS-01/attempt-1/budget-decision-applied.json \
+  --decision-receipt work/WS-01/attempt-1/budget-decision.json \
+  --route-decision work/WS-01/attempt-1/reroute-decision.json \
+  --receipt work/WS-01/attempt-1/budget-decision-applied.json \
   --operator-identity-hash <redacted-operator-hash> \
   --reason "operator selected stronger route"
 ```

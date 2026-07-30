@@ -11,9 +11,9 @@ Scope:
 - Registry metadata: `adapters/hermes/hermes.registry.json`.
 - Slash-command metadata: `adapters/hermes/slash-commands.json`.
 - Raw inspection report:
-  `tasks/release-0-8/evidence/hermes/inspection/hermes-inspection-report.json`.
+  `work/release-0-8/evidence/hermes/inspection/hermes-inspection-report.json`.
 - Raw preflight report:
-  `tasks/release-0-8/evidence/hermes/inspection/hermes-preflight-report.json`.
+  `work/release-0-8/evidence/hermes/inspection/hermes-preflight-report.json`.
 
 Safe inspection result:
 
@@ -57,6 +57,6 @@ caps.
 Superseding evidence:
 
 - `docs/adapters/evidence/hermes-glm52-live-2026-07-29.md`;
-- `tasks/release-0-8/evidence/hermes/live-host-conformance-hermes.json`;
-- `tasks/release-0-8/evidence/hermes/live-calibration-verification-hermes.json`;
-- `tasks/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json`.
+- `work/release-0-8/evidence/hermes/live-host-conformance-hermes.json`;
+- `work/release-0-8/evidence/hermes/live-calibration-verification-hermes.json`;
+- `work/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json`.

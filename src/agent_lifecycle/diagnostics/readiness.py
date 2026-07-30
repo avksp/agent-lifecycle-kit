@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -233,7 +232,7 @@ def _unavailable_adapter_record(display_path: str, descriptor_path: Path, reason
             "declaredPaths": [],
             "existingPaths": [],
             "missingPaths": [],
-            "ignoredTasksEvidenceCount": 0,
+            "localOnlyEvidenceCount": 0,
             "status": "SKIPPED",
         },
         "validationSummary": validation_summary,
@@ -241,15 +240,11 @@ def _unavailable_adapter_record(display_path: str, descriptor_path: Path, reason
 
 
 def _checkout_checks(root: Path) -> list[dict[str, Any]]:
-    checks = [
+    return [
         _file_check(root, Path("pyproject.toml"), name="checkout:pyproject"),
         _file_check(root, Path("src/agent_lifecycle"), name="checkout:package-source"),
         _file_check(root, Path("adapters"), name="checkout:adapters"),
     ]
-    ignored = _tasks_ignore_check(root)
-    if ignored:
-        checks.append(ignored)
-    return checks
 
 
 def _package_checks(root: Path) -> list[dict[str, Any]]:
@@ -345,14 +340,14 @@ def _evidence_summary(root: Path, adapters: list[dict[str, Any]]) -> dict[str, A
             }
             for path in evidence["missingPaths"]
         )
-        if evidence["ignoredTasksEvidenceCount"]:
-            local_only += evidence["ignoredTasksEvidenceCount"]
+        if evidence["localOnlyEvidenceCount"]:
+            local_only += evidence["localOnlyEvidenceCount"]
     status = "WARN" if missing else "PASS"
     return {
         "status": status,
         "verifiedAdapterCount": len(verified),
         "missingLocalEvidenceCount": len(missing),
-        "ignoredTasksEvidenceCount": local_only,
+        "localOnlyEvidenceCount": local_only,
         "missing": missing,
         "productionPromotionClaimed": False,
     }
@@ -370,10 +365,10 @@ def _evidence_paths(live_range: Any) -> list[str]:
 def _local_evidence_status(root: Path, evidence_paths: list[str]) -> dict[str, Any]:
     existing = []
     missing = []
-    ignored_tasks = 0
+    local_only = 0
     for raw_path in evidence_paths:
-        if raw_path.startswith("tasks/"):
-            ignored_tasks += 1
+        if raw_path.startswith("work/"):
+            local_only += 1
         path = root / raw_path
         if path.is_file():
             existing.append(raw_path)
@@ -383,7 +378,7 @@ def _local_evidence_status(root: Path, evidence_paths: list[str]) -> dict[str, A
         "declaredPaths": evidence_paths,
         "existingPaths": existing,
         "missingPaths": missing,
-        "ignoredTasksEvidenceCount": ignored_tasks,
+        "localOnlyEvidenceCount": local_only,
         "status": "PASS" if not missing else "WARN",
     }
 
@@ -429,30 +424,6 @@ def _file_check(root: Path, relative: Path, *, name: str) -> dict[str, Any]:
         "name": name,
         "status": "PASS" if path.exists() else "FAIL",
         "details": {"path": relative.as_posix()},
-    }
-
-
-def _tasks_ignore_check(root: Path) -> dict[str, Any] | None:
-    git = root / ".git"
-    if not git.exists():
-        return None
-    result = subprocess.run(
-        ["git", "ls-files", "tasks"],
-        cwd=root,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        timeout=5,
-    )
-    tracked = [line for line in result.stdout.splitlines() if line.strip()]
-    return {
-        "name": "checkout:tasks-untracked",
-        "status": "PASS" if result.returncode == 0 and not tracked else "FAIL",
-        "details": {
-            "trackedTasksCount": len(tracked),
-            "gitAvailable": result.returncode == 0,
-        },
     }
 
 

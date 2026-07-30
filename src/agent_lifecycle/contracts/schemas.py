@@ -27,6 +27,28 @@ def _open_object_schema(
 
 
 _SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-lifecycle-version.v1": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agent-lifecycle-version.v1",
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["schemaVersion", "version"],
+        "properties": {
+            "schemaVersion": {"const": "agent-lifecycle-version.v1"},
+            "version": {"type": "string", "minLength": 1},
+        },
+    },
+    "agent-lifecycle-schema-index.v1": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agent-lifecycle-schema-index.v1",
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["schemaVersion", "schemas"],
+        "properties": {
+            "schemaVersion": {"const": "agent-lifecycle-schema-index.v1"},
+            "schemas": {"type": "array", "items": {"type": "object"}},
+        },
+    },
     "agent-lifecycle-error.v1": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": "agent-lifecycle-error.v1",
@@ -1348,6 +1370,74 @@ _SCHEMAS: dict[str, dict[str, Any]] = {
             "planRevision": {"type": "integer", "minimum": 1},
             "planDigest": {"type": "string", "minLength": 64, "maxLength": 64},
             "lineageChecks": {"type": "array", "items": {"type": "object"}},
+        },
+    ),
+    "agent-public-contract-policy.v1": _open_object_schema(
+        "agent-public-contract-policy.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "rules",
+            "requiredCoreSchemas",
+            "schemas",
+            "cliOutputs",
+            "productionPromotionClaimed",
+            "policyDigest",
+        ],
+        properties={
+            "status": {"const": "PASS"},
+            "rules": {"type": "object"},
+            "requiredCoreSchemas": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "schemas": {"type": "array", "items": {"type": "object"}},
+            "cliOutputs": {"type": "array", "items": {"type": "object"}},
+            "productionPromotionClaimed": {"const": False},
+            "policyDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-public-contract-policy-validation.v1": _open_object_schema(
+        "agent-public-contract-policy-validation.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "schemaCount",
+            "cliOutputCount",
+            "deprecatedCompatibleSchemas",
+            "blockers",
+            "policyDigest",
+            "validationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "schemaCount": {"type": "integer", "minimum": 0},
+            "cliOutputCount": {"type": "integer", "minimum": 0},
+            "deprecatedCompatibleSchemas": {"type": "array", "items": {"type": "string"}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "policyDigest": {"type": ["string", "null"]},
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-lifecycle-cost-report.v1": _open_object_schema(
+        "agent-lifecycle-cost-report.v1",
+        required=["schemaVersion", "mode", "entries"],
+        properties={
+            "mode": {"enum": ["light", "standard", "strict", "release"]},
+            "entries": {"type": "array", "items": {"type": "object"}},
+            "limits": {"type": "object"},
+            "overLimitReason": {"type": "string"},
+            "productionPromotionClaimed": {"const": False},
+        },
+    ),
+    "agent-lifecycle-cost-validation.v1": _open_object_schema(
+        "agent-lifecycle-cost-validation.v1",
+        required=["schemaVersion", "status", "mode", "totals", "ratios", "limits", "blockers", "reportDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "mode": {"type": ["string", "null"]},
+            "totals": {"type": "object"},
+            "ratios": {"type": "object"},
+            "limits": {"type": "object"},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "reportDigest": {"type": "string", "minLength": 64, "maxLength": 64},
         },
     ),
 }
