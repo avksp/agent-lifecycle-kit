@@ -102,6 +102,32 @@ agent-lifecycle plan handoff --manifest <plan.manifest.json> --snapshot <plan-sn
 
 Подробнее: [непрерывность плана](../reference/plan-continuity.md).
 
+## Индекс доказательств и импорт
+
+Индекс доказательств — необязательная пересобираемая сводка по уже
+существующим артефактам жизненного цикла. Он помогает проверяющему или
+небольшой локальной модели найти нужную квитанцию, не читая все файлы целиком.
+Индекс хранит дайджесты, поля схемы/статуса и краткие сводки; он не становится
+источником истины и не возвращает исходное содержимое артефактов.
+
+```bash
+agent-lifecycle evidence index --project-root . --artifact evidence/final-proof.json --out evidence-index.json
+agent-lifecycle evidence search --index evidence-index.json --query final --out evidence-search.json
+```
+
+Импорт планирования преобразует один недоверенный входной файл в черновой
+кандидат ALK. Кандидат остаётся в статусе `DRAFT`, требует проверки и не может
+быть зафиксирован, пока не пройдёт обычные проверки ALK и независимую
+проверку плана.
+
+```bash
+agent-lifecycle import plan --source incoming-plan.md --out imported-plan.json
+agent-lifecycle import check --candidate imported-plan.json
+agent-lifecycle import proposal-check --proposal skill-proposal.json
+```
+
+Подробнее: [индекс доказательств и импорт](../reference/evidence-imports.md).
+
 ## Режим компактного контекста
 
 Системы с маленьким контекстным окном поддерживаются через детерминированный
@@ -495,8 +521,9 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 `workflow task-result`, `workflow task-accept`, `workflow finalize`,
 `audit ownership`, `audit review-check`, `tier resolve`, `context profile-check`, `context check`,
 `context render`, `model profile-check`, `model route`, `model usage-check`,
-`metrics cost-check`, `quality pack-check`, `quality behavior-check`, `diagnostics bundle`,
-`report status-view`,
+`metrics cost-check`, `evidence index`, `evidence search`, `import plan`,
+`import check`, `import proposal-check`, `quality pack-check`,
+`quality behavior-check`, `diagnostics bundle`, `report status-view`,
 `goal check`, `goal summarize`, `goal update`, `followup check`,
 `followup add`, `followup close`, `followup sweep`, `worktree policy-check`,
 `worktree receipt`, `worktree check`, `runner start`,
