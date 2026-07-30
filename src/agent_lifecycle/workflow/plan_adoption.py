@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.specification import validate_completion_check
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
@@ -336,6 +337,7 @@ def _replace_plan_state(
         "forbiddenWrites": list(manifest.get("forbiddenWrites", [])),
         "leadOwned": list(manifest.get("leadOwned", [])),
     }
+    _replace_completion_check_state(state, manifest)
     state["runDeadlineAt"] = deadline_after(state["runStartedAt"], int(state["budgets"].get("maxRunWallSeconds", 86400)))
     state["packetSet"] = packet_set
     state["tasks"] = tasks
@@ -346,6 +348,23 @@ def _replace_plan_state(
     state["authorization"] = _authorization(start_mode, authorized_by)
     state["phase"] = "READY" if state["authorization"].get("granted") else "AWAITING_AUTHORIZATION"
     state["lastPlanReview"] = _last_plan_review(root, manifest)
+
+
+def _replace_completion_check_state(state: dict[str, Any], manifest: dict[str, Any]) -> None:
+    specification = manifest.get("specification", {})
+    check = specification.get("completionCheck") if isinstance(specification, dict) else None
+    if check is None:
+        state.pop("completionCheck", None)
+        state.pop("completionCheckValidation", None)
+        state.pop("completionCheckReceipt", None)
+        return
+    validation = validate_completion_check(check)
+    state["completionCheck"] = {
+        **check,
+        "receiptPath": validation["receiptPath"],
+    }
+    state["completionCheckValidation"] = validation
+    state.pop("completionCheckReceipt", None)
 
 
 def _authorization(start_mode: str, authorized_by: str | None) -> dict[str, Any]:

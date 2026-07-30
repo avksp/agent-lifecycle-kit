@@ -9,6 +9,7 @@ and does not depend on a source project.
 - [Verified-adapter release checklist](guides/verified-adapter-release-checklist.md)
 - [Russian README](guides/README.ru.md)
 - [Release architecture](architecture/release-architecture.md)
+- [Completion check](reference/completion-check.md)
 - [Production promotion contract](reference/production-promotion.md)
 - [Live cost calibration](reference/live-cost-calibration.md)
 - [Release security](security/release-security.md)

@@ -6,7 +6,11 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
-from agent_lifecycle.specification import validate_completion_signal
+from agent_lifecycle.specification import (
+    validate_completion_check,
+    validate_completion_check_receipt,
+    validate_completion_signal,
+)
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
@@ -38,6 +42,7 @@ def finalize_run(
     final_audit = read_json_object(root / final_audit_rel, label="final audit")
     final_audit_identity = artifact_identity(root, final_audit_rel, final_audit)
     _validate_final_audit(state, final_audit)
+    completion_check_receipt = _validate_completion_check(state, root)
     finalization_gate_receipts = _validate_finalization_gates(
         state_path,
         state,
@@ -48,6 +53,7 @@ def finalize_run(
         state,
         operation_id=operation_id,
         final_audit=final_audit_identity,
+        completion_check_receipt=completion_check_receipt,
         finalization_gate_receipts=finalization_gate_receipts,
         reason=reason,
     )
@@ -55,6 +61,8 @@ def finalize_run(
     identity = artifact_identity(root, proof_rel, proof)
     state["finalProof"] = {**identity, "semanticStatus": proof["semanticStatus"]}
     state["finalAudit"] = final_audit_identity
+    if completion_check_receipt is not None:
+        state["completionCheckReceipt"] = completion_check_receipt["receipt"]
     state["phase"] = "COMPLETE"
     commit_state(
         state_path,
@@ -63,6 +71,7 @@ def finalize_run(
         event_type="run-finalized",
         payload={
             "finalAudit": final_audit_identity,
+            "completionCheckReceipt": completion_check_receipt,
             "finalizationGateReceipts": finalization_gate_receipts,
             "proof": state["finalProof"],
             "reason": reason,
@@ -140,11 +149,33 @@ def _validate_finalization_gates(
     return receipts
 
 
+def _validate_completion_check(state: dict[str, Any], root: Path) -> dict[str, Any] | None:
+    check = state.get("completionCheck")
+    if check is None:
+        return None
+    if not isinstance(check, dict):
+        raise LifecycleError("invalid-workflow-state", "completionCheck in workflow state must be an object")
+    check_validation = validate_completion_check(check)
+    receipt_rel = check_validation["receiptPath"]
+    receipt_path = root / receipt_rel
+    if not receipt_path.is_file():
+        raise LifecycleError(
+            "completion-check-receipt-missing",
+            "declared completion check requires a receipt before finalization",
+            {"path": receipt_rel},
+        )
+    receipt = read_json_object(receipt_path, label="completion check receipt")
+    validation = validate_completion_check_receipt(receipt, check=check, state=state)
+    identity = artifact_identity(root, receipt_rel, receipt)
+    return {"check": check_validation, "receipt": identity, "validation": validation}
+
+
 def _proof_body(
     state: dict[str, Any],
     *,
     operation_id: str,
     final_audit: dict[str, Any],
+    completion_check_receipt: dict[str, Any] | None,
     finalization_gate_receipts: list[dict[str, Any]],
     reason: str,
 ) -> dict[str, Any]:
@@ -170,6 +201,7 @@ def _proof_body(
         "productionPromotionClaimed": False,
         "acceptedTasks": accepted,
         "finalAudit": final_audit,
+        "completionCheck": completion_check_receipt,
         "finalizationGateReceipts": finalization_gate_receipts,
         "reason": reason,
         "createdAt": now_iso(),

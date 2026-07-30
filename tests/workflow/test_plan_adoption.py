@@ -137,6 +137,28 @@ class WorkflowPlanAdoptionTests(unittest.TestCase):
             task = next(item for item in payload["tasks"] if item["id"] == "WS-02")
             self.assertEqual(task["status"], "READY")
 
+    def test_adopt_plan_copies_completion_check_to_runtime_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="BLOCKED", blocker={"code": "plan-drift", "reason": "x", "resumePhase": "RUNNING"})
+            _write_plan_bundle(root, include_completion_check=True)
+
+            adopt_plan(
+                state_path,
+                manifest_path=root / "plans/package/plan.manifest.json",
+                operation_id="adopt-op",
+                expected_revision=1,
+                source_revision="source-2",
+                reset_tasks=True,
+                start_mode="auto-after-freeze",
+                authorized_by="tester",
+            )
+
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(stored["completionCheck"]["checkId"], "done-check")
+            self.assertEqual(stored["completionCheckValidation"]["schemaVersion"], "agent-completion-check-validation.v1")
+            self.assertEqual(stored["completionCheck"]["receiptPath"], "final/completion-check-receipt.json")
+
 
 if __name__ == "__main__":
     unittest.main()

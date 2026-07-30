@@ -289,10 +289,20 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 необязательные `toolOutputs` и число последних дословных сообщений
 пользователя.
 
-`workflow finalize` требует `--final-audit`. Audit должен пройти с
+`workflow finalize` требует `--final-audit`. Финальная проверка должна пройти с
 `READY_FOR_FINALIZATION`, совпадать с `planRevision` и `planDigest` запуска,
-не заявлять продвижение в эксплуатацию и не содержать нерешённых находок уровня
-MEDIUM и выше.
+не заявлять продвижение в эксплуатацию, не содержать нерешённых находок уровня
+MEDIUM и выше и иметь корректный `agent-completion-signal.v1`. Если принятая
+спецификация объявляет `completionCheck`, завершение дополнительно требует
+квитанцию `agent-completion-check-receipt.v1`, связанную с тем же запуском,
+отпечатком плана, исходной ревизией, доказательствами и проверяющим.
+
+Действия, которые должен выполнить человек, фиксируются состоянием процесса, а
+не текстовым обещанием о завершении. Запуск можно поставить в
+`WAITING_FOR_EXTERNAL_ACTION` и продолжить только после подходящей квитанции
+`agent-external-action-receipt.v1`. Проверка завершения для человеческого
+решения должна ссылаться на эту квитанцию, а не создавать отдельный путь
+одобрения.
 
 Переходы процесса принудительно проверяют `controllerGates` задачи для фаз
 `pre-launch`, `post-attempt`, `pre-acceptance` и `finalization`. Ожидаемые
@@ -613,6 +623,7 @@ SDD-план и независимо проверяй его до готовно
 - [English README](../../README.md)
 - [Матрица поддержки адаптеров](../adapters/support-matrix.md)
 - [Диагностика готовности](../reference/readiness-diagnostics.md)
+- [Проверка завершения](../reference/completion-check.md)
 - [Инструкция по продвижению адаптера](../adapters/live-promotion-runbook.md)
 - [Проверочный список релиза проверенного адаптера](verified-adapter-release-checklist.md)
 - [Modular controller architecture](../architecture/modular-controller.md)

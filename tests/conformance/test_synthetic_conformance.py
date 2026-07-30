@@ -90,6 +90,8 @@ class SyntheticConformanceTests(unittest.TestCase):
         self.assertEqual(baseline["liveModelInvocations"], 0)
         self.assertEqual(replay_plan["liveModelInvocations"], 0)
         self.assertEqual(baseline["qualityRegressionCount"], 0)
+        for scenario in replay_plan["semanticReplay"].values():
+            self.assertIn("qualityCheck", scenario)
 
         expected_runs = (
             len(targets["corpus"])
