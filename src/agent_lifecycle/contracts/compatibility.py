@@ -24,6 +24,11 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "contract policy", "schemaVersion": POLICY_SCHEMA_VERSION, "compatibility": "stable-json"},
     {"command": "contract check", "schemaVersion": VALIDATION_SCHEMA_VERSION, "compatibility": "stable-json"},
     {"command": "metrics cost-check", "schemaVersion": "agent-lifecycle-cost-validation.v1", "compatibility": "stable-json"},
+    {"command": "evidence index", "schemaVersion": "agent-evidence-index.v1", "compatibility": "stable-json"},
+    {"command": "evidence search", "schemaVersion": "agent-evidence-search-summary.v1", "compatibility": "stable-json"},
+    {"command": "import plan", "schemaVersion": "agent-planning-import-result.v1", "compatibility": "stable-json"},
+    {"command": "import check", "schemaVersion": "agent-planning-import-validation.v1", "compatibility": "stable-json"},
+    {"command": "import proposal-check", "schemaVersion": "agent-skill-improvement-proposal-validation.v1", "compatibility": "stable-json"},
 )
 
 REQUIRED_CORE_SCHEMAS: tuple[str, ...] = (
