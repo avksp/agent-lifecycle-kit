@@ -1,4 +1,4 @@
-# Diagnostic Bundles
+# Diagnostic bundles
 
 Diagnostic bundles export a redacted, compact summary from existing lifecycle
 artifacts. `agent-diagnostic-bundle.v1` includes artifact identities, schema

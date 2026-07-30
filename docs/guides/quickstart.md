@@ -3,7 +3,7 @@
 This guide shows the smallest useful source-checkout flow. It performs no live
 model calls and does not write host configuration.
 
-## Install From Source
+## Install from source
 
 ```bash
 python -m pip install -e .
@@ -16,7 +16,7 @@ Without installation, run from the checkout:
 PYTHONPATH=src python -m agent_lifecycle version
 ```
 
-## Check Readiness
+## Check readiness
 
 ```bash
 agent-lifecycle diagnose --no-install-plans
@@ -34,7 +34,7 @@ agent-lifecycle diagnose \
   --no-install-plans
 ```
 
-## Preview Adapter Setup
+## Preview adapter setup
 
 ```bash
 agent-lifecycle adapter install-plan \
@@ -44,7 +44,7 @@ agent-lifecycle adapter install-plan \
 The output is a dry run. It lists files, commands, and operator actions, but it
 does not mutate the host and does not change adapter maturity.
 
-## Run A Plan Gate
+## Run a plan gate
 
 For a frozen plan:
 
@@ -57,7 +57,7 @@ agent-lifecycle plan check \
 The plan remains the source of truth for ownership, write scope, acceptance,
 validation, and evidence expectations.
 
-## Keep Context Small
+## Keep context small
 
 Use the compact profile before handing work to a constrained model:
 

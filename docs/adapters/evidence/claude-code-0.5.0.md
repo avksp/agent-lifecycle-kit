@@ -1,4 +1,4 @@
-# Claude Code 0.5.0 Evidence Summary
+# Claude Code 0.5.0 evidence summary
 
 This is the committed, redacted summary for the Claude Code host-specific
 `VERIFIED` claim. Raw receipts and diagnostics remain local release evidence
@@ -16,7 +16,7 @@ under `work/release-0-5/evidence/` because that tree is intentionally ignored.
 - Public directory approval claimed: false.
 - Universal adapter support claimed: false.
 
-## Gate Results
+## Gate results
 
 | Gate | Result | Key metrics |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ under `work/release-0-5/evidence/` because that tree is intentionally ignored.
 | Live calibration | `PASS` | 14 invocations, 242738 billable tokens, 230.989 seconds |
 | Full ALK lifecycle | `PASS` | `task-start` -> `task-result` -> `task-accept` -> `finalize`, final proof hash `58f0b77c48fee53b0c246e58baf244551f06b4b2322432959b79bbf8bf899ede` |
 
-## Local Raw Evidence
+## Local raw evidence
 
 - `work/release-0-5/evidence/0.5.1-claude-live-promotion/live-host-promotion-plan-validation.json`
 - `work/release-0-5/evidence/0.5.1-claude-live-promotion/preflight/claude-code-preflight-report.json`

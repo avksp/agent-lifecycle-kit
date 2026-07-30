@@ -3,7 +3,7 @@ name: agent-first-planning
 description: Create or revise production-ready SDD plans for agent execution, including clarification, specification, freeze inputs, ownership, budgets, and evidence contracts.
 ---
 
-# Agent First Planning
+# Agent first planning
 
 Use this skill when a request must become an agent-ready implementation plan
 before work starts. The output is a frozen-ready package, not implementation.
@@ -33,7 +33,7 @@ before work starts. The output is a frozen-ready package, not implementation.
 7. Route the candidate plan to `audit-agent-plan`. Revise until it is
    `READY_TO_FREEZE`, explicitly blocked, or the review budget is exhausted.
 
-## Planning Rules
+## Planning rules
 
 - Do not implement code while planning.
 - Do not assign shared integration to a worker by hiding it in another task.

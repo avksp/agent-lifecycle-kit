@@ -1,4 +1,4 @@
-# Adapter Event Capture
+# Adapter event capture
 
 Adapter event capture records host activity as neutral ALK evidence. Adapter
 metadata declares the capability with `adapter-event-stream` and

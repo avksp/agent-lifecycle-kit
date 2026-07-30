@@ -1,4 +1,4 @@
-# Read-Only Status Views
+# Read-only status views
 
 Read-only status views render a compact status summary from existing artifacts.
 `agent-readonly-status-view.v1` records that the view is not source of truth,
