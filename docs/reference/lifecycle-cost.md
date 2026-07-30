@@ -77,6 +77,17 @@ must preserve the configured quality floor for the task shape, SDD tier and
 risk flags. Missing or weak statistics keep confidence low and favor the
 current or minimum safe mode.
 
+When a recommendation is stable, `agent-lifecycle policy tune` can turn it into
+an explicit policy proposal:
+
+```bash
+agent-lifecycle policy tune --report <lifecycle-recommendation.json>
+```
+
+The default command path is read-only. Writing a policy artifact requires both
+`--apply` and `--output`, and the output carries before/after values, rollback
+metadata, regression-signal status and preserved quality constraints.
+
 Modes are `light`, `standard`, `strict` and `release`. Each mode has default
 limits for pipeline token share, pipeline step share, pipeline tokens and
 pipeline steps. If strict or release work intentionally exceeds the default

@@ -40,6 +40,8 @@ read-only unless their own help says otherwise.
   cost report from explicit JSON artifact paths.
 - `agent-lifecycle metrics recommend`: suggest the lightest lifecycle mode that
   preserves the required quality floor.
+- `agent-lifecycle policy tune`: build a read-only policy proposal or write an
+  approved policy artifact with `--apply --output`.
 
 ## Context And Continuity
 
