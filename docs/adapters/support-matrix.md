@@ -103,6 +103,12 @@ receipt and does not promote support on its own.
 report, and `agent-lifecycle adapter install-plan` previews host-local setup
 without writing configuration or changing maturity labels.
 
+The redacted evidence summary index is tracked at
+`docs/adapters/evidence/adapter-evidence-summary.v1.json`. It records which
+summary file supports each source-tree maturity claim. Raw live receipts remain
+host-local and ignored; their absence is a re-review concern, not the same
+condition as a missing tracked summary.
+
 Critical review phases must not silently downgrade to `budget` or
 `local-compact`. A local-only host can satisfy final/security/performance review
 only with an explicit `local-strong-review` or equivalent review-capable binding

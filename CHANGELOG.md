@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.3.0 - 2026-07-30
+
+- Compact root README and Russian README into navigable entry points while
+  moving detailed setup and command reference material into dedicated docs.
+- Added quickstart, adapter install, CLI reference, and source-of-truth
+  documentation.
+- Improved readiness diagnostics so tracked redacted adapter evidence summaries
+  are reported separately from host-local raw receipts.
+
 ## 1.2.0 - 2026-07-30
 
 - Added optional evidence index contracts and `agent-lifecycle evidence
