@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "agent-lifecycle-baselines.v1",
+  "profileId": "lifecycle-baselines.v1",
+  "minimumReportsForConfidence": 2,
+  "modeOrder": [
+    "light",
+    "standard",
+    "strict",
+    "release"
+  ],
+  "taskShapes": {
+    "docs-only": {
+      "defaultMode": "light",
+      "minMode": "light",
+      "overheadWarningShare": 0.22,
+      "coordinationWarningShare": 0.12,
+      "reviewStepWarningThreshold": 2,
+      "highRisk": false
+    },
+    "small-fix": {
+      "defaultMode": "standard",
+      "minMode": "light",
+      "overheadWarningShare": 0.28,
+      "coordinationWarningShare": 0.16,
+      "reviewStepWarningThreshold": 3,
+      "highRisk": false
+    },
+    "feature": {
+      "defaultMode": "standard",
+      "minMode": "standard",
+      "overheadWarningShare": 0.34,
+      "coordinationWarningShare": 0.18,
+      "reviewStepWarningThreshold": 4,
+      "highRisk": false
+    },
+    "release": {
+      "defaultMode": "release",
+      "minMode": "strict",
+      "overheadWarningShare": 0.55,
+      "coordinationWarningShare": 0.24,
+      "reviewStepWarningThreshold": 8,
+      "highRisk": true
+    },
+    "adapter": {
+      "defaultMode": "strict",
+      "minMode": "strict",
+      "overheadWarningShare": 0.45,
+      "coordinationWarningShare": 0.22,
+      "reviewStepWarningThreshold": 6,
+      "highRisk": true
+    },
+    "architecture": {
+      "defaultMode": "strict",
+      "minMode": "strict",
+      "overheadWarningShare": 0.45,
+      "coordinationWarningShare": 0.22,
+      "reviewStepWarningThreshold": 6,
+      "highRisk": true
+    }
+  },
+  "riskFloors": {
+    "security": "strict",
+    "contracts": "strict",
+    "adapter": "strict",
+    "architecture": "strict",
+    "release": "release",
+    "S2": "strict"
+  },
+  "productionPromotionClaimed": false
+}

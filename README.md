@@ -18,6 +18,7 @@ visible and bounded.
 - Compact context profiles and objective snapshots for small local models.
 - Cost and usage accounting that separates product work from lifecycle checks.
 - Deterministic cost reports from explicit lifecycle artifacts.
+- Advisory lifecycle mode recommendations from accumulated cost reports.
 - Read-only diagnostics for the current checkout and adapter readiness.
 
 ## Quick Start

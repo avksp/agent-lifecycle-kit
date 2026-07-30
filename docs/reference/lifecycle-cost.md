@@ -60,12 +60,29 @@ The compact summary uses `agent-lifecycle-cost-summary.v1` and also carries the
 standard compact-context fields, so it can be passed directly to
 `agent-lifecycle context check`.
 
+Build an advisory mode recommendation from accumulated reports with:
+
+```bash
+agent-lifecycle metrics recommend \
+  --report <first-cost-report.json> \
+  --report <second-cost-report.json> \
+  --task-shape feature \
+  --current-mode standard \
+  --out <lifecycle-recommendation.json> \
+  --summary-out <compact-recommendation-summary.json>
+```
+
+Recommendations are advisory only. They never change policy automatically and
+must preserve the configured quality floor for the task shape, SDD tier and
+risk flags. Missing or weak statistics keep confidence low and favor the
+current or minimum safe mode.
+
 Modes are `light`, `standard`, `strict` and `release`. Each mode has default
 limits for pipeline token share, pipeline step share, pipeline tokens and
 pipeline steps. If strict or release work intentionally exceeds the default
 pipeline limits, the report needs `overLimitReason`.
 
 Small local models can use the compact validation receipt to decide whether the
-process is still helping the task. Larger models can inspect the full generated
-report, source artifact digests, underlying tests, reviews and final proof
-without losing quality.
+process is still helping the task and which mode is reasonable next. Larger
+models can inspect the full generated report, source artifact digests,
+underlying tests, reviews and final proof without losing quality.
