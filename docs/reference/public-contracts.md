@@ -90,3 +90,28 @@ approval.
 receipt/session artifacts. Results keep artifact digests and report
 `chainVerified` only when a supplied hash chain contains the same path and
 digest; otherwise they are `chainUnchecked`.
+
+## Runner recovery and optional cross-check
+
+Runner recovery contracts are additive receipts for multi-attempt work. They do
+not replace workflow state or the controlled runner state.
+
+Stable schema ids:
+
+- `agent-runner-attempt-snapshot-receipt.v1`
+- `agent-runner-attempt-snapshot-receipt-validation.v1`
+- `agent-worker-lease-receipt.v1`
+- `agent-worker-lease-receipt-validation.v1`
+- `agent-phase-resource-measurement.v1`
+- `agent-phase-resource-measurement-validation.v1`
+- `agent-cross-check-profile.v1`
+- `agent-cross-check-profile-validation.v1`
+- `agent-cross-check-receipt.v1`
+- `agent-cross-check-receipt-validation.v1`
+
+`agent-phase-resource-measurement.v1` reuses the usage-export envelope for
+phase-level tokens, duration and resource counters. It rejects monetary phase
+fields; USD-cost is not required for local or non-metered models.
+
+`agent-cross-check-profile.v1` is disabled by default, token/resource-capped and
+advisory unless a plan explicitly opts into blocking use.
