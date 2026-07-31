@@ -40,6 +40,13 @@ HOSTS = {
         "runnerStatus": "bounded-live-runner",
         "eventBridgeDispatch": "gemini-stream-json-to-host-operation-receipt",
     },
+    "grok-build": {
+        "descriptorHost": "grok-build",
+        "secondary": True,
+        "nativeProjection": "acp-probe-gated-cli",
+        "modelRouting": True,
+        "hostCapability": "supported-acp-probe",
+    },
     "hermes": {
         "descriptorHost": "hermes",
         "registry": "hermes.registry.json",
@@ -61,6 +68,19 @@ HOSTS = {
         "nativeManifest": "opencode.json",
         "modelRouting": True,
         "maturity": "VERIFIED",
+    },
+    "openinterpreter": {
+        "descriptorHost": "openinterpreter",
+        "secondary": True,
+        "nativeProjection": "host-local-compatible-cli",
+        "modelRouting": True,
+    },
+    "pi": {
+        "descriptorHost": "pi",
+        "secondary": True,
+        "nativeProjection": "rpc-json-skills",
+        "modelRouting": True,
+        "hostCapability": "unsupported-alt-protocol",
     },
     "qwen-code": {
         "descriptorHost": "qwen-code",
@@ -112,6 +132,12 @@ class HostAdapterTests(unittest.TestCase):
                         self.assertEqual(projection["runner"]["status"], "fail-closed-skeleton")
                         self.assertEqual(projection["eventBridge"]["runtimeDispatch"], expected_dispatch)
                         self.assertIn("fail closed", (adapter_root / "event-bridge.md").read_text(encoding="utf-8"))
+                elif config.get("secondary"):
+                    descriptor = load_json(adapter_root / "adapter.descriptor.json")
+                    readme = (adapter_root / "README.md").read_text(encoding="utf-8")
+                    self.assertEqual(descriptor["nativeProjection"], config["nativeProjection"])
+                    self.assertEqual(descriptor["maturity"], "EXPERIMENTAL")
+                    self.assertIn("EXPERIMENTAL", readme)
                 else:
                     manifest = load_json(adapter_root / config["nativeManifest"])
                     self.assertEqual(manifest["name"], config["nativeChecks"]["name"])
@@ -164,6 +190,17 @@ class HostAdapterTests(unittest.TestCase):
                     if host == "opencode":
                         self.assertEqual(descriptor["modelRouting"]["profileSupport"], "host-local")
                         self.assertEqual(descriptor["modelRouting"]["unsupportedClassPolicy"], "fail-closed")
+                if config.get("hostCapability") == "supported-acp-probe":
+                    capability = descriptor["hostCapabilities"][0]
+                    self.assertEqual(capability["capabilityId"], "acp")
+                    self.assertEqual(capability["support"], "supported")
+                    self.assertEqual(capability["evidencePolicy"], "probe-required")
+                    self.assertFalse(capability["probe"]["liveCallsStarted"])
+                if config.get("hostCapability") == "unsupported-alt-protocol":
+                    capability = descriptor["hostCapabilities"][0]
+                    self.assertEqual(capability["capabilityId"], "acp")
+                    self.assertEqual(capability["support"], "unsupported")
+                    self.assertEqual(capability["evidencePolicy"], "not-claimed")
 
     def test_offline_conformance_descriptor_passes_without_live_runtime(self) -> None:
         for host in HOSTS:

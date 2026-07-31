@@ -1,0 +1,34 @@
+{
+  "adapterId": "grok-build",
+  "blockers": [
+    {
+      "code": "acp-executable-missing"
+    },
+    {
+      "code": "acp-probe-failed"
+    }
+  ],
+  "capabilityId": "acp",
+  "checks": [
+    {
+      "name": "capability-declaration",
+      "status": "PASS"
+    },
+    {
+      "name": "executable-present",
+      "status": "FAIL"
+    },
+    {
+      "name": "acp-probe",
+      "status": "FAIL"
+    },
+    {
+      "name": "invocation-contract",
+      "status": "PASS"
+    }
+  ],
+  "host": "grok-build",
+  "liveCallsStarted": false,
+  "schemaVersion": "agent-acp-probe-receipt.v1",
+  "status": "FAIL"
+}

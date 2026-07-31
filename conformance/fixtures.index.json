@@ -1,13 +1,16 @@
 {
-  "schemaVersion": "agent-lifecycle-fixtures-index.v1",
-  "indexId": "synthetic-conformance-fixtures-v1",
-  "syntheticOnly": true,
-  "liveModelInvocations": 0,
+  "contextProfiles": [
+    {
+      "bytes": 3408,
+      "path": "profiles/small-context-profile.v1.json",
+      "sha256": "2b8c9847e12c7c41550d3fe919d4001e1125a3ce9b50b77dd11ca11d7f58e7f8"
+    }
+  ],
   "coreProfiles": [
     {
+      "bytes": 3481,
       "path": "conformance/core/adapter-baseline.v1.json",
-      "sha256": "8a411920115322764174af9baeee76d1fa23545ecdc597e3dfaddeb459b1f086",
-      "bytes": 2897
+      "sha256": "2a2cf659a4db7dd5489c52aeceb38551e76ec683c8177ce8a5f5135574b9a2a9"
     },
     {
       "bytes": 1412,
@@ -25,13 +28,6 @@
       "sha256": "a09c1cc7de3e860da6ba51781100a056c71b29ba1b2915914eca07f3bec7e4e4"
     }
   ],
-  "contextProfiles": [
-    {
-      "bytes": 3408,
-      "path": "profiles/small-context-profile.v1.json",
-      "sha256": "2b8c9847e12c7c41550d3fe919d4001e1125a3ce9b50b77dd11ca11d7f58e7f8"
-    }
-  ],
   "evaluations": [
     {
       "bytes": 7155,
@@ -46,9 +42,9 @@
   ],
   "fixtures": [
     {
+      "bytes": 2108,
       "path": "fixtures/synthetic/negative-matrix-01.json",
-      "sha256": "5c14787ab6ef9c59547ee9cd20262680db870531ec0cbcd7b96fc22ee563a87c",
-      "bytes": 2108
+      "sha256": "5c14787ab6ef9c59547ee9cd20262680db870531ec0cbcd7b96fc22ee563a87c"
     },
     {
       "bytes": 876,
@@ -85,5 +81,61 @@
       "path": "fixtures/synthetic/s2-security-01.json",
       "sha256": "febe7b0a9aa117b66428c8511fa9335800a7f17de55d237763475739ec4e8f37"
     }
-  ]
+  ],
+  "indexId": "synthetic-conformance-fixtures-v1",
+  "liveModelInvocations": 0,
+  "schemaVersion": "agent-lifecycle-fixtures-index.v1",
+  "secondaryAdapterFixtures": [
+    {
+      "bytes": 471,
+      "path": "conformance/adapters/grok-build/offline-baseline.json",
+      "sha256": "05cde8013b5aa9a6260db4e019a26d745cd8a15d87a77200e5bf36536b79d0ac"
+    },
+    {
+      "bytes": 3144,
+      "path": "conformance/adapters/grok-build/event-stream.json",
+      "sha256": "17c3a3c3adede330a74c2d0e2f2f71a91528c3bd4322badb843c52307edd4e56"
+    },
+    {
+      "bytes": 975,
+      "path": "conformance/adapters/grok-build/event-stream-receipt.json",
+      "sha256": "24aa79d7c8492cc2c908a1d440e3dccb1880b6ec4ce445f1d8ea271895a55f52"
+    },
+    {
+      "bytes": 491,
+      "path": "conformance/adapters/openinterpreter/offline-baseline.json",
+      "sha256": "77d4984317de59ac1a1a71ce9902850a210501b9111d234cef5ab35c3cf76af3"
+    },
+    {
+      "bytes": 3274,
+      "path": "conformance/adapters/openinterpreter/event-stream.json",
+      "sha256": "7d57c8df2c0b4dd252ca4e7da20ad26611e11ca37c292a7cf11535a02a8bee02"
+    },
+    {
+      "bytes": 995,
+      "path": "conformance/adapters/openinterpreter/event-stream-receipt.json",
+      "sha256": "cc9a07baa5fa140c0787d44729b5623e7e5a93384133ad21463ccceb3508d919"
+    },
+    {
+      "bytes": 439,
+      "path": "conformance/adapters/pi/offline-baseline.json",
+      "sha256": "0b2c28045cafd9165b901a97aac692ce3f7e2b6c057c6b902eb28c2f11058cf6"
+    },
+    {
+      "bytes": 2936,
+      "path": "conformance/adapters/pi/event-stream.json",
+      "sha256": "f5899c4adc5d164cb6a194d074ea08dd325ecee81bc434a5bcd9be02502080f9"
+    },
+    {
+      "bytes": 943,
+      "path": "conformance/adapters/pi/event-stream-receipt.json",
+      "sha256": "f46f7b831eaf20a870dd94b6f7263e4e09d24119c61f63b6f27700206a93e353"
+    },
+    {
+      "bytes": 599,
+      "path": "conformance/adapters/grok-build/grok-acp-probe-negative-fixture.json",
+      "sha256": "33ac4b3173b197e96f75ee29ddfb0e2a2f1a52fc5f8de400f357f5b128a62ff5"
+    }
+  ],
+  "syntheticOnly": true
 }
