@@ -13,6 +13,7 @@ and does not depend on a source project.
 - [Adapter support matrix](adapters/support-matrix.md)
 - [Adapter install](adapters/install.md)
 - [Adapter live-promotion runbook](adapters/live-promotion-runbook.md)
+- [Goose adapter](adapters/goose.md)
 - [Grok Build adapter](adapters/grok-build.md)
 - [OpenInterpreter adapter](adapters/openinterpreter.md)
 - [Pi adapter](adapters/pi.md)

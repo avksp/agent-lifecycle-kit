@@ -152,6 +152,23 @@ gemini --version
 Gemini CLI remains `EXPERIMENTAL` until accepted live conformance, usage
 calibration, and lifecycle proof exist for a concrete host range.
 
+## Goose
+
+Files:
+
+- `adapters/goose/adapter.descriptor.json`
+- `adapters/goose/capabilities.manifest.json`
+
+Confirm the host CLI and keep the ACP probe fail-closed:
+
+```bash
+goose --help
+agent-lifecycle adapter install-plan --descriptor adapters/goose/adapter.descriptor.json
+```
+
+Goose remains `EXPERIMENTAL` until accepted live host conformance, usage
+calibration, and lifecycle proof exist for a concrete host range.
+
 ## Kimi Code
 
 Files:
@@ -171,6 +188,35 @@ kimi --version
 
 Kimi Code remains `EXPERIMENTAL` until provider/model configuration, live
 conformance, usage calibration, and lifecycle proof are accepted.
+
+## Grok Build
+
+```bash
+grok build --help
+agent-lifecycle adapter install-plan --descriptor adapters/grok-build/adapter.descriptor.json
+```
+
+Grok Build remains `EXPERIMENTAL`: the ACP path must pass a local probe, and a
+failed probe is recorded as fail-closed evidence.
+
+## OpenInterpreter
+
+```bash
+interpreter --version
+agent-lifecycle adapter install-plan --descriptor adapters/openinterpreter/adapter.descriptor.json
+```
+
+OpenInterpreter is a host-local compatible CLI projection without a live
+promotion claim.
+
+## Pi
+
+```bash
+agent-lifecycle adapter install-plan --descriptor adapters/pi/adapter.descriptor.json
+```
+
+Pi is represented as RPC/JSON plus AGENTS/agentskills projection. Offline
+fixtures do not promote adapter maturity.
 
 ## Promotion boundary
 

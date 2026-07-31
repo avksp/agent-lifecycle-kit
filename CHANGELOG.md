@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.15.0 - 2026-07-31
+
+- Completed adapter inventory and promotion-gate coverage for all 12 adapter
+  descriptors.
+- Added Goose to root, English and Russian adapter lists and install docs.
+- Added redacted EXPERIMENTAL evidence summaries for Goose, Grok Build,
+  OpenInterpreter and Pi without claiming live promotion.
+- Tightened docs, support-matrix and evidence-index validators so secondary
+  adapters cannot be omitted from release gates.
+
 ## 1.14.0 - 2026-07-31
 
 - Added optional Bug Forensics / Defect Repair profile contracts and helpers.
