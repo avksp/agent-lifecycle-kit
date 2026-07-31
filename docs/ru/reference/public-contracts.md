@@ -27,6 +27,14 @@
 - `agent-import-dialect-profile.v1`: профиль внешнего dialect import.
 - `agent-episode-index.v1`: rebuildable индекс receipt/session episodes.
 - `agent-episode-retrieval.v1`: bounded retrieval result с digest provenance.
+- `agent-runner-attempt-snapshot-receipt.v1`: receipt snapshot/restore/abandon
+  и selected-attempt metadata.
+- `agent-worker-lease-receipt.v1`: receipt lease/heartbeat state worker-а.
+- `agent-phase-resource-measurement.v1`: phase-level tokens/resources через
+  usage export envelope без обязательного USD-cost.
+- `agent-cross-check-profile.v1`: optional cross-check profile, выключенный по
+  умолчанию и capped в tokens/resources.
+- `agent-cross-check-receipt.v1`: receipt дополнительной проверки.
 - `agent-lifecycle-policy-proposal.v1`: предложение по настройке правил.
 
 ## Правило совместимости
@@ -53,3 +61,7 @@ check`. Изменение контракта без тестов и докум�
 переданным receipt/session artifacts. Result получает `chainVerified` только
 при совпадении path и digest с hash-chain entry; иначе state остаётся
 `chainUnchecked`.
+
+Runner recovery receipts добавляют evidence для нескольких попыток, но не
+заменяют workflow state. Cross-check profile остаётся advisory и opt-in, пока
+план явно не требует blocking cross-check.
