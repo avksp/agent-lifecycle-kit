@@ -166,8 +166,9 @@ goose --help
 agent-lifecycle adapter install-plan --descriptor adapters/goose/adapter.descriptor.json
 ```
 
-Goose remains `EXPERIMENTAL` until accepted live host conformance, usage
-calibration, and lifecycle proof exist for a concrete host range.
+Goose is host-specific `VERIFIED` only for Goose `1.45.0` on the tested local
+ZAI GLM 5.2 binding. Live promotion used bounded no-session/no-profile
+invocations with explicit provider/model selection and clean-worktree checks.
 
 ## Kimi Code
 

@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "4c71d5b5d78b6505d5b83defc0207e3140ea1a8db34e4b22e3b14e6f7f7cb1dd",
+  "descriptorDigest": "9b32b085031a690f3ea9e7cca6867e7a5202c75b5948c10a5d03fc07e164d4f4",
   "eventCapture": {
     "categories": [
       "command",
@@ -170,10 +170,10 @@
       "transport": "acp"
     }
   ],
-  "maturity": "EXPERIMENTAL",
+  "maturity": "VERIFIED",
   "modelRouting": {
     "attemptRoutePolicy": "must-execute-or-fail-closed",
-    "liveVerified": false,
+    "liveVerified": true,
     "profileSupport": "host-local",
     "providerModelNamesInCore": false,
     "unsupportedClassPolicy": "fail-closed",
@@ -181,7 +181,26 @@
   },
   "promotion": {
     "productionPromotionClaimed": false,
-    "verifiedRequiresLiveTestedHostRange": true
+    "verifiedRequiresLiveTestedHostRange": true,
+    "liveTestedHostRange": {
+      "host": "goose",
+      "minimumVersion": "1.45.0",
+      "maximumVersion": "1.45.0",
+      "evidence": [
+        "docs/adapters/evidence/goose-live-verified.md",
+        "work/release-1-16/evidence/preflight/goose-preflight-report.json",
+        "work/release-1-16/evidence/goose-containment-receipt.json",
+        "work/release-1-16/evidence/live-host-receipts/goose.json",
+        "work/release-1-16/evidence/live-host-conformance-goose.json",
+        "work/release-1-16/evidence/live-calibration-receipts/goose.json",
+        "work/release-1-16/evidence/live-calibration-verification-goose.json",
+        "work/release-1-16/evidence/goose/full-lifecycle/final/final-proof-r5.json"
+      ],
+      "testedAt": "2026-07-31",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "87fb1ce58612efbd2121d8eb56f9d54de8fbbcfb"
+    }
   },
   "runtimeBoundary": {
     "hostSpecificCode": "adapter-owned",
