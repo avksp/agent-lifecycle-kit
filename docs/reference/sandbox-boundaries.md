@@ -1,0 +1,75 @@
+# Sandbox boundaries
+
+Sandbox boundaries are optional, schema-backed runtime evidence for filesystem,
+network, process and environment containment. They are separate from git
+write-scope governance.
+
+## Boundary split
+
+`agent-worktree-attempt-receipt.v1` proves that a task changed only allowed
+repository paths in an isolated worktree. It does not prove that the host
+runtime blocked network access, process spawning, environment reads or
+filesystem paths outside the repository.
+
+`agent-sandbox-receipt.v1` records runtime containment:
+
+- `filesystem`: host or OS limits outside the allowed runtime filesystem
+  boundary.
+- `network`: denied, filtered or otherwise governed network access.
+- `process`: process spawning and child-process controls.
+- `environment`: environment variable and secret exposure controls.
+- `enforcement.source`: the authority that enforced the boundary, such as
+  `HOST`, `OS`, `CONTAINER`, `ADAPTER`, `EXTERNAL`, `UNKNOWN` or
+  `UNSUPPORTED`.
+
+Unknown support is explicit. A receipt or adapter capability may validate with
+`status: UNKNOWN`, but a high-risk task that requires sandbox evidence accepts
+only configured passing statuses, `PASS` by default.
+
+## Policy
+
+`agent-sandbox-requirement.v1` is fail closed. The default policy requires a
+passing sandbox receipt for high-risk task classes such as `S2`, `security`,
+`release`, `external-environment`, `architecture` and `performance`.
+
+A task can also opt in directly:
+
+```json
+{
+  "id": "WS-security-01",
+  "tier": "S1",
+  "executionPolicy": {
+    "sandbox": {
+      "required": true
+    }
+  }
+}
+```
+
+If sandbox evidence is required and missing, validation returns
+`sandbox-receipt-required`. If the receipt is structurally valid but has
+`sandboxStatus: UNKNOWN`, validation returns `sandbox-receipt-not-accepted`.
+
+## Adapter capabilities
+
+Adapter descriptors and capability manifests use
+`agent-sandbox-capability.v1`. Existing adapters currently declare
+`status: UNKNOWN` and `verified: false` for sandbox support unless a live
+sandbox receipt proves otherwise. This avoids treating adapter maturity as an
+OS sandbox claim.
+
+An adapter may become more specific only with evidence for every runtime
+boundary and enforcement source. Capability manifests must match the descriptor
+field exactly; drift fails validation.
+
+## Public contracts
+
+- `agent-sandbox-receipt.v1`
+- `agent-sandbox-receipt-validation.v1`
+- `agent-sandbox-requirement.v1`
+- `agent-sandbox-requirement-validation.v1`
+- `agent-sandbox-capability.v1`
+- `agent-sandbox-capability-validation.v1`
+
+None of these contracts claim production promotion. Production promotion still
+requires the normal release evidence path.

@@ -46,3 +46,24 @@ Stable schema ids:
 `agent-fix-impact-receipt.v1` is the canonical fix-impact contract. It binds
 changed files, related finding ids, root-cause digests, behavior changes,
 preserved contracts, validation evidence and collateral-damage checks.
+
+## Sandbox boundaries
+
+The sandbox-boundary surface is additive and opt-in for tasks that require
+runtime containment evidence.
+
+Stable schema ids:
+
+- `agent-sandbox-receipt.v1`
+- `agent-sandbox-receipt-validation.v1`
+- `agent-sandbox-requirement.v1`
+- `agent-sandbox-requirement-validation.v1`
+- `agent-sandbox-capability.v1`
+- `agent-sandbox-capability-validation.v1`
+
+`agent-sandbox-receipt.v1` is distinct from
+`agent-worktree-attempt-receipt.v1`: worktree receipts govern repository write
+scope, while sandbox receipts govern runtime filesystem, network, process,
+environment and enforcement-source evidence. `UNKNOWN` is a valid explicit
+capability state, but high-risk required policy accepts only configured passing
+sandbox statuses.

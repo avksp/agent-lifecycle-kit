@@ -37,6 +37,9 @@ flowchart LR
 - Дополнительный proof-integrity слой для багфиксов и рискованных финальных
   подтверждений: стабильные findings, digest root cause, fix-impact receipts и
   hash chain.
+- Дополнительные sandbox receipts для рискованных задач: filesystem, network,
+  process, environment и enforcement source фиксируются отдельно от git
+  write-scope.
 - Рекомендации по режиму жизненного цикла строятся по накопленной статистике.
 - Предложения по настройке правил остаются рекомендательными и применяются
   только явно, с возможностью отката.
@@ -123,6 +126,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
   `agent-follow-up-summary.v1`.
 - Изоляция рабочего дерева: `agent-worktree-isolation-policy.v1`,
   `agent-worktree-attempt-receipt.v1`.
+- Sandbox boundaries: `agent-sandbox-receipt.v1`,
+  `agent-sandbox-requirement.v1`, `agent-sandbox-capability.v1`.
 - События адаптера: `agent-adapter-event-stream-receipt.v1`,
   `agent-adapter-event-capture-validation.v1`.
 - Проверочные вердикты: `agent-review-verdict.v1`,
@@ -152,6 +157,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
   зрелость адаптера.
 - Публичные заявления релиза опираются только на отслеживаемые файлы и
   обезличенные резюме подтверждений.
+- Git write-scope ограничивает пути репозитория; sandbox receipts описывают
+  runtime containment и могут оставаться `UNKNOWN` до отдельной проверки.
 
 ## Документы
 
@@ -165,6 +172,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - [Учёт расхода жизненного цикла](reference/lifecycle-cost.md)
 - [Экспорт использования](reference/usage-export.md)
 - [Целостность подтверждений](reference/evidence-integrity.md)
+- [Sandbox boundaries](reference/sandbox-boundaries.md)
 - [Безопасность релиза](security/release-security.md)
 
 ## Лицензия

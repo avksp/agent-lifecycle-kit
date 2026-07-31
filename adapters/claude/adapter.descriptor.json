@@ -46,21 +46,121 @@
     "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
     "liveVerified": true
   },
+  "sandboxCapabilities": {
+    "schemaVersion": "agent-sandbox-capability.v1",
+    "status": "UNKNOWN",
+    "boundaries": {
+      "filesystem": {
+        "mode": "UNKNOWN",
+        "evidenceIds": [],
+        "details": {}
+      },
+      "network": {
+        "mode": "UNKNOWN",
+        "evidenceIds": [],
+        "details": {}
+      },
+      "process": {
+        "mode": "UNKNOWN",
+        "evidenceIds": [],
+        "details": {}
+      },
+      "environment": {
+        "mode": "UNKNOWN",
+        "evidenceIds": [],
+        "details": {}
+      }
+    },
+    "enforcement": {
+      "source": "UNKNOWN",
+      "verified": false,
+      "evidenceIds": [],
+      "details": {}
+    },
+    "writeScopeBoundary": {
+      "gitWriteScopeGovernedSeparately": true,
+      "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
+      "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
+    },
+    "verified": false,
+    "evidenceIds": [],
+    "notes": [
+      "Sandbox support is not live-verified for this adapter descriptor.",
+      "Git write-scope governance is separate from OS/process/network/environment containment."
+    ],
+    "productionPromotionClaimed": false
+  },
   "operations": [
-    {"name": "install", "mapping": "claude-plugin-install", "offlineConformance": "deterministic"},
-    {"name": "discover", "mapping": "claude-skill-discovery", "offlineConformance": "deterministic"},
-    {"name": "validate-envelope", "mapping": "core-schema-validation", "offlineConformance": "deterministic"},
-    {"name": "launch", "mapping": "host-agent-launch", "offlineConformance": "synthetic"},
-    {"name": "model-route-execution", "mapping": "attemptModelRoute-to-host-model", "offlineConformance": "synthetic"},
-    {"name": "wait", "mapping": "host-bounded-wait", "offlineConformance": "synthetic"},
-    {"name": "cancel", "mapping": "host-cancel-request", "offlineConformance": "synthetic"},
-    {"name": "resume", "mapping": "workflow-state-resume", "offlineConformance": "synthetic"},
-    {"name": "tool-execution", "mapping": "host-tool-call", "offlineConformance": "synthetic"},
-    {"name": "adapter-event-stream", "mapping": "agent-adapter-event.v1", "offlineConformance": "deterministic"},
-    {"name": "result-collection", "mapping": "task-result-artifact", "offlineConformance": "deterministic"},
-    {"name": "usage-attestation", "mapping": "host-usage-ledger", "offlineConformance": "synthetic"},
-    {"name": "task-audit", "mapping": "audit-plan-implementation", "offlineConformance": "deterministic"},
-    {"name": "final-audit", "mapping": "audit-plan-implementation", "offlineConformance": "deterministic"}
+    {
+      "name": "install",
+      "mapping": "claude-plugin-install",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "discover",
+      "mapping": "claude-skill-discovery",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "validate-envelope",
+      "mapping": "core-schema-validation",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "launch",
+      "mapping": "host-agent-launch",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "model-route-execution",
+      "mapping": "attemptModelRoute-to-host-model",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "wait",
+      "mapping": "host-bounded-wait",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "cancel",
+      "mapping": "host-cancel-request",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "resume",
+      "mapping": "workflow-state-resume",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "tool-execution",
+      "mapping": "host-tool-call",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "adapter-event-stream",
+      "mapping": "agent-adapter-event.v1",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "result-collection",
+      "mapping": "task-result-artifact",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "usage-attestation",
+      "mapping": "host-usage-ledger",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "name": "task-audit",
+      "mapping": "audit-plan-implementation",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "name": "final-audit",
+      "mapping": "audit-plan-implementation",
+      "offlineConformance": "deterministic"
+    }
   ],
   "eventCapture": {
     "status": "DECLARED",
