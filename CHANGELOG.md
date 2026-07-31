@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.8.0 - 2026-07-31
+
+- Added schema-backed usage/session export reports with receipt digests,
+  tokens, steps, resources, durations, adapter ids and budget decisions.
+- Added `agent-lifecycle metrics usage-export` with deterministic JSON and
+  table output.
+- Kept `cost_usd` optional and host-reported only; local model usage remains
+  token/resource based.
+- Added redaction checks and usage export documentation.
+
 ## 1.7.0 - 2026-07-31
 
 - Added schema-backed neutral host capability declarations for ACP support.

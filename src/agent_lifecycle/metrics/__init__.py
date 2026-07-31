@@ -15,18 +15,28 @@ from agent_lifecycle.metrics.recommendations import (
     validate_lifecycle_baselines,
 )
 from agent_lifecycle.metrics.regression_signals import summarize_regression_signals
+from agent_lifecycle.metrics.usage_export import (
+    build_usage_export,
+    require_usage_export_pass,
+    usage_export_totals,
+    validate_usage_export,
+)
 
 __all__ = [
     "COST_CATEGORIES",
     "DEFAULT_MODE_LIMITS",
+    "build_usage_export",
     "build_lifecycle_cost_summary",
     "build_lifecycle_recommendation_summary",
     "generate_lifecycle_cost_report",
     "recommend_lifecycle_mode",
     "require_lifecycle_cost_pass",
     "require_lifecycle_recommendation_pass",
+    "require_usage_export_pass",
     "summarize_lifecycle_overhead",
     "summarize_regression_signals",
+    "usage_export_totals",
     "validate_lifecycle_baselines",
     "validate_lifecycle_cost_report",
+    "validate_usage_export",
 ]
