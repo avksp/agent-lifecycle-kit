@@ -1,0 +1,106 @@
+[
+  {
+    "adapterId": "openinterpreter",
+    "eventId": "offline-event-capture-openinterpreter-01",
+    "eventType": "session.started",
+    "host": "openinterpreter",
+    "operationId": "offline-event-capture-openinterpreter",
+    "payload": {
+      "category": "lifecycle-transition"
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 1,
+    "status": "INFO",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "openinterpreter",
+    "eventId": "offline-event-capture-openinterpreter-02",
+    "eventType": "task.launched",
+    "host": "openinterpreter",
+    "operationId": "offline-event-capture-openinterpreter",
+    "payload": {
+      "category": "lifecycle-transition"
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 2,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "openinterpreter",
+    "eventId": "offline-event-capture-openinterpreter-03",
+    "eventType": "command.completed",
+    "host": "openinterpreter",
+    "operationId": "offline-event-capture-openinterpreter",
+    "payload": {
+      "category": "command",
+      "command": "agent-lifecycle adapter event-check",
+      "exitCode": 0
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 3,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "openinterpreter",
+    "eventId": "offline-event-capture-openinterpreter-04",
+    "eventType": "writes.summarized",
+    "host": "openinterpreter",
+    "operationId": "offline-event-capture-openinterpreter",
+    "payload": {
+      "category": "file-change",
+      "changedFiles": [
+        "adapters/openinterpreter/adapter.descriptor.json"
+      ]
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 4,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "openinterpreter",
+    "eventId": "offline-event-capture-openinterpreter-05",
+    "eventType": "usage.reported",
+    "host": "openinterpreter",
+    "operationId": "offline-event-capture-openinterpreter",
+    "payload": {
+      "category": "model-usage",
+      "inputTokens": 64,
+      "outputTokens": 16
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 5,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "openinterpreter",
+    "eventId": "offline-event-capture-openinterpreter-06",
+    "eventType": "task.completed",
+    "host": "openinterpreter",
+    "operationId": "offline-event-capture-openinterpreter",
+    "payload": {
+      "category": "lifecycle-transition",
+      "resultPath": "conformance/adapters/openinterpreter/offline-baseline.json"
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 6,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  }
+]

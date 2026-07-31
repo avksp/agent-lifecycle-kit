@@ -1,0 +1,106 @@
+[
+  {
+    "adapterId": "pi",
+    "eventId": "offline-event-capture-pi-01",
+    "eventType": "session.started",
+    "host": "pi",
+    "operationId": "offline-event-capture-pi",
+    "payload": {
+      "category": "lifecycle-transition"
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 1,
+    "status": "INFO",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "pi",
+    "eventId": "offline-event-capture-pi-02",
+    "eventType": "task.launched",
+    "host": "pi",
+    "operationId": "offline-event-capture-pi",
+    "payload": {
+      "category": "lifecycle-transition"
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 2,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "pi",
+    "eventId": "offline-event-capture-pi-03",
+    "eventType": "command.completed",
+    "host": "pi",
+    "operationId": "offline-event-capture-pi",
+    "payload": {
+      "category": "command",
+      "command": "agent-lifecycle adapter event-check",
+      "exitCode": 0
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 3,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "pi",
+    "eventId": "offline-event-capture-pi-04",
+    "eventType": "writes.summarized",
+    "host": "pi",
+    "operationId": "offline-event-capture-pi",
+    "payload": {
+      "category": "file-change",
+      "changedFiles": [
+        "adapters/pi/adapter.descriptor.json"
+      ]
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 4,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "pi",
+    "eventId": "offline-event-capture-pi-05",
+    "eventType": "usage.reported",
+    "host": "pi",
+    "operationId": "offline-event-capture-pi",
+    "payload": {
+      "category": "model-usage",
+      "inputTokens": 64,
+      "outputTokens": 16
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 5,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "pi",
+    "eventId": "offline-event-capture-pi-06",
+    "eventType": "task.completed",
+    "host": "pi",
+    "operationId": "offline-event-capture-pi",
+    "payload": {
+      "category": "lifecycle-transition",
+      "resultPath": "conformance/adapters/pi/offline-baseline.json"
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 6,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  }
+]

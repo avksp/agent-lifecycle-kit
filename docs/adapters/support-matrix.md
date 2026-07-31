@@ -6,7 +6,7 @@ source tree includes host-local model selection, budget-mode controls,
 lifecycle gates, Claude Code live promotion evidence, Codex CLI live promotion
 evidence, reusable promotion guidance, adapter capability manifests, safe
 adapter inspection, and ordered terminal outcomes for OpenCode, Hermes, Cursor,
-Gemini CLI, Qwen Code, and Kimi Code.
+Gemini CLI, Qwen Code, Kimi Code, Grok Build, OpenInterpreter, and Pi.
 `EXPERIMENTAL` means the adapter has an offline projection and deterministic
 contract tests. `VERIFIED` is host-specific and requires bounded live host
 conformance, live calibration, and lifecycle proof evidence.
@@ -24,9 +24,12 @@ adapter by itself.
 | Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
 | Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | Cursor Agent 2026.07.23-e383d2b safe inspection passed on local Free tier; bounded smoke cannot promote without usage/cost calibration and lifecycle proof; marketplace approval not claimed |
 | Gemini CLI | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Gemini CLI 0.46.0 safe inspection and bounded harness shape passed; local live canary is blocked by unsupported Gemini Code Assist client tier; live receipts, usage calibration, lifecycle proof, and publication not claimed |
+| Grok Build | ACP probe-gated CLI projection and capability manifest | EXPERIMENTAL | Source-tree descriptor and offline conformance fixtures only; a failed local probe is recorded as fail-closed; live receipts, usage calibration, lifecycle proof, and publication not claimed |
 | Hermes | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | VERIFIED | Hermes Agent v0.19.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory/publication review not claimed |
 | Kimi Code | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Kimi Code 0.30.0 safe inspection and bounded harness shape passed; local live canary is blocked until a provider/model alias is configured; live receipts, usage calibration, lifecycle proof, and publication not claimed |
 | OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | OpenCode CLI 1.18.9 live host conformance, live calibration, and ALK lifecycle proof passed locally; npm publication not claimed |
+| OpenInterpreter | Host-local compatible CLI projection and capability manifest | EXPERIMENTAL | Offline conformance fixtures only; live receipts, usage calibration, lifecycle proof, and publication not claimed |
+| Pi | RPC/JSON plus AGENTS/agentskills projection and capability manifest | EXPERIMENTAL | Offline conformance fixtures only; live receipts, usage calibration, lifecycle proof, and publication not claimed |
 | Qwen Code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | Qwen Code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on GLM 5.2 locally; public package approval not claimed |
 
 ## Event capture support
@@ -91,6 +94,8 @@ runners/harnesses but still need accepted live usage receipts and quality/cost
 evidence before a host-specific `VERIFIED` claim. On the current local host,
 Gemini CLI is blocked by an unsupported Gemini Code Assist client tier and Kimi
 Code is blocked by missing provider/model configuration.
+Grok Build, OpenInterpreter, and Pi are also `EXPERIMENTAL`; they have offline
+adapter descriptors and conformance fixtures but no accepted live host range.
 
 `agent-lifecycle adapter scaffold` creates descriptor, capability manifest,
 fail-closed runner, receipt-normalizer, conformance and documentation

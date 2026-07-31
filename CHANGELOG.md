@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.13.0 - 2026-07-31
+
+- Added EXPERIMENTAL Grok Build, OpenInterpreter and Pi adapter descriptors,
+  capability manifests and offline conformance fixtures.
+- Added a negative Grok ACP-probe fixture so failed local discovery produces
+  explicit fail-closed evidence.
+- Extended the offline adapter baseline and fixture index for the secondary
+  adapters while keeping live promotion unclaimed.
+- Added adapter documentation and support-matrix entries for the secondary
+  adapters.
+
 ## 1.12.0 - 2026-07-31
 
 - Added runner recovery receipts for attempt snapshot, restore, abandon and

@@ -1,0 +1,12 @@
+{
+  "adapterDescriptor": "adapters/grok-build/adapter.descriptor.json",
+  "adapterId": "grok-build",
+  "baselineId": "offline-adapter-baseline-v1",
+  "capabilityManifest": "adapters/grok-build/capabilities.manifest.json",
+  "expectedResult": "PASS",
+  "host": "grok-build",
+  "liveRuntimeRequired": false,
+  "requiredMaturity": "EXPERIMENTAL",
+  "schemaVersion": "agent-lifecycle-adapter-conformance.v1",
+  "sharedBaseline": "conformance/core/adapter-baseline.v1.json"
+}
