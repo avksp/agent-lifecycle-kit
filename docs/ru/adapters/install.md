@@ -61,6 +61,17 @@ gemini --version
 agent-lifecycle adapter install-plan --descriptor adapters/gemini-cli/adapter.descriptor.json
 ```
 
+## Goose
+
+```bash
+goose --help
+agent-lifecycle adapter install-plan --descriptor adapters/goose/adapter.descriptor.json
+```
+
+Goose остаётся `EXPERIMENTAL`: ACP host-capability projection должен пройти
+live conformance, калибровку расхода и lifecycle proof для конкретного диапазона
+хоста.
+
 ## Kimi Code
 
 ```bash
