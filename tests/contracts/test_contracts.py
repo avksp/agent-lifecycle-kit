@@ -220,11 +220,21 @@ class ContractTests(unittest.TestCase):
             "agent-sandbox-requirement-validation.v1",
             "agent-sandbox-capability.v1",
             "agent-sandbox-capability-validation.v1",
+            "agent-cross-check-profile.v1",
+            "agent-cross-check-profile-validation.v1",
+            "agent-cross-check-receipt.v1",
+            "agent-cross-check-receipt-validation.v1",
+            "agent-runner-attempt-snapshot-receipt.v1",
+            "agent-runner-attempt-snapshot-receipt-validation.v1",
+            "agent-worker-lease-receipt.v1",
+            "agent-worker-lease-receipt-validation.v1",
             "agent-import-dialect-profile.v1",
             "agent-import-dialect-profile-validation.v1",
             "agent-episode-index.v1",
             "agent-episode-index-validation.v1",
             "agent-episode-retrieval.v1",
+            "agent-phase-resource-measurement.v1",
+            "agent-phase-resource-measurement-validation.v1",
         ]:
             self.assertIn(schema_id, ids)
         self.assertEqual(get_schema("agent-lifecycle-error.v1")["additionalProperties"], False)
@@ -272,6 +282,11 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-live-host-promotion-plan-validation.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-sandbox-receipt.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertIn("writeScopeBoundary", get_schema("agent-sandbox-receipt.v1")["required"])
+        self.assertEqual(get_schema("agent-cross-check-profile.v1")["properties"]["enabledByDefault"], {"const": False})
+        self.assertEqual(get_schema("agent-cross-check-profile.v1")["properties"]["budgetUnits"], {"const": "tokens-and-resources"})
+        self.assertEqual(get_schema("agent-runner-attempt-snapshot-receipt.v1")["properties"]["productionPromotionClaimed"], {"const": False})
+        self.assertEqual(get_schema("agent-worker-lease-receipt.v1")["properties"]["productionPromotionClaimed"], {"const": False})
+        self.assertEqual(get_schema("agent-phase-resource-measurement.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-import-dialect-profile.v1")["properties"]["sourceTrusted"], {"const": False})
         self.assertEqual(get_schema("agent-episode-index.v1")["properties"]["sourceOfTruth"], {"const": False})
         with self.assertRaises(LifecycleError):

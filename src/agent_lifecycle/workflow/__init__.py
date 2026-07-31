@@ -23,6 +23,12 @@ from agent_lifecycle.workflow.final_proof_integrity import (
     proof_integrity_required,
     validate_final_proof_integrity,
 )
+from agent_lifecycle.workflow.leases import (
+    build_worker_lease_receipt,
+    classify_lease_status,
+    require_worker_lease_receipt_pass,
+    validate_worker_lease_receipt,
+)
 from agent_lifecycle.workflow.sandbox_policy import (
     build_sandbox_requirement_policy,
     require_task_sandbox_evidence_pass,
@@ -35,8 +41,10 @@ __all__ = [
     "adopt_plan",
     "apply_budget_decision",
     "block_run",
+    "build_worker_lease_receipt",
     "build_sandbox_requirement_policy",
     "check_lineage",
+    "classify_lease_status",
     "commit_task_result",
     "finalize_run",
     "next_action",
@@ -44,6 +52,7 @@ __all__ = [
     "pause_for_external_action",
     "proof_integrity_required",
     "require_task_sandbox_evidence_pass",
+    "require_worker_lease_receipt_pass",
     "resolve_blocker",
     "resume_external_action",
     "sandbox_evidence_required",
@@ -54,4 +63,5 @@ __all__ = [
     "validate_budget_exceeded_policy",
     "validate_final_proof_integrity",
     "validate_task_sandbox_evidence",
+    "validate_worker_lease_receipt",
 ]

@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.12.0 - 2026-07-31
+
+- Added runner recovery receipts for attempt snapshot, restore, abandon and
+  selected-attempt metadata.
+- Added worker lease and heartbeat receipts that distinguish active, expired
+  and completed workers.
+- Added optional cross-check profile and receipts with token/resource budget
+  caps, disabled-by-default activation and plan-gated blocking use.
+- Added phase resource measurements that reuse the usage-export envelope for
+  tokens, durations and resource counters without mandatory USD-cost fields.
+- Added English and Russian documentation for runner recovery and cross-check
+  behavior.
+
 ## 1.11.0 - 2026-07-31
 
 - Added import dialect profiles for Constitution/ADR and AGENTS/agentskills
