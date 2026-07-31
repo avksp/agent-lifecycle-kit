@@ -24,6 +24,9 @@
 - `agent-sandbox-requirement.v1`: fail-closed политика обязательного sandbox
   evidence для high-risk задач.
 - `agent-sandbox-capability.v1`: декларация sandbox capabilities адаптера.
+- `agent-import-dialect-profile.v1`: профиль внешнего dialect import.
+- `agent-episode-index.v1`: rebuildable индекс receipt/session episodes.
+- `agent-episode-retrieval.v1`: bounded retrieval result с digest provenance.
 - `agent-lifecycle-policy-proposal.v1`: предложение по настройке правил.
 
 ## Правило совместимости
@@ -41,3 +44,12 @@ check`. Изменение контракта без тестов и докум�
 в репозитории, а sandbox receipt описывает runtime containment. `UNKNOWN` —
 валидное явное состояние capability, но required high-risk policy принимает
 только настроенные passing statuses, по умолчанию `PASS`.
+
+`agent-import-dialect-profile.v1` требует `sourceTrusted: false`,
+`requiresReview: true` и `freezeBlocked: true`. `nativeDialectProfileDigest`
+фиксирует provenance импортированного dialect, но не означает approval.
+
+`agent-episode-retrieval.v1` возвращает bounded context projection по явно
+переданным receipt/session artifacts. Result получает `chainVerified` только
+при совпадении path и digest с hash-chain entry; иначе state остаётся
+`chainUnchecked`.

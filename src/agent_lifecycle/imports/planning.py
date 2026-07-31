@@ -40,11 +40,13 @@ def import_planning_input(
     package_id: str = "imported-plan",
     max_input_bytes: int = DEFAULT_MAX_INPUT_BYTES,
     target_tokens: int = DEFAULT_TARGET_TOKENS,
+    dialect_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a draft ALK candidate from an explicit untrusted input file."""
 
     _check_positive_cap(max_input_bytes, "maxInputBytes")
     _check_positive_cap(target_tokens, "targetTokens")
+    native_dialect_profile_digest = _profile_digest(dialect_profile)
     blockers: list[dict[str, Any]] = []
     if not source_path.is_file():
         blockers.append({"code": "planning-import-source-missing", "sourceLabel": source_path.name})
@@ -58,7 +60,18 @@ def import_planning_input(
             data = source_path.read_bytes()
     text = _decode_text(data, blockers) if data and len(data) <= max_input_bytes else ""
     blockers.extend(_content_blockers(text))
-    candidate = _candidate_plan(text, data, package_id=package_id, source_label=source_path.name) if text and not blockers else None
+    candidate = (
+        _candidate_plan(
+            text,
+            data,
+            package_id=package_id,
+            source_label=source_path.name,
+            native_dialect_profile_digest=native_dialect_profile_digest,
+            dialect_profile=dialect_profile,
+        )
+        if text and not blockers
+        else None
+    )
     if text and candidate is None and not blockers:
         blockers.append({"code": "planning-import-requirements-missing"})
     body = {
@@ -75,6 +88,8 @@ def import_planning_input(
             "digest": sha256_hex(data),
             "inputBytes": len(data),
         },
+        "nativeDialectProfileDigest": native_dialect_profile_digest,
+        "dialectProfile": _dialect_profile_summary(dialect_profile),
         "candidatePlan": candidate,
         "requiresReview": True,
         "auditRequired": True,
@@ -132,6 +147,13 @@ def validate_import_result(result: dict[str, Any]) -> dict[str, Any]:
             blockers.append({"code": "planning-import-candidate-audit-not-required"})
         if import_state.get("freezeBlocked") is not True:
             blockers.append({"code": "planning-import-candidate-freeze-not-blocked"})
+        profile_digest = result.get("nativeDialectProfileDigest")
+        candidate_profile_digest = import_state.get("nativeDialectProfileDigest")
+        if profile_digest is not None:
+            if not _is_digest(profile_digest):
+                blockers.append({"code": "planning-import-dialect-profile-digest-invalid"})
+            if candidate_profile_digest != profile_digest:
+                blockers.append({"code": "planning-import-dialect-profile-digest-mismatch"})
         try:
             validate_plan_manifest(candidate)
         except LifecycleError as exc:
@@ -199,7 +221,15 @@ def require_skill_proposal_pass(payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-def _candidate_plan(text: str, data: bytes, *, package_id: str, source_label: str) -> dict[str, Any] | None:
+def _candidate_plan(
+    text: str,
+    data: bytes,
+    *,
+    package_id: str,
+    source_label: str,
+    native_dialect_profile_digest: str | None,
+    dialect_profile: dict[str, Any] | None,
+) -> dict[str, Any] | None:
     parsed = _parse_structured_input(data)
     title = _extract_title(text, parsed)
     requirements = _extract_requirements(text, parsed)
@@ -239,6 +269,8 @@ def _candidate_plan(text: str, data: bytes, *, package_id: str, source_label: st
         "importState": {
             "sourceLabel": source_label,
             "sourceDigest": source_digest,
+            "nativeDialectProfileDigest": native_dialect_profile_digest,
+            "dialect": _dialect_profile_summary(dialect_profile),
             "requiresReview": True,
             "auditRequired": True,
             "freezeBlocked": True,
@@ -342,8 +374,38 @@ def _content_blockers(text: str) -> list[dict[str, Any]]:
     return blockers
 
 
+def _profile_digest(profile: dict[str, Any] | None) -> str | None:
+    if profile is None:
+        return None
+    if not isinstance(profile, dict):
+        raise LifecycleError("invalid-dialect-profile", "dialect_profile must be an object")
+    digest = profile.get("profileDigest")
+    if isinstance(digest, str) and _is_digest(digest):
+        expected = canonical_digest({key: value for key, value in profile.items() if key != "profileDigest"})
+        if digest != expected:
+            raise LifecycleError("invalid-dialect-profile", "dialect profileDigest does not match profile")
+        return digest
+    return canonical_digest(profile)
+
+
+def _dialect_profile_summary(profile: dict[str, Any] | None) -> dict[str, Any] | None:
+    if profile is None:
+        return None
+    return {
+        "schemaVersion": profile.get("schemaVersion"),
+        "dialectId": profile.get("dialectId"),
+        "dialectKind": profile.get("dialectKind"),
+        "sourceTrusted": profile.get("sourceTrusted"),
+        "profileDigest": _profile_digest(profile),
+    }
+
+
 def _contains_sensitive_marker(value: str) -> bool:
     return bool(_content_blockers(value))
+
+
+def _is_digest(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value)
 
 
 def _safe_identifier(value: str) -> str:
