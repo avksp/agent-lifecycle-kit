@@ -120,6 +120,64 @@
       ],
       "productionPromotionClaimed": false,
       "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "goose",
+      "host": "goose",
+      "maturity": "EXPERIMENTAL",
+      "testedHostRange": null,
+      "summaryPath": "docs/adapters/evidence/goose-1.7.0.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "offline-conformance",
+        "host-capability-declaration",
+        "probe-required"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "grok-build",
+      "host": "grok-build",
+      "maturity": "EXPERIMENTAL",
+      "testedHostRange": null,
+      "summaryPath": "docs/adapters/evidence/grok-build-1.13.0.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "offline-conformance",
+        "acp-negative-probe-fixture"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "openinterpreter",
+      "host": "openinterpreter",
+      "maturity": "EXPERIMENTAL",
+      "testedHostRange": null,
+      "summaryPath": "docs/adapters/evidence/openinterpreter-1.13.0.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "offline-conformance",
+        "host-local-compatible-cli-projection"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    {
+      "adapterId": "pi",
+      "host": "pi",
+      "maturity": "EXPERIMENTAL",
+      "testedHostRange": null,
+      "summaryPath": "docs/adapters/evidence/pi-1.13.0.md",
+      "rawEvidenceLocalOnly": true,
+      "evidenceKinds": [
+        "offline-conformance",
+        "rpc-json-projection",
+        "agentskills-projection"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
     }
   ]
 }
