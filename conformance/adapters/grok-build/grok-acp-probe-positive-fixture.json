@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "agent-acp-probe-receipt.v1",
+  "status": "PASS",
+  "adapterId": "grok-build",
+  "host": "grok-build",
+  "capabilityId": "acp",
+  "liveCallsStarted": false,
+  "checks": [
+    {
+      "name": "capability-declaration",
+      "status": "PASS"
+    },
+    {
+      "name": "executable-present",
+      "status": "PASS"
+    },
+    {
+      "name": "acp-probe",
+      "status": "PASS"
+    },
+    {
+      "name": "invocation-contract",
+      "status": "PASS"
+    }
+  ],
+  "blockers": []
+}

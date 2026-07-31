@@ -83,11 +83,13 @@ agent-lifecycle adapter install-plan --descriptor adapters/kimi-code/adapter.des
 ## Grok Build
 
 ```bash
-grok build --help
+grok --version
+grok agent --help
 agent-lifecycle adapter install-plan --descriptor adapters/grok-build/adapter.descriptor.json
 ```
 
-Grok Build остаётся `EXPERIMENTAL`: ACP-путь должен пройти локальный probe, а
+Grok Build имеет host-specific `VERIFIED` для Grok Build `0.2.117` на
+проверенной локальной связке `grok-4.5`. ACP-путь остаётся probe-gated, а
 неудачный probe фиксируется как fail-closed evidence.
 
 ## OpenInterpreter
