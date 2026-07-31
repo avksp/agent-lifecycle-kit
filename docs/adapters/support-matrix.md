@@ -22,9 +22,9 @@ adapter by itself.
 | --- | --- | --- | --- |
 | Codex | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | VERIFIED | Codex CLI 0.145.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; public Plugins Directory review not claimed |
 | Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
-| Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | Cursor Agent 2026.07.23-e383d2b safe inspection passed on local Free tier; bounded smoke cannot promote without usage/cost calibration and lifecycle proof; marketplace approval not claimed |
+| Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | Cursor Agent 2026.07.23-e383d2b safe inspection passed on local Free tier; bounded smoke cannot promote without usage/resource calibration and lifecycle proof; marketplace approval not claimed |
 | Gemini CLI | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Gemini CLI 0.46.0 safe inspection and bounded harness shape passed; local live canary is blocked by unsupported Gemini Code Assist client tier; live receipts, usage calibration, lifecycle proof, and publication not claimed |
-| Goose | ACP host-capability projection and capability manifest | EXPERIMENTAL | Offline conformance and probe-required ACP declaration only; live host conformance, usage calibration, lifecycle proof, and publication not claimed |
+| Goose | ACP host-capability projection, bounded no-profile live harness, and capability manifest | VERIFIED | Goose 1.45.0 live host conformance, live calibration, and ALK lifecycle proof passed locally on ZAI GLM 5.2; public directory approval not claimed |
 | Grok Build | ACP probe-gated CLI projection and capability manifest | EXPERIMENTAL | Source-tree descriptor and offline conformance fixtures only; a failed local probe is recorded as fail-closed; live receipts, usage calibration, lifecycle proof, and publication not claimed |
 | Hermes | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | VERIFIED | Hermes Agent v0.19.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory/publication review not claimed |
 | Kimi Code | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Kimi Code 0.30.0 safe inspection and bounded harness shape passed; local live canary is blocked until a provider/model alias is configured; live receipts, usage calibration, lifecycle proof, and publication not claimed |
@@ -87,17 +87,18 @@ Code is `VERIFIED` for host-local model routing on Claude Code 2.1.220.
 OpenCode is `VERIFIED` for host-local model routing on OpenCode CLI 1.18.9.
 Hermes is `VERIFIED` for host-local model routing on Hermes Agent v0.19.0.
 Qwen Code is `VERIFIED` for host-local model routing on Qwen Code 0.21.0.
-Their live receipts include host usage attestation, quality pass status, and
-bounded budget evidence. Cursor, Gemini CLI, Goose, Grok Build, Kimi Code,
-OpenInterpreter, and Pi remain `EXPERIMENTAL`: Cursor declares fail-closed
-support for host-local model profiles and model-route execution, Gemini CLI and
-Kimi Code have bounded runners/harnesses, Goose and Grok Build have ACP
-capability/probe projections, and OpenInterpreter and Pi have offline adapter
-descriptors and conformance fixtures. These adapters still need accepted live
-usage receipts, quality/cost evidence and a concrete live host range before a
-host-specific `VERIFIED` claim. On the current local host, Gemini CLI is blocked
-by an unsupported Gemini Code Assist client tier and Kimi Code is blocked by
-missing provider/model configuration.
+Goose is `VERIFIED` for host-local model routing on Goose 1.45.0. The verified
+adapters' live receipts include host usage attestation, quality pass status,
+and bounded budget evidence. Cursor, Gemini CLI, Grok Build, Kimi Code,
+OpenInterpreter, and Pi remain `EXPERIMENTAL`: Cursor declares fail-closed support for
+host-local model profiles and model-route execution, Gemini CLI and Kimi Code
+have bounded runners/harnesses, Grok Build has an ACP capability/probe
+projection, and OpenInterpreter and Pi have offline adapter descriptors and
+conformance fixtures. These adapters still need accepted live usage receipts,
+quality/resource evidence and a concrete live host range before a host-specific
+`VERIFIED` claim. On the current local host, Gemini CLI is blocked by an
+unsupported Gemini Code Assist client tier and Kimi Code is blocked by missing
+provider/model configuration.
 
 `agent-lifecycle adapter scaffold` creates descriptor, capability manifest,
 fail-closed runner, receipt-normalizer, conformance and documentation
@@ -255,6 +256,34 @@ Qwen Code is verified only for the tested local host range:
 
 This evidence does not claim universal adapter support, public package
 approval, or a broader production-promotion platform matrix pass.
+
+## Goose ZAI GLM 5.2 live evidence
+
+Goose is verified only for the tested local host range:
+
+- Host: Goose 1.45.0.
+- Source revision:
+  `87fb1ce58612efbd2121d8eb56f9d54de8fbbcfb`.
+- Committed redacted evidence summary:
+  `docs/adapters/evidence/goose-live-verified.md`.
+- Live preflight:
+  `work/release-1-16/evidence/preflight/goose-preflight-report.json`.
+- Bounded containment receipt:
+  `work/release-1-16/evidence/goose-containment-receipt.json`.
+- Live host conformance receipt:
+  `work/release-1-16/evidence/live-host-receipts/goose.json`.
+- Live host conformance validation:
+  `work/release-1-16/evidence/live-host-conformance-goose.json`.
+- Live calibration receipt:
+  `work/release-1-16/evidence/live-calibration-receipts/goose.json`.
+- Live calibration validation:
+  `work/release-1-16/evidence/live-calibration-verification-goose.json`.
+- ALK lifecycle final proof:
+  `work/release-1-16/evidence/goose/full-lifecycle/final/final-proof-r5.json`.
+
+This evidence does not claim universal adapter support, public directory
+approval, verified OS sandbox containment, or a broader production-promotion
+platform matrix pass.
 
 ## Neutrality error contract
 

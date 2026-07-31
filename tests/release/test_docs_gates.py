@@ -151,6 +151,52 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertEqual(payload["status"], "FAIL")
             self.assertIn("docs-compat-verified-row", {item["code"] for item in payload["blockers"]})
 
+    def test_docs_compat_accepts_verified_row_backed_by_live_evidence_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_min_docs(root, unsupported_verified_row=False)
+            support_matrix = root / "docs/adapters/support-matrix.md"
+            support_matrix.write_text(
+                support_matrix.read_text(encoding="utf-8") + "| Goose | Projection | VERIFIED | Claim |\n",
+                encoding="utf-8",
+            )
+            _write_text(root / "docs/adapters/evidence/goose-live.md", "Goose live evidence.\n")
+            _write_text(
+                root / "docs/adapters/evidence/adapter-evidence-summary.v1.json",
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-adapter-evidence-summary-index.v1",
+                        "status": "PASS",
+                        "productionPromotionClaimed": False,
+                        "maturityChangesClaimed": True,
+                        "adapters": [
+                            {
+                                "adapterId": "goose",
+                                "host": "goose",
+                                "maturity": "VERIFIED",
+                                "testedHostRange": "1.45.0",
+                                "summaryPath": "docs/adapters/evidence/goose-live.md",
+                                "rawEvidenceLocalOnly": True,
+                                "evidenceKinds": [
+                                    "live-host-conformance",
+                                    "live-usage-calibration",
+                                    "lifecycle-final-proof",
+                                ],
+                                "productionPromotionClaimed": False,
+                                "publicDirectoryApprovalClaimed": False,
+                            }
+                        ],
+                    }
+                ),
+            )
+            _write_text(root / "adapters/goose/adapter.descriptor.json", '{"adapterId":"goose","host":"goose"}\n')
+            evidence = root / "docs-compat.json"
+
+            _run("tools/release/validate_docs_compat.py", "--root", str(root), "--evidence", str(evidence))
+
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+            self.assertEqual(payload["status"], "PASS")
+
     def test_docs_compat_rejects_versioned_feature_prose(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -213,12 +259,34 @@ def _assert_links_resolve(path: Path) -> None:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/cost calibration are required. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/resource calibration are required. Public contracts live in docs/reference/public-contracts.md. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`.\n",
     )
     _write_text(
         root / "docs/ru/README.md",
-        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. Список в Публичных контрактах: reference/public-contracts.md. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`.\n",
     )
+    public_contracts = (
+        "`completionCheck`.\n"
+        "`agent-completion-check-receipt.v1`.\n"
+        "`agent-goal-record.v1`.\n"
+        "`agent-objective-snapshot.v1`.\n"
+        "`agent-runner-state.v1`.\n"
+        "`agent-runner-snapshot.v1`.\n"
+        "`agent-follow-up-register.v1`.\n"
+        "`agent-follow-up-summary.v1`.\n"
+        "`agent-worktree-isolation-policy.v1`.\n"
+        "`agent-worktree-attempt-receipt.v1`.\n"
+        "`agent-adapter-event-stream-receipt.v1`.\n"
+        "`agent-adapter-event-capture-validation.v1`.\n"
+        "`agent-review-verdict.v1`.\n"
+        "`agent-review-routing-summary.v1`.\n"
+        "`agent-optional-quality-pack.v1`.\n"
+        "`agent-behavior-check-run.v1`.\n"
+        "`agent-diagnostic-bundle.v1`.\n"
+        "`agent-readonly-status-view.v1`.\n"
+    )
+    _write_text(root / "docs/reference/public-contracts.md", public_contracts)
+    _write_text(root / "docs/ru/reference/public-contracts.md", public_contracts)
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
         root / "docs/adapters/support-matrix.md",
@@ -348,7 +416,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "small local model.\n"
         "agent-lifecycle report status-view.\n",
     )
-    for host in ("claude", "codex", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "qwen-code"):
+    for host in ("claude", "codex", "cursor", "gemini-cli", "goose", "hermes", "kimi-code", "opencode", "qwen-code"):
         _write_text(
             root / f"docs/adapters/{host}.md",
             (
@@ -356,6 +424,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
                 if host == "codex"
                 else "This adapter is `VERIFIED` for Claude Code 2.1.220; live conformance exists and it does not claim official approval.\n"
                 if host == "claude"
+                else "This adapter is `VERIFIED` for Goose `1.45.0`; live conformance exists and it does not claim public approval.\n"
+                if host == "goose"
                 else "This adapter is `VERIFIED` for OpenCode CLI `1.18.9`; live conformance exists and it does not claim npm publication.\n"
                 if host == "opencode"
                 else "This adapter is `VERIFIED` for Hermes Agent `v0.19.0`; live conformance exists and it does not claim public approval.\n"
