@@ -36,6 +36,10 @@ flowchart LR
 - Optional sandbox boundary receipts for high-risk work: filesystem, network,
   process, environment and enforcement-source evidence kept separate from git
   write scope.
+- Import mapper profiles for Constitution/ADR and AGENTS/agentskills inputs;
+  imported artifacts remain untrusted drafts with dialect profile digests.
+- Lightweight episode retrieval over receipt/session summaries with digest
+  provenance and explicit `chainVerified` or `chainUnchecked` state.
 - Advisory lifecycle mode recommendations from accumulated cost reports.
 - Explicit lifecycle policy proposals with reversible apply artifacts.
 - Read-only diagnostics for the current checkout and adapter readiness.
@@ -128,6 +132,8 @@ stable and are the compact vocabulary used by the docs, tests, and receipts:
 - Evidence integrity: `agent-proof-finding.v1`,
   `agent-root-cause-evidence.v1`, `agent-fix-impact-receipt.v1`,
   `agent-receipt-hash-chain.v1`, `agent-proof-integrity-receipt.v1`.
+- Import interop: `agent-import-dialect-profile.v1`,
+  `agent-episode-index.v1`, `agent-episode-retrieval.v1`.
 - Optional quality checks: `agent-optional-quality-pack.v1`,
   `agent-behavior-check-run.v1`.
 - Diagnostics and status views: `agent-diagnostic-bundle.v1`,
@@ -150,6 +156,8 @@ Full contract details are listed in [Public contracts](docs/reference/public-con
   evidence summaries.
 - Git write scope governs repository paths; sandbox receipts govern runtime
   containment and may be `UNKNOWN` until separately verified.
+- External dialect imports and retrieved episodes are context aids only; they
+  do not replace reviewed ALK source-of-truth artifacts.
 
 ## Documentation
 
@@ -162,6 +170,8 @@ Full contract details are listed in [Public contracts](docs/reference/public-con
 - [Usage export](docs/reference/usage-export.md)
 - [Evidence integrity](docs/reference/evidence-integrity.md)
 - [Sandbox boundaries](docs/reference/sandbox-boundaries.md)
+- [Import mappers](docs/reference/import-mappers.md)
+- [Episode retrieval](docs/reference/episode-retrieval.md)
 - [Release security](docs/security/release-security.md)
 
 ## License

@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.11.0 - 2026-07-31
+
+- Added import dialect profiles for Constitution/ADR and AGENTS/agentskills
+  inputs while keeping imported artifacts untrusted DRAFTs.
+- Added `nativeDialectProfileDigest` provenance on planning import results and
+  candidate plan import state.
+- Added rebuildable episode indexes and bounded episode retrieval with
+  `chainVerified` or `chainUnchecked` provenance.
+- Added English and Russian documentation for import mappers and episode
+  retrieval.
+
 ## 1.10.0 - 2026-07-31
 
 - Added sandbox-boundary contracts for runtime filesystem, network, process,
