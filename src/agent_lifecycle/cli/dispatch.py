@@ -308,6 +308,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             source_revision=args.source_revision,
             final_audit_path=args.final_audit,
             proof_path=args.proof,
+            proof_integrity_path=args.proof_integrity,
             goal_record_path=args.goal_record,
             follow_up_register_path=args.follow_up_register,
             reason=args.reason,

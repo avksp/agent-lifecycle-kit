@@ -26,3 +26,23 @@ Adapters should branch on `schemaVersion` and `code`, not prose output.
 Large-model reviews can inspect the full schema body through `schema show`;
 small local models can use the policy receipt as a compact map of what is
 stable.
+
+## Evidence integrity
+
+The proof-integrity surface is additive and opt-in. It is used when a run or
+final audit explicitly requires stronger evidence for a bug fix, regression or
+high-risk change.
+
+Stable schema ids:
+
+- `agent-proof-finding.v1`
+- `agent-root-cause-evidence.v1`
+- `agent-fix-impact-receipt.v1`
+- `agent-receipt-hash-chain.v1`
+- `agent-hash-chain-migration-policy.v1`
+- `agent-proof-integrity-receipt.v1`
+- `agent-proof-integrity-validation.v1`
+
+`agent-fix-impact-receipt.v1` is the canonical fix-impact contract. It binds
+changed files, related finding ids, root-cause digests, behavior changes,
+preserved contracts, validation evidence and collateral-damage checks.
