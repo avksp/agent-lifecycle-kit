@@ -13,6 +13,7 @@
 | Qwen Code | `VERIFIED` | Проверен для Qwen Code 0.21.0 на связке GLM 5.2. |
 | Cursor | `EXPERIMENTAL` | Локальный осмотр проходит, но подтверждений из реального запуска недостаточно. |
 | Gemini CLI | `EXPERIMENTAL` | Проверка реальным вызовом ограничена текущим уровнем Gemini Code Assist. |
+| Goose | `EXPERIMENTAL` | ACP host-capability projection с offline conformance; live promotion не заявлен. |
 | Kimi Code | `EXPERIMENTAL` | Нужен настроенный провайдер и алиас модели. |
 | Grok Build | `EXPERIMENTAL` | ACP-путь закрыт локальным probe gate; негативный probe фиксируется fail-closed. |
 | OpenInterpreter | `EXPERIMENTAL` | Host-local compatible CLI projection с offline conformance. |
