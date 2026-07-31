@@ -13,9 +13,13 @@ REQUIRED_HOSTS = (
     "Claude Code",
     "Cursor",
     "Gemini CLI",
+    "Goose",
+    "Grok Build",
     "Hermes",
     "Kimi Code",
     "OpenCode",
+    "OpenInterpreter",
+    "Pi",
     "Qwen Code",
 )
 REQUIRED_LIVE_EVIDENCE_LABELS = (

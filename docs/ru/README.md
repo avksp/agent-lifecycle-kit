@@ -119,6 +119,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 | Qwen Code | `VERIFIED` для Qwen Code 0.21.0 на проверенной связке GLM 5.2. Одобрение публичного пакета не заявлено. |
 | Cursor | `EXPERIMENTAL`; безопасный локальный осмотр прошёл, но подтверждений из реального запуска недостаточно. |
 | Gemini CLI | `EXPERIMENTAL`; локальная проверка на реальном вызове ограничена текущим уровнем Gemini Code Assist. |
+| Goose | `EXPERIMENTAL`; ACP host-capability projection с offline conformance. |
 | Kimi Code | `EXPERIMENTAL`; для проверки нужен настроенный провайдер и псевдоним модели. |
 | Grok Build | `EXPERIMENTAL`; использование ACP закрыто локальным probe gate, негативный probe фиксируется fail-closed. |
 | OpenInterpreter | `EXPERIMENTAL`; host-local compatible CLI projection с offline conformance. |

@@ -38,6 +38,9 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn(required, english)
         self.assertIn("quickstart.md", russian)
         self.assertIn("reference/cli.md", russian)
+        for adapter in ("Goose", "Grok Build", "OpenInterpreter", "Pi"):
+            self.assertIn(adapter, english)
+            self.assertIn(adapter, russian)
 
     def test_release_entry_docs_have_resolving_links(self) -> None:
         for relative in (
@@ -64,6 +67,21 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             with self.subTest(path=relative):
                 _assert_links_resolve(ROOT / relative)
 
+    def test_adapter_evidence_index_covers_current_descriptors(self) -> None:
+        descriptor_ids = {
+            json.loads(path.read_text(encoding="utf-8"))["adapterId"]
+            for path in sorted((ROOT / "adapters").glob("*/adapter.descriptor.json"))
+        }
+        index = json.loads((ROOT / "docs/adapters/evidence/adapter-evidence-summary.v1.json").read_text(encoding="utf-8"))
+        indexed_ids = {item["adapterId"] for item in index["adapters"]}
+
+        self.assertEqual(indexed_ids, descriptor_ids)
+        for item in index["adapters"]:
+            with self.subTest(adapter=item["adapterId"]):
+                self.assertTrue((ROOT / item["summaryPath"]).is_file())
+                self.assertFalse(item["productionPromotionClaimed"])
+                self.assertFalse(item["publicDirectoryApprovalClaimed"])
+
     def test_quickstart_and_adapter_docs_cover_bounded_commands(self) -> None:
         quickstart = (ROOT / "docs/guides/quickstart.md").read_text(encoding="utf-8")
         quickstart_ru = (ROOT / "docs/ru/quickstart.md").read_text(encoding="utf-8")
@@ -83,6 +101,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "claude plugin",
             "qwen --version",
             "gemini --version",
+            "goose --help",
             "kimi --version",
         ):
             self.assertIn(command, install)
@@ -209,7 +228,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "OpenCode GLM 5.2 live evidence.\n"
         "Hermes GLM 5.2 live evidence.\n"
         "Qwen Code GLM 5.2 live evidence.\n"
-        "Cursor, Gemini CLI, and Kimi Code remain `EXPERIMENTAL`.\n"
+        "Cursor. Gemini CLI. Goose. Grok Build. Kimi Code. OpenInterpreter. Pi.\n"
         "`adapter-event-stream`.\n"
         "`agent-adapter-event-stream-receipt.v1`.\n"
         "| Codex | Projection | VERIFIED | Claim |\n"
