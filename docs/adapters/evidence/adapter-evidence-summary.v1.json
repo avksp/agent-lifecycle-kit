@@ -140,13 +140,16 @@
     {
       "adapterId": "grok-build",
       "host": "grok-build",
-      "maturity": "EXPERIMENTAL",
-      "testedHostRange": null,
-      "summaryPath": "docs/adapters/evidence/grok-build-1.13.0.md",
+      "maturity": "VERIFIED",
+      "testedHostRange": "0.2.117",
+      "summaryPath": "docs/adapters/evidence/grok-build-live-verified.md",
       "rawEvidenceLocalOnly": true,
       "evidenceKinds": [
-        "offline-conformance",
-        "acp-negative-probe-fixture"
+        "live-host-conformance",
+        "live-usage-calibration",
+        "lifecycle-final-proof",
+        "bounded-containment",
+        "acp-positive-probe"
       ],
       "productionPromotionClaimed": false,
       "publicDirectoryApprovalClaimed": false

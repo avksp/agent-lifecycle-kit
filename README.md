@@ -114,7 +114,7 @@ required only for metered modes.
 | Gemini CLI | `EXPERIMENTAL`; local live canary is blocked by the current Gemini Code Assist tier. |
 | Goose | `VERIFIED` for Goose 1.45.0 on the tested ZAI GLM 5.2 binding. Public directory approval is not claimed. |
 | Kimi Code | `EXPERIMENTAL`; live proof requires a configured provider and model alias. |
-| Grok Build | `EXPERIMENTAL`; ACP use is gated by a local probe and negative probe evidence is tracked. |
+| Grok Build | `VERIFIED` for Grok Build 0.2.117 on the tested grok-4.5 binding. Public directory approval is not claimed. |
 | OpenInterpreter | `EXPERIMENTAL`; host-local compatible CLI projection with offline conformance only. |
 | Pi | `EXPERIMENTAL`; RPC/JSON and AGENTS/agentskills projection with no live promotion claim. |
 

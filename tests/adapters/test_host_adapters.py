@@ -45,6 +45,7 @@ HOSTS = {
         "secondary": True,
         "nativeProjection": "acp-probe-gated-cli",
         "modelRouting": True,
+        "maturity": "VERIFIED",
         "hostCapability": "supported-acp-probe",
     },
     "hermes": {
@@ -135,9 +136,10 @@ class HostAdapterTests(unittest.TestCase):
                 elif config.get("secondary"):
                     descriptor = load_json(adapter_root / "adapter.descriptor.json")
                     readme = (adapter_root / "README.md").read_text(encoding="utf-8")
+                    expected_maturity = config.get("maturity", "EXPERIMENTAL")
                     self.assertEqual(descriptor["nativeProjection"], config["nativeProjection"])
-                    self.assertEqual(descriptor["maturity"], "EXPERIMENTAL")
-                    self.assertIn("EXPERIMENTAL", readme)
+                    self.assertEqual(descriptor["maturity"], expected_maturity)
+                    self.assertIn(expected_maturity, readme)
                 else:
                     manifest = load_json(adapter_root / config["nativeManifest"])
                     self.assertEqual(manifest["name"], config["nativeChecks"]["name"])
@@ -195,6 +197,7 @@ class HostAdapterTests(unittest.TestCase):
                     self.assertEqual(capability["capabilityId"], "acp")
                     self.assertEqual(capability["support"], "supported")
                     self.assertEqual(capability["evidencePolicy"], "probe-required")
+                    self.assertEqual(capability["probe"]["command"], ["grok", "agent", "--help"])
                     self.assertFalse(capability["probe"]["liveCallsStarted"])
                 if config.get("hostCapability") == "unsupported-alt-protocol":
                     capability = descriptor["hostCapabilities"][0]

@@ -121,7 +121,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 | Gemini CLI | `EXPERIMENTAL`; локальная проверка на реальном вызове ограничена текущим уровнем Gemini Code Assist. |
 | Goose | `VERIFIED` для Goose 1.45.0 на проверенной связке ZAI GLM 5.2. Одобрение публичного каталога не заявлено. |
 | Kimi Code | `EXPERIMENTAL`; для проверки нужен настроенный провайдер и псевдоним модели. |
-| Grok Build | `EXPERIMENTAL`; использование ACP закрыто локальным probe gate, негативный probe фиксируется fail-closed. |
+| Grok Build | `VERIFIED` для Grok Build 0.2.117 на проверенной связке grok-4.5. Одобрение публичного каталога не заявлено. |
 | OpenInterpreter | `EXPERIMENTAL`; host-local compatible CLI projection с offline conformance. |
 | Pi | `EXPERIMENTAL`; RPC/JSON и AGENTS/agentskills projection без заявления о live promotion. |
 

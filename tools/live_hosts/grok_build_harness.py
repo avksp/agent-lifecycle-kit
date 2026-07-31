@@ -441,7 +441,7 @@ def _default_model(text: str) -> str | None:
 def _project_trusted(text: str) -> bool | None:
     for line in text.splitlines():
         line = line.strip().lower()
-        if line.startswith("project trusted:"):
+        if "project trusted:" in line:
             value = line.split(":", 1)[1].strip()
             if value in {"yes", "true"}:
                 return True
