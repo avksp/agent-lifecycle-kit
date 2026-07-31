@@ -1,0 +1,29 @@
+{
+  "adapterId": "pi",
+  "descriptorDigest": "cd88eec16978a7a01a445021820cd0ea7e75999b98c26118139a253c0e025fc7",
+  "emittedAt": "2026-07-31T00:23:00Z",
+  "eventCount": 6,
+  "eventStreamDigest": "d810ba2ada1f51876732fa74dbcb472f25355438839a00899c7d924b2d216c36",
+  "eventTypes": [
+    "session.started",
+    "task.launched",
+    "command.completed",
+    "writes.summarized",
+    "usage.reported",
+    "task.completed"
+  ],
+  "host": "pi",
+  "operationId": "offline-event-capture-pi",
+  "producer": {
+    "boundary": "adapter-owned",
+    "id": "pi-neutral-event-producer",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
+  "productionPromotionClaimed": false,
+  "receiptDigest": "dfc26961cc27782220ae3d62cbf278341b16be1bf96c42a141ee13a9e7013a56",
+  "runId": "offline-conformance",
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "taskId": "adapter-event-capture",
+  "terminalEvent": "task.completed"
+}

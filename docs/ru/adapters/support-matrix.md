@@ -14,6 +14,9 @@
 | Cursor | `EXPERIMENTAL` | Локальный осмотр проходит, но подтверждений из реального запуска недостаточно. |
 | Gemini CLI | `EXPERIMENTAL` | Проверка реальным вызовом ограничена текущим уровнем Gemini Code Assist. |
 | Kimi Code | `EXPERIMENTAL` | Нужен настроенный провайдер и алиас модели. |
+| Grok Build | `EXPERIMENTAL` | ACP-путь закрыт локальным probe gate; негативный probe фиксируется fail-closed. |
+| OpenInterpreter | `EXPERIMENTAL` | Host-local compatible CLI projection с offline conformance. |
+| Pi | `EXPERIMENTAL` | RPC/JSON и AGENTS/agentskills projection без live promotion. |
 
 `VERIFIED` относится только к указанному диапазону хоста и не означает
 публичное одобрение каталога, npm-публикацию или готовность других версий.

@@ -1,0 +1,106 @@
+[
+  {
+    "adapterId": "grok-build",
+    "eventId": "offline-event-capture-grok-build-01",
+    "eventType": "session.started",
+    "host": "grok-build",
+    "operationId": "offline-event-capture-grok-build",
+    "payload": {
+      "category": "lifecycle-transition"
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 1,
+    "status": "INFO",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "grok-build",
+    "eventId": "offline-event-capture-grok-build-02",
+    "eventType": "task.launched",
+    "host": "grok-build",
+    "operationId": "offline-event-capture-grok-build",
+    "payload": {
+      "category": "lifecycle-transition"
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 2,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "grok-build",
+    "eventId": "offline-event-capture-grok-build-03",
+    "eventType": "command.completed",
+    "host": "grok-build",
+    "operationId": "offline-event-capture-grok-build",
+    "payload": {
+      "category": "command",
+      "command": "agent-lifecycle adapter event-check",
+      "exitCode": 0
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 3,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "grok-build",
+    "eventId": "offline-event-capture-grok-build-04",
+    "eventType": "writes.summarized",
+    "host": "grok-build",
+    "operationId": "offline-event-capture-grok-build",
+    "payload": {
+      "category": "file-change",
+      "changedFiles": [
+        "adapters/grok-build/adapter.descriptor.json"
+      ]
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 4,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "grok-build",
+    "eventId": "offline-event-capture-grok-build-05",
+    "eventType": "usage.reported",
+    "host": "grok-build",
+    "operationId": "offline-event-capture-grok-build",
+    "payload": {
+      "category": "model-usage",
+      "inputTokens": 64,
+      "outputTokens": 16
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 5,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  },
+  {
+    "adapterId": "grok-build",
+    "eventId": "offline-event-capture-grok-build-06",
+    "eventType": "task.completed",
+    "host": "grok-build",
+    "operationId": "offline-event-capture-grok-build",
+    "payload": {
+      "category": "lifecycle-transition",
+      "resultPath": "conformance/adapters/grok-build/offline-baseline.json"
+    },
+    "recordedAt": "2026-07-31T00:23:00Z",
+    "runId": "offline-conformance",
+    "schemaVersion": "agent-adapter-event.v1",
+    "sequence": 6,
+    "status": "PASS",
+    "taskId": "adapter-event-capture"
+  }
+]
