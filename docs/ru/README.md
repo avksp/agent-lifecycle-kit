@@ -40,6 +40,10 @@ flowchart LR
 - Дополнительные sandbox receipts для рискованных задач: filesystem, network,
   process, environment и enforcement source фиксируются отдельно от git
   write-scope.
+- Import mapper profiles для Constitution/ADR и AGENTS/agentskills; результат
+  остаётся untrusted draft с digest dialect profile.
+- Лёгкий episode retrieval по receipt/session summaries с digest provenance и
+  явным состоянием `chainVerified` или `chainUnchecked`.
 - Рекомендации по режиму жизненного цикла строятся по накопленной статистике.
 - Предложения по настройке правил остаются рекомендательными и применяются
   только явно, с возможностью отката.
@@ -135,6 +139,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - Целостность подтверждений: `agent-proof-finding.v1`,
   `agent-root-cause-evidence.v1`, `agent-fix-impact-receipt.v1`,
   `agent-receipt-hash-chain.v1`, `agent-proof-integrity-receipt.v1`.
+- Import interop: `agent-import-dialect-profile.v1`,
+  `agent-episode-index.v1`, `agent-episode-retrieval.v1`.
 - Дополнительные проверки качества: `agent-optional-quality-pack.v1`,
   `agent-behavior-check-run.v1`.
 - Диагностика и статусы: `agent-diagnostic-bundle.v1`,
@@ -159,6 +165,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
   обезличенные резюме подтверждений.
 - Git write-scope ограничивает пути репозитория; sandbox receipts описывают
   runtime containment и могут оставаться `UNKNOWN` до отдельной проверки.
+- Внешние dialect imports и retrieved episodes помогают с контекстом, но не
+  заменяют проверенные ALK source-of-truth artifacts.
 
 ## Документы
 
@@ -173,6 +181,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - [Экспорт использования](reference/usage-export.md)
 - [Целостность подтверждений](reference/evidence-integrity.md)
 - [Sandbox boundaries](reference/sandbox-boundaries.md)
+- [Import mappers](reference/import-mappers.md)
+- [Episode retrieval](reference/episode-retrieval.md)
 - [Безопасность релиза](security/release-security.md)
 
 ## Лицензия

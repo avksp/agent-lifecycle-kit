@@ -1,0 +1,103 @@
+"""Built-in JSON schemas for import dialect and episode retrieval contracts."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from agent_lifecycle.contracts.schema_builders import open_object_schema
+
+IMPORT_DIALECT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-import-dialect-profile.v1": open_object_schema(
+        "agent-import-dialect-profile.v1",
+        required=[
+            "schemaVersion",
+            "dialectId",
+            "dialectKind",
+            "sourceTrusted",
+            "requiresReview",
+            "freezeBlocked",
+            "profileDigest",
+        ],
+        properties={
+            "dialectId": {"type": "string", "minLength": 1},
+            "dialectKind": {"type": "string", "minLength": 1},
+            "sourceTrusted": {"const": False},
+            "requiresReview": {"const": True},
+            "freezeBlocked": {"const": True},
+            "markers": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "resourceCaps": {"type": "object"},
+            "profileDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-import-dialect-profile-validation.v1": open_object_schema(
+        "agent-import-dialect-profile-validation.v1",
+        required=["schemaVersion", "status", "dialectId", "dialectKind", "blockers", "profileDigest", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "dialectId": {"type": ["string", "null"]},
+            "dialectKind": {"type": ["string", "null"]},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "profileDigest": {"type": ["string", "null"], "minLength": 64, "maxLength": 64},
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-episode-index.v1": open_object_schema(
+        "agent-episode-index.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "sourceOfTruth",
+            "rebuildable",
+            "enabledByDefault",
+            "episodeCount",
+            "episodes",
+            "blockers",
+            "indexDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "sourceOfTruth": {"const": False},
+            "rebuildable": {"const": True},
+            "enabledByDefault": {"const": False},
+            "episodeCount": {"type": "integer", "minimum": 0},
+            "episodes": {"type": "array", "items": {"type": "object"}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "indexDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-episode-index-validation.v1": open_object_schema(
+        "agent-episode-index-validation.v1",
+        required=["schemaVersion", "status", "episodeCount", "blockers", "indexDigest", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "episodeCount": {"type": "integer", "minimum": 0},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "indexDigest": {"type": ["string", "null"], "minLength": 64, "maxLength": 64},
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-episode-retrieval.v1": open_object_schema(
+        "agent-episode-retrieval.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "sourceOfTruth",
+            "query",
+            "resultCount",
+            "results",
+            "indexDigest",
+            "blockers",
+            "retrievalDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "sourceOfTruth": {"const": False},
+            "query": {"type": "string"},
+            "resultCount": {"type": "integer", "minimum": 0},
+            "results": {"type": "array", "items": {"type": "object"}},
+            "indexDigest": {"type": ["string", "null"], "minLength": 64, "maxLength": 64},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "retrievalDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+}
