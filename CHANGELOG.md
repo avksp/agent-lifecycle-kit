@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.14.0 - 2026-07-31
+
+- Added optional Bug Forensics / Defect Repair profile contracts and helpers.
+- Added reproduction-before-modification, failure fingerprint, hypothesis
+  ledger, regression-proof, workflow gate and audit receipts.
+- Reused `agent-fix-impact-receipt.v1` for no-collateral-damage evidence and
+  `agent-cross-check-receipt.v1` for explicit high-risk bug cross-checks.
+- Added English and Russian Bug Forensics documentation and compact-context
+  budget guidance.
+
 ## 1.13.0 - 2026-07-31
 
 - Added EXPERIMENTAL Grok Build, OpenInterpreter and Pi adapter descriptors,

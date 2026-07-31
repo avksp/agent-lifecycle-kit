@@ -19,6 +19,12 @@ from agent_lifecycle.workflow.controller import (
     status,
     validate_budget_exceeded_policy,
 )
+from agent_lifecycle.workflow.bug_forensics_gates import (
+    build_bug_forensics_gate_receipt,
+    bug_forensics_activated,
+    require_bug_forensics_gate_pass,
+    validate_bug_forensics_gate_receipt,
+)
 from agent_lifecycle.workflow.final_proof_integrity import (
     proof_integrity_required,
     validate_final_proof_integrity,
@@ -41,8 +47,10 @@ __all__ = [
     "adopt_plan",
     "apply_budget_decision",
     "block_run",
+    "build_bug_forensics_gate_receipt",
     "build_worker_lease_receipt",
     "build_sandbox_requirement_policy",
+    "bug_forensics_activated",
     "check_lineage",
     "classify_lease_status",
     "commit_task_result",
@@ -51,6 +59,7 @@ __all__ = [
     "pause_for_budget_decision",
     "pause_for_external_action",
     "proof_integrity_required",
+    "require_bug_forensics_gate_pass",
     "require_task_sandbox_evidence_pass",
     "require_worker_lease_receipt_pass",
     "resolve_blocker",
@@ -61,6 +70,7 @@ __all__ = [
     "start_task",
     "status",
     "validate_budget_exceeded_policy",
+    "validate_bug_forensics_gate_receipt",
     "validate_final_proof_integrity",
     "validate_task_sandbox_evidence",
     "validate_worker_lease_receipt",
