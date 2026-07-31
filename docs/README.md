@@ -35,6 +35,8 @@ and does not depend on a source project.
 - [Review verdicts](reference/review-verdict.md)
 - [Optional quality packs](reference/optional-quality-packs.md)
 - [Optional cross-check profile](reference/cross-check-profile.md)
+- [Bug Forensics profile](reference/bug-forensics.md)
+- [Bug Forensics context budget](reference/bug-forensics-context-budget.md)
 - [Diagnostic bundles](reference/diagnostic-bundles.md)
 - [Read-only status views](reference/read-only-status-view.md)
 - [Controlled runner](reference/runner.md)
