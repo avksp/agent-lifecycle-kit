@@ -8,9 +8,9 @@
   ],
   "coreProfiles": [
     {
-      "bytes": 3481,
+      "bytes": 3660,
       "path": "conformance/core/adapter-baseline.v1.json",
-      "sha256": "2a2cf659a4db7dd5489c52aeceb38551e76ec683c8177ce8a5f5135574b9a2a9"
+      "sha256": "336db9edfff550a82462d30b634af59ad0e1ed43903b8dae0fd0d1b67a5ae8c7"
     },
     {
       "bytes": 1412,
@@ -18,9 +18,9 @@
       "sha256": "e3fb9c832f14aa8598ba867a61969ed1950cdca5f9c2f17165e836de85ee63d0"
     },
     {
-      "bytes": 989,
+      "bytes": 1054,
       "path": "conformance/core/live-calibration-profile.v1.json",
-      "sha256": "6191e41c0bb8595e456f6da62be1ca167c94b25742a310f743d7910368bba886"
+      "sha256": "6662fe79eb13b51ad8547e9bfa938197128c8eac062917c20bb6ae9c0b65efe4"
     },
     {
       "bytes": 890,

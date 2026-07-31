@@ -99,8 +99,9 @@ ownership is in [Source of truth](docs/reference/source-of-truth.md).
 
 `EXPERIMENTAL` means the adapter has source projection metadata and deterministic
 offline checks, but it is not promoted. `VERIFIED` is host-specific and requires
-bounded live host conformance, usage/cost calibration, accepted redacted
-evidence, and lifecycle final proof for the tested host range.
+bounded live host conformance, usage/resource calibration, accepted redacted
+evidence, and lifecycle final proof for the tested host range. USD accounting is
+required only for metered modes.
 
 | Host | Current claim |
 | --- | --- |
@@ -111,7 +112,7 @@ evidence, and lifecycle final proof for the tested host range.
 | Qwen Code | `VERIFIED` for Qwen Code 0.21.0 on the tested GLM 5.2 binding. Public package approval is not claimed. |
 | Cursor | `EXPERIMENTAL`; local safe inspection passed, but accepted live receipts are incomplete. |
 | Gemini CLI | `EXPERIMENTAL`; local live canary is blocked by the current Gemini Code Assist tier. |
-| Goose | `EXPERIMENTAL`; ACP host-capability projection with offline conformance only. |
+| Goose | `VERIFIED` for Goose 1.45.0 on the tested ZAI GLM 5.2 binding. Public directory approval is not claimed. |
 | Kimi Code | `EXPERIMENTAL`; live proof requires a configured provider and model alias. |
 | Grok Build | `EXPERIMENTAL`; ACP use is gated by a local probe and negative probe evidence is tracked. |
 | OpenInterpreter | `EXPERIMENTAL`; host-local compatible CLI projection with offline conformance only. |

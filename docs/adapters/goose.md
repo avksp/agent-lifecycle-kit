@@ -1,14 +1,16 @@
 # Goose Adapter
 
-The Goose adapter is an EXPERIMENTAL ALK adapter projection for hosts that
-provide an ACP-compatible command surface.
+The Goose adapter is a host-specific `VERIFIED` ALK adapter projection for
+Goose `1.45.0` on the tested local ZAI GLM 5.2 binding.
 
 ## Files
 
 - Descriptor: `adapters/goose/adapter.descriptor.json`
 - Capability manifest: `adapters/goose/capabilities.manifest.json`
 - Offline tests: `tests/adapters/goose/test_goose_adapter.py`
-- Probe receipt tests: `tests/live_hosts/test_goose_adapter.py`
+- Live harness: `tools/live_hosts/goose_harness.py`
+- Shared JSON CLI loop: `tools/live_hosts/json_cli_harness.py`
+- Probe and live harness tests: `tests/live_hosts/test_goose_adapter.py`
 
 ## Capability Contract
 
@@ -17,8 +19,15 @@ neutral capability claim, not a provider or model identity. Lifecycle semantics
 remain delegated to ALK core, and unsupported operations use the shared
 fail-closed policy.
 
-The adapter is not marked `VERIFIED`. Promotion requires live host conformance
-and calibration evidence in a later release gate.
+The `VERIFIED` claim is limited to the tested host range and the redacted
+live conformance evidence summary at
+`docs/adapters/evidence/goose-live-verified.md`. The live harness uses bounded
+`goose run` invocations with `--no-session`,
+`--no-profile`, `--max-turns 1`, `--max-tool-repetitions 1`, explicit
+host-local provider/model selection and post-invocation clean-worktree checks.
+
+This does not claim public directory approval, production platform promotion,
+universal ACP support or verified OS sandbox containment.
 
 ## Validation
 

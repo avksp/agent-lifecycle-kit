@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.16.0 - 2026-07-31
+
+- Promoted Goose to host-specific `VERIFIED` for Goose 1.45.0 on the tested
+  ZAI GLM 5.2 binding.
+- Added a bounded no-session/no-profile Goose live harness and shared JSON CLI
+  receipt loop for future adapter promotions.
+- Added Goose live host conformance, live calibration, containment and
+  lifecycle proof evidence summaries without public directory or production
+  promotion claims.
+- Added Goose to live calibration and adapter baseline profiles and recorded a
+  staged DRY audit for existing large live harnesses.
+
 ## 1.15.0 - 2026-07-31
 
 - Completed adapter inventory and promotion-gate coverage for all 12 adapter
