@@ -42,6 +42,12 @@
     },
     {
       "declaredMaturity": "EXPERIMENTAL",
+      "host": "goose",
+      "nativeProjection": "acp-host-cli",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
       "host": "hermes",
       "nativeProjection": "hermes-registry",
       "offlineInstallDiscoveryRequired": true
@@ -90,6 +96,7 @@
     "cursor",
     "gemini-cli",
     "grok-build",
+    "goose",
     "hermes",
     "kimi-code",
     "opencode",
