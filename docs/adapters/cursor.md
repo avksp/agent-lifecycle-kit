@@ -31,5 +31,5 @@ redacted in evidence. The summary is
 The adapter remains `EXPERIMENTAL` until live Cursor conformance, usage
 calibration and lifecycle proof evidence are accepted in the support matrix.
 Current blocker: `BLOCKED_FREE_SUBSCRIPTION_PROMOTION_EVIDENCE`; bounded smoke
-on the local Free subscription cannot replace usage/cost attestation or final
+on the local Free subscription cannot replace usage/resource attestation or final
 lifecycle proof.

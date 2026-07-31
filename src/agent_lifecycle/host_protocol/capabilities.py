@@ -19,6 +19,13 @@ def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
 
     model_routing = descriptor.get("modelRouting") if isinstance(descriptor.get("modelRouting"), dict) else {}
     operations = descriptor.get("operations") if isinstance(descriptor.get("operations"), list) else []
+    promotion = {
+        "verifiedRequiresLiveTestedHostRange": True,
+        "productionPromotionClaimed": False,
+    }
+    live_range = descriptor.get("liveTestedHostRange")
+    if isinstance(live_range, dict):
+        promotion["liveTestedHostRange"] = live_range
     return {
         "schemaVersion": CAPABILITY_MANIFEST_SCHEMA_VERSION,
         "adapterId": descriptor.get("adapterId"),
@@ -45,10 +52,7 @@ def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
         "hostCapabilities": _host_capabilities_from_descriptor(descriptor),
         "sandboxCapabilities": _sandbox_capabilities_from_descriptor(descriptor),
         "eventCapture": _event_capture_from_descriptor(descriptor),
-        "promotion": {
-            "verifiedRequiresLiveTestedHostRange": True,
-            "productionPromotionClaimed": False,
-        },
+        "promotion": promotion,
     }
 
 

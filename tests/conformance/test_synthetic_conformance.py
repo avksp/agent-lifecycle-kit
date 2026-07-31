@@ -74,6 +74,7 @@ class SyntheticConformanceTests(unittest.TestCase):
                 "claude-code",
                 "cursor",
                 "gemini-cli",
+                "goose",
                 "grok-build",
                 "hermes",
                 "kimi-code",

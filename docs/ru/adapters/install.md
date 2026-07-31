@@ -68,9 +68,10 @@ goose --help
 agent-lifecycle adapter install-plan --descriptor adapters/goose/adapter.descriptor.json
 ```
 
-Goose остаётся `EXPERIMENTAL`: ACP host-capability projection должен пройти
-live conformance, калибровку расхода и lifecycle proof для конкретного диапазона
-хоста.
+Goose имеет host-specific `VERIFIED` только для Goose `1.45.0` на проверенной
+связке ZAI GLM 5.2. Live promotion использовал ограниченные no-session/no-profile
+запуски с явным provider/model и проверкой чистого worktree после каждого
+вызова.
 
 ## Kimi Code
 
