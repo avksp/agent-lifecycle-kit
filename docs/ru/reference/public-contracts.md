@@ -5,14 +5,24 @@
 
 ## Основные контракты
 
+- `completionCheck`: обязательный task-level gate завершения.
 - `agent-completion-check-receipt.v1`: подтверждение завершения.
 - `agent-goal-record.v1`: запись цели.
 - `agent-objective-snapshot.v1`: компактный снимок цели.
 - `agent-runner-state.v1`: состояние управляемого выполнения.
+- `agent-runner-snapshot.v1`: компактный снимок runner state.
 - `agent-follow-up-register.v1`: реестр продолжений.
+- `agent-follow-up-summary.v1`: краткое состояние продолжений.
+- `agent-worktree-isolation-policy.v1`: политика изоляции рабочего дерева.
 - `agent-worktree-attempt-receipt.v1`: подтверждение изоляции рабочего дерева.
 - `agent-adapter-event-stream-receipt.v1`: поток событий адаптера.
+- `agent-adapter-event-capture-validation.v1`: проверка capture evidence.
 - `agent-review-verdict.v1`: проверочный вердикт.
+- `agent-review-routing-summary.v1`: routing summary для review.
+- `agent-optional-quality-pack.v1`: opt-in пакет качества.
+- `agent-behavior-check-run.v1`: результат behavior-check.
+- `agent-diagnostic-bundle.v1`: диагностический пакет.
+- `agent-readonly-status-view.v1`: read-only status view.
 - `agent-proof-finding.v1`: стабильная идентичность finding.
 - `agent-root-cause-evidence.v1`: подтверждение root cause.
 - `agent-fix-impact-receipt.v1`: канонический receipt влияния исправления.
@@ -35,6 +45,16 @@
 - `agent-cross-check-profile.v1`: optional cross-check profile, выключенный по
   умолчанию и capped в tokens/resources.
 - `agent-cross-check-receipt.v1`: receipt дополнительной проверки.
+- `agent-bug-forensics-profile.v1`: optional профиль для bug/regression repair.
+- `agent-bug-reproduction-receipt.v1`: reproduction-before-modification
+  evidence.
+- `agent-failure-fingerprint.v1`: стабильный fingerprint ошибки.
+- `agent-bug-hypothesis-ledger.v1`: accepted/rejected hypotheses и
+  minimal-patch gate.
+- `agent-regression-proof-receipt.v1`: тот же fingerprint red before / green
+  after.
+- `agent-bug-forensics-gate-receipt.v1`: workflow gate receipt.
+- `agent-bug-forensics-audit.v1`: audit summary для bug-forensics gate.
 - `agent-lifecycle-policy-proposal.v1`: предложение по настройке правил.
 
 ## Правило совместимости
@@ -65,3 +85,8 @@ check`. Изменение контракта без тестов и докум�
 Runner recovery receipts добавляют evidence для нескольких попыток, но не
 заменяют workflow state. Cross-check profile остаётся advisory и opt-in, пока
 план явно не требует blocking cross-check.
+
+Bug Forensics включается только явным task/profile marker. Для impact он
+использует существующий `agent-fix-impact-receipt.v1`, а для high-risk
+cross-check — `agent-cross-check-receipt.v1` с token/resource caps и без
+обязательного USD-cost.

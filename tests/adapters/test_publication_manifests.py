@@ -8,7 +8,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "1.13.0"
+VERSION = "1.14.0"
 PLUGIN_NAME = "agent-lifecycle-kit"
 SKILL_NAMES = {
     "agent-first-planning",
@@ -16,6 +16,7 @@ SKILL_NAMES = {
     "agent-plan-to-workers",
     "agent-workflow-orchestrator",
     "audit-plan-implementation",
+    "bug-forensics",
 }
 
 
