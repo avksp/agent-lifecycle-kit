@@ -1,0 +1,106 @@
+"""Built-in JSON schemas for optional cross-check contracts."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from agent_lifecycle.contracts.schema_builders import open_object_schema
+
+CROSS_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-cross-check-profile.v1": open_object_schema(
+        "agent-cross-check-profile.v1",
+        required=[
+            "schemaVersion",
+            "profileId",
+            "status",
+            "enabledByDefault",
+            "activationMode",
+            "advisoryByDefault",
+            "blockingRequiresPlanOptIn",
+            "requiresExplicitActivation",
+            "budgetCap",
+            "budgetUnits",
+            "monetaryCostCanonical",
+            "productionPromotionClaimed",
+            "profileDigest",
+        ],
+        properties={
+            "profileId": {"type": "string", "minLength": 1},
+            "status": {"const": "OPTIONAL"},
+            "enabledByDefault": {"const": False},
+            "activationMode": {"const": "opt-in"},
+            "advisoryByDefault": {"const": True},
+            "blockingRequiresPlanOptIn": {"const": True},
+            "requiresExplicitActivation": {"const": True},
+            "liveCallsAllowed": {"type": "boolean"},
+            "riskTriggers": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "budgetCap": {"type": "object"},
+            "budgetUnits": {"const": "tokens-and-resources"},
+            "monetaryCostCanonical": {"const": False},
+            "productionPromotionClaimed": {"const": False},
+            "profileDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-cross-check-profile-validation.v1": open_object_schema(
+        "agent-cross-check-profile-validation.v1",
+        required=["schemaVersion", "status", "profileId", "enabledByDefault", "blockers", "profileDigest", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "profileId": {"type": ["string", "null"]},
+            "enabledByDefault": {"type": ["boolean", "null"]},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "profileDigest": {"type": ["string", "null"], "minLength": 64, "maxLength": 64},
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-cross-check-receipt.v1": open_object_schema(
+        "agent-cross-check-receipt.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "profileId",
+            "profileDigest",
+            "subject",
+            "reviewer",
+            "findings",
+            "blocking",
+            "advisory",
+            "budgetCap",
+            "budgetUsage",
+            "liveCallsStarted",
+            "blockers",
+            "productionPromotionClaimed",
+            "receiptDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL", "SKIPPED"]},
+            "profileId": {"type": "string", "minLength": 1},
+            "profileDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "subject": {"type": "object"},
+            "reviewer": {"type": "object"},
+            "findings": {"type": "array", "items": {"type": "object"}},
+            "blocking": {"type": "boolean"},
+            "advisory": {"type": "boolean"},
+            "budgetCap": {"type": "object"},
+            "budgetUsage": {"type": "object"},
+            "liveCallsStarted": {"type": "boolean"},
+            "evidenceIds": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "productionPromotionClaimed": {"const": False},
+            "receiptDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-cross-check-receipt-validation.v1": open_object_schema(
+        "agent-cross-check-receipt-validation.v1",
+        required=["schemaVersion", "status", "receiptStatus", "profileId", "blocking", "blockers", "receiptDigest", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "receiptStatus": {"type": ["string", "null"]},
+            "profileId": {"type": ["string", "null"]},
+            "blocking": {"type": ["boolean", "null"]},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "receiptDigest": {"type": ["string", "null"], "minLength": 64, "maxLength": 64},
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+}
