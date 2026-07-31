@@ -34,6 +34,9 @@ flowchart LR
   жизненного цикла и координацию.
 - Экспорт использования показывает сессии, токены, ресурсы, digest
   подтверждений и необязательный `cost_usd`, если его сообщает metered-хост.
+- Дополнительный proof-integrity слой для багфиксов и рискованных финальных
+  подтверждений: стабильные findings, digest root cause, fix-impact receipts и
+  hash chain.
 - Рекомендации по режиму жизненного цикла строятся по накопленной статистике.
 - Предложения по настройке правил остаются рекомендательными и применяются
   только явно, с возможностью отката.
@@ -124,6 +127,9 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
   `agent-adapter-event-capture-validation.v1`.
 - Проверочные вердикты: `agent-review-verdict.v1`,
   `agent-review-routing-summary.v1`.
+- Целостность подтверждений: `agent-proof-finding.v1`,
+  `agent-root-cause-evidence.v1`, `agent-fix-impact-receipt.v1`,
+  `agent-receipt-hash-chain.v1`, `agent-proof-integrity-receipt.v1`.
 - Дополнительные проверки качества: `agent-optional-quality-pack.v1`,
   `agent-behavior-check-run.v1`.
 - Диагностика и статусы: `agent-diagnostic-bundle.v1`,
@@ -158,6 +164,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - [Диагностика готовности](reference/readiness-diagnostics.md)
 - [Учёт расхода жизненного цикла](reference/lifecycle-cost.md)
 - [Экспорт использования](reference/usage-export.md)
+- [Целостность подтверждений](reference/evidence-integrity.md)
 - [Безопасность релиза](security/release-security.md)
 
 ## Лицензия
