@@ -229,6 +229,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_finalize.add_argument("--source-revision", required=True)
     workflow_finalize.add_argument("--final-audit", required=True)
     workflow_finalize.add_argument("--proof", required=True)
+    workflow_finalize.add_argument("--proof-integrity")
     workflow_finalize.add_argument("--goal-record")
     workflow_finalize.add_argument("--follow-up-register")
     workflow_finalize.add_argument("--reason", required=True)

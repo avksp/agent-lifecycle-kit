@@ -19,6 +19,10 @@ from agent_lifecycle.workflow.controller import (
     status,
     validate_budget_exceeded_policy,
 )
+from agent_lifecycle.workflow.final_proof_integrity import (
+    proof_integrity_required,
+    validate_final_proof_integrity,
+)
 
 __all__ = [
     "accept_task",
@@ -31,6 +35,7 @@ __all__ = [
     "next_action",
     "pause_for_budget_decision",
     "pause_for_external_action",
+    "proof_integrity_required",
     "resolve_blocker",
     "resume_external_action",
     "select_auto_budget_action",
@@ -38,4 +43,5 @@ __all__ = [
     "start_task",
     "status",
     "validate_budget_exceeded_policy",
+    "validate_final_proof_integrity",
 ]

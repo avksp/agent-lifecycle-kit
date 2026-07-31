@@ -26,7 +26,9 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle workflow task-result`: submit implementation evidence.
 - `agent-lifecycle workflow task-accept`: accept a completed task.
 - `agent-lifecycle workflow block/resolve-blocker`: record external blockers.
-- `agent-lifecycle workflow finalize`: produce final lifecycle proof.
+- `agent-lifecycle workflow finalize`: produce final lifecycle proof. Add
+  `--proof-integrity <receipt.json>` when the run or final audit requires
+  proof-integrity evidence.
 - `agent-lifecycle runner start/status/transition/stop/resume`: control
   bounded execution state.
 
