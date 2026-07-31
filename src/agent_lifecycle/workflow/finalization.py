@@ -15,6 +15,7 @@ from agent_lifecycle.specification import (
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.followup import validate_followup_register
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
+from agent_lifecycle.workflow.final_proof_integrity import validate_final_proof_integrity
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
@@ -29,6 +30,7 @@ def finalize_run(
     source_revision: str,
     final_audit_path: str,
     proof_path: str,
+    proof_integrity_path: str | None = None,
     goal_record_path: str | None = None,
     follow_up_register_path: str | None = None,
     reason: str,
@@ -49,6 +51,7 @@ def finalize_run(
     completion_check_receipt = _validate_completion_check(state, root)
     goal_record = _validate_goal_record(state, root, goal_record_path)
     follow_up_register = _validate_follow_up_register(state, root, follow_up_register_path)
+    proof_integrity = _validate_proof_integrity(state, root, final_audit, proof_integrity_path)
     finalization_gate_receipts = _validate_finalization_gates(
         state_path,
         state,
@@ -62,6 +65,7 @@ def finalize_run(
         completion_check_receipt=completion_check_receipt,
         goal_record=goal_record,
         follow_up_register=follow_up_register,
+        proof_integrity=proof_integrity,
         finalization_gate_receipts=finalization_gate_receipts,
         reason=reason,
     )
@@ -75,6 +79,8 @@ def finalize_run(
         state["goalRecord"] = goal_record["record"]
     if follow_up_register is not None:
         state["followUpRegister"] = follow_up_register["register"]
+    if proof_integrity is not None:
+        state["proofIntegrityReceipt"] = proof_integrity["receipt"]
     state["phase"] = "COMPLETE"
     commit_state(
         state_path,
@@ -86,6 +92,7 @@ def finalize_run(
             "completionCheckReceipt": completion_check_receipt,
             "goalRecord": goal_record,
             "followUpRegister": follow_up_register,
+            "proofIntegrity": proof_integrity,
             "finalizationGateReceipts": finalization_gate_receipts,
             "proof": state["finalProof"],
             "reason": reason,
@@ -214,6 +221,22 @@ def _validate_follow_up_register(state: dict[str, Any], root: Path, follow_up_re
     return {"register": identity, "validation": validation}
 
 
+def _validate_proof_integrity(
+    state: dict[str, Any],
+    root: Path,
+    final_audit: dict[str, Any],
+    proof_integrity_path: str | None,
+) -> dict[str, Any] | None:
+    if proof_integrity_path is None:
+        validate_final_proof_integrity(state=state, final_audit=final_audit, receipt=None)
+        return None
+    receipt_rel = normalize_repo_path(proof_integrity_path, label="proof integrity receipt")
+    receipt = read_json_object(root / receipt_rel, label="proof integrity receipt")
+    validation = validate_final_proof_integrity(state=state, final_audit=final_audit, receipt=receipt)
+    identity = artifact_identity(root, receipt_rel, receipt)
+    return {"receipt": identity, "validation": validation}
+
+
 def _proof_body(
     state: dict[str, Any],
     *,
@@ -222,6 +245,7 @@ def _proof_body(
     completion_check_receipt: dict[str, Any] | None,
     goal_record: dict[str, Any] | None,
     follow_up_register: dict[str, Any] | None,
+    proof_integrity: dict[str, Any] | None,
     finalization_gate_receipts: list[dict[str, Any]],
     reason: str,
 ) -> dict[str, Any]:
@@ -250,6 +274,7 @@ def _proof_body(
         "completionCheck": completion_check_receipt,
         "goalRecord": goal_record,
         "followUpRegister": follow_up_register,
+        "proofIntegrity": proof_integrity,
         "finalizationGateReceipts": finalization_gate_receipts,
         "reason": reason,
         "createdAt": now_iso(),

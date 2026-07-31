@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.9.0 - 2026-07-31
+
+- Added proof-integrity contracts for stable finding identity, root-cause
+  evidence, canonical fix-impact receipts and append-only receipt hash chains.
+- Added proof-integrity validation helpers and optional finalization binding
+  through `workflow finalize --proof-integrity`.
+- Added hash-chain migration policy for new runs and explicit legacy
+  exemptions/backfill behavior.
+- Added English and Russian evidence-integrity documentation.
+
 ## 1.8.0 - 2026-07-31
 
 - Added schema-backed usage/session export reports with receipt digests,
