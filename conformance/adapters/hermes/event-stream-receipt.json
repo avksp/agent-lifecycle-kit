@@ -1,6 +1,6 @@
 {
   "adapterId": "hermes",
-  "descriptorDigest": "c2232b4a8a3dd1e21a7bad642cca99ebd687c34389e84ab4fb5b912c21e40014",
+  "descriptorDigest": "988970d6b939b5a7f6fdab0538e1fc96793db2496c454954f2604e30a37efae1",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "81576ea72843f6cc49c60ff113d3977f35cacab32555ee1df67a6f04d6fc7f2b",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "c3170eb3eede3e2041a0663c1290f4318979d0b950b14838644a16c90152ffd6",
+  "receiptDigest": "35048eea40b6302b84a099fecf2f85cb6948ba7d805059f60ac8ec38ad59e338",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",

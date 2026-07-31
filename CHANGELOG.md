@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.10.0 - 2026-07-31
+
+- Added sandbox-boundary contracts for runtime filesystem, network, process,
+  environment and enforcement-source evidence.
+- Added sandbox receipt builders, validators and fail-closed workflow policy
+  checks for high-risk or explicitly sandbox-required tasks.
+- Added additive adapter sandbox capability declarations without overclaiming
+  verified OS sandbox support.
+- Added English and Russian sandbox-boundary documentation and public contract
+  references.
+
 ## 1.9.0 - 2026-07-31
 
 - Added proof-integrity contracts for stable finding identity, root-cause

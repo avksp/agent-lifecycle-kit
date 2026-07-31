@@ -8,6 +8,7 @@ from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.host_protocol.acp_capability import validate_host_capabilities
 from agent_lifecycle.host_protocol.event_capture import EVENT_CAPTURE_OPERATION, adapter_declares_event_capture, event_capture_declaration
 from agent_lifecycle.host_protocol.validation import REQUIRED_OPERATION_NAMES, validate_adapter_descriptor
+from agent_lifecycle.runner import validate_sandbox_capability
 
 CAPABILITY_MANIFEST_SCHEMA_VERSION = "agent-adapter-capability-manifest.v1"
 CAPABILITY_MANIFEST_VALIDATION_SCHEMA_VERSION = "agent-adapter-capability-manifest-validation.v1"
@@ -42,6 +43,7 @@ def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
             "providerModelNamesInCore": model_routing.get("providerModelNamesInCore"),
         },
         "hostCapabilities": _host_capabilities_from_descriptor(descriptor),
+        "sandboxCapabilities": _sandbox_capabilities_from_descriptor(descriptor),
         "eventCapture": _event_capture_from_descriptor(descriptor),
         "promotion": {
             "verifiedRequiresLiveTestedHostRange": True,
@@ -87,6 +89,7 @@ def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[s
     _validate_manifest_capabilities(manifest, descriptor, blockers)
     _validate_runtime_boundary(manifest, descriptor, blockers)
     _validate_host_capability_drift(manifest, descriptor, blockers)
+    _validate_sandbox_capability_drift(manifest, descriptor, blockers)
     _validate_event_capture(manifest, descriptor, blockers)
     status = "PASS" if not blockers else "FAIL"
     return {
@@ -130,6 +133,13 @@ def _host_capabilities_from_descriptor(descriptor: dict[str, Any]) -> list[dict[
     if not isinstance(capabilities, list):
         return []
     return [dict(item) for item in capabilities if isinstance(item, dict)]
+
+
+def _sandbox_capabilities_from_descriptor(descriptor: dict[str, Any]) -> dict[str, Any] | None:
+    capabilities = descriptor.get("sandboxCapabilities")
+    if not isinstance(capabilities, dict):
+        return None
+    return dict(capabilities)
 
 
 def _validate_manifest_capabilities(
@@ -207,6 +217,26 @@ def _validate_host_capability_drift(
     )
     if validation["status"] == "FAIL":
         blockers.append({"code": "capability-manifest-host-capability-invalid", "blockers": validation["blockers"]})
+
+
+def _validate_sandbox_capability_drift(
+    manifest: dict[str, Any],
+    descriptor: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> None:
+    descriptor_capability = descriptor.get("sandboxCapabilities")
+    manifest_capability = manifest.get("sandboxCapabilities")
+    if descriptor_capability is None and manifest_capability is None:
+        return
+    if manifest_capability != descriptor_capability:
+        blockers.append({"code": "capability-manifest-sandbox-capability-drift"})
+        return
+    if not isinstance(manifest_capability, dict):
+        blockers.append({"code": "capability-manifest-sandbox-capability-invalid"})
+        return
+    validation = validate_sandbox_capability(manifest_capability)
+    if validation["status"] == "FAIL":
+        blockers.append({"code": "capability-manifest-sandbox-capability-invalid", "blockers": validation["blockers"]})
 
 
 def _validate_event_capture(
