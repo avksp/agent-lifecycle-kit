@@ -110,6 +110,9 @@ evidence, and lifecycle final proof for the tested host range.
 | Cursor | `EXPERIMENTAL`; local safe inspection passed, but accepted live receipts are incomplete. |
 | Gemini CLI | `EXPERIMENTAL`; local live canary is blocked by the current Gemini Code Assist tier. |
 | Kimi Code | `EXPERIMENTAL`; live proof requires a configured provider and model alias. |
+| Grok Build | `EXPERIMENTAL`; ACP use is gated by a local probe and negative probe evidence is tracked. |
+| OpenInterpreter | `EXPERIMENTAL`; host-local compatible CLI projection with offline conformance only. |
+| Pi | `EXPERIMENTAL`; RPC/JSON and AGENTS/agentskills projection with no live promotion claim. |
 
 Adapter installation and maturity details live in
 [Adapter install](docs/adapters/install.md) and
@@ -156,6 +159,9 @@ Compact vocabulary includes `completionCheck`,
 - [Русская документация](docs/ru/README.md)
 - [Quickstart](docs/guides/quickstart.md)
 - [Adapter install](docs/adapters/install.md)
+- [Grok Build adapter](docs/adapters/grok-build.md)
+- [OpenInterpreter adapter](docs/adapters/openinterpreter.md)
+- [Pi adapter](docs/adapters/pi.md)
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
 - [Lifecycle cost accounting](docs/reference/lifecycle-cost.md)
 - [Usage export](docs/reference/usage-export.md)

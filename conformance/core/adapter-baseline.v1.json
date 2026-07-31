@@ -1,37 +1,101 @@
 {
-  "schemaVersion": "agent-lifecycle-adapter-baseline.v1",
   "baselineId": "offline-adapter-baseline-v1",
   "contractCompatibility": {
-    "rangeKind": "closed-offline",
-    "minimum": "adapter-contract.v1",
-    "maximum": "adapter-contract.v1",
     "authoritativeSource": {
-      "sourceId": "normalized-contract-inventory-r02",
-      "sha256": "c332a29de6eed7dcf1ff93cfa5cb0868557f31d1f7ff635ba2df2c7695ed3d4a"
+      "sha256": "c332a29de6eed7dcf1ff93cfa5cb0868557f31d1f7ff635ba2df2c7695ed3d4a",
+      "sourceId": "normalized-contract-inventory-r02"
+    },
+    "maximum": "adapter-contract.v1",
+    "minimum": "adapter-contract.v1",
+    "rangeKind": "closed-offline"
+  },
+  "hostMatrix": [
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "codex",
+      "nativeProjection": "codex-plugin",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "claude-code",
+      "nativeProjection": "claude-plugin",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "cursor",
+      "nativeProjection": "cursor-plugin",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "gemini-cli",
+      "nativeProjection": "host-local-projection",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "grok-build",
+      "nativeProjection": "acp-probe-gated-cli",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "hermes",
+      "nativeProjection": "hermes-registry",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "kimi-code",
+      "nativeProjection": "host-local-projection",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "opencode",
+      "nativeProjection": "opencode-plugin",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "openinterpreter",
+      "nativeProjection": "host-local-compatible-cli",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "pi",
+      "nativeProjection": "rpc-json-skills",
+      "offlineInstallDiscoveryRequired": true
+    },
+    {
+      "declaredMaturity": "EXPERIMENTAL",
+      "host": "qwen-code",
+      "nativeProjection": "host-local-projection",
+      "offlineInstallDiscoveryRequired": true
     }
+  ],
+  "maturityRules": {
+    "liveTestedHostRange": null,
+    "offlineBaselineRequired": true,
+    "requiredReleaseMaturity": "EXPERIMENTAL",
+    "unsupportedOperationPolicy": "fail-closed",
+    "verifiedRequiresLiveEvidence": true
   },
   "requiredHosts": [
     "codex",
     "claude-code",
     "cursor",
     "gemini-cli",
+    "grok-build",
     "hermes",
     "kimi-code",
     "opencode",
+    "openinterpreter",
+    "pi",
     "qwen-code"
-  ],
-  "requiredProtocolEnvelopes": [
-    "adapter-discovery.v1",
-    "adapter-capability-descriptor.v1",
-    "agent-adapter-capability-manifest.v1",
-    "host-operation-request.v1",
-    "host-operation-receipt.v1",
-    "model-route-decision.v1",
-    "model-usage-receipt.v1",
-    "usage-attestation.v1",
-    "task-result.v2",
-    "task-review.v2",
-    "final-audit.v2"
   ],
   "requiredOperations": [
     "install",
@@ -49,61 +113,18 @@
     "task-audit",
     "final-audit"
   ],
-  "maturityRules": {
-    "requiredReleaseMaturity": "EXPERIMENTAL",
-    "verifiedRequiresLiveEvidence": true,
-    "unsupportedOperationPolicy": "fail-closed",
-    "offlineBaselineRequired": true,
-    "liveTestedHostRange": null
-  },
-  "hostMatrix": [
-    {
-      "host": "codex",
-      "nativeProjection": "codex-plugin",
-      "offlineInstallDiscoveryRequired": true,
-      "declaredMaturity": "EXPERIMENTAL"
-    },
-    {
-      "host": "claude-code",
-      "nativeProjection": "claude-plugin",
-      "offlineInstallDiscoveryRequired": true,
-      "declaredMaturity": "EXPERIMENTAL"
-    },
-    {
-      "host": "cursor",
-      "nativeProjection": "cursor-plugin",
-      "offlineInstallDiscoveryRequired": true,
-      "declaredMaturity": "EXPERIMENTAL"
-    },
-    {
-      "host": "gemini-cli",
-      "nativeProjection": "host-local-projection",
-      "offlineInstallDiscoveryRequired": true,
-      "declaredMaturity": "EXPERIMENTAL"
-    },
-    {
-      "host": "hermes",
-      "nativeProjection": "hermes-registry",
-      "offlineInstallDiscoveryRequired": true,
-      "declaredMaturity": "EXPERIMENTAL"
-    },
-    {
-      "host": "kimi-code",
-      "nativeProjection": "host-local-projection",
-      "offlineInstallDiscoveryRequired": true,
-      "declaredMaturity": "EXPERIMENTAL"
-    },
-    {
-      "host": "opencode",
-      "nativeProjection": "opencode-plugin",
-      "offlineInstallDiscoveryRequired": true,
-      "declaredMaturity": "EXPERIMENTAL"
-    },
-    {
-      "host": "qwen-code",
-      "nativeProjection": "host-local-projection",
-      "offlineInstallDiscoveryRequired": true,
-      "declaredMaturity": "EXPERIMENTAL"
-    }
-  ]
+  "requiredProtocolEnvelopes": [
+    "adapter-discovery.v1",
+    "adapter-capability-descriptor.v1",
+    "agent-adapter-capability-manifest.v1",
+    "host-operation-request.v1",
+    "host-operation-receipt.v1",
+    "model-route-decision.v1",
+    "model-usage-receipt.v1",
+    "usage-attestation.v1",
+    "task-result.v2",
+    "task-review.v2",
+    "final-audit.v2"
+  ],
+  "schemaVersion": "agent-lifecycle-adapter-baseline.v1"
 }

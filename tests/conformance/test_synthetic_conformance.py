@@ -67,7 +67,22 @@ class SyntheticConformanceTests(unittest.TestCase):
         baseline = load_json(CONFORMANCE_ROOT / "core" / "adapter-baseline.v1.json")
         hosts = {item["host"]: item for item in baseline["hostMatrix"]}
 
-        self.assertEqual(set(hosts), {"codex", "claude-code", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "qwen-code"})
+        self.assertEqual(
+            set(hosts),
+            {
+                "codex",
+                "claude-code",
+                "cursor",
+                "gemini-cli",
+                "grok-build",
+                "hermes",
+                "kimi-code",
+                "opencode",
+                "openinterpreter",
+                "pi",
+                "qwen-code",
+            },
+        )
         self.assertEqual(baseline["maturityRules"]["requiredReleaseMaturity"], "EXPERIMENTAL")
         self.assertIsNone(baseline["maturityRules"]["liveTestedHostRange"])
         self.assertEqual(baseline["maturityRules"]["unsupportedOperationPolicy"], "fail-closed")

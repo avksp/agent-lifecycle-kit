@@ -1,0 +1,12 @@
+{
+  "adapterDescriptor": "adapters/pi/adapter.descriptor.json",
+  "adapterId": "pi",
+  "baselineId": "offline-adapter-baseline-v1",
+  "capabilityManifest": "adapters/pi/capabilities.manifest.json",
+  "expectedResult": "PASS",
+  "host": "pi",
+  "liveRuntimeRequired": false,
+  "requiredMaturity": "EXPERIMENTAL",
+  "schemaVersion": "agent-lifecycle-adapter-conformance.v1",
+  "sharedBaseline": "conformance/core/adapter-baseline.v1.json"
+}
