@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.host_protocol.acp_capability import validate_host_capabilities
 from agent_lifecycle.host_protocol.contracts import HostOperationReceipt, HostOperationRequest
 
 REQUIRED_DESCRIPTOR_FIELDS = {
@@ -95,6 +96,21 @@ def _validate_descriptor_shape(descriptor: dict[str, Any], blockers: list[dict[s
     missing_operations = sorted(REQUIRED_OPERATION_NAMES.difference(provided))
     if missing_operations:
         blockers.append({"code": "adapter-required-operation-missing", "message": "required operations are missing", "operations": missing_operations})
+    host_capabilities = descriptor.get("hostCapabilities")
+    if host_capabilities is not None:
+        validation = validate_host_capabilities(
+            host_capabilities,
+            adapter_id=descriptor.get("adapterId") if isinstance(descriptor.get("adapterId"), str) else None,
+            host=descriptor.get("host") if isinstance(descriptor.get("host"), str) else None,
+        )
+        if validation["status"] == "FAIL":
+            blockers.append(
+                {
+                    "code": "adapter-host-capability-invalid",
+                    "message": "adapter hostCapabilities failed validation",
+                    "blockers": validation["blockers"],
+                }
+            )
 
 
 def _validate_baseline(descriptor: dict[str, Any], baseline: dict[str, Any], blockers: list[dict[str, Any]]) -> None:

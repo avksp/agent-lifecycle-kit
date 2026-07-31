@@ -10,6 +10,7 @@ from agent_lifecycle.contracts.adapter_event_schemas import ADAPTER_EVENT_SCHEMA
 from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.evidence_import_schemas import EVIDENCE_IMPORT_SCHEMAS
+from agent_lifecycle.contracts.host_capability_schemas import HOST_CAPABILITY_SCHEMAS
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.policy_schemas import POLICY_SCHEMAS
@@ -27,6 +28,7 @@ _SCHEMA_GROUPS = (
     EVIDENCE_IMPORT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,
     RUNNER_WORKTREE_SCHEMAS,
+    HOST_CAPABILITY_SCHEMAS,
     ADAPTER_CONTRACT_SCHEMAS,
     CONTEXT_MODEL_SCHEMAS,
     RELEASE_CONTRACT_SCHEMAS,

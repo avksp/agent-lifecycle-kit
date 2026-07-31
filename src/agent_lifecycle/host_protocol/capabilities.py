@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.host_protocol.acp_capability import validate_host_capabilities
 from agent_lifecycle.host_protocol.event_capture import EVENT_CAPTURE_OPERATION, adapter_declares_event_capture, event_capture_declaration
 from agent_lifecycle.host_protocol.validation import REQUIRED_OPERATION_NAMES, validate_adapter_descriptor
 
@@ -40,6 +41,7 @@ def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
             "unsupportedOperations": descriptor.get("unsupportedOperationPolicy"),
             "providerModelNamesInCore": model_routing.get("providerModelNamesInCore"),
         },
+        "hostCapabilities": _host_capabilities_from_descriptor(descriptor),
         "eventCapture": _event_capture_from_descriptor(descriptor),
         "promotion": {
             "verifiedRequiresLiveTestedHostRange": True,
@@ -84,6 +86,7 @@ def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[s
         )
     _validate_manifest_capabilities(manifest, descriptor, blockers)
     _validate_runtime_boundary(manifest, descriptor, blockers)
+    _validate_host_capability_drift(manifest, descriptor, blockers)
     _validate_event_capture(manifest, descriptor, blockers)
     status = "PASS" if not blockers else "FAIL"
     return {
@@ -120,6 +123,13 @@ def _event_capture_from_descriptor(descriptor: dict[str, Any]) -> dict[str, Any]
         "producerBoundary": None,
         "promotionRequired": False,
     }
+
+
+def _host_capabilities_from_descriptor(descriptor: dict[str, Any]) -> list[dict[str, Any]]:
+    capabilities = descriptor.get("hostCapabilities")
+    if not isinstance(capabilities, list):
+        return []
+    return [dict(item) for item in capabilities if isinstance(item, dict)]
 
 
 def _validate_manifest_capabilities(
@@ -174,6 +184,29 @@ def _validate_runtime_boundary(
         blockers.append({"code": "capability-runtime-boundary-policy", "field": "unsupportedOperations"})
     if boundary.get("providerModelNamesInCore") is not False:
         blockers.append({"code": "capability-provider-model-boundary", "message": "provider model names must stay out of core contracts"})
+
+
+def _validate_host_capability_drift(
+    manifest: dict[str, Any],
+    descriptor: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> None:
+    descriptor_capabilities = descriptor.get("hostCapabilities")
+    manifest_capabilities = manifest.get("hostCapabilities")
+    if descriptor_capabilities is None and manifest_capabilities is None:
+        return
+    if not isinstance(descriptor_capabilities, list):
+        descriptor_capabilities = []
+    if manifest_capabilities != descriptor_capabilities:
+        blockers.append({"code": "capability-manifest-host-capability-drift"})
+        return
+    validation = validate_host_capabilities(
+        manifest_capabilities,
+        adapter_id=descriptor.get("adapterId") if isinstance(descriptor.get("adapterId"), str) else None,
+        host=descriptor.get("host") if isinstance(descriptor.get("host"), str) else None,
+    )
+    if validation["status"] == "FAIL":
+        blockers.append({"code": "capability-manifest-host-capability-invalid", "blockers": validation["blockers"]})
 
 
 def _validate_event_capture(
