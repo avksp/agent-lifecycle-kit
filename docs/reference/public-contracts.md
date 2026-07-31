@@ -27,6 +27,36 @@ Large-model reviews can inspect the full schema body through `schema show`;
 small local models can use the policy receipt as a compact map of what is
 stable.
 
+## Core lifecycle controls
+
+The core lifecycle surface covers completion, goal continuity, runner state,
+follow-up tracking, worktree isolation, adapter event capture, review verdicts
+and optional quality/reporting controls.
+
+Stable schema ids:
+
+- `agent-completion-check-receipt.v1`
+- `agent-goal-record.v1`
+- `agent-objective-snapshot.v1`
+- `agent-runner-state.v1`
+- `agent-runner-snapshot.v1`
+- `agent-follow-up-register.v1`
+- `agent-follow-up-summary.v1`
+- `agent-worktree-isolation-policy.v1`
+- `agent-worktree-attempt-receipt.v1`
+- `agent-adapter-event-stream-receipt.v1`
+- `agent-adapter-event-capture-validation.v1`
+- `agent-review-verdict.v1`
+- `agent-review-routing-summary.v1`
+- `agent-optional-quality-pack.v1`
+- `agent-behavior-check-run.v1`
+- `agent-diagnostic-bundle.v1`
+- `agent-readonly-status-view.v1`
+
+`completionCheck` is the task-level completion gate. Optional quality packs and
+read-only reports add bounded evidence, but they do not replace source-of-truth
+lifecycle artifacts.
+
 ## Evidence integrity
 
 The proof-integrity surface is additive and opt-in. It is used when a run or
@@ -115,3 +145,31 @@ fields; USD-cost is not required for local or non-metered models.
 
 `agent-cross-check-profile.v1` is disabled by default, token/resource-capped and
 advisory unless a plan explicitly opts into blocking use.
+
+## Bug forensics
+
+Bug Forensics is an optional defect-repair profile. It is activated only by an
+explicit task/profile marker and requires proof that the same failure is red
+before the fix and green after it.
+
+Stable schema ids:
+
+- `agent-bug-forensics-profile.v1`
+- `agent-bug-forensics-profile-validation.v1`
+- `agent-bug-reproduction-receipt.v1`
+- `agent-bug-reproduction-receipt-validation.v1`
+- `agent-failure-fingerprint.v1`
+- `agent-failure-fingerprint-validation.v1`
+- `agent-bug-hypothesis-ledger.v1`
+- `agent-bug-hypothesis-ledger-validation.v1`
+- `agent-regression-proof-receipt.v1`
+- `agent-regression-proof-receipt-validation.v1`
+- `agent-bug-forensics-gate-receipt.v1`
+- `agent-bug-forensics-gate-validation.v1`
+- `agent-bug-forensics-audit.v1`
+- `agent-bug-forensics-audit-validation.v1`
+
+`agent-fix-impact-receipt.v1` remains the canonical fix-impact contract. Bug
+Forensics references it instead of defining a competing schema. Cross-check, if
+requested for a high-risk bug, reuses `agent-cross-check-receipt.v1` with
+token/resource caps and without mandatory USD-cost accounting.
