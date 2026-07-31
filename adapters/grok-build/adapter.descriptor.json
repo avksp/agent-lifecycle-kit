@@ -40,7 +40,7 @@
       "probe": {
         "command": [
           "grok",
-          "build",
+          "agent",
           "--help"
         ],
         "liveCallsStarted": false,
@@ -52,12 +52,31 @@
       "transport": "acp"
     }
   ],
-  "liveTestedHostRange": null,
-  "maturity": "EXPERIMENTAL",
+  "liveTestedHostRange": {
+    "host": "grok-build",
+    "minimumVersion": "0.2.117",
+    "maximumVersion": "0.2.117",
+    "evidence": [
+      "docs/adapters/evidence/grok-build-live-verified.md",
+      "conformance/adapters/grok-build/grok-acp-probe-positive-fixture.json",
+      "work/release-1-17/evidence/preflight/grok-build-preflight-report.json",
+      "work/release-1-17/evidence/grok-build-containment-receipt.json",
+      "work/release-1-17/evidence/live-host-receipts/grok-build.json",
+      "work/release-1-17/evidence/live-host-conformance-grok-build.json",
+      "work/release-1-17/evidence/live-calibration-receipts/grok-build.json",
+      "work/release-1-17/evidence/live-calibration-verification-grok-build.json",
+      "work/release-1-17/evidence/grok-build/full-lifecycle/final/final-proof-r2.json"
+    ],
+    "testedAt": "2026-07-31",
+    "productionPromotionClaimed": false,
+    "publicDirectoryApprovalClaimed": false,
+    "sourceRevision": "fbee9cca9b68ace522089cc0de9c77df0d0c356b"
+  },
+  "maturity": "VERIFIED",
   "modelRouting": {
     "attemptRoutePolicy": "must-execute-or-fail-closed",
     "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
-    "liveVerified": false,
+    "liveVerified": true,
     "profileSupport": "host-local",
     "providerModelNamesInCore": false,
     "status": "workflow-enforced",
