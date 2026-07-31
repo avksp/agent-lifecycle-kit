@@ -86,6 +86,8 @@ EVIDENCE_IMPORT_SCHEMAS: dict[str, dict[str, Any]] = {
             "reviewGates": {"type": "array", "items": {"type": "string"}},
             "resourceCaps": {"type": "object"},
             "source": {"type": "object"},
+            "nativeDialectProfileDigest": {"type": ["string", "null"], "minLength": 64, "maxLength": 64},
+            "dialectProfile": {"type": ["object", "null"]},
             "candidatePlan": {"type": ["object", "null"]},
             "requiresReview": {"const": True},
             "auditRequired": {"const": True},

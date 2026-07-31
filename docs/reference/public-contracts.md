@@ -67,3 +67,26 @@ scope, while sandbox receipts govern runtime filesystem, network, process,
 environment and enforcement-source evidence. `UNKNOWN` is a valid explicit
 capability state, but high-risk required policy accepts only configured passing
 sandbox statuses.
+
+## Import interop and episode retrieval
+
+The import interop surface maps external dialects into reviewed ALK draft
+artifacts. It never treats imported content as trusted source of truth.
+
+Stable schema ids:
+
+- `agent-import-dialect-profile.v1`
+- `agent-import-dialect-profile-validation.v1`
+- `agent-episode-index.v1`
+- `agent-episode-index-validation.v1`
+- `agent-episode-retrieval.v1`
+
+`agent-import-dialect-profile.v1` requires `sourceTrusted: false`,
+`requiresReview: true` and `freezeBlocked: true`. Imported artifacts can carry
+`nativeDialectProfileDigest`, but that digest is provenance, not review
+approval.
+
+`agent-episode-retrieval.v1` is a bounded context projection over explicit
+receipt/session artifacts. Results keep artifact digests and report
+`chainVerified` only when a supplied hash chain contains the same path and
+digest; otherwise they are `chainUnchecked`.

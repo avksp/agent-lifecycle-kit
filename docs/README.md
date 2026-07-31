@@ -37,6 +37,8 @@ and does not depend on a source project.
 - [Lifecycle cost accounting](reference/lifecycle-cost.md)
 - [Usage export](reference/usage-export.md)
 - [Evidence integrity](reference/evidence-integrity.md)
+- [Import mappers](reference/import-mappers.md)
+- [Episode retrieval](reference/episode-retrieval.md)
 - [Lifecycle policy proposals](reference/policy.md)
 - [Plan continuity](reference/plan-continuity.md)
 - [Evidence index and imports](reference/evidence-imports.md)
