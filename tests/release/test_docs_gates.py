@@ -416,7 +416,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "small local model.\n"
         "agent-lifecycle report status-view.\n",
     )
-    for host in ("claude", "codex", "cursor", "gemini-cli", "goose", "hermes", "kimi-code", "opencode", "qwen-code"):
+    for host in ("claude", "codex", "cursor", "gemini-cli", "goose", "grok-build", "hermes", "kimi-code", "opencode", "qwen-code"):
         _write_text(
             root / f"docs/adapters/{host}.md",
             (
@@ -432,6 +432,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
                 if host == "hermes"
                 else "This adapter is `VERIFIED` for Qwen Code `0.21.0`; live conformance exists and it does not claim public approval.\n"
                 if host == "qwen-code"
+                else "This adapter remains `EXPERIMENTAL`; probe and live conformance evidence are required before promotion.\n"
+                if host == "grok-build"
                 else "This adapter remains `EXPERIMENTAL` until live conformance evidence exists.\n"
             ),
         )

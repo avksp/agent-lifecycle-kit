@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SECONDARY = ("grok-build", "openinterpreter", "pi")
+SECONDARY = ("openinterpreter", "pi")
 
 
 def test_secondary_adapters_are_experimental_without_live_range() -> None:

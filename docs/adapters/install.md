@@ -193,12 +193,14 @@ conformance, usage calibration, and lifecycle proof are accepted.
 ## Grok Build
 
 ```bash
-grok build --help
+grok --version
+grok agent --help
 agent-lifecycle adapter install-plan --descriptor adapters/grok-build/adapter.descriptor.json
 ```
 
-Grok Build remains `EXPERIMENTAL`: the ACP path must pass a local probe, and a
-failed probe is recorded as fail-closed evidence.
+Grok Build has host-specific `VERIFIED` support for Grok Build `0.2.117` on the
+tested local `grok-4.5` binding. The ACP path remains probe-gated, and a failed
+probe is recorded as fail-closed evidence.
 
 ## OpenInterpreter
 
