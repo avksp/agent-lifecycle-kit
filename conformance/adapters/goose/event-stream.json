@@ -1,0 +1,106 @@
+[
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-goose-01",
+    "host": "goose",
+    "adapterId": "goose",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-goose",
+    "sequence": 1,
+    "eventType": "session.started",
+    "status": "INFO",
+    "recordedAt": "2026-07-31T00:17:00Z",
+    "payload": {
+      "category": "lifecycle-transition"
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-goose-02",
+    "host": "goose",
+    "adapterId": "goose",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-goose",
+    "sequence": 2,
+    "eventType": "task.launched",
+    "status": "PASS",
+    "recordedAt": "2026-07-31T00:17:00Z",
+    "payload": {
+      "category": "lifecycle-transition"
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-goose-03",
+    "host": "goose",
+    "adapterId": "goose",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-goose",
+    "sequence": 3,
+    "eventType": "command.completed",
+    "status": "PASS",
+    "recordedAt": "2026-07-31T00:17:00Z",
+    "payload": {
+      "category": "command",
+      "command": "agent-lifecycle adapter event-check",
+      "exitCode": 0
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-goose-04",
+    "host": "goose",
+    "adapterId": "goose",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-goose",
+    "sequence": 4,
+    "eventType": "writes.summarized",
+    "status": "PASS",
+    "recordedAt": "2026-07-31T00:17:00Z",
+    "payload": {
+      "category": "file-change",
+      "changedFiles": [
+        "adapters/goose/adapter.descriptor.json"
+      ]
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-goose-05",
+    "host": "goose",
+    "adapterId": "goose",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-goose",
+    "sequence": 5,
+    "eventType": "usage.reported",
+    "status": "PASS",
+    "recordedAt": "2026-07-31T00:17:00Z",
+    "payload": {
+      "category": "model-usage",
+      "inputTokens": 64,
+      "outputTokens": 16
+    }
+  },
+  {
+    "schemaVersion": "agent-adapter-event.v1",
+    "eventId": "offline-event-capture-goose-06",
+    "host": "goose",
+    "adapterId": "goose",
+    "runId": "offline-conformance",
+    "taskId": "adapter-event-capture",
+    "operationId": "offline-event-capture-goose",
+    "sequence": 6,
+    "eventType": "task.completed",
+    "status": "PASS",
+    "recordedAt": "2026-07-31T00:17:00Z",
+    "payload": {
+      "category": "lifecycle-transition",
+      "resultPath": "conformance/adapters/goose/offline-baseline.json"
+    }
+  }
+]

@@ -1,0 +1,194 @@
+{
+  "adapterId": "goose",
+  "capabilities": [
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "goose-acp-install",
+      "name": "install",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "goose-acp-probe",
+      "name": "discover",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "core-schema-validation",
+      "name": "validate-envelope",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "goose-acp-launch",
+      "name": "launch",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "attemptModelRoute-to-host-model",
+      "name": "model-route-execution",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "goose-acp-wait",
+      "name": "wait",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "goose-acp-cancel",
+      "name": "cancel",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "workflow-state-resume",
+      "name": "resume",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "goose-acp-tool-call",
+      "name": "tool-execution",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "agent-adapter-event.v1",
+      "name": "adapter-event-stream",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "task-result-artifact",
+      "name": "result-collection",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "host-usage-ledger",
+      "name": "usage-attestation",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "audit-plan-implementation",
+      "name": "task-audit",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "audit-plan-implementation",
+      "name": "final-audit",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    }
+  ],
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
+  "descriptorDigest": "35ae7fca31d7d82a31d8d2c2648033596278bc8c803dac8845163f015dfed9ce",
+  "eventCapture": {
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "portableEventSchema": "agent-adapter-event.v1",
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false,
+    "status": "DECLARED"
+  },
+  "host": "goose",
+  "hostCapabilities": [
+    {
+      "adapterId": "goose",
+      "capabilityId": "acp",
+      "evidencePolicy": "probe-required",
+      "host": "goose",
+      "invocationContract": {
+        "receiptSchema": "agent-host-operation-receipt.v1",
+        "requestSchema": "agent-host-operation-request.v1",
+        "unsupportedOperationPolicy": "fail-closed"
+      },
+      "probe": {
+        "command": [
+          "goose",
+          "--help"
+        ],
+        "liveCallsStarted": false,
+        "required": true
+      },
+      "providerIdentityUsed": false,
+      "schemaVersion": "agent-host-capability.v1",
+      "support": "supported",
+      "transport": "acp"
+    }
+  ],
+  "maturity": "EXPERIMENTAL",
+  "modelRouting": {
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "liveVerified": false,
+    "profileSupport": "host-local",
+    "providerModelNamesInCore": false,
+    "unsupportedClassPolicy": "fail-closed",
+    "usageReceiptRequired": true
+  },
+  "promotion": {
+    "productionPromotionClaimed": false,
+    "verifiedRequiresLiveTestedHostRange": true
+  },
+  "runtimeBoundary": {
+    "hostSpecificCode": "adapter-owned",
+    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+    "providerModelNamesInCore": false,
+    "unsupportedOperations": "fail-closed"
+  },
+  "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "unsupportedOperationPolicy": "fail-closed"
+}
