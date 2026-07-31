@@ -99,6 +99,7 @@ ADAPTER_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
             "modelRouting": {"type": "object"},
             "runtimeBoundary": {"type": "object"},
             "hostCapabilities": {"type": "array", "items": {"type": "object"}},
+            "sandboxCapabilities": {"type": ["object", "null"]},
             "promotion": {"type": "object"},
         },
     ),
