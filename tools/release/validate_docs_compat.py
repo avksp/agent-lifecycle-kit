@@ -249,6 +249,7 @@ ADAPTER_DOCS = (
     "docs/adapters/cursor.md",
     "docs/adapters/gemini-cli.md",
     "docs/adapters/goose.md",
+    "docs/adapters/grok-build.md",
     "docs/adapters/hermes.md",
     "docs/adapters/kimi-code.md",
     "docs/adapters/opencode.md",
@@ -345,6 +346,10 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
         required = ("`VERIFIED`", "Codex CLI 0.145.0", "live conformance", "does not claim public")
     elif relative == "docs/adapters/goose.md":
         required = ("`VERIFIED`", "Goose `1.45.0`", "live conformance", "does not claim public")
+    elif relative == "docs/adapters/grok-build.md" and "Grok Build" in verified_doc_hosts:
+        required = ("`VERIFIED`", "Grok Build `0.2.117`", "live conformance", "does not claim public")
+    elif relative == "docs/adapters/grok-build.md":
+        required = ("`EXPERIMENTAL`", "probe", "conformance")
     elif relative == "docs/adapters/opencode.md":
         required = ("`VERIFIED`", "OpenCode CLI `1.18.9`", "live conformance", "does not claim npm")
     elif relative == "docs/adapters/hermes.md":
@@ -363,6 +368,7 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
                 "docs/adapters/claude.md",
                 "docs/adapters/codex.md",
                 "docs/adapters/goose.md",
+                "docs/adapters/grok-build.md",
                 "docs/adapters/opencode.md",
                 "docs/adapters/hermes.md",
                 "docs/adapters/qwen-code.md",
