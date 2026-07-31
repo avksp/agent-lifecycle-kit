@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "agent-lifecycle-host-adapter.v1",
+  "adapterId": "goose",
+  "host": "goose",
+  "nativeProjection": "acp-host-cli",
+  "capabilityManifest": "adapters/goose/capabilities.manifest.json",
+  "maturity": "EXPERIMENTAL",
+  "liveTestedHostRange": null,
+  "contractCompatibility": {
+    "rangeKind": "closed-offline",
+    "minimum": "adapter-contract.v1",
+    "maximum": "adapter-contract.v1",
+    "authoritativeSource": {
+      "sourceId": "normalized-contract-inventory-r02",
+      "sha256": "c332a29de6eed7dcf1ff93cfa5cb0868557f31d1f7ff635ba2df2c7695ed3d4a"
+    }
+  },
+  "unsupportedOperationPolicy": "fail-closed",
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
+  "hostCapabilities": [
+    {
+      "schemaVersion": "agent-host-capability.v1",
+      "capabilityId": "acp",
+      "adapterId": "goose",
+      "host": "goose",
+      "support": "supported",
+      "transport": "acp",
+      "evidencePolicy": "probe-required",
+      "providerIdentityUsed": false,
+      "probe": {
+        "required": true,
+        "command": ["goose", "--help"],
+        "liveCallsStarted": false
+      },
+      "invocationContract": {
+        "requestSchema": "agent-host-operation-request.v1",
+        "receiptSchema": "agent-host-operation-receipt.v1",
+        "unsupportedOperationPolicy": "fail-closed"
+      }
+    }
+  ],
+  "modelRouting": {
+    "status": "workflow-enforced",
+    "profileSupport": "host-local",
+    "providerModelNamesInCore": false,
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "usageReceiptRequired": true,
+    "unsupportedClassPolicy": "fail-closed",
+    "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
+    "liveVerified": false
+  },
+  "operations": [
+    {"name": "install", "mapping": "goose-acp-install", "offlineConformance": "synthetic"},
+    {"name": "discover", "mapping": "goose-acp-probe", "offlineConformance": "synthetic"},
+    {"name": "validate-envelope", "mapping": "core-schema-validation", "offlineConformance": "deterministic"},
+    {"name": "launch", "mapping": "goose-acp-launch", "offlineConformance": "synthetic"},
+    {"name": "model-route-execution", "mapping": "attemptModelRoute-to-host-model", "offlineConformance": "synthetic"},
+    {"name": "wait", "mapping": "goose-acp-wait", "offlineConformance": "synthetic"},
+    {"name": "cancel", "mapping": "goose-acp-cancel", "offlineConformance": "synthetic"},
+    {"name": "resume", "mapping": "workflow-state-resume", "offlineConformance": "synthetic"},
+    {"name": "tool-execution", "mapping": "goose-acp-tool-call", "offlineConformance": "synthetic"},
+    {"name": "adapter-event-stream", "mapping": "agent-adapter-event.v1", "offlineConformance": "deterministic"},
+    {"name": "result-collection", "mapping": "task-result-artifact", "offlineConformance": "deterministic"},
+    {"name": "usage-attestation", "mapping": "host-usage-ledger", "offlineConformance": "synthetic"},
+    {"name": "task-audit", "mapping": "audit-plan-implementation", "offlineConformance": "deterministic"},
+    {"name": "final-audit", "mapping": "audit-plan-implementation", "offlineConformance": "deterministic"}
+  ],
+  "eventCapture": {
+    "status": "DECLARED",
+    "portableEventSchema": "agent-adapter-event.v1",
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false
+  }
+}

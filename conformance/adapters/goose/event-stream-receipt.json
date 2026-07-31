@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "adapterId": "goose",
+  "host": "goose",
+  "runId": "offline-conformance",
+  "taskId": "adapter-event-capture",
+  "operationId": "offline-event-capture-goose",
+  "producer": {
+    "id": "goose-neutral-event-producer",
+    "boundary": "adapter-owned",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
+  "descriptorDigest": "35ae7fca31d7d82a31d8d2c2648033596278bc8c803dac8845163f015dfed9ce",
+  "eventStreamDigest": "ebb96d43e5b99aafd88a1d708a81b9924313b5a382f1060a8e5e397fee93cebf",
+  "eventCount": 6,
+  "eventTypes": [
+    "session.started",
+    "task.launched",
+    "command.completed",
+    "writes.summarized",
+    "usage.reported",
+    "task.completed"
+  ],
+  "terminalEvent": "task.completed",
+  "emittedAt": "2026-07-31T00:17:01Z",
+  "productionPromotionClaimed": false,
+  "receiptDigest": "4ee7ae7164662931e34883497f3173ee917021f3673df9ab35c6b3a31580247c"
+}
