@@ -1,0 +1,186 @@
+{
+  "adapterId": "grok-build",
+  "capabilityManifest": "adapters/grok-build/capabilities.manifest.json",
+  "contractCompatibility": {
+    "authoritativeSource": {
+      "sha256": "c332a29de6eed7dcf1ff93cfa5cb0868557f31d1f7ff635ba2df2c7695ed3d4a",
+      "sourceId": "normalized-contract-inventory-r02"
+    },
+    "maximum": "adapter-contract.v1",
+    "minimum": "adapter-contract.v1",
+    "rangeKind": "closed-offline"
+  },
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
+  "eventCapture": {
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "portableEventSchema": "agent-adapter-event.v1",
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false,
+    "status": "DECLARED"
+  },
+  "host": "grok-build",
+  "hostCapabilities": [
+    {
+      "adapterId": "grok-build",
+      "capabilityId": "acp",
+      "evidencePolicy": "probe-required",
+      "host": "grok-build",
+      "invocationContract": {
+        "receiptSchema": "agent-host-operation-receipt.v1",
+        "requestSchema": "agent-host-operation-request.v1",
+        "unsupportedOperationPolicy": "fail-closed"
+      },
+      "probe": {
+        "command": [
+          "grok",
+          "build",
+          "--help"
+        ],
+        "liveCallsStarted": false,
+        "required": true
+      },
+      "providerIdentityUsed": false,
+      "schemaVersion": "agent-host-capability.v1",
+      "support": "supported",
+      "transport": "acp"
+    }
+  ],
+  "liveTestedHostRange": null,
+  "maturity": "EXPERIMENTAL",
+  "modelRouting": {
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
+    "liveVerified": false,
+    "profileSupport": "host-local",
+    "providerModelNamesInCore": false,
+    "status": "workflow-enforced",
+    "unsupportedClassPolicy": "fail-closed",
+    "usageReceiptRequired": true
+  },
+  "nativeProjection": "acp-probe-gated-cli",
+  "operations": [
+    {
+      "mapping": "grok-build-acp-probe-gated-install",
+      "name": "install",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "mapping": "grok-build-acp-probe-gated-discover",
+      "name": "discover",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "mapping": "core-schema-validation",
+      "name": "validate-envelope",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "mapping": "grok-build-acp-probe-gated-launch",
+      "name": "launch",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "mapping": "attemptModelRoute-to-host-model",
+      "name": "model-route-execution",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "mapping": "grok-build-acp-probe-gated-wait",
+      "name": "wait",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "mapping": "grok-build-acp-probe-gated-cancel",
+      "name": "cancel",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "mapping": "grok-build-acp-probe-gated-resume",
+      "name": "resume",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "mapping": "grok-build-acp-probe-gated-tool-execution",
+      "name": "tool-execution",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "mapping": "agent-adapter-event.v1",
+      "name": "adapter-event-stream",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "mapping": "task-result-artifact",
+      "name": "result-collection",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "mapping": "grok-build-acp-probe-gated-usage-attestation",
+      "name": "usage-attestation",
+      "offlineConformance": "synthetic"
+    },
+    {
+      "mapping": "audit-plan-implementation",
+      "name": "task-audit",
+      "offlineConformance": "deterministic"
+    },
+    {
+      "mapping": "audit-plan-implementation",
+      "name": "final-audit",
+      "offlineConformance": "deterministic"
+    }
+  ],
+  "sandboxCapabilities": {
+    "boundaries": {
+      "environment": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "filesystem": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "network": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "process": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      }
+    },
+    "enforcement": {
+      "details": {},
+      "evidenceIds": [],
+      "source": "UNKNOWN",
+      "verified": false
+    },
+    "evidenceIds": [],
+    "notes": [
+      "Sandbox support is not live-verified for this adapter descriptor.",
+      "Git write-scope governance is separate from OS/process/network/environment containment."
+    ],
+    "productionPromotionClaimed": false,
+    "schemaVersion": "agent-sandbox-capability.v1",
+    "status": "UNKNOWN",
+    "verified": false,
+    "writeScopeBoundary": {
+      "gitWriteScopeGovernedSeparately": true,
+      "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
+      "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
+    }
+  },
+  "schemaVersion": "agent-lifecycle-host-adapter.v1",
+  "unsupportedOperationPolicy": "fail-closed"
+}

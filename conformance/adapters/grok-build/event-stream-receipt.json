@@ -1,0 +1,29 @@
+{
+  "adapterId": "grok-build",
+  "descriptorDigest": "eb03e3ba12cbf23b7092e53707dd32b3d6b4ad0e02beb5d03ad1145ee04d36e4",
+  "emittedAt": "2026-07-31T00:23:00Z",
+  "eventCount": 6,
+  "eventStreamDigest": "1dd4889f819b335ddb3574cca11ec94ffb6a4714eb23f47f5eaf452f62182006",
+  "eventTypes": [
+    "session.started",
+    "task.launched",
+    "command.completed",
+    "writes.summarized",
+    "usage.reported",
+    "task.completed"
+  ],
+  "host": "grok-build",
+  "operationId": "offline-event-capture-grok-build",
+  "producer": {
+    "boundary": "adapter-owned",
+    "id": "grok-build-neutral-event-producer",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
+  "productionPromotionClaimed": false,
+  "receiptDigest": "54cc7fef73899a8127588421921bb48688a90b9b98d580d8db5d046759da598d",
+  "runId": "offline-conformance",
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "taskId": "adapter-event-capture",
+  "terminalEvent": "task.completed"
+}

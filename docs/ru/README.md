@@ -117,6 +117,9 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 | Cursor | `EXPERIMENTAL`; безопасный локальный осмотр прошёл, но подтверждений из реального запуска недостаточно. |
 | Gemini CLI | `EXPERIMENTAL`; локальная проверка на реальном вызове ограничена текущим уровнем Gemini Code Assist. |
 | Kimi Code | `EXPERIMENTAL`; для проверки нужен настроенный провайдер и псевдоним модели. |
+| Grok Build | `EXPERIMENTAL`; использование ACP закрыто локальным probe gate, негативный probe фиксируется fail-closed. |
+| OpenInterpreter | `EXPERIMENTAL`; host-local compatible CLI projection с offline conformance. |
+| Pi | `EXPERIMENTAL`; RPC/JSON и AGENTS/agentskills projection без заявления о live promotion. |
 
 Подробнее: [Установка адаптеров](adapters/install.md) и
 [матрица поддержки адаптеров](adapters/support-matrix.md).
