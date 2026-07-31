@@ -1,9 +1,13 @@
 # Goose Adapter
 
-This adapter is an EXPERIMENTAL Agent Lifecycle Kit projection for the Goose
-host. It declares ACP as a neutral host capability and keeps lifecycle
-semantics in ALK core.
+This adapter is a host-specific `VERIFIED` Agent Lifecycle Kit projection for
+Goose `1.45.0`. It declares ACP as a neutral host capability and keeps
+lifecycle semantics in ALK core.
 
-The descriptor is validated offline. A supported ACP declaration still requires
-a host probe before use; missing executable, failed probe, or invalid invocation
-contract must fail closed.
+The promotion evidence is bounded to no-session, no-profile Goose invocations
+with explicit host-local provider/model selection. A supported ACP declaration
+still requires a host probe before use; missing executable, failed probe, or
+invalid invocation contract must fail closed.
+
+This adapter does not claim public directory approval, production platform
+promotion, universal ACP support, or verified OS sandbox containment.

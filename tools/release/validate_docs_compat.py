@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`VERIFIED` for Qwen Code 0.21.0",
             "`EXPERIMENTAL` means",
             "bounded live host conformance",
-            "usage/cost",
+            "usage/resource calibration",
             "Public contracts",
             "docs/reference/public-contracts.md",
         ),
@@ -247,6 +248,7 @@ ADAPTER_DOCS = (
     "docs/adapters/codex.md",
     "docs/adapters/cursor.md",
     "docs/adapters/gemini-cli.md",
+    "docs/adapters/goose.md",
     "docs/adapters/hermes.md",
     "docs/adapters/kimi-code.md",
     "docs/adapters/opencode.md",
@@ -260,7 +262,27 @@ VERSIONED_FEATURE_PROSE = re.compile(
     r"0\.\d+\s+line\s+adds|^#{2,}\s+0\.\d+\s+)",
     re.MULTILINE,
 )
-VERIFIED_DOC_HOSTS = {"Codex", "Claude Code", "OpenCode", "Hermes", "Qwen Code"}
+LEGACY_VERIFIED_DOC_HOSTS = {"Codex", "Claude Code", "OpenCode", "Hermes", "Qwen Code"}
+REQUIRED_VERIFIED_EVIDENCE_KINDS = {
+    "live-host-conformance",
+    "live-usage-calibration",
+    "lifecycle-final-proof",
+}
+HOST_DISPLAY_NAMES = {
+    "claude": "Claude Code",
+    "claude-code": "Claude Code",
+    "codex": "Codex",
+    "cursor": "Cursor",
+    "gemini-cli": "Gemini CLI",
+    "goose": "Goose",
+    "grok-build": "Grok Build",
+    "hermes": "Hermes",
+    "kimi-code": "Kimi Code",
+    "opencode": "OpenCode",
+    "openinterpreter": "OpenInterpreter",
+    "pi": "Pi",
+    "qwen-code": "Qwen Code",
+}
 
 
 def main() -> int:
@@ -272,11 +294,12 @@ def main() -> int:
     root = Path(args.root)
     blockers: list[dict[str, Any]] = []
     checks: list[dict[str, Any]] = []
+    verified_doc_hosts = LEGACY_VERIFIED_DOC_HOSTS | _verified_doc_hosts_from_evidence_index(root, blockers)
 
     for relative, required in DOC_RULES:
-        checks.append(_check_doc(root, relative, required, blockers))
+        checks.append(_check_doc(root, relative, required, blockers, verified_doc_hosts))
     for relative in ADAPTER_DOCS:
-        checks.append(_check_adapter_doc(root, relative, blockers))
+        checks.append(_check_adapter_doc(root, relative, blockers, verified_doc_hosts))
     checks.append(_check_versioned_feature_prose(root, blockers))
 
     evidence = {
@@ -290,7 +313,13 @@ def main() -> int:
     return 0 if not blockers else 1
 
 
-def _check_doc(root: Path, relative: str, required: tuple[str, ...], blockers: list[dict[str, Any]]) -> dict[str, Any]:
+def _check_doc(
+    root: Path,
+    relative: str,
+    required: tuple[str, ...],
+    blockers: list[dict[str, Any]],
+    verified_doc_hosts: set[str],
+) -> dict[str, Any]:
     path = root / relative
     check: dict[str, Any] = {"path": relative, "status": "PASS", "required": list(required), "identity": None}
     if not path.is_file():
@@ -303,17 +332,19 @@ def _check_doc(root: Path, relative: str, required: tuple[str, ...], blockers: l
     if missing:
         blockers.append({"code": "docs-compat-required-text-missing", "message": f"{relative} missing: {', '.join(missing)}"})
         check["status"] = "FAIL"
-    if _contains_overclaim(relative, text, blockers):
+    if _contains_overclaim(relative, text, blockers, verified_doc_hosts):
         check["status"] = "FAIL"
     return check
 
 
-def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]) -> dict[str, Any]:
+def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]], verified_doc_hosts: set[str]) -> dict[str, Any]:
     path = root / relative
     if relative == "docs/adapters/claude.md":
         required = ("`VERIFIED`", "Claude Code 2.1.220", "live conformance", "does not claim official")
     elif relative == "docs/adapters/codex.md":
         required = ("`VERIFIED`", "Codex CLI 0.145.0", "live conformance", "does not claim public")
+    elif relative == "docs/adapters/goose.md":
+        required = ("`VERIFIED`", "Goose `1.45.0`", "live conformance", "does not claim public")
     elif relative == "docs/adapters/opencode.md":
         required = ("`VERIFIED`", "OpenCode CLI `1.18.9`", "live conformance", "does not claim npm")
     elif relative == "docs/adapters/hermes.md":
@@ -322,7 +353,7 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
         required = ("`VERIFIED`", "Qwen Code `0.21.0`", "live conformance", "does not claim public")
     else:
         required = ("`EXPERIMENTAL`", "live", "conformance")
-    check = _check_doc(root, relative, required, blockers)
+    check = _check_doc(root, relative, required, blockers, verified_doc_hosts)
     if path.is_file():
         text = path.read_text(encoding="utf-8")
         if (
@@ -331,6 +362,7 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
             not in {
                 "docs/adapters/claude.md",
                 "docs/adapters/codex.md",
+                "docs/adapters/goose.md",
                 "docs/adapters/opencode.md",
                 "docs/adapters/hermes.md",
                 "docs/adapters/qwen-code.md",
@@ -343,12 +375,12 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
     return check
 
 
-def _contains_overclaim(relative: str, text: str, blockers: list[dict[str, Any]]) -> bool:
+def _contains_overclaim(relative: str, text: str, blockers: list[dict[str, Any]], verified_doc_hosts: set[str]) -> bool:
     failed = False
     invalid_verified_rows = [
         row
         for row in VERIFIED_ROW.findall(text)
-        if _verified_row_host(row) not in VERIFIED_DOC_HOSTS
+        if _verified_row_host(row) not in verified_doc_hosts
     ]
     if invalid_verified_rows:
         blockers.append({"code": "docs-compat-verified-row", "message": f"{relative} contains a VERIFIED current-maturity row"})
@@ -392,6 +424,68 @@ def _check_versioned_feature_prose(root: Path, blockers: list[dict[str, Any]]) -
 def _verified_row_host(row: str) -> str:
     cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
     return cells[0] if cells else ""
+
+
+def _verified_doc_hosts_from_evidence_index(root: Path, blockers: list[dict[str, Any]]) -> set[str]:
+    index_path = root / "docs/adapters/evidence/adapter-evidence-summary.v1.json"
+    if not index_path.is_file():
+        return set()
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        blockers.append(
+            {
+                "code": "docs-compat-evidence-index-invalid-json",
+                "message": f"{index_path.relative_to(root).as_posix()} is invalid JSON: {exc.msg}",
+            }
+        )
+        return set()
+
+    verified_hosts: set[str] = set()
+    for item in index.get("adapters", []):
+        if not _has_verified_live_evidence(root, item):
+            continue
+        for key in ("adapterId", "host"):
+            value = item.get(key)
+            if isinstance(value, str):
+                verified_hosts.add(_host_display_name(value))
+        descriptor = _read_descriptor(root, item.get("adapterId"))
+        for key in ("adapterId", "host"):
+            value = descriptor.get(key)
+            if isinstance(value, str):
+                verified_hosts.add(_host_display_name(value))
+    return verified_hosts
+
+
+def _has_verified_live_evidence(root: Path, item: dict[str, Any]) -> bool:
+    if item.get("maturity") != "VERIFIED":
+        return False
+    if item.get("productionPromotionClaimed") or item.get("publicDirectoryApprovalClaimed"):
+        return False
+    if not item.get("testedHostRange"):
+        return False
+    evidence_kinds = set(item.get("evidenceKinds", []))
+    if not REQUIRED_VERIFIED_EVIDENCE_KINDS.issubset(evidence_kinds):
+        return False
+    summary_path = item.get("summaryPath")
+    return isinstance(summary_path, str) and (root / summary_path).is_file()
+
+
+def _read_descriptor(root: Path, adapter_id: Any) -> dict[str, Any]:
+    if not isinstance(adapter_id, str):
+        return {}
+    descriptor_path = root / "adapters" / adapter_id / "adapter.descriptor.json"
+    if not descriptor_path.is_file():
+        return {}
+    try:
+        descriptor = json.loads(descriptor_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return descriptor if isinstance(descriptor, dict) else {}
+
+
+def _host_display_name(value: str) -> str:
+    return HOST_DISPLAY_NAMES.get(value, value.replace("-", " ").title())
 
 
 if __name__ == "__main__":

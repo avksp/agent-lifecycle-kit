@@ -2,7 +2,7 @@
   "schemaVersion": "agent-adapter-evidence-summary-index.v1",
   "status": "PASS",
   "productionPromotionClaimed": false,
-  "maturityChangesClaimed": false,
+  "maturityChangesClaimed": true,
   "adapters": [
     {
       "adapterId": "codex",
@@ -124,14 +124,15 @@
     {
       "adapterId": "goose",
       "host": "goose",
-      "maturity": "EXPERIMENTAL",
-      "testedHostRange": null,
-      "summaryPath": "docs/adapters/evidence/goose-1.7.0.md",
+      "maturity": "VERIFIED",
+      "testedHostRange": "1.45.0",
+      "summaryPath": "docs/adapters/evidence/goose-live-verified.md",
       "rawEvidenceLocalOnly": true,
       "evidenceKinds": [
-        "offline-conformance",
-        "host-capability-declaration",
-        "probe-required"
+        "live-host-conformance",
+        "live-usage-calibration",
+        "lifecycle-final-proof",
+        "bounded-containment"
       ],
       "productionPromotionClaimed": false,
       "publicDirectoryApprovalClaimed": false

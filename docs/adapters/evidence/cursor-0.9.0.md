@@ -39,7 +39,7 @@ Non-promotion decision:
 
 Cursor is not promoted in this evidence note. A bounded smoke run on the local
 Free subscription would spend limited user resources without satisfying the
-required production usage/cost calibration and final lifecycle proof gates. The
+required production usage/resource calibration and final lifecycle proof gates. The
 support matrix must remain `EXPERIMENTAL` until those gates pass under an
 explicit operator-approved budget.
 

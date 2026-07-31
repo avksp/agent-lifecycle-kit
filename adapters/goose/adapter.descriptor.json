@@ -4,8 +4,26 @@
   "host": "goose",
   "nativeProjection": "acp-host-cli",
   "capabilityManifest": "adapters/goose/capabilities.manifest.json",
-  "maturity": "EXPERIMENTAL",
-  "liveTestedHostRange": null,
+  "maturity": "VERIFIED",
+  "liveTestedHostRange": {
+    "host": "goose",
+    "minimumVersion": "1.45.0",
+    "maximumVersion": "1.45.0",
+    "evidence": [
+      "docs/adapters/evidence/goose-live-verified.md",
+      "work/release-1-16/evidence/preflight/goose-preflight-report.json",
+      "work/release-1-16/evidence/goose-containment-receipt.json",
+      "work/release-1-16/evidence/live-host-receipts/goose.json",
+      "work/release-1-16/evidence/live-host-conformance-goose.json",
+      "work/release-1-16/evidence/live-calibration-receipts/goose.json",
+      "work/release-1-16/evidence/live-calibration-verification-goose.json",
+      "work/release-1-16/evidence/goose/full-lifecycle/final/final-proof-r5.json"
+    ],
+    "testedAt": "2026-07-31",
+    "productionPromotionClaimed": false,
+    "publicDirectoryApprovalClaimed": false,
+    "sourceRevision": "87fb1ce58612efbd2121d8eb56f9d54de8fbbcfb"
+  },
   "contractCompatibility": {
     "rangeKind": "closed-offline",
     "minimum": "adapter-contract.v1",
@@ -50,7 +68,7 @@
     "usageReceiptRequired": true,
     "unsupportedClassPolicy": "fail-closed",
     "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
-    "liveVerified": false
+    "liveVerified": true
   },
   "sandboxCapabilities": {
     "schemaVersion": "agent-sandbox-capability.v1",
