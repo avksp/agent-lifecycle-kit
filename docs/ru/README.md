@@ -44,6 +44,12 @@ flowchart LR
   остаётся untrusted draft с digest dialect profile.
 - Лёгкий episode retrieval по receipt/session summaries с digest provenance и
   явным состоянием `chainVerified` или `chainUnchecked`.
+- Runner recovery receipts для snapshot, restore, abandon, selected attempt,
+  worker lease и heartbeat state.
+- Optional cross-check profile для рискованных задач: выключен по умолчанию,
+  capped в tokens/resources и advisory, пока план явно не делает его blocking.
+- Phase resource measurements используют usage export envelope для токенов,
+  длительности и resource counters без обязательного USD-cost.
 - Рекомендации по режиму жизненного цикла строятся по накопленной статистике.
 - Предложения по настройке правил остаются рекомендательными и применяются
   только явно, с возможностью отката.
@@ -117,39 +123,21 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 
 ## Карта контрактов
 
-Публичная поверхность жизненного цикла описана схемами. Эти имена стабильны и
-используются в документах, тестах и подтверждающих артефактах:
-
-- Завершение: `completionCheck`,
-  `agent-completion-check-receipt.v1`.
-- Непрерывность цели: `agent-goal-record.v1`,
-  `agent-objective-snapshot.v1`.
-- Управляемое выполнение: `agent-runner-state.v1`,
-  `agent-runner-snapshot.v1`.
-- Последующие работы: `agent-follow-up-register.v1`,
-  `agent-follow-up-summary.v1`.
-- Изоляция рабочего дерева: `agent-worktree-isolation-policy.v1`,
-  `agent-worktree-attempt-receipt.v1`.
-- Sandbox boundaries: `agent-sandbox-receipt.v1`,
-  `agent-sandbox-requirement.v1`, `agent-sandbox-capability.v1`.
-- События адаптера: `agent-adapter-event-stream-receipt.v1`,
-  `agent-adapter-event-capture-validation.v1`.
-- Проверочные вердикты: `agent-review-verdict.v1`,
-  `agent-review-routing-summary.v1`.
-- Целостность подтверждений: `agent-proof-finding.v1`,
-  `agent-root-cause-evidence.v1`, `agent-fix-impact-receipt.v1`,
-  `agent-receipt-hash-chain.v1`, `agent-proof-integrity-receipt.v1`.
-- Import interop: `agent-import-dialect-profile.v1`,
-  `agent-episode-index.v1`, `agent-episode-retrieval.v1`.
-- Дополнительные проверки качества: `agent-optional-quality-pack.v1`,
-  `agent-behavior-check-run.v1`.
-- Диагностика и статусы: `agent-diagnostic-bundle.v1`,
-  `agent-readonly-status-view.v1`.
-- Предложения по правилам жизненного цикла:
-  `agent-lifecycle-policy-proposal.v1`,
-  `agent-lifecycle-policy-tune-result.v1`.
-
-Полный список: [Публичные контракты](reference/public-contracts.md).
+Публичная поверхность жизненного цикла описана схемами. Полный список stable
+schema ids, правила совместимости, runner recovery receipts, cross-check
+contracts и usage export details находятся в
+[Публичных контрактах](reference/public-contracts.md).
+Compact vocabulary: `completionCheck`,
+`agent-completion-check-receipt.v1`, `agent-goal-record.v1`,
+`agent-objective-snapshot.v1`, `agent-runner-state.v1`,
+`agent-runner-snapshot.v1`, `agent-follow-up-register.v1`,
+`agent-follow-up-summary.v1`, `agent-worktree-isolation-policy.v1`,
+`agent-worktree-attempt-receipt.v1`,
+`agent-adapter-event-stream-receipt.v1`,
+`agent-adapter-event-capture-validation.v1`, `agent-review-verdict.v1`,
+`agent-review-routing-summary.v1`, `agent-optional-quality-pack.v1`,
+`agent-behavior-check-run.v1`, `agent-diagnostic-bundle.v1` и
+`agent-readonly-status-view.v1`.
 
 ## Границы проекта
 
@@ -167,6 +155,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
   runtime containment и могут оставаться `UNKNOWN` до отдельной проверки.
 - Внешние dialect imports и retrieved episodes помогают с контекстом, но не
   заменяют проверенные ALK source-of-truth artifacts.
+- Optional cross-check и runner recovery receipts добавляют evidence только
+  при запросе задачи или плана; это не default multi-model execution.
 
 ## Документы
 
@@ -183,6 +173,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - [Sandbox boundaries](reference/sandbox-boundaries.md)
 - [Import mappers](reference/import-mappers.md)
 - [Episode retrieval](reference/episode-retrieval.md)
+- [Runner recovery](reference/runner-recovery.md)
+- [Cross-check profile](reference/cross-check-profile.md)
 - [Безопасность релиза](security/release-security.md)
 
 ## Лицензия
