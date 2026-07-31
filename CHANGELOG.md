@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.17.0 - 2026-07-31
+
+- Promoted Grok Build to host-specific `VERIFIED` for Grok Build 0.2.117 on
+  the tested local grok-4.5 binding.
+- Added a bounded Grok Build live harness on the shared JSON CLI receipt loop,
+  with plan-mode containment, disabled subagents/memory/web search and
+  clean-worktree checks.
+- Added Grok Build live host conformance, live calibration, positive ACP probe,
+  containment and lifecycle proof evidence summaries without public directory
+  or production promotion claims.
+- Recorded the adapter harness DRY audit and left migration of older VERIFIED
+  harnesses to a parity-fixture hardening release.
+
 ## 1.16.0 - 2026-07-31
 
 - Promoted Goose to host-specific `VERIFIED` for Goose 1.45.0 on the tested

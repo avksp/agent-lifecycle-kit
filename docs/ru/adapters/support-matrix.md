@@ -15,7 +15,7 @@
 | Gemini CLI | `EXPERIMENTAL` | Проверка реальным вызовом ограничена текущим уровнем Gemini Code Assist. |
 | Goose | `VERIFIED` | Проверен для Goose 1.45.0 на связке ZAI GLM 5.2; public directory approval не заявлен. |
 | Kimi Code | `EXPERIMENTAL` | Нужен настроенный провайдер и алиас модели. |
-| Grok Build | `EXPERIMENTAL` | ACP-путь закрыт локальным probe gate; негативный probe фиксируется fail-closed. |
+| Grok Build | `VERIFIED` | Проверен для Grok Build 0.2.117 на связке grok-4.5; public directory approval не заявлен. |
 | OpenInterpreter | `EXPERIMENTAL` | Host-local compatible CLI projection с offline conformance. |
 | Pi | `EXPERIMENTAL` | RPC/JSON и AGENTS/agentskills projection без live promotion. |
 
