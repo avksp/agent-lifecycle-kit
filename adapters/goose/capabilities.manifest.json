@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "35ae7fca31d7d82a31d8d2c2648033596278bc8c803dac8845163f015dfed9ce",
+  "descriptorDigest": "4c71d5b5d78b6505d5b83defc0207e3140ea1a8db34e4b22e3b14e6f7f7cb1dd",
   "eventCapture": {
     "categories": [
       "command",
@@ -188,6 +188,50 @@
     "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
     "providerModelNamesInCore": false,
     "unsupportedOperations": "fail-closed"
+  },
+  "sandboxCapabilities": {
+    "boundaries": {
+      "environment": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "filesystem": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "network": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "process": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      }
+    },
+    "enforcement": {
+      "details": {},
+      "evidenceIds": [],
+      "source": "UNKNOWN",
+      "verified": false
+    },
+    "evidenceIds": [],
+    "notes": [
+      "Sandbox support is not live-verified for this adapter descriptor.",
+      "Git write-scope governance is separate from OS/process/network/environment containment."
+    ],
+    "productionPromotionClaimed": false,
+    "schemaVersion": "agent-sandbox-capability.v1",
+    "status": "UNKNOWN",
+    "verified": false,
+    "writeScopeBoundary": {
+      "gitWriteScopeGovernedSeparately": true,
+      "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
+      "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
+    }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
   "unsupportedOperationPolicy": "fail-closed"

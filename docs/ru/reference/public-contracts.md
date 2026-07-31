@@ -19,6 +19,11 @@
 - `agent-receipt-hash-chain.v1`: append-only цепочка receipts.
 - `agent-proof-integrity-receipt.v1`: общий receipt целостности
   подтверждений.
+- `agent-sandbox-receipt.v1`: runtime evidence для filesystem, network,
+  process, environment и enforcement source.
+- `agent-sandbox-requirement.v1`: fail-closed политика обязательного sandbox
+  evidence для high-risk задач.
+- `agent-sandbox-capability.v1`: декларация sandbox capabilities адаптера.
 - `agent-lifecycle-policy-proposal.v1`: предложение по настройке правил.
 
 ## Правило совместимости
@@ -30,3 +35,9 @@ check`. Изменение контракта без тестов и докум�
 исправления. Он связывает changed files, finding ids, digest root cause,
 изменённые и сохранённые behavior contracts, regression evidence и проверку
 побочного влияния.
+
+`agent-sandbox-receipt.v1` не заменяет
+`agent-worktree-attempt-receipt.v1`. Worktree receipt ограничивает пути записи
+в репозитории, а sandbox receipt описывает runtime containment. `UNKNOWN` —
+валидное явное состояние capability, но required high-risk policy принимает
+только настроенные passing statuses, по умолчанию `PASS`.
