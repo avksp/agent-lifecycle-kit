@@ -18,6 +18,7 @@ from agent_lifecycle.contracts.proof_integrity_schemas import PROOF_INTEGRITY_SC
 from agent_lifecycle.contracts.release_contract_schemas import RELEASE_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHEMAS
 from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SCHEMAS
+from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
 
@@ -30,6 +31,7 @@ _SCHEMA_GROUPS = (
     EVIDENCE_IMPORT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,
     RUNNER_WORKTREE_SCHEMAS,
+    SANDBOX_SCHEMAS,
     HOST_CAPABILITY_SCHEMAS,
     USAGE_EXPORT_SCHEMAS,
     PROOF_INTEGRITY_SCHEMAS,

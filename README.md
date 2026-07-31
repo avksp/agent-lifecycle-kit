@@ -33,6 +33,9 @@ flowchart LR
   host-reported `cost_usd`.
 - Optional proof-integrity evidence for bug fixes and high-risk final proofs:
   stable findings, root-cause digests, fix-impact receipts and hash chains.
+- Optional sandbox boundary receipts for high-risk work: filesystem, network,
+  process, environment and enforcement-source evidence kept separate from git
+  write scope.
 - Advisory lifecycle mode recommendations from accumulated cost reports.
 - Explicit lifecycle policy proposals with reversible apply artifacts.
 - Read-only diagnostics for the current checkout and adapter readiness.
@@ -116,6 +119,8 @@ stable and are the compact vocabulary used by the docs, tests, and receipts:
   `agent-follow-up-summary.v1`.
 - Worktree isolation: `agent-worktree-isolation-policy.v1`,
   `agent-worktree-attempt-receipt.v1`.
+- Sandbox boundaries: `agent-sandbox-receipt.v1`,
+  `agent-sandbox-requirement.v1`, `agent-sandbox-capability.v1`.
 - Adapter event capture: `agent-adapter-event-stream-receipt.v1`,
   `agent-adapter-event-capture-validation.v1`.
 - Review routing: `agent-review-verdict.v1`,
@@ -143,6 +148,8 @@ Full contract details are listed in [Public contracts](docs/reference/public-con
   adapter.
 - Public release claims are limited to tracked source files and redacted
   evidence summaries.
+- Git write scope governs repository paths; sandbox receipts govern runtime
+  containment and may be `UNKNOWN` until separately verified.
 
 ## Documentation
 
@@ -154,6 +161,7 @@ Full contract details are listed in [Public contracts](docs/reference/public-con
 - [Lifecycle cost accounting](docs/reference/lifecycle-cost.md)
 - [Usage export](docs/reference/usage-export.md)
 - [Evidence integrity](docs/reference/evidence-integrity.md)
+- [Sandbox boundaries](docs/reference/sandbox-boundaries.md)
 - [Release security](docs/security/release-security.md)
 
 ## License
