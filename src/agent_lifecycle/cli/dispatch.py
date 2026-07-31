@@ -47,13 +47,16 @@ from agent_lifecycle.model_routing import (
     validate_usage_receipt,
 )
 from agent_lifecycle.metrics import (
+    build_usage_export,
     build_lifecycle_cost_summary,
     build_lifecycle_recommendation_summary,
     generate_lifecycle_cost_report,
     recommend_lifecycle_mode,
     require_lifecycle_cost_pass,
     require_lifecycle_recommendation_pass,
+    require_usage_export_pass,
     validate_lifecycle_cost_report,
+    validate_usage_export,
 )
 from agent_lifecycle.planning import (
     build_plan_snapshot,
@@ -73,7 +76,7 @@ from agent_lifecycle.quality import (
     run_behavior_checks,
     validate_quality_pack,
 )
-from agent_lifecycle.reporting import build_status_view
+from agent_lifecycle.reporting import build_status_view, render_usage_export_json, render_usage_export_table
 from agent_lifecycle.runner import (
     build_runner_snapshot,
     initialize_runner_state,
@@ -530,6 +533,26 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
             "liveCallsStarted": False,
             "productionPromotionClaimed": False,
         }
+    if args.metrics_command == "usage-export":
+        export = build_usage_export(
+            artifact_paths=[Path(item) for item in args.artifact],
+            project_root=Path(args.project_root),
+        )
+        validation = require_usage_export_pass(validate_usage_export(export))
+        rendered = render_usage_export_json(export) if args.format == "json" else render_usage_export_table(export)
+        output_path = Path(args.out)
+        _write_text_create(output_path, rendered)
+        return {
+            "schemaVersion": "agent-usage-export-generation.v1",
+            "status": validation["status"],
+            "format": args.format,
+            "outputPath": args.out,
+            "outputBytes": len(rendered.encode("utf-8")),
+            "exportDigest": canonical_digest(export),
+            "validation": validation,
+            "liveCallsStarted": False,
+            "productionPromotionClaimed": False,
+        }
     if args.metrics_command == "recommend":
         reports = [read_json_object(Path(item), label="lifecycle cost report") for item in args.report]
         baseline_profile = read_json_object(Path(args.baseline_profile), label="lifecycle baseline profile")
@@ -548,6 +571,17 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.summary_out), build_lifecycle_recommendation_summary(recommendation))
         return recommendation
     raise LifecycleError("command-not-implemented", "metrics command is not implemented")
+
+
+def _write_text_create(path: Path, text: str) -> bytes:
+    data = text.encode("utf-8")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8") as handle:
+            handle.write(text)
+    except FileExistsError as exc:
+        raise LifecycleError("output-already-exists", "output artifact already exists", {"path": path.as_posix()}) from exc
+    return data
 
 
 def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
