@@ -29,6 +29,8 @@ flowchart LR
 - Compact context profiles and objective snapshots for small local models.
 - Cost and usage accounting that separates product work from lifecycle checks.
 - Deterministic cost reports from explicit lifecycle artifacts.
+- Usage/session exports with tokens, resources, receipt digests, and optional
+  host-reported `cost_usd`.
 - Advisory lifecycle mode recommendations from accumulated cost reports.
 - Explicit lifecycle policy proposals with reversible apply artifacts.
 - Read-only diagnostics for the current checkout and adapter readiness.
@@ -61,7 +63,8 @@ Useful command groups:
 - `agent-lifecycle plan`: plan checks, locks, snapshots, and handoffs.
 - `agent-lifecycle workflow`: task execution receipts and final proof.
 - `agent-lifecycle audit`: plan and implementation review gates.
-- `agent-lifecycle metrics`: lifecycle cost reports and validation.
+- `agent-lifecycle metrics`: lifecycle cost reports, usage exports, and
+  validation.
 - `agent-lifecycle policy`: opt-in lifecycle policy proposals.
 - `agent-lifecycle diagnostics`: redacted evidence bundles.
 - `agent-lifecycle diagnose`: checkout readiness without writes or live calls.
@@ -144,6 +147,7 @@ Full contract details are listed in [Public contracts](docs/reference/public-con
 - [Adapter install](docs/adapters/install.md)
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
 - [Lifecycle cost accounting](docs/reference/lifecycle-cost.md)
+- [Usage export](docs/reference/usage-export.md)
 - [Release security](docs/security/release-security.md)
 
 ## License
