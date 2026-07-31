@@ -68,6 +68,35 @@ kimi --version
 agent-lifecycle adapter install-plan --descriptor adapters/kimi-code/adapter.descriptor.json
 ```
 
+## Grok Build
+
+```bash
+grok build --help
+agent-lifecycle adapter install-plan --descriptor adapters/grok-build/adapter.descriptor.json
+```
+
+Grok Build остаётся `EXPERIMENTAL`: ACP-путь должен пройти локальный probe, а
+неудачный probe фиксируется как fail-closed evidence.
+
+## OpenInterpreter
+
+```bash
+interpreter --version
+agent-lifecycle adapter install-plan --descriptor adapters/openinterpreter/adapter.descriptor.json
+```
+
+OpenInterpreter описан как host-local compatible CLI projection без заявления
+о live promotion.
+
+## Pi
+
+```bash
+agent-lifecycle adapter install-plan --descriptor adapters/pi/adapter.descriptor.json
+```
+
+Pi описан как RPC/JSON и AGENTS/agentskills projection. Offline fixtures не
+повышают зрелость адаптера.
+
 ## Граница продвижения
 
 Пробная установка, осмотр и синтетический прогон не повышают зрелость адаптера.

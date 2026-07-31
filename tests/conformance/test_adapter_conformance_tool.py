@@ -22,7 +22,23 @@ class AdapterConformanceToolTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(payload["schemaVersion"], "agent-adapter-conformance-verification.v1")
             self.assertEqual(payload["status"], "PASS")
-            self.assertEqual(set(payload["hosts"]), {"claude", "codex", "cursor", "gemini-cli", "goose", "hermes", "kimi-code", "opencode", "qwen-code"})
+            self.assertEqual(
+                set(payload["hosts"]),
+                {
+                    "claude",
+                    "codex",
+                    "cursor",
+                    "gemini-cli",
+                    "goose",
+                    "grok-build",
+                    "hermes",
+                    "kimi-code",
+                    "opencode",
+                    "openinterpreter",
+                    "pi",
+                    "qwen-code",
+                },
+            )
             self.assertFalse(payload["productionPromotionClaimed"])
 
     def test_tool_fails_closed_when_capability_manifest_is_missing(self) -> None:

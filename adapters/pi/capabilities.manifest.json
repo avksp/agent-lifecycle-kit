@@ -1,0 +1,227 @@
+{
+  "adapterId": "pi",
+  "capabilities": [
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "pi-rpc-json-skills-install",
+      "name": "install",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "pi-rpc-json-skills-discover",
+      "name": "discover",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "core-schema-validation",
+      "name": "validate-envelope",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "pi-rpc-json-skills-launch",
+      "name": "launch",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "attemptModelRoute-to-host-model",
+      "name": "model-route-execution",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "pi-rpc-json-skills-wait",
+      "name": "wait",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "pi-rpc-json-skills-cancel",
+      "name": "cancel",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "pi-rpc-json-skills-resume",
+      "name": "resume",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "pi-rpc-json-skills-tool-execution",
+      "name": "tool-execution",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "agent-adapter-event.v1",
+      "name": "adapter-event-stream",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "task-result-artifact",
+      "name": "result-collection",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "mapping": "pi-rpc-json-skills-usage-attestation",
+      "name": "usage-attestation",
+      "offlineConformance": "synthetic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "audit-plan-implementation",
+      "name": "task-audit",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    },
+    {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "audit-plan-implementation",
+      "name": "final-audit",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed"
+    }
+  ],
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
+  "descriptorDigest": "cd88eec16978a7a01a445021820cd0ea7e75999b98c26118139a253c0e025fc7",
+  "eventCapture": {
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "portableEventSchema": "agent-adapter-event.v1",
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false,
+    "status": "DECLARED"
+  },
+  "host": "pi",
+  "hostCapabilities": [
+    {
+      "adapterId": "pi",
+      "capabilityId": "acp",
+      "evidencePolicy": "not-claimed",
+      "host": "pi",
+      "invocationContract": null,
+      "probe": null,
+      "providerIdentityUsed": false,
+      "schemaVersion": "agent-host-capability.v1",
+      "support": "unsupported",
+      "transport": "unknown"
+    }
+  ],
+  "maturity": "EXPERIMENTAL",
+  "modelRouting": {
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "liveVerified": false,
+    "profileSupport": "host-local",
+    "providerModelNamesInCore": false,
+    "unsupportedClassPolicy": "fail-closed",
+    "usageReceiptRequired": true
+  },
+  "promotion": {
+    "productionPromotionClaimed": false,
+    "verifiedRequiresLiveTestedHostRange": true
+  },
+  "runtimeBoundary": {
+    "hostSpecificCode": "adapter-owned",
+    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+    "providerModelNamesInCore": false,
+    "unsupportedOperations": "fail-closed"
+  },
+  "sandboxCapabilities": {
+    "boundaries": {
+      "environment": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "filesystem": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "network": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "process": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      }
+    },
+    "enforcement": {
+      "details": {},
+      "evidenceIds": [],
+      "source": "UNKNOWN",
+      "verified": false
+    },
+    "evidenceIds": [],
+    "notes": [
+      "Sandbox support is not live-verified for this adapter descriptor.",
+      "Git write-scope governance is separate from OS/process/network/environment containment."
+    ],
+    "productionPromotionClaimed": false,
+    "schemaVersion": "agent-sandbox-capability.v1",
+    "status": "UNKNOWN",
+    "verified": false,
+    "writeScopeBoundary": {
+      "gitWriteScopeGovernedSeparately": true,
+      "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
+      "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
+    }
+  },
+  "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "unsupportedOperationPolicy": "fail-closed"
+}
