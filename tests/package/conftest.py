@@ -1,2 +1,1 @@
-def pytest_addoption(parser):
-    parser.addoption("--operation-request", action="store", default=None)
+# Shared pytest options are registered in tests/conftest.py.

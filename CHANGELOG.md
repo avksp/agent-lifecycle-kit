@@ -4,6 +4,13 @@
 
 - No changes yet.
 
+## 1.7.0 - 2026-07-31
+
+- Added schema-backed neutral host capability declarations for ACP support.
+- Added fail-closed ACP probe receipts that do not start live model calls.
+- Added an EXPERIMENTAL Goose adapter descriptor, capability manifest,
+  validation tests and adapter documentation.
+
 ## 1.6.0 - 2026-07-30
 
 - Added read-only lifecycle policy proposals built from recommendation reports
