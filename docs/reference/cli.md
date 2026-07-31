@@ -38,6 +38,9 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle metrics cost-check`: validate lifecycle cost receipts.
 - `agent-lifecycle metrics cost-report`: generate and validate a lifecycle
   cost report from explicit JSON artifact paths.
+- `agent-lifecycle metrics usage-export`: export sessions, receipt digests,
+  tokens, resources, durations, budget decisions, and optional host-reported
+  `cost_usd` from explicit JSON artifact paths.
 - `agent-lifecycle metrics recommend`: suggest the lightest lifecycle mode that
   preserves the required quality floor.
 - `agent-lifecycle policy tune`: build a read-only policy proposal or write an

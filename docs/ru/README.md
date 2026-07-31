@@ -32,6 +32,8 @@ flowchart LR
   шаг вместо длинной истории.
 - Отчёты о расходе разделяют практическую работу, проверку продукта, контроль
   жизненного цикла и координацию.
+- Экспорт использования показывает сессии, токены, ресурсы, digest
+  подтверждений и необязательный `cost_usd`, если его сообщает metered-хост.
 - Рекомендации по режиму жизненного цикла строятся по накопленной статистике.
 - Предложения по настройке правил остаются рекомендательными и применяются
   только явно, с возможностью отката.
@@ -69,7 +71,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - `agent-lifecycle workflow`: отчёты о выполнении задач и финальное
   подтверждение.
 - `agent-lifecycle audit`: проверка плана и реализации.
-- `agent-lifecycle metrics`: отчёты о расходе и проверка этих отчётов.
+- `agent-lifecycle metrics`: отчёты о расходе, экспорт использования и
+  проверка этих отчётов.
 - `agent-lifecycle policy`: предложения по настройке правил жизненного цикла.
 - `agent-lifecycle diagnostics`: обезличенные диагностические пакеты.
 - `agent-lifecycle diagnose`: проверка готовности исходного дерева без записи и
@@ -154,6 +157,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - [Публичные контракты](reference/public-contracts.md)
 - [Диагностика готовности](reference/readiness-diagnostics.md)
 - [Учёт расхода жизненного цикла](reference/lifecycle-cost.md)
+- [Экспорт использования](reference/usage-export.md)
 - [Безопасность релиза](security/release-security.md)
 
 ## Лицензия
