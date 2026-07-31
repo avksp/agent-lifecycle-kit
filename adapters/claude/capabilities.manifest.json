@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "e3e04f29c0304ab836b9dc6d96e33e5f2c0d2d5aff82880210b120bbeb698f24",
+  "descriptorDigest": "d868f87cbe7e7ab1dc8bf349954dd35efe1546647271e413a275b76ecd6a1d64",
   "eventCapture": {
     "categories": [
       "command",
@@ -145,6 +145,7 @@
     "status": "DECLARED"
   },
   "host": "claude-code",
+  "hostCapabilities": [],
   "maturity": "VERIFIED",
   "modelRouting": {
     "attemptRoutePolicy": "must-execute-or-fail-closed",
@@ -163,6 +164,50 @@
     "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
     "providerModelNamesInCore": false,
     "unsupportedOperations": "fail-closed"
+  },
+  "sandboxCapabilities": {
+    "boundaries": {
+      "environment": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "filesystem": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "network": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "process": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      }
+    },
+    "enforcement": {
+      "details": {},
+      "evidenceIds": [],
+      "source": "UNKNOWN",
+      "verified": false
+    },
+    "evidenceIds": [],
+    "notes": [
+      "Sandbox support is not live-verified for this adapter descriptor.",
+      "Git write-scope governance is separate from OS/process/network/environment containment."
+    ],
+    "productionPromotionClaimed": false,
+    "schemaVersion": "agent-sandbox-capability.v1",
+    "status": "UNKNOWN",
+    "verified": false,
+    "writeScopeBoundary": {
+      "gitWriteScopeGovernedSeparately": true,
+      "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
+      "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
+    }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
   "unsupportedOperationPolicy": "fail-closed"

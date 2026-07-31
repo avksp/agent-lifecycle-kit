@@ -26,6 +26,7 @@ and does not depend on a source project.
 - [Goal continuity](reference/goal-continuity.md)
 - [Follow-up register](reference/follow-up-register.md)
 - [Worktree isolation receipts](reference/worktree-isolation.md)
+- [Sandbox boundaries](reference/sandbox-boundaries.md)
 - [Adapter event capture](reference/adapter-event-capture.md)
 - [Review verdicts](reference/review-verdict.md)
 - [Optional quality packs](reference/optional-quality-packs.md)

@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "f229b5d7ba31ac9cd838e7050bdc3752606751bdd361f0eee997089aab799c7a",
+  "descriptorDigest": "e9084b9e4191f9a61f9973f73e9dd4600b38ff8fa9d639bcfcbf5f08a42e851e",
   "eventCapture": {
     "categories": [
       "command",
@@ -145,6 +145,7 @@
     "status": "DECLARED"
   },
   "host": "qwen-code",
+  "hostCapabilities": [],
   "maturity": "VERIFIED",
   "modelRouting": {
     "attemptRoutePolicy": "must-execute-or-fail-closed",
@@ -163,6 +164,50 @@
     "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
     "providerModelNamesInCore": false,
     "unsupportedOperations": "fail-closed"
+  },
+  "sandboxCapabilities": {
+    "boundaries": {
+      "environment": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "filesystem": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "network": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "process": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      }
+    },
+    "enforcement": {
+      "details": {},
+      "evidenceIds": [],
+      "source": "UNKNOWN",
+      "verified": false
+    },
+    "evidenceIds": [],
+    "notes": [
+      "Sandbox support is not live-verified for this adapter descriptor.",
+      "Git write-scope governance is separate from OS/process/network/environment containment."
+    ],
+    "productionPromotionClaimed": false,
+    "schemaVersion": "agent-sandbox-capability.v1",
+    "status": "UNKNOWN",
+    "verified": false,
+    "writeScopeBoundary": {
+      "gitWriteScopeGovernedSeparately": true,
+      "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
+      "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
+    }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
   "unsupportedOperationPolicy": "fail-closed"

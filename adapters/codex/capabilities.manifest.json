@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "12571ef6019aa1d4fa5d8d79fb8d80b499b8e4b2300eb5fa0661336b1bdd4760",
+  "descriptorDigest": "2af506b0ac54f0d27aa5c70035b366f46ee4ea3ebdfa772e90dd76c4aa7dbc43",
   "eventCapture": {
     "categories": [
       "command",
@@ -145,6 +145,7 @@
     "status": "DECLARED"
   },
   "host": "codex",
+  "hostCapabilities": [],
   "maturity": "VERIFIED",
   "modelRouting": {
     "attemptRoutePolicy": "must-execute-or-fail-closed",
@@ -163,6 +164,50 @@
     "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
     "providerModelNamesInCore": false,
     "unsupportedOperations": "fail-closed"
+  },
+  "sandboxCapabilities": {
+    "boundaries": {
+      "environment": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "filesystem": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "network": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      },
+      "process": {
+        "details": {},
+        "evidenceIds": [],
+        "mode": "UNKNOWN"
+      }
+    },
+    "enforcement": {
+      "details": {},
+      "evidenceIds": [],
+      "source": "UNKNOWN",
+      "verified": false
+    },
+    "evidenceIds": [],
+    "notes": [
+      "Sandbox support is not live-verified for this adapter descriptor.",
+      "Git write-scope governance is separate from OS/process/network/environment containment."
+    ],
+    "productionPromotionClaimed": false,
+    "schemaVersion": "agent-sandbox-capability.v1",
+    "status": "UNKNOWN",
+    "verified": false,
+    "writeScopeBoundary": {
+      "gitWriteScopeGovernedSeparately": true,
+      "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
+      "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
+    }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
   "unsupportedOperationPolicy": "fail-closed"

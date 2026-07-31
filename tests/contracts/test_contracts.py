@@ -214,6 +214,12 @@ class ContractTests(unittest.TestCase):
             "agent-planning-import-validation.v1",
             "agent-skill-improvement-proposal.v1",
             "agent-skill-improvement-proposal-validation.v1",
+            "agent-sandbox-receipt.v1",
+            "agent-sandbox-receipt-validation.v1",
+            "agent-sandbox-requirement.v1",
+            "agent-sandbox-requirement-validation.v1",
+            "agent-sandbox-capability.v1",
+            "agent-sandbox-capability-validation.v1",
         ]:
             self.assertIn(schema_id, ids)
         self.assertEqual(get_schema("agent-lifecycle-error.v1")["additionalProperties"], False)
@@ -259,6 +265,8 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-lifecycle-live-host-conformance-receipt.v1")["properties"]["syntheticReplayUsed"], {"const": False})
         self.assertIn("validationCommands", get_schema("agent-live-host-promotion-plan.v1")["required"])
         self.assertEqual(get_schema("agent-live-host-promotion-plan-validation.v1")["properties"]["productionPromotionClaimed"], {"const": False})
+        self.assertEqual(get_schema("agent-sandbox-receipt.v1")["properties"]["productionPromotionClaimed"], {"const": False})
+        self.assertIn("writeScopeBoundary", get_schema("agent-sandbox-receipt.v1")["required"])
         with self.assertRaises(LifecycleError):
             get_schema("missing.v1")
 
