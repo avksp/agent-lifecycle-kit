@@ -23,8 +23,14 @@ from agent_lifecycle.audit.review_verdict import (
     require_review_verdict_pass,
     validate_review_verdict,
 )
+from agent_lifecycle.audit.bug_forensics import (
+    build_bug_forensics_audit,
+    require_bug_forensics_audit_pass,
+    validate_bug_forensics_audit,
+)
 
 __all__ = [
+    "build_bug_forensics_audit",
     "build_ownership_report",
     "build_finding_identity",
     "build_fix_impact_receipt",
@@ -35,9 +41,11 @@ __all__ = [
     "compact_review_routing",
     "finding_identity_fields",
     "require_proof_integrity_pass",
+    "require_bug_forensics_audit_pass",
     "require_review_verdict_pass",
     "stable_finding_id",
     "validate_finding_identity",
+    "validate_bug_forensics_audit",
     "validate_fix_impact_receipt",
     "validate_hash_chain_migration_policy",
     "validate_proof_integrity_receipt",

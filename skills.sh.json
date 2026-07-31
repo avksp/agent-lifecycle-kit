@@ -8,7 +8,8 @@
         "audit-agent-plan",
         "agent-plan-to-workers",
         "agent-workflow-orchestrator",
-        "audit-plan-implementation"
+        "audit-plan-implementation",
+        "bug-forensics"
       ]
     }
   ]

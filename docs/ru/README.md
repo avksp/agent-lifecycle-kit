@@ -48,6 +48,9 @@ flowchart LR
   worker lease и heartbeat state.
 - Optional cross-check profile для рискованных задач: выключен по умолчанию,
   capped в tokens/resources и advisory, пока план явно не делает его blocking.
+- Optional Bug Forensics profile для явных bug/regression repair задач:
+  reproduction-before-fix, stable fingerprint, hypothesis ledger, minimal patch
+  gate и same-fingerprint regression proof.
 - Phase resource measurements используют usage export envelope для токенов,
   длительности и resource counters без обязательного USD-cost.
 - Рекомендации по режиму жизненного цикла строятся по накопленной статистике.
@@ -128,19 +131,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 
 Публичная поверхность жизненного цикла описана схемами. Полный список stable
 schema ids, правила совместимости, runner recovery receipts, cross-check
-contracts и usage export details находятся в
+contracts, Bug Forensics contracts и usage export details находятся в
 [Публичных контрактах](reference/public-contracts.md).
-Compact vocabulary: `completionCheck`,
-`agent-completion-check-receipt.v1`, `agent-goal-record.v1`,
-`agent-objective-snapshot.v1`, `agent-runner-state.v1`,
-`agent-runner-snapshot.v1`, `agent-follow-up-register.v1`,
-`agent-follow-up-summary.v1`, `agent-worktree-isolation-policy.v1`,
-`agent-worktree-attempt-receipt.v1`,
-`agent-adapter-event-stream-receipt.v1`,
-`agent-adapter-event-capture-validation.v1`, `agent-review-verdict.v1`,
-`agent-review-routing-summary.v1`, `agent-optional-quality-pack.v1`,
-`agent-behavior-check-run.v1`, `agent-diagnostic-bundle.v1` и
-`agent-readonly-status-view.v1`.
 
 ## Границы проекта
 
@@ -178,6 +170,8 @@ Compact vocabulary: `completionCheck`,
 - [Episode retrieval](reference/episode-retrieval.md)
 - [Runner recovery](reference/runner-recovery.md)
 - [Cross-check profile](reference/cross-check-profile.md)
+- [Bug Forensics profile](reference/bug-forensics.md)
+- [Bug Forensics context budget](reference/bug-forensics-context-budget.md)
 - [Безопасность релиза](security/release-security.md)
 
 ## Лицензия

@@ -45,6 +45,8 @@ flowchart LR
 - Optional cross-check profile for high-risk work; it is disabled by default,
   budget-capped in tokens/resources and advisory unless a plan opts into
   blocking use.
+- Optional Bug Forensics profile for explicit bug/regression repair:
+  reproduction, fingerprint, hypothesis ledger, minimal patch and proof.
 - Phase resource measurements reuse the usage export envelope for tokens,
   duration and resource counters without mandatory USD-cost accounting.
 - Advisory lifecycle mode recommendations from accumulated cost reports.
@@ -121,19 +123,8 @@ Adapter installation and maturity details live in
 ## Contract map
 
 The public lifecycle surface is schema-backed. Full stable schema ids,
-compatibility rules, runner recovery receipts, cross-check contracts and usage
+compatibility rules, runner recovery, cross-check, Bug Forensics and usage
 export details are listed in [Public contracts](docs/reference/public-contracts.md).
-Compact vocabulary includes `completionCheck`,
-`agent-completion-check-receipt.v1`, `agent-goal-record.v1`,
-`agent-objective-snapshot.v1`, `agent-runner-state.v1`,
-`agent-runner-snapshot.v1`, `agent-follow-up-register.v1`,
-`agent-follow-up-summary.v1`, `agent-worktree-isolation-policy.v1`,
-`agent-worktree-attempt-receipt.v1`,
-`agent-adapter-event-stream-receipt.v1`,
-`agent-adapter-event-capture-validation.v1`, `agent-review-verdict.v1`,
-`agent-review-routing-summary.v1`, `agent-optional-quality-pack.v1`,
-`agent-behavior-check-run.v1`, `agent-diagnostic-bundle.v1` and
-`agent-readonly-status-view.v1`.
 
 ## Design boundaries
 
@@ -159,9 +150,6 @@ Compact vocabulary includes `completionCheck`,
 - [Русская документация](docs/ru/README.md)
 - [Quickstart](docs/guides/quickstart.md)
 - [Adapter install](docs/adapters/install.md)
-- [Grok Build adapter](docs/adapters/grok-build.md)
-- [OpenInterpreter adapter](docs/adapters/openinterpreter.md)
-- [Pi adapter](docs/adapters/pi.md)
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
 - [Lifecycle cost accounting](docs/reference/lifecycle-cost.md)
 - [Usage export](docs/reference/usage-export.md)
@@ -171,6 +159,8 @@ Compact vocabulary includes `completionCheck`,
 - [Episode retrieval](docs/reference/episode-retrieval.md)
 - [Runner recovery](docs/reference/runner-recovery.md)
 - [Cross-check profile](docs/reference/cross-check-profile.md)
+- [Bug Forensics profile](docs/reference/bug-forensics.md)
+- [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md)
 - [Release security](docs/security/release-security.md)
 
 ## License

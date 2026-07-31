@@ -7,6 +7,7 @@ from typing import Any
 
 from agent_lifecycle.contracts.adapter_contract_schemas import ADAPTER_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.adapter_event_schemas import ADAPTER_EVENT_SCHEMAS
+from agent_lifecycle.contracts.bug_forensics_schemas import BUG_FORENSICS_SCHEMAS
 from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.cross_check_schemas import CROSS_CHECK_SCHEMAS
@@ -34,6 +35,7 @@ _SCHEMA_GROUPS = (
     IMPORT_DIALECT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,
     RUNNER_WORKTREE_SCHEMAS,
+    BUG_FORENSICS_SCHEMAS,
     CROSS_CHECK_SCHEMAS,
     SANDBOX_SCHEMAS,
     HOST_CAPABILITY_SCHEMAS,
