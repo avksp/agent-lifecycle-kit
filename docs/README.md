@@ -35,6 +35,7 @@ and does not depend on a source project.
 - [Public contracts](reference/public-contracts.md)
 - [Lifecycle cost accounting](reference/lifecycle-cost.md)
 - [Usage export](reference/usage-export.md)
+- [Evidence integrity](reference/evidence-integrity.md)
 - [Lifecycle policy proposals](reference/policy.md)
 - [Plan continuity](reference/plan-continuity.md)
 - [Evidence index and imports](reference/evidence-imports.md)

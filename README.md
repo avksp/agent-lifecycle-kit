@@ -31,6 +31,8 @@ flowchart LR
 - Deterministic cost reports from explicit lifecycle artifacts.
 - Usage/session exports with tokens, resources, receipt digests, and optional
   host-reported `cost_usd`.
+- Optional proof-integrity evidence for bug fixes and high-risk final proofs:
+  stable findings, root-cause digests, fix-impact receipts and hash chains.
 - Advisory lifecycle mode recommendations from accumulated cost reports.
 - Explicit lifecycle policy proposals with reversible apply artifacts.
 - Read-only diagnostics for the current checkout and adapter readiness.
@@ -118,6 +120,9 @@ stable and are the compact vocabulary used by the docs, tests, and receipts:
   `agent-adapter-event-capture-validation.v1`.
 - Review routing: `agent-review-verdict.v1`,
   `agent-review-routing-summary.v1`.
+- Evidence integrity: `agent-proof-finding.v1`,
+  `agent-root-cause-evidence.v1`, `agent-fix-impact-receipt.v1`,
+  `agent-receipt-hash-chain.v1`, `agent-proof-integrity-receipt.v1`.
 - Optional quality checks: `agent-optional-quality-pack.v1`,
   `agent-behavior-check-run.v1`.
 - Diagnostics and status views: `agent-diagnostic-bundle.v1`,
@@ -148,6 +153,7 @@ Full contract details are listed in [Public contracts](docs/reference/public-con
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
 - [Lifecycle cost accounting](docs/reference/lifecycle-cost.md)
 - [Usage export](docs/reference/usage-export.md)
+- [Evidence integrity](docs/reference/evidence-integrity.md)
 - [Release security](docs/security/release-security.md)
 
 ## License
