@@ -75,6 +75,7 @@ def inspect_adapter_descriptor(
             "status": "SKIPPED" if skip_host_commands else "UNKNOWN",
             "binary": _display_binary(host_bin or descriptor.get("host")),
         },
+        "hostCapabilities": descriptor.get("hostCapabilities") if isinstance(descriptor.get("hostCapabilities"), list) else [],
     }
 
     if skip_host_commands:

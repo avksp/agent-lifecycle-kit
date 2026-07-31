@@ -1,5 +1,12 @@
 """Provider-neutral host operation protocol."""
 
+from agent_lifecycle.host_protocol.acp_capability import (
+    build_acp_capability,
+    build_acp_probe_receipt,
+    require_host_capabilities_pass,
+    validate_host_capabilities,
+    validate_no_acp_evidence_for_hosts,
+)
 from agent_lifecycle.host_protocol.capabilities import (
     build_capability_manifest,
     validate_capability_manifest,
@@ -34,6 +41,8 @@ __all__ = [
     "HostOperationReceipt",
     "HostOperationRequest",
     "adapter_declares_event_capture",
+    "build_acp_capability",
+    "build_acp_probe_receipt",
     "build_capability_manifest",
     "build_adapter_event_stream",
     "build_event_stream_receipt",
@@ -43,6 +52,7 @@ __all__ = [
     "require_adapter_event_stream_pass",
     "require_adapter_inspection_pass",
     "require_adapter_validation_pass",
+    "require_host_capabilities_pass",
     "inspect_adapter_descriptor",
     "scaffold_adapter",
     "validate_capability_manifest",
@@ -50,4 +60,6 @@ __all__ = [
     "validate_event_capture_receipt",
     "validate_adapter_event_stream",
     "validate_adapter_descriptor",
+    "validate_host_capabilities",
+    "validate_no_acp_evidence_for_hosts",
 ]
