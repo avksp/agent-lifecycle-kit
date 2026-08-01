@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/agent-lifecycle-kit-banner.svg" alt="Agent Lifecycle Kit - plan, execute, prove, finish agent work" width="100%">
+  <img src="docs/assets/agent-lifecycle-kit-banner.svg?v=2026-08-01-2" alt="Agent Lifecycle Kit - plan, execute, prove, finish agent work" width="100%">
 </p>
 
 # Agent Lifecycle Kit
