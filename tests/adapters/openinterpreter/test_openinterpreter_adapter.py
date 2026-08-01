@@ -19,7 +19,9 @@ def test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
     assert manifest == build_capability_manifest(descriptor)
     assert descriptor["nativeProjection"] == "host-local-compatible-cli"
     assert descriptor["hostCapabilities"] == []
-    assert descriptor["maturity"] == "EXPERIMENTAL"
+    assert descriptor["maturity"] == "VERIFIED"
+    assert descriptor["liveTestedHostRange"]["host"] == "openinterpreter"
+    assert "docs/adapters/evidence/openinterpreter-live-verified.md" in descriptor["liveTestedHostRange"]["evidence"]
 
 
 def _load_json(path: Path) -> dict:

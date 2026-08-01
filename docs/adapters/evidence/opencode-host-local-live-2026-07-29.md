@@ -1,10 +1,11 @@
-# OpenCode GLM 5.2 live evidence
+# OpenCode Host-Local Live Evidence
 
 Status: host-specific `VERIFIED` for OpenCode CLI `1.18.9`.
 
 Scope:
 
 - Host: OpenCode CLI `1.18.9`.
+- Provider/model binding: host-local, redacted in committed docs.
 - Tested at: `2026-07-29`.
 - Source revision: `6c6b40210ee28de4b6a5993367af89e629fb99ff`.
 - Maturity claim: `VERIFIED` for this host range only.
@@ -15,7 +16,7 @@ Accepted evidence:
 
 | Gate | Status | Evidence |
 | --- | --- | --- |
-| Live preflight | `PASS` | `work/release-0-7/evidence/opencode/preflight/opencode-glm52-preflight-report.json` |
+| Live preflight | `PASS` | host-local preflight receipt retained under ignored `work/` evidence |
 | Live host conformance | `PASS` | `work/release-0-7/evidence/opencode/live-host-conformance-opencode.json` |
 | Live host receipt | `PASS` | `work/release-0-7/evidence/opencode/live-host-receipts/opencode.json`, receipt hash `058a0124263c5ec53d5a27c9ca0127dddd1e4cef7d9dda3f45bb4c27747b94fa` |
 | Live calibration | `PASS` | `work/release-0-7/evidence/opencode/live-calibration-verification-opencode.json` |

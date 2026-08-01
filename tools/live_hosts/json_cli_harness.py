@@ -344,6 +344,130 @@ def parse_json_objects(text: str) -> list[dict[str, Any]]:
     return events
 
 
+def parse_jsonl_usage(text: str, *, wall_seconds: float = 0.0, context_source: str = "host-jsonl") -> JsonCliUsage:
+    events = parse_jsonl_objects(text)
+    usage_values: list[dict[str, Any]] = []
+    costs: list[float] = []
+    session_id: str | None = None
+    tool_calls = 0
+    for event in events:
+        session_id = session_id or find_string(event, {"session_id", "sessionId", "conversation_id", "conversationId"})
+        usage_values.extend(find_dicts(event, {"usage", "token_usage", "tokenUsage"}))
+        costs.extend(find_numbers(event, {"cost_usd", "costUsd", "costUSD", "cost"}))
+        tool_calls += count_tool_calls(event)
+    input_tokens = sum(int_from_any(first_present(usage, ("inputTokens", "input_tokens", "prompt_tokens", "promptTokens"))) for usage in usage_values)
+    output_tokens = sum(int_from_any(first_present(usage, ("outputTokens", "output_tokens", "completion_tokens", "completionTokens"))) for usage in usage_values)
+    total_tokens = sum(int_from_any(first_present(usage, ("billableTokens", "billable_tokens", "total_tokens", "totalTokens"))) for usage in usage_values)
+    context_bytes = sum(
+        int_from_any(first_present(usage, ("cumulativeContextBytes", "cumulative_context_bytes", "contextBytes", "context_bytes")))
+        for usage in usage_values
+    )
+    return JsonCliUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        billable_tokens=total_tokens or input_tokens + output_tokens,
+        cumulative_context_bytes=context_bytes if context_bytes else None,
+        cumulative_context_bytes_source=context_source if context_bytes else None,
+        tool_calls=tool_calls,
+        wall_seconds=round(wall_seconds, 3),
+        cost_usd=sum(costs) if costs else None,
+        session_id=session_id,
+        event_count=len(events),
+    )
+
+
+def parse_jsonl_objects(text: str) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            value = json.loads(stripped)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            events.append(value)
+    return events
+
+
+def first_present(value: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    for key in keys:
+        if key in value:
+            return value[key]
+    return None
+
+
+def int_from_any(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    return 0
+
+
+def find_string(value: Any, keys: set[str]) -> str | None:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in keys and isinstance(item, str) and item:
+                return item
+            found = find_string(item, keys)
+            if found:
+                return found
+    elif isinstance(value, list):
+        for item in value:
+            found = find_string(item, keys)
+            if found:
+                return found
+    return None
+
+
+def find_dicts(value: Any, keys: set[str]) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in keys and isinstance(item, dict):
+                found.append(item)
+            found.extend(find_dicts(item, keys))
+    elif isinstance(value, list):
+        for item in value:
+            found.extend(find_dicts(item, keys))
+    return found
+
+
+def find_numbers(value: Any, keys: set[str]) -> list[float]:
+    found: list[float] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in keys and isinstance(item, (int, float)) and not isinstance(item, bool):
+                found.append(float(item))
+            found.extend(find_numbers(item, keys))
+    elif isinstance(value, list):
+        for item in value:
+            found.extend(find_numbers(item, keys))
+    return found
+
+
+def count_tool_calls(value: Any) -> int:
+    if isinstance(value, dict):
+        total = 0
+        for key, item in value.items():
+            if key in {"tool_call", "toolCall", "tool_calls", "toolCalls"}:
+                if isinstance(item, list):
+                    total += len(item)
+                elif isinstance(item, dict):
+                    total += 1
+                elif isinstance(item, int) and not isinstance(item, bool):
+                    total += item
+            total += count_tool_calls(item)
+        return total
+    if isinstance(value, list):
+        return sum(count_tool_calls(item) for item in value)
+    return 0
+
+
 def check_clean_worktree(worktree: Path) -> dict[str, Any]:
     if not worktree.exists():
         return {"clean": False, "reason": "missing-worktree"}
@@ -353,10 +477,10 @@ def check_clean_worktree(worktree: Path) -> dict[str, Any]:
     return {"clean": result.stdout == "", "dirtyEntryCount": len([line for line in result.stdout.splitlines() if line.strip()])}
 
 
-def run_command_capture(command: list[str], *, cwd: Path | None = None, timeout_seconds: float | None = None) -> CommandResult:
+def run_command_capture(command: list[str], *, cwd: Path | None = None, timeout_seconds: float | None = None, env: dict[str, str] | None = None) -> CommandResult:
     started = time.monotonic()
     try:
-        result = subprocess.run(command, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout_seconds, check=False)
+        result = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout_seconds, check=False)
     except subprocess.TimeoutExpired as error:
         return CommandResult(
             returncode=124,
@@ -494,9 +618,9 @@ def live_report(
     }
 
 
-def run_command(command: list[str], checks: list[dict[str, Any]], name: str) -> dict[str, Any]:
+def run_command(command: list[str], checks: list[dict[str, Any]], name: str, *, env: dict[str, str] | None = None) -> dict[str, Any]:
     started = time.monotonic()
-    result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    result = subprocess.run(command, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     elapsed = time.monotonic() - started
     checks.append({"name": name, "status": "PASS" if result.returncode == 0 else "FAIL", "returncode": result.returncode, "stdoutSha256": sha256_hex(result.stdout.encode("utf-8")), "stderrSha256": sha256_hex(result.stderr.encode("utf-8")), "wallSeconds": round(elapsed, 3)})
     return {"returncode": result.returncode, "stdout": result.stdout, "stderr": result.stderr}

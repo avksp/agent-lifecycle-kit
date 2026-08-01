@@ -1,10 +1,12 @@
-# Qwen Code GLM 5.2 live evidence
+# Qwen Code Host-Local Live Evidence
 
-Status: `VERIFIED` for Qwen Code `0.21.0` on the tested local GLM 5.2 binding.
+Status: `VERIFIED` for Qwen Code `0.21.0` on the tested host-local
+provider/model binding.
 
 Scope:
 
 - Host: Qwen Code `0.21.0`.
+- Provider/model binding: host-local, redacted in committed docs.
 - Adapter descriptor: `adapters/qwen-code/adapter.descriptor.json`.
 - Capability manifest: `adapters/qwen-code/capabilities.manifest.json`.
 - Source revision: `6c6b40210ee28de4b6a5993367af89e629fb99ff`.

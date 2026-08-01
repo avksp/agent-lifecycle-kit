@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
+import re
+import shlex
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Callable, Iterator, Mapping, Protocol
 
 from agent_lifecycle.contracts import canonical_digest, write_json_create
 from agent_lifecycle.model_routing import validate_host_model_profile
@@ -25,6 +29,29 @@ class CommandResult:
     stdout: str
     stderr: str
     wall_seconds: float
+
+
+@dataclass(frozen=True)
+class HostEnvFile:
+    path: Path
+    values: dict[str, str]
+    ignored_names: tuple[str, ...] = ()
+
+    def apply_to(self, base: Mapping[str, str]) -> dict[str, str]:
+        merged = dict(base)
+        merged.update(self.values)
+        return merged
+
+    def redacted_json(self) -> dict[str, object]:
+        return {
+            "schemaVersion": "agent-host-env-file-redacted.v1",
+            "source": "host-env-file",
+            "pathDigest": canonical_digest({"path": str(self.path.expanduser())}),
+            "loadedVariables": sorted(self.values),
+            "ignoredVariableCount": len(self.ignored_names),
+            "variableCount": len(self.values),
+            "valuesRedacted": True,
+        }
 
 
 class UsageSnapshot(Protocol):
@@ -124,6 +151,112 @@ def _positive_int(value: object) -> bool:
 
 def _positive_number(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+
+
+def load_host_env_file(path: Path, *, allowed_names: set[str]) -> HostEnvFile:
+    if not path.is_file():
+        raise HarnessError("missing-host-env-file", "host env file does not exist")
+    if not allowed_names:
+        raise HarnessError("invalid-host-env-file", "at least one allowed env var name is required")
+    values: dict[str, str] = {}
+    ignored: set[str] = set()
+    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        parsed = _parse_env_line(raw_line)
+        if parsed is None:
+            continue
+        name, value = parsed
+        if name not in allowed_names:
+            ignored.add(name)
+            continue
+        values[name] = value
+        if not value:
+            raise HarnessError("invalid-host-env-file", f"{name} must not be empty in env file line {line_number}")
+    if not values:
+        raise HarnessError("invalid-host-env-file", "host env file did not contain any allowed variables")
+    return HostEnvFile(path=path, values=values, ignored_names=tuple(sorted(ignored)))
+
+
+def load_host_env_file_from_args(host_env_file: str | None, host_env_allow: list[str] | None) -> HostEnvFile | None:
+    if not host_env_file:
+        if host_env_allow:
+            raise HarnessError("missing-host-env-file", "--host-env-allow requires --host-env-file")
+        return None
+    allowed_names = set(host_env_allow or [])
+    if not allowed_names:
+        raise HarnessError("missing-host-env-allow", "--host-env-file requires at least one --host-env-allow variable name")
+    invalid = sorted(name for name in allowed_names if not _ENV_NAME.match(name))
+    if invalid:
+        raise HarnessError("invalid-host-env-allow", f"invalid env var names: {', '.join(invalid)}")
+    return load_host_env_file(Path(host_env_file).expanduser(), allowed_names=allowed_names)
+
+
+def subprocess_env_with_host_env(host_env: HostEnvFile | None) -> dict[str, str] | None:
+    return host_env.apply_to(os.environ) if host_env else None
+
+
+def add_host_env_args(parser: Any) -> None:
+    parser.add_argument("--host-env-file")
+    parser.add_argument(
+        "--host-env-allow",
+        action="append",
+        default=[],
+        help="Allow one variable name from --host-env-file to be passed to this host process; repeat for multiple variables.",
+    )
+
+
+def dispatch_with_host_env(args: Any, dispatch: Callable[[Any], dict[str, Any]]) -> dict[str, Any]:
+    host_env = load_host_env_file_from_args(getattr(args, "host_env_file", None), getattr(args, "host_env_allow", []))
+    with host_env_context(host_env):
+        report = dispatch(args)
+    return attach_host_env_report(report, host_env)
+
+
+def attach_host_env_report(report: dict[str, Any], host_env: HostEnvFile | None) -> dict[str, Any]:
+    if host_env is None:
+        return report
+    return {**report, "hostEnv": host_env.redacted_json()}
+
+
+@contextmanager
+def host_env_context(host_env: HostEnvFile | None) -> Iterator[None]:
+    if host_env is None:
+        yield
+        return
+    previous = {name: os.environ.get(name) for name in host_env.values}
+    os.environ.update(host_env.values)
+    try:
+        yield
+    finally:
+        for name, value in previous.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
+
+_ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _parse_env_line(line: str) -> tuple[str, str] | None:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return None
+    if stripped.startswith("export "):
+        stripped = stripped.removeprefix("export ").strip()
+    if "=" not in stripped:
+        raise HarnessError("invalid-host-env-file", "env file lines must use KEY=value syntax")
+    name, raw_value = stripped.split("=", 1)
+    name = name.strip()
+    if not _ENV_NAME.match(name):
+        raise HarnessError("invalid-host-env-file", f"invalid env var name: {name}")
+    try:
+        parts = shlex.split(raw_value, comments=True, posix=True)
+    except ValueError as error:
+        raise HarnessError("invalid-host-env-file", f"invalid quoted value for {name}") from error
+    if len(parts) > 1:
+        raise HarnessError("invalid-host-env-file", f"invalid unquoted whitespace in value for {name}")
+    value = parts[0] if parts else ""
+    return name, value
 
 
 @dataclass(frozen=True)

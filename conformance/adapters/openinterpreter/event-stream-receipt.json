@@ -1,6 +1,6 @@
 {
   "adapterId": "openinterpreter",
-  "descriptorDigest": "a7032258e474a4e3725cb2d0099694746fbd3406debfc0beb40fb956e5e96beb",
+  "descriptorDigest": "ee79a93870431370a4d1a4dc1e4ed757e5c05a892db5f04c7414dff0805816ca",
   "emittedAt": "2026-07-31T00:23:00Z",
   "eventCount": 6,
   "eventStreamDigest": "ecc4e8dbd5dd37e24ba52bc6bb6270aa485f846d42eedcabce67fa351de0cda9",
@@ -20,10 +20,10 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "ab6d679685681877c160dbc510176f5d9ab1ae27b7434723cbc2cee5d3d09ae1",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",
   "taskId": "adapter-event-capture",
-  "terminalEvent": "task.completed"
+  "terminalEvent": "task.completed",
+  "receiptDigest": "d936130ad0371f3a6f241884668a6dfa982716fac360d89cf171d3104c03f427"
 }

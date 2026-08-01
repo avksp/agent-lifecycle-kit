@@ -37,6 +37,26 @@ but the evidence contract and release gates stay the same.
    neutrality, packaging, and CI checks before publishing the tag and GitHub
    Release object.
 
+## Host secret handling
+
+Use the host's normal credential source for model access. Some hosts use an
+interactive login or credential store; API providers normally use environment
+variables. For OpenInterpreter, custom providers declare the required
+environment variable name through provider `env_key`; built-in providers use
+their documented variable names.
+
+ALK live harnesses may receive a private dotenv-style file through
+`--host-env-file`, but no variable from that file is passed unless the operator
+also supplies `--host-env-allow <NAME>`. This allowlist is intentionally
+operator-provided: the harness must not infer allowed secrets from arbitrary
+host output or persist the key value in receipts.
+
+Reports and receipts may include only `agent-host-env-file-redacted.v1`
+metadata: loaded variable names, counts, a path digest and `valuesRedacted:
+true`. Run `validate_host_env_hygiene.py` with the same env file and allowlist
+to prove the secret value is absent from emitted reports before accepting live
+evidence.
+
 ## Required validators
 
 Use these validators instead of prose-only review:
@@ -68,6 +88,13 @@ python tools/release/validate_support_matrix.py \
 
 python tools/release/validate_docs_compat.py \
   --evidence <docs-compat-evidence.json>
+
+python tools/release/validate_host_env_hygiene.py \
+  --report <host-harness-report-or-receipt.json> \
+  --host-env-file <private-host-env-file> \
+  --host-env-allow <PROVIDER_API_KEY_NAME> \
+  --require-host-env-report \
+  --evidence <host-env-hygiene-evidence.json>
 ```
 
 ## Fail-closed blockers

@@ -19,7 +19,7 @@ if str(SRC) not in sys.path:
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex  # noqa: E402
 from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
-from tools.live_hosts.common import BudgetPolicy, BudgetTracker, CommandResult, HarnessError  # noqa: E402
+from tools.live_hosts.common import BudgetPolicy, BudgetTracker, CommandResult, HarnessError, add_host_env_args, dispatch_with_host_env  # noqa: E402
 
 
 HOST = "cursor"
@@ -97,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--budget-targets", default=DEFAULT_BUDGET_TARGETS.as_posix())
     parser.add_argument("--cursor-bin", default="cursor")
     parser.add_argument("--cursor-model")
+    add_host_env_args(parser)
     parser.add_argument("--worktree")
     parser.add_argument("--budget-mode", choices=["metered", "subscription", "local"], default="metered")
     parser.add_argument("--budget-cap-usd", type=float)
@@ -112,7 +113,7 @@ def main(argv: list[str] | None = None) -> int:
 
     blockers: list[dict[str, Any]] = []
     try:
-        report = _dispatch(args)
+        report = dispatch_with_host_env(args, _dispatch)
     except HarnessError as error:
         blockers.append({"code": error.code, "message": error.message})
         report = _base_report("FAIL", blockers)

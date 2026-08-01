@@ -14,6 +14,9 @@ Security-sensitive release rules:
 - no private key, token, cookie or credential in release artifacts;
 - no source-project path or local-machine path in release artifacts;
 - no host-specific lifecycle semantics in the shared core.
+- host-local env files used by live harnesses require explicit
+  `--host-env-allow` and `validate_host_env_hygiene.py` evidence before the
+  related reports can be accepted.
 
 Security and resource checks are separate gates. A run can pass lifecycle cost
 accounting and still fail release security if it leaks local paths, secrets or

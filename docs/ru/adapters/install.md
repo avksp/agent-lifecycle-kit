@@ -12,6 +12,34 @@ agent-lifecycle adapter inspect --descriptor adapters/codex/adapter.descriptor.j
 agent-lifecycle adapter install-plan --descriptor adapters/codex/adapter.descriptor.json
 ```
 
+## Host-local секреты
+
+Адаптеры, которые вызывают реальную модель, должны получать ключи через
+штатный механизм хоста: переменные окружения, credential store хоста или
+операторский secret launcher. ALK не хранит provider keys в tracked config,
+descriptor, receipts или release evidence.
+
+Для live harness можно использовать `--host-env-file`, если ключ не нужно
+экспортировать глобально. Это приватный dotenv-style файл оператора вне
+репозитория; каждое имя переменной явно разрешается для конкретного запуска:
+
+```bash
+python tools/live_hosts/<host>_harness.py \
+  --mode preflight \
+  --host-env-file ~/.config/alk/hosts/<host>.env \
+  --host-env-allow PROVIDER_API_KEY \
+  --report work/<release>/evidence/<host>-preflight.json
+```
+
+Harness передаёт дочернему host-процессу только разрешённые имена и пишет в
+evidence только `agent-host-env-file-redacted.v1`. Проверку отсутствия значений
+секретов в отчётах выполняет `tools/release/validate_host_env_hygiene.py`.
+
+Это правило относится ко всем provider-flexible адаптерам. Если хост умеет
+переключать providers или models, выбранный provider остаётся источником имени
+и механизма credential; ALK получает только явно разрешённое оператором имя
+переменной для текущего harness-запуска.
+
 ## Codex
 
 ```bash
@@ -69,9 +97,9 @@ agent-lifecycle adapter install-plan --descriptor adapters/goose/adapter.descrip
 ```
 
 Goose имеет host-specific `VERIFIED` только для Goose `1.45.0` на проверенной
-связке ZAI GLM 5.2. Live promotion использовал ограниченные no-session/no-profile
-запуски с явным provider/model и проверкой чистого worktree после каждого
-вызова.
+host-local provider/model связке. Live promotion использовал ограниченные
+no-session/no-profile запуски с явным provider/model и проверкой чистого
+worktree после каждого вызова.
 
 ## Kimi Code
 
@@ -89,18 +117,43 @@ agent-lifecycle adapter install-plan --descriptor adapters/grok-build/adapter.de
 ```
 
 Grok Build имеет host-specific `VERIFIED` для Grok Build `0.2.117` на
-проверенной локальной связке `grok-4.5`. ACP-путь остаётся probe-gated, а
+проверенной host-local provider/model связке. ACP-путь остаётся probe-gated, а
 неудачный probe фиксируется как fail-closed evidence.
 
 ## OpenInterpreter
 
 ```bash
 interpreter --version
+interpreter doctor --json
 agent-lifecycle adapter install-plan --descriptor adapters/openinterpreter/adapter.descriptor.json
 ```
 
-OpenInterpreter описан как host-local compatible CLI projection без заявления
-о live promotion.
+OpenInterpreter имеет host-specific `VERIFIED` для `interpreter` 0.0.34 на
+проверенной host-local provider/model связке. Учётные данные выбранной модели
+должны быть видны процессу `interpreter` перед локальным live rerun.
+OpenInterpreter берёт имя нужной переменной из выбранного provider: custom
+provider указывает `env_key` в `~/.openinterpreter/config.toml` или
+`.openinterpreter/config.toml`, а встроенные providers используют свои
+документированные переменные. Значение ключа должно приходить из окружения или
+credential store хоста, а не из repository config.
+
+Чтобы дать ключ выбранного provider только ALK harness-процессу, помести его в
+приватный operator env-file и явно разреши это имя:
+
+```bash
+python tools/live_hosts/openinterpreter_harness.py \
+  --mode preflight \
+  --interpreter-model <model-id> \
+  --host-env-file ~/.config/alk/hosts/openinterpreter.env \
+  --host-env-allow PROVIDER_API_KEY \
+  --budget-mode subscription \
+  --max-invocations 14 \
+  --max-billable-tokens 1000 \
+  --allow-live \
+  --report work/release-1-18/evidence/preflight/openinterpreter-preflight-report.json
+```
+
+`PROVIDER_API_KEY` нужно заменить на имя env-key из выбранного provider.
 
 ## Pi
 
