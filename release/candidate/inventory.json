@@ -86,8 +86,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "21fcfe4b0ab2e87ec1961ab45d015ad26ea34e521589fba7d21ce1d8a297c9c1",
-      "bytes": 20649
+      "sha256": "07bd03f89bfb8dcdf5dbe2fa84008f9e0b5f78b273dfb4628e68c7251a8d8cdd",
+      "bytes": 21156
     },
     {
       "path": "CONTRIBUTING.md",
@@ -106,8 +106,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "2884e1dc1a372938b0cb77077ff911023bac20ff6c453eacd572aba2802288cd",
-      "bytes": 8585
+      "sha256": "a2e8f4a737da87c7532905607ee03e17acf406d03155ead44e1767119b152de6",
+      "bytes": 8856
     },
     {
       "path": "SECURITY.md",
@@ -615,6 +615,21 @@
       "bytes": 5005
     },
     {
+      "path": "conformance/fixtures/imports/external-agent-basic.yaml",
+      "sha256": "7ab3e4702423114511b6e85c2ce73f9132eb9c3c06ca3ff92f9a01d92020908a",
+      "bytes": 317
+    },
+    {
+      "path": "conformance/fixtures/imports/external-dialect-profile-basic.json",
+      "sha256": "98956be55c39b6618cfe6c506e567d943fe6a0b4e9695edc929fe3d2b479985c",
+      "bytes": 53
+    },
+    {
+      "path": "conformance/fixtures/imports/external-workflow-basic.yaml",
+      "sha256": "1686e3cf2168a16b7f69c67104d1f86475fe6c2744d61fbd923dc5b3fea56324",
+      "bytes": 198
+    },
+    {
       "path": "docs/README.md",
       "sha256": "da19534b31a442523c3ba4c74db03463cc766463bfcb58efc0b25cdb22566044",
       "bytes": 2778
@@ -936,8 +951,8 @@
     },
     {
       "path": "docs/reference/import-mappers.md",
-      "sha256": "2d246692e1980468cb76dc5bbdb04bfaac918460fc325f98c71217e67ce69049",
-      "bytes": 1553
+      "sha256": "4a6a569e484678ce36aca1b0e9d30a44717c1b96a42bf1480ea7ca7dc089734a",
+      "bytes": 2991
     },
     {
       "path": "docs/reference/lifecycle-cost.md",
@@ -976,8 +991,8 @@
     },
     {
       "path": "docs/reference/public-contracts.md",
-      "sha256": "3fbb6e3fb987c32b882517409497ce6a199cc6d6b64ed4b422a59ca28c715d72",
-      "bytes": 6600
+      "sha256": "1e19afcebcda11d8120111f7f17a646aa32093e1c84062304c3082432caac96c",
+      "bytes": 6975
     },
     {
       "path": "docs/reference/read-only-status-view.md",
@@ -1026,8 +1041,8 @@
     },
     {
       "path": "docs/ru/README.md",
-      "sha256": "24f2462ac16ff0b765c245e7668a8aca2b62b1dcbdc52c71e55018c7e506f688",
-      "bytes": 13126
+      "sha256": "4fa0305f30adc5248c18c3b164e092defdc3b1ab7e13a2b87b74a63e53f77509",
+      "bytes": 13161
     },
     {
       "path": "docs/ru/adapters/install.md",
@@ -1076,8 +1091,8 @@
     },
     {
       "path": "docs/ru/reference/import-mappers.md",
-      "sha256": "935e11829a6aaeeeea65d147067414de4da6be33fc953dbf08ad0818da380436",
-      "bytes": 2000
+      "sha256": "d42a167dbccb98a189b6c987253e567450a56054f7b9feea137142b432ca943f",
+      "bytes": 3648
     },
     {
       "path": "docs/ru/reference/lifecycle-cost.md",
@@ -1086,8 +1101,8 @@
     },
     {
       "path": "docs/ru/reference/public-contracts.md",
-      "sha256": "1eb28e080bc0510785f3c40c27100d808af4563897edb036031810bf2762e514",
-      "bytes": 6239
+      "sha256": "4eff050b12630d3855e7b70a0278493b67c61aaaa874bf2d6c1a7f1871a646bb",
+      "bytes": 6664
     },
     {
       "path": "docs/ru/reference/readiness-diagnostics.md",
@@ -1226,7 +1241,7 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "f910b2b5fea95b1cb608776ac9a4d28b1f6695687fefd4e0a591a241576b1a67",
+      "sha256": "2e0002502e2aaf577fee9cc476a579311896041e870227a9bffdb6a2c1740681",
       "bytes": 1134
     },
     {
@@ -1276,7 +1291,7 @@
     },
     {
       "path": "src/agent_lifecycle/_version.py",
-      "sha256": "d16b44e2e50a7a199c3e686c195d46b2aba18877a0e69d098aa32ad8fe355bb4",
+      "sha256": "f45d7cb6bc70d331972a32db3fced09a4ebedaf71d96b578b6e78ad09095479b",
       "bytes": 47
     },
     {
@@ -1326,8 +1341,8 @@
     },
     {
       "path": "src/agent_lifecycle/cli/dispatch.py",
-      "sha256": "0f2d79a7ed34899712072c02b9032759cc4f3ec7a63dec2d698ef21c79dc94f1",
-      "bytes": 31487
+      "sha256": "243dabba6fc5b44c17555292e1e04d324cc48d91f78fee41da0136fa347006ba",
+      "bytes": 32523
     },
     {
       "path": "src/agent_lifecycle/cli/followup.py",
@@ -1346,8 +1361,8 @@
     },
     {
       "path": "src/agent_lifecycle/cli/parsers.py",
-      "sha256": "95f0d9671d0e5f6dab6826c6ada26835d756bb638eedd7c80746d25d1634dc47",
-      "bytes": 20805
+      "sha256": "c031d835983bdef583b92a40f633dbafd1c9a566f20f1dc5999bb2b8ec5612db",
+      "bytes": 21521
     },
     {
       "path": "src/agent_lifecycle/cli/policy.py",
@@ -1666,8 +1681,8 @@
     },
     {
       "path": "src/agent_lifecycle/imports/__init__.py",
-      "sha256": "3a9e4480671e86b8bdcf646ab660770013a27a710b3135e03547247e1a2f55c2",
-      "bytes": 1025
+      "sha256": "85a5eb87377be8354e2c3f73faa7316f86d73e51734041ec1fbc9870d82393ee",
+      "bytes": 1837
     },
     {
       "path": "src/agent_lifecycle/imports/agentskills_profile.py",
@@ -1678,6 +1693,26 @@
       "path": "src/agent_lifecycle/imports/constitution_adr.py",
       "sha256": "16f4def30fe7753cc1d97a3468d5a2a47e3b4d48fe333bf47670512dc6a9ffcf",
       "bytes": 4016
+    },
+    {
+      "path": "src/agent_lifecycle/imports/dialect_profiles.py",
+      "sha256": "b86d53e15358fb3b9f819563ef0f4a83d3dd7e1df5836ba1edaf300955f750b5",
+      "bytes": 4655
+    },
+    {
+      "path": "src/agent_lifecycle/imports/external_agent.py",
+      "sha256": "32f36cc78e1156a4953fa3fc84d0744aba43367c24c350f09911136d7f2090c3",
+      "bytes": 876
+    },
+    {
+      "path": "src/agent_lifecycle/imports/external_dialects.py",
+      "sha256": "057bda3385c56299dc4e7d88dc6a89ec8b97b846ddcde07c014d7b815b4feff1",
+      "bytes": 19223
+    },
+    {
+      "path": "src/agent_lifecycle/imports/external_workflow.py",
+      "sha256": "f7bb25037a8ace72d157dfd52fb9df8008986f537f922babeeeac0d726582e76",
+      "bytes": 888
     },
     {
       "path": "src/agent_lifecycle/imports/planning.py",
@@ -2246,8 +2281,8 @@
     },
     {
       "path": "tests/cli/test_evidence_import_commands.py",
-      "sha256": "64e622d30cfe421943ba4dd05404c4745441b46ca29ffbe7d46fa4d393724056",
-      "bytes": 4037
+      "sha256": "9968eeb9ac31abbb3522c9988a9cabe65f09af3919b575e197cccdf10ce020b3",
+      "bytes": 5928
     },
     {
       "path": "tests/cli/test_followup_commands.py",
@@ -2391,8 +2426,8 @@
     },
     {
       "path": "tests/contracts/test_import_dialect_schemas.py",
-      "sha256": "9a5b1b424997be9c1c1f9503370090427415e7d45e8ddffa3ce17dceb202fc4f",
-      "bytes": 1573
+      "sha256": "240cd8f1bf68d223ad393f159c71e442e2f96990f471dc9cd5d1e7396e86499a",
+      "bytes": 1900
     },
     {
       "path": "tests/contracts/test_lifecycle_recommendation_contracts.py",
@@ -2493,6 +2528,21 @@
       "path": "tests/imports/test_dialect_imports.py",
       "sha256": "13c53ead9d46ca13bc9b3619df0f2be3bc8114d8fb4570359834afbb4cce103d",
       "bytes": 3258
+    },
+    {
+      "path": "tests/imports/test_external_agent_import.py",
+      "sha256": "92a06d57ecf263ef4ebc79fcb9dd574e92242cb800c71053e1b9df1b0fe76e86",
+      "bytes": 2490
+    },
+    {
+      "path": "tests/imports/test_external_dialect_framework.py",
+      "sha256": "3dca2cb342003d1c49805f7e9133ed417a198073bd86cadbf8d243cf8746b271",
+      "bytes": 1752
+    },
+    {
+      "path": "tests/imports/test_external_workflow_import.py",
+      "sha256": "079977043bc54152584e463109bf4805fddd6f861b277c1dad8423ec911445d3",
+      "bytes": 1843
     },
     {
       "path": "tests/imports/test_planning_imports.py",
@@ -2681,7 +2731,7 @@
     },
     {
       "path": "tests/package/test_foundation.py",
-      "sha256": "cb1894dc4a726359177c8eab949a395a1aec217b15b5f9dfc1a92b8c6fd56931",
+      "sha256": "4191dc372d3920b77f40a1980ef8e6ed4d826388c8832318756e0aefb9c49013",
       "bytes": 7804
     },
     {
@@ -3086,9 +3136,9 @@
     },
     {
       "path": "uv.lock",
-      "sha256": "02aa6d0ad445989d5ac0a8bd302f8adcb8f92e8f522e7e922f5d175d1de3e2f5",
+      "sha256": "484d5bbeda14b1c4e5a0cab8a168852351b63c7a74244985d1ffb81e9773a475",
       "bytes": 186
     }
   ],
-  "candidatePayloadInventoryDigest": "d2f904a359e3a3300a83ac6a84a6c9322a1490bd8a6580d18ea1337600401728"
+  "candidatePayloadInventoryDigest": "c3718724255327ae26ff97f4f30f14fc00183630dabea110b4d676bf3a11b5a6"
 }

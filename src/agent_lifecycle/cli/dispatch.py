@@ -34,9 +34,13 @@ from agent_lifecycle.cli.policy import dispatch_policy
 from agent_lifecycle.cli.worktree import dispatch_worktree
 from agent_lifecycle.goal import build_objective_snapshot, update_goal_record, validate_goal_record
 from agent_lifecycle.imports import (
+    external_dialect_registry,
+    import_external_dialect,
     import_planning_input,
+    require_external_import_pass,
     require_import_validation_pass,
     require_skill_proposal_pass,
+    validate_external_import_result,
     validate_import_result,
     validate_skill_improvement_proposal,
 )
@@ -229,6 +233,11 @@ def _dispatch_evidence(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_import(args: argparse.Namespace) -> dict[str, Any]:
+    if args.import_command == "profile-list":
+        payload = external_dialect_registry()
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.import_command == "plan":
         payload = import_planning_input(
             Path(args.source),
@@ -240,8 +249,23 @@ def _dispatch_import(args: argparse.Namespace) -> dict[str, Any]:
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
+    if args.import_command == "external":
+        payload = import_external_dialect(
+            Path(args.source),
+            family=args.family,
+            profile_id=args.profile,
+            package_id=args.package_id,
+            max_input_bytes=args.max_input_bytes,
+            target_tokens=args.target_tokens,
+        )
+        require_external_import_pass(validate_external_import_result(payload))
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.import_command == "check":
         return require_import_validation_pass(validate_import_result(read_json_object(Path(args.candidate), label="planning import result")))
+    if args.import_command == "external-check":
+        return require_external_import_pass(validate_external_import_result(read_json_object(Path(args.candidate), label="external dialect import result")))
     if args.import_command == "proposal-check":
         return require_skill_proposal_pass(validate_skill_improvement_proposal(read_json_object(Path(args.proposal), label="skill proposal")))
     raise LifecycleError("command-not-implemented", "import command is not implemented")

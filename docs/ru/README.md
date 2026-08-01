@@ -40,8 +40,9 @@ flowchart LR
 - Дополнительные sandbox receipts для рискованных задач: filesystem, network,
   process, environment и enforcement source фиксируются отдельно от git
   write-scope.
-- Import mapper profiles для Constitution/ADR и AGENTS/agentskills; результат
-  остаётся untrusted draft с digest dialect profile.
+- Import mapper profiles для generic workflow/agent dialects, Constitution/ADR
+  и AGENTS/agentskills; результат остаётся untrusted draft с digest dialect
+  profile.
 - Лёгкий episode retrieval по receipt/session summaries с digest provenance и
   явным состоянием `chainVerified` или `chainUnchecked`.
 - Runner recovery receipts для snapshot, restore, abandon, selected attempt,
