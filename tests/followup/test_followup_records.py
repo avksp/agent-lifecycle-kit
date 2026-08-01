@@ -13,6 +13,7 @@ from agent_lifecycle.contracts import LifecycleError, sha256_hex  # noqa: E402
 from agent_lifecycle.followup import (  # noqa: E402
     build_followup_summary,
     close_followup_item,
+    followup_item_from_completion_gate,
     validate_followup_register,
 )
 
@@ -80,6 +81,33 @@ class FollowUpRegisterTests(unittest.TestCase):
             validate_followup_register(register, state=_state())
         self.assertEqual(raised.exception.code, "follow-up-closure-invalid")
 
+    def test_followup_item_from_completion_gate_requires_follow_up_decision(self) -> None:
+        receipt = _completion_gate_receipt("FOLLOW_UP")
+
+        item = followup_item_from_completion_gate(
+            receipt,
+            item_id="FU-02",
+            title="Deferred cleanup",
+            owner_id="release-lead",
+            target_release="next",
+            reason="non-blocking completion gate follow-up",
+        )
+
+        self.assertEqual(item["status"], "SCHEDULED")
+        self.assertEqual(item["currentScopeImpact"], "none")
+        self.assertEqual(item["completionGate"]["decision"], "FOLLOW_UP")
+
+        with self.assertRaises(LifecycleError) as raised:
+            followup_item_from_completion_gate(
+                _completion_gate_receipt("CONTINUE"),
+                item_id="FU-03",
+                title="Invalid follow-up",
+                owner_id="release-lead",
+                target_release="next",
+                reason="should fail",
+            )
+        self.assertEqual(raised.exception.code, "completion-gate-follow-up-not-allowed")
+
 
 def _state() -> dict:
     return {
@@ -128,6 +156,18 @@ def _item(*, current_scope_impact: str = "none", required_artifacts: list[str] |
         },
         "reason": "tracked for later closure",
     }
+
+
+def _completion_gate_receipt(decision: str) -> dict:
+    body = {
+        "schemaVersion": "agent-completion-gate-receipt.v1",
+        "status": "PASS",
+        "decision": decision,
+        "reasonCodes": ["non-blocking-follow-up"] if decision == "FOLLOW_UP" else ["validation-missing"],
+        "blockers": [] if decision == "FOLLOW_UP" else [{"code": "validation-missing"}],
+        "gateDigest": "a" * 64,
+    }
+    return body
 
 
 if __name__ == "__main__":

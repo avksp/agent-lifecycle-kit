@@ -10,6 +10,7 @@ instead of duplicating long rules.
 | Plugin package version | Root and adapter plugin manifests |
 | Public schema ids | `src/agent_lifecycle/contracts/schemas.py` |
 | CLI command behavior | `src/agent_lifecycle/cli/` and command tests |
+| Completion stop/continue decisions | `agent-completion-gate-receipt.v1` and `src/agent_lifecycle/specification/completion_gate.py` |
 | External issue intake | `skills/issue-to-spec/SKILL.md` and reviewed ALK plans |
 | Adapter maturity | `adapters/*/adapter.descriptor.json` |
 | Adapter capabilities | `adapters/*/capabilities.manifest.json` |
