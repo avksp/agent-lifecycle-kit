@@ -26,7 +26,7 @@ flowchart LR
 - Fail-closed execution receipts, blocker handling, and final proof.
 - Adapter contracts for host-specific projections without putting host details
   in the core.
-- Compact context profiles and objective snapshots for small local models.
+- Compact context profiles, small-model packets and objective snapshots for local models.
 - Cost and usage accounting that separates product work from lifecycle checks.
 - Usage/session exports with tokens, resources, receipt digests, and optional
   host-reported `cost_usd`.
@@ -93,7 +93,7 @@ Useful command groups:
   event checks, and dry-run install plans.
 - `agent-lifecycle import`: untrusted planning imports and generic external
   workflow/agent dialect imports.
-- `agent-lifecycle model`, `context`, `goal`, `followup`, `worktree`,
+- `agent-lifecycle model`, `task`, `context`, `goal`, `followup`, `worktree`,
   `runner`, `metrics`, `quality`, `report`, `evidence`, `import`, `contract`,
   and `schema`: supporting lifecycle controls.
 
@@ -161,7 +161,7 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
 - [Issue to specification drafts](docs/guides/issue-to-spec.md)
 - [Adapter install](docs/adapters/install.md)
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
-- [Adaptive policy](docs/reference/adaptive-lifecycle-policy.md) and [lifecycle cost accounting](docs/reference/lifecycle-cost.md)
+- [Small-model packets](docs/reference/small-model-packets.md), [adaptive policy](docs/reference/adaptive-lifecycle-policy.md) and [lifecycle cost accounting](docs/reference/lifecycle-cost.md)
 - [Usage export](docs/reference/usage-export.md)
 - [Evidence integrity](docs/reference/evidence-integrity.md)
 - [Read-only status views](docs/reference/read-only-status-view.md)

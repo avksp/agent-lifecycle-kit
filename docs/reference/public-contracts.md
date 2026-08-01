@@ -65,6 +65,12 @@ Stable schema ids:
 - `agent-adaptive-lifecycle-policy-request.v1`
 - `agent-adaptive-lifecycle-policy-decision.v1`
 - `agent-adaptive-lifecycle-policy-decision-validation.v1`
+- `agent-small-model-task-packet.v1`
+- `agent-small-model-task-packet-index.v1`
+- `agent-small-model-output-contract.v1`
+- `agent-small-model-task-result.v1`
+- `agent-small-model-output-validation.v1`
+- `agent-small-model-packet-compile-result.v1`
 
 `completionCheck` is the task-level completion gate. Optional quality packs and
 read-only reports add bounded evidence, but they do not replace source-of-truth
@@ -76,6 +82,11 @@ Adaptive lifecycle policy chooses the lightest safe mode from neutral
 task/risk/evidence/resource inputs. It is advisory by default; automatic
 selection requires explicit opt-in and cannot choose below the quality floor.
 It does not use provider/model names or live currency lookup.
+
+Small-model packets compile frozen task packets into a narrower implementation
+surface with exact write scope, compact context receipts and required output
+contracts. They cannot expand authority or satisfy critical review by
+themselves.
 
 ## Evidence integrity
 

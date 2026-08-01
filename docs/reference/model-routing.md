@@ -27,6 +27,11 @@ mode is below the floor. Low-risk S0/S1 `light` work can route to the `budget`
 class, but critical review, local-only policy, context and capability gates
 remain authoritative.
 
+Small-model packets are compatible with budget or local compact implementation
+routes only when the adaptive quality floor permits them. They do not make a
+small/local route valid for critical review; final audit and security-sensitive
+review still require calibrated review-capable classes.
+
 ## Model classes
 
 | Class | Purpose |
