@@ -15,6 +15,7 @@ EXPECTED_SKILLS = {
     "agent-workflow-orchestrator",
     "audit-plan-implementation",
     "bug-forensics",
+    "issue-to-spec",
 }
 
 

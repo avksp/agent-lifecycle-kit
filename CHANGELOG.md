@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.24.0 - 2026-08-01
+
+- Added draft-only issue-to-spec intake for external tickets and tracker
+  payloads without execution or freeze authority.
+- Added read-only workflow event feed and lifecycle progress projections with
+  fixed-width one-line rows, attested token counters and git-style change
+  summaries.
+- Added advisory adapter package discovery for release inspection without
+  descriptor override, maturity promotion or live host calls.
+
 ## 1.23.0 - 2026-08-01
 
 - Added metered-only `meteredAskThreshold` advisory validation without changing

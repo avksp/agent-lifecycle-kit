@@ -43,3 +43,8 @@ truth for final review.
 ```bash
 agent-lifecycle plan handoff --manifest <plan.manifest.json> --snapshot <plan-snapshot.json> --out <handoff.json>
 ```
+
+Fresh-context handoff is a recipe over these artifacts, not a separate state
+transition. A resumed worker may cite the handoff, status view, event feed or
+progress view as evidence, but default lifecycle state does not change until a
+normal workflow command records an operation.
