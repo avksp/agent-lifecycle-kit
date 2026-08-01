@@ -1,7 +1,9 @@
 # Agent Lifecycle Kit documentation
 
-This documentation describes the standalone lifecycle kit. It is host-neutral
-and does not depend on a source project.
+This documentation describes the standalone lifecycle kit. ALK is a
+provider-neutral control layer for coding agents: it keeps specs, plans,
+execution, audits, and final proof aligned until the task is actually complete.
+It is host-neutral and does not depend on a source project.
 
 ## Locales
 
