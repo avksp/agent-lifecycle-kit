@@ -427,7 +427,8 @@ def _requirements_from_lines(text: str, *, prefix: str) -> list[str]:
         if stripped.startswith(("- ", "* ")):
             requirements.append(f"{prefix}: {_safe_summary(stripped[2:])}.")
         elif re.match(r"^\d+\.\s+", stripped):
-            requirements.append(f"{prefix}: {_safe_summary(re.sub(r'^\d+\.\s+', '', stripped))}.")
+            numbered_text = re.sub(r"^\d+\.\s+", "", stripped)
+            requirements.append(f"{prefix}: {_safe_summary(numbered_text)}.")
     return requirements[:MAX_REQUIREMENTS]
 
 

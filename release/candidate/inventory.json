@@ -1706,8 +1706,8 @@
     },
     {
       "path": "src/agent_lifecycle/imports/external_dialects.py",
-      "sha256": "057bda3385c56299dc4e7d88dc6a89ec8b97b846ddcde07c014d7b815b4feff1",
-      "bytes": 19223
+      "sha256": "4dd51811b39f6feb484f932401b12be81cd620217baa1cc68d6346f3f0773ed3",
+      "bytes": 19318
     },
     {
       "path": "src/agent_lifecycle/imports/external_workflow.py",
@@ -3140,5 +3140,5 @@
       "bytes": 186
     }
   ],
-  "candidatePayloadInventoryDigest": "c3718724255327ae26ff97f4f30f14fc00183630dabea110b4d676bf3a11b5a6"
+  "candidatePayloadInventoryDigest": "9e7ddda4e3ef64b78c6500bacdc96dc7d50458cafb817a662e6b89a3c97f13b3"
 }
