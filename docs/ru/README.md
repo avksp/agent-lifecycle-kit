@@ -39,7 +39,10 @@ flowchart LR
   hash chain.
 - Дополнительные sandbox receipts для рискованных задач: filesystem, network,
   process, environment и enforcement source фиксируются отдельно от git
-  write-scope.
+  write-scope, включая partial containment и redacted credential proxy
+  boundaries.
+- Release-time capability bench строит bounded probe plans из capability
+  manifests и проверяет live receipts на drift без изменения maturity.
 - Import mapper profiles для generic workflow/agent dialects, Constitution/ADR
   и AGENTS/agentskills; результат остаётся untrusted draft с digest dialect
   profile.

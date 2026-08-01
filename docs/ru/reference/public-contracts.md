@@ -39,6 +39,9 @@
 - `agent-sandbox-requirement.v1`: fail-closed политика обязательного sandbox
   evidence для high-risk задач.
 - `agent-sandbox-capability.v1`: декларация sandbox capabilities адаптера.
+- `agent-adapter-probe-profile.v1`: профиль capability bench.
+- `agent-adapter-probe-plan.v1`: declarative adapter probe plan.
+- `agent-adapter-probe-evidence-validation.v1`: проверка probe evidence/drift.
 - `agent-import-dialect-profile.v1`: профиль внешнего dialect import.
 - `agent-episode-index.v1`: rebuildable индекс receipt/session episodes.
 - `agent-episode-retrieval.v1`: bounded retrieval result с digest provenance.
@@ -77,6 +80,13 @@ check`. Изменение контракта без тестов и докум�
 в репозитории, а sandbox receipt описывает runtime containment. `UNKNOWN` —
 валидное явное состояние capability, но required high-risk policy принимает
 только настроенные passing statuses, по умолчанию `PASS`.
+Partial containment и credential proxy boundaries остаются details внутри
+`agent-sandbox-receipt.v1`; отдельный execution-sandbox schema alias не
+вводится.
+
+Adapter probe plan является release-time drift detector для live conformance.
+Он не запускает live calls, не меняет maturity и не заявляет production
+promotion.
 
 `agent-import-dialect-profile.v1` требует `sourceTrusted: false`,
 `requiresReview: true` и `freezeBlocked: true`. `nativeDialectProfileDigest`

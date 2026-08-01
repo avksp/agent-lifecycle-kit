@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.22.0 - 2026-08-01
+
+- Added release-time adapter capability bench tools that generate bounded probe
+  plans from capability manifests and validate live receipts for drift without
+  promoting adapter maturity.
+- Extended sandbox receipt validation for partial process containment and
+  redacted credential proxy boundaries inside `agent-sandbox-receipt.v1`.
+- Updated live-promotion runbooks, support matrices and public contract docs
+  for capability bench and sandbox-boundary evidence.
+
 ## 1.21.0 - 2026-08-01
 
 - Added draft-only task templates for bugfix, idea-to-PR, PR review,
