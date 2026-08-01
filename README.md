@@ -36,8 +36,9 @@ flowchart LR
 - Optional sandbox boundary receipts for high-risk work: filesystem, network,
   process, environment and enforcement-source evidence kept separate from git
   write scope.
-- Import mapper profiles for Constitution/ADR and AGENTS/agentskills inputs;
-  imported artifacts remain untrusted drafts with dialect profile digests.
+- Import mapper profiles for generic workflow/agent dialects,
+  Constitution/ADR and AGENTS/agentskills inputs; imported artifacts remain
+  untrusted drafts with dialect profile digests.
 - Lightweight episode retrieval over receipt/session summaries with digest
   provenance and explicit `chainVerified` or `chainUnchecked` state.
 - Runner recovery receipts for attempt snapshot, restore, abandon, selected
@@ -88,6 +89,8 @@ Useful command groups:
 - `agent-lifecycle diagnose`: checkout readiness without writes or live calls.
 - `agent-lifecycle adapter`: descriptor validation, inspection, scaffolding,
   event checks, and dry-run install plans.
+- `agent-lifecycle import`: untrusted planning imports and generic external
+  workflow/agent dialect imports.
 - `agent-lifecycle model`, `context`, `goal`, `followup`, `worktree`,
   `runner`, `metrics`, `quality`, `report`, `evidence`, `import`, `contract`,
   and `schema`: supporting lifecycle controls.
@@ -142,7 +145,9 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
 - Git write scope governs repository paths; sandbox receipts govern runtime
   containment and may be `UNKNOWN` until separately verified.
 - External dialect imports and retrieved episodes are context aids only; they
-  do not replace reviewed ALK source-of-truth artifacts.
+  do not replace reviewed ALK source-of-truth artifacts. Imported workflow
+  nodes are never executed, and imported agent provider/model/auth/tool hints
+  remain host-local metadata.
 - Optional cross-check and runner recovery receipts add evidence only when a
   task or plan requests them; they are not default multi-model execution.
 
