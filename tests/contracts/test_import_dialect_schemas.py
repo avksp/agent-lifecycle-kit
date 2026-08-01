@@ -31,6 +31,13 @@ class ImportDialectSchemaTests(unittest.TestCase):
         self.assertTrue(schema["properties"]["requiresReview"]["const"])
         self.assertTrue(schema["properties"]["freezeBlocked"]["const"])
 
+    def test_import_dialect_profile_schema_accepts_generic_external_metadata(self) -> None:
+        schema = get_schema("agent-import-dialect-profile.v1")
+
+        self.assertTrue(schema["additionalProperties"])
+        self.assertIn("dialectKind", schema["properties"])
+        self.assertIn("markers", schema["properties"])
+
     def test_planning_import_schema_exposes_native_dialect_profile_digest(self) -> None:
         schema = get_schema("agent-planning-import-result.v1")
 

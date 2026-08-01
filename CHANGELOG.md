@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.20.0 - 2026-08-01
+
+- Added a generic external dialect import framework with explicit
+  family/profile selection for workflow-like and agent/harness-like inputs.
+- Added workflow-family and agent-family draft mappers that keep imported
+  content untrusted, require review/freeze, never execute imported workflow
+  nodes and keep provider/model/auth/tool hints host-local and redacted.
+- Added CLI commands for external import profile listing, generic external
+  imports and external import validation.
+
 ## 1.19.0 - 2026-08-01
 
 - Promoted Pi to host-specific `VERIFIED` for Pi 0.83.0 on the tested
