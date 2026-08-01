@@ -10,7 +10,7 @@
     "minimumVersion": "1.18.9",
     "maximumVersion": "1.18.9",
     "evidence": [
-      "docs/adapters/evidence/opencode-glm52-live-2026-07-29.md",
+      "docs/adapters/evidence/opencode-host-local-live-2026-07-29.md",
       "work/release-0-7/evidence/opencode/live-host-conformance-opencode.json",
       "work/release-0-7/evidence/opencode/live-calibration-verification-opencode.json",
       "work/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json"

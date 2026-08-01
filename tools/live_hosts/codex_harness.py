@@ -24,9 +24,12 @@ from tools.live_hosts.common import (  # noqa: E402
     CommandResult,
     HarnessError,
     HostModelSelection,
+    add_host_env_args,
+    dispatch_with_host_env,
     load_host_model_selection,
     write_model_selection_receipt,
 )
+from tools.live_hosts.json_cli_harness import parse_jsonl_usage  # noqa: E402
 
 
 HOST = "codex"
@@ -108,6 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model-class")
     parser.add_argument("--model-binding")
     parser.add_argument("--model-selection-receipt")
+    add_host_env_args(parser)
     parser.add_argument("--worktree")
     parser.add_argument("--budget-mode", choices=["metered", "subscription", "local"], default="metered")
     parser.add_argument("--budget-cap-usd", type=float)
@@ -123,7 +127,7 @@ def main(argv: list[str] | None = None) -> int:
 
     blockers: list[dict[str, Any]] = []
     try:
-        report = _dispatch(args, blockers)
+        report = dispatch_with_host_env(args, lambda parsed: _dispatch(parsed, blockers))
     except HarnessError as error:
         blockers.append({"code": error.code, "message": error.message})
         report = _base_report("FAIL", blockers)
@@ -721,45 +725,18 @@ def build_live_operation_record(
 
 
 def parse_codex_jsonl(text: str, *, wall_seconds: float = 0.0) -> CodexUsage:
-    events = []
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            value = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict):
-            events.append(value)
-    usage_values: list[dict[str, Any]] = []
-    costs: list[float] = []
-    session_id: str | None = None
-    tool_calls = 0
-    for event in events:
-        session_id = session_id or _find_string(event, {"session_id", "sessionId", "conversation_id", "conversationId"})
-        usage_values.extend(_find_dicts(event, {"usage", "token_usage", "tokenUsage"}))
-        costs.extend(_find_numbers(event, {"cost_usd", "costUsd", "costUSD", "cost"}))
-        tool_calls += _count_tool_calls(event)
-    input_tokens = sum(_int_from_any(_first_present(usage, ("inputTokens", "input_tokens", "prompt_tokens", "promptTokens"))) for usage in usage_values)
-    output_tokens = sum(_int_from_any(_first_present(usage, ("outputTokens", "output_tokens", "completion_tokens", "completionTokens"))) for usage in usage_values)
-    total_tokens = sum(_int_from_any(_first_present(usage, ("billableTokens", "billable_tokens", "total_tokens", "totalTokens"))) for usage in usage_values)
-    context_bytes = sum(
-        _int_from_any(_first_present(usage, ("cumulativeContextBytes", "cumulative_context_bytes", "contextBytes", "context_bytes")))
-        for usage in usage_values
-    )
-    billable_tokens = total_tokens or input_tokens + output_tokens
+    usage = parse_jsonl_usage(text, wall_seconds=wall_seconds)
     return CodexUsage(
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        billable_tokens=billable_tokens,
-        cumulative_context_bytes=context_bytes if context_bytes else None,
-        cumulative_context_bytes_source="host-jsonl" if context_bytes else None,
-        tool_calls=tool_calls,
-        wall_seconds=wall_seconds,
-        cost_usd=sum(costs) if costs else None,
-        session_id=session_id,
-        event_count=len(events),
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        billable_tokens=usage.billable_tokens,
+        cumulative_context_bytes=usage.cumulative_context_bytes,
+        cumulative_context_bytes_source=usage.cumulative_context_bytes_source,
+        tool_calls=usage.tool_calls,
+        wall_seconds=usage.wall_seconds,
+        cost_usd=usage.cost_usd,
+        session_id=usage.session_id,
+        event_count=usage.event_count,
     )
 
 
@@ -904,83 +881,6 @@ def _first_line(text: str) -> str | None:
         if line.strip():
             return line.strip()
     return None
-
-
-def _first_present(value: dict[str, Any], keys: tuple[str, ...]) -> Any:
-    for key in keys:
-        if key in value:
-            return value[key]
-    return None
-
-
-def _int_from_any(value: Any) -> int:
-    if isinstance(value, bool):
-        return 0
-    if isinstance(value, int):
-        return value
-    if isinstance(value, float):
-        return int(value)
-    return 0
-
-
-def _find_string(value: Any, keys: set[str]) -> str | None:
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key in keys and isinstance(item, str) and item:
-                return item
-            found = _find_string(item, keys)
-            if found:
-                return found
-    elif isinstance(value, list):
-        for item in value:
-            found = _find_string(item, keys)
-            if found:
-                return found
-    return None
-
-
-def _find_dicts(value: Any, keys: set[str]) -> list[dict[str, Any]]:
-    found: list[dict[str, Any]] = []
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key in keys and isinstance(item, dict):
-                found.append(item)
-            found.extend(_find_dicts(item, keys))
-    elif isinstance(value, list):
-        for item in value:
-            found.extend(_find_dicts(item, keys))
-    return found
-
-
-def _find_numbers(value: Any, keys: set[str]) -> list[float]:
-    found: list[float] = []
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key in keys and isinstance(item, (int, float)) and not isinstance(item, bool):
-                found.append(float(item))
-            found.extend(_find_numbers(item, keys))
-    elif isinstance(value, list):
-        for item in value:
-            found.extend(_find_numbers(item, keys))
-    return found
-
-
-def _count_tool_calls(value: Any) -> int:
-    if isinstance(value, dict):
-        total = 0
-        for key, item in value.items():
-            if key in {"tool_call", "toolCall", "tool_calls", "toolCalls"}:
-                if isinstance(item, list):
-                    total += len(item)
-                elif isinstance(item, dict):
-                    total += 1
-                elif isinstance(item, int):
-                    total += item
-            total += _count_tool_calls(item)
-        return total
-    if isinstance(value, list):
-        return sum(_count_tool_calls(item) for item in value)
-    return 0
 
 
 if __name__ == "__main__":

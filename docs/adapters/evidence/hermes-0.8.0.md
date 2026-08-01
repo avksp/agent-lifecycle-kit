@@ -56,7 +56,7 @@ caps.
 
 Superseding evidence:
 
-- `docs/adapters/evidence/hermes-glm52-live-2026-07-29.md`;
+- `docs/adapters/evidence/hermes-host-local-live-2026-07-29.md`;
 - `work/release-0-8/evidence/hermes/live-host-conformance-hermes.json`;
 - `work/release-0-8/evidence/hermes/live-calibration-verification-hermes.json`;
 - `work/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json`.

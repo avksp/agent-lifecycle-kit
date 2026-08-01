@@ -4,10 +4,22 @@
 
 - No changes yet.
 
+## 1.18.0 - 2026-08-01
+
+- Promoted OpenInterpreter to host-specific `VERIFIED` for `interpreter`
+  0.0.34 on the tested host-local provider/model binding.
+- Added a bounded OpenInterpreter JSONL live harness on the shared JSON CLI
+  receipt loop, including preflight containment, read-only sandbox invocation,
+  clean-worktree checks and token/resource usage receipts.
+- Added provider-neutral host env injection for live harnesses through explicit
+  operator allowlists and redacted `agent-host-env-file-redacted.v1` metadata.
+- Added host-env hygiene validation and separated the release security check
+  from the live harness implementation.
+
 ## 1.17.0 - 2026-07-31
 
 - Promoted Grok Build to host-specific `VERIFIED` for Grok Build 0.2.117 on
-  the tested local grok-4.5 binding.
+  the tested host-local provider/model binding.
 - Added a bounded Grok Build live harness on the shared JSON CLI receipt loop,
   with plan-mode containment, disabled subagents/memory/web search and
   clean-worktree checks.
@@ -20,7 +32,7 @@
 ## 1.16.0 - 2026-07-31
 
 - Promoted Goose to host-specific `VERIFIED` for Goose 1.45.0 on the tested
-  ZAI GLM 5.2 binding.
+  host-local provider/model binding.
 - Added a bounded no-session/no-profile Goose live harness and shared JSON CLI
   receipt loop for future adapter promotions.
 - Added Goose live host conformance, live calibration, containment and
@@ -287,11 +299,11 @@
 ## 0.12.2 - 2026-07-29
 
 - Promoted the OpenCode adapter to host-specific `VERIFIED` for OpenCode CLI
-  1.18.9 with GLM 5.2 live host conformance, usage calibration, and full ALK
-  lifecycle proof evidence.
+  1.18.9 with host-local live host conformance, usage calibration, and full
+  ALK lifecycle proof evidence.
 - Promoted the Hermes adapter to host-specific `VERIFIED` for Hermes Agent
-  v0.19.0 with GLM 5.2 live host conformance, usage calibration, and full ALK
-  lifecycle proof evidence.
+  v0.19.0 with host-local live host conformance, usage calibration, and full
+  ALK lifecycle proof evidence.
 - Promoted the Qwen Code adapter to host-specific `VERIFIED` for Qwen Code
   0.21.0, added the bounded Qwen Code runner and live harness, and synchronized
   adapter docs, support matrix checks, and package metadata to `0.12.2`.
@@ -381,7 +393,7 @@
   auto-reroute after budget or resource-cap exhaustion.
 - Split the root CLI dispatcher into thin entrypoint, parser, and dispatch
   modules.
-- Added release 0.4 validation for Cursor GLM compatibility shape, negative
+- Added release 0.4 validation for Cursor host-local compatibility shape, negative
   suite coverage, context-fit evidence, and portable provider-model leakage.
 - Updated live host and production-promotion documentation for metered,
   subscription, and local budget modes.

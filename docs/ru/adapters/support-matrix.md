@@ -10,13 +10,13 @@
 | Claude Code | `VERIFIED` | Проверен для Claude Code 2.1.220. |
 | OpenCode | `VERIFIED` | Проверен для OpenCode CLI 1.18.9. |
 | Hermes | `VERIFIED` | Проверен для Hermes Agent v0.19.0. |
-| Qwen Code | `VERIFIED` | Проверен для Qwen Code 0.21.0 на связке GLM 5.2. |
+| Qwen Code | `VERIFIED` | Проверен для Qwen Code 0.21.0 на host-local provider/model связке. |
 | Cursor | `EXPERIMENTAL` | Локальный осмотр проходит, но подтверждений из реального запуска недостаточно. |
 | Gemini CLI | `EXPERIMENTAL` | Проверка реальным вызовом ограничена текущим уровнем Gemini Code Assist. |
-| Goose | `VERIFIED` | Проверен для Goose 1.45.0 на связке ZAI GLM 5.2; public directory approval не заявлен. |
+| Goose | `VERIFIED` | Проверен для Goose 1.45.0 на host-local provider/model связке; public directory approval не заявлен. |
 | Kimi Code | `EXPERIMENTAL` | Нужен настроенный провайдер и алиас модели. |
-| Grok Build | `VERIFIED` | Проверен для Grok Build 0.2.117 на связке grok-4.5; public directory approval не заявлен. |
-| OpenInterpreter | `EXPERIMENTAL` | Host-local compatible CLI projection с offline conformance. |
+| Grok Build | `VERIFIED` | Проверен для Grok Build 0.2.117 на host-local provider/model связке; public directory approval не заявлен. |
+| OpenInterpreter | `VERIFIED` | Проверен для `interpreter` 0.0.34 на host-local provider/model связке; live conformance, calibration, containment и lifecycle proof прошли локально, public directory approval не заявлен. |
 | Pi | `EXPERIMENTAL` | RPC/JSON и AGENTS/agentskills projection без live promotion. |
 
 `VERIFIED` относится только к указанному диапазону хоста и не означает

@@ -25,6 +25,8 @@ from tools.live_hosts.common import (  # noqa: E402
     CommandResult,
     HarnessError,
     HostModelSelection,
+    add_host_env_args,
+    dispatch_with_host_env,
     load_host_model_selection,
     write_model_selection_receipt,
 )
@@ -110,6 +112,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model-class")
     parser.add_argument("--model-binding")
     parser.add_argument("--model-selection-receipt")
+    add_host_env_args(parser)
     parser.add_argument("--worktree")
     parser.add_argument("--budget-mode", choices=["metered", "subscription", "local"], default="metered")
     parser.add_argument("--budget-cap-usd", type=float)
@@ -125,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
 
     blockers: list[dict[str, Any]] = []
     try:
-        report = _dispatch(args)
+        report = dispatch_with_host_env(args, _dispatch)
     except HarnessError as error:
         blockers.append({"code": error.code, "message": error.message})
         report = _base_report("FAIL", blockers)

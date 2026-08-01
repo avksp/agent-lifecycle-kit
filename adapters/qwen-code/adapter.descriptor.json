@@ -17,7 +17,7 @@
     "minimumVersion": "0.21.0",
     "maximumVersion": "0.21.0",
     "evidence": [
-      "docs/adapters/evidence/qwen-code-glm52-live-2026-07-29.md",
+      "docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md",
       "work/release-0-11/evidence/qwen-code/live-host-conformance-qwen-code.json",
       "work/release-0-11/evidence/qwen-code/live-calibration-verification-qwen-code.json",
       "work/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json"
