@@ -77,6 +77,12 @@ check`. Изменение контракта без тестов и докум�
 `requiresReview: true` и `freezeBlocked: true`. `nativeDialectProfileDigest`
 фиксирует provenance импортированного dialect, но не означает approval.
 
+Generic external workflow и agent/harness imports используют тот же
+`agent-import-dialect-profile.v1` с family/profile metadata. Workflow-family
+imports создают reviewable requirements и validation hints без выполнения
+imported nodes. Agent-family imports держат provider, model, auth, environment и
+tool hints как redacted host-local metadata; это не portable defaults.
+
 `agent-episode-retrieval.v1` возвращает bounded context projection по явно
 переданным receipt/session artifacts. Result получает `chainVerified` только
 при совпадении path и digest с hash-chain entry; иначе state остаётся

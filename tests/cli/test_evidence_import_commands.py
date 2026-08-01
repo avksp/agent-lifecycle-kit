@@ -95,6 +95,50 @@ class CliEvidenceImportCommandTests(unittest.TestCase):
             self.assertEqual(proposal_validation["schemaVersion"], "agent-skill-improvement-proposal-validation.v1")
             self.assertFalse(proposal_validation["autoApply"])
 
+    def test_external_import_profile_list_and_check_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "workflow.yaml"
+            source.write_text(
+                "name: External workflow\n"
+                "steps:\n"
+                "  - inspect request\n"
+                "  - validate evidence\n",
+                encoding="utf-8",
+            )
+            registry_out = root / "out/registry.json"
+            import_out = root / "out/import.json"
+
+            code, registry = _run_cli(["import", "profile-list", "--out", str(registry_out)])
+            self.assertEqual(code, 0)
+            self.assertEqual(registry["schemaVersion"], "agent-external-dialect-profile-registry.v1")
+            self.assertIn("workflow", registry["families"])
+            self.assertTrue(registry_out.is_file())
+
+            code, imported = _run_cli(
+                [
+                    "import",
+                    "external",
+                    "--source",
+                    str(source),
+                    "--family",
+                    "workflow",
+                    "--package-id",
+                    "external-workflow",
+                    "--out",
+                    str(import_out),
+                ]
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(imported["schemaVersion"], "agent-planning-import-result.v1")
+            self.assertEqual(imported["externalDialect"]["family"], "workflow")
+            self.assertFalse(imported["externalDialect"]["executesInput"])
+
+            code, validation = _run_cli(["import", "external-check", "--candidate", str(import_out)])
+            self.assertEqual(code, 0)
+            self.assertEqual(validation["schemaVersion"], "agent-external-dialect-import-validation.v1")
+            self.assertTrue(validation["freezeBlocked"])
+
 
 if __name__ == "__main__":
     unittest.main()
