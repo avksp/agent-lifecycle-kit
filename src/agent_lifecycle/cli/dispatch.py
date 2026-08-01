@@ -64,7 +64,9 @@ from agent_lifecycle.metrics import (
 )
 from agent_lifecycle.planning import (
     build_plan_snapshot,
+    build_task_template_library,
     reconcile_plan_snapshot,
+    require_task_template_validation_pass,
     render_plan_handoff,
     require_reconciliation_pass,
     require_repository_references_pass,
@@ -72,12 +74,16 @@ from agent_lifecycle.planning import (
     validate_acceptance_checklist,
     validate_plan_manifest,
     validate_repository_references,
+    validate_task_template_library,
 )
 from agent_lifecycle.quality import (
+    build_bug_forensics_recipe_library,
     build_default_quality_pack,
     require_behavior_checks_pass,
+    require_bug_forensics_recipe_pass,
     require_quality_pack_pass,
     run_behavior_checks,
+    validate_bug_forensics_recipe_library,
     validate_quality_pack,
 )
 from agent_lifecycle.reporting import build_status_view, render_usage_export_json, render_usage_export_table
@@ -279,6 +285,28 @@ def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
         manifest = read_json_object(Path(args.manifest), label="quality pack") if args.manifest else build_default_quality_pack()
         fixtures = [read_json_object(Path(item), label="behavior fixture") for item in args.fixture]
         return require_behavior_checks_pass(run_behavior_checks(manifest, fixtures))
+    if args.quality_command == "template-list":
+        payload = build_task_template_library()
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.quality_command == "template-check":
+        payload = validate_task_template_library(project_root=Path(args.project_root), template_id=args.template_id)
+        require_task_template_validation_pass(payload)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.quality_command == "bug-recipe-list":
+        payload = build_bug_forensics_recipe_library()
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.quality_command == "bug-recipe-check":
+        payload = validate_bug_forensics_recipe_library(recipe_id=args.recipe_id)
+        require_bug_forensics_recipe_pass(payload)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     raise LifecycleError("command-not-implemented", "quality command is not implemented")
 
 

@@ -30,6 +30,10 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn(("metrics cost-report", "agent-lifecycle-cost-generation.v1"), cli_outputs)
         self.assertIn(("metrics recommend", "agent-lifecycle-recommendation.v1"), cli_outputs)
         self.assertIn(("policy tune", "agent-lifecycle-policy-tune-result.v1"), cli_outputs)
+        self.assertIn(("quality template-list", "agent-task-template-library.v1"), cli_outputs)
+        self.assertIn(("quality template-check", "agent-task-template-library-validation.v1"), cli_outputs)
+        self.assertIn(("quality bug-recipe-list", "agent-bug-forensics-recipe-library.v1"), cli_outputs)
+        self.assertIn(("quality bug-recipe-check", "agent-bug-forensics-recipe-validation.v1"), cli_outputs)
         self.assertFalse(policy["productionPromotionClaimed"])
 
     def test_public_contract_policy_keeps_deprecated_schema_readable(self) -> None:

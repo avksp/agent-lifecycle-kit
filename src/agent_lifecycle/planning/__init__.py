@@ -10,16 +10,26 @@ from agent_lifecycle.planning.continuity import (
     validate_repository_references,
 )
 from agent_lifecycle.planning.tiering import resolve_sdd_tier
+from agent_lifecycle.planning.templates import (
+    build_task_template_library,
+    render_task_template,
+    require_task_template_validation_pass,
+    validate_task_template_library,
+)
 from agent_lifecycle.planning.validation import validate_plan_manifest
 
 __all__ = [
     "build_plan_snapshot",
+    "build_task_template_library",
     "reconcile_plan_snapshot",
+    "render_task_template",
     "render_plan_handoff",
     "require_reconciliation_pass",
     "require_repository_references_pass",
+    "require_task_template_validation_pass",
     "resolve_sdd_tier",
     "validate_acceptance_checklist",
     "validate_plan_manifest",
     "validate_repository_references",
+    "validate_task_template_library",
 ]
