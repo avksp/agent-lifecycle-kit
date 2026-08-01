@@ -16,6 +16,10 @@ class PolicyTuningContractTests(unittest.TestCase):
         ids = {item["id"] for item in list_schemas()["schemas"]}
 
         for schema_id in [
+            "agent-lifecycle-quality-floor-decision.v1",
+            "agent-adaptive-lifecycle-policy-request.v1",
+            "agent-adaptive-lifecycle-policy-decision.v1",
+            "agent-adaptive-lifecycle-policy-decision-validation.v1",
             "agent-lifecycle-regression-signals.v1",
             "agent-lifecycle-policy-proposal.v1",
             "agent-lifecycle-policy-summary.v1",
@@ -28,6 +32,10 @@ class PolicyTuningContractTests(unittest.TestCase):
         proposal = get_schema("agent-lifecycle-policy-proposal.v1")
         self.assertEqual(proposal["properties"]["advisoryOnly"], {"const": True})
         self.assertEqual(proposal["properties"]["autoApply"], {"const": False})
+        adaptive = get_schema("agent-adaptive-lifecycle-policy-decision.v1")
+        self.assertEqual(adaptive["properties"]["resourceBasis"], {"const": "tokens-and-resources"})
+        self.assertEqual(adaptive["properties"]["monetaryFieldsUsed"], {"const": False})
+        self.assertEqual(adaptive["properties"]["providerModelNamesInCore"], {"const": False})
 
     def test_contract_policy_lists_policy_tune_cli_output(self) -> None:
         policy = build_contract_policy()
@@ -35,6 +43,8 @@ class PolicyTuningContractTests(unittest.TestCase):
 
         self.assertEqual(rows["policy tune"]["schemaVersion"], "agent-lifecycle-policy-tune-result.v1")
         self.assertEqual(rows["policy tune"]["compatibility"], "stable-json")
+        self.assertEqual(rows["policy adaptive-decision"]["schemaVersion"], "agent-adaptive-lifecycle-policy-decision.v1")
+        self.assertEqual(rows["policy adaptive-check"]["schemaVersion"], "agent-adaptive-lifecycle-policy-decision-validation.v1")
 
 
 if __name__ == "__main__":

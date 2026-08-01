@@ -65,6 +65,11 @@ metered host wants an early operator prompt, `meteredAskThreshold` belongs in
 the metered budget policy only and remains advisory; hard caps still decide
 whether execution must pause.
 
+Adaptive lifecycle policy uses the same resource discipline. It may accept
+host-reported monetary metadata only for `budgetMode: "metered"`, but mode
+selection uses tokens, wall time, invocations, retries and quality floors, not
+live currency lookup.
+
 Build an advisory mode recommendation from accumulated reports with:
 
 ```bash
@@ -81,6 +86,15 @@ Recommendations are advisory only. They never change policy automatically and
 must preserve the configured quality floor for the task shape, SDD tier and
 risk flags. Missing or weak statistics keep confidence low and favor the
 current or minimum safe mode.
+
+For per-task neutral inputs, build an adaptive decision with:
+
+```bash
+agent-lifecycle policy adaptive-decision \
+  --request <adaptive-request.json> \
+  --baseline-profile profiles/lifecycle-baselines.v1.json \
+  --out <adaptive-decision.json>
+```
 
 When a recommendation is stable, `agent-lifecycle policy tune` can turn it into
 an explicit policy proposal:

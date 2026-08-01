@@ -45,6 +45,7 @@ and does not depend on a source project.
 - [Read-only status views](reference/read-only-status-view.md)
 - [Controlled runner](reference/runner.md)
 - [Public contracts](reference/public-contracts.md)
+- [Adaptive lifecycle policy](reference/adaptive-lifecycle-policy.md)
 - [Lifecycle cost accounting](reference/lifecycle-cost.md)
 - [Usage export](reference/usage-export.md)
 - [Evidence integrity](reference/evidence-integrity.md)
