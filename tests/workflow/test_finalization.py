@@ -13,6 +13,8 @@ try:
 except ImportError:
     from helpers import *  # noqa: F401,F403,E402
 
+from agent_lifecycle.specification import build_completion_gate_receipt  # noqa: E402
+
 class WorkflowFinalizationTests(unittest.TestCase):
     def test_finalize_run_writes_proof_and_completes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -347,6 +349,64 @@ class WorkflowFinalizationTests(unittest.TestCase):
             proof = json.loads((root / "final/proof.json").read_text(encoding="utf-8"))
             self.assertEqual(proof["followUpRegister"]["register"]["path"], "final/follow-up-register.json")
             self.assertEqual(proof["followUpRegister"]["validation"]["status"], "PASS")
+
+    def test_finalize_run_records_passing_completion_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            final_audit = _final_audit()
+            write_json_create(root / "final/final-audit.json", final_audit)
+            gate = build_completion_gate_receipt(state=state, final_audit=final_audit)
+            write_json_create(root / "final/completion-gate.json", gate)
+
+            payload = finalize_run(
+                state_path,
+                operation_id="finalize-op",
+                expected_revision=1,
+                source_revision="source",
+                final_audit_path="final/final-audit.json",
+                proof_path="final/proof.json",
+                completion_gate_receipt_path="final/completion-gate.json",
+                reason="done",
+            )
+
+            self.assertEqual(payload["phase"], "COMPLETE")
+            proof = json.loads((root / "final/proof.json").read_text(encoding="utf-8"))
+            self.assertEqual(proof["completionGate"]["validation"]["decision"], "STOP")
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(stored["completionGateReceipt"]["path"], "final/completion-gate.json")
+
+    def test_finalize_run_rejects_completion_gate_continue_decision(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            final_audit = _final_audit()
+            write_json_create(root / "final/final-audit.json", final_audit)
+            gate = build_completion_gate_receipt(
+                state=state,
+                final_audit=final_audit,
+                validation_results=[{"id": "VAL-FULL", "status": "FAIL"}],
+                required_validation_ids=["VAL-FULL"],
+            )
+            write_json_create(root / "final/completion-gate.json", gate)
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    completion_gate_receipt_path="final/completion-gate.json",
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "completion-gate-not-ready")
 
     def test_finalize_run_rejects_final_audit_plan_digest_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
