@@ -9,10 +9,12 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.policy import (
     apply_policy_proposal,
+    build_adaptive_lifecycle_decision,
     build_policy_proposal,
     build_runtime_policy_receipt,
     build_policy_summary,
     require_policy_proposal_pass,
+    validate_adaptive_lifecycle_decision,
     validate_runtime_policy_receipt,
 )
 
@@ -39,6 +41,12 @@ def add_policy_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     runtime_receipt.add_argument("--out", required=True)
     runtime_check = policy_sub.add_parser("runtime-check")
     runtime_check.add_argument("--receipt", required=True)
+    adaptive_decision = policy_sub.add_parser("adaptive-decision")
+    adaptive_decision.add_argument("--request", required=True)
+    adaptive_decision.add_argument("--baseline-profile", default="profiles/lifecycle-baselines.v1.json")
+    adaptive_decision.add_argument("--out")
+    adaptive_check = policy_sub.add_parser("adaptive-check")
+    adaptive_check.add_argument("--decision", required=True)
 
 
 def dispatch_policy(args: argparse.Namespace) -> dict[str, Any]:
@@ -55,6 +63,16 @@ def dispatch_policy(args: argparse.Namespace) -> dict[str, Any]:
         return receipt
     if args.policy_command == "runtime-check":
         return validate_runtime_policy_receipt(read_json_object(Path(args.receipt), label="runtime policy receipt"))
+    if args.policy_command == "adaptive-decision":
+        decision = build_adaptive_lifecycle_decision(
+            read_json_object(Path(args.request), label="adaptive lifecycle request"),
+            read_json_object(Path(args.baseline_profile), label="lifecycle baseline profile"),
+        )
+        if args.out:
+            write_json_create(Path(args.out), decision)
+        return decision
+    if args.policy_command == "adaptive-check":
+        return validate_adaptive_lifecycle_decision(read_json_object(Path(args.decision), label="adaptive lifecycle decision"))
     if args.policy_command != "tune":
         raise LifecycleError("command-not-implemented", "policy command is not implemented")
     if args.output and not args.apply:
