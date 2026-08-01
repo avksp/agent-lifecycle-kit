@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-EXPERIMENTAL_SECONDARY = ("pi",)
+EXPERIMENTAL_SECONDARY: tuple[str, ...] = ()
 
 
 def test_secondary_adapters_are_experimental_without_live_range() -> None:
@@ -27,6 +27,18 @@ def test_openinterpreter_secondary_adapter_is_verified_with_live_range() -> None
     assert descriptor["modelRouting"]["liveVerified"] is True
     assert descriptor["liveTestedHostRange"]["host"] == "openinterpreter"
     assert "docs/adapters/evidence/openinterpreter-live-verified.md" in descriptor["liveTestedHostRange"]["evidence"]
+    assert conformance["liveRuntimeRequired"] is False
+    assert conformance["requiredMaturity"] == "EXPERIMENTAL"
+
+
+def test_pi_secondary_adapter_is_verified_with_live_range() -> None:
+    descriptor = _load_json(ROOT / "adapters/pi/adapter.descriptor.json")
+    conformance = _load_json(ROOT / "conformance/adapters/pi/offline-baseline.json")
+
+    assert descriptor["maturity"] == "VERIFIED"
+    assert descriptor["modelRouting"]["liveVerified"] is True
+    assert descriptor["liveTestedHostRange"]["host"] == "pi"
+    assert "docs/adapters/evidence/pi-live-verified.md" in descriptor["liveTestedHostRange"]["evidence"]
     assert conformance["liveRuntimeRequired"] is False
     assert conformance["requiredMaturity"] == "EXPERIMENTAL"
 

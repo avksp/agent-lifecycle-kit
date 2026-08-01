@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.19.0 - 2026-08-01
+
+- Promoted Pi to host-specific `VERIFIED` for Pi 0.83.0 on the tested
+  host-local provider/model binding.
+- Added a bounded Pi JSONL live harness on the shared JSON CLI receipt loop,
+  with no-session, no-tools, no project-local context, offline startup and
+  clean-worktree checks.
+- Added Pi install/preflight containment, live conformance, live calibration
+  and lifecycle proof evidence summaries without public directory or
+  production promotion claims.
+
 ## 1.18.0 - 2026-08-01
 
 - Promoted OpenInterpreter to host-specific `VERIFIED` for `interpreter`

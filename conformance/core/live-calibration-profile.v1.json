@@ -13,6 +13,7 @@
     "kimi-code",
     "opencode",
     "openinterpreter",
+    "pi",
     "qwen-code"
   ],
   "requiredScenarios": [

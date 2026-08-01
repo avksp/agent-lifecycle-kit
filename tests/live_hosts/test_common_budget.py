@@ -21,6 +21,7 @@ from tools.live_hosts import (  # noqa: E402
     kimi_code_harness,
     opencode_harness,
     openinterpreter_harness,
+    pi_harness,
     qwen_code_harness,
 )
 from tools.live_hosts.common import (  # noqa: E402
@@ -159,6 +160,7 @@ class HostEnvFileTests(unittest.TestCase):
             kimi_code_harness,
             opencode_harness,
             openinterpreter_harness,
+            pi_harness,
             qwen_code_harness,
         ]
         with tempfile.TemporaryDirectory() as tmp:
