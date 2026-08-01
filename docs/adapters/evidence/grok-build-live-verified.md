@@ -1,11 +1,12 @@
 # Grok Build live evidence
 
-Status: `VERIFIED` for Grok Build `0.2.117` on the tested local `grok-4.5`
-binding.
+Status: `VERIFIED` for Grok Build `0.2.117` on the tested host-local
+provider/model binding.
 
 Scope:
 
 - Host: Grok Build `0.2.117`.
+- Provider/model binding: host-local, redacted in committed docs.
 - Adapter descriptor: `adapters/grok-build/adapter.descriptor.json`.
 - Capability manifest: `adapters/grok-build/capabilities.manifest.json`.
 - Source revision used for live receipts:

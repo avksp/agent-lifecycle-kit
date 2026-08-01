@@ -39,7 +39,7 @@
       "host": "opencode",
       "maturity": "VERIFIED",
       "testedHostRange": "1.18.9",
-      "summaryPath": "docs/adapters/evidence/opencode-glm52-live-2026-07-29.md",
+      "summaryPath": "docs/adapters/evidence/opencode-host-local-live-2026-07-29.md",
       "rawEvidenceLocalOnly": true,
       "evidenceKinds": [
         "live-host-conformance",
@@ -54,7 +54,7 @@
       "host": "hermes",
       "maturity": "VERIFIED",
       "testedHostRange": "0.19.0",
-      "summaryPath": "docs/adapters/evidence/hermes-glm52-live-2026-07-29.md",
+      "summaryPath": "docs/adapters/evidence/hermes-host-local-live-2026-07-29.md",
       "rawEvidenceLocalOnly": true,
       "evidenceKinds": [
         "live-host-conformance",
@@ -69,7 +69,7 @@
       "host": "qwen-code",
       "maturity": "VERIFIED",
       "testedHostRange": "0.21.0",
-      "summaryPath": "docs/adapters/evidence/qwen-code-glm52-live-2026-07-29.md",
+      "summaryPath": "docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md",
       "rawEvidenceLocalOnly": true,
       "evidenceKinds": [
         "live-host-conformance",
@@ -157,13 +157,15 @@
     {
       "adapterId": "openinterpreter",
       "host": "openinterpreter",
-      "maturity": "EXPERIMENTAL",
-      "testedHostRange": null,
-      "summaryPath": "docs/adapters/evidence/openinterpreter-1.13.0.md",
+      "maturity": "VERIFIED",
+      "testedHostRange": "0.0.34",
+      "summaryPath": "docs/adapters/evidence/openinterpreter-live-verified.md",
       "rawEvidenceLocalOnly": true,
       "evidenceKinds": [
-        "offline-conformance",
-        "host-local-compatible-cli-projection"
+        "live-host-conformance",
+        "live-usage-calibration",
+        "lifecycle-final-proof",
+        "bounded-containment"
       ],
       "productionPromotionClaimed": false,
       "publicDirectoryApprovalClaimed": false

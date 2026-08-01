@@ -1,6 +1,6 @@
 {
   "adapterId": "hermes",
-  "descriptorDigest": "988970d6b939b5a7f6fdab0538e1fc96793db2496c454954f2604e30a37efae1",
+  "descriptorDigest": "375fecf3e41cea3beb294411d11499aa3fada19df2d83a84c8c311bd7741d81b",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "81576ea72843f6cc49c60ff113d3977f35cacab32555ee1df67a6f04d6fc7f2b",
@@ -20,10 +20,10 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "35048eea40b6302b84a099fecf2f85cb6948ba7d805059f60ac8ec38ad59e338",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",
   "taskId": "adapter-event-capture",
-  "terminalEvent": "task.completed"
+  "terminalEvent": "task.completed",
+  "receiptDigest": "34d9ba68509b894ae73f9a7bad7698afe36c982521b9e5b4e1cbc36ba1dc877c"
 }

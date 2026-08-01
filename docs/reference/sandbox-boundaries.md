@@ -22,6 +22,13 @@ filesystem paths outside the repository.
   `HOST`, `OS`, `CONTAINER`, `ADAPTER`, `EXTERNAL`, `UNKNOWN` or
   `UNSUPPORTED`.
 
+Live host harnesses can optionally pass provider credentials from a private
+operator env file. That path is an environment boundary, not adapter metadata:
+the operator must name every allowed variable with `--host-env-allow`, the
+harness passes only those names to the child host process, and receipts record
+only `agent-host-env-file-redacted.v1` metadata. Secret values and full
+host-local env-file paths are never valid receipt contents.
+
 Unknown support is explicit. A receipt or adapter capability may validate with
 `status: UNKNOWN`, but a high-risk task that requires sandbox evidence accepts
 only configured passing statuses, `PASS` by default.
