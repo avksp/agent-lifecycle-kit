@@ -33,6 +33,18 @@ Unknown support is explicit. A receipt or adapter capability may validate with
 `status: UNKNOWN`, but a high-risk task that requires sandbox evidence accepts
 only configured passing statuses, `PASS` by default.
 
+Partial containment is represented inside the same canonical
+`agent-sandbox-receipt.v1` envelope. For example, Windows process-tree coverage
+can be recorded as `boundaries.process.details.partialContainment` with covered
+behavior and limitations. Partial containment derives `sandboxStatus: UNKNOWN`
+unless a task policy explicitly accepts that status; it must not be upgraded to
+`PASS` just because one boundary is partially declared.
+
+Credential proxy evidence also stays inside sandbox boundary details. Receipts
+may record a host-local source class, an attachment boundary, allowed variable
+names and a placeholder such as `<credential-proxy>`, but they must not contain
+secret values or full private env-file paths.
+
 ## Policy
 
 `agent-sandbox-requirement.v1` is fail closed. The default policy requires a
@@ -47,7 +59,8 @@ A task can also opt in directly:
   "tier": "S1",
   "executionPolicy": {
     "sandbox": {
-      "required": true
+      "required": true,
+      "acceptedSandboxStatuses": ["PASS"]
     }
   }
 }
@@ -56,6 +69,8 @@ A task can also opt in directly:
 If sandbox evidence is required and missing, validation returns
 `sandbox-receipt-required`. If the receipt is structurally valid but has
 `sandboxStatus: UNKNOWN`, validation returns `sandbox-receipt-not-accepted`.
+Plans that deliberately accept partial containment can override
+`acceptedSandboxStatuses` at task level, for example `["PASS", "UNKNOWN"]`.
 
 ## Adapter capabilities
 
