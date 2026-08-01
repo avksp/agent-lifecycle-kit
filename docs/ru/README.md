@@ -43,6 +43,8 @@ flowchart LR
 - Import mapper profiles для generic workflow/agent dialects, Constitution/ADR
   и AGENTS/agentskills; результат остаётся untrusted draft с digest dialect
   profile.
+- Draft-only task templates для bugfix, idea-to-PR, PR review,
+  merge-conflict repair и release-readiness задач.
 - Лёгкий episode retrieval по receipt/session summaries с digest provenance и
   явным состоянием `chainVerified` или `chainUnchecked`.
 - Runner recovery receipts для snapshot, restore, abandon, selected attempt,
@@ -51,7 +53,7 @@ flowchart LR
   capped в tokens/resources и advisory, пока план явно не делает его blocking.
 - Optional Bug Forensics profile для явных bug/regression repair задач:
   reproduction-before-fix, stable fingerprint, hypothesis ledger, minimal patch
-  gate и same-fingerprint regression proof.
+  gate, same-fingerprint regression proof и reusable recipes.
 - Phase resource measurements используют usage export envelope для токенов,
   длительности и resource counters без обязательного USD-cost.
 - Рекомендации по режиму жизненного цикла строятся по накопленной статистике.
@@ -174,6 +176,7 @@ contracts, Bug Forensics contracts и usage export details находятся в
 - [Cross-check profile](reference/cross-check-profile.md)
 - [Bug Forensics profile](reference/bug-forensics.md)
 - [Bug Forensics context budget](reference/bug-forensics-context-budget.md)
+- [Task templates](reference/task-templates.md)
 - [Безопасность релиза](security/release-security.md)
 
 ## Лицензия

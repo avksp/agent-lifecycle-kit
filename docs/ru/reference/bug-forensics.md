@@ -32,6 +32,21 @@ bug-specific fix-impact schema не вводится.
 Для рискованных багов можно явно включить Release 1.12 cross-check. Он остаётся
 capped в tokens/resources и advisory, пока frozen plan не требует blocking.
 
+## Recipes
+
+Bug Forensics recipes — optional metadata для типовых этапов defect repair:
+
+- `issue-classification`: определить класс дефекта и необходимость профиля.
+- `reproduction`: доказать red-состояние до правки и привязать artifacts
+  digest.
+- `investigation`: вести accepted/rejected hypotheses и minimal-patch scope.
+- `validation`: доказать same-fingerprint red-to-green и fix impact.
+- `review`: проверить gate receipt и optional cross-check evidence.
+
+Recipes не вводят новые receipt schemas. Они ссылаются на существующие Bug
+Forensics, proof-integrity и cross-check receipts, выключены по умолчанию и
+используют tokens/resources вместо обязательного USD-cost.
+
 ## Phase 2
 
 Suspect graph, flake detector и bug-class classifier описаны как следующий

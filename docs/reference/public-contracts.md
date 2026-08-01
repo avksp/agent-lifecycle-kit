@@ -50,6 +50,11 @@ Stable schema ids:
 - `agent-review-routing-summary.v1`
 - `agent-optional-quality-pack.v1`
 - `agent-behavior-check-run.v1`
+- `agent-task-template-library.v1`
+- `agent-task-template-library-validation.v1`
+- `agent-task-template-render.v1`
+- `agent-bug-forensics-recipe-library.v1`
+- `agent-bug-forensics-recipe-validation.v1`
 - `agent-diagnostic-bundle.v1`
 - `agent-readonly-status-view.v1`
 
@@ -174,8 +179,14 @@ Stable schema ids:
 - `agent-bug-forensics-gate-validation.v1`
 - `agent-bug-forensics-audit.v1`
 - `agent-bug-forensics-audit-validation.v1`
+- `agent-bug-forensics-recipe-library.v1`
+- `agent-bug-forensics-recipe-validation.v1`
 
 `agent-fix-impact-receipt.v1` remains the canonical fix-impact contract. Bug
 Forensics references it instead of defining a competing schema. Cross-check, if
 requested for a high-risk bug, reuses `agent-cross-check-receipt.v1` with
 token/resource caps and without mandatory USD-cost accounting.
+
+Bug Forensics recipes are metadata over the existing receipt chain. They are
+optional, disabled by default and cannot introduce competing defect-repair
+receipt schemas.

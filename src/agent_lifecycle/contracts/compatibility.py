@@ -32,6 +32,10 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "import plan", "schemaVersion": "agent-planning-import-result.v1", "compatibility": "stable-json"},
     {"command": "import check", "schemaVersion": "agent-planning-import-validation.v1", "compatibility": "stable-json"},
     {"command": "import proposal-check", "schemaVersion": "agent-skill-improvement-proposal-validation.v1", "compatibility": "stable-json"},
+    {"command": "quality template-list", "schemaVersion": "agent-task-template-library.v1", "compatibility": "stable-json"},
+    {"command": "quality template-check", "schemaVersion": "agent-task-template-library-validation.v1", "compatibility": "stable-json"},
+    {"command": "quality bug-recipe-list", "schemaVersion": "agent-bug-forensics-recipe-library.v1", "compatibility": "stable-json"},
+    {"command": "quality bug-recipe-check", "schemaVersion": "agent-bug-forensics-recipe-validation.v1", "compatibility": "stable-json"},
 )
 
 REQUIRED_CORE_SCHEMAS: tuple[str, ...] = (

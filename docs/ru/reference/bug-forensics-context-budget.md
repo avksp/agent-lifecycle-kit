@@ -24,3 +24,7 @@ Default caps:
 Полные логи остаются artifact files. В контекст достаточно включать path,
 sha256, byte count, верхний stack frame, exception/assertion и стабильный log
 pattern.
+
+Recipes должны помещаться в тот же compact packet: selected recipe id, stage,
+required receipt schemas и короткий checklist. Полные логи, command outputs и
+детальные rejected hypotheses остаются artifacts с digest-ссылками.
