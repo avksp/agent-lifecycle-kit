@@ -32,6 +32,31 @@ routes only when the adaptive quality floor permits them. They do not make a
 small/local route valid for critical review; final audit and security-sensitive
 review still require calibrated review-capable classes.
 
+## Failure-aware escalation
+
+Route requests may include optional `failureSignals` from classification,
+validation, retry, remediation or flake receipts. These signals are neutral:
+they use failure classes, retry counts, flake status, validation status and
+receipt digests, not provider or model names.
+
+The resolver starts with the normal lightest safe class, then applies a bounded
+progressive ladder:
+
+```text
+no-model -> local-small-packet -> standard-implementation -> stronger-review -> optional-cross-check
+```
+
+Validation failures, API-contract, serialization, permission, migration or
+performance classes can escalate low-risk work to standard implementation.
+Security bugs, race conditions, flaky tests, repeated retries or repeated
+remediation loops escalate to stronger review. A repeated failure never
+downgrades below the previous provider-neutral model class.
+
+The route decision records an `escalation` summary with reason codes,
+`failureClass`, retry/remediation counts, `optionalCrossCheckRecommended`,
+`downgradeBlocked`, `qualityFloorPreserved: true` and
+`providerModelNamesInCore: false`.
+
 ## Model classes
 
 | Class | Purpose |

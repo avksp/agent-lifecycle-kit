@@ -103,6 +103,41 @@ class AdaptiveLifecyclePolicyTests(unittest.TestCase):
         self.assertFalse(blocked_eligibility["smallModelPacketEligible"])
         self.assertIn("small-model-quality-floor-blocked", {item["code"] for item in blocked_eligibility["blockers"]})
 
+    def test_failure_signals_escalate_without_lowering_current_mode(self) -> None:
+        decision = build_adaptive_lifecycle_decision(
+            _request(
+                taskShape="small-fix",
+                currentMode="strict",
+                failureSignals={
+                    "failureClass": "api-contract",
+                    "retryCount": 1,
+                    "classificationDigest": "a" * 64,
+                },
+            ),
+            _baselines(),
+        )
+
+        self.assertEqual(decision["status"], "PASS")
+        self.assertEqual(decision["recommendedMode"], "strict")
+        self.assertIn("failure-class-api-contract-escalation", decision["reasonCodes"])
+        self.assertIn("no-downgrade-after-failure", decision["reasonCodes"])
+        self.assertEqual(decision["neutralInputs"]["failureSignals"]["failureClass"], "api-contract")
+
+    def test_security_or_flaky_failure_escalates_to_strict(self) -> None:
+        security = build_adaptive_lifecycle_decision(
+            _request(taskShape="small-fix", failureSignals={"failureClass": "security-bug"}),
+            _baselines(),
+        )
+        flaky = build_adaptive_lifecycle_decision(
+            _request(taskShape="small-fix", failureSignals={"flakeStatus": "flaky"}),
+            _baselines(),
+        )
+
+        self.assertEqual(security["recommendedMode"], "strict")
+        self.assertEqual(flaky["recommendedMode"], "strict")
+        self.assertIn("failure-class-security-bug-strict-escalation", security["reasonCodes"])
+        self.assertIn("failure-class-flake-strict-escalation", flaky["reasonCodes"])
+
 
 def _request(**overrides: object) -> dict[str, object]:
     request: dict[str, object] = {
