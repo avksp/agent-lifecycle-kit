@@ -70,6 +70,9 @@
 - `agent-small-model-task-result.v1`: результат worker-а по output contract.
 - `agent-small-model-output-validation.v1`: fail-closed проверка результата.
 - `agent-small-model-packet-compile-result.v1`: CLI compile result.
+- `agent-task-outcome-index.v1`: локальный индекс task outcomes из receipts.
+- `agent-quality-cost-signals.v1`: advisory quality-cost signals.
+- `agent-quality-cost-signals-summary.v1`: compact summary learning signals.
 - `agent-bug-forensics-profile.v1`: optional профиль для bug/regression repair.
 - `agent-bug-reproduction-receipt.v1`: reproduction-before-modification
   evidence.
@@ -135,6 +138,12 @@ Adaptive lifecycle policy выбирает самый лёгкий безопа�
 decision; автоматический выбор требует opt-in и не может быть ниже quality
 floor. Provider/model names и live currency lookup не используются в portable
 core.
+
+Quality-cost learning строит локальные advisory signals из явных lifecycle
+receipts. Он группирует outcomes по task shape, lifecycle mode, route class и
+profile, учитывает tokens, wall time, tool calls, retries и blocker rate, но не
+запускает telemetry, не требует USD fields, не строит provider/model leaderboards
+и не меняет policy автоматически.
 
 Small-model packets сужают implementation surface: exact write scope, compact
 context receipt и required output contract. Они не расширяют authority и сами

@@ -51,10 +51,13 @@ from agent_lifecycle.model_routing import (
     validate_usage_receipt,
 )
 from agent_lifecycle.metrics import (
+    build_quality_cost_signals,
+    build_task_outcome_index,
     build_usage_export,
     build_lifecycle_cost_summary,
     build_lifecycle_recommendation_summary,
     generate_lifecycle_cost_report,
+    recommend_from_quality_cost_signals,
     recommend_lifecycle_mode,
     require_lifecycle_cost_pass,
     require_lifecycle_recommendation_pass,
@@ -627,11 +630,39 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
             "liveCallsStarted": False,
             "productionPromotionClaimed": False,
         }
+    if args.metrics_command == "outcome-index":
+        artifacts = [read_json_object(Path(item), label="outcome artifact") for item in args.artifact]
+        payload = build_task_outcome_index(artifacts, source_paths=list(args.artifact))
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.metrics_command == "quality-signals":
+        payload = build_quality_cost_signals(read_json_object(Path(args.index), label="task outcome index"))
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.metrics_command == "recommend":
         reports = [read_json_object(Path(item), label="lifecycle cost report") for item in args.report]
         baseline_profile = read_json_object(Path(args.baseline_profile), label="lifecycle baseline profile")
         recommendation = recommend_lifecycle_mode(
             reports=reports,
+            baseline_profile=baseline_profile,
+            task_shape=args.task_shape,
+            current_mode=args.current_mode,
+            sdd_tier=args.sdd_tier,
+            risk_flags=args.risk,
+        )
+        require_lifecycle_recommendation_pass(recommendation)
+        if args.out:
+            write_json_create(Path(args.out), recommendation)
+        if args.summary_out:
+            write_json_create(Path(args.summary_out), build_lifecycle_recommendation_summary(recommendation))
+        return recommendation
+    if args.metrics_command == "learn-recommend":
+        signals = read_json_object(Path(args.signals), label="quality-cost signals")
+        baseline_profile = read_json_object(Path(args.baseline_profile), label="lifecycle baseline profile")
+        recommendation = recommend_from_quality_cost_signals(
+            signals=signals,
             baseline_profile=baseline_profile,
             task_shape=args.task_shape,
             current_mode=args.current_mode,

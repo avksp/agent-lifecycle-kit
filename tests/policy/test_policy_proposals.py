@@ -84,6 +84,18 @@ class PolicyProposalTests(unittest.TestCase):
         for field in ["latestUserIntent", "activeDecisions", "acceptedEvidence", "nextRequiredAction", "doNotDo"]:
             self.assertIn(field, summary)
 
+    def test_learning_recommendation_preserves_local_benefit_metadata(self) -> None:
+        recommendation = _recommendation(current_mode="strict", recommended_mode="light")
+        recommendation["statistics"] = {
+            "schemaVersion": "agent-quality-cost-learning-statistics.v1",
+            "selectedSignal": {"averageTokens": 900, "successRate": 1.0},
+        }
+
+        proposal = build_policy_proposal(recommendation)
+
+        self.assertEqual(proposal["expectedBenefit"]["localAverageTokens"], 900)
+        self.assertEqual(proposal["expectedBenefit"]["localSuccessRate"], 1.0)
+
 
 def _small_fix_recommendation() -> dict[str, object]:
     return recommend_lifecycle_mode(

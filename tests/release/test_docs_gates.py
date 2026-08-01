@@ -58,6 +58,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/public-contracts.md",
             "docs/ru/reference/adaptive-lifecycle-policy.md",
             "docs/ru/reference/small-model-packets.md",
+            "docs/ru/reference/quality-cost-learning.md",
             "docs/ru/reference/readiness-diagnostics.md",
             "docs/ru/reference/lifecycle-cost.md",
             "docs/ru/security/release-security.md",
@@ -300,6 +301,10 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-small-model-output-contract.v1`.\n"
         "`agent-small-model-output-validation.v1`.\n"
         "`agent-small-model-packet-compile-result.v1`.\n"
+        "`agent-task-outcome-index.v1`.\n"
+        "`agent-quality-cost-signals.v1`.\n"
+        "`agent-quality-cost-signals-summary.v1`.\n"
+        "Quality-cost learning avoids provider/model leaderboards.\n"
     )
     _write_text(root / "docs/reference/public-contracts.md", public_contracts)
     _write_text(root / "docs/ru/reference/public-contracts.md", public_contracts)
@@ -312,9 +317,41 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`monetaryFieldsUsed` is always `false`.\n"
         "`monetaryFieldsUsed: false`.\n"
         "quality floor.\n"
+        "quality-cost learning.\n"
     )
     _write_text(root / "docs/reference/adaptive-lifecycle-policy.md", adaptive_policy)
     _write_text(root / "docs/ru/reference/adaptive-lifecycle-policy.md", adaptive_policy)
+    _write_text(
+        root / "docs/reference/quality-cost-learning.md",
+        "`agent-task-outcome-index.v1`.\n"
+        "`agent-quality-cost-signals.v1`.\n"
+        "`agent-lifecycle-recommendation.v1`.\n"
+        "agent-lifecycle metrics outcome-index.\n"
+        "agent-lifecycle metrics quality-signals.\n"
+        "agent-lifecycle metrics learn-recommend.\n"
+        "`autoApply: false`.\n"
+        "provider/model leaderboards.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/quality-cost-learning.md",
+        "`agent-task-outcome-index.v1`.\n"
+        "`agent-quality-cost-signals.v1`.\n"
+        "`agent-lifecycle-recommendation.v1`.\n"
+        "agent-lifecycle metrics outcome-index.\n"
+        "agent-lifecycle metrics quality-signals.\n"
+        "agent-lifecycle metrics learn-recommend.\n"
+        "`autoApply: false`.\n"
+        "provider/model leaderboards.\n",
+    )
+    _write_text(
+        root / "docs/reference/lifecycle-cost.md",
+        "agent-lifecycle metrics outcome-index.\n"
+        "agent-lifecycle metrics quality-signals.\n"
+        "agent-lifecycle metrics learn-recommend.\n"
+        "`agent-task-outcome-index.v1`.\n"
+        "`agent-quality-cost-signals.v1`.\n"
+        "does not require USD fields.\n",
+    )
     small_model_packets = (
         "`agent-small-model-task-packet.v1`.\n"
         "`agent-small-model-output-contract.v1`.\n"
