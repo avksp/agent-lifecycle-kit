@@ -113,6 +113,74 @@ class ModelRouteResolverTests(unittest.TestCase):
         self.assertIn("lifecycle-mode-light", decision["reasonCodes"])
         self.assertIn("quality-floor-light", decision["reasonCodes"])
 
+    def test_api_contract_failure_escalates_budget_to_standard_code(self) -> None:
+        decision = resolve_model_route(
+            _request(
+                phase="triage",
+                tier="S0",
+                capabilities=["text", "json", "tool-use"],
+                failure_signals={
+                    "failureClass": "api-contract",
+                    "confidence": "HIGH",
+                    "validationStatus": "FAIL",
+                    "classificationDigest": "a" * 64,
+                },
+            ),
+            _routing_profile(),
+        )
+
+        self.assertEqual(decision["modelClass"], "standard-code")
+        self.assertTrue(decision["escalation"]["escalated"])
+        self.assertEqual(decision["escalation"]["ladderStep"], "standard-implementation")
+        self.assertIn("failure-class-api-contract", decision["reasonCodes"])
+        self.assertIn("failure-classification-digest-bound", decision["reasonCodes"])
+
+    def test_security_failure_routes_to_stronger_review_and_recommends_cross_check(self) -> None:
+        decision = resolve_model_route(
+            _request(
+                phase="task-implementation",
+                tier="S1",
+                risk_flags={"security": True},
+                failure_signals={"failureClass": "security-bug", "retryCount": 1},
+            ),
+            _routing_profile(),
+        )
+
+        self.assertEqual(decision["modelClass"], "strong-reasoning")
+        self.assertEqual(decision["escalation"]["ladderStep"], "stronger-review")
+        self.assertTrue(decision["escalation"]["optionalCrossCheckRecommended"])
+
+    def test_repeated_failure_never_downgrades_previous_model_class(self) -> None:
+        decision = resolve_model_route(
+            _request(
+                phase="triage",
+                tier="S0",
+                failure_signals={
+                    "failureClass": "edge-case",
+                    "retryCount": 1,
+                    "previousModelClass": "standard-code",
+                },
+            ),
+            _routing_profile(),
+        )
+
+        self.assertEqual(decision["modelClass"], "standard-code")
+        self.assertIn("no-downgrade-after-failure", decision["reasonCodes"])
+        self.assertTrue(decision["escalation"]["downgradeBlocked"])
+
+    def test_failure_signals_reject_provider_model_names(self) -> None:
+        with self.assertRaises(LifecycleError) as raised:
+            resolve_model_route(
+                _request(
+                    phase="triage",
+                    tier="S0",
+                    failure_signals={"failureClass": "edge-case", "providerModel": "host-specific"},
+                ),
+                _routing_profile(),
+            )
+
+        self.assertEqual(raised.exception.code, "invalid-model-route-request")
+
 
 def _routing_profile() -> dict:
     return json.loads((ROOT / "profiles/model-routing-profile.v1.json").read_text(encoding="utf-8"))
@@ -129,6 +197,7 @@ def _request(
     user_policy: dict | None = None,
     lifecycle_mode: str | None = None,
     quality_floor: str | None = None,
+    failure_signals: dict | None = None,
 ) -> dict:
     request = {
         "schemaVersion": "agent-lifecycle-model-route-request.v1",
@@ -146,6 +215,8 @@ def _request(
         request["lifecycleMode"] = lifecycle_mode
     if quality_floor is not None:
         request["qualityFloor"] = quality_floor
+    if failure_signals is not None:
+        request["failureSignals"] = failure_signals
     return request
 
 

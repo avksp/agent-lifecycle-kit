@@ -54,6 +54,35 @@
       "description": "Require an explicit class in higher-level host policy before launch."
     }
   },
+  "progressiveEscalation": {
+    "enabled": true,
+    "ladder": [
+      "no-model",
+      "local-small-packet",
+      "standard-implementation",
+      "stronger-review",
+      "optional-cross-check"
+    ],
+    "failureClasses": [
+      "edge-case",
+      "api-contract",
+      "serialization",
+      "race",
+      "permission",
+      "migration",
+      "performance",
+      "flaky-test",
+      "security-bug",
+      "unknown"
+    ],
+    "evidenceTriggers": [
+      "validation-failure",
+      "retry-count",
+      "remediation-loops",
+      "flake-status",
+      "failure-classification"
+    ]
+  },
   "tokenBudgets": {
     "S0": {
       "tight": 20000,

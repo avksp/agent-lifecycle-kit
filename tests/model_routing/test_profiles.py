@@ -22,6 +22,7 @@ class ModelRoutingProfileTests(unittest.TestCase):
         self.assertEqual(result["schemaVersion"], "agent-lifecycle-model-routing-profile-validation.v1")
         self.assertIn("local-strong-review", result["classes"])
         self.assertIn("final-audit", result["criticalReviewPhases"])
+        self.assertTrue(result["progressiveEscalation"])
 
     def test_host_profile_validation_redacts_provider_model(self) -> None:
         result = validate_host_model_profile(_host_profile())

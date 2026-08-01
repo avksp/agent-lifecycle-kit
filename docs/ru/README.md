@@ -60,8 +60,8 @@ flowchart LR
   gate, same-fingerprint regression proof и reusable recipes.
 - Phase resource measurements используют usage export envelope для токенов,
   длительности и resource counters без обязательного USD-cost.
-- Adaptive lifecycle policy и предложения по настройке правил выбирают самый
-  лёгкий безопасный режим по нейтральным входам и остаются advisory без opt-in.
+- Adaptive lifecycle policy, failure-aware routing и предложения по настройке
+  правил выбирают самый лёгкий безопасный режим по нейтральным evidence.
 - Диагностика готовности, event feeds и lifecycle progress views по умолчанию
   не пишут state и не запускают реальные модельные вызовы.
 

@@ -11,11 +11,13 @@ from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.quality import (
     build_bug_forensics_profile,
     build_bug_reproduction_receipt,
+    build_failure_classification_receipt,
     build_failure_fingerprint,
     build_hypothesis_ledger,
     build_regression_proof_receipt,
     validate_bug_forensics_profile,
     validate_bug_reproduction_receipt,
+    validate_failure_classification_receipt,
     validate_failure_fingerprint,
     validate_hypothesis_ledger,
     validate_regression_proof_receipt,
@@ -81,6 +83,27 @@ class BugForensicsProfileTests(unittest.TestCase):
         self.assertEqual(validation["status"], "PASS")
         self.assertEqual(fingerprint["findingId"], finding["findingId"])
         self.assertEqual(fingerprint["rootCauseDigest"], root_cause["rootCauseDigest"])
+
+    def test_failure_classification_receipt_links_fingerprint(self) -> None:
+        _finding, root_cause, _fix_impact = _proof_integrity_refs()
+        fingerprint = build_failure_fingerprint(
+            failure={
+                "exceptionType": "AssertionError",
+                "failingAssertion": "expected HTTP status code 404",
+                "stackTop": "tests/test_profile.py::test_missing_profile",
+            },
+            root_cause_digest=root_cause["rootCauseDigest"],
+        )
+
+        receipt = build_failure_classification_receipt(
+            failure=fingerprint["failure"],
+            failure_fingerprint=fingerprint,
+            evidence_ids=["EV39-CLASSIFIER"],
+        )
+
+        self.assertEqual(receipt["failureClass"], "api-contract")
+        self.assertEqual(receipt["failureFingerprintDigest"], fingerprint["fingerprintDigest"])
+        self.assertEqual(validate_failure_classification_receipt(receipt)["status"], "PASS")
 
     def test_hypothesis_ledger_requires_accepted_rejected_and_minimal_patch(self) -> None:
         ledger = build_hypothesis_ledger(
