@@ -24,14 +24,14 @@ adapter by itself.
 | Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
 | Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | Cursor Agent 2026.07.23-e383d2b safe inspection passed on local Free tier; bounded smoke cannot promote without usage/resource calibration and lifecycle proof; marketplace approval not claimed |
 | Gemini CLI | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Gemini CLI 0.46.0 safe inspection and bounded harness shape passed; local live canary is blocked by unsupported Gemini Code Assist client tier; live receipts, usage calibration, lifecycle proof, and publication not claimed |
-| Goose | ACP host-capability projection, bounded no-profile live harness, and capability manifest | VERIFIED | Goose 1.45.0 live host conformance, live calibration, and ALK lifecycle proof passed locally on ZAI GLM 5.2; public directory approval not claimed |
-| Grok Build | ACP probe-gated CLI projection, bounded plan-mode live harness and capability manifest | VERIFIED | Grok Build 0.2.117 live host conformance, live calibration, ACP probe and ALK lifecycle proof passed locally on grok-4.5; public directory approval not claimed |
+| Goose | ACP host-capability projection, bounded no-profile live harness, and capability manifest | VERIFIED | Goose 1.45.0 live host conformance, live calibration, and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
+| Grok Build | ACP probe-gated CLI projection, bounded plan-mode live harness and capability manifest | VERIFIED | Grok Build 0.2.117 live host conformance, live calibration, ACP probe and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
 | Hermes | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | VERIFIED | Hermes Agent v0.19.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory/publication review not claimed |
 | Kimi Code | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Kimi Code 0.30.0 safe inspection and bounded harness shape passed; local live canary is blocked until a provider/model alias is configured; live receipts, usage calibration, lifecycle proof, and publication not claimed |
 | OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | OpenCode CLI 1.18.9 live host conformance, live calibration, and ALK lifecycle proof passed locally; npm publication not claimed |
-| OpenInterpreter | Host-local compatible CLI projection and capability manifest | EXPERIMENTAL | Offline conformance fixtures only; live receipts, usage calibration, lifecycle proof, and publication not claimed |
+| OpenInterpreter | Host-local compatible CLI projection, bounded JSONL live harness and capability manifest | VERIFIED | `interpreter` 0.0.34 live host conformance, live calibration, containment and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
 | Pi | RPC/JSON plus AGENTS/agentskills projection and capability manifest | EXPERIMENTAL | Offline conformance fixtures only; live receipts, usage calibration, lifecycle proof, and publication not claimed |
-| Qwen Code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | Qwen Code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on GLM 5.2 locally; public package approval not claimed |
+| Qwen Code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | Qwen Code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on a host-local provider/model binding; public package approval not claimed |
 
 ## Event capture support
 
@@ -88,17 +88,20 @@ OpenCode is `VERIFIED` for host-local model routing on OpenCode CLI 1.18.9.
 Hermes is `VERIFIED` for host-local model routing on Hermes Agent v0.19.0.
 Qwen Code is `VERIFIED` for host-local model routing on Qwen Code 0.21.0.
 Goose is `VERIFIED` for host-local model routing on Goose 1.45.0. Grok Build is
-`VERIFIED` for host-local model routing on Grok Build 0.2.117. The verified
+`VERIFIED` for host-local model routing on Grok Build 0.2.117. OpenInterpreter
+is `VERIFIED` for host-local model routing on `interpreter` 0.0.34. The verified
 adapters' live receipts include host usage attestation, quality pass status,
-and bounded budget evidence. Cursor, Gemini CLI, Kimi Code, OpenInterpreter,
-and Pi remain `EXPERIMENTAL`: Cursor declares fail-closed support for
-host-local model profiles and model-route execution, Gemini CLI and Kimi Code
-have bounded runners/harnesses, and OpenInterpreter and Pi have offline adapter
-descriptors and conformance fixtures. These adapters still need accepted live
-usage receipts, quality/resource evidence and a concrete live host range before
-a host-specific `VERIFIED` claim. On the current local host, Gemini CLI is
-blocked by an unsupported Gemini Code Assist client tier and Kimi Code is
-blocked by missing provider/model configuration.
+and bounded budget evidence. Cursor, Gemini CLI, Kimi Code and Pi remain
+`EXPERIMENTAL`: Cursor declares fail-closed support for host-local model
+profiles and model-route execution, Gemini CLI and Kimi Code have bounded
+runners/harnesses, and Pi has offline adapter descriptors and conformance
+fixtures. These adapters still need accepted live usage receipts,
+quality/resource evidence and a concrete live host range before a host-specific
+`VERIFIED` claim. On the current local host, Gemini CLI is blocked by an
+unsupported Gemini Code Assist client tier, and Kimi Code is blocked by missing
+provider/model configuration.
+Provider-flexible adapters must use the selected host/provider's configured or
+documented env-key name rather than an ALK hardcoded secret name.
 
 `agent-lifecycle adapter scaffold` creates descriptor, capability manifest,
 fail-closed runner, receipt-normalizer, conformance and documentation
@@ -128,6 +131,13 @@ mode requires a USD cap; subscription and local modes require invocation caps
 plus token and/or wall-clock caps. Exceeding a cap pauses for an operator
 decision or follows a bounded auto-reroute policy, but it never upgrades an
 adapter to `VERIFIED` by itself.
+
+Provider-flexible adapters must keep provider credentials host-local. The host
+or selected provider determines the env-key name through its config or
+documentation; ALK does not hardcode provider secret names. Live harnesses can
+scope an operator env file to one invocation through `--host-env-file` plus an
+explicit `--host-env-allow <NAME>`, and the related evidence must pass
+`validate_host_env_hygiene.py` before promotion evidence is accepted.
 
 Lifecycle cost reports add one more resource check: they separate
 implementation, product validation, pipeline compliance and coordination cost.
@@ -185,16 +195,16 @@ Claude Code is verified only for the tested local host range:
 This evidence does not claim universal adapter support, public directory
 approval, or a broader production-promotion platform matrix pass.
 
-## OpenCode GLM 5.2 live evidence
+## OpenCode Host-Local Live Evidence
 
 OpenCode is verified only for the tested local host range:
 
 - Host: OpenCode CLI 1.18.9.
 - Source revision: `6c6b40210ee28de4b6a5993367af89e629fb99ff`.
 - Committed redacted evidence summary:
-  `docs/adapters/evidence/opencode-glm52-live-2026-07-29.md`.
+  `docs/adapters/evidence/opencode-host-local-live-2026-07-29.md`.
 - Live preflight:
-  `work/release-0-7/evidence/opencode/preflight/opencode-glm52-preflight-report.json`.
+  host-local preflight receipt retained under ignored `work/` evidence.
 - Live host conformance receipt:
   `work/release-0-7/evidence/opencode/live-host-receipts/opencode.json`.
 - Live host conformance validation:
@@ -209,16 +219,16 @@ OpenCode is verified only for the tested local host range:
 This evidence does not claim universal adapter support, npm publication, public
 directory approval, or a broader production-promotion platform matrix pass.
 
-## Hermes GLM 5.2 live evidence
+## Hermes Host-Local Live Evidence
 
 Hermes is verified only for the tested local host range:
 
 - Host: Hermes Agent v0.19.0.
 - Source revision: `d71033a4`.
 - Committed redacted evidence summary:
-  `docs/adapters/evidence/hermes-glm52-live-2026-07-29.md`.
+  `docs/adapters/evidence/hermes-host-local-live-2026-07-29.md`.
 - Live preflight:
-  `work/release-0-8/evidence/hermes/preflight/hermes-glm52-preflight-report.json`.
+  host-local preflight receipt retained under ignored `work/` evidence.
 - Live host conformance receipt:
   `work/release-0-8/evidence/hermes/live-host-receipts/hermes.json`.
 - Live host conformance validation:
@@ -233,14 +243,14 @@ Hermes is verified only for the tested local host range:
 This evidence does not claim universal adapter support, public directory
 approval, or a broader production-promotion platform matrix pass.
 
-## Qwen Code GLM 5.2 live evidence
+## Qwen Code Host-Local Live Evidence
 
 Qwen Code is verified only for the tested local host range:
 
 - Host: Qwen Code 0.21.0.
 - Source revision: `6c6b40210ee28de4b6a5993367af89e629fb99ff`.
 - Committed redacted evidence summary:
-  `docs/adapters/evidence/qwen-code-glm52-live-2026-07-29.md`.
+  `docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md`.
 - Live preflight:
   `work/release-0-11/evidence/qwen-code/live-preflight/qwen-code-preflight-report.json`.
 - Live host conformance receipt:
@@ -257,7 +267,7 @@ Qwen Code is verified only for the tested local host range:
 This evidence does not claim universal adapter support, public package
 approval, or a broader production-promotion platform matrix pass.
 
-## Goose ZAI GLM 5.2 live evidence
+## Goose Host-Local Live Evidence
 
 Goose is verified only for the tested local host range:
 
@@ -285,7 +295,7 @@ This evidence does not claim universal adapter support, public directory
 approval, verified OS sandbox containment, or a broader production-promotion
 platform matrix pass.
 
-## Grok Build grok-4.5 live evidence
+## Grok Build Host-Local Live Evidence
 
 Grok Build is verified only for the tested local host range:
 
@@ -314,6 +324,35 @@ Grok Build is verified only for the tested local host range:
 This evidence does not claim universal adapter support, public directory
 approval, verified OS sandbox containment, or a broader production-promotion
 platform matrix pass.
+
+## OpenInterpreter Host-Local Live Evidence
+
+OpenInterpreter is verified only for the tested local host range:
+
+- Host: `interpreter` 0.0.34.
+- Source revision:
+  `52cfa2fd5a97823155c552cb9ae27b735fc85713`.
+- Committed redacted evidence summary:
+  `docs/adapters/evidence/openinterpreter-live-verified.md`.
+- Live preflight:
+  `work/release-1-18/evidence/preflight/openinterpreter-preflight-report-live-ready.json`.
+- Bounded containment receipt:
+  `work/release-1-18/evidence/openinterpreter-containment-receipt-live-ready.json`.
+- Live host conformance receipt:
+  `work/release-1-18/evidence/live-host-receipts/openinterpreter.json`.
+- Live host conformance validation:
+  `work/release-1-18/evidence/live-host-conformance-openinterpreter.json`.
+- Live calibration receipt:
+  `work/release-1-18/evidence/live-calibration-receipts/openinterpreter.json`.
+- Live calibration validation:
+  `work/release-1-18/evidence/live-calibration-verification-openinterpreter.json`.
+- ALK lifecycle final proof:
+  `work/release-1-18/evidence/openinterpreter/full-lifecycle/final/final-proof.json`.
+
+This evidence does not claim universal adapter support, public directory
+approval, verified OS sandbox containment, or a broader production-promotion
+platform matrix pass. The containment evidence is limited to the bounded
+ephemeral read-only harness invocation policy.
 
 ## Neutrality error contract
 

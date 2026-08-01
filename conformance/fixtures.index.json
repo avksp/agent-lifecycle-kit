@@ -18,9 +18,9 @@
       "sha256": "e3fb9c832f14aa8598ba867a61969ed1950cdca5f9c2f17165e836de85ee63d0"
     },
     {
-      "bytes": 1072,
+      "bytes": 1095,
       "path": "conformance/core/live-calibration-profile.v1.json",
-      "sha256": "292aef80227080e5fc5c43e8a30f2bf1ff614f66531b1a67d93651c1f516d1db"
+      "sha256": "6ebe4ed92601010aece161dd429714b203386c9637dd44eeddce87e9a48b9ebd"
     },
     {
       "bytes": 890,

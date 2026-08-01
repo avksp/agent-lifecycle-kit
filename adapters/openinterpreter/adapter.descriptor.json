@@ -27,12 +27,30 @@
   },
   "host": "openinterpreter",
   "hostCapabilities": [],
-  "liveTestedHostRange": null,
-  "maturity": "EXPERIMENTAL",
+  "liveTestedHostRange": {
+    "host": "openinterpreter",
+    "minimumVersion": "0.0.34",
+    "maximumVersion": "0.0.34",
+    "evidence": [
+      "docs/adapters/evidence/openinterpreter-live-verified.md",
+      "work/release-1-18/evidence/preflight/openinterpreter-preflight-report-live-ready.json",
+      "work/release-1-18/evidence/openinterpreter-containment-receipt-live-ready.json",
+      "work/release-1-18/evidence/live-host-receipts/openinterpreter.json",
+      "work/release-1-18/evidence/live-host-conformance-openinterpreter.json",
+      "work/release-1-18/evidence/live-calibration-receipts/openinterpreter.json",
+      "work/release-1-18/evidence/live-calibration-verification-openinterpreter.json",
+      "work/release-1-18/evidence/openinterpreter/full-lifecycle/final/final-proof.json"
+    ],
+    "testedAt": "2026-08-01",
+    "productionPromotionClaimed": false,
+    "publicDirectoryApprovalClaimed": false,
+    "sourceRevision": "52cfa2fd5a97823155c552cb9ae27b735fc85713"
+  },
+  "maturity": "VERIFIED",
   "modelRouting": {
     "attemptRoutePolicy": "must-execute-or-fail-closed",
     "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
-    "liveVerified": false,
+    "liveVerified": true,
     "profileSupport": "host-local",
     "providerModelNamesInCore": false,
     "status": "workflow-enforced",

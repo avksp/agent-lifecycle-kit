@@ -75,6 +75,7 @@ HOSTS = {
         "secondary": True,
         "nativeProjection": "host-local-compatible-cli",
         "modelRouting": True,
+        "maturity": "VERIFIED",
     },
     "pi": {
         "descriptorHost": "pi",

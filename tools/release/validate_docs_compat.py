@@ -91,9 +91,9 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "authoritative source-tree support claim",
             "Codex CLI 0.6.0 live evidence",
             "Claude Code 0.5.0 live evidence",
-            "OpenCode GLM 5.2 live evidence",
-            "Hermes GLM 5.2 live evidence",
-            "Qwen Code GLM 5.2 live evidence",
+            "OpenCode Host-Local Live Evidence",
+            "Hermes Host-Local Live Evidence",
+            "Qwen Code Host-Local Live Evidence",
             "Cursor",
             "Gemini CLI",
             "Goose",
@@ -115,6 +115,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "validate_adapter_conformance.py",
             "validate_live_host_conformance.py",
             "validate_live_calibration.py",
+            "validate_host_env_hygiene.py",
             "validate_support_matrix.py",
         ),
     ),
@@ -253,6 +254,8 @@ ADAPTER_DOCS = (
     "docs/adapters/hermes.md",
     "docs/adapters/kimi-code.md",
     "docs/adapters/opencode.md",
+    "docs/adapters/openinterpreter.md",
+    "docs/adapters/pi.md",
     "docs/adapters/qwen-code.md",
 )
 
@@ -356,6 +359,8 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
         required = ("`VERIFIED`", "Hermes Agent `v0.19.0`", "live conformance", "does not claim public")
     elif relative == "docs/adapters/qwen-code.md":
         required = ("`VERIFIED`", "Qwen Code `0.21.0`", "live conformance", "does not claim public")
+    elif relative == "docs/adapters/openinterpreter.md" and "OpenInterpreter" in verified_doc_hosts:
+        required = ("`VERIFIED`", "`interpreter` 0.0.34", "live conformance", "does not claim public")
     else:
         required = ("`EXPERIMENTAL`", "live", "conformance")
     check = _check_doc(root, relative, required, blockers, verified_doc_hosts)
@@ -372,6 +377,7 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
                 "docs/adapters/opencode.md",
                 "docs/adapters/hermes.md",
                 "docs/adapters/qwen-code.md",
+                "docs/adapters/openinterpreter.md",
             }
             and "until live" not in text
             and "not `VERIFIED`" not in text

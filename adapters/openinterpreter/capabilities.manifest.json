@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "a7032258e474a4e3725cb2d0099694746fbd3406debfc0beb40fb956e5e96beb",
+  "descriptorDigest": "ee79a93870431370a4d1a4dc1e4ed757e5c05a892db5f04c7414dff0805816ca",
   "eventCapture": {
     "categories": [
       "command",
@@ -146,18 +146,37 @@
   },
   "host": "openinterpreter",
   "hostCapabilities": [],
-  "maturity": "EXPERIMENTAL",
+  "maturity": "VERIFIED",
   "modelRouting": {
     "attemptRoutePolicy": "must-execute-or-fail-closed",
-    "liveVerified": false,
+    "liveVerified": true,
     "profileSupport": "host-local",
     "providerModelNamesInCore": false,
     "unsupportedClassPolicy": "fail-closed",
     "usageReceiptRequired": true
   },
   "promotion": {
+    "verifiedRequiresLiveTestedHostRange": true,
     "productionPromotionClaimed": false,
-    "verifiedRequiresLiveTestedHostRange": true
+    "liveTestedHostRange": {
+      "host": "openinterpreter",
+      "minimumVersion": "0.0.34",
+      "maximumVersion": "0.0.34",
+      "evidence": [
+        "docs/adapters/evidence/openinterpreter-live-verified.md",
+        "work/release-1-18/evidence/preflight/openinterpreter-preflight-report-live-ready.json",
+        "work/release-1-18/evidence/openinterpreter-containment-receipt-live-ready.json",
+        "work/release-1-18/evidence/live-host-receipts/openinterpreter.json",
+        "work/release-1-18/evidence/live-host-conformance-openinterpreter.json",
+        "work/release-1-18/evidence/live-calibration-receipts/openinterpreter.json",
+        "work/release-1-18/evidence/live-calibration-verification-openinterpreter.json",
+        "work/release-1-18/evidence/openinterpreter/full-lifecycle/final/final-proof.json"
+      ],
+      "testedAt": "2026-08-01",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "52cfa2fd5a97823155c552cb9ae27b735fc85713"
+    }
   },
   "runtimeBoundary": {
     "hostSpecificCode": "adapter-owned",

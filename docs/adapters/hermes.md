@@ -28,7 +28,7 @@ accepted live evidence was captured on 2026-07-29 with host-local model
 binding, bounded subscription resource caps, live conformance through the host
 receipt, live calibration, and an ALK lifecycle final proof. The redacted live
 summary is
-`docs/adapters/evidence/hermes-glm52-live-2026-07-29.md`.
+`docs/adapters/evidence/hermes-host-local-live-2026-07-29.md`.
 
 This does not claim public directory approval, production promotion, or
 compatibility with untested Hermes versions.
