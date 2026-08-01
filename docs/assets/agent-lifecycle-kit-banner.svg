@@ -99,19 +99,19 @@
       </g>
     </g>
 
-    <g transform="translate(724 428)">
-      <rect width="398" height="136" rx="16" fill="#111923" stroke="#2d3d52"/>
+    <g transform="translate(724 404)">
+      <rect width="398" height="154" rx="16" fill="#111923" stroke="#2d3d52"/>
       <text x="28" y="36" font-size="18" font-weight="800" fill="#ffffff">Built to finish</text>
       <g font-size="16" fill="#d7e2ee">
         <circle cx="34" cy="66" r="4" fill="#35d4c9"/>
         <text x="50" y="72">SDD plan before code</text>
-        <circle cx="34" cy="96" r="4" fill="#5eb4ff"/>
-        <text x="50" y="102">SDLC gates for agent work</text>
-        <circle cx="34" cy="126" r="4" fill="#f0a243"/>
-        <text x="50" y="132">Deterministic packets and receipts</text>
+        <circle cx="34" cy="100" r="4" fill="#5eb4ff"/>
+        <text x="50" y="106">SDLC gates for agent work</text>
+        <circle cx="34" cy="134" r="4" fill="#f0a243"/>
+        <text x="50" y="140">Deterministic packets and receipts</text>
       </g>
     </g>
 
-    <text x="1120" y="594" text-anchor="end" font-size="20" font-weight="800" fill="#9cc9bd">SDD · SDLC · Deterministic proof</text>
+    <text x="1120" y="604" text-anchor="end" font-size="20" font-weight="800" fill="#9cc9bd">SDD · SDLC · Deterministic proof</text>
   </g>
 </svg>
