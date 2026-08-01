@@ -43,6 +43,7 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "report status-view", "schemaVersion": "agent-readonly-status-view.v1", "compatibility": "stable-json"},
     {"command": "report event-feed", "schemaVersion": "agent-workflow-event-feed.v1", "compatibility": "stable-json"},
     {"command": "report progress", "schemaVersion": "agent-lifecycle-progress-view.v1", "compatibility": "stable-json"},
+    {"command": "specification completion-gate", "schemaVersion": "agent-completion-gate-receipt.v1", "compatibility": "stable-json"},
     {"command": "task compile-small", "schemaVersion": "agent-small-model-packet-compile-result.v1", "compatibility": "stable-json"},
 )
 
@@ -51,6 +52,7 @@ REQUIRED_CORE_SCHEMAS: tuple[str, ...] = (
     "agent-lifecycle-schema-index.v1",
     "agent-completion-check.v1",
     "agent-completion-check-receipt.v1",
+    "agent-completion-gate-receipt.v1",
     "agent-goal-record.v1",
     "agent-follow-up-register.v1",
     "agent-runner-state.v1",

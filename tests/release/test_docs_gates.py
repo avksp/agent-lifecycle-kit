@@ -272,6 +272,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     public_contracts = (
         "`completionCheck`.\n"
         "`agent-completion-check-receipt.v1`.\n"
+        "`agent-completion-gate-receipt.v1`.\n"
+        "`agent-completion-gate-validation.v1`.\n"
         "`agent-goal-record.v1`.\n"
         "`agent-objective-snapshot.v1`.\n"
         "`agent-runner-state.v1`.\n"
@@ -384,6 +386,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         root / "docs/reference/completion-check.md",
         "`completionCheck`.\n"
         "`agent-completion-check-receipt.v1`.\n"
+        "`agent-completion-gate-receipt.v1`.\n"
+        "agent-lifecycle specification completion-gate.\n"
         "`agent-external-action-receipt.v1`.\n"
         "fails closed.\n",
     )

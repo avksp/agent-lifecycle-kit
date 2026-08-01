@@ -14,6 +14,8 @@ read-only unless their own help says otherwise.
 ## Planning
 
 - `agent-lifecycle specification check`: validate specification shape.
+- `agent-lifecycle specification completion-gate`: build a deterministic
+  stop/continue/escalate/split/follow-up receipt from current evidence.
 - `agent-lifecycle plan check`: validate a plan manifest and optional lock.
 - `agent-lifecycle plan snapshot/reconcile/handoff`: maintain compact,
   reviewable plan state.
@@ -32,7 +34,8 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle workflow block/resolve-blocker`: record external blockers.
 - `agent-lifecycle workflow finalize`: produce final lifecycle proof. Add
   `--proof-integrity <receipt.json>` when the run or final audit requires
-  proof-integrity evidence.
+  proof-integrity evidence, and `--completion-gate-receipt <receipt.json>` when
+  completion gate binding is required.
 - `agent-lifecycle runner start/status/transition/stop/resume`: control
   bounded execution state.
 - `agent-lifecycle task compile-small`: compile frozen task packets into

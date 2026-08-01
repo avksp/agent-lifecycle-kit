@@ -263,6 +263,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_finalize.add_argument("--proof-integrity")
     workflow_finalize.add_argument("--goal-record")
     workflow_finalize.add_argument("--follow-up-register")
+    workflow_finalize.add_argument("--completion-gate-receipt")
     workflow_finalize.add_argument("--reason", required=True)
 
 
@@ -379,6 +380,13 @@ def _add_specification_parser(subparsers: argparse._SubParsersAction[argparse.Ar
     specification_sub = specification.add_subparsers(dest="specification_command", required=True)
     specification_check = specification_sub.add_parser("check")
     specification_check.add_argument("--specification", required=True)
+    completion_gate = specification_sub.add_parser("completion-gate")
+    completion_gate.add_argument("--state", required=True)
+    completion_gate.add_argument("--final-audit")
+    completion_gate.add_argument("--follow-up-register")
+    completion_gate.add_argument("--input")
+    completion_gate.add_argument("--verifier", default="completion-gate")
+    completion_gate.add_argument("--out")
 
 
 def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
