@@ -159,6 +159,52 @@ class PolicyCommandTests(unittest.TestCase):
         self.assertEqual(check_payload["schemaVersion"], "agent-runtime-policy-receipt-validation.v1")
         self.assertEqual(check_payload["status"], "PASS")
 
+    def test_policy_adaptive_decision_and_check_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            request = root / "adaptive-request.json"
+            decision_path = root / "adaptive-decision.json"
+            request.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-adaptive-lifecycle-policy-request.v1",
+                        "taskShape": "small-fix",
+                        "sddTier": "S1",
+                        "riskFlags": [],
+                        "requiredEvidence": [],
+                        "priorAttempts": 0,
+                        "contextTokens": 0,
+                        "resourceCaps": {"maxInvocations": 1},
+                        "budgetMode": "local",
+                        "automaticSelectionEnabled": False,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            code, payload = _run_cli(
+                [
+                    "policy",
+                    "adaptive-decision",
+                    "--request",
+                    str(request),
+                    "--baseline-profile",
+                    str(ROOT / "profiles/lifecycle-baselines.v1.json"),
+                    "--out",
+                    str(decision_path),
+                ]
+            )
+            check_code, check_payload = _run_cli(["policy", "adaptive-check", "--decision", str(decision_path)])
+            decision_written = decision_path.is_file()
+
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["schemaVersion"], "agent-adaptive-lifecycle-policy-decision.v1")
+        self.assertEqual(payload["recommendedMode"], "light")
+        self.assertTrue(decision_written)
+        self.assertEqual(check_code, 0)
+        self.assertEqual(check_payload["schemaVersion"], "agent-adaptive-lifecycle-policy-decision-validation.v1")
+        self.assertEqual(check_payload["status"], "PASS")
+
 
 def _recommendation() -> dict[str, object]:
     return {

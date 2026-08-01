@@ -52,8 +52,8 @@ flowchart LR
   reusable recipes.
 - Phase resource measurements reuse the usage export envelope for tokens,
   duration and resource counters without mandatory USD-cost accounting.
-- Advisory lifecycle mode recommendations from accumulated cost reports.
-- Lifecycle policy proposals with reversible apply and runtime receipts.
+- Adaptive lifecycle policy, reversible proposals and runtime receipts choose
+  the lightest safe mode from neutral inputs and stay advisory unless opted in.
 - Read-only diagnostics, event feeds and progress views over checkout/workflow state.
 
 ## Quick start
@@ -86,7 +86,7 @@ Useful command groups:
 - `agent-lifecycle audit`: plan and implementation review gates.
 - `agent-lifecycle metrics`: lifecycle cost reports, usage exports, and
   validation.
-- `agent-lifecycle policy`: opt-in lifecycle policy proposals.
+- `agent-lifecycle policy`: adaptive decisions, policy proposals and runtime receipts.
 - `agent-lifecycle diagnostics`: redacted evidence bundles.
 - `agent-lifecycle diagnose`: checkout readiness without writes or live calls.
 - `agent-lifecycle adapter`: descriptor validation, inspection, scaffolding,
@@ -161,7 +161,7 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
 - [Issue to specification drafts](docs/guides/issue-to-spec.md)
 - [Adapter install](docs/adapters/install.md)
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
-- [Lifecycle cost accounting](docs/reference/lifecycle-cost.md)
+- [Adaptive policy](docs/reference/adaptive-lifecycle-policy.md) and [lifecycle cost accounting](docs/reference/lifecycle-cost.md)
 - [Usage export](docs/reference/usage-export.md)
 - [Evidence integrity](docs/reference/evidence-integrity.md)
 - [Read-only status views](docs/reference/read-only-status-view.md)

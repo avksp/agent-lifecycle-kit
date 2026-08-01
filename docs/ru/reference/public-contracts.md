@@ -58,6 +58,10 @@
   умолчанию и capped в tokens/resources.
 - `agent-cross-check-receipt.v1`: receipt дополнительной проверки.
 - `agent-runtime-policy-receipt.v1`: receipt runtime policy decision.
+- `agent-lifecycle-quality-floor-decision.v1`: минимальный безопасный режим.
+- `agent-adaptive-lifecycle-policy-request.v1`: neutral adaptive policy input.
+- `agent-adaptive-lifecycle-policy-decision.v1`: adaptive lifecycle decision.
+- `agent-adaptive-lifecycle-policy-decision-validation.v1`: проверка decision.
 - `agent-bug-forensics-profile.v1`: optional профиль для bug/regression repair.
 - `agent-bug-reproduction-receipt.v1`: reproduction-before-modification
   evidence.
@@ -117,6 +121,12 @@ Runner recovery receipts добавляют evidence для нескольких
 `agent-runtime-policy-receipt.v1` отделяет доказанное pre-execution enforcement
 от advisory-only logging. `agent-worktree-writeback-receipt.v1` фиксирует
 apply/discard overlay и не заменяет `agent-sandbox-receipt.v1`.
+
+Adaptive lifecycle policy выбирает самый лёгкий безопасный режим по
+нейтральным task/risk/evidence/resource inputs. По умолчанию это advisory
+decision; автоматический выбор требует opt-in и не может быть ниже quality
+floor. Provider/model names и live currency lookup не используются в portable
+core.
 
 Bug Forensics включается только явным task/profile marker. Для impact он
 использует существующий `agent-fix-impact-receipt.v1`, а для high-risk

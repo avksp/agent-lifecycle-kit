@@ -16,6 +16,8 @@ from agent_lifecycle.model_routing.profiles import (
     validate_host_model_profile,
     validate_model_routing_profile,
 )
+from agent_lifecycle.policy.quality_floor import MODES as LIFECYCLE_MODES
+from agent_lifecycle.policy.quality_floor import mode_index
 
 DEFAULT_CRITICAL_PHASES = {
     "s2-specification",
@@ -118,6 +120,18 @@ def _validate_request(request: dict[str, Any]) -> dict[str, Any]:
     max_billable = request.get("maxBillableTokens")
     if max_billable is not None and (not isinstance(max_billable, int) or isinstance(max_billable, bool) or max_billable < 0):
         raise LifecycleError("invalid-model-route-request", "maxBillableTokens must be a non-negative integer")
+    lifecycle_mode = request.get("lifecycleMode")
+    if lifecycle_mode is not None and lifecycle_mode not in LIFECYCLE_MODES:
+        raise LifecycleError("invalid-model-route-request", "lifecycleMode is unsupported", {"lifecycleMode": lifecycle_mode})
+    quality_floor = request.get("qualityFloor")
+    if quality_floor is not None and quality_floor not in LIFECYCLE_MODES:
+        raise LifecycleError("invalid-model-route-request", "qualityFloor is unsupported", {"qualityFloor": quality_floor})
+    if lifecycle_mode is not None and quality_floor is not None and mode_index(lifecycle_mode) < mode_index(quality_floor):
+        raise LifecycleError(
+            "model-route-lifecycle-floor",
+            "lifecycleMode cannot be below qualityFloor",
+            {"lifecycleMode": lifecycle_mode, "qualityFloor": quality_floor},
+        )
     return {
         "operationId": operation_id,
         "phase": phase,
@@ -129,6 +143,8 @@ def _validate_request(request: dict[str, Any]) -> dict[str, Any]:
         "budgetClass": budget_class,
         "userPolicy": dict(user_policy),
         "maxBillableTokens": max_billable,
+        "lifecycleMode": lifecycle_mode,
+        "qualityFloor": quality_floor,
     }
 
 
@@ -144,6 +160,8 @@ def _candidate_for_request(request: dict[str, Any], profile: dict[str, Any]) -> 
         if tier == "S0" and request["targetContextWindow"] in {"4k-strict", "8k"}:
             return "local-compact"
         return "local-standard-code"
+    if request.get("lifecycleMode") == "light" and tier in {"S0", "S1"}:
+        return "budget"
     if policy == "quality-first":
         return "standard-code" if tier == "S0" else "strong-reasoning"
     phase_rules = profile.get("phaseRules", {})
@@ -292,6 +310,10 @@ def _reason_codes(
         reasons.append("local-only")
     if request["targetContextWindow"] in {"4k-strict", "8k"}:
         reasons.append(f"context-{request['targetContextWindow']}")
+    if request.get("lifecycleMode") is not None:
+        reasons.append(f"lifecycle-mode-{request['lifecycleMode']}")
+    if request.get("qualityFloor") is not None:
+        reasons.append(f"quality-floor-{request['qualityFloor']}")
     for risk in sorted(_active_risks(request)):
         reasons.append(f"risk-{risk}")
     if rejections:

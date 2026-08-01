@@ -21,6 +21,12 @@ agent-lifecycle model usage-check --receipt <model-usage-receipt.json> --route-d
 `model route` is deterministic. The same request, routing profile, and optional
 host profile produce the same decision digest.
 
+Route requests may include optional `lifecycleMode` and `qualityFloor` values
+from an adaptive lifecycle decision. The resolver rejects requests where the
+mode is below the floor. Low-risk S0/S1 `light` work can route to the `budget`
+class, but critical review, local-only policy, context and capability gates
+remain authoritative.
+
 ## Model classes
 
 | Class | Purpose |

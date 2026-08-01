@@ -60,9 +60,8 @@ flowchart LR
   gate, same-fingerprint regression proof и reusable recipes.
 - Phase resource measurements используют usage export envelope для токенов,
   длительности и resource counters без обязательного USD-cost.
-- Рекомендации по режиму жизненного цикла строятся по накопленной статистике.
-- Предложения по настройке правил остаются рекомендательными и применяются
-  только явно, с возможностью отката.
+- Adaptive lifecycle policy и предложения по настройке правил выбирают самый
+  лёгкий безопасный режим по нейтральным входам и остаются advisory без opt-in.
 - Диагностика готовности, event feeds и lifecycle progress views по умолчанию
   не пишут state и не запускают реальные модельные вызовы.
 
@@ -99,7 +98,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - `agent-lifecycle audit`: проверка плана и реализации.
 - `agent-lifecycle metrics`: отчёты о расходе, экспорт использования и
   проверка этих отчётов.
-- `agent-lifecycle policy`: предложения по настройке правил жизненного цикла.
+- `agent-lifecycle policy`: adaptive decisions, runtime receipts и предложения
+  по настройке правил.
 - `agent-lifecycle diagnostics`: обезличенные диагностические пакеты.
 - `agent-lifecycle diagnose`: проверка готовности исходного дерева без записи и
   без реальных вызовов моделей.
@@ -171,7 +171,7 @@ contracts, Bug Forensics contracts и usage export details находятся в
 - [Источник правды](reference/source-of-truth.md)
 - [Публичные контракты](reference/public-contracts.md)
 - [Диагностика готовности](reference/readiness-diagnostics.md)
-- [Учёт расхода жизненного цикла](reference/lifecycle-cost.md)
+- [Adaptive policy](reference/adaptive-lifecycle-policy.md) и [учёт расхода жизненного цикла](reference/lifecycle-cost.md)
 - [Экспорт использования](reference/usage-export.md)
 - [Целостность подтверждений](reference/evidence-integrity.md)
 - [Read-only status views](reference/read-only-status-view.md)
