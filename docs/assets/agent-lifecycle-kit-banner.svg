@@ -15,10 +15,10 @@
   <path d="M98 142h1004" stroke="#202a37" stroke-width="2"/>
 
   <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
-    <g transform="translate(389 34)">
-      <rect width="422" height="34" rx="17" fill="#121b26" stroke="#2c3c50"/>
+    <g transform="translate(464 34)">
+      <rect width="272" height="34" rx="17" fill="#121b26" stroke="#2c3c50"/>
       <circle cx="22" cy="17" r="5" fill="#35d4c9"/>
-      <text x="40" y="22" font-size="15" font-weight="700" fill="#c5d2e2">OPEN SOURCE · Apache-2.0 · v1.29.0 · Python 3.11-3.13</text>
+      <text x="146" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#c5d2e2">OPEN SOURCE · Apache-2.0</text>
     </g>
 
     <text x="600" y="118" text-anchor="middle" font-size="58" font-weight="800" fill="#ffffff">Agent Lifecycle Kit</text>
@@ -72,33 +72,37 @@
     <g transform="translate(78 408)">
       <text x="0" y="0" font-size="15" font-weight="800" fill="#8fa5bb">HOST-NEUTRAL ADAPTERS</text>
       <g font-size="16" font-weight="700" fill="#eaf2fb">
-        <rect x="0" y="24" width="128" height="38" rx="8" fill="#172231" stroke="#2d3d52"/>
-        <text x="64" y="49" text-anchor="middle">Codex</text>
-        <rect x="140" y="24" width="142" height="38" rx="8" fill="#172231" stroke="#2d3d52"/>
-        <text x="211" y="49" text-anchor="middle">Claude Code</text>
-        <rect x="294" y="24" width="126" height="38" rx="8" fill="#172231" stroke="#2d3d52"/>
-        <text x="357" y="49" text-anchor="middle">Qwen Code</text>
-        <rect x="432" y="24" width="104" height="38" rx="8" fill="#172231" stroke="#2d3d52"/>
-        <text x="484" y="49" text-anchor="middle">Goose</text>
-        <rect x="0" y="74" width="162" height="38" rx="8" fill="#172231" stroke="#2d3d52"/>
-        <text x="81" y="99" text-anchor="middle">OpenInterpreter</text>
-        <rect x="174" y="74" width="70" height="38" rx="8" fill="#172231" stroke="#2d3d52"/>
-        <text x="209" y="99" text-anchor="middle">Pi</text>
-        <rect x="256" y="74" width="124" height="38" rx="8" fill="#172231" stroke="#2d3d52"/>
-        <text x="318" y="99" text-anchor="middle">Grok Build</text>
+        <rect x="0" y="24" width="112" height="36" rx="8" fill="#172231" stroke="#2d3d52"/>
+        <text x="56" y="48" text-anchor="middle">Codex</text>
+        <rect x="124" y="24" width="136" height="36" rx="8" fill="#172231" stroke="#2d3d52"/>
+        <text x="192" y="48" text-anchor="middle">Claude Code</text>
+        <rect x="272" y="24" width="120" height="36" rx="8" fill="#172231" stroke="#2d3d52"/>
+        <text x="332" y="48" text-anchor="middle">OpenCode</text>
+        <rect x="0" y="70" width="112" height="36" rx="8" fill="#172231" stroke="#2d3d52"/>
+        <text x="56" y="94" text-anchor="middle">Hermes</text>
+        <rect x="124" y="70" width="126" height="36" rx="8" fill="#172231" stroke="#2d3d52"/>
+        <text x="187" y="94" text-anchor="middle">Qwen Code</text>
+        <rect x="262" y="70" width="104" height="36" rx="8" fill="#172231" stroke="#2d3d52"/>
+        <text x="314" y="94" text-anchor="middle">Goose</text>
+        <rect x="0" y="116" width="156" height="36" rx="8" fill="#172231" stroke="#2d3d52"/>
+        <text x="78" y="140" text-anchor="middle">OpenInterpreter</text>
+        <rect x="168" y="116" width="70" height="36" rx="8" fill="#172231" stroke="#2d3d52"/>
+        <text x="203" y="140" text-anchor="middle">Pi</text>
+        <rect x="250" y="116" width="122" height="36" rx="8" fill="#172231" stroke="#2d3d52"/>
+        <text x="311" y="140" text-anchor="middle">Grok Build</text>
       </g>
     </g>
 
     <g transform="translate(724 398)">
       <rect width="398" height="146" rx="16" fill="#111923" stroke="#2d3d52"/>
-      <text x="28" y="36" font-size="18" font-weight="800" fill="#ffffff">What is different</text>
+      <text x="28" y="36" font-size="18" font-weight="800" fill="#ffffff">Built to finish</text>
       <g font-size="16" fill="#d7e2ee">
         <circle cx="34" cy="66" r="4" fill="#35d4c9"/>
-        <text x="50" y="72">State lives in receipts, not chat memory</text>
+        <text x="50" y="72">Frozen plan before code</text>
         <circle cx="34" cy="96" r="4" fill="#5eb4ff"/>
-        <text x="50" y="102">Freeze-gate before implementation</text>
+        <text x="50" y="102">Receipts prove each step</text>
         <circle cx="34" cy="126" r="4" fill="#f0a243"/>
-        <text x="50" y="132">Token/resource routing, USD optional</text>
+        <text x="50" y="132">Light checks first, risk profiles on demand</text>
       </g>
     </g>
 
