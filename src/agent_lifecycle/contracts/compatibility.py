@@ -29,6 +29,8 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "policy tune", "schemaVersion": "agent-lifecycle-policy-tune-result.v1", "compatibility": "stable-json"},
     {"command": "policy runtime-receipt", "schemaVersion": "agent-runtime-policy-receipt.v1", "compatibility": "stable-json"},
     {"command": "policy runtime-check", "schemaVersion": "agent-runtime-policy-receipt-validation.v1", "compatibility": "stable-json"},
+    {"command": "policy adaptive-decision", "schemaVersion": "agent-adaptive-lifecycle-policy-decision.v1", "compatibility": "stable-json"},
+    {"command": "policy adaptive-check", "schemaVersion": "agent-adaptive-lifecycle-policy-decision-validation.v1", "compatibility": "stable-json"},
     {"command": "evidence index", "schemaVersion": "agent-evidence-index.v1", "compatibility": "stable-json"},
     {"command": "evidence search", "schemaVersion": "agent-evidence-search-summary.v1", "compatibility": "stable-json"},
     {"command": "import plan", "schemaVersion": "agent-planning-import-result.v1", "compatibility": "stable-json"},

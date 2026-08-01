@@ -206,6 +206,10 @@ class ContractTests(unittest.TestCase):
             "agent-lifecycle-recommendation.v1",
             "agent-lifecycle-recommendation-summary.v1",
             "agent-lifecycle-regression-signals.v1",
+            "agent-lifecycle-quality-floor-decision.v1",
+            "agent-adaptive-lifecycle-policy-request.v1",
+            "agent-adaptive-lifecycle-policy-decision.v1",
+            "agent-adaptive-lifecycle-policy-decision-validation.v1",
             "agent-lifecycle-policy-proposal.v1",
             "agent-lifecycle-policy-summary.v1",
             "agent-lifecycle-tuned-policy.v1",
@@ -296,6 +300,9 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-lifecycle-policy-proposal.v1")["properties"]["advisoryOnly"], {"const": True})
         self.assertEqual(get_schema("agent-lifecycle-policy-proposal.v1")["properties"]["autoApply"], {"const": False})
         self.assertEqual(get_schema("agent-lifecycle-tuned-policy.v1")["properties"]["productionPromotionClaimed"], {"const": False})
+        self.assertEqual(get_schema("agent-adaptive-lifecycle-policy-decision.v1")["properties"]["resourceBasis"], {"const": "tokens-and-resources"})
+        self.assertEqual(get_schema("agent-adaptive-lifecycle-policy-decision.v1")["properties"]["monetaryFieldsUsed"], {"const": False})
+        self.assertEqual(get_schema("agent-adaptive-lifecycle-policy-decision.v1")["properties"]["providerModelNamesInCore"], {"const": False})
         self.assertEqual(get_schema("agent-adapter-scaffold-result.v1")["properties"]["maturity"], {"const": "EXPERIMENTAL"})
         self.assertEqual(get_schema("agent-lifecycle-live-host-conformance-receipt.v1")["properties"]["syntheticReplayUsed"], {"const": False})
         self.assertIn("validationCommands", get_schema("agent-live-host-promotion-plan.v1")["required"])

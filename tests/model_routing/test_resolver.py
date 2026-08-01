@@ -84,6 +84,35 @@ class ModelRouteResolverTests(unittest.TestCase):
             )
         self.assertEqual(raised.exception.code, "model-route-unsupported")
 
+    def test_lifecycle_mode_cannot_be_below_quality_floor(self) -> None:
+        with self.assertRaises(LifecycleError) as raised:
+            resolve_model_route(
+                _request(
+                    phase="triage",
+                    tier="S1",
+                    lifecycle_mode="light",
+                    quality_floor="standard",
+                ),
+                _routing_profile(),
+            )
+
+        self.assertEqual(raised.exception.code, "model-route-lifecycle-floor")
+
+    def test_light_lifecycle_mode_can_choose_budget_route(self) -> None:
+        decision = resolve_model_route(
+            _request(
+                phase="triage",
+                tier="S1",
+                lifecycle_mode="light",
+                quality_floor="light",
+            ),
+            _routing_profile(),
+        )
+
+        self.assertEqual(decision["modelClass"], "budget")
+        self.assertIn("lifecycle-mode-light", decision["reasonCodes"])
+        self.assertIn("quality-floor-light", decision["reasonCodes"])
+
 
 def _routing_profile() -> dict:
     return json.loads((ROOT / "profiles/model-routing-profile.v1.json").read_text(encoding="utf-8"))
@@ -98,8 +127,10 @@ def _request(
     target_window: str = "8k",
     policy: str = "balanced",
     user_policy: dict | None = None,
+    lifecycle_mode: str | None = None,
+    quality_floor: str | None = None,
 ) -> dict:
-    return {
+    request = {
         "schemaVersion": "agent-lifecycle-model-route-request.v1",
         "operationId": "route-op",
         "phase": phase,
@@ -111,6 +142,11 @@ def _request(
         "budgetClass": "normal",
         "userPolicy": user_policy or {"localModelsAllowed": False, "cloudModelsAllowed": True},
     }
+    if lifecycle_mode is not None:
+        request["lifecycleMode"] = lifecycle_mode
+    if quality_floor is not None:
+        request["qualityFloor"] = quality_floor
+    return request
 
 
 def _host_profile(*, local_strong: bool) -> dict:
