@@ -19,6 +19,8 @@ read-only unless their own help says otherwise.
   reviewable plan state.
 - `agent-lifecycle import plan/check`: keep imported work draft-only until
   reviewed.
+- `issue-to-spec` skill: convert external issues into draft-only ALK
+  specification input.
 - `agent-lifecycle quality template-list/template-check`: inspect and validate
   draft-only task templates.
 
@@ -75,7 +77,8 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle diagnose`: build one redacted checkout readiness report.
 - `agent-lifecycle diagnostics bundle`: collect selected evidence into a
   redacted bundle.
-- `agent-lifecycle report status-view`: render a compact status view.
+- `agent-lifecycle report status-view/event-feed/progress`: render read-only
+  status, workflow event and lifecycle progress views.
 - `agent-lifecycle evidence index/search`: build and query compact evidence
   indexes.
 - `agent-lifecycle model profile-check/route/usage-check`: validate routing and

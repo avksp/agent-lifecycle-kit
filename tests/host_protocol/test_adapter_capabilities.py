@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -58,6 +61,35 @@ class AdapterCapabilityManifestTests(unittest.TestCase):
         self.assertEqual(normalized["outputs"][0]["apiKey"], "<redacted>")
         self.assertEqual(normalized["usage"]["provider"]["session-token"], "<redacted>")
         self.assertEqual(normalized["usage"]["inputTokens"], 10)
+
+    def test_adapter_package_discovery_is_advisory_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "discovery.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools/release/discover_adapter_packages.py"),
+                    "--adapter-root",
+                    str(ROOT / "adapters"),
+                    "--out",
+                    str(out),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            payload = _load_json(out)
+
+        self.assertEqual(payload["schemaVersion"], "agent-adapter-package-discovery.v1")
+        self.assertTrue(payload["advisoryOnly"])
+        self.assertTrue(payload["sourceTreeDescriptorsAuthoritative"])
+        self.assertFalse(payload["discoveryCanOverrideDescriptors"])
+        self.assertFalse(payload["productionPromotionClaimed"])
+        packages = {item["adapterId"]: item for item in payload["packages"]}
+        self.assertIn("goose", packages)
+        self.assertFalse(packages["goose"]["missingCapabilities"])
 
 
 def _load_json(path: Path) -> dict:

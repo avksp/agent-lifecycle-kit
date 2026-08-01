@@ -29,6 +29,8 @@
 - `agent-bug-forensics-recipe-validation.v1`: проверка Bug Forensics recipes.
 - `agent-diagnostic-bundle.v1`: диагностический пакет.
 - `agent-readonly-status-view.v1`: read-only status view.
+- `agent-workflow-event-feed.v1`: read-only event feed по workflow state.
+- `agent-lifecycle-progress-view.v1`: read-only lifecycle progress view.
 - `agent-proof-finding.v1`: стабильная идентичность finding.
 - `agent-root-cause-evidence.v1`: подтверждение root cause.
 - `agent-fix-impact-receipt.v1`: канонический receipt влияния исправления.
@@ -43,6 +45,7 @@
 - `agent-adapter-probe-profile.v1`: профиль capability bench.
 - `agent-adapter-probe-plan.v1`: declarative adapter probe plan.
 - `agent-adapter-probe-evidence-validation.v1`: проверка probe evidence/drift.
+- `agent-adapter-package-discovery.v1`: advisory source-tree discovery.
 - `agent-import-dialect-profile.v1`: профиль внешнего dialect import.
 - `agent-episode-index.v1`: rebuildable индекс receipt/session episodes.
 - `agent-episode-retrieval.v1`: bounded retrieval result с digest provenance.
@@ -123,3 +126,6 @@ cross-check — `agent-cross-check-receipt.v1` с token/resource caps и без
 Bug Forensics recipes являются metadata над существующей receipt chain. Они
 optional, выключены по умолчанию и не могут вводить competing defect-repair
 receipt schemas.
+
+Event feed и lifecycle progress view являются projection-only артефактами.
+Они не запускают model calls, не тратят токены и не меняют workflow state.

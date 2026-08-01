@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agent_lifecycle.reporting import build_status_view
+from agent_lifecycle.reporting import build_lifecycle_progress_view, build_status_view
 
 
 class StatusViewTests(unittest.TestCase):
@@ -47,6 +47,130 @@ class StatusViewTests(unittest.TestCase):
         self.assertEqual(view["status"], "FAIL")
         self.assertEqual(view["items"][0]["blockerCodes"], ["missing-evidence"])
         self.assertIn("status-view-artifact-failed", {item["code"] for item in view["blockers"]})
+
+    def test_lifecycle_progress_view_formats_one_line_rows_and_terminal_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state = root / "state.json"
+            usage = root / "usage.json"
+            changes = root / "changes.json"
+            state.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-workflow-state.v3",
+                        "runId": "run-1",
+                        "packageId": "package",
+                        "planRevision": 1,
+                        "planDigest": "0" * 64,
+                        "sourceRevision": "main",
+                        "stateRevision": 5,
+                        "phase": "COMPLETE",
+                        "runStartedAt": "2026-08-01T10:00:00Z",
+                        "authorization": {"mode": "approval-required"},
+                        "budgets": {},
+                        "tasks": [{"id": "WS-01", "status": "ACCEPTED", "attempt": 1, "required": True}],
+                        "lifecycleProgressSteps": [
+                            {
+                                "name": "implementation",
+                                "status": "DONE",
+                                "durationSeconds": 65,
+                                "taskIds": ["WS-01"],
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            usage.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-lifecycle-model-usage-receipt.v1",
+                        "operationId": "op-1",
+                        "host": "codex",
+                        "modelClass": "balanced",
+                        "providerModelHash": "1" * 64,
+                        "taskId": "WS-01",
+                        "usage": {
+                            "inputTokens": 1100,
+                            "outputTokens": 200,
+                            "billableTokens": 1300,
+                            "cumulativeContextBytes": 0,
+                            "toolCalls": 0,
+                            "wallSeconds": 65,
+                        },
+                        "attestation": {"source": "host", "status": "ATTESTED"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            changes.write_text(
+                json.dumps(
+                    {
+                        "filesChanged": 7,
+                        "insertions": 432,
+                        "deletions": 118,
+                        "modified": 5,
+                        "added": 1,
+                        "deleted": 1,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            view = build_lifecycle_progress_view(
+                state_path=state,
+                usage_receipt_paths=[usage],
+                change_summary_path=changes,
+            )
+
+        self.assertEqual(view["schemaVersion"], "agent-lifecycle-progress-view.v1")
+        self.assertTrue(view["readOnly"])
+        self.assertFalse(view["tokenSpendForProgress"])
+        self.assertIn("00:01:05", view["lines"][0])
+        self.assertIn("↑0.2k/↓1.1k tok", view["lines"][0])
+        self.assertEqual(
+            view["terminalSummary"]["changeSummary"],
+            "7 files changed · 432 insertions · 118 deletions · 5 modified · 1 added · 1 deleted",
+        )
+        self.assertIn("TOTAL", view["terminalSummary"]["line"])
+
+    def test_lifecycle_progress_view_keeps_unknown_tokens_for_unattested_usage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state = root / "state.json"
+            usage = root / "usage.json"
+            state.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-workflow-state.v3",
+                        "runId": "run-1",
+                        "packageId": "package",
+                        "planRevision": 1,
+                        "planDigest": "0" * 64,
+                        "sourceRevision": "main",
+                        "stateRevision": 1,
+                        "phase": "RUNNING",
+                        "authorization": {"mode": "approval-required"},
+                        "budgets": {},
+                        "tasks": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            usage.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-lifecycle-model-usage-receipt.v1",
+                        "usage": {"inputTokens": 1100, "outputTokens": 200},
+                        "attestation": {"source": "host", "status": "MISSING"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            view = build_lifecycle_progress_view(state_path=state, usage_receipt_paths=[usage])
+
+        self.assertIn("↑?/↓? tok", view["lines"][0])
 
 
 if __name__ == "__main__":

@@ -19,3 +19,17 @@ rules:
 
 Hosts without probe evidence should be represented as `unsupported` or
 `unknown`, or omitted from the positive capability evidence set.
+
+## Adapter package discovery
+
+`tools/release/discover_adapter_packages.py` scans adapter package directories
+for `adapter.descriptor.json` and `capabilities.manifest.json`. The output is
+advisory only:
+
+- descriptors remain authoritative for maturity;
+- capability manifests remain authoritative for supported operations;
+- discovery cannot promote adapters or override descriptor claims;
+- no host command or model call is started.
+
+Use discovery to inspect source packages before release assembly, not to make
+runtime decisions.
