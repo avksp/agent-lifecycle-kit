@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.runner import validate_sandbox_receipt
+from agent_lifecycle.runner.sandbox_receipts import SANDBOX_STATUSES
 
 SANDBOX_REQUIREMENT_SCHEMA = "agent-sandbox-requirement.v1"
 SANDBOX_REQUIREMENT_VALIDATION_SCHEMA = "agent-sandbox-requirement-validation.v1"
@@ -79,6 +80,7 @@ def validate_task_sandbox_evidence(
     blockers: list[dict[str, Any]] = []
     receipt_validation: dict[str, Any] | None = None
     task_id = task.get("id") if isinstance(task.get("id"), str) else None
+    accepted_sandbox_statuses = _accepted_sandbox_statuses(task, policy, blockers)
     if receipt is None:
         if required:
             blockers.append({"code": "sandbox-receipt-required", "taskId": task_id})
@@ -91,11 +93,11 @@ def validate_task_sandbox_evidence(
         )
         if receipt_validation["status"] != "PASS":
             blockers.append({"code": "sandbox-receipt-invalid", "validation": receipt_validation})
-        if required and receipt_validation.get("sandboxStatus") not in policy["acceptedSandboxStatuses"]:
+        if required and receipt_validation.get("sandboxStatus") not in accepted_sandbox_statuses:
             blockers.append(
                 {
                     "code": "sandbox-receipt-not-accepted",
-                    "acceptedSandboxStatuses": policy["acceptedSandboxStatuses"],
+                    "acceptedSandboxStatuses": accepted_sandbox_statuses,
                     "sandboxStatus": receipt_validation.get("sandboxStatus"),
                 }
             )
@@ -105,6 +107,7 @@ def validate_task_sandbox_evidence(
         "required": required,
         "taskId": task_id,
         "sandboxStatus": receipt_validation.get("sandboxStatus") if receipt_validation else None,
+        "acceptedSandboxStatuses": accepted_sandbox_statuses,
         "blockers": blockers,
         "policyDigest": policy["policyDigest"],
         "receiptDigest": receipt_validation.get("receiptDigest") if receipt_validation else None,
@@ -157,6 +160,25 @@ def _task_sandbox_policy(task: dict[str, Any]) -> dict[str, Any]:
         return {}
     sandbox = execution_policy.get("sandbox")
     return sandbox if isinstance(sandbox, dict) else {}
+
+
+def _accepted_sandbox_statuses(
+    task: dict[str, Any],
+    policy: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> list[str]:
+    task_policy = _task_sandbox_policy(task)
+    value = task_policy.get("acceptedSandboxStatuses")
+    if value is None:
+        return list(policy["acceptedSandboxStatuses"])
+    if not isinstance(value, list) or not value or not all(isinstance(item, str) and item for item in value):
+        blockers.append({"code": "sandbox-task-accepted-statuses-invalid", "value": value})
+        return list(policy["acceptedSandboxStatuses"])
+    unknown = sorted(set(value).difference(SANDBOX_STATUSES))
+    if unknown:
+        blockers.append({"code": "sandbox-task-accepted-statuses-unknown", "statuses": unknown})
+        return list(policy["acceptedSandboxStatuses"])
+    return list(value)
 
 
 def _is_high_risk_task(task: dict[str, Any], policy: dict[str, Any]) -> bool:

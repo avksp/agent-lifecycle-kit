@@ -31,6 +31,18 @@ env-file не являются допустимым содержимым receipt
 валидным со `status: UNKNOWN`, но high-risk задача, для которой sandbox
 evidence обязателен, по умолчанию принимает только `PASS`.
 
+Partial containment фиксируется в том же canonical
+`agent-sandbox-receipt.v1`. Например, частичное покрытие Windows process tree
+можно записать как `boundaries.process.details.partialContainment` с описанием
+покрытия и ограничений. Такой receipt получает `sandboxStatus: UNKNOWN`, если
+план задачи явно не разрешил этот статус; его нельзя повышать до `PASS` только
+из-за частично заявленной границы.
+
+Credential proxy evidence также остаётся внутри sandbox boundary details.
+Receipt может хранить host-local source class, attachment boundary, разрешённые
+имена переменных и placeholder вроде `<credential-proxy>`, но не значения
+секретов и не полный путь к приватному env-file.
+
 ## Policy
 
 `agent-sandbox-requirement.v1` работает fail closed. Политика по умолчанию
@@ -45,7 +57,8 @@ evidence обязателен, по умолчанию принимает тол
   "tier": "S1",
   "executionPolicy": {
     "sandbox": {
-      "required": true
+      "required": true,
+      "acceptedSandboxStatuses": ["PASS"]
     }
   }
 }
@@ -54,6 +67,8 @@ evidence обязателен, по умолчанию принимает тол
 Если sandbox evidence обязателен и отсутствует, проверка возвращает
 `sandbox-receipt-required`. Если receipt структурно валиден, но имеет
 `sandboxStatus: UNKNOWN`, проверка возвращает `sandbox-receipt-not-accepted`.
+Планы, которые намеренно принимают partial containment, могут задать
+`acceptedSandboxStatuses` на уровне задачи, например `["PASS", "UNKNOWN"]`.
 
 ## Возможности адаптеров
 

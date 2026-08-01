@@ -70,6 +70,20 @@ live host conformance receipt and one passing live calibration receipt.
 Synthetic replay baselines remain offline regression fixtures only and cannot
 promote an adapter from `EXPERIMENTAL` to `VERIFIED`.
 
+Adapter capability bench evidence is a drift detector for the live conformance
+path. `generate_adapter_probe_plan.py` reads
+`agent-adapter-capability-manifest.v1` files and emits a bounded declarative
+plan with `liveCallsStarted: false`, `promotionDecision: NOT_EVALUATED` and no
+maturity change claim. `validate_adapter_probe_evidence.py` compares live host
+receipts to that plan and fails on missing planned operations, synthetic replay
+for live-required operations or host-protocol envelope bypass. Passing bench
+evidence is useful for promotion review, but it never promotes an adapter
+without live conformance, calibration and lifecycle proof.
+
+Sandbox evidence uses only `agent-sandbox-receipt.v1`. Partial process-tree
+containment and credential proxy boundaries are expressed as receipt details;
+secret values and private env-file paths are invalid receipt contents.
+
 ## Model routing support
 
 The core includes provider-neutral model routing through `agent-lifecycle model

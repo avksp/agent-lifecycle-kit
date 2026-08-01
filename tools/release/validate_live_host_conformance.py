@@ -20,6 +20,7 @@ def main() -> int:
     parser.add_argument("--receipt-dir", required=True)
     parser.add_argument("--promoted-hosts", required=True)
     parser.add_argument("--evidence", required=True)
+    parser.add_argument("--probe-plan")
     parser.add_argument("--operation-request")
     args = parser.parse_args()
 
@@ -28,6 +29,8 @@ def main() -> int:
     receipt_dir = Path(args.receipt_dir)
     profile = load_json(profile_path)
     baseline = load_json(baseline_path)
+    probe_plan_path = Path(args.probe_plan) if args.probe_plan else None
+    probe_plan = load_json(probe_plan_path) if probe_plan_path else None
     promoted_hosts = _split_hosts(args.promoted_hosts)
 
     blockers: list[dict[str, Any]] = []
@@ -35,6 +38,8 @@ def main() -> int:
     receipt_identities: list[dict[str, Any]] = []
 
     _validate_inputs(profile, baseline, receipt_dir, promoted_hosts, blockers)
+    if probe_plan is not None:
+        _validate_probe_plan(probe_plan, promoted_hosts, blockers)
     if receipt_dir.is_dir():
         for host in promoted_hosts:
             receipt_path = receipt_dir / f"{host}.json"
@@ -50,6 +55,7 @@ def main() -> int:
         "status": "PASS" if not blockers else "FAIL",
         "profile": file_identity(profile_path),
         "baseline": file_identity(baseline_path),
+        "adapterProbePlan": file_identity(probe_plan_path) if probe_plan_path else None,
         "promotedHosts": promoted_hosts,
         "receipts": receipt_identities,
         "checks": checks,
@@ -85,6 +91,31 @@ def _validate_inputs(
             blockers.append({"code": "live-host-not-in-adapter-baseline", "message": f"{host} is not in adapter baseline requiredHosts"})
     if profile.get("syntheticAcceptedForProductionPromotion") is not False:
         blockers.append({"code": "synthetic-live-host-conformance-allowed", "message": "synthetic receipts must not promote production"})
+
+
+def _validate_probe_plan(
+    probe_plan: dict[str, Any],
+    promoted_hosts: list[str],
+    blockers: list[dict[str, Any]],
+) -> None:
+    if probe_plan.get("schemaVersion") != "agent-adapter-probe-plan.v1":
+        blockers.append({"code": "invalid-adapter-probe-plan", "message": "unsupported probe plan schemaVersion"})
+    if probe_plan.get("status") != "PASS":
+        blockers.append({"code": "adapter-probe-plan-not-pass", "message": "probe plan status must be PASS"})
+    if probe_plan.get("liveCallsStarted") is not False:
+        blockers.append({"code": "adapter-probe-plan-started-live-calls", "message": "probe plan must be declarative"})
+    if probe_plan.get("productionPromotionClaimed") is not False:
+        blockers.append({"code": "adapter-probe-plan-production-claim", "message": "probe plans must not claim production promotion"})
+    if probe_plan.get("maturityChangeClaimed") is not False:
+        blockers.append({"code": "adapter-probe-plan-maturity-claim", "message": "probe plans must not claim maturity changes"})
+    plan_hosts = {
+        item.get("host")
+        for item in probe_plan.get("hosts", [])
+        if isinstance(item, dict) and isinstance(item.get("host"), str)
+    }
+    for host in promoted_hosts:
+        if host not in plan_hosts:
+            blockers.append({"code": "promoted-host-missing-from-probe-plan", "message": f"{host} is not covered by probe plan"})
 
 
 def _validate_receipt(
