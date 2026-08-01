@@ -123,7 +123,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 | Kimi Code | `EXPERIMENTAL`; для проверки нужен настроенный провайдер и псевдоним модели. |
 | Grok Build | `VERIFIED` для Grok Build 0.2.117 на проверенной host-local provider/model связке. Одобрение публичного каталога не заявлено. |
 | OpenInterpreter | `VERIFIED` для `interpreter` 0.0.34 на проверенной host-local provider/model связке. Одобрение публичного каталога не заявлено. |
-| Pi | `EXPERIMENTAL`; RPC/JSON и AGENTS/agentskills projection без заявления о live promotion. |
+| Pi | `VERIFIED` для Pi 0.83.0 на проверенной host-local provider/model связке. Одобрение публичного каталога не заявлено. |
 
 Подробнее: [Установка адаптеров](adapters/install.md) и
 [матрица поддержки адаптеров](adapters/support-matrix.md).
