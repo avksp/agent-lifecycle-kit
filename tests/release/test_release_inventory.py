@@ -39,6 +39,7 @@ class ReleaseInventoryTests(unittest.TestCase):
             self.assertIn("tools/live_hosts/qwen_code_harness.py", {item["path"] for item in inventory_payload["files"]})
             self.assertIn("fixtures/synthetic/negative-matrix-01.json", {item["path"] for item in inventory_payload["files"]})
             self.assertIn("evals/synthetic/cost-baseline.v1.json", {item["path"] for item in inventory_payload["files"]})
+            self.assertIn("templates/tasks/bugfix.md", {item["path"] for item in inventory_payload["files"]})
             self.assertEqual(payload["status"], "PASS")
             self.assertFalse(payload["productionPromotionClaimed"])
 
