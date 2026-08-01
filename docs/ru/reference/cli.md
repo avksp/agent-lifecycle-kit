@@ -43,6 +43,8 @@ JSON, чтобы результат можно было проверять ав�
 
 - `agent-lifecycle metrics`: отчёты о расходе, экспорт использования и
   рекомендации по режиму.
+- `agent-lifecycle metrics outcome-index/quality-signals/learn-recommend`:
+  advisory learning по локальным receipts без auto-apply.
 - `agent-lifecycle metrics usage-export`: экспорт сессий, digest
   подтверждений, токенов, ресурсов, длительности, решений по бюджету и
   необязательного `cost_usd`, если его сообщает metered-хост.

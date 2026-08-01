@@ -73,6 +73,9 @@ Stable schema ids:
 - `agent-small-model-task-result.v1`
 - `agent-small-model-output-validation.v1`
 - `agent-small-model-packet-compile-result.v1`
+- `agent-task-outcome-index.v1`
+- `agent-quality-cost-signals.v1`
+- `agent-quality-cost-signals-summary.v1`
 
 `completionCheck` binds observable completion evidence. The completion gate is
 a deterministic stop/continue/escalate/split/follow-up decision over current
@@ -85,6 +88,12 @@ Adaptive lifecycle policy chooses the lightest safe mode from neutral
 task/risk/evidence/resource inputs. It is advisory by default; automatic
 selection requires explicit opt-in and cannot choose below the quality floor.
 It does not use provider/model names or live currency lookup.
+
+Quality-cost learning builds local, advisory signals from explicit lifecycle
+receipts. It groups outcomes by task shape, lifecycle mode, route class and
+profile, then records token, wall-time, tool-call, retry and blocker-rate
+signals. It never starts telemetry, requires USD fields, builds
+provider/model leaderboards or mutates policy automatically.
 
 Small-model packets compile frozen task packets into a narrower implementation
 surface with exact write scope, compact context receipts and required output

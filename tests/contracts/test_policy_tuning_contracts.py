@@ -46,6 +46,9 @@ class PolicyTuningContractTests(unittest.TestCase):
         self.assertEqual(rows["policy adaptive-decision"]["schemaVersion"], "agent-adaptive-lifecycle-policy-decision.v1")
         self.assertEqual(rows["policy adaptive-check"]["schemaVersion"], "agent-adaptive-lifecycle-policy-decision-validation.v1")
         self.assertEqual(rows["specification completion-gate"]["schemaVersion"], "agent-completion-gate-receipt.v1")
+        self.assertEqual(rows["metrics outcome-index"]["schemaVersion"], "agent-task-outcome-index.v1")
+        self.assertEqual(rows["metrics quality-signals"]["schemaVersion"], "agent-quality-cost-signals.v1")
+        self.assertEqual(rows["metrics learn-recommend"]["schemaVersion"], "agent-lifecycle-recommendation.v1")
         self.assertEqual(rows["task compile-small"]["schemaVersion"], "agent-small-model-packet-compile-result.v1")
 
 

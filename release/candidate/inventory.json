@@ -87,8 +87,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "41fc50a9ea4564941fcc72af95e4db20930a6e48063e8565f8113d6f28ee45a7",
-      "bytes": 24324
+      "sha256": "117b16c8c5bb813aa8897e1ae902f89d9287ee0681c10663ffde8e102fef080b",
+      "bytes": 24803
     },
     {
       "path": "CONTRIBUTING.md",
@@ -107,8 +107,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "ab03f53454bc0c505ee9b1bfa6c58da8ff7fb55f8e92aecfd43adacc8ffd67b5",
-      "bytes": 9396
+      "sha256": "5560450490c8cbc211cc4cd6f1425bc7b92f24517e615451943b9e8af9adc694",
+      "bytes": 9457
     },
     {
       "path": "SECURITY.md",
@@ -637,8 +637,8 @@
     },
     {
       "path": "docs/README.md",
-      "sha256": "e911faa32b09b907beae81e8b83af50809d2a96e0c9fe55c13d2d0532d760ba8",
-      "bytes": 3068
+      "sha256": "eb35536b6f8489f41f666e3c3cd97532bcdefefadddf471700f00c990c436892",
+      "bytes": 3130
     },
     {
       "path": "docs/adapters/authoring.md",
@@ -902,8 +902,8 @@
     },
     {
       "path": "docs/reference/adaptive-lifecycle-policy.md",
-      "sha256": "34ba011e2bad022c4d2bad88d2b2e9ce5204f039235962e223f0c64fe5d76e8b",
-      "bytes": 3027
+      "sha256": "69e1bb432d83e5278e37955b92b7d248c4aa7fb6df47d0d146750e0ffeec4265",
+      "bytes": 3223
     },
     {
       "path": "docs/reference/bug-forensics-context-budget.md",
@@ -917,8 +917,8 @@
     },
     {
       "path": "docs/reference/cli.md",
-      "sha256": "179a71e93990ef998e87a571b1e7f211fad9de468c39f4e54674174abab00b47",
-      "bytes": 4498
+      "sha256": "32e519115787986234fe91e3ac5337d66c724cf0205354372f7e1ce1f9b7ab2e",
+      "bytes": 4648
     },
     {
       "path": "docs/reference/completion-check.md",
@@ -972,8 +972,8 @@
     },
     {
       "path": "docs/reference/lifecycle-cost.md",
-      "sha256": "6bb558207a492ae9458523ff984fa92c88826cbd6195d073d96beed091d5a345",
-      "bytes": 4532
+      "sha256": "fd1e42c95f77577190453c4bf8046335a9d0ed277e8a9a6aa3c5f7ae6c21c344",
+      "bytes": 5102
     },
     {
       "path": "docs/reference/live-cost-calibration.md",
@@ -1007,8 +1007,13 @@
     },
     {
       "path": "docs/reference/public-contracts.md",
-      "sha256": "eda8a0bb0c233d6ed2f69f836e9d0c0bba50557663341299a26d14bfd0f76a73",
-      "bytes": 10229
+      "sha256": "da3400c5e5765bca6da9fe3f43675cf655ef82016eeee7d6fe73199a549f13c6",
+      "bytes": 10690
+    },
+    {
+      "path": "docs/reference/quality-cost-learning.md",
+      "sha256": "9ae1ef880d7100fbd3c620a88eb41bcc9f55cdee93921f4e100ff310d624997b",
+      "bytes": 1379
     },
     {
       "path": "docs/reference/read-only-status-view.md",
@@ -1062,8 +1067,8 @@
     },
     {
       "path": "docs/ru/README.md",
-      "sha256": "d8079b8b9f1795604e97203e11c697b2140caa25431e8ad56949a95bb2cd6751",
-      "bytes": 13962
+      "sha256": "e83f1bea26c9f869187e1a1a40b9872fdbd8ff890111c785c1a365dffee9472c",
+      "bytes": 14023
     },
     {
       "path": "docs/ru/adapters/install.md",
@@ -1102,8 +1107,8 @@
     },
     {
       "path": "docs/ru/reference/cli.md",
-      "sha256": "1f44b9987c51bfd6852fb35f93febe4a34a49913ca7f93f144754a091390698e",
-      "bytes": 3818
+      "sha256": "f0d1c52aaa3c9ee1a872574444a298a3d0f9555e1b5666fe574b4b2a8dc97c7c",
+      "bytes": 3965
     },
     {
       "path": "docs/ru/reference/cross-check-profile.md",
@@ -1132,8 +1137,13 @@
     },
     {
       "path": "docs/ru/reference/public-contracts.md",
-      "sha256": "3557ae11bb95bb50b688b8589054703f71cfd60af970cfe07d47cca7754e5ab8",
-      "bytes": 10578
+      "sha256": "617995225b71c49472671b9c36d18a6147d4303cfc7ea3b8ab00cb0062f5744d",
+      "bytes": 11264
+    },
+    {
+      "path": "docs/ru/reference/quality-cost-learning.md",
+      "sha256": "8b01aa951264644bb343ef340e4cf0cf66faf003fd27cbd526e3211a79e895ff",
+      "bytes": 1630
     },
     {
       "path": "docs/ru/reference/read-only-status-view.md",
@@ -1287,7 +1297,7 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "4d94d53407e24d824bc2f70c71d89151e4c4352a02d3ba797b69bfd8188d70a7",
+      "sha256": "a41b2d2fa6ea468498ccd8bad3392b431689ff8446b0b9a7d7ade2b0e255b97e",
       "bytes": 1134
     },
     {
@@ -1342,7 +1352,7 @@
     },
     {
       "path": "src/agent_lifecycle/_version.py",
-      "sha256": "a7d42f92392f32be4dd58515a48281f8aebc99cf07138a3a12ad10cc13ab2d5e",
+      "sha256": "bcf38a67c07b9411a731e7530d881f7a8af533690c6f7c2d8bdffe3b63b40d41",
       "bytes": 47
     },
     {
@@ -1392,8 +1402,8 @@
     },
     {
       "path": "src/agent_lifecycle/cli/dispatch.py",
-      "sha256": "ddeb225964d513cd3e207e4a7c0ab921cb8776641676076807f88202da76d590",
-      "bytes": 36451
+      "sha256": "09bfe29b0a66ed4f18ac92cdb2815608da102c4f896ce19bc38814ed732f04d9",
+      "bytes": 38010
     },
     {
       "path": "src/agent_lifecycle/cli/followup.py",
@@ -1407,8 +1417,8 @@
     },
     {
       "path": "src/agent_lifecycle/cli/metrics_parser.py",
-      "sha256": "04ee9d11f1b64f80a95182ad7a17e97a3c10dec3b208a5bc94b4a8880b1e8147",
-      "bytes": 1767
+      "sha256": "40fdb0007e83e4d5ef2382a7503fc1dccc892cbc7afb48b6a13f0816837aee9f",
+      "bytes": 2679
     },
     {
       "path": "src/agent_lifecycle/cli/parsers.py",
@@ -1487,8 +1497,8 @@
     },
     {
       "path": "src/agent_lifecycle/contracts/compatibility.py",
-      "sha256": "2da4790f5978070deeb7f8785932a92f678ebcde726e135b9644b1359be0b501",
-      "bytes": 12260
+      "sha256": "0dbd1ebd2ddfd9d70ed02f32af52a2517cdee5c4146c4e728fdf27a6c14c8b30",
+      "bytes": 12638
     },
     {
       "path": "src/agent_lifecycle/contracts/context_model_schemas.py",
@@ -1527,8 +1537,8 @@
     },
     {
       "path": "src/agent_lifecycle/contracts/metric_schemas.py",
-      "sha256": "d1ab32deb96b27a36410cc06c4f1850273fb6ac3bbc9d01554a79e31c8163866",
-      "bytes": 10116
+      "sha256": "84b4709bb2162435ba675eb335d200983339ff462b4387f60e05255729984d30",
+      "bytes": 13876
     },
     {
       "path": "src/agent_lifecycle/contracts/paths.py",
@@ -1782,8 +1792,8 @@
     },
     {
       "path": "src/agent_lifecycle/metrics/__init__.py",
-      "sha256": "2c6d44c9c9b41394c5b258913cd89312173cc656bfd21cab00446728a3a73f4b",
-      "bytes": 1679
+      "sha256": "4700d0c9b724af950c715c3469c710748ed789f53dcbb435daafa026e66ec556",
+      "bytes": 2025
     },
     {
       "path": "src/agent_lifecycle/metrics/cost_collection.py",
@@ -1796,14 +1806,19 @@
       "bytes": 8940
     },
     {
+      "path": "src/agent_lifecycle/metrics/outcome_index.py",
+      "sha256": "e45e080ffbae536f5b9dc45c9039cd7717980c15ce7bc40af6d18ad19f5169d9",
+      "bytes": 14842
+    },
+    {
       "path": "src/agent_lifecycle/metrics/phase_resources.py",
       "sha256": "19b56f9e6387229208bf759d73b31ede32a75815caff963a1a47454b9ea3715b",
       "bytes": 10341
     },
     {
       "path": "src/agent_lifecycle/metrics/recommendations.py",
-      "sha256": "2bc5d8473ad70fb1720dc009d935c836e23e1bfb47bf0f64b51ad6a301918402",
-      "bytes": 14861
+      "sha256": "66e4e9ed89e842255070fddc565237fa7467a8c8e057af6977a3c56499ca5f36",
+      "bytes": 22858
     },
     {
       "path": "src/agent_lifecycle/metrics/regression_signals.py",
@@ -1947,8 +1962,8 @@
     },
     {
       "path": "src/agent_lifecycle/policy/proposals.py",
-      "sha256": "600c48f6320902e2ca4bb5c30738d3e2c2436edc4c3ab0858d831dbbe1244d64",
-      "bytes": 8012
+      "sha256": "469c888596887e66526fd5cf9587cbfadda5ff46a921d7358b770d86f6fceb4a",
+      "bytes": 8251
     },
     {
       "path": "src/agent_lifecycle/policy/quality_floor.py",
@@ -2402,8 +2417,8 @@
     },
     {
       "path": "tests/cli/test_contract_metrics_commands.py",
-      "sha256": "da483552b0ed6d4462b8ce501d97689ac70b8e7b05bcf1f00a3d2253ef5e0ac6",
-      "bytes": 10169
+      "sha256": "cc4ca20699f57b79a04781a23f41302020476c6934a893e5c2a5434a58af8e66",
+      "bytes": 13033
     },
     {
       "path": "tests/cli/test_diagnostics_commands.py",
@@ -2537,13 +2552,13 @@
     },
     {
       "path": "tests/contracts/test_compatibility.py",
-      "sha256": "cfb5fa978c1f236054ee5e05d9121fccf51b84388b6a2bfe85762311fd269103",
-      "bytes": 3271
+      "sha256": "dcc778cffef05651b786961e8cdac375a7f97b9ba390b25709ce2b488ee079ef",
+      "bytes": 3694
     },
     {
       "path": "tests/contracts/test_contracts.py",
-      "sha256": "a4d4b67448159ed479737ef526360e1c5fed0554c910b060e0db8f06b1b580c5",
-      "bytes": 22762
+      "sha256": "5cb5c0b6dd3f71177cffc587b33c4a802a2ca18a1ea8ec18189373b78d930cf1",
+      "bytes": 23236
     },
     {
       "path": "tests/contracts/test_cross_check_schemas.py",
@@ -2567,13 +2582,13 @@
     },
     {
       "path": "tests/contracts/test_lifecycle_recommendation_contracts.py",
-      "sha256": "d8b0bb8f472fe84b63498a320eceb20bfbda6997f5c5895cb52a858e4239baef",
-      "bytes": 1551
+      "sha256": "552721ddfac7505f034abf1887e790e69db6c1d0a46d2a92893266405823f70f",
+      "bytes": 2016
     },
     {
       "path": "tests/contracts/test_policy_tuning_contracts.py",
-      "sha256": "997da9bac0db75d69c966b08074a7596bc6aa09d6131c94362da9ee85907bea0",
-      "bytes": 2658
+      "sha256": "80ae7c9b3f4be5aac6fb28cb7815b24caf2d0624b19309d2cfc2749a86f157c5",
+      "bytes": 2982
     },
     {
       "path": "tests/contracts/test_proof_integrity_schemas.py",
@@ -2777,8 +2792,13 @@
     },
     {
       "path": "tests/metrics/test_lifecycle_recommendations.py",
-      "sha256": "4d46a56a003656b0237cfc62db4188ff870055c2cbcc1eeffe85211df5dc4a40",
-      "bytes": 6571
+      "sha256": "380458aa13bf7b84554c02d346b8fb437dadf834281063cf097de62ea6f36a1e",
+      "bytes": 9438
+    },
+    {
+      "path": "tests/metrics/test_outcome_index.py",
+      "sha256": "f88eb37d8bf7a0960695e8e8632c12f8fc9e7e798ebcad51fc8b73b568f3f367",
+      "bytes": 3919
     },
     {
       "path": "tests/metrics/test_phase_resources.py",
@@ -2867,7 +2887,7 @@
     },
     {
       "path": "tests/package/test_foundation.py",
-      "sha256": "2e82c01f077c97788199ee64eba0efe869295e8b0c3b4a684df5be0e89767050",
+      "sha256": "b9090b9d6cb813bb07070044979d4fc11511386528bb0a95f0abddee4de0a51a",
       "bytes": 7804
     },
     {
@@ -2902,8 +2922,8 @@
     },
     {
       "path": "tests/policy/test_policy_proposals.py",
-      "sha256": "e183aadbfc59ba6b83d081e8cba6ecca749de722a626bb8e31eaf4a5851689f0",
-      "bytes": 6120
+      "sha256": "b61f2efb3f4aa4c42e093c93e3b258545e7acdfe6e9b7826028af7525eb1acb4",
+      "bytes": 6714
     },
     {
       "path": "tests/policy/test_quality_floor.py",
@@ -2967,8 +2987,8 @@
     },
     {
       "path": "tests/release/test_docs_gates.py",
-      "sha256": "5e0aab4cacedf8b15637451318f1b1eb6b537afe4e516605d24179caa71f47b6",
-      "bytes": 23823
+      "sha256": "b5abb862e0d76c55da877af303a96c01b301d6b60248c210c28ce5dea661d5f1",
+      "bytes": 25389
     },
     {
       "path": "tests/release/test_final_candidate_validator.py",
@@ -3007,8 +3027,8 @@
     },
     {
       "path": "tests/release/test_release_inventory.py",
-      "sha256": "691c757e3a324ed93b7cce9eb4f27a20d677fa0c4dc9746f0842132e6fd04a53",
-      "bytes": 9716
+      "sha256": "f13741e8ee565208314014f6b5b5cc192d00b0b5fc041f0c5775242dd05c17b0",
+      "bytes": 10216
     },
     {
       "path": "tests/release/test_task_packet_context.py",
@@ -3277,8 +3297,8 @@
     },
     {
       "path": "tools/release/validate_docs_compat.py",
-      "sha256": "a770ad229db37a01d309538472a678382cb12246128282229824093c086f8e90",
-      "bytes": 21819
+      "sha256": "88d44ee6776be77eb9715e2e92bd131597005fab454a096d49eef11900d5e724",
+      "bytes": 23625
     },
     {
       "path": "tools/release/validate_host_env_hygiene.py",
@@ -3332,9 +3352,9 @@
     },
     {
       "path": "uv.lock",
-      "sha256": "5927b26ee662c92e71b4ac476804fedd085ef4c97b038994ddc98a5ebf65a1d5",
+      "sha256": "33ce70cc4cd931eb7d0d9033f28db244ec6bde1043e490e487fe2bc48e97b595",
       "bytes": 186
     }
   ],
-  "candidatePayloadInventoryDigest": "4f0698e1bae40b90494d013bbec6db1a1c67edd1e651002d2a468eec3c581b59"
+  "candidatePayloadInventoryDigest": "138b8aaf4295973f17bfe759592a5b3436d78ed5af530a5ca818ac74ffafc2d7"
 }

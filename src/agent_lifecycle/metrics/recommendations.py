@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.metrics.outcome_index import QUALITY_COST_SIGNALS_SCHEMA
 from agent_lifecycle.metrics.costs import (
     COST_CATEGORIES,
     DEFAULT_MODE_LIMITS,
@@ -12,7 +13,6 @@ from agent_lifecycle.metrics.costs import (
     summarize_usage_confidence,
     validate_lifecycle_cost_report,
 )
-from agent_lifecycle.policy.quality_floor import max_mode, mode_index, quality_floor_mode
 
 BASELINES_SCHEMA = "agent-lifecycle-baselines.v1"
 BASELINE_VALIDATION_SCHEMA = "agent-lifecycle-baselines-validation.v1"
@@ -121,7 +121,7 @@ def recommend_lifecycle_mode(
         body = _failed_recommendation(task_shape, current_mode, baseline_validation, stats, blockers)
         return {**body, "recommendationDigest": canonical_digest(body)}
 
-    floor = quality_floor_mode(
+    floor = _quality_floor_mode(
         task_shape=task_shape,
         baseline_profile=baseline_profile,
         sdd_tier=sdd_tier,
@@ -141,11 +141,92 @@ def recommend_lifecycle_mode(
         "advisoryOnly": True,
         "autoApply": False,
         "qualityFloor": floor,
-        "qualityFloorPreserved": mode_index(recommended) >= mode_index(floor),
+        "qualityFloorPreserved": _mode_index(recommended) >= _mode_index(floor),
         "warnings": warnings,
         "reasons": _reasons(confidence, recommended, floor, weak_data, warnings),
         "statistics": stats,
         "baselineValidation": baseline_validation,
+        "productionPromotionClaimed": False,
+    }
+    body["compactSummary"] = build_lifecycle_recommendation_summary(body)
+    return {**body, "recommendationDigest": canonical_digest(body)}
+
+
+def recommend_from_quality_cost_signals(
+    *,
+    signals: dict[str, Any],
+    baseline_profile: dict[str, Any],
+    task_shape: str = "feature",
+    current_mode: str | None = None,
+    sdd_tier: str | None = None,
+    risk_flags: list[str] | None = None,
+) -> dict[str, Any]:
+    """Recommend a lifecycle mode from local outcome-index signals."""
+
+    baseline_validation = validate_lifecycle_baselines(baseline_profile)
+    blockers = list(baseline_validation["blockers"])
+    if not isinstance(signals, dict) or signals.get("schemaVersion") != QUALITY_COST_SIGNALS_SCHEMA:
+        blockers.append({"code": "quality-cost-signals-schema"})
+        signal_rows: list[dict[str, Any]] = []
+    else:
+        signal_rows = [item for item in signals.get("signals", []) if isinstance(item, dict)]
+        if signals.get("status") != "PASS":
+            blockers.extend(signals.get("blockers", []))
+        blockers.extend(_unsafe_quality_cost_signal_blockers(signals))
+    shape = _task_shape(baseline_profile, task_shape, blockers)
+    if baseline_validation["status"] != "PASS" or shape is None or blockers:
+        body = _failed_recommendation(task_shape, current_mode, baseline_validation, {}, blockers)
+        body["qualityCostSignals"] = signals if isinstance(signals, dict) else {}
+        return {**body, "recommendationDigest": canonical_digest(body)}
+
+    floor = _quality_floor_mode(
+        task_shape=task_shape,
+        baseline_profile=baseline_profile,
+        sdd_tier=sdd_tier,
+        risk_flags=risk_flags or [],
+    )
+    relevant = [item for item in signal_rows if item.get("taskShape") == task_shape]
+    best = _best_quality_cost_signal(relevant)
+    warnings = _quality_cost_warnings(best, signals=signals, profile=baseline_profile)
+    confidence = _quality_cost_confidence(best, baseline_profile, warning_count=len(warnings))
+    current = current_mode if current_mode in MODE_ORDER else None
+    candidate = str(best.get("lifecycleMode")) if best and best.get("lifecycleMode") in MODE_ORDER else str(shape["defaultMode"])
+    if confidence == "LOW":
+        candidate = current or str(shape["defaultMode"])
+    recommended = _max_mode(candidate, floor)
+    body = {
+        "schemaVersion": RECOMMENDATION_SCHEMA,
+        "status": "PASS",
+        "taskShape": task_shape,
+        "currentMode": current_mode,
+        "recommendedMode": recommended,
+        "confidence": confidence,
+        "advisoryOnly": True,
+        "autoApply": False,
+        "qualityFloor": floor,
+        "qualityFloorPreserved": _mode_index(recommended) >= _mode_index(floor),
+        "warnings": warnings,
+        "reasons": _quality_cost_reasons(confidence, recommended, floor, best, warnings),
+        "statistics": {
+            "schemaVersion": "agent-quality-cost-learning-statistics.v1",
+            "status": signals.get("status"),
+            "outcomeIndexDigest": signals.get("outcomeIndexDigest"),
+            "signalsDigest": signals.get("signalsDigest") or canonical_digest(signals),
+            "groupCount": signals.get("groupCount", 0),
+            "taskCount": signals.get("taskCount", 0),
+            "selectedSignal": best,
+        },
+        "baselineValidation": baseline_validation,
+        "qualityCostSignals": {
+            "signalsDigest": signals.get("signalsDigest") or canonical_digest(signals),
+            "outcomeIndexDigest": signals.get("outcomeIndexDigest"),
+            "selectedSignal": best,
+        },
+        "rollback": {
+            "strategy": "discard recommendation and keep prior lifecycle routing policy",
+            "restore": [{"path": f"taskShapes.{task_shape}.defaultMode", "value": current_mode}],
+            "requiresReview": True,
+        },
         "productionPromotionClaimed": False,
     }
     body["compactSummary"] = build_lifecycle_recommendation_summary(body)
@@ -200,7 +281,7 @@ def _validate_shape(shape: str, config: Any, blockers: list[dict[str, Any]]) -> 
     threshold = config.get("reviewStepWarningThreshold")
     if not isinstance(threshold, int) or isinstance(threshold, bool) or threshold < 0:
         blockers.append({"code": "baseline-shape-review-threshold", "taskShape": shape})
-    if mode_index(str(config.get("defaultMode"))) < mode_index(str(config.get("minMode"))):
+    if _mode_index(str(config.get("defaultMode"))) < _mode_index(str(config.get("minMode"))):
         blockers.append({"code": "baseline-shape-default-below-min", "taskShape": shape})
 
 
@@ -272,12 +353,122 @@ def _recommended_mode(
 ) -> str:
     current = current_mode if current_mode in MODE_ORDER else None
     if confidence == "LOW":
-        return max_mode(current or str(shape["defaultMode"]), floor)
+        return _max_mode(current or str(shape["defaultMode"]), floor)
     if shape.get("highRisk") is True:
-        return max_mode(current or str(shape["defaultMode"]), floor)
+        return _max_mode(current or str(shape["defaultMode"]), floor)
     overhead_warning = any(item["code"] in {"pipeline-token-share-high", "coordination-token-share-high"} for item in warnings)
     target = str(shape["minMode"] if overhead_warning else shape["defaultMode"])
-    return max_mode(target, floor)
+    return _max_mode(target, floor)
+
+
+def _quality_floor_mode(
+    *,
+    task_shape: str,
+    baseline_profile: dict[str, Any],
+    sdd_tier: str | None,
+    risk_flags: list[str],
+) -> str:
+    from agent_lifecycle.policy.quality_floor import quality_floor_mode
+
+    return quality_floor_mode(
+        task_shape=task_shape,
+        baseline_profile=baseline_profile,
+        sdd_tier=sdd_tier,
+        risk_flags=risk_flags,
+    )
+
+
+def _max_mode(first: str, second: str) -> str:
+    from agent_lifecycle.policy.quality_floor import max_mode
+
+    return max_mode(first, second)
+
+
+def _mode_index(mode: str) -> int:
+    from agent_lifecycle.policy.quality_floor import mode_index
+
+    return mode_index(mode)
+
+
+def _best_quality_cost_signal(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not rows:
+        return None
+    return sorted(
+        rows,
+        key=lambda item: (
+            -float(item.get("successRate", 0.0)),
+            float(item.get("blockerRate", 1.0)),
+            float(item.get("averageTokens", 0.0)),
+            -int(item.get("sampleCount", 0)),
+        ),
+    )[0]
+
+
+def _quality_cost_warnings(
+    selected: dict[str, Any] | None,
+    *,
+    signals: dict[str, Any],
+    profile: dict[str, Any],
+) -> list[dict[str, Any]]:
+    warnings: list[dict[str, Any]] = []
+    if selected is None:
+        warnings.append({"code": "quality-cost-no-local-signal"})
+        return warnings
+    if int(selected.get("sampleCount", 0)) < int(profile.get("minimumReportsForConfidence", 2)):
+        warnings.append({"code": "quality-cost-weak-samples", "sampleCount": selected.get("sampleCount", 0)})
+    if float(selected.get("successRate", 0.0)) < 0.8:
+        warnings.append({"code": "quality-cost-success-rate-low", "successRate": selected.get("successRate", 0.0)})
+    if float(selected.get("blockerRate", 0.0)) > 0:
+        warnings.append({"code": "quality-cost-blocker-rate-nonzero", "blockerRate": selected.get("blockerRate", 0.0)})
+    if signals.get("telemetryStarted") is not False:
+        warnings.append({"code": "quality-cost-telemetry-unsafe"})
+    if signals.get("providerModelLeaderboard") is not False:
+        warnings.append({"code": "quality-cost-provider-leaderboard-unsafe"})
+    if signals.get("monetaryFieldsUsed") is not False:
+        warnings.append({"code": "quality-cost-monetary-fields-unsafe"})
+    if signals.get("productionPromotionClaimed") is not False:
+        warnings.append({"code": "quality-cost-production-claim-unsafe"})
+    return warnings
+
+
+def _unsafe_quality_cost_signal_blockers(signals: dict[str, Any]) -> list[dict[str, Any]]:
+    blockers = []
+    for field, code in (
+        ("telemetryStarted", "quality-cost-telemetry-started"),
+        ("providerModelLeaderboard", "quality-cost-provider-leaderboard"),
+        ("monetaryFieldsUsed", "quality-cost-monetary-fields-used"),
+        ("productionPromotionClaimed", "quality-cost-production-promotion-claimed"),
+    ):
+        if signals.get(field) is not False:
+            blockers.append({"code": code, "field": field})
+    return blockers
+
+
+def _quality_cost_confidence(selected: dict[str, Any] | None, profile: dict[str, Any], *, warning_count: int) -> str:
+    if selected is None:
+        return "LOW"
+    samples = int(selected.get("sampleCount", 0))
+    success = float(selected.get("successRate", 0.0))
+    blocker_rate = float(selected.get("blockerRate", 0.0))
+    if samples < int(profile.get("minimumReportsForConfidence", 2)) or success < 0.8 or blocker_rate > 0:
+        return "LOW"
+    if samples >= 5 and success >= 0.9 and warning_count == 0:
+        return "HIGH"
+    return "MEDIUM"
+
+
+def _quality_cost_reasons(
+    confidence: str,
+    recommended: str,
+    floor: str,
+    selected: dict[str, Any] | None,
+    warnings: list[dict[str, Any]],
+) -> list[str]:
+    reasons = [f"confidence-{confidence.lower()}", f"quality-floor-{floor}", f"recommended-{recommended}"]
+    if selected is not None:
+        reasons.append(f"local-samples-{selected.get('sampleCount', 0)}")
+    reasons.extend(item["code"] for item in warnings[:6] if isinstance(item.get("code"), str))
+    return reasons
 
 
 def _reasons(confidence: str, recommended: str, floor: str, weak_data: bool, warnings: list[dict[str, Any]]) -> list[str]:

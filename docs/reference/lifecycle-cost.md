@@ -87,6 +87,19 @@ must preserve the configured quality floor for the task shape, SDD tier and
 risk flags. Missing or weak statistics keep confidence low and favor the
 current or minimum safe mode.
 
+Quality-cost learning can use local lifecycle receipts directly:
+
+```bash
+agent-lifecycle metrics outcome-index --artifact <task-result.json> --out <outcome-index.json>
+agent-lifecycle metrics quality-signals --index <outcome-index.json> --out <signals.json>
+agent-lifecycle metrics learn-recommend --signals <signals.json> --task-shape feature
+```
+
+This path reports `agent-task-outcome-index.v1` and
+`agent-quality-cost-signals.v1`. It uses tokens, wall time, tool calls, retries,
+remediation loops and blocker rate. It does not require USD fields or live
+telemetry.
+
 For per-task neutral inputs, build an adaptive decision with:
 
 ```bash
