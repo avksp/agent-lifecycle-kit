@@ -24,3 +24,7 @@ Default context caps:
 Large logs should be summarized by path, sha256, byte count, top stack frame,
 exception/assertion and stable log pattern. Full logs remain artifacts and do
 not need to be copied into the compact packet.
+
+Recipes should fit into the same compact packet. Include the selected recipe id,
+stage, required receipt schemas and short check list; keep full logs, command
+outputs and rejected-hypothesis detail in artifacts referenced by digest.

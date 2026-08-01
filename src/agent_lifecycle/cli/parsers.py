@@ -137,6 +137,17 @@ def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     behavior_check = quality_sub.add_parser("behavior-check")
     behavior_check.add_argument("--manifest")
     behavior_check.add_argument("--fixture", action="append", default=[])
+    template_list = quality_sub.add_parser("template-list")
+    template_list.add_argument("--out")
+    template_check = quality_sub.add_parser("template-check")
+    template_check.add_argument("--project-root", default=".")
+    template_check.add_argument("--template-id")
+    template_check.add_argument("--out")
+    bug_recipe_list = quality_sub.add_parser("bug-recipe-list")
+    bug_recipe_list.add_argument("--out")
+    bug_recipe_check = quality_sub.add_parser("bug-recipe-check")
+    bug_recipe_check.add_argument("--recipe-id")
+    bug_recipe_check.add_argument("--out")
 
 
 def _add_report_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
