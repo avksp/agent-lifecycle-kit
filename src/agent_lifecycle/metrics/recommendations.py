@@ -12,6 +12,7 @@ from agent_lifecycle.metrics.costs import (
     summarize_usage_confidence,
     validate_lifecycle_cost_report,
 )
+from agent_lifecycle.policy.quality_floor import max_mode, mode_index, quality_floor_mode
 
 BASELINES_SCHEMA = "agent-lifecycle-baselines.v1"
 BASELINE_VALIDATION_SCHEMA = "agent-lifecycle-baselines-validation.v1"
@@ -120,7 +121,12 @@ def recommend_lifecycle_mode(
         body = _failed_recommendation(task_shape, current_mode, baseline_validation, stats, blockers)
         return {**body, "recommendationDigest": canonical_digest(body)}
 
-    floor = _quality_floor(shape, baseline_profile, sdd_tier=sdd_tier, risk_flags=risk_flags or [])
+    floor = quality_floor_mode(
+        task_shape=task_shape,
+        baseline_profile=baseline_profile,
+        sdd_tier=sdd_tier,
+        risk_flags=risk_flags or [],
+    )
     warnings = _warnings(stats, shape, baseline_profile)
     weak_data = _weak_data(stats, baseline_profile)
     confidence = _confidence(stats, weak_data=weak_data, warning_count=len(warnings))
@@ -135,7 +141,7 @@ def recommend_lifecycle_mode(
         "advisoryOnly": True,
         "autoApply": False,
         "qualityFloor": floor,
-        "qualityFloorPreserved": _mode_index(recommended) >= _mode_index(floor),
+        "qualityFloorPreserved": mode_index(recommended) >= mode_index(floor),
         "warnings": warnings,
         "reasons": _reasons(confidence, recommended, floor, weak_data, warnings),
         "statistics": stats,
@@ -194,7 +200,7 @@ def _validate_shape(shape: str, config: Any, blockers: list[dict[str, Any]]) -> 
     threshold = config.get("reviewStepWarningThreshold")
     if not isinstance(threshold, int) or isinstance(threshold, bool) or threshold < 0:
         blockers.append({"code": "baseline-shape-review-threshold", "taskShape": shape})
-    if _mode_index(str(config.get("defaultMode"))) < _mode_index(str(config.get("minMode"))):
+    if mode_index(str(config.get("defaultMode"))) < mode_index(str(config.get("minMode"))):
         blockers.append({"code": "baseline-shape-default-below-min", "taskShape": shape})
 
 
@@ -212,23 +218,6 @@ def _task_shape(profile: dict[str, Any], task_shape: str, blockers: list[dict[st
         blockers.append({"code": "baseline-task-shape-missing", "taskShape": task_shape})
         return None
     return shapes[task_shape]
-
-
-def _quality_floor(
-    shape: dict[str, Any],
-    profile: dict[str, Any],
-    *,
-    sdd_tier: str | None,
-    risk_flags: list[str],
-) -> str:
-    floor = str(shape.get("minMode"))
-    risk_floors = profile.get("riskFloors") if isinstance(profile.get("riskFloors"), dict) else {}
-    for risk in [*risk_flags, sdd_tier]:
-        if isinstance(risk, str) and risk in risk_floors:
-            floor = _max_mode(floor, str(risk_floors[risk]))
-    if shape.get("highRisk") is True:
-        floor = _max_mode(floor, "strict")
-    return floor
 
 
 def _warnings(stats: dict[str, Any], shape: dict[str, Any], profile: dict[str, Any]) -> list[dict[str, Any]]:
@@ -283,12 +272,12 @@ def _recommended_mode(
 ) -> str:
     current = current_mode if current_mode in MODE_ORDER else None
     if confidence == "LOW":
-        return _max_mode(current or str(shape["defaultMode"]), floor)
+        return max_mode(current or str(shape["defaultMode"]), floor)
     if shape.get("highRisk") is True:
-        return _max_mode(current or str(shape["defaultMode"]), floor)
+        return max_mode(current or str(shape["defaultMode"]), floor)
     overhead_warning = any(item["code"] in {"pipeline-token-share-high", "coordination-token-share-high"} for item in warnings)
     target = str(shape["minMode"] if overhead_warning else shape["defaultMode"])
-    return _max_mode(target, floor)
+    return max_mode(target, floor)
 
 
 def _reasons(confidence: str, recommended: str, floor: str, weak_data: bool, warnings: list[dict[str, Any]]) -> list[str]:
@@ -325,14 +314,3 @@ def _failed_recommendation(
         "blockers": blockers,
         "productionPromotionClaimed": False,
     }
-
-
-def _max_mode(*modes: str) -> str:
-    valid = [mode for mode in modes if mode in MODE_ORDER]
-    if not valid:
-        return "standard"
-    return max(valid, key=_mode_index)
-
-
-def _mode_index(mode: str) -> int:
-    return MODE_ORDER.index(mode) if mode in MODE_ORDER else MODE_ORDER.index("standard")

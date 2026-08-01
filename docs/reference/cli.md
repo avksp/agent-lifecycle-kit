@@ -53,6 +53,8 @@ read-only unless their own help says otherwise.
   preserves the required quality floor.
 - `agent-lifecycle policy tune`: build a read-only policy proposal or write an
   approved policy artifact with `--apply --output`.
+- `agent-lifecycle policy adaptive-decision/adaptive-check`: build and validate
+  neutral adaptive lifecycle mode decisions.
 
 ## Context and continuity
 

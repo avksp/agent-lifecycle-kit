@@ -9,6 +9,10 @@ Each declared command must list its input schemas, expected evidence and
 resource caps. The default command footprint must stay zero so routine workflow
 commands remain lightweight.
 
+Adaptive lifecycle policy can use a pack or task profile as required evidence
+only after it is explicitly selected. Required evidence can raise the quality
+floor, but packs remain disabled by default and resource capped.
+
 `agent-optional-quality-pack-validation.v1` fails closed when a pack is enabled
 by default, changes canonical lifecycle commands, lacks resource caps or claims
 promotion. `agent-behavior-check-fixture.v1` and `agent-behavior-check-run.v1`
