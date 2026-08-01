@@ -57,6 +57,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/source-of-truth.md",
             "docs/ru/reference/public-contracts.md",
             "docs/ru/reference/adaptive-lifecycle-policy.md",
+            "docs/ru/reference/small-model-packets.md",
             "docs/ru/reference/readiness-diagnostics.md",
             "docs/ru/reference/lifecycle-cost.md",
             "docs/ru/security/release-security.md",
@@ -64,6 +65,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/cli.md",
             "docs/reference/source-of-truth.md",
             "docs/reference/adaptive-lifecycle-policy.md",
+            "docs/reference/small-model-packets.md",
             "docs/reference/readiness-diagnostics.md",
         ):
             with self.subTest(path=relative):
@@ -292,6 +294,10 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-adaptive-lifecycle-policy-request.v1`.\n"
         "`agent-adaptive-lifecycle-policy-decision.v1`.\n"
         "`agent-adaptive-lifecycle-policy-decision-validation.v1`.\n"
+        "`agent-small-model-task-packet.v1`.\n"
+        "`agent-small-model-output-contract.v1`.\n"
+        "`agent-small-model-output-validation.v1`.\n"
+        "`agent-small-model-packet-compile-result.v1`.\n"
     )
     _write_text(root / "docs/reference/public-contracts.md", public_contracts)
     _write_text(root / "docs/ru/reference/public-contracts.md", public_contracts)
@@ -307,6 +313,17 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/adaptive-lifecycle-policy.md", adaptive_policy)
     _write_text(root / "docs/ru/reference/adaptive-lifecycle-policy.md", adaptive_policy)
+    small_model_packets = (
+        "`agent-small-model-task-packet.v1`.\n"
+        "`agent-small-model-output-contract.v1`.\n"
+        "`agent-small-model-task-result.v1`.\n"
+        "`agent-small-model-output-validation.v1`.\n"
+        "agent-lifecycle task compile-small.\n"
+        "quality floor.\n"
+        "write scope.\n"
+    )
+    _write_text(root / "docs/reference/small-model-packets.md", small_model_packets)
+    _write_text(root / "docs/ru/reference/small-model-packets.md", small_model_packets)
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
         root / "docs/adapters/support-matrix.md",
