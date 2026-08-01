@@ -28,6 +28,8 @@ JSON, чтобы результат можно было проверять ав�
   цепочки `workflow finalize` принимает
   `--proof-integrity <proof-integrity.json>`.
 - `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.
+- `agent-lifecycle task compile-small`: small-model packets с output contract и
+  compact context receipt.
 
 ## Проверка качества
 

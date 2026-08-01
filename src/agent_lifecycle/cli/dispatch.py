@@ -10,7 +10,7 @@ from agent_lifecycle import __version__
 from agent_lifecycle.audit import build_ownership_report, require_review_verdict_pass, validate_review_verdict
 from agent_lifecycle.audit.ownership import report_has_category
 from agent_lifecycle.changesets import changed_files
-from agent_lifecycle.compiler import compile_task_packets
+from agent_lifecycle.compiler import compile_small_model_packets, compile_task_packets
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.contracts.compatibility import (
     build_contract_policy,
@@ -784,4 +784,17 @@ def _dispatch_task(args: argparse.Namespace) -> dict[str, Any]:
             write=args.write,
         )
         return {"schemaVersion": "agent-task-packet-compile-result.v1", **result}
+    if args.task_command == "compile-small":
+        adaptive_decision = read_json_object(Path(args.adaptive_decision), label="adaptive lifecycle decision") if args.adaptive_decision else None
+        result = compile_small_model_packets(
+            Path(args.manifest),
+            context_profile_path=Path(args.context_profile),
+            out_dir=Path(args.out_dir) if args.out_dir else None,
+            target_window=args.target_window,
+            adaptive_decision=adaptive_decision,
+            write=args.write,
+        )
+        if result["status"] != "PASS":
+            raise LifecycleError("small-model-packet-compile-failed", "small-model packet compilation failed", {"result": result})
+        return result
     raise LifecycleError("command-not-implemented", "task command is not implemented")

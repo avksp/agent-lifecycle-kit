@@ -36,3 +36,10 @@ counters по фазам через envelope Release 1.8 usage export. Phase mea
 
 Receipt содержит вложенный `agent-usage-export.v1`, чтобы переиспользовать
 существующие totals и redaction checks.
+
+## Small-model packets
+
+`agent-small-model-task-packet.v1` — отдельный execution packet для маленьких
+implementation attempts. Он содержит точный write scope, output contract и
+compact context receipt. Такой packet не заменяет runner state, review, final
+audit или production promotion evidence.
