@@ -23,6 +23,7 @@ from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHE
 from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SCHEMAS
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
+from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
 
 SCHEMA_INDEX_VERSION = "agent-lifecycle-schema-index.v1"
@@ -34,6 +35,7 @@ _SCHEMA_GROUPS = (
     EVIDENCE_IMPORT_SCHEMAS,
     IMPORT_DIALECT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,
+    TASK_TEMPLATE_SCHEMAS,
     RUNNER_WORKTREE_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
     CROSS_CHECK_SCHEMAS,

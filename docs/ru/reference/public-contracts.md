@@ -21,6 +21,11 @@
 - `agent-review-routing-summary.v1`: routing summary для review.
 - `agent-optional-quality-pack.v1`: opt-in пакет качества.
 - `agent-behavior-check-run.v1`: результат behavior-check.
+- `agent-task-template-library.v1`: каталог draft-only task templates.
+- `agent-task-template-library-validation.v1`: проверка task templates.
+- `agent-task-template-render.v1`: render result одного task template.
+- `agent-bug-forensics-recipe-library.v1`: каталог Bug Forensics recipes.
+- `agent-bug-forensics-recipe-validation.v1`: проверка Bug Forensics recipes.
 - `agent-diagnostic-bundle.v1`: диагностический пакет.
 - `agent-readonly-status-view.v1`: read-only status view.
 - `agent-proof-finding.v1`: стабильная идентичность finding.
@@ -96,3 +101,7 @@ Bug Forensics включается только явным task/profile marker. 
 использует существующий `agent-fix-impact-receipt.v1`, а для high-risk
 cross-check — `agent-cross-check-receipt.v1` с token/resource caps и без
 обязательного USD-cost.
+
+Bug Forensics recipes являются metadata над существующей receipt chain. Они
+optional, выключены по умолчанию и не могут вводить competing defect-repair
+receipt schemas.

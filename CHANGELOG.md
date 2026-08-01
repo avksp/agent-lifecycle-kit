@@ -4,6 +4,14 @@
 
 - No changes yet.
 
+## 1.21.0 - 2026-08-01
+
+- Added draft-only task templates for bugfix, idea-to-PR, PR review,
+  merge-conflict repair and release-readiness workflows.
+- Added reusable Bug Forensics recipes that reference existing receipts instead
+  of defining a competing bug-fix evidence chain.
+- Added optional quality CLI commands for template and recipe listing/checking.
+
 ## 1.20.0 - 2026-08-01
 
 - Added a generic external dialect import framework with explicit

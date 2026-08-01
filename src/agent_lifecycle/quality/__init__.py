@@ -24,6 +24,11 @@ from agent_lifecycle.quality.bug_forensics import (
     validate_hypothesis_ledger,
     validate_regression_proof_receipt,
 )
+from agent_lifecycle.quality.bug_forensics_recipes import (
+    build_bug_forensics_recipe_library,
+    require_bug_forensics_recipe_pass,
+    validate_bug_forensics_recipe_library,
+)
 from agent_lifecycle.quality.packs import (
     build_default_quality_pack,
     require_behavior_checks_pass,
@@ -35,6 +40,7 @@ from agent_lifecycle.quality.packs import (
 __all__ = [
     "build_cross_check_profile",
     "build_bug_forensics_profile",
+    "build_bug_forensics_recipe_library",
     "build_bug_reproduction_receipt",
     "build_cross_check_receipt",
     "build_failure_fingerprint",
@@ -42,6 +48,7 @@ __all__ = [
     "build_regression_proof_receipt",
     "build_default_quality_pack",
     "require_bug_forensics_profile_pass",
+    "require_bug_forensics_recipe_pass",
     "require_bug_reproduction_pass",
     "require_cross_check_profile_pass",
     "require_cross_check_receipt_pass",
@@ -51,6 +58,7 @@ __all__ = [
     "require_quality_pack_pass",
     "run_behavior_checks",
     "validate_bug_forensics_profile",
+    "validate_bug_forensics_recipe_library",
     "validate_bug_reproduction_receipt",
     "validate_cross_check_profile",
     "validate_cross_check_receipt",

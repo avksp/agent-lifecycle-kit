@@ -19,6 +19,8 @@ read-only unless their own help says otherwise.
   reviewable plan state.
 - `agent-lifecycle import plan/check`: keep imported work draft-only until
   reviewed.
+- `agent-lifecycle quality template-list/template-check`: inspect and validate
+  draft-only task templates.
 
 ## Execution
 
@@ -37,6 +39,8 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle audit review-check`: validate review verdicts.
 - `agent-lifecycle quality pack-check`: validate optional quality packs.
 - `agent-lifecycle quality behavior-check`: run fixture-backed behavior checks.
+- `agent-lifecycle quality bug-recipe-list/bug-recipe-check`: inspect reusable
+  Bug Forensics recipes that reuse existing receipts.
 - `agent-lifecycle metrics cost-check`: validate lifecycle cost receipts.
 - `agent-lifecycle metrics cost-report`: generate and validate a lifecycle
   cost report from explicit JSON artifact paths.

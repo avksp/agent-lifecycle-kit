@@ -42,6 +42,23 @@ High-risk bug fixes can request a secondary review through the Release 1.12
 cross-check profile. It remains token/resource-capped, not USD-canonical, and
 advisory unless the frozen plan explicitly opts into blocking behavior.
 
+## Recipes
+
+Bug Forensics recipes are optional metadata for common defect-repair stages:
+
+- `issue-classification`: decide the defect class and whether the profile is
+  needed.
+- `reproduction`: prove the bug is red before code changes and bind artifacts
+  by digest.
+- `investigation`: maintain accepted and rejected hypotheses and minimal-patch
+  scope.
+- `validation`: prove same-fingerprint red-to-green behavior and fix impact.
+- `review`: validate the gate receipt and optional cross-check evidence.
+
+Recipes do not introduce new receipt schemas. They reference the existing
+Bug Forensics, proof-integrity and cross-check receipts, stay disabled by
+default and use tokens/resources rather than mandatory USD cost.
+
 ## Phase 2
 
 The v1 profile documents but does not require:

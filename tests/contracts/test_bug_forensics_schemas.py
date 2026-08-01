@@ -24,6 +24,8 @@ class BugForensicsSchemaTests(unittest.TestCase):
             "agent-bug-forensics-gate-validation.v1",
             "agent-bug-forensics-audit.v1",
             "agent-bug-forensics-audit-validation.v1",
+            "agent-bug-forensics-recipe-library.v1",
+            "agent-bug-forensics-recipe-validation.v1",
         }:
             with self.subTest(schema_id=schema_id):
                 self.assertIn(schema_id, ids)

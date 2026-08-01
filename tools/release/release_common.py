@@ -42,6 +42,7 @@ PAYLOAD_ROOTS = (
     "profiles",
     "skills",
     "src",
+    "templates",
     "tests",
     "tools/live_hosts",
     "tools/release",
