@@ -5,12 +5,27 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agent-lifecycle-kit"
 version = "1.29.0"
-description = "Provider-neutral lifecycle controller core for specification, planning, execution, validation, and audit workflows."
+description = "Provider-neutral lifecycle control layer that helps coding agents plan, execute, validate, and prove software tasks to completion."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Agent Lifecycle Kit contributors" }]
-keywords = ["agents", "planning", "sdd", "audit", "workflow", "lifecycle"]
+keywords = [
+  "adapter-conformance",
+  "agent-lifecycle",
+  "agent-workflows",
+  "agents",
+  "ai-agents",
+  "audit",
+  "coding-agents",
+  "lifecycle",
+  "model-routing",
+  "planning",
+  "sdd",
+  "software-delivery",
+  "task-orchestration",
+  "workflow",
+]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
