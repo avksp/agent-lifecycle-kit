@@ -77,6 +77,8 @@ def _summary_projection(summary: dict[str, Any]) -> dict[str, Any]:
 
 
 def _packet_projection(packet: dict[str, Any]) -> dict[str, Any]:
+    if packet.get("schemaVersion") == "agent-small-model-task-packet.v1":
+        return _small_model_packet_projection(packet)
     if packet.get("schemaVersion") != "agent-task-packet.v1":
         raise LifecycleError("invalid-task-packet", "task packet schema is unsupported")
     task = dict(packet.get("task", {}))
@@ -98,6 +100,27 @@ def _id_projection(items: Any) -> list[Any]:
     if not isinstance(items, list):
         return []
     return [item.get("id") if isinstance(item, dict) and isinstance(item.get("id"), str) else item for item in items]
+
+
+def _small_model_packet_projection(packet: dict[str, Any]) -> dict[str, Any]:
+    write_scope = packet.get("writeScope") if isinstance(packet.get("writeScope"), dict) else {}
+    output_contract = packet.get("requiredOutputContract") if isinstance(packet.get("requiredOutputContract"), dict) else {}
+    validation = packet.get("validation") if isinstance(packet.get("validation"), dict) else {}
+    task = dict(packet.get("task", {}))
+    return {
+        "plan": dict(packet.get("plan", {})),
+        "task": task,
+        "ownership": {
+            "writes": list(write_scope.get("writes", [])),
+            "readOnly": list(write_scope.get("readOnly", [])),
+            "forbiddenWrites": list(write_scope.get("forbiddenWrites", [])),
+        },
+        "specification": {"requirements": list(validation.get("acceptanceIds", []))},
+        "validation": validation,
+        "acceptance": [],
+        "contextRefs": [],
+        "requiredOutputContractDigest": output_contract.get("contractDigest"),
+    }
 
 
 def _acceptance_projection(items: Any) -> list[dict[str, Any]]:

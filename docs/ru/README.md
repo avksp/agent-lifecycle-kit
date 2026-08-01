@@ -28,8 +28,8 @@ flowchart LR
 - Выполнение, блокировки, повторные попытки и финальное подтверждение
   фиксируются в структурированных артефактах.
 - Контракты адаптеров не смешивают детали конкретного хоста с ядром.
-- Маленькие локальные модели получают компактный контекст и явный следующий
-  шаг вместо длинной истории.
+- Маленькие локальные модели получают small-model packets, компактный контекст
+  и явный следующий шаг вместо длинной истории.
 - Отчёты о расходе разделяют практическую работу, проверку продукта, контроль
   жизненного цикла и координацию.
 - Экспорт использования показывает сессии, токены, ресурсы, digest
@@ -171,7 +171,7 @@ contracts, Bug Forensics contracts и usage export details находятся в
 - [Источник правды](reference/source-of-truth.md)
 - [Публичные контракты](reference/public-contracts.md)
 - [Диагностика готовности](reference/readiness-diagnostics.md)
-- [Adaptive policy](reference/adaptive-lifecycle-policy.md) и [учёт расхода жизненного цикла](reference/lifecycle-cost.md)
+- [Small-model packets](reference/small-model-packets.md), [adaptive policy](reference/adaptive-lifecycle-policy.md) и [учёт расхода жизненного цикла](reference/lifecycle-cost.md)
 - [Экспорт использования](reference/usage-export.md)
 - [Целостность подтверждений](reference/evidence-integrity.md)
 - [Read-only status views](reference/read-only-status-view.md)

@@ -76,6 +76,23 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(active["specification"]["requirements"], ["REQ-CONTEXT"])
         self.assertEqual(active["acceptance"], [{"id": "AC-CONTEXT", "requirementIds": ["REQ-CONTEXT"], "evidenceIds": ["EV-CONTEXT"]}])
 
+    def test_render_accepts_small_model_packet_projection(self) -> None:
+        packet = {
+            "schemaVersion": "agent-small-model-task-packet.v1",
+            "plan": {"packageId": "package", "planDigest": "0" * 64},
+            "task": {"id": "WS-01", "title": "Small task", "dependsOn": []},
+            "writeScope": {"writes": ["src"], "readOnly": [], "forbiddenWrites": []},
+            "requiredOutputContract": {"contractDigest": "1" * 64},
+            "validation": {"acceptanceIds": ["AC-CONTEXT"], "evidenceIds": ["EV-CONTEXT"]},
+        }
+
+        result = render_context(_profile(), packet, _summary(), window="4k-strict")
+
+        self.assertEqual(result["status"], "PASS")
+        active = result["envelope"]["activeTaskPacket"]
+        self.assertEqual(active["requiredOutputContractDigest"], "1" * 64)
+        self.assertEqual(active["ownership"]["writes"], ["src"])
+
     def test_oversized_packet_fails_closed_without_truncation(self) -> None:
         packet = _packet()
         packet["task"]["plannedItems"] = ["REQ-" + ("x" * 200)] * 300
