@@ -46,16 +46,16 @@ flowchart LR
   provenance and explicit `chainVerified` or `chainUnchecked` state.
 - Runner recovery receipts for attempt snapshot, restore, abandon, selected
   attempt, worker lease and heartbeat state.
-- Optional cross-check profile for high-risk work; it is disabled by default,
-  budget-capped in tokens/resources and advisory unless a plan opts into
-  blocking use.
+- Optional cross-check, runtime policy and write-back receipts for high-risk
+  work; they are off by default and require opt-in/enforcement evidence before
+  they become blocking claims.
 - Optional Bug Forensics profile for explicit bug/regression repair:
   reproduction, fingerprint, hypothesis ledger, minimal patch, proof and
   reusable recipes.
 - Phase resource measurements reuse the usage export envelope for tokens,
   duration and resource counters without mandatory USD-cost accounting.
 - Advisory lifecycle mode recommendations from accumulated cost reports.
-- Explicit lifecycle policy proposals with reversible apply artifacts.
+- Explicit lifecycle policy proposals with reversible apply and runtime receipts.
 - Read-only diagnostics for the current checkout and adapter readiness.
 
 ## Quick start

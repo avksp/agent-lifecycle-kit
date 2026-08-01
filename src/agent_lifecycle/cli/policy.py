@@ -10,8 +10,10 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_jso
 from agent_lifecycle.policy import (
     apply_policy_proposal,
     build_policy_proposal,
+    build_runtime_policy_receipt,
     build_policy_summary,
     require_policy_proposal_pass,
+    validate_runtime_policy_receipt,
 )
 
 TUNE_RESULT_SCHEMA = "agent-lifecycle-policy-tune-result.v1"
@@ -27,9 +29,32 @@ def add_policy_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     tune.add_argument("--apply", action="store_true")
     tune.add_argument("--output")
     tune.add_argument("--summary-output")
+    runtime_receipt = policy_sub.add_parser("runtime-receipt")
+    runtime_receipt.add_argument("--policy-id", required=True)
+    runtime_receipt.add_argument("--action", choices=["ALLOW", "DENY", "ASK"], required=True)
+    runtime_receipt.add_argument("--subject", required=True)
+    runtime_receipt.add_argument("--adapter-evidence", required=True)
+    runtime_receipt.add_argument("--enforcement-mode", choices=["enforced", "advisory"], default="advisory")
+    runtime_receipt.add_argument("--evidence-id", action="append", default=[])
+    runtime_receipt.add_argument("--out", required=True)
+    runtime_check = policy_sub.add_parser("runtime-check")
+    runtime_check.add_argument("--receipt", required=True)
 
 
 def dispatch_policy(args: argparse.Namespace) -> dict[str, Any]:
+    if args.policy_command == "runtime-receipt":
+        receipt = build_runtime_policy_receipt(
+            policy_id=args.policy_id,
+            action=args.action,
+            subject=read_json_object(Path(args.subject), label="runtime policy subject"),
+            adapter_evidence=read_json_object(Path(args.adapter_evidence), label="runtime policy adapter evidence"),
+            enforcement_mode=args.enforcement_mode,
+            evidence_ids=args.evidence_id,
+        )
+        write_json_create(Path(args.out), receipt)
+        return receipt
+    if args.policy_command == "runtime-check":
+        return validate_runtime_policy_receipt(read_json_object(Path(args.receipt), label="runtime policy receipt"))
     if args.policy_command != "tune":
         raise LifecycleError("command-not-implemented", "policy command is not implemented")
     if args.output and not args.apply:

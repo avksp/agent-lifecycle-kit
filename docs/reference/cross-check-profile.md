@@ -16,14 +16,19 @@ high-risk work without making multi-model review part of the default lifecycle.
 ## Receipts
 
 `agent-cross-check-receipt.v1` records the subject, reviewer, findings,
-budget cap and budget usage. Validation recomputes the receipt digest and fails
-when:
+independence evidence, budget cap and budget usage. Validation recomputes the
+receipt digest and fails when:
 
 - the profile digest does not match;
 - usage exceeds the configured cap;
 - a blocking cross-check is claimed without plan opt-in;
+- independence is required but cannot be proven from neutral identity hashes;
 - live calls are claimed when the profile does not allow them;
 - monetary budget fields are used.
+
+Independence is provider-neutral. The receipt compares only neutral identity
+hash fields such as `hostIdentityHash` and `modelIdentityHash`; provider names,
+model names and account names are not canonical contract fields.
 
 This makes cross-check useful for S2, security, release and bug-fix tasks while
 keeping ordinary work on the normal lifecycle path.
