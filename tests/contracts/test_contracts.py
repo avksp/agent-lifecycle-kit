@@ -235,6 +235,11 @@ class ContractTests(unittest.TestCase):
             "agent-episode-retrieval.v1",
             "agent-phase-resource-measurement.v1",
             "agent-phase-resource-measurement-validation.v1",
+            "agent-task-template-library.v1",
+            "agent-task-template-library-validation.v1",
+            "agent-task-template-render.v1",
+            "agent-bug-forensics-recipe-library.v1",
+            "agent-bug-forensics-recipe-validation.v1",
         ]:
             self.assertIn(schema_id, ids)
         self.assertEqual(get_schema("agent-lifecycle-error.v1")["additionalProperties"], False)
@@ -289,6 +294,10 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-phase-resource-measurement.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-import-dialect-profile.v1")["properties"]["sourceTrusted"], {"const": False})
         self.assertEqual(get_schema("agent-episode-index.v1")["properties"]["sourceOfTruth"], {"const": False})
+        self.assertEqual(get_schema("agent-task-template-library.v1")["properties"]["draftOnly"], {"const": True})
+        self.assertEqual(get_schema("agent-task-template-library.v1")["properties"]["freezeBlocked"], {"const": True})
+        self.assertEqual(get_schema("agent-bug-forensics-recipe-library.v1")["properties"]["enabledByDefault"], {"const": False})
+        self.assertEqual(get_schema("agent-bug-forensics-recipe-library.v1")["properties"]["budgetUnits"], {"const": "tokens-and-resources"})
         with self.assertRaises(LifecycleError):
             get_schema("missing.v1")
 

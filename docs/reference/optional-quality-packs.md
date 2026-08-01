@@ -18,8 +18,22 @@ over-budget retry, missing event capture and blocked external action.
 ```bash
 agent-lifecycle quality pack-check --manifest <quality-pack.json>
 agent-lifecycle quality behavior-check --manifest <quality-pack.json> --fixture <behavior-fixture.json>
+agent-lifecycle quality template-list
+agent-lifecycle quality template-check --template-id bugfix
+agent-lifecycle quality bug-recipe-list
+agent-lifecycle quality bug-recipe-check --recipe-id reproduction
 ```
 
 When no manifest is provided, the CLI validates the built-in optional pack.
 Negative fixtures pass the behavior check only when the expected failure or
 block is detected.
+
+Task templates are draft-only planning aids. They are disabled by default,
+require explicit selection and keep review/freeze gates intact. Template checks
+validate the markdown files under `templates/tasks/` for draft-only markers,
+absence of runtime defaults and bounded size.
+
+Bug Forensics recipes are optional recipe metadata for common defect-repair
+stages. They reuse the existing reproduction, fingerprint, hypothesis,
+regression-proof, fix-impact, cross-check and gate receipts; they do not create
+a competing bug-fix schema chain.

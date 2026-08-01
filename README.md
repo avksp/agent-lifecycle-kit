@@ -39,6 +39,8 @@ flowchart LR
 - Import mapper profiles for generic workflow/agent dialects,
   Constitution/ADR and AGENTS/agentskills inputs; imported artifacts remain
   untrusted drafts with dialect profile digests.
+- Draft-only task templates for bugfix, idea-to-PR, PR review, merge-conflict
+  repair and release-readiness work.
 - Lightweight episode retrieval over receipt/session summaries with digest
   provenance and explicit `chainVerified` or `chainUnchecked` state.
 - Runner recovery receipts for attempt snapshot, restore, abandon, selected
@@ -47,7 +49,8 @@ flowchart LR
   budget-capped in tokens/resources and advisory unless a plan opts into
   blocking use.
 - Optional Bug Forensics profile for explicit bug/regression repair:
-  reproduction, fingerprint, hypothesis ledger, minimal patch and proof.
+  reproduction, fingerprint, hypothesis ledger, minimal patch, proof and
+  reusable recipes.
 - Phase resource measurements reuse the usage export envelope for tokens,
   duration and resource counters without mandatory USD-cost accounting.
 - Advisory lifecycle mode recommendations from accumulated cost reports.
@@ -168,6 +171,7 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
 - [Cross-check profile](docs/reference/cross-check-profile.md)
 - [Bug Forensics profile](docs/reference/bug-forensics.md)
 - [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md)
+- [Task templates](templates/tasks/README.md)
 - [Release security](docs/security/release-security.md)
 
 ## License

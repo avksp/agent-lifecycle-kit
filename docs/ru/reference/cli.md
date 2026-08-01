@@ -16,6 +16,8 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle plan check`: проверка плана и файла блокировки.
 - `agent-lifecycle plan acceptance-check`: проверка трассируемости критериев
   приёмки.
+- `agent-lifecycle quality template-list/template-check`: просмотр и проверка
+  draft-only task templates.
 
 ## Выполнение
 
@@ -29,6 +31,8 @@ JSON, чтобы результат можно было проверять ав�
 
 - `agent-lifecycle audit`: проверка плана, реализации и вердиктов.
 - `agent-lifecycle quality`: дополнительные проверочные наборы.
+- `agent-lifecycle quality bug-recipe-list/bug-recipe-check`: просмотр
+  reusable Bug Forensics recipes, которые используют существующие receipts.
 
 ## Расход и настройки
 
