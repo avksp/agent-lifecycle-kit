@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/agent-lifecycle-kit-banner.svg" alt="Agent Lifecycle Kit - SDD, SDLC и проверяемое завершение работы агента" width="100%">
+</p>
+
 # Agent Lifecycle Kit
 
 Agent Lifecycle Kit (ALK) - provider-neutral контрольный слой для coding agents.
