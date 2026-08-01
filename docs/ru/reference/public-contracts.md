@@ -15,6 +15,7 @@
 - `agent-follow-up-summary.v1`: краткое состояние продолжений.
 - `agent-worktree-isolation-policy.v1`: политика изоляции рабочего дерева.
 - `agent-worktree-attempt-receipt.v1`: подтверждение изоляции рабочего дерева.
+- `agent-worktree-writeback-receipt.v1`: решение apply/discard для overlay.
 - `agent-adapter-event-stream-receipt.v1`: поток событий адаптера.
 - `agent-adapter-event-capture-validation.v1`: проверка capture evidence.
 - `agent-review-verdict.v1`: проверочный вердикт.
@@ -53,6 +54,7 @@
 - `agent-cross-check-profile.v1`: optional cross-check profile, выключенный по
   умолчанию и capped в tokens/resources.
 - `agent-cross-check-receipt.v1`: receipt дополнительной проверки.
+- `agent-runtime-policy-receipt.v1`: receipt runtime policy decision.
 - `agent-bug-forensics-profile.v1`: optional профиль для bug/regression repair.
 - `agent-bug-reproduction-receipt.v1`: reproduction-before-modification
   evidence.
@@ -105,7 +107,13 @@ tool hints как redacted host-local metadata; это не portable defaults.
 
 Runner recovery receipts добавляют evidence для нескольких попыток, но не
 заменяют workflow state. Cross-check profile остаётся advisory и opt-in, пока
-план явно не требует blocking cross-check.
+план явно не требует blocking cross-check. Independence проверяется по
+нейтральным `hostIdentityHash` и `modelIdentityHash`, а не по именам
+провайдеров.
+
+`agent-runtime-policy-receipt.v1` отделяет доказанное pre-execution enforcement
+от advisory-only logging. `agent-worktree-writeback-receipt.v1` фиксирует
+apply/discard overlay и не заменяет `agent-sandbox-receipt.v1`.
 
 Bug Forensics включается только явным task/profile marker. Для impact он
 использует существующий `agent-fix-impact-receipt.v1`, а для high-risk

@@ -60,6 +60,11 @@ The compact summary uses `agent-lifecycle-cost-summary.v1` and also carries the
 standard compact-context fields, so it can be passed directly to
 `agent-lifecycle context check`.
 
+Currency fields are never required for local or subscription models. When a
+metered host wants an early operator prompt, `meteredAskThreshold` belongs in
+the metered budget policy only and remains advisory; hard caps still decide
+whether execution must pause.
+
 Build an advisory mode recommendation from accumulated reports with:
 
 ```bash

@@ -145,6 +145,8 @@ class ContractTests(unittest.TestCase):
         self.assertIn("agent-worktree-isolation-policy-validation.v1", ids)
         self.assertIn("agent-worktree-attempt-receipt.v1", ids)
         self.assertIn("agent-worktree-attempt-receipt-validation.v1", ids)
+        self.assertIn("agent-worktree-writeback-receipt.v1", ids)
+        self.assertIn("agent-worktree-writeback-receipt-validation.v1", ids)
         self.assertIn("agent-runner-policy.v1", ids)
         self.assertIn("agent-runner-state.v1", ids)
         self.assertIn("agent-runner-state-validation.v1", ids)
@@ -206,6 +208,8 @@ class ContractTests(unittest.TestCase):
             "agent-lifecycle-tuned-policy.v1",
             "agent-lifecycle-policy-apply-result.v1",
             "agent-lifecycle-policy-tune-result.v1",
+            "agent-runtime-policy-receipt.v1",
+            "agent-runtime-policy-receipt-validation.v1",
             "agent-plan-reference-validation.v1",
             "agent-plan-snapshot.v1",
             "agent-plan-reconciliation.v1",
@@ -270,6 +274,7 @@ class ContractTests(unittest.TestCase):
         self.assertIn("finalizationBlockers", get_schema("agent-follow-up-register-validation.v1")["required"])
         self.assertIn("worktreeRoot", get_schema("agent-worktree-isolation-policy.v1")["required"])
         self.assertIn("cleanupDecision", get_schema("agent-worktree-attempt-receipt-validation.v1")["required"])
+        self.assertIn("decision", get_schema("agent-worktree-writeback-receipt-validation.v1")["required"])
         self.assertIn("attempt", get_schema("agent-runner-transition-request.v1")["properties"]["action"]["enum"])
         self.assertEqual(get_schema("agent-runner-policy.v1")["properties"]["maxAttemptsPerTask"]["minimum"], 0)
         self.assertEqual(get_schema("agent-plan-snapshot.v1")["properties"]["immutable"], {"const": True})

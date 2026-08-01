@@ -42,6 +42,8 @@ class ReleaseInventoryTests(unittest.TestCase):
             self.assertIn("templates/tasks/bugfix.md", {item["path"] for item in inventory_payload["files"]})
             self.assertIn("conformance/core/adapter-probe-profile.v1.json", {item["path"] for item in inventory_payload["files"]})
             self.assertIn("tools/release/generate_adapter_probe_plan.py", {item["path"] for item in inventory_payload["files"]})
+            self.assertIn("src/agent_lifecycle/policy/runtime_receipts.py", {item["path"] for item in inventory_payload["files"]})
+            self.assertIn("tests/policy/test_runtime_policy_receipts.py", {item["path"] for item in inventory_payload["files"]})
             self.assertEqual(payload["status"], "PASS")
             self.assertFalse(payload["productionPromotionClaimed"])
 
