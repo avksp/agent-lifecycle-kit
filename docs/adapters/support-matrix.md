@@ -30,7 +30,7 @@ adapter by itself.
 | Kimi Code | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Kimi Code 0.30.0 safe inspection and bounded harness shape passed; local live canary is blocked until a provider/model alias is configured; live receipts, usage calibration, lifecycle proof, and publication not claimed |
 | OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | OpenCode CLI 1.18.9 live host conformance, live calibration, and ALK lifecycle proof passed locally; npm publication not claimed |
 | OpenInterpreter | Host-local compatible CLI projection, bounded JSONL live harness and capability manifest | VERIFIED | `interpreter` 0.0.34 live host conformance, live calibration, containment and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
-| Pi | RPC/JSON plus AGENTS/agentskills projection and capability manifest | EXPERIMENTAL | Offline conformance fixtures only; live receipts, usage calibration, lifecycle proof, and publication not claimed |
+| Pi | RPC/JSON plus AGENTS/agentskills projection, bounded JSONL live harness and capability manifest | VERIFIED | Pi 0.83.0 live host conformance, live calibration, containment, host-env hygiene and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
 | Qwen Code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | Qwen Code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on a host-local provider/model binding; public package approval not claimed |
 
 ## Event capture support
@@ -89,17 +89,16 @@ Hermes is `VERIFIED` for host-local model routing on Hermes Agent v0.19.0.
 Qwen Code is `VERIFIED` for host-local model routing on Qwen Code 0.21.0.
 Goose is `VERIFIED` for host-local model routing on Goose 1.45.0. Grok Build is
 `VERIFIED` for host-local model routing on Grok Build 0.2.117. OpenInterpreter
-is `VERIFIED` for host-local model routing on `interpreter` 0.0.34. The verified
-adapters' live receipts include host usage attestation, quality pass status,
-and bounded budget evidence. Cursor, Gemini CLI, Kimi Code and Pi remain
-`EXPERIMENTAL`: Cursor declares fail-closed support for host-local model
-profiles and model-route execution, Gemini CLI and Kimi Code have bounded
-runners/harnesses, and Pi has offline adapter descriptors and conformance
-fixtures. These adapters still need accepted live usage receipts,
-quality/resource evidence and a concrete live host range before a host-specific
-`VERIFIED` claim. On the current local host, Gemini CLI is blocked by an
-unsupported Gemini Code Assist client tier, and Kimi Code is blocked by missing
-provider/model configuration.
+is `VERIFIED` for host-local model routing on `interpreter` 0.0.34. Pi is
+`VERIFIED` for host-local model routing on Pi 0.83.0. The verified adapters'
+live receipts include host usage attestation, quality pass status, and bounded
+budget evidence. Cursor, Gemini CLI and Kimi Code remain `EXPERIMENTAL`: Cursor
+declares fail-closed support for host-local model profiles and model-route
+execution, while Gemini CLI and Kimi Code have bounded runners/harnesses. These
+adapters still need accepted live usage receipts, quality/resource evidence and
+a concrete live host range before a host-specific `VERIFIED` claim. On the
+current local host, Gemini CLI is blocked by an unsupported Gemini Code Assist
+client tier, and Kimi Code is blocked by missing provider/model configuration.
 Provider-flexible adapters must use the selected host/provider's configured or
 documented env-key name rather than an ALK hardcoded secret name.
 
@@ -353,6 +352,42 @@ This evidence does not claim universal adapter support, public directory
 approval, verified OS sandbox containment, or a broader production-promotion
 platform matrix pass. The containment evidence is limited to the bounded
 ephemeral read-only harness invocation policy.
+
+## Pi Live Evidence
+
+Pi is verified only for the tested local host range:
+
+- Host: Pi 0.83.0.
+- Source revision:
+  `75317878358a3dffa4b503cdb8bd8fff40de770b`.
+- Committed redacted evidence summary:
+  `docs/adapters/evidence/pi-live-verified.md`.
+- Install/source probe:
+  `work/release-1-19/evidence/pi-install-probe.json`.
+- Live preflight:
+  `work/release-1-19/evidence/preflight/pi-preflight-report-live-ready.json`.
+- Bounded containment receipt:
+  `work/release-1-19/evidence/pi-containment-receipt-live-ready.json`.
+- Live host conformance receipt:
+  `work/release-1-19/evidence/live-host-receipts/pi.json`.
+- Live host conformance validation:
+  `work/release-1-19/evidence/live-host-conformance-pi.json`.
+- Live calibration receipt:
+  `work/release-1-19/evidence/live-calibration-receipts/pi.json`.
+- Live calibration validation:
+  `work/release-1-19/evidence/live-calibration-verification-pi.json`.
+- Host env hygiene:
+  `work/release-1-19/evidence/host-env-hygiene-pi-harness-reports.json`.
+- Host env hygiene scanned evidence:
+  `work/release-1-19/evidence/host-env-hygiene-pi-all-scanned.json`.
+- ALK lifecycle final proof:
+  `work/release-1-19/evidence/pi/full-lifecycle/final/final-proof.json`.
+
+This evidence does not claim universal adapter support, public directory
+approval, ACP support, verified OS sandbox containment, or a broader
+production-promotion platform matrix pass. The containment evidence is limited
+to the bounded no-tools/no-session/no project-context harness invocation
+policy.
 
 ## Neutrality error contract
 

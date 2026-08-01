@@ -158,11 +158,34 @@ python tools/live_hosts/openinterpreter_harness.py \
 ## Pi
 
 ```bash
+pi --version
 agent-lifecycle adapter install-plan --descriptor adapters/pi/adapter.descriptor.json
 ```
 
-Pi описан как RPC/JSON и AGENTS/agentskills projection. Offline fixtures не
-повышают зрелость адаптера.
+Pi имеет host-specific `VERIFIED` для Pi `0.83.0` на проверенной host-local
+provider/model связке. Учётные данные выбранного provider должны быть видны
+процессу `pi` перед локальным live rerun. Имя env-key берётся из документации
+или конфигурации выбранного Pi provider; ALK не хардкодит provider secret names.
+
+Чтобы дать ключ только ALK harness-процессу, используй приватный operator
+env-file и явно разреши переменную выбранного provider:
+
+```bash
+python tools/live_hosts/pi_harness.py \
+  --mode preflight \
+  --pi-provider <provider> \
+  --pi-model <model-id> \
+  --host-env-file ~/.config/alk/hosts/pi.env \
+  --host-env-allow <PROVIDER_API_KEY_NAME> \
+  --budget-mode subscription \
+  --max-invocations 14 \
+  --max-billable-tokens <token-cap> \
+  --allow-live \
+  --report work/<release>/evidence/preflight/pi-preflight-report.json
+```
+
+Проверенный Pi claim не заявляет ACP support, public directory approval или
+production promotion.
 
 ## Граница продвижения
 

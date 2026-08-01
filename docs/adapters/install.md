@@ -271,11 +271,35 @@ documented env-key name.
 ## Pi
 
 ```bash
+pi --version
 agent-lifecycle adapter install-plan --descriptor adapters/pi/adapter.descriptor.json
 ```
 
-Pi is represented as RPC/JSON plus AGENTS/agentskills projection. Offline
-fixtures do not promote adapter maturity.
+Pi has host-specific `VERIFIED` support for Pi `0.83.0` on the tested
+host-local provider/model binding. The selected provider's credential must be
+visible to the `pi` process before a local live rerun can start. Use Pi's own
+provider documentation or config to choose the env-key name; ALK does not
+hardcode provider secret names.
+
+To scope that key to the ALK harness process, use a private operator env file
+and explicitly allow the selected provider variable:
+
+```bash
+python tools/live_hosts/pi_harness.py \
+  --mode preflight \
+  --pi-provider <provider> \
+  --pi-model <model-id> \
+  --host-env-file ~/.config/alk/hosts/pi.env \
+  --host-env-allow <PROVIDER_API_KEY_NAME> \
+  --budget-mode subscription \
+  --max-invocations 14 \
+  --max-billable-tokens <token-cap> \
+  --allow-live \
+  --report work/<release>/evidence/preflight/pi-preflight-report.json
+```
+
+The verified Pi claim does not claim ACP support, public directory approval or
+production promotion.
 
 ## Promotion boundary
 
