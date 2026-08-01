@@ -56,6 +56,10 @@ By default decisions are advisory. Automatic application is allowed only when
 the request explicitly sets `automaticSelectionEnabled: true`, the decision has
 no blockers, and the selected mode is at or above the quality floor.
 
+Local quality-cost learning can recommend future modes from historical
+receipts, but it remains advisory and cannot lower the floor. Low-confidence
+signals keep the current or minimum safe mode.
+
 ## Resource policy
 
 Optimization is based on tokens and resources, not live currency lookup:

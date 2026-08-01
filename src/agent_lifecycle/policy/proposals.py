@@ -148,6 +148,7 @@ def _candidate_change(recommendation: dict[str, Any], *, before: str, after: str
 
 def _expected_benefit(recommendation: dict[str, Any], *, before: str, after: str) -> dict[str, Any]:
     stats = recommendation.get("statistics") if isinstance(recommendation.get("statistics"), dict) else {}
+    selected_signal = stats.get("selectedSignal") if isinstance(stats.get("selectedSignal"), dict) else {}
     totals = stats.get("totals") if isinstance(stats.get("totals"), dict) else {}
     pipeline = totals.get("pipelineCompliance", {}) if isinstance(totals.get("pipelineCompliance"), dict) else {}
     coordination = totals.get("coordination", {}) if isinstance(totals.get("coordination"), dict) else {}
@@ -155,6 +156,8 @@ def _expected_benefit(recommendation: dict[str, Any], *, before: str, after: str
         "kind": "reduce-process-overhead" if is_downgrade(before, after) else "preserve-or-increase-quality",
         "processOverheadTokens": int(pipeline.get("tokens", 0)) + int(coordination.get("tokens", 0)),
         "pipelineTokenShare": (stats.get("ratios") or {}).get("pipelineTokenShare", 0.0),
+        "localAverageTokens": selected_signal.get("averageTokens"),
+        "localSuccessRate": selected_signal.get("successRate"),
     }
 
 

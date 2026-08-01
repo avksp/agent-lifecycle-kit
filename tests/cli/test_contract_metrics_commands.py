@@ -169,6 +169,56 @@ class CliContractMetricsCommandTests(unittest.TestCase):
         self.assertEqual(context_code, 0)
         self.assertEqual(context_payload["status"], "PASS")
 
+    def test_metrics_learning_cli_writes_index_signals_and_recommendation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact_a = root / "outcome-a.json"
+            artifact_b = root / "outcome-b.json"
+            index_path = root / "outcome-index.json"
+            signals_path = root / "quality-signals.json"
+            recommendation_path = root / "learning-recommendation.json"
+            summary_path = root / "learning-summary.json"
+            artifact_a.write_text(json.dumps(_outcome("WS-01", mode="light", tokens=800)), encoding="utf-8")
+            artifact_b.write_text(json.dumps(_outcome("WS-02", mode="light", tokens=900)), encoding="utf-8")
+
+            code, index = _run_cli([
+                "metrics",
+                "outcome-index",
+                "--artifact",
+                str(artifact_a),
+                "--artifact",
+                str(artifact_b),
+                "--out",
+                str(index_path),
+            ])
+            signal_code, signals = _run_cli(["metrics", "quality-signals", "--index", str(index_path), "--out", str(signals_path)])
+            recommendation_code, recommendation = _run_cli(
+                [
+                    "metrics",
+                    "learn-recommend",
+                    "--signals",
+                    str(signals_path),
+                    "--task-shape",
+                    "small-fix",
+                    "--current-mode",
+                    "strict",
+                    "--out",
+                    str(recommendation_path),
+                    "--summary-out",
+                    str(summary_path),
+                ]
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(index["schemaVersion"], "agent-task-outcome-index.v1")
+        self.assertEqual(signal_code, 0)
+        self.assertEqual(signals["schemaVersion"], "agent-quality-cost-signals.v1")
+        self.assertEqual(recommendation_code, 0)
+        self.assertEqual(recommendation["schemaVersion"], "agent-lifecycle-recommendation.v1")
+        self.assertEqual(recommendation["recommendedMode"], "light")
+        self.assertTrue(recommendation["advisoryOnly"])
+        self.assertFalse(recommendation["autoApply"])
+
 
 def _cost_report() -> dict[str, object]:
     return {
@@ -205,6 +255,27 @@ def _usage_receipt() -> dict[str, object]:
             "wallSeconds": 2,
         },
         "attestation": {"source": "host", "status": "ATTESTED"},
+    }
+
+
+def _outcome(task_id: str, *, mode: str, tokens: int) -> dict[str, object]:
+    return {
+        "schemaVersion": "agent-task-result.v2",
+        "runId": "run",
+        "packageId": "package",
+        "taskId": task_id,
+        "taskShape": "small-fix",
+        "lifecycleMode": mode,
+        "routeClass": "local-code",
+        "status": "PASS",
+        "commands": [{"id": "VAL", "exitCode": 0}],
+        "usage": {
+            "inputTokens": tokens,
+            "outputTokens": 50,
+            "billableTokens": tokens + 50,
+            "wallSeconds": 5,
+            "toolCalls": 1,
+        },
     }
 
 
