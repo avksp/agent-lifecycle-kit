@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 1200 630">
   <title id="title">Agent Lifecycle Kit social card</title>
-  <desc id="desc">Agent Lifecycle Kit turns coding-agent work into a reviewed, bounded, and proven lifecycle.</desc>
+  <desc id="desc">Agent Lifecycle Kit доводит работу кодового агента до проверяемого результата.</desc>
   <defs>
     <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
       <path d="M80 0H0V80" fill="none" stroke="#263141" stroke-width="1"/>
@@ -14,18 +14,18 @@
   <path d="M120 490c220 86 728 86 960-28" fill="none" stroke="#1b6f6c" stroke-width="2" opacity=".45"/>
 
   <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
-    <g transform="translate(460 26)">
-      <rect width="280" height="34" rx="17" fill="#121b26" stroke="#2c3c50"/>
+    <g transform="translate(445 26)">
+      <rect width="310" height="34" rx="17" fill="#121b26" stroke="#2c3c50"/>
       <circle cx="22" cy="17" r="5" fill="#35d4c9"/>
-      <text x="150" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#c5d2e2">OPEN SOURCE · Apache-2.0</text>
+      <text x="165" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#c5d2e2">ОТКРЫТЫЙ КОД · Apache-2.0</text>
     </g>
 
     <text x="600" y="130" text-anchor="middle" font-size="58" font-weight="800" fill="#ffffff">Agent Lifecycle Kit</text>
     <path d="M432 156h336" stroke="#5eb4ff" stroke-width="6" stroke-linecap="round"/>
     <path d="M432 168h186" stroke="#a468ff" stroke-width="5" stroke-linecap="round"/>
     <path d="M98 182h1004" stroke="#202a37" stroke-width="2"/>
-    <text x="600" y="214" text-anchor="middle" font-size="25" font-weight="600" fill="#d7e2ee">Provider-neutral control layer for coding agents</text>
-    <text x="600" y="248" text-anchor="middle" font-size="19" fill="#95a8bb">From a task request to a reviewed spec, frozen plan, bounded work, audit, and final proof.</text>
+    <text x="600" y="214" text-anchor="middle" font-size="25" font-weight="600" fill="#d7e2ee">Нейтральный слой управления для кодовых агентов</text>
+    <text x="600" y="248" text-anchor="middle" font-size="19" fill="#95a8bb">От задачи к спецификации, плану, работе, проверке и подтверждению результата.</text>
 
     <g fill="none" stroke="#5eb4ff" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)">
       <path d="M172 330h116"/>
@@ -39,38 +39,38 @@
       <g>
         <circle cx="134" cy="330" r="42" fill="#141c27" stroke="#5d78ff" stroke-width="2"/>
         <text x="134" y="336" font-size="18" fill="#ffffff">01</text>
-        <text x="134" y="396" font-size="18" fill="#dbe6f2">Request</text>
+        <text x="134" y="396" font-size="18" fill="#dbe6f2">Запрос</text>
       </g>
       <g>
         <circle cx="304" cy="330" r="42" fill="#141c27" stroke="#35d4c9" stroke-width="2"/>
         <path d="M286 322h36M286 334h24" stroke="#35d4c9" stroke-width="5" stroke-linecap="round"/>
-        <text x="304" y="396" font-size="18" fill="#dbe6f2">Spec</text>
+        <text x="304" y="396" font-size="18" fill="#dbe6f2">Спец.</text>
       </g>
       <g>
         <circle cx="474" cy="330" r="42" fill="#141c27" stroke="#a468ff" stroke-width="2"/>
         <path d="M454 308h40v44h-40zM463 320h22M463 332h26M463 344h16" fill="none" stroke="#a468ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-        <text x="474" y="396" font-size="18" fill="#dbe6f2">Plan</text>
+        <text x="474" y="396" font-size="18" fill="#dbe6f2">План</text>
       </g>
       <g>
         <circle cx="644" cy="330" r="42" fill="#141c27" stroke="#f0a243" stroke-width="2"/>
         <path d="M622 328l22-24 22 24-22 28zM622 328h44" fill="none" stroke="#f0a243" stroke-width="5" stroke-linejoin="round"/>
-        <text x="644" y="396" font-size="18" fill="#dbe6f2">Work</text>
+        <text x="644" y="396" font-size="18" fill="#dbe6f2">Работа</text>
       </g>
       <g>
         <circle cx="814" cy="330" r="42" fill="#141c27" stroke="#ff6f91" stroke-width="2"/>
         <path d="M794 333l13 13 29-38" fill="none" stroke="#ff6f91" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-        <text x="814" y="396" font-size="18" fill="#dbe6f2">Audit</text>
+        <text x="814" y="396" font-size="18" fill="#dbe6f2">Аудит</text>
       </g>
       <g>
         <circle cx="984" cy="330" r="42" fill="#141c27" stroke="#35d4c9" stroke-width="2"/>
         <path d="M964 331l14 14 31-40" fill="none" stroke="#35d4c9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M958 357h52" stroke="#35d4c9" stroke-width="5" stroke-linecap="round"/>
-        <text x="984" y="396" font-size="18" fill="#dbe6f2">Proof</text>
+        <text x="984" y="396" font-size="18" fill="#dbe6f2">Итог</text>
       </g>
     </g>
 
     <g transform="translate(78 436)">
-      <text x="0" y="0" font-size="15" font-weight="800" fill="#8fa5bb">HOST-NEUTRAL ADAPTERS</text>
+      <text x="0" y="0" font-size="15" font-weight="800" fill="#8fa5bb">АДАПТЕРЫ К РАЗНЫМ CLI</text>
       <g font-size="14" font-weight="700" fill="#eaf2fb">
         <rect x="0" y="22" width="122" height="32" rx="8" fill="#172231" stroke="#2d3d52"/>
         <text x="61" y="43" text-anchor="middle">Codex</text>
@@ -101,14 +101,14 @@
 
     <g transform="translate(724 458)">
       <rect width="398" height="136" rx="16" fill="#111923" stroke="#2d3d52"/>
-      <text x="28" y="32" font-size="18" font-weight="800" fill="#ffffff">Built to finish</text>
+      <text x="28" y="32" font-size="18" font-weight="800" fill="#ffffff">Доводит до результата</text>
       <g font-size="16" fill="#d7e2ee">
         <circle cx="34" cy="58" r="4" fill="#35d4c9"/>
-        <text x="50" y="64">SDD plan before code</text>
+        <text x="50" y="64">SDD-план до кода</text>
         <circle cx="34" cy="86" r="4" fill="#5eb4ff"/>
-        <text x="50" y="92">SDLC gates for agent work</text>
+        <text x="50" y="92">Контрольные точки SDLC</text>
         <circle cx="34" cy="114" r="4" fill="#f0a243"/>
-        <text x="50" y="120">Deterministic packets and receipts</text>
+        <text x="50" y="120">Детерминированные задачи и отчёты</text>
       </g>
     </g>
   </g>
