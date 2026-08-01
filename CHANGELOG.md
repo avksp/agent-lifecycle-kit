@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.28.0 - 2026-08-01
+
+- Added local outcome indexes and quality-cost signals from explicit lifecycle
+  receipts without telemetry, provider/model leaderboards or required USD
+  fields.
+- Added advisory learning recommendations that preserve quality floors, stay
+  `autoApply: false` and can feed the existing policy proposal path.
+- Added `agent-lifecycle metrics outcome-index`, `quality-signals` and
+  `learn-recommend` plus public contracts and docs for the learning loop.
+
 ## 1.27.0 - 2026-08-01
 
 - Added deterministic completion gate receipts that choose `STOP`, `CONTINUE`,
