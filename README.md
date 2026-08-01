@@ -116,7 +116,7 @@ required only for metered modes.
 | Kimi Code | `EXPERIMENTAL`; live proof requires a configured provider and model alias. |
 | Grok Build | `VERIFIED` for Grok Build 0.2.117 on the tested host-local provider/model binding. Public directory approval is not claimed. |
 | OpenInterpreter | `VERIFIED` for `interpreter` 0.0.34 on the tested host-local provider/model binding. Public directory approval is not claimed. |
-| Pi | `EXPERIMENTAL`; RPC/JSON and AGENTS/agentskills projection with no live promotion claim. |
+| Pi | `VERIFIED` for Pi 0.83.0 on the tested host-local provider/model binding. Public directory approval is not claimed. |
 
 Adapter installation and maturity details live in
 [Adapter install](docs/adapters/install.md) and
