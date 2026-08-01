@@ -15,14 +15,19 @@ Generic cross-check profile позволяет плану запросить д�
 
 ## Receipts
 
-`agent-cross-check-receipt.v1` фиксирует subject, reviewer, findings, budget
-cap и фактическое usage. Валидация падает, если:
+`agent-cross-check-receipt.v1` фиксирует subject, reviewer, findings,
+independence evidence, budget cap и фактическое usage. Валидация падает, если:
 
 - digest профиля не совпадает;
 - usage превышает cap;
 - blocking cross-check заявлен без opt-in в плане;
+- independence требуется, но не подтверждается нейтральными identity hashes;
 - live calls заявлены, но профиль их не разрешает;
 - используются monetary budget fields.
+
+Independence provider-neutral: receipt сравнивает только `hostIdentityHash` и
+`modelIdentityHash`. Имена провайдеров, моделей и аккаунтов не являются
+canonical contract fields.
 
 Такой профиль полезен для S2, security, release и bug-fix задач, но обычные
 задачи остаются на стандартном lifecycle path.

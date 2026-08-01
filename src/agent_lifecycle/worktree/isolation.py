@@ -11,6 +11,7 @@ from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_p
 LINEAGE_KEYS = ("runId", "packageId", "planRevision", "planDigest", "sourceRevision")
 OUTCOMES = {"PASS", "FAILED", "BLOCKED"}
 CLEANUP_DECISIONS = {"PRESERVE", "REMOVE"}
+WRITEBACK_DECISIONS = {"APPLY", "DISCARD"}
 
 
 def validate_worktree_policy(policy: dict[str, Any]) -> dict[str, Any]:
@@ -132,6 +133,105 @@ def validate_attempt_isolation_receipt(
     return body
 
 
+def build_worktree_writeback_receipt(
+    workflow_state: dict[str, Any],
+    *,
+    task_id: str,
+    attempt: int,
+    overlay_digest: str,
+    changed_files: list[str],
+    decision: str,
+    operator_authorization: dict[str, Any],
+    reason: str,
+    applied_files: list[str] | None = None,
+    discarded_files: list[str] | None = None,
+    isolation_receipt_digest: str | None = None,
+) -> dict[str, Any]:
+    selected_decision = _enum(decision, WRITEBACK_DECISIONS, label="decision.action")
+    changed = _path_list(changed_files, label="changedFiles", allow_empty=True)
+    applied = _path_list(
+        applied_files if applied_files is not None else (changed if selected_decision == "APPLY" else []),
+        label="appliedFiles",
+        allow_empty=True,
+    )
+    discarded = _path_list(
+        discarded_files if discarded_files is not None else (changed if selected_decision == "DISCARD" else []),
+        label="discardedFiles",
+        allow_empty=True,
+    )
+    body = {
+        "schemaVersion": "agent-worktree-writeback-receipt.v1",
+        "status": "PASS",
+        "lineage": _lineage_from_workflow(workflow_state),
+        "taskId": task_id,
+        "attempt": _positive_int(attempt, label="attempt"),
+        "boundary": {
+            "kind": "isolated-overlay",
+            "isolationReceiptDigest": isolation_receipt_digest,
+            "overlayDigest": _digest(overlay_digest, label="overlayDigest"),
+            "runtimeAgnostic": True,
+        },
+        "decision": {
+            "action": selected_decision,
+            "operatorAuthorization": _operator_authorization(operator_authorization),
+            "reason": _required_string(reason, label="decision.reason"),
+        },
+        "changedFiles": changed,
+        "appliedFiles": applied,
+        "discardedFiles": discarded,
+        "createdAt": _now_iso(),
+        "productionPromotionClaimed": False,
+    }
+    result = validate_worktree_writeback_receipt(body, workflow_state=workflow_state)
+    return {**body, "receiptDigest": result["receiptDigest"]}
+
+
+def validate_worktree_writeback_receipt(
+    receipt: dict[str, Any],
+    *,
+    workflow_state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if not isinstance(receipt, dict):
+        raise LifecycleError("invalid-worktree-writeback-receipt", "worktree write-back receipt must be an object")
+    if receipt.get("schemaVersion") != "agent-worktree-writeback-receipt.v1":
+        raise LifecycleError("invalid-worktree-writeback-receipt", "worktree write-back schemaVersion is unsupported")
+    if receipt.get("status") != "PASS":
+        raise LifecycleError("worktree-writeback-not-pass", "worktree write-back receipt must be PASS")
+    lineage = _lineage(receipt.get("lineage"))
+    if workflow_state is not None:
+        _validate_workflow_binding(lineage, workflow_state)
+    task_id = _required_string(receipt.get("taskId"), label="taskId")
+    attempt = _positive_int(receipt.get("attempt"), label="attempt")
+    boundary = _writeback_boundary(receipt.get("boundary"))
+    decision = _writeback_decision(receipt.get("decision"))
+    changed = _path_list(receipt.get("changedFiles", []), label="changedFiles", allow_empty=True)
+    applied = _path_list(receipt.get("appliedFiles", []), label="appliedFiles", allow_empty=True)
+    discarded = _path_list(receipt.get("discardedFiles", []), label="discardedFiles", allow_empty=True)
+    _validate_writeback_paths(changed, applied=applied, discarded=discarded, decision=decision["action"])
+    if workflow_state is not None:
+        task = _workflow_task(workflow_state, task_id)
+        _validate_changed_files_in_scope(changed, _allowed_roots([], task))
+    if receipt.get("productionPromotionClaimed") is not False:
+        raise LifecycleError("worktree-writeback-production-claim", "write-back receipt must not claim production promotion")
+    stored_digest = receipt.get("receiptDigest")
+    receipt_digest = _receipt_digest(receipt)
+    if stored_digest is not None and stored_digest != receipt_digest:
+        raise LifecycleError("worktree-writeback-receipt-digest-mismatch", "worktree write-back receiptDigest does not match receipt")
+    return {
+        "schemaVersion": "agent-worktree-writeback-receipt-validation.v1",
+        "status": "PASS",
+        "lineage": lineage,
+        "taskId": task_id,
+        "attempt": attempt,
+        "decision": decision["action"],
+        "overlayDigest": boundary["overlayDigest"],
+        "changedFileCount": len(changed),
+        "appliedFileCount": len(applied),
+        "discardedFileCount": len(discarded),
+        "receiptDigest": receipt_digest,
+    }
+
+
 def _isolation(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise LifecycleError("invalid-worktree-receipt", "worktree isolation is required")
@@ -160,6 +260,63 @@ def _cleanup(value: Any) -> dict[str, Any]:
         raise LifecycleError("invalid-worktree-receipt", "operatorAuthorization must be an object")
     _required_string(value.get("reason"), label="cleanup.reason")
     return {"decision": decision, "operatorAuthorization": authorization}
+
+
+def _writeback_boundary(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise LifecycleError("invalid-worktree-writeback-receipt", "write-back boundary is required")
+    if value.get("kind") != "isolated-overlay":
+        raise LifecycleError("invalid-worktree-writeback-receipt", "write-back boundary kind is unsupported")
+    if value.get("runtimeAgnostic") is not True:
+        raise LifecycleError("invalid-worktree-writeback-receipt", "write-back boundary must be runtime agnostic")
+    isolation_digest = value.get("isolationReceiptDigest")
+    if isolation_digest is not None:
+        _digest(isolation_digest, label="boundary.isolationReceiptDigest")
+    return {
+        "kind": "isolated-overlay",
+        "isolationReceiptDigest": isolation_digest,
+        "overlayDigest": _digest(value.get("overlayDigest"), label="boundary.overlayDigest"),
+        "runtimeAgnostic": True,
+    }
+
+
+def _writeback_decision(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise LifecycleError("invalid-worktree-writeback-receipt", "write-back decision is required")
+    action = _enum(value.get("action"), WRITEBACK_DECISIONS, label="decision.action")
+    authorization = _operator_authorization(value.get("operatorAuthorization"))
+    _required_string(value.get("reason"), label="decision.reason")
+    return {"action": action, "operatorAuthorization": authorization}
+
+
+def _operator_authorization(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise LifecycleError("invalid-worktree-writeback-receipt", "operatorAuthorization must be an object")
+    if not isinstance(value.get("operatorIdentityHash"), str) or not value["operatorIdentityHash"]:
+        raise LifecycleError("invalid-worktree-writeback-receipt", "operatorIdentityHash is required")
+    return dict(value)
+
+
+def _validate_writeback_paths(
+    changed: list[str],
+    *,
+    applied: list[str],
+    discarded: list[str],
+    decision: str,
+) -> None:
+    changed_set = set(changed)
+    applied_set = set(applied)
+    discarded_set = set(discarded)
+    overlap = sorted(applied_set.intersection(discarded_set))
+    if overlap:
+        raise LifecycleError("worktree-writeback-path-overlap", "applied and discarded paths overlap", {"paths": overlap})
+    outside = sorted(applied_set.union(discarded_set) - changed_set)
+    if outside:
+        raise LifecycleError("worktree-writeback-path-outside-overlay", "write-back path is outside overlay changes", {"paths": outside})
+    if decision == "DISCARD" and applied:
+        raise LifecycleError("worktree-writeback-discard-applied-paths", "discard decision must not apply files")
+    if decision == "APPLY" and changed and not applied:
+        raise LifecycleError("worktree-writeback-apply-empty", "apply decision must apply at least one changed file")
 
 
 def _validate_changed_files_in_scope(changed_files: list[str], allowed_roots: list[str]) -> None:
@@ -227,6 +384,12 @@ def _required_string(value: Any, *, label: str) -> str:
 def _required_bool(value: Any, *, label: str) -> bool:
     if not isinstance(value, bool):
         raise LifecycleError("invalid-worktree-policy", f"{label} must be boolean")
+    return value
+
+
+def _digest(value: Any, *, label: str) -> str:
+    if not isinstance(value, str) or len(value) != 64:
+        raise LifecycleError("invalid-worktree-writeback-receipt", f"{label} must be a sha256 digest")
     return value
 
 

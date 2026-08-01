@@ -16,6 +16,9 @@ DEFAULT_RISK_TRIGGERS = ("S2", "security", "release", "high-risk", "bugfix", "re
 RESOURCE_CAP_KEYS = {"maxInvocations", "maxInputTokens", "maxOutputTokens", "maxWallSeconds"}
 USAGE_KEYS = {"invocations", "inputTokens", "outputTokens", "wallSeconds"}
 MONEY_KEYS = {"costUsd", "cost_usd", "usd", "budgetUsd", "maxUsd", "money", "monetary"}
+INDEPENDENCE_DIMENSIONS = {"host", "model"}
+INDEPENDENCE_IDENTITY_FIELDS = {"host": "hostIdentityHash", "model": "modelIdentityHash"}
+INDEPENDENCE_STATUSES = {"INDEPENDENT", "NOT_REQUIRED", "NOT_PROVEN"}
 
 
 def build_cross_check_profile(
@@ -24,6 +27,8 @@ def build_cross_check_profile(
     budget_cap: dict[str, int] | None = None,
     risk_triggers: list[str] | None = None,
     live_calls_allowed: bool = False,
+    independence_required: bool = False,
+    independence_dimensions: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build the generic optional cross-check profile."""
 
@@ -41,6 +46,10 @@ def build_cross_check_profile(
         "riskTriggers": _string_list(list(risk_triggers or DEFAULT_RISK_TRIGGERS), label="riskTriggers", code="invalid-cross-check-profile"),
         "budgetCap": _resource_cap(cap, code="invalid-cross-check-profile"),
         "budgetUnits": "tokens-and-resources",
+        "independencePolicy": _independence_policy(
+            required=independence_required,
+            dimensions=independence_dimensions,
+        ),
         "monetaryCostCanonical": False,
         "productionPromotionClaimed": False,
     }
@@ -73,6 +82,7 @@ def validate_cross_check_profile(profile: dict[str, Any]) -> dict[str, Any]:
     _validate_resource_cap(profile.get("budgetCap"), blockers)
     if profile.get("budgetUnits") != "tokens-and-resources":
         blockers.append({"code": "cross-check-profile-budget-units-invalid"})
+    _validate_independence_policy(profile.get("independencePolicy"), blockers)
     if profile.get("monetaryCostCanonical") is not False:
         blockers.append({"code": "cross-check-profile-money-canonical"})
     if profile.get("productionPromotionClaimed") is not False:
@@ -115,6 +125,9 @@ def build_cross_check_receipt(
         cap_blockers.append({"code": "cross-check-blocking-without-plan-opt-in"})
     if profile_validation["status"] != "PASS":
         cap_blockers.append({"code": "cross-check-profile-invalid"})
+    independence = _independence_evidence(subject, reviewer, profile.get("independencePolicy") if isinstance(profile, dict) else None)
+    if independence["required"] and independence["status"] != "INDEPENDENT":
+        cap_blockers.append({"code": "cross-check-independence-not-proven"})
     body = {
         "schemaVersion": CROSS_CHECK_RECEIPT_SCHEMA,
         "status": _enum(status or ("FAIL" if cap_blockers else "PASS"), RECEIPT_STATUSES, label="status", code="invalid-cross-check-receipt"),
@@ -125,6 +138,7 @@ def build_cross_check_receipt(
         "findings": list(findings or []),
         "blocking": bool(blocking),
         "advisory": not blocking,
+        "independence": independence,
         "budgetCap": dict(cap),
         "budgetUsage": usage,
         "liveCallsStarted": bool(live_calls_started),
@@ -163,8 +177,18 @@ def validate_cross_check_receipt(receipt: dict[str, Any], *, profile: dict[str, 
         blockers.append({"code": "cross-check-blocking-without-plan-opt-in"})
     if receipt.get("advisory") is not (receipt.get("blocking") is not True):
         blockers.append({"code": "cross-check-advisory-mismatch"})
-    if not isinstance(receipt.get("reviewer"), dict) or not receipt["reviewer"]:
+    reviewer = receipt.get("reviewer")
+    if not isinstance(reviewer, dict) or not reviewer:
         blockers.append({"code": "cross-check-reviewer-invalid"})
+        reviewer = {}
+    independence = receipt.get("independence")
+    _validate_independence_evidence(independence, blockers)
+    if isinstance(independence, dict) and independence.get("required") is True and independence.get("status") != "INDEPENDENT":
+        blockers.append({"code": "cross-check-independence-not-proven"})
+    if profile is not None and isinstance(subject, dict) and isinstance(reviewer, dict):
+        expected_independence = _independence_evidence(subject, reviewer, profile.get("independencePolicy"))
+        if independence != expected_independence:
+            blockers.append({"code": "cross-check-independence-mismatch"})
     if not isinstance(receipt.get("findings", []), list) or not all(isinstance(item, dict) for item in receipt.get("findings", [])):
         blockers.append({"code": "cross-check-findings-invalid"})
     cap = receipt.get("budgetCap")
@@ -188,6 +212,7 @@ def validate_cross_check_receipt(receipt: dict[str, Any], *, profile: dict[str, 
         "receiptStatus": status if isinstance(status, str) else None,
         "profileId": receipt.get("profileId") if isinstance(receipt.get("profileId"), str) else None,
         "blocking": receipt.get("blocking") if isinstance(receipt.get("blocking"), bool) else None,
+        "independenceStatus": independence.get("status") if isinstance(independence, dict) else None,
         "blockers": blockers,
         "receiptDigest": receipt.get("receiptDigest"),
     }
@@ -253,6 +278,99 @@ def _budget_usage(value: dict[str, int], *, code: str) -> dict[str, int]:
             raise LifecycleError(code, "budgetUsage values must be non-negative integers", {"field": key})
         result[key] = item
     return {key: result.get(key, 0) for key in sorted(USAGE_KEYS)}
+
+
+def _independence_policy(*, required: bool, dimensions: list[str] | None) -> dict[str, Any]:
+    selected = dimensions or ["host", "model"]
+    for dimension in selected:
+        if dimension not in INDEPENDENCE_DIMENSIONS:
+            raise LifecycleError("invalid-cross-check-profile", "independence dimension is unsupported", {"dimension": dimension})
+    if len(selected) != len(set(selected)):
+        raise LifecycleError("invalid-cross-check-profile", "independence dimensions contain duplicates")
+    return {
+        "required": bool(required),
+        "requiredDimensions": list(selected),
+        "identityFields": dict(INDEPENDENCE_IDENTITY_FIELDS),
+        "providerNamesCanonical": False,
+    }
+
+
+def _independence_evidence(
+    subject: dict[str, Any],
+    reviewer: dict[str, Any],
+    policy: Any,
+) -> dict[str, Any]:
+    selected_policy = policy if isinstance(policy, dict) else _independence_policy(required=False, dimensions=None)
+    required = selected_policy.get("required") is True
+    dimensions = [
+        item
+        for item in selected_policy.get("requiredDimensions", [])
+        if isinstance(item, str) and item in INDEPENDENCE_DIMENSIONS
+    ] or ["host", "model"]
+    comparisons: list[dict[str, Any]] = []
+    independent = True
+    for dimension in dimensions:
+        field = INDEPENDENCE_IDENTITY_FIELDS[dimension]
+        subject_hash = subject.get(field)
+        reviewer_hash = reviewer.get(field)
+        proven = (
+            isinstance(subject_hash, str)
+            and len(subject_hash) == 64
+            and isinstance(reviewer_hash, str)
+            and len(reviewer_hash) == 64
+            and subject_hash != reviewer_hash
+        )
+        comparisons.append(
+            {
+                "dimension": dimension,
+                "identityField": field,
+                "subjectHash": subject_hash if isinstance(subject_hash, str) else None,
+                "reviewerHash": reviewer_hash if isinstance(reviewer_hash, str) else None,
+                "independent": proven,
+            }
+        )
+        independent = independent and proven
+    return {
+        "required": required,
+        "status": "INDEPENDENT" if required and independent else ("NOT_REQUIRED" if not required else "NOT_PROVEN"),
+        "requiredDimensions": dimensions,
+        "comparisons": comparisons,
+        "providerNamesCompared": False,
+    }
+
+
+def _validate_independence_policy(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(value, dict):
+        blockers.append({"code": "cross-check-independence-policy-invalid"})
+        return
+    if not isinstance(value.get("required"), bool):
+        blockers.append({"code": "cross-check-independence-required-invalid"})
+    dimensions = value.get("requiredDimensions")
+    if not isinstance(dimensions, list) or not dimensions:
+        blockers.append({"code": "cross-check-independence-dimensions-invalid"})
+    elif len(dimensions) != len(set(dimensions)) or any(item not in INDEPENDENCE_DIMENSIONS for item in dimensions):
+        blockers.append({"code": "cross-check-independence-dimensions-invalid"})
+    identity_fields = value.get("identityFields")
+    if identity_fields != INDEPENDENCE_IDENTITY_FIELDS:
+        blockers.append({"code": "cross-check-independence-identity-fields-invalid"})
+    if value.get("providerNamesCanonical") is not False:
+        blockers.append({"code": "cross-check-independence-provider-names-canonical"})
+
+
+def _validate_independence_evidence(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(value, dict):
+        blockers.append({"code": "cross-check-independence-invalid"})
+        return
+    if not isinstance(value.get("required"), bool):
+        blockers.append({"code": "cross-check-independence-required-invalid"})
+    if value.get("status") not in INDEPENDENCE_STATUSES:
+        blockers.append({"code": "cross-check-independence-status-invalid"})
+    if not isinstance(value.get("requiredDimensions"), list) or not value["requiredDimensions"]:
+        blockers.append({"code": "cross-check-independence-dimensions-invalid"})
+    if not isinstance(value.get("comparisons"), list) or not all(isinstance(item, dict) for item in value["comparisons"]):
+        blockers.append({"code": "cross-check-independence-comparisons-invalid"})
+    if value.get("providerNamesCompared") is not False:
+        blockers.append({"code": "cross-check-independence-provider-name-compare"})
 
 
 def _validate_resource_cap(value: Any, blockers: list[dict[str, Any]]) -> None:

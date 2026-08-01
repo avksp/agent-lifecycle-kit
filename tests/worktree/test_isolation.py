@@ -10,7 +10,9 @@ sys.path.insert(0, str(ROOT / "src"))
 from agent_lifecycle.contracts import LifecycleError  # noqa: E402
 from agent_lifecycle.worktree import (  # noqa: E402
     build_attempt_isolation_receipt,
+    build_worktree_writeback_receipt,
     validate_attempt_isolation_receipt,
+    validate_worktree_writeback_receipt,
     validate_worktree_policy,
 )
 
@@ -90,6 +92,63 @@ class WorktreeIsolationTests(unittest.TestCase):
         self.assertEqual(validation["worktreeRoot"], ".alk/worktrees")
         with self.assertRaises(LifecycleError):
             validate_worktree_policy({**_policy(), "worktreeRoot": "../outside"})
+
+    def test_builds_and_validates_writeback_receipt(self) -> None:
+        receipt = build_worktree_writeback_receipt(
+            _state(),
+            task_id="WS-01",
+            attempt=1,
+            overlay_digest="a" * 64,
+            changed_files=["src/example.py", "src/extra.py"],
+            decision="APPLY",
+            operator_authorization={"operatorIdentityHash": "operator-hash"},
+            reason="operator accepted overlay changes",
+            applied_files=["src/example.py"],
+            discarded_files=["src/extra.py"],
+            isolation_receipt_digest="b" * 64,
+        )
+
+        validation = validate_worktree_writeback_receipt(receipt, workflow_state=_state())
+
+        self.assertEqual(receipt["schemaVersion"], "agent-worktree-writeback-receipt.v1")
+        self.assertEqual(validation["schemaVersion"], "agent-worktree-writeback-receipt-validation.v1")
+        self.assertEqual(validation["decision"], "APPLY")
+        self.assertEqual(validation["appliedFileCount"], 1)
+        self.assertEqual(validation["discardedFileCount"], 1)
+
+    def test_discard_writeback_does_not_apply_paths(self) -> None:
+        receipt = build_worktree_writeback_receipt(
+            _state(),
+            task_id="WS-01",
+            attempt=1,
+            overlay_digest="a" * 64,
+            changed_files=["src/example.py"],
+            decision="DISCARD",
+            operator_authorization={"operatorIdentityHash": "operator-hash"},
+            reason="operator discarded overlay",
+        )
+
+        validation = validate_worktree_writeback_receipt(receipt, workflow_state=_state())
+
+        self.assertEqual(receipt["appliedFiles"], [])
+        self.assertEqual(receipt["discardedFiles"], ["src/example.py"])
+        self.assertEqual(validation["discardedFileCount"], 1)
+
+    def test_writeback_rejects_path_overlap(self) -> None:
+        with self.assertRaises(LifecycleError) as raised:
+            build_worktree_writeback_receipt(
+                _state(),
+                task_id="WS-01",
+                attempt=1,
+                overlay_digest="a" * 64,
+                changed_files=["src/example.py"],
+                decision="APPLY",
+                operator_authorization={"operatorIdentityHash": "operator-hash"},
+                reason="invalid overlap",
+                applied_files=["src/example.py"],
+                discarded_files=["src/example.py"],
+            )
+        self.assertEqual(raised.exception.code, "worktree-writeback-path-overlap")
 
 
 def _policy() -> dict:
