@@ -75,6 +75,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-task-outcome-index.v1`",
             "`agent-quality-cost-signals.v1`",
             "`agent-quality-cost-signals-summary.v1`",
+            "`agent-failure-classification-receipt.v1`",
+            "`agent-failure-classification-validation.v1`",
             "Quality-cost learning",
             "provider/model leaderboards",
         ),
@@ -115,8 +117,20 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-task-outcome-index.v1`",
             "`agent-quality-cost-signals.v1`",
             "`agent-quality-cost-signals-summary.v1`",
+            "`agent-failure-classification-receipt.v1`",
+            "`agent-failure-classification-validation.v1`",
             "Quality-cost learning",
             "provider/model leaderboards",
+        ),
+    ),
+    (
+        "docs/reference/model-routing.md",
+        (
+            "failureSignals",
+            "no-model -> local-small-packet -> standard-implementation -> stronger-review -> optional-cross-check",
+            "optionalCrossCheckRecommended",
+            "downgradeBlocked",
+            "providerModelNamesInCore: false",
         ),
     ),
     (
@@ -180,6 +194,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`monetaryFieldsUsed` is always `false`",
             "quality floor",
             "quality-cost learning",
+            "Failure signals",
         ),
     ),
     (

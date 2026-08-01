@@ -16,6 +16,8 @@ class BugForensicsSchemaTests(unittest.TestCase):
             "agent-bug-reproduction-receipt-validation.v1",
             "agent-failure-fingerprint.v1",
             "agent-failure-fingerprint-validation.v1",
+            "agent-failure-classification-receipt.v1",
+            "agent-failure-classification-validation.v1",
             "agent-bug-hypothesis-ledger.v1",
             "agent-bug-hypothesis-ledger-validation.v1",
             "agent-regression-proof-receipt.v1",

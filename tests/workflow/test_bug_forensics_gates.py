@@ -11,6 +11,7 @@ from agent_lifecycle.quality import (
     build_bug_reproduction_receipt,
     build_cross_check_profile,
     build_cross_check_receipt,
+    build_failure_classification_receipt,
     build_failure_fingerprint,
     build_hypothesis_ledger,
     build_regression_proof_receipt,
@@ -56,6 +57,8 @@ class BugForensicsGateTests(unittest.TestCase):
             task={"id": "BUG-1", "qualityProfile": "bug-forensics", "blockingCrossCheckRequired": True},
             reproduction_receipt=refs["reproduction"],
             failure_fingerprint=refs["fingerprint"],
+            failure_classification=refs["classification"],
+            flake_signal={"status": "stable-fail", "runs": 3, "failures": 3},
             hypothesis_ledger=refs["ledger"],
             regression_proof=refs["proof"],
             fix_impact_receipt=refs["fixImpact"],
@@ -68,6 +71,28 @@ class BugForensicsGateTests(unittest.TestCase):
         self.assertTrue(receipt["chainVerified"])
         self.assertEqual(validation["status"], "PASS")
         self.assertEqual(receipt["evidence"]["crossCheck"]["schemaVersion"], "agent-cross-check-receipt.v1")
+        self.assertEqual(receipt["evidence"]["failureClassification"]["schemaVersion"], "agent-failure-classification-receipt.v1")
+        self.assertEqual(receipt["evidence"]["flakeSignal"]["status"], "stable-fail")
+
+    def test_security_failure_class_requires_cross_check_for_high_risk_bug(self) -> None:
+        refs = _refs()
+        classification = build_failure_classification_receipt(
+            failure={"logPattern": "security vulnerability token leak"},
+            evidence_ids=["EV39-CLASSIFIER"],
+        )
+
+        receipt = build_bug_forensics_gate_receipt(
+            task={"id": "BUG-1", "qualityProfile": "bug-forensics", "sddTier": "S2", "riskFlags": {"security": True}},
+            reproduction_receipt=refs["reproduction"],
+            failure_fingerprint=refs["fingerprint"],
+            failure_classification=classification,
+            hypothesis_ledger=refs["ledger"],
+            regression_proof=refs["proof"],
+            fix_impact_receipt=refs["fixImpact"],
+        )
+
+        self.assertEqual(receipt["status"], "FAIL")
+        self.assertIn("bug-forensics-cross-check-missing", {item["code"] for item in receipt["blockers"]})
 
 
 def _refs() -> dict[str, dict]:
@@ -118,6 +143,11 @@ def _refs() -> dict[str, dict]:
         finding_id=finding["findingId"],
         root_cause_digest=root_cause["rootCauseDigest"],
     )
+    classification = build_failure_classification_receipt(
+        failure={"exceptionType": "AssertionError", "failingAssertion": "expected HTTP status code 404"},
+        failure_fingerprint=fingerprint,
+        evidence_ids=["EV39-CLASSIFIER"],
+    )
     ledger = build_hypothesis_ledger(
         lineage=lineage,
         hypotheses=[
@@ -133,7 +163,7 @@ def _refs() -> dict[str, dict]:
         reproduction_receipt=reproduction,
         fix_impact_receipt=fix_impact,
     )
-    return {"reproduction": reproduction, "fingerprint": fingerprint, "ledger": ledger, "proof": proof, "fixImpact": fix_impact}
+    return {"reproduction": reproduction, "fingerprint": fingerprint, "classification": classification, "ledger": ledger, "proof": proof, "fixImpact": fix_impact}
 
 
 if __name__ == "__main__":

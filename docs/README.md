@@ -46,6 +46,7 @@ and does not depend on a source project.
 - [Small-model packets](reference/small-model-packets.md)
 - [Controlled runner](reference/runner.md)
 - [Public contracts](reference/public-contracts.md)
+- [Model routing](reference/model-routing.md)
 - [Adaptive lifecycle policy](reference/adaptive-lifecycle-policy.md)
 - [Quality-cost learning](reference/quality-cost-learning.md)
 - [Lifecycle cost accounting](reference/lifecycle-cost.md)
