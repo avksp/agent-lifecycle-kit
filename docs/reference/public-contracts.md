@@ -116,6 +116,12 @@ Stable schema ids:
 `nativeDialectProfileDigest`, but that digest is provenance, not review
 approval.
 
+Generic external workflow and agent/harness imports reuse
+`agent-import-dialect-profile.v1` with family/profile metadata. Workflow-family
+imports produce reviewable requirements and validation hints without executing
+imported nodes. Agent-family imports keep provider, model, auth, environment and
+tool hints as host-local redacted metadata; they are not portable defaults.
+
 `agent-episode-retrieval.v1` is a bounded context projection over explicit
 receipt/session artifacts. Results keep artifact digests and report
 `chainVerified` only when a supplied hash chain contains the same path and

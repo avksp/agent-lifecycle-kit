@@ -1,0 +1,8 @@
+name: Build verification workflow
+steps:
+  - checkout repository
+  - run unit test command
+  - collect validation evidence
+validations:
+  - unittest suite passes
+  - docs compatibility check passes
