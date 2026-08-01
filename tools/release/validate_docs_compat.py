@@ -60,6 +60,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-behavior-check-run.v1`",
             "`agent-diagnostic-bundle.v1`",
             "`agent-readonly-status-view.v1`",
+            "`agent-workflow-event-feed.v1`",
+            "`agent-lifecycle-progress-view.v1`",
         ),
     ),
     (
@@ -83,6 +85,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-behavior-check-run.v1`",
             "`agent-diagnostic-bundle.v1`",
             "`agent-readonly-status-view.v1`",
+            "`agent-workflow-event-feed.v1`",
+            "`agent-lifecycle-progress-view.v1`",
         ),
     ),
     (
@@ -222,9 +226,13 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         "docs/reference/read-only-status-view.md",
         (
             "`agent-readonly-status-view.v1`",
+            "`agent-workflow-event-feed.v1`",
+            "`agent-lifecycle-progress-view.v1`",
             "not source of truth",
             "small local model",
             "agent-lifecycle report status-view",
+            "agent-lifecycle report event-feed",
+            "agent-lifecycle report progress",
         ),
     ),
     (

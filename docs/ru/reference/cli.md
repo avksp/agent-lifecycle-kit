@@ -16,6 +16,8 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle plan check`: проверка плана и файла блокировки.
 - `agent-lifecycle plan acceptance-check`: проверка трассируемости критериев
   приёмки.
+- `issue-to-spec` skill: перевод внешних issue в draft-only ALK specification
+  input.
 - `agent-lifecycle quality template-list/template-check`: просмотр и проверка
   draft-only task templates.
 
@@ -55,3 +57,5 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle goal`: снимки цели.
 - `agent-lifecycle followup`: учёт продолжений, которые не должны потеряться.
 - `agent-lifecycle evidence`: индекс подтверждающих артефактов.
+- `agent-lifecycle report status-view/event-feed/progress`: read-only
+  представления статуса, событий workflow и lifecycle progress.

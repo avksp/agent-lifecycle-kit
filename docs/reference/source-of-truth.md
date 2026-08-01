@@ -10,6 +10,7 @@ instead of duplicating long rules.
 | Plugin package version | Root and adapter plugin manifests |
 | Public schema ids | `src/agent_lifecycle/contracts/schemas.py` |
 | CLI command behavior | `src/agent_lifecycle/cli/` and command tests |
+| External issue intake | `skills/issue-to-spec/SKILL.md` and reviewed ALK plans |
 | Adapter maturity | `adapters/*/adapter.descriptor.json` |
 | Adapter capabilities | `adapters/*/capabilities.manifest.json` |
 | Support summary | `docs/adapters/support-matrix.md` |
@@ -28,3 +29,9 @@ was introduced; the changelog and release notes carry that history.
 Tracked evidence summaries are suitable for source releases. Local raw receipts
 are useful for re-running live promotion review, but they may be absent from a
 fresh checkout by design.
+
+## Intake rule
+
+External issues, tickets and imported tracker payloads are draft inputs. They
+can seed a specification, but they cannot authorize execution, freeze a plan or
+override reviewed ALK source-of-truth artifacts.
