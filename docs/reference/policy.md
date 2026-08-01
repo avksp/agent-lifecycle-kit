@@ -43,3 +43,28 @@ review or final proof.
 Small local models should use `agent-lifecycle-policy-summary.v1` summaries for
 the next action and refusal reasons. Larger models can inspect the full
 proposal, regression signals and tuned policy artifact before approval.
+
+## Runtime policy receipts
+
+`agent-runtime-policy-receipt.v1` records an adapter policy decision without
+turning advisory logging into a blocking claim. It supports `ALLOW`, `DENY`
+and `ASK` decisions.
+
+```bash
+agent-lifecycle policy runtime-receipt \
+  --policy-id <policy-id> \
+  --action DENY \
+  --subject <subject.json> \
+  --adapter-evidence <adapter-evidence.json> \
+  --enforcement-mode enforced \
+  --out <runtime-policy-receipt.json>
+
+agent-lifecycle policy runtime-check \
+  --receipt <runtime-policy-receipt.json>
+```
+
+`enforcementMode: enforced` passes only when adapter evidence proves
+pre-execution enforcement and the decision was recorded before execution.
+Adapters that can only log after the fact must use `enforcementMode:
+advisory`; the receipt remains useful evidence, but it is not a blocking
+policy gate.

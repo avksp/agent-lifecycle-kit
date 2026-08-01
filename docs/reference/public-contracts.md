@@ -44,6 +44,8 @@ Stable schema ids:
 - `agent-follow-up-summary.v1`
 - `agent-worktree-isolation-policy.v1`
 - `agent-worktree-attempt-receipt.v1`
+- `agent-worktree-writeback-receipt.v1`
+- `agent-worktree-writeback-receipt-validation.v1`
 - `agent-adapter-event-stream-receipt.v1`
 - `agent-adapter-event-capture-validation.v1`
 - `agent-review-verdict.v1`
@@ -168,13 +170,22 @@ Stable schema ids:
 - `agent-cross-check-profile-validation.v1`
 - `agent-cross-check-receipt.v1`
 - `agent-cross-check-receipt-validation.v1`
+- `agent-runtime-policy-receipt.v1`
+- `agent-runtime-policy-receipt-validation.v1`
 
 `agent-phase-resource-measurement.v1` reuses the usage-export envelope for
 phase-level tokens, duration and resource counters. It rejects monetary phase
 fields; USD-cost is not required for local or non-metered models.
 
 `agent-cross-check-profile.v1` is disabled by default, token/resource-capped and
-advisory unless a plan explicitly opts into blocking use.
+advisory unless a plan explicitly opts into blocking use. Optional independence
+evidence compares neutral host/model identity hashes; provider names are not
+canonical.
+
+`agent-runtime-policy-receipt.v1` distinguishes proven pre-execution
+enforcement from advisory-only logging. `agent-worktree-writeback-receipt.v1`
+records overlay apply/discard decisions and does not replace
+`agent-sandbox-receipt.v1`.
 
 ## Bug forensics
 

@@ -83,9 +83,26 @@ def _budget_mode_check(mode: str, config: Any) -> dict[str, Any]:
     if not isinstance(config, dict):
         return {"id": f"{mode}-cap-config", "status": "FAIL", "reason": "missing"}
     if mode == "metered":
+        cap = config.get("budgetCapUsd")
+        threshold = config.get("meteredAskThreshold")
+        has_cap = _positive_number(cap)
+        threshold_present = threshold is not None
+        threshold_valid = (
+            not threshold_present
+            or (_positive_number(threshold) and has_cap and float(threshold) < float(cap))
+        )
         return {
             "id": "metered-usd-cap",
-            "status": "PASS" if _positive_number(config.get("budgetCapUsd")) else "FAIL",
+            "status": "PASS" if has_cap and threshold_valid else "FAIL",
+            "hasBudgetCapUsd": has_cap,
+            "advisoryThresholdEnabled": threshold_present and threshold_valid,
+            "advisoryOnly": threshold_present,
+        }
+    if "meteredAskThreshold" in config:
+        return {
+            "id": f"{mode}-resource-caps",
+            "status": "FAIL",
+            "reason": "meteredAskThreshold is only valid for metered budget mode",
         }
     max_invocations = config.get("maxInvocations")
     has_invocations = isinstance(max_invocations, int) and not isinstance(max_invocations, bool) and max_invocations > 0

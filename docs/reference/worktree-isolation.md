@@ -27,3 +27,16 @@ agent-lifecycle worktree check --receipt <worktree-receipt.json> --state <run.st
 
 `runner transition` attempt requests may carry an `isolationReceipt`; when
 present, the runner validates it and stores its digest in transition history.
+
+## Write-back receipts
+
+`agent-worktree-writeback-receipt.v1` records the decision to apply or discard
+changes from an isolated overlay. It binds workflow lineage, task id, attempt,
+overlay digest, changed files, applied/discarded paths, operator authorization
+and a receipt digest.
+
+The receipt is runtime-agnostic. It can describe a container overlay,
+temporary checkout or other isolated boundary, but ALK does not require a
+specific container runtime and does not introduce a second sandbox schema id.
+Runtime containment remains `agent-sandbox-receipt.v1`; write-back only
+describes repository changes crossing back into the main worktree.
