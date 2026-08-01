@@ -153,7 +153,26 @@ CONTEXT_MODEL_SCHEMAS: dict[str, dict[str, Any]] = {
             "forbidDowngradeForCriticalReview": {"type": "boolean"},
             "maxAutoReroutesPerTask": {"type": "integer", "minimum": 0},
             "defaultAutoAction": {"type": "string"},
-            "budgetModes": {"type": "object"},
+            "budgetModes": {
+                "type": "object",
+                "properties": {
+                    "metered": {
+                        "type": "object",
+                        "properties": {
+                            "budgetCapUsd": {"type": "number", "exclusiveMinimum": 0},
+                            "meteredAskThreshold": {"type": "number", "exclusiveMinimum": 0},
+                        },
+                    },
+                    "subscription": {
+                        "type": "object",
+                        "not": {"required": ["meteredAskThreshold"]},
+                    },
+                    "local": {
+                        "type": "object",
+                        "not": {"required": ["meteredAskThreshold"]},
+                    },
+                },
+            },
         },
     ),
     "agent-lifecycle-budget-decision-receipt.v1": _open_object_schema(

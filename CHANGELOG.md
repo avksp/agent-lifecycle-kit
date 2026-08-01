@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.23.0 - 2026-08-01
+
+- Added metered-only `meteredAskThreshold` advisory validation without changing
+  hard cap behavior or requiring currency fields for local/subscription modes.
+- Added optional runtime policy receipts that distinguish proven
+  pre-execution enforcement from advisory-only logging.
+- Added provider-neutral cross-check independence evidence and worktree
+  write-back receipts for isolated overlay apply/discard decisions.
+
 ## 1.22.0 - 2026-08-01
 
 - Added release-time adapter capability bench tools that generate bounded probe

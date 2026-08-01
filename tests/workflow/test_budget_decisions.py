@@ -170,6 +170,37 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
         result = validate_budget_exceeded_policy(policy)
         self.assertEqual(result["status"], "PASS")
 
+    def test_metered_budget_policy_accepts_advisory_threshold_below_hard_cap(self) -> None:
+        policy = _budget_policy(mode="manual")
+        policy["budgetModes"]["metered"]["meteredAskThreshold"] = 3.0
+
+        result = validate_budget_exceeded_policy(policy)
+
+        metered = next(item for item in result["checks"] if item["id"] == "metered-usd-cap")
+        self.assertEqual(result["status"], "PASS")
+        self.assertTrue(metered["advisoryThresholdEnabled"])
+        self.assertTrue(metered["advisoryOnly"])
+
+    def test_metered_advisory_threshold_does_not_apply_to_local_or_subscription_modes(self) -> None:
+        policy = _budget_policy(mode="manual")
+        policy["budgetModes"]["local"]["meteredAskThreshold"] = 3.0
+        with self.assertRaises(LifecycleError) as raised:
+            validate_budget_exceeded_policy(policy)
+        self.assertEqual(raised.exception.code, "invalid-budget-policy")
+
+        policy = _budget_policy(mode="manual")
+        policy["budgetModes"]["subscription"]["meteredAskThreshold"] = 3.0
+        with self.assertRaises(LifecycleError) as raised:
+            validate_budget_exceeded_policy(policy)
+        self.assertEqual(raised.exception.code, "invalid-budget-policy")
+
+    def test_metered_advisory_threshold_must_stay_below_hard_cap(self) -> None:
+        policy = _budget_policy(mode="manual")
+        policy["budgetModes"]["metered"]["meteredAskThreshold"] = policy["budgetModes"]["metered"]["budgetCapUsd"]
+        with self.assertRaises(LifecycleError) as raised:
+            validate_budget_exceeded_policy(policy)
+        self.assertEqual(raised.exception.code, "invalid-budget-policy")
+
     def test_subscription_budget_policy_requires_max_invocations(self) -> None:
         # NEG-R04-07 Subscription Missing Max Invocations
         policy = _budget_policy(mode="manual")

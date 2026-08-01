@@ -87,8 +87,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "ed50792eed590fc3cbcaf3dbb04e08161afdfa1ef82458ab57e2cb022827d8da",
-      "bytes": 22010
+      "sha256": "c7872a04a4098439a0c4bd4be19f182e150f3575133a1c9e7a05e655758cf8bb",
+      "bytes": 22455
     },
     {
       "path": "CONTRIBUTING.md",
@@ -107,8 +107,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "c3a57b31d8b0e43d23bbc244627591ba893b64bdb286aab3619ba0307aeb103e",
-      "bytes": 9151
+      "sha256": "4476ca8d6c9a8a4d24f621521b74f88d93c656150b498a1ab3349ec0aaedafe2",
+      "bytes": 9182
     },
     {
       "path": "SECURITY.md",
@@ -862,8 +862,8 @@
     },
     {
       "path": "docs/guides/budget-reroute-policy.md",
-      "sha256": "bee1e112acf24d95b0c55eecae2feff5ecd9f3c7b985d48d4e516dd8fb9c762f",
-      "bytes": 2922
+      "sha256": "12e05576e750a7cc3dd666cfb48efba04f200511c2d2268375fc075a938bf4bc",
+      "bytes": 3209
     },
     {
       "path": "docs/guides/production-resource-security.md",
@@ -917,8 +917,8 @@
     },
     {
       "path": "docs/reference/cross-check-profile.md",
-      "sha256": "7317473fa683d7f6fc6b36909e77bcf90c6995e3f5baeb395ead624c52415ed6",
-      "bytes": 988
+      "sha256": "ad5ccca217d5bbe6659bf1548c52e57ebba5470ab7f9350f8e93ae3572541642",
+      "bytes": 1312
     },
     {
       "path": "docs/reference/diagnostic-bundles.md",
@@ -962,8 +962,8 @@
     },
     {
       "path": "docs/reference/lifecycle-cost.md",
-      "sha256": "75a2e3966961848af233d3c88967f8ea90f093a014e6cf8821b05503216cf093",
-      "bytes": 3769
+      "sha256": "2e113eca82ceecb35d2dcafc09abd0430f58b42ee743f756026f3bf7a12032b4",
+      "bytes": 4030
     },
     {
       "path": "docs/reference/live-cost-calibration.md",
@@ -987,8 +987,8 @@
     },
     {
       "path": "docs/reference/policy.md",
-      "sha256": "7d93021461905cbff079e6e9d706acf6739f3acfbfbc6dd54def360b4608493b",
-      "bytes": 1580
+      "sha256": "fcc0ca83a48c41384b26d19d53ff5bce712b87ef615d8f83a51b17a5c2b454f6",
+      "bytes": 2410
     },
     {
       "path": "docs/reference/production-promotion.md",
@@ -997,8 +997,8 @@
     },
     {
       "path": "docs/reference/public-contracts.md",
-      "sha256": "88b7f0183bb94b526a266d3e212b3d7e80cdfab897e6cb97e3850bf84cd69524",
-      "bytes": 8105
+      "sha256": "974ece21b54af00122e7d752bc5af78e94706d8d73a13b001dfdd369ad7368ac",
+      "bytes": 8626
     },
     {
       "path": "docs/reference/read-only-status-view.md",
@@ -1042,13 +1042,13 @@
     },
     {
       "path": "docs/reference/worktree-isolation.md",
-      "sha256": "385090b5e41208d6d9bde2faab5fb60aa1e4896279fe3e85b5075fb97f47e713",
-      "bytes": 1400
+      "sha256": "588674fc6ea9ca3c87fede69571544d48984ac6b2f746a4f01ed8d7e29036c2d",
+      "bytes": 2046
     },
     {
       "path": "docs/ru/README.md",
-      "sha256": "20315a5914a4687f515fce4046140532a3933896a9b0f23f99bc00f437271dd4",
-      "bytes": 13604
+      "sha256": "66486bd809d384dcff9a266da2fb572c8efa34ff8835b79fac9caac327d71097",
+      "bytes": 13615
     },
     {
       "path": "docs/ru/adapters/install.md",
@@ -1082,8 +1082,8 @@
     },
     {
       "path": "docs/ru/reference/cross-check-profile.md",
-      "sha256": "e9266760924a5986685aa7d89a9d79aeae6627f941bbc7faf484c57d963e9ed0",
-      "bytes": 1333
+      "sha256": "f535a6c883f40eee4c27dbfc010b1e592f9cb3bf7427c5188ad489f57bae32b7",
+      "bytes": 1710
     },
     {
       "path": "docs/ru/reference/episode-retrieval.md",
@@ -1102,13 +1102,13 @@
     },
     {
       "path": "docs/ru/reference/lifecycle-cost.md",
-      "sha256": "48b24324fcb7a9be463fe73d716ba80ed59474075149d97a3da5e20a20f786db",
-      "bytes": 1393
+      "sha256": "0ce3a1427d355006a1524c44e291cd0fa09cb83a6adeffc381b4bc702da099db",
+      "bytes": 1799
     },
     {
       "path": "docs/ru/reference/public-contracts.md",
-      "sha256": "fd7f45da728af54d215198118d8faa0cddd6adebee986c53211f1c82aab1eac5",
-      "bytes": 7913
+      "sha256": "2017dbf954033d904b60c042c7a65ed775d3d5deb277575ab974c3a1253856e1",
+      "bytes": 8485
     },
     {
       "path": "docs/ru/reference/readiness-diagnostics.md",
@@ -1252,7 +1252,7 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "60be07760adfb34c485ca1a5684a417ab37736420a07004c07d081b23af8afc4",
+      "sha256": "0cf3ab790f0c1ecaeda4c041e217bd5dffbb5dded22b12d3f01411cb143d257a",
       "bytes": 1134
     },
     {
@@ -1302,7 +1302,7 @@
     },
     {
       "path": "src/agent_lifecycle/_version.py",
-      "sha256": "f631cfe67a234c8a60093dea440d94a979e175734bf921191e4e16235247c639",
+      "sha256": "d2cd3ee1ffa349bd27f440d1600a30ac7cc0bed74b29f6f6d5d09f06f3552215",
       "bytes": 47
     },
     {
@@ -1377,8 +1377,8 @@
     },
     {
       "path": "src/agent_lifecycle/cli/policy.py",
-      "sha256": "ba98632fb7426da6aefe4df995e967d737623ea30b606fed4f79ff8da7869a1e",
-      "bytes": 2648
+      "sha256": "71d6b37afe96b97ff68b0c79f549b2d5759c85fb3306d6a621ca46ca7fc22521",
+      "bytes": 4150
     },
     {
       "path": "src/agent_lifecycle/cli/worktree.py",
@@ -1442,13 +1442,13 @@
     },
     {
       "path": "src/agent_lifecycle/contracts/compatibility.py",
-      "sha256": "55d8e0702d0a1d42a2d99986bf5af02f492d454f3bad0c765d3cd6d4fa893e66",
-      "bytes": 11037
+      "sha256": "a64e471bc0071f3006ed7b37c46667b1189c94fabc9feb3656a51a1cc6a841e6",
+      "bytes": 11300
     },
     {
       "path": "src/agent_lifecycle/contracts/context_model_schemas.py",
-      "sha256": "a802dc056c560f35f704c0334d94381914bfb7fc95a4562ff94cfc080e96d182",
-      "bytes": 10904
+      "sha256": "9f6de5ce692d48ca548adc0362c832b5d978a9daadaef43d76e4a16cb3826824",
+      "bytes": 11671
     },
     {
       "path": "src/agent_lifecycle/contracts/core_schemas.py",
@@ -1457,8 +1457,8 @@
     },
     {
       "path": "src/agent_lifecycle/contracts/cross_check_schemas.py",
-      "sha256": "b072d707851e9dd6feba6332f05b6b3771c1ce7220becc9ca48ac62d52e5d781",
-      "bytes": 4596
+      "sha256": "c9af369e1e1424c1a0dc62b1638ae6e9662c138bdc49ccbad97c5d2a5b4081d4",
+      "bytes": 4965
     },
     {
       "path": "src/agent_lifecycle/contracts/errors.py",
@@ -1497,8 +1497,8 @@
     },
     {
       "path": "src/agent_lifecycle/contracts/policy_schemas.py",
-      "sha256": "a991365878b69bf7e409006f63dc2ca2bd8aab3e057f9953d890143909470f91",
-      "bytes": 6412
+      "sha256": "6403bdfca8a442fc82f0b9ffee352b303fe9959cf74e3b88c7064f61eeac71bf",
+      "bytes": 8864
     },
     {
       "path": "src/agent_lifecycle/contracts/proof_integrity_schemas.py",
@@ -1517,8 +1517,8 @@
     },
     {
       "path": "src/agent_lifecycle/contracts/runner_worktree_schemas.py",
-      "sha256": "0caffe0c963a5b07c533097939b982466f0e8b0539df8c0baa3ef4b057b591c5",
-      "bytes": 15003
+      "sha256": "c86e6f89ca51fc4a6704324f41e8658d7ad252f7ffd5db0a44aa7b34d7eba165",
+      "bytes": 17428
     },
     {
       "path": "src/agent_lifecycle/contracts/sandbox_schemas.py",
@@ -1887,8 +1887,8 @@
     },
     {
       "path": "src/agent_lifecycle/policy/__init__.py",
-      "sha256": "32347d660f6d89df690bde45b92a54db90b4101b77080a7e4a1d613d41aeebbb",
-      "bytes": 424
+      "sha256": "5f5e67d6a44d1b84f34fcbb090b6aab8abc23024ed889a44825789fc16488add",
+      "bytes": 710
     },
     {
       "path": "src/agent_lifecycle/policy/apply.py",
@@ -1904,6 +1904,11 @@
       "path": "src/agent_lifecycle/policy/quality_floor.py",
       "sha256": "f633e29c529dab2f3560504f5d12af42a2d1d0982d494391cc8f29aea8bb1913",
       "bytes": 1117
+    },
+    {
+      "path": "src/agent_lifecycle/policy/runtime_receipts.py",
+      "sha256": "8d5740bff5f353b6175eb9ada2a6fbae2a0b4b9c829f77ac322529f95c2cf9d7",
+      "bytes": 8600
     },
     {
       "path": "src/agent_lifecycle/py.typed",
@@ -1927,8 +1932,8 @@
     },
     {
       "path": "src/agent_lifecycle/quality/cross_check.py",
-      "sha256": "3fe7d1a289b9d1c468b542da8f23a6ed0d8266ce62deee819e0b5498c9a98424",
-      "bytes": 16628
+      "sha256": "9f3b2c7f2a9e7d864e691330b368d360aafdd0d54494bd813a3aa9e9264ac1ed",
+      "bytes": 22709
     },
     {
       "path": "src/agent_lifecycle/quality/packs.py",
@@ -2017,8 +2022,8 @@
     },
     {
       "path": "src/agent_lifecycle/workflow/budget_policy.py",
-      "sha256": "a55df3ed3cb4e9beb4172a865cc87e4b493b372c4b2823539cc6bc3ea1372d06",
-      "bytes": 5635
+      "sha256": "e60227bc6fb7692945a078255f117e6ff98879b58bebf18b9de90040571103ec",
+      "bytes": 6355
     },
     {
       "path": "src/agent_lifecycle/workflow/budget_receipts.py",
@@ -2117,13 +2122,13 @@
     },
     {
       "path": "src/agent_lifecycle/worktree/__init__.py",
-      "sha256": "c630cb033aa4ffde53ed7f1ee13f7c937bd22ec6c65939043e5528cecc5f8160",
-      "bytes": 329
+      "sha256": "817a02e040759684c6f915e7f9bd59fbd50297e2aa25b6d5332d841134cc1268",
+      "bytes": 491
     },
     {
       "path": "src/agent_lifecycle/worktree/isolation.py",
-      "sha256": "67ca578ced21575c120fd68d10dabb472b4d1d45348df57548dea332af0ed990",
-      "bytes": 12266
+      "sha256": "207036e7a4bcc08d8df0006653db2ef49ec5d6b528869c94b8b3a96470bb3d33",
+      "bytes": 20002
     },
     {
       "path": "templates/adapters/README.md",
@@ -2367,8 +2372,8 @@
     },
     {
       "path": "tests/cli/test_policy_commands.py",
-      "sha256": "43207c59f5f2b380d62b54718f78f7736724c793791380771dca18f63c472f07",
-      "bytes": 6741
+      "sha256": "6dd9bdc5f9fdcb5cecb442147d86a5b4b5a0036babde76dc63780ec62b94569f",
+      "bytes": 8559
     },
     {
       "path": "tests/cli/test_quality_observability_commands.py",
@@ -2467,13 +2472,13 @@
     },
     {
       "path": "tests/contracts/test_contracts.py",
-      "sha256": "96272ed051c21d60883f358e29134283d5ddadf027940c3204735b0fcff37707",
-      "bytes": 19530
+      "sha256": "f4d641a5bf003d366942150a6ce415d69c3605501a8cc31d1cd40035c21776a2",
+      "bytes": 19886
     },
     {
       "path": "tests/contracts/test_cross_check_schemas.py",
-      "sha256": "0f0c4c3a5f64d6ac13c2ebf2e99dd8d5e5cc5919e20a6e5f89d2af42a2497f32",
-      "bytes": 1194
+      "sha256": "66b3252ddc3fb559257164885987005c39fffa3e5cfb71767b8920d0215e89fb",
+      "bytes": 1622
     },
     {
       "path": "tests/contracts/test_digest_authority.py",
@@ -2792,7 +2797,7 @@
     },
     {
       "path": "tests/package/test_foundation.py",
-      "sha256": "1af5519fba06d8a5b813f11812d1ac25d73dcf9094d5f20822e38988c9468379",
+      "sha256": "9fd2d793cb05ed63e318ac7cbe22666e20e1d36f5958d6346ca25b89011f7a33",
       "bytes": 7804
     },
     {
@@ -2826,6 +2831,11 @@
       "bytes": 6120
     },
     {
+      "path": "tests/policy/test_runtime_policy_receipts.py",
+      "sha256": "d20f57b68114c783d464970429308cfa4e4edbffee29a0b701ee162e259d68fb",
+      "bytes": 2881
+    },
+    {
       "path": "tests/quality/test_bug_forensics_profile.py",
       "sha256": "09bc219ea67e2eb84eeeeecd34f2ae0fbc77c12a108223d7be9d79baee0ac952",
       "bytes": 8517
@@ -2837,8 +2847,8 @@
     },
     {
       "path": "tests/quality/test_cross_check_profile.py",
-      "sha256": "c4c472b449d66956123e7d427b871dd166004570253aba923b93067944dc7b90",
-      "bytes": 2901
+      "sha256": "8ed798151ee1136c6b9b0027eb909ec618bb0743f5817e04574fd9d6e1b771b0",
+      "bytes": 4912
     },
     {
       "path": "tests/quality/test_packs.py",
@@ -2897,8 +2907,8 @@
     },
     {
       "path": "tests/release/test_live_host_conformance_validator.py",
-      "sha256": "052da874abcd5544a313cc0da9bce4df53643abb2a226a5292f78c5c7cce87a1",
-      "bytes": 5474
+      "sha256": "ccddfdc64a2095e3de59ad45c98f3dd2b59857adf6e3d70d4a701126ecd7cea3",
+      "bytes": 5480
     },
     {
       "path": "tests/release/test_live_host_promotion_plan.py",
@@ -2917,8 +2927,8 @@
     },
     {
       "path": "tests/release/test_release_inventory.py",
-      "sha256": "cc0637441ace32f179d5350ebe80fd2e630faa1e468c5237968a878d2be5cf68",
-      "bytes": 7433
+      "sha256": "9addf5b2716938aceed4d6790d335805fe258352b28c2203ac9ba007f60a1c15",
+      "bytes": 7693
     },
     {
       "path": "tests/release/test_task_packet_context.py",
@@ -3002,8 +3012,8 @@
     },
     {
       "path": "tests/workflow/test_budget_decisions.py",
-      "sha256": "453cf80ae2f0a11ffd3c488bdd92dd8633344b7340a681ad3ed6149cbbdec163",
-      "bytes": 10851
+      "sha256": "46be272559fe8e5a09b4a81330fd01629934f96804c88de191bbe172b62b3927",
+      "bytes": 12506
     },
     {
       "path": "tests/workflow/test_bug_forensics_gates.py",
@@ -3057,8 +3067,8 @@
     },
     {
       "path": "tests/worktree/test_isolation.py",
-      "sha256": "f388aa6c8e2eaace6b51e3356779a4cf2dbb25b0001f00cadca02182ab86665b",
-      "bytes": 4392
+      "sha256": "c386b756dad664c432f29d42898e2e9799821e8075cd47a8bc3385bdef3c17e7",
+      "bytes": 6969
     },
     {
       "path": "tools/live_hosts/__init__.py",
@@ -3227,9 +3237,9 @@
     },
     {
       "path": "uv.lock",
-      "sha256": "046448e10e66df3678ec632c96543f83c67e5344eb75cb0092d608da2ee9cf54",
+      "sha256": "d023a3523e2c497629b10c13282df80c534619587dfd6d6c96921cd86cbbe0b4",
       "bytes": 186
     }
   ],
-  "candidatePayloadInventoryDigest": "e11810f7d99dce4c7570090f6eb80745b8b20550e07f3dffed9aba17ec51b845"
+  "candidatePayloadInventoryDigest": "8dc56b2ef07c713bf2952d713e42641ac1985d744193cb6a851e8f8e6d931c14"
 }

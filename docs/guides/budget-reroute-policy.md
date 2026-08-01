@@ -15,11 +15,16 @@ new model invocation starts.
 
 Budget accounting supports three resource modes:
 
-- `metered`: requires a positive `budgetCapUsd`.
+- `metered`: requires a positive `budgetCapUsd`; optional
+  `meteredAskThreshold` is advisory-only and must stay below the hard cap.
 - `subscription`: requires `maxInvocations` plus at least one of
   `maxBillableTokens` or `maxWallSeconds`.
 - `local`: uses the same resource caps as `subscription`, but does not require
   a USD cap.
+
+`meteredAskThreshold` is valid only inside `budgetModes.metered`. Subscription
+and local modes should use tokens, invocations and wall-clock caps; they must
+not inherit currency-denominated thresholds.
 
 ## Manual pause
 
