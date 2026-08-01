@@ -40,12 +40,33 @@
       "transport": "unknown"
     }
   ],
-  "liveTestedHostRange": null,
-  "maturity": "EXPERIMENTAL",
+  "liveTestedHostRange": {
+    "host": "pi",
+    "minimumVersion": "0.83.0",
+    "maximumVersion": "0.83.0",
+    "evidence": [
+      "docs/adapters/evidence/pi-live-verified.md",
+      "work/release-1-19/evidence/pi-install-probe.json",
+      "work/release-1-19/evidence/preflight/pi-preflight-report-live-ready.json",
+      "work/release-1-19/evidence/pi-containment-receipt-live-ready.json",
+      "work/release-1-19/evidence/live-host-receipts/pi.json",
+      "work/release-1-19/evidence/live-host-conformance-pi.json",
+      "work/release-1-19/evidence/live-calibration-receipts/pi.json",
+      "work/release-1-19/evidence/live-calibration-verification-pi.json",
+      "work/release-1-19/evidence/host-env-hygiene-pi-harness-reports.json",
+      "work/release-1-19/evidence/host-env-hygiene-pi-all-scanned.json",
+      "work/release-1-19/evidence/pi/full-lifecycle/final/final-proof.json"
+    ],
+    "testedAt": "2026-08-01",
+    "productionPromotionClaimed": false,
+    "publicDirectoryApprovalClaimed": false,
+    "sourceRevision": "75317878358a3dffa4b503cdb8bd8fff40de770b"
+  },
+  "maturity": "VERIFIED",
   "modelRouting": {
     "attemptRoutePolicy": "must-execute-or-fail-closed",
     "criticalReviewPolicy": "requires-strong-or-calibrated-local-review",
-    "liveVerified": false,
+    "liveVerified": true,
     "profileSupport": "host-local",
     "providerModelNamesInCore": false,
     "status": "workflow-enforced",

@@ -17,7 +17,7 @@
 | Kimi Code | `EXPERIMENTAL` | Нужен настроенный провайдер и алиас модели. |
 | Grok Build | `VERIFIED` | Проверен для Grok Build 0.2.117 на host-local provider/model связке; public directory approval не заявлен. |
 | OpenInterpreter | `VERIFIED` | Проверен для `interpreter` 0.0.34 на host-local provider/model связке; live conformance, calibration, containment и lifecycle proof прошли локально, public directory approval не заявлен. |
-| Pi | `EXPERIMENTAL` | RPC/JSON и AGENTS/agentskills projection без live promotion. |
+| Pi | `VERIFIED` | Проверен для Pi 0.83.0 на host-local provider/model связке; live conformance, calibration, containment, host-env hygiene и lifecycle proof прошли локально, public directory approval не заявлен. |
 
 `VERIFIED` относится только к указанному диапазону хоста и не означает
 публичное одобрение каталога, npm-публикацию или готовность других версий.
