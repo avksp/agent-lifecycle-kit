@@ -35,6 +35,7 @@ class ReleaseInventoryTests(unittest.TestCase):
             self.assertIn("tools/live_hosts/hermes_harness.py", {item["path"] for item in inventory_payload["files"]})
             self.assertIn("tools/live_hosts/kimi_code_harness.py", {item["path"] for item in inventory_payload["files"]})
             self.assertIn("tools/live_hosts/opencode_harness.py", {item["path"] for item in inventory_payload["files"]})
+            self.assertIn("tools/live_hosts/pi_harness.py", {item["path"] for item in inventory_payload["files"]})
             self.assertIn("tools/live_hosts/qwen_code_harness.py", {item["path"] for item in inventory_payload["files"]})
             self.assertIn("fixtures/synthetic/negative-matrix-01.json", {item["path"] for item in inventory_payload["files"]})
             self.assertIn("evals/synthetic/cost-baseline.v1.json", {item["path"] for item in inventory_payload["files"]})
@@ -74,7 +75,7 @@ class ReleaseInventoryTests(unittest.TestCase):
             self.assertEqual(matrix["adapterMaturityByHost"]["Grok Build"], "VERIFIED")
             self.assertEqual(
                 set(matrix["verifiedHosts"]),
-                {"Codex", "Claude Code", "Goose", "Grok Build", "OpenCode", "Hermes", "OpenInterpreter", "Qwen Code"},
+                {"Codex", "Claude Code", "Goose", "Grok Build", "OpenCode", "Hermes", "OpenInterpreter", "Pi", "Qwen Code"},
             )
             self.assertTrue(deferred["deferredProductionPromotion"])
             self.assertFalse(deferred["liveModelExecutionClaimed"])
