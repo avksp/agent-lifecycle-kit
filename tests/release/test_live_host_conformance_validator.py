@@ -75,7 +75,7 @@ class LiveHostConformanceValidatorTests(unittest.TestCase):
 
             payload = json.loads(evidence.read_text(encoding="utf-8"))
             self.assertEqual(payload["status"], "PASS")
-            self.assertEqual(payload["adapterProbePlan"]["path"], str(probe_plan))
+            self.assertEqual(payload["adapterProbePlan"]["path"], probe_plan.as_posix())
 
     def test_live_host_conformance_validator_rejects_synthetic_receipts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
