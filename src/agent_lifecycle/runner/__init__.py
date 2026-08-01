@@ -16,6 +16,8 @@ from agent_lifecycle.runner.core import (
     validate_runner_state,
 )
 from agent_lifecycle.runner.sandbox_receipts import (
+    build_credential_proxy_details,
+    build_partial_process_boundary,
     build_sandbox_receipt,
     build_unknown_sandbox_capability,
     require_sandbox_receipt_pass,
@@ -25,6 +27,8 @@ from agent_lifecycle.runner.sandbox_receipts import (
 
 __all__ = [
     "build_attempt_snapshot_receipt",
+    "build_credential_proxy_details",
+    "build_partial_process_boundary",
     "build_sandbox_receipt",
     "build_runner_snapshot",
     "build_unknown_sandbox_capability",

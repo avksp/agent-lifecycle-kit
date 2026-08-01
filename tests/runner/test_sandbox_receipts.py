@@ -4,6 +4,8 @@ import unittest
 
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.runner import (
+    build_credential_proxy_details,
+    build_partial_process_boundary,
     build_sandbox_receipt,
     build_unknown_sandbox_capability,
     require_sandbox_receipt_pass,
@@ -78,6 +80,105 @@ class SandboxReceiptTests(unittest.TestCase):
         self.assertFalse(capability["verified"])
         self.assertEqual(validation["status"], "PASS")
         self.assertEqual(validation["unknownBoundaryCount"], 4)
+
+    def test_partial_process_containment_is_valid_but_not_required_pass(self) -> None:
+        boundaries = _enforced_boundaries()
+        boundaries["process"] = build_partial_process_boundary(
+            evidence_ids=["ev-process-partial"],
+            covered=["direct-child-process"],
+            limitations=["windows-process-tree-grandchildren-not-guaranteed"],
+            platforms=["windows"],
+        )
+        receipt = build_sandbox_receipt(
+            lineage=_lineage(),
+            task_id="WS32-02",
+            attempt=1,
+            boundaries=boundaries,
+            enforcement={"source": "HOST", "verified": True, "evidenceIds": ["ev-process-partial"], "details": {}},
+            verifier={"tool": "unit-test"},
+            evidence_ids=["ev-process-partial"],
+        )
+
+        validation = validate_sandbox_receipt(receipt)
+
+        self.assertEqual(receipt["status"], "UNKNOWN")
+        self.assertEqual(validation["status"], "PASS")
+        self.assertEqual(validation["sandboxStatus"], "UNKNOWN")
+        self.assertEqual(validation["partialBoundaryCount"], 1)
+
+    def test_pass_receipt_cannot_overclaim_partial_containment(self) -> None:
+        boundaries = _enforced_boundaries()
+        boundaries["process"] = build_partial_process_boundary(
+            evidence_ids=["ev-process-partial"],
+            covered=["direct-child-process"],
+            limitations=["process-tree-coverage-is-partial"],
+        )
+        receipt = build_sandbox_receipt(
+            lineage=_lineage(),
+            task_id="WS32-02",
+            attempt=1,
+            boundaries=boundaries,
+            enforcement={"source": "HOST", "verified": True, "evidenceIds": ["ev-process-partial"], "details": {}},
+            verifier={"tool": "unit-test"},
+            status="PASS",
+        )
+
+        validation = validate_sandbox_receipt(receipt)
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn("sandbox-pass-overclaims-partial-boundary", {item["code"] for item in validation["blockers"]})
+
+    def test_credential_proxy_boundary_requires_redacted_placeholder(self) -> None:
+        boundaries = _enforced_boundaries()
+        boundaries["environment"]["details"] = build_credential_proxy_details(
+            source="HOST_ENV",
+            attachment="host-harness-env-injection",
+            egress_boundary="host-process-only",
+            allowed_env_names=["PROVIDER_API_KEY"],
+        )
+        receipt = build_sandbox_receipt(
+            lineage=_lineage(),
+            task_id="WS32-02",
+            attempt=1,
+            boundaries=boundaries,
+            enforcement={"source": "HOST", "verified": True, "evidenceIds": ["ev-credential-proxy"], "details": {}},
+            verifier={"tool": "unit-test"},
+            evidence_ids=["ev-credential-proxy"],
+        )
+
+        validation = validate_sandbox_receipt(receipt)
+
+        self.assertEqual(validation["status"], "PASS")
+        self.assertEqual(validation["credentialProxyCount"], 1)
+        self.assertTrue(validation["credentialProxyRedacted"])
+
+    def test_credential_proxy_boundary_rejects_secret_values(self) -> None:
+        boundaries = _enforced_boundaries()
+        boundaries["environment"]["details"] = {
+            "credentialProxy": {
+                "source": "HOST_ENV",
+                "attachment": "host-harness-env-injection",
+                "egressBoundary": "host-process-only",
+                "allowedEnvNames": ["PROVIDER_API_KEY"],
+                "sandboxCredentialValue": "not-redacted-credential-value",
+                "secretValueStoredInReceipt": True,
+            }
+        }
+        receipt = build_sandbox_receipt(
+            lineage=_lineage(),
+            task_id="WS32-02",
+            attempt=1,
+            boundaries=boundaries,
+            enforcement={"source": "HOST", "verified": True, "evidenceIds": ["ev-credential-proxy"], "details": {}},
+            verifier={"tool": "unit-test"},
+        )
+
+        validation = validate_sandbox_receipt(receipt)
+
+        codes = {item["code"] for item in validation["blockers"]}
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn("sandbox-credential-proxy-secret-stored", codes)
+        self.assertIn("sandbox-credential-proxy-secret-value", codes)
 
 
 def _lineage() -> dict:

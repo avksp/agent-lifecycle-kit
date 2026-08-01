@@ -177,6 +177,9 @@ class ContractTests(unittest.TestCase):
             "agent-lifecycle-live-calibration-receipt.v1",
             "agent-lifecycle-live-host-conformance-receipt.v1",
             "agent-live-host-conformance-verification.v1",
+            "agent-adapter-probe-profile.v1",
+            "agent-adapter-probe-plan.v1",
+            "agent-adapter-probe-evidence-validation.v1",
             "agent-live-host-promotion-plan.v1",
             "agent-live-host-promotion-plan-validation.v1",
             "agent-digest-authority-evidence.v1",
@@ -287,6 +290,11 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-live-host-promotion-plan-validation.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-sandbox-receipt.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertIn("writeScopeBoundary", get_schema("agent-sandbox-receipt.v1")["required"])
+        self.assertIn("partialBoundaryCount", get_schema("agent-sandbox-receipt-validation.v1")["properties"])
+        self.assertIn("credentialProxyCount", get_schema("agent-sandbox-receipt-validation.v1")["properties"])
+        self.assertEqual(get_schema("agent-adapter-probe-plan.v1")["properties"]["liveCallsStarted"], {"const": False})
+        self.assertEqual(get_schema("agent-adapter-probe-plan.v1")["properties"]["productionPromotionClaimed"], {"const": False})
+        self.assertEqual(get_schema("agent-adapter-probe-evidence-validation.v1")["properties"]["maturityChangeClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-cross-check-profile.v1")["properties"]["enabledByDefault"], {"const": False})
         self.assertEqual(get_schema("agent-cross-check-profile.v1")["properties"]["budgetUnits"], {"const": "tokens-and-resources"})
         self.assertEqual(get_schema("agent-runner-attempt-snapshot-receipt.v1")["properties"]["productionPromotionClaimed"], {"const": False})

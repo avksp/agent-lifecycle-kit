@@ -103,6 +103,25 @@ environment and enforcement-source evidence. `UNKNOWN` is a valid explicit
 capability state, but high-risk required policy accepts only configured passing
 sandbox statuses.
 
+Partial containment and credential proxy boundaries remain details inside
+`agent-sandbox-receipt.v1`; no execution-sandbox alias schema is introduced.
+
+## Adapter capability bench
+
+Adapter capability bench contracts are release-time drift detectors for live
+host conformance. They plan and validate coverage, but they do not start live
+calls or promote maturity.
+
+Stable schema ids:
+
+- `agent-adapter-probe-profile.v1`
+- `agent-adapter-probe-plan.v1`
+- `agent-adapter-probe-evidence-validation.v1`
+
+`agent-adapter-probe-plan.v1` keeps `liveCallsStarted: false`,
+`promotionDecision: NOT_EVALUATED`, `maturityChangeClaimed: false` and
+`productionPromotionClaimed: false`.
+
 ## Import interop and episode retrieval
 
 The import interop surface maps external dialects into reviewed ALK draft
