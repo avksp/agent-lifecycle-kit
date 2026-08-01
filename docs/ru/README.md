@@ -9,61 +9,66 @@ Agent Lifecycle Kit (ALK) - provider-neutral контрольный слой д�
 
 **Лицензия:** Apache-2.0 · **Версия:** 1.29.0 · **Python:** 3.11-3.13
 
-```mermaid
-flowchart LR
-  request[Задача] --> spec[Проверенная спецификация]
-  spec --> plan[Зафиксированный план]
-  plan --> work[Ограниченные пакеты работ]
-  work --> review[Проверка реализации]
-  review --> proof[Финальное подтверждение]
-  proof --> done[Завершено или оформлено как продолжение]
-  review -->|блокер| plan
-```
+## Почему стоит попробовать
 
-## Что входит
+- Жизненный цикл ориентирован на завершение: план, выполнение, проверка и proof.
+- Ядро нейтрально к провайдерам; команды конкретных CLI остаются в адаптерах.
+- Маленькие и локальные модели получают компактный контекст, явный следующий шаг
+  и детерминированные проверки.
+- Дополнительные профили включаются только по типу задачи или уровню риска.
+- Учёт расхода показывает токены и ресурсы; USD-cost необязателен и используется
+  только когда metered-хост сам его сообщает.
+
+## Области возможностей
+
+### Планирование и выполнение
 
 - Спецификация и план проверяются до начала реализации.
 - Работа разбивается на пакеты с владельцем, границами записи и критериями
   приёмки.
 - Выполнение, completion gate, блокировки, повторные попытки и финальное
   подтверждение фиксируются в структурированных артефактах.
-- Контракты адаптеров не смешивают детали конкретного хоста с ядром.
-- Маленькие локальные модели получают small-model packets, компактный контекст
-  и явный следующий шаг вместо длинной истории.
-- Отчёты о расходе разделяют практическую работу, проверку продукта, контроль
-  жизненного цикла и координацию.
-- Экспорт использования показывает сессии, токены, ресурсы, digest
-  подтверждений и необязательный `cost_usd`, если его сообщает metered-хост.
-- Дополнительный proof-integrity слой для багфиксов и рискованных финальных
-  подтверждений: стабильные findings, digest root cause, fix-impact receipts и
-  hash chain.
-- Дополнительные sandbox receipts для рискованных задач: filesystem, network,
-  process, environment и enforcement source фиксируются отдельно от git
-  write-scope, включая partial containment и redacted credential proxy
-  boundaries.
-- Release-time capability bench строит bounded probe plans из capability
-  manifests и проверяет live receipts на drift без изменения maturity.
-- Import mapper profiles для generic workflow/agent dialects, Constitution/ADR
-  и AGENTS/agentskills; результат остаётся untrusted draft с digest dialect
-  profile.
-- Issue-to-spec intake держит внешние тикеты как draft-only вход до review/freeze.
-- Draft-only task templates для bugfix, idea-to-PR, PR review,
-  merge-conflict repair и release-readiness задач.
-- Лёгкий episode retrieval по receipt/session summaries с digest provenance и
-  явным состоянием `chainVerified` или `chainUnchecked`.
-- Runner recovery receipts для snapshot, restore, abandon, selected attempt,
-  worker lease и heartbeat state.
-- Optional cross-check profile для рискованных задач: выключен по умолчанию,
-  capped в tokens/resources и advisory, пока план явно не делает его blocking.
-- Optional Bug Forensics profile для явных bug/regression repair задач:
+- Draft-only task templates покрывают bugfix, idea-to-PR, PR review,
+  merge-conflict repair и release-readiness задачи.
+
+### Качество и подтверждение
+
+- Проверка реализации сравнивает результат с frozen plan и acceptance evidence.
+- Optional Bug Forensics profile для bug/regression repair задач фиксирует
   reproduction-before-fix, stable fingerprint, hypothesis ledger, minimal patch
   gate, same-fingerprint regression proof и reusable recipes.
+- Proof-integrity слой для рискованных финальных подтверждений хранит stable
+  findings, digest root cause, fix-impact receipts и hash chain.
+- Optional cross-check, runtime policy и write-back receipts выключены по
+  умолчанию и становятся blocking только если это явно задано в плане.
+
+### Маршрутизация и расход
+
+- Small-model packets, compact context profiles, objective snapshots и
+  quality-cost learning помогают выбрать самый лёгкий безопасный режим.
 - Phase resource measurements используют usage export envelope для токенов,
   длительности и resource counters без обязательного USD-cost.
-- Adaptive lifecycle policy, failure-aware routing и предложения по настройке
-  правил выбирают самый лёгкий безопасный режим по нейтральным evidence.
-- Диагностика готовности, event feeds и lifecycle progress views по умолчанию
-  не пишут state и не запускают реальные модельные вызовы.
+- Экспорт использования показывает сессии, токены, ресурсы, digest
+  подтверждений и необязательный host-reported `cost_usd`.
+
+### Адаптеры и импорт
+
+- Контракты адаптеров не смешивают детали конкретного хоста с lifecycle schemas.
+- Release-time capability bench строит bounded probe plans и проверяет live
+  receipts на drift без автоматического изменения maturity.
+- Import mappers и issue-to-spec intake держат внешние workflow, agent dialects и
+  тикеты как untrusted draft inputs.
+- Episode retrieval ищет по receipt/session summaries с digest provenance и
+  состоянием `chainVerified` или `chainUnchecked`.
+
+### Операции
+
+- Runner recovery receipts покрывают snapshot, restore, abandon, selected
+  attempt, worker lease и heartbeat state.
+- Sandbox receipts для рискованных задач описывают runtime containment отдельно
+  от git write-scope.
+- Диагностика готовности, event feeds и lifecycle progress views по умолчанию не
+  пишут state и не запускают реальные модельные вызовы.
 
 ## Быстрый старт
 
@@ -80,34 +85,10 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 
 ## Обычный цикл
 
-1. Уточнить задачу и ограничения.
-2. Подготовить спецификацию и план.
-3. Проверить план и зафиксировать его.
-4. Выполнить ограниченные пакеты работ.
-5. Проверить реализацию по плану.
-6. Завершить задачу только после приёмки, подтверждающих артефактов и оценки
-   остаточных рисков.
-
-Основные группы команд:
-
-- `agent-lifecycle specification`: проверка спецификации и completion gate.
-- `agent-lifecycle plan`: проверка плана, файл блокировки, снимки и передача
-  контекста.
-- `agent-lifecycle workflow`: отчёты о выполнении задач и финальное
-  подтверждение.
-- `agent-lifecycle audit`: проверка плана и реализации.
-- `agent-lifecycle metrics`: отчёты о расходе, экспорт использования и
-  проверка этих отчётов.
-- `agent-lifecycle policy`: adaptive decisions, runtime receipts и предложения
-  по настройке правил.
-- `agent-lifecycle diagnostics`: обезличенные диагностические пакеты.
-- `agent-lifecycle diagnose`: проверка готовности исходного дерева без записи и
-  без реальных вызовов моделей.
-- `agent-lifecycle adapter`: проверка, осмотр, заготовка адаптера, события и
-  пробный план установки.
-
-Подробности: [Справочник команд](reference/cli.md) и
-[источник правды](reference/source-of-truth.md).
+Обычный путь: спецификация -> frozen plan -> bounded work -> проверка реализации
+-> final proof. Основные команды покрывают specification, plan, workflow, audit,
+adapter, import, metrics, policy, diagnostics и runner state. Подробности:
+[Справочник команд](reference/cli.md) и [источник правды](reference/source-of-truth.md).
 
 ## Зрелость адаптеров
 
