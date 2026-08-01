@@ -28,6 +28,46 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
             self.assertEqual(payload["schemaVersion"], "agent-specification-validation.v1")
             self.assertEqual(payload["requirementCount"], 1)
 
+    def test_specification_completion_gate_cli_writes_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["phase"] = "FINAL_AUDIT"
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            audit_path = root / "final-audit.json"
+            audit_path.write_text(json.dumps(_final_audit()), encoding="utf-8")
+            input_path = root / "gate-input.json"
+            input_path.write_text(
+                json.dumps({
+                    "requiredValidationIds": ["VAL-FULL"],
+                    "validationResults": [{"id": "VAL-FULL", "status": "PASS"}],
+                }),
+                encoding="utf-8",
+            )
+            out_path = root / "completion-gate.json"
+
+            code, payload = _run_cli(
+                [
+                    "specification",
+                    "completion-gate",
+                    "--state",
+                    str(state_path),
+                    "--final-audit",
+                    str(audit_path),
+                    "--input",
+                    str(input_path),
+                    "--out",
+                    str(out_path),
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-completion-gate-receipt.v1")
+            self.assertEqual(payload["decision"], "STOP")
+            self.assertTrue(out_path.exists())
+
     def test_plan_check_cli_validates_manifest_and_lock(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -204,6 +244,20 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
             self.assertEqual(payload["schemaVersion"], "agent-small-model-packet-compile-result.v1")
             self.assertEqual(payload["status"], "PASS")
             self.assertTrue(packet_path.exists())
+
+
+def _final_audit() -> dict:
+    return {
+        "schemaVersion": "agent-run-final-audit.v1",
+        "status": "PASS",
+        "semanticStatus": "READY_FOR_FINALIZATION",
+        "planRevision": 1,
+        "planDigest": "0" * 64,
+        "productionPromotionClaimed": False,
+        "notAcceptedTasks": [],
+        "missingReleaseEvidence": [],
+        "findings": [],
+    }
 
 
 if __name__ == "__main__":

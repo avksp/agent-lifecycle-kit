@@ -12,7 +12,7 @@ JSON, чтобы результат можно было проверять ав�
 
 ## Планирование
 
-- `agent-lifecycle specification`: проверки спецификации.
+- `agent-lifecycle specification`: проверки спецификации и completion gate.
 - `agent-lifecycle plan check`: проверка плана и файла блокировки.
 - `agent-lifecycle plan acceptance-check`: проверка трассируемости критериев
   приёмки.
@@ -26,7 +26,8 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle workflow`: переходы жизненного цикла, отчёты задач и
   финальное подтверждение. Для запусков с обязательной проверкой причинной
   цепочки `workflow finalize` принимает
-  `--proof-integrity <proof-integrity.json>`.
+  `--proof-integrity <proof-integrity.json>`; для обязательного решения
+  завершения принимает `--completion-gate-receipt <completion-gate.json>`.
 - `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.
 - `agent-lifecycle task compile-small`: small-model packets с output contract и
   compact context receipt.

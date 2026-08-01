@@ -142,6 +142,8 @@ class ContractTests(unittest.TestCase):
         self.assertIn("agent-completion-check-validation.v1", ids)
         self.assertIn("agent-completion-check-receipt.v1", ids)
         self.assertIn("agent-completion-check-receipt-validation.v1", ids)
+        self.assertIn("agent-completion-gate-receipt.v1", ids)
+        self.assertIn("agent-completion-gate-validation.v1", ids)
         self.assertIn("agent-goal-record.v1", ids)
         self.assertIn("agent-goal-record-validation.v1", ids)
         self.assertIn("agent-objective-snapshot.v1", ids)
@@ -289,6 +291,11 @@ class ContractTests(unittest.TestCase):
         self.assertIn("commands", get_schema("agent-packaging-smoke-evidence.v1")["required"])
         self.assertEqual(get_schema("agent-completion-check.v1")["properties"]["kind"]["enum"], ["verification", "external-action"])
         self.assertEqual(get_schema("agent-completion-check-receipt-validation.v1")["properties"]["status"], {"const": "PASS"})
+        self.assertEqual(
+            get_schema("agent-completion-gate-receipt.v1")["properties"]["decision"]["enum"],
+            ["STOP", "CONTINUE", "ESCALATE", "SPLIT", "FOLLOW_UP"],
+        )
+        self.assertEqual(get_schema("agent-completion-gate-receipt.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-goal-record.v1")["properties"]["status"]["enum"], ["ACTIVE", "BLOCKED", "READY_FOR_FINALIZATION", "COMPLETE"])
         self.assertIn("items", get_schema("agent-follow-up-register.v1")["required"])
         self.assertIn("finalizationBlockers", get_schema("agent-follow-up-register-validation.v1")["required"])

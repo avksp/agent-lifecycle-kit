@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.27.0 - 2026-08-01
+
+- Added deterministic completion gate receipts that choose `STOP`, `CONTINUE`,
+  `ESCALATE`, `SPLIT` or `FOLLOW_UP` from acceptance, validation, blockers,
+  final proof, risk and follow-up evidence.
+- Integrated optional completion gate binding into workflow finalization so
+  `STOP`/`FOLLOW_UP` decisions cannot bypass current evidence digests.
+- Added `agent-lifecycle specification completion-gate`, public schemas and
+  docs for stop/continue/follow-up semantics.
+
 ## 1.26.0 - 2026-08-01
 
 - Added small-model packet compilation from frozen task packets with exact
