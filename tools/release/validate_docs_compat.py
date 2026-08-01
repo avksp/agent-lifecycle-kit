@@ -361,6 +361,8 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
         required = ("`VERIFIED`", "Qwen Code `0.21.0`", "live conformance", "does not claim public")
     elif relative == "docs/adapters/openinterpreter.md" and "OpenInterpreter" in verified_doc_hosts:
         required = ("`VERIFIED`", "`interpreter` 0.0.34", "live conformance", "does not claim public")
+    elif relative == "docs/adapters/pi.md" and "Pi" in verified_doc_hosts:
+        required = ("`VERIFIED`", "Pi `0.83.0`", "live conformance", "does not claim public")
     else:
         required = ("`EXPERIMENTAL`", "live", "conformance")
     check = _check_doc(root, relative, required, blockers, verified_doc_hosts)
@@ -378,6 +380,7 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
                 "docs/adapters/hermes.md",
                 "docs/adapters/qwen-code.md",
                 "docs/adapters/openinterpreter.md",
+                "docs/adapters/pi.md",
             }
             and "until live" not in text
             and "not `VERIFIED`" not in text

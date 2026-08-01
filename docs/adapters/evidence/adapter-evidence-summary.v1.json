@@ -173,14 +173,16 @@
     {
       "adapterId": "pi",
       "host": "pi",
-      "maturity": "EXPERIMENTAL",
-      "testedHostRange": null,
-      "summaryPath": "docs/adapters/evidence/pi-1.13.0.md",
+      "maturity": "VERIFIED",
+      "testedHostRange": "0.83.0",
+      "summaryPath": "docs/adapters/evidence/pi-live-verified.md",
       "rawEvidenceLocalOnly": true,
       "evidenceKinds": [
-        "offline-conformance",
-        "rpc-json-projection",
-        "agentskills-projection"
+        "live-host-conformance",
+        "live-usage-calibration",
+        "lifecycle-final-proof",
+        "bounded-containment",
+        "host-env-hygiene"
       ],
       "productionPromotionClaimed": false,
       "publicDirectoryApprovalClaimed": false

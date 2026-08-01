@@ -82,6 +82,7 @@ HOSTS = {
         "secondary": True,
         "nativeProjection": "rpc-json-skills",
         "modelRouting": True,
+        "maturity": "VERIFIED",
         "hostCapability": "unsupported-alt-protocol",
     },
     "qwen-code": {

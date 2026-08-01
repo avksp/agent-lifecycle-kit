@@ -2,4 +2,12 @@
 
 This projection uses RPC/JSON plus AGENTS/agentskills metadata. The alternate protocol capability is not claimed.
 
-Maturity is `EXPERIMENTAL`. Live host conformance, usage receipts, sandbox evidence and lifecycle proof are required before any `VERIFIED` claim. Unsupported operations fail closed and lifecycle semantics stay delegated to ALK core.
+Maturity is host-specific `VERIFIED` for Pi 0.83.0 on the tested host-local
+provider/model binding. Live host conformance, usage receipts, host-env hygiene
+and lifecycle proof are recorded in
+`docs/adapters/evidence/pi-live-verified.md`.
+
+The adapter does not claim ACP support, public directory approval, production
+promotion, or sandbox containment beyond the bounded no-tools/no-session/no
+project-context live harness policy. Unsupported operations fail closed and
+lifecycle semantics stay delegated to ALK core.
