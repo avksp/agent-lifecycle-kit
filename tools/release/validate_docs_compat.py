@@ -44,6 +44,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "`completionCheck`",
             "`agent-completion-check-receipt.v1`",
+            "`agent-completion-gate-receipt.v1`",
+            "`agent-completion-gate-validation.v1`",
             "`agent-goal-record.v1`",
             "`agent-objective-snapshot.v1`",
             "`agent-runner-state.v1`",
@@ -77,6 +79,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "`completionCheck`",
             "`agent-completion-check-receipt.v1`",
+            "`agent-completion-gate-receipt.v1`",
+            "`agent-completion-gate-validation.v1`",
             "`agent-goal-record.v1`",
             "`agent-objective-snapshot.v1`",
             "`agent-runner-state.v1`",
@@ -204,6 +208,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "`completionCheck`",
             "`agent-completion-check-receipt.v1`",
+            "`agent-completion-gate-receipt.v1`",
+            "agent-lifecycle specification completion-gate",
             "`agent-external-action-receipt.v1`",
             "fails closed",
         ),

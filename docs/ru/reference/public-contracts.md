@@ -7,6 +7,8 @@
 
 - `completionCheck`: обязательный task-level gate завершения.
 - `agent-completion-check-receipt.v1`: подтверждение завершения.
+- `agent-completion-gate-receipt.v1`: решение stop/continue/escalate/split/follow-up.
+- `agent-completion-gate-validation.v1`: проверка completion gate receipt.
 - `agent-goal-record.v1`: запись цели.
 - `agent-objective-snapshot.v1`: компактный снимок цели.
 - `agent-runner-state.v1`: состояние управляемого выполнения.

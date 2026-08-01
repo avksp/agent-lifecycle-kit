@@ -34,3 +34,7 @@ artifacts, final audit and proof.
 
 `workflow finalize` can bind a checked register into final proof with
 `--follow-up-register <follow-up-register.json>`.
+
+A completion gate can choose `FOLLOW_UP` only for non-blocking cleanup or
+deferred work. Blocking defects stay `CONTINUE`, `ESCALATE` or `SPLIT`; they
+cannot be hidden in the register with `currentScopeImpact: none`.

@@ -23,7 +23,7 @@ flowchart LR
 
 - Reviewed specification and plan flow before implementation starts.
 - Deterministic task packets for splitting work across agents.
-- Fail-closed execution receipts, blocker handling, and final proof.
+- Fail-closed execution receipts, completion gates, blockers, and final proof.
 - Adapter contracts for host-specific projections without putting host details
   in the core.
 - Compact context profiles, small-model packets and objective snapshots for local models.
@@ -80,7 +80,7 @@ Russian documentation starts at [Документация на русском](d
 
 Useful command groups:
 
-- `agent-lifecycle specification`: specification checks and summaries.
+- `agent-lifecycle specification`: specification checks and completion gates.
 - `agent-lifecycle plan`: plan checks, locks, snapshots, and handoffs.
 - `agent-lifecycle workflow`: task execution receipts and final proof.
 - `agent-lifecycle audit`: plan and implementation review gates.

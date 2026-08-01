@@ -36,6 +36,8 @@ and optional quality/reporting controls.
 Stable schema ids:
 
 - `agent-completion-check-receipt.v1`
+- `agent-completion-gate-receipt.v1`
+- `agent-completion-gate-validation.v1`
 - `agent-goal-record.v1`
 - `agent-objective-snapshot.v1`
 - `agent-runner-state.v1`
@@ -72,11 +74,12 @@ Stable schema ids:
 - `agent-small-model-output-validation.v1`
 - `agent-small-model-packet-compile-result.v1`
 
-`completionCheck` is the task-level completion gate. Optional quality packs and
-read-only reports add bounded evidence, but they do not replace source-of-truth
-lifecycle artifacts. Event feeds and progress views are projections over
-existing state/receipts; they do not start model calls, spend tokens, or mutate
-state.
+`completionCheck` binds observable completion evidence. The completion gate is
+a deterministic stop/continue/escalate/split/follow-up decision over current
+evidence. Optional quality packs and read-only reports add bounded evidence,
+but they do not replace source-of-truth lifecycle artifacts. Event feeds and
+progress views are projections over existing state/receipts; they do not start
+model calls, spend tokens, or mutate state.
 
 Adaptive lifecycle policy chooses the lightest safe mode from neutral
 task/risk/evidence/resource inputs. It is advisory by default; automatic

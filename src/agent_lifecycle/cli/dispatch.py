@@ -104,7 +104,7 @@ from agent_lifecycle.runner import (
     validate_runner_state,
 )
 from agent_lifecycle.runner.core import write_runner_state, write_runner_state_create
-from agent_lifecycle.specification import validate_specification
+from agent_lifecycle.specification import build_completion_gate_receipt, validate_specification
 from agent_lifecycle.workflow import (
     accept_task,
     adopt_plan,
@@ -383,6 +383,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             proof_integrity_path=args.proof_integrity,
             goal_record_path=args.goal_record,
             follow_up_register_path=args.follow_up_register,
+            completion_gate_receipt_path=args.completion_gate_receipt,
             reason=args.reason,
         )
     return _dispatch_workflow_task(args, state_path)
@@ -727,6 +728,23 @@ def _dispatch_tier(args: argparse.Namespace) -> dict[str, Any]:
 def _dispatch_specification(args: argparse.Namespace) -> dict[str, Any]:
     if args.specification_command == "check":
         return validate_specification(read_json_object(Path(args.specification), label="specification"))
+    if args.specification_command == "completion-gate":
+        gate_input = read_json_object(Path(args.input), label="completion gate input") if args.input else {}
+        payload = build_completion_gate_receipt(
+            state=read_json_object(Path(args.state), label="workflow state"),
+            final_audit=read_json_object(Path(args.final_audit), label="final audit") if args.final_audit else None,
+            follow_up_register=read_json_object(Path(args.follow_up_register), label="follow-up register") if args.follow_up_register else None,
+            validation_results=gate_input.get("validationResults", []),
+            required_validation_ids=gate_input.get("requiredValidationIds", []),
+            follow_up_candidates=gate_input.get("followUpCandidates", []),
+            regression_signals=gate_input.get("regressionSignals", []),
+            risk_flags=gate_input.get("riskFlags", []),
+            split_candidates=gate_input.get("splitCandidates", []),
+            verifier_id=args.verifier,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     raise LifecycleError("command-not-implemented", "specification command is not implemented")
 
 
