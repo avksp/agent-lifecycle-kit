@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.25.0 - 2026-08-01
+
+- Added adaptive lifecycle policy decisions that choose the lightest safe mode
+  from neutral task, risk, evidence and resource inputs.
+- Added schema-backed quality-floor and adaptive-decision receipts with digest
+  validation, advisory-by-default behavior and opt-in automatic selection.
+- Integrated lifecycle mode/floor hints with provider-neutral model routing
+  while keeping currency metadata metered-only and unused for core selection.
+
 ## 1.24.0 - 2026-08-01
 
 - Added draft-only issue-to-spec intake for external tickets and tracker

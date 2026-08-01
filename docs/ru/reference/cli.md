@@ -43,7 +43,8 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle metrics usage-export`: экспорт сессий, digest
   подтверждений, токенов, ресурсов, длительности, решений по бюджету и
   необязательного `cost_usd`, если его сообщает metered-хост.
-- `agent-lifecycle policy`: рекомендательные предложения по настройке правил.
+- `agent-lifecycle policy`: adaptive decisions, runtime receipts и
+  рекомендательные предложения по настройке правил.
 
 ## Адаптеры
 

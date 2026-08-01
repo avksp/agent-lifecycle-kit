@@ -56,12 +56,14 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/cli.md",
             "docs/ru/reference/source-of-truth.md",
             "docs/ru/reference/public-contracts.md",
+            "docs/ru/reference/adaptive-lifecycle-policy.md",
             "docs/ru/reference/readiness-diagnostics.md",
             "docs/ru/reference/lifecycle-cost.md",
             "docs/ru/security/release-security.md",
             "docs/adapters/install.md",
             "docs/reference/cli.md",
             "docs/reference/source-of-truth.md",
+            "docs/reference/adaptive-lifecycle-policy.md",
             "docs/reference/readiness-diagnostics.md",
         ):
             with self.subTest(path=relative):
@@ -286,9 +288,25 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-readonly-status-view.v1`.\n"
         "`agent-workflow-event-feed.v1`.\n"
         "`agent-lifecycle-progress-view.v1`.\n"
+        "`agent-lifecycle-quality-floor-decision.v1`.\n"
+        "`agent-adaptive-lifecycle-policy-request.v1`.\n"
+        "`agent-adaptive-lifecycle-policy-decision.v1`.\n"
+        "`agent-adaptive-lifecycle-policy-decision-validation.v1`.\n"
     )
     _write_text(root / "docs/reference/public-contracts.md", public_contracts)
     _write_text(root / "docs/ru/reference/public-contracts.md", public_contracts)
+    adaptive_policy = (
+        "`agent-lifecycle-quality-floor-decision.v1`.\n"
+        "`agent-adaptive-lifecycle-policy-decision.v1`.\n"
+        "agent-lifecycle policy adaptive-decision.\n"
+        "agent-lifecycle policy adaptive-check.\n"
+        "tokens-and-resources.\n"
+        "`monetaryFieldsUsed` is always `false`.\n"
+        "`monetaryFieldsUsed: false`.\n"
+        "quality floor.\n"
+    )
+    _write_text(root / "docs/reference/adaptive-lifecycle-policy.md", adaptive_policy)
+    _write_text(root / "docs/ru/reference/adaptive-lifecycle-policy.md", adaptive_policy)
     cursor_maturity = "VERIFIED" if unsupported_verified_row else "EXPERIMENTAL"
     _write_text(
         root / "docs/adapters/support-matrix.md",

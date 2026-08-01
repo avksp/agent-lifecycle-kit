@@ -61,12 +61,21 @@ Stable schema ids:
 - `agent-readonly-status-view.v1`
 - `agent-workflow-event-feed.v1`
 - `agent-lifecycle-progress-view.v1`
+- `agent-lifecycle-quality-floor-decision.v1`
+- `agent-adaptive-lifecycle-policy-request.v1`
+- `agent-adaptive-lifecycle-policy-decision.v1`
+- `agent-adaptive-lifecycle-policy-decision-validation.v1`
 
 `completionCheck` is the task-level completion gate. Optional quality packs and
 read-only reports add bounded evidence, but they do not replace source-of-truth
 lifecycle artifacts. Event feeds and progress views are projections over
 existing state/receipts; they do not start model calls, spend tokens, or mutate
 state.
+
+Adaptive lifecycle policy chooses the lightest safe mode from neutral
+task/risk/evidence/resource inputs. It is advisory by default; automatic
+selection requires explicit opt-in and cannot choose below the quality floor.
+It does not use provider/model names or live currency lookup.
 
 ## Evidence integrity
 
