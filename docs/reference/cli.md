@@ -35,6 +35,8 @@ read-only unless their own help says otherwise.
   proof-integrity evidence.
 - `agent-lifecycle runner start/status/transition/stop/resume`: control
   bounded execution state.
+- `agent-lifecycle task compile-small`: compile frozen task packets into
+  small-model packets with output contracts and compact context receipts.
 
 ## Review and quality
 

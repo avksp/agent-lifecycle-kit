@@ -55,6 +55,15 @@ def resolve_window(profile: dict[str, Any], window: str | None) -> dict[str, Any
     return {"name": selected, **validation["windows"][selected]}
 
 
+def small_model_windows(profile: dict[str, Any]) -> list[str]:
+    validation = validate_context_profile(profile)
+    return [
+        name
+        for name in sorted(validation["windows"], key=lambda item: WINDOWS[item])
+        if WINDOWS[name] <= WINDOWS["16k"]
+    ]
+
+
 def _validate_window(name: str, value: Any) -> dict[str, Any]:
     if name not in WINDOWS or not isinstance(value, dict):
         raise LifecycleError("invalid-context-profile", f"invalid window profile: {name}")

@@ -58,3 +58,8 @@ It fits the selected small-context profile or fails closed. Small local models
 can use it to continue without replaying long history. Larger models can still
 inspect full runner state, workflow state, evidence, reviews and audits for
 quality-sensitive decisions.
+
+`agent-small-model-task-packet.v1` is a separate execution packet for small
+implementation attempts. It carries exact write scope, a required output
+contract and a compact context receipt. It does not replace runner state,
+reviews, final audit or production promotion evidence.

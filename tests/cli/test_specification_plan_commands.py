@@ -178,6 +178,33 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertEqual(payload["code"], "plan-reconciliation-failed")
 
+    def test_task_compile_small_cli_writes_packets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = _write_task_compile_bundle(root)
+            previous_cwd = Path.cwd()
+            os.chdir(root)
+            try:
+                code, payload = _run_cli(
+                    [
+                        "task",
+                        "compile-small",
+                        "--manifest",
+                        str(manifest_path),
+                        "--context-profile",
+                        str(ROOT / "profiles/small-context-profile.v1.json"),
+                        "--write",
+                    ]
+                )
+            finally:
+                os.chdir(previous_cwd)
+
+            packet_path = root / "plans/p/workflow/small-model-packets/WS-01.small-model-packet.json"
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-small-model-packet-compile-result.v1")
+            self.assertEqual(payload["status"], "PASS")
+            self.assertTrue(packet_path.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
