@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.goal import validate_goal_record
 from agent_lifecycle.specification import (
+    require_completion_gate_finalization,
     validate_completion_check,
     validate_completion_check_receipt,
     validate_completion_signal,
@@ -33,6 +35,7 @@ def finalize_run(
     proof_integrity_path: str | None = None,
     goal_record_path: str | None = None,
     follow_up_register_path: str | None = None,
+    completion_gate_receipt_path: str | None = None,
     reason: str,
 ) -> dict[str, Any]:
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
@@ -46,11 +49,19 @@ def finalize_run(
     root = package_root(state_path, state)
     final_audit_rel = normalize_repo_path(final_audit_path)
     final_audit = read_json_object(root / final_audit_rel, label="final audit")
+    raw_final_audit = deepcopy(final_audit)
     final_audit_identity = artifact_identity(root, final_audit_rel, final_audit)
     _validate_final_audit(state, final_audit)
     completion_check_receipt = _validate_completion_check(state, root)
     goal_record = _validate_goal_record(state, root, goal_record_path)
     follow_up_register = _validate_follow_up_register(state, root, follow_up_register_path)
+    completion_gate = _validate_completion_gate(
+        state,
+        root,
+        raw_final_audit,
+        completion_gate_receipt_path=completion_gate_receipt_path,
+        follow_up_register_path=follow_up_register_path,
+    )
     proof_integrity = _validate_proof_integrity(state, root, final_audit, proof_integrity_path)
     finalization_gate_receipts = _validate_finalization_gates(
         state_path,
@@ -63,6 +74,7 @@ def finalize_run(
         operation_id=operation_id,
         final_audit=final_audit_identity,
         completion_check_receipt=completion_check_receipt,
+        completion_gate=completion_gate,
         goal_record=goal_record,
         follow_up_register=follow_up_register,
         proof_integrity=proof_integrity,
@@ -75,6 +87,8 @@ def finalize_run(
     state["finalAudit"] = final_audit_identity
     if completion_check_receipt is not None:
         state["completionCheckReceipt"] = completion_check_receipt["receipt"]
+    if completion_gate is not None:
+        state["completionGateReceipt"] = completion_gate["receipt"]
     if goal_record is not None:
         state["goalRecord"] = goal_record["record"]
     if follow_up_register is not None:
@@ -90,6 +104,7 @@ def finalize_run(
         payload={
             "finalAudit": final_audit_identity,
             "completionCheckReceipt": completion_check_receipt,
+            "completionGate": completion_gate,
             "goalRecord": goal_record,
             "followUpRegister": follow_up_register,
             "proofIntegrity": proof_integrity,
@@ -221,6 +236,48 @@ def _validate_follow_up_register(state: dict[str, Any], root: Path, follow_up_re
     return {"register": identity, "validation": validation}
 
 
+def _validate_completion_gate(
+    state: dict[str, Any],
+    root: Path,
+    final_audit: dict[str, Any],
+    *,
+    completion_gate_receipt_path: str | None,
+    follow_up_register_path: str | None,
+) -> dict[str, Any] | None:
+    path = completion_gate_receipt_path
+    existing = state.get("completionGate")
+    if path is None and isinstance(existing, dict) and existing.get("receiptPath"):
+        path = existing["receiptPath"]
+    if path is None:
+        return None
+    receipt_rel = normalize_repo_path(path, label="completion gate receipt")
+    receipt = read_json_object(root / receipt_rel, label="completion gate receipt")
+    follow_up_register = _read_follow_up_register_payload(state, root, follow_up_register_path)
+    validation = require_completion_gate_finalization(
+        receipt,
+        state=state,
+        final_audit=final_audit,
+        follow_up_register=follow_up_register,
+    )
+    identity = artifact_identity(root, receipt_rel, receipt)
+    return {"receipt": identity, "validation": validation}
+
+
+def _read_follow_up_register_payload(
+    state: dict[str, Any],
+    root: Path,
+    follow_up_register_path: str | None,
+) -> dict[str, Any] | None:
+    path = follow_up_register_path
+    existing = state.get("followUpRegister")
+    if path is None and isinstance(existing, dict) and existing.get("path"):
+        path = existing["path"]
+    if path is None:
+        return None
+    register_rel = normalize_repo_path(path, label="follow-up register")
+    return read_json_object(root / register_rel, label="follow-up register")
+
+
 def _validate_proof_integrity(
     state: dict[str, Any],
     root: Path,
@@ -243,6 +300,7 @@ def _proof_body(
     operation_id: str,
     final_audit: dict[str, Any],
     completion_check_receipt: dict[str, Any] | None,
+    completion_gate: dict[str, Any] | None,
     goal_record: dict[str, Any] | None,
     follow_up_register: dict[str, Any] | None,
     proof_integrity: dict[str, Any] | None,
@@ -272,6 +330,7 @@ def _proof_body(
         "acceptedTasks": accepted,
         "finalAudit": final_audit,
         "completionCheck": completion_check_receipt,
+        "completionGate": completion_gate,
         "goalRecord": goal_record,
         "followUpRegister": follow_up_register,
         "proofIntegrity": proof_integrity,

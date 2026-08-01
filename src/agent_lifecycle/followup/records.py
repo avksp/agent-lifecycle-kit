@@ -87,6 +87,53 @@ def add_followup_item(register: dict[str, Any], item: dict[str, Any]) -> dict[st
     return updated
 
 
+def followup_item_from_completion_gate(
+    receipt: dict[str, Any],
+    *,
+    item_id: str,
+    title: str,
+    owner_id: str,
+    target_release: str,
+    reason: str,
+    source: dict[str, Any] | None = None,
+    closure_evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Convert a non-blocking completion gate decision into a follow-up item."""
+
+    if not isinstance(receipt, dict) or receipt.get("schemaVersion") != "agent-completion-gate-receipt.v1":
+        raise LifecycleError("invalid-completion-gate-receipt", "completion gate receipt is required")
+    if receipt.get("decision") != "FOLLOW_UP":
+        raise LifecycleError("completion-gate-follow-up-not-allowed", "only FOLLOW_UP decisions can create follow-up items")
+    if receipt.get("blockers"):
+        raise LifecycleError("completion-gate-follow-up-blocked", "blocking completion gate receipts cannot create follow-up items")
+    _required_string(item_id, label="itemId")
+    _required_string(title, label="title")
+    _required_string(owner_id, label="ownerId")
+    _required_string(target_release, label="targetRelease")
+    _required_string(reason, label="reason")
+    item_source = source or {
+        "outOfScopeReason": "Completion gate classified this work as non-blocking follow-up.",
+    }
+    item = {
+        "id": item_id,
+        "title": title,
+        "owner": {"id": owner_id},
+        "status": "SCHEDULED",
+        "source": item_source,
+        "targetRelease": target_release,
+        "currentScopeImpact": "none",
+        "closureEvidence": closure_evidence or {"requiredEvidenceIds": [], "requiredArtifacts": []},
+        "reason": reason,
+        "completionGate": {
+            "decision": receipt["decision"],
+            "reasonCodes": list(receipt.get("reasonCodes", [])),
+            "gateDigest": receipt.get("gateDigest"),
+        },
+    }
+    _validate_item(item, seen=set(), root=None)
+    return item
+
+
 def close_followup_item(
     register: dict[str, Any],
     *,
