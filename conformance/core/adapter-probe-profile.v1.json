@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "agent-adapter-probe-profile.v1",
+  "profileId": "adapter-capability-bench-v1",
+  "status": "OPTIONAL",
+  "maxHostsPerPlan": 12,
+  "maxLiveOperationsPerHost": 16,
+  "defaultTimeoutSeconds": 120,
+  "deterministicSmokeOperations": [
+    "validate-envelope",
+    "adapter-event-stream",
+    "result-collection",
+    "task-audit",
+    "final-audit"
+  ],
+  "requiredReceiptSchemas": [
+    "agent-lifecycle-live-host-conformance-receipt.v1",
+    "agent-host-operation-request.v1",
+    "agent-host-operation-receipt.v1"
+  ],
+  "driftPolicy": {
+    "missingPlannedOperation": "FAIL",
+    "syntheticReplayForLiveRequiredOperation": "FAIL",
+    "hostProtocolEnvelopeBypass": "FAIL",
+    "maturityPromotionFromProbePlan": "FORBIDDEN"
+  },
+  "liveCallsStarted": false,
+  "productionPromotionClaimed": false,
+  "maturityChangeClaimed": false
+}

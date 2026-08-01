@@ -21,3 +21,14 @@
 
 `VERIFIED` относится только к указанному диапазону хоста и не означает
 публичное одобрение каталога, npm-публикацию или готовность других версий.
+
+Capability bench evidence — это drift detector для live conformance. План
+строится из `agent-adapter-capability-manifest.v1`, не запускает live calls,
+не меняет maturity и не заявляет production promotion. Проверка evidence
+сравнивает live host receipts с планом и падает при пропущенной planned
+operation, synthetic replay для live-required operation или обходе host-protocol
+envelope.
+
+Sandbox evidence использует только `agent-sandbox-receipt.v1`. Partial
+process-tree containment и credential proxy границы записываются в details
+receipt; значения секретов и полные пути к приватным env-file недопустимы.
