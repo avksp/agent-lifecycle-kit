@@ -66,6 +66,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/cli.md",
             "docs/reference/source-of-truth.md",
             "docs/reference/adaptive-lifecycle-policy.md",
+            "docs/reference/model-routing.md",
             "docs/reference/small-model-packets.md",
             "docs/reference/readiness-diagnostics.md",
         ):
@@ -304,6 +305,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-task-outcome-index.v1`.\n"
         "`agent-quality-cost-signals.v1`.\n"
         "`agent-quality-cost-signals-summary.v1`.\n"
+        "`agent-failure-classification-receipt.v1`.\n"
+        "`agent-failure-classification-validation.v1`.\n"
         "Quality-cost learning avoids provider/model leaderboards.\n"
     )
     _write_text(root / "docs/reference/public-contracts.md", public_contracts)
@@ -318,9 +321,18 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`monetaryFieldsUsed: false`.\n"
         "quality floor.\n"
         "quality-cost learning.\n"
+        "Failure signals.\n"
     )
     _write_text(root / "docs/reference/adaptive-lifecycle-policy.md", adaptive_policy)
     _write_text(root / "docs/ru/reference/adaptive-lifecycle-policy.md", adaptive_policy)
+    _write_text(
+        root / "docs/reference/model-routing.md",
+        "failureSignals.\n"
+        "no-model -> local-small-packet -> standard-implementation -> stronger-review -> optional-cross-check.\n"
+        "optionalCrossCheckRecommended.\n"
+        "downgradeBlocked.\n"
+        "providerModelNamesInCore: false.\n",
+    )
     _write_text(
         root / "docs/reference/quality-cost-learning.md",
         "`agent-task-outcome-index.v1`.\n"

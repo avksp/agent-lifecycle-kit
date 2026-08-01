@@ -7,6 +7,7 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.metrics.recommendations import validate_lifecycle_baselines
 from agent_lifecycle.policy.quality_floor import MODES, max_mode, mode_index, resolve_quality_floor
+from agent_lifecycle.quality.failure_classification import FAILURE_CLASSES, HIGH_RISK_FAILURE_CLASSES
 
 ADAPTIVE_REQUEST_SCHEMA = "agent-adaptive-lifecycle-policy-request.v1"
 ADAPTIVE_DECISION_SCHEMA = "agent-adaptive-lifecycle-policy-decision.v1"
@@ -14,6 +15,7 @@ ADAPTIVE_VALIDATION_SCHEMA = "agent-adaptive-lifecycle-policy-decision-validatio
 RESOURCE_BASIS = "tokens-and-resources"
 SDD_TIERS = {"S0", "S1", "S2"}
 BUDGET_MODES = {"local", "subscription", "metered"}
+FLAKE_STATUSES = {"stable-fail", "stable-pass", "flaky", "inconclusive"}
 FORBIDDEN_NEUTRAL_KEYS = {
     "apikey",
     "auth",
@@ -195,6 +197,7 @@ def _normalize_request(request: dict[str, Any]) -> tuple[dict[str, Any], list[di
     prior_attempts = _non_negative_int(request.get("priorAttempts", 0), field="priorAttempts", blockers=blockers)
     context_tokens = _non_negative_int(request.get("contextTokens", 0), field="contextTokens", blockers=blockers)
     resource_caps = _resource_caps(request.get("resourceCaps", {}), blockers)
+    failure_signals = _failure_signals(request.get("failureSignals", {}), blockers)
     budget_mode = _string(request.get("budgetMode"), default="local")
     if budget_mode not in BUDGET_MODES:
         blockers.append({"code": "adaptive-request-budget-mode-invalid", "budgetMode": budget_mode})
@@ -217,6 +220,7 @@ def _normalize_request(request: dict[str, Any]) -> tuple[dict[str, Any], list[di
             "priorAttempts": prior_attempts,
             "contextTokens": context_tokens,
             "resourceCaps": resource_caps,
+            "failureSignals": failure_signals,
             "budgetMode": budget_mode,
             "currentMode": current_mode,
             "automaticSelectionEnabled": automatic,
@@ -237,6 +241,25 @@ def _recommended_mode(normalized: dict[str, Any], baseline_profile: dict[str, An
     if normalized["priorAttempts"] >= 2:
         target = max_mode(target, "strict")
         reasons.append("retry-escalation")
+    failure_signals = normalized.get("failureSignals", {})
+    failure_class = failure_signals.get("failureClass")
+    if failure_class in {"api-contract", "serialization", "permission", "migration", "performance"}:
+        target = max_mode(target, "standard")
+        reasons.append(f"failure-class-{failure_class}-escalation")
+    if failure_class in HIGH_RISK_FAILURE_CLASSES or failure_class == "flaky-test" or failure_signals.get("flakeStatus") == "flaky":
+        target = max_mode(target, "strict")
+        reasons.append(f"failure-class-{failure_class or 'flake'}-strict-escalation")
+    if failure_signals.get("validationStatus") in {"FAIL", "ERROR", "BLOCKED", "REJECTED"}:
+        target = max_mode(target, "standard")
+        reasons.append("validation-failure-escalation")
+    if int(failure_signals.get("retryCount", 0)) >= 2 or int(failure_signals.get("remediationLoops", 0)) >= 2:
+        target = max_mode(target, "strict")
+        reasons.append("failure-loop-strict-escalation")
+    if normalized["currentMode"] in MODES and (normalized["priorAttempts"] > 0 or failure_signals):
+        raised = max_mode(target, normalized["currentMode"])
+        if raised != target:
+            reasons.append("no-downgrade-after-failure")
+        target = raised
     if normalized["contextTokens"] >= 64000:
         target = max_mode(target, "strict")
         reasons.append("large-context-escalation")
@@ -260,6 +283,7 @@ def _neutral_inputs(normalized: dict[str, Any], *, monetary_keys: list[str]) -> 
         "priorAttempts": normalized["priorAttempts"],
         "contextTokens": normalized["contextTokens"],
         "resourceCaps": {key: caps[key] for key in sorted(caps) if key in {"maxInvocations", "maxWallSeconds", "maxBillableTokens"}},
+        "failureSignals": dict(normalized["failureSignals"]),
         "budgetMode": normalized["budgetMode"],
         "automaticSelectionEnabled": normalized["automaticSelectionEnabled"],
         "monetaryMetadataKeys": monetary_keys,
@@ -277,6 +301,43 @@ def _resource_caps(value: Any, blockers: list[dict[str, Any]]) -> dict[str, Any]
         if field in caps:
             caps[field] = _non_negative_int(caps[field], field=f"resourceCaps.{field}", blockers=blockers)
     return caps
+
+
+def _failure_signals(value: Any, blockers: list[dict[str, Any]]) -> dict[str, Any]:
+    if value in (None, {}):
+        return {}
+    if not isinstance(value, dict):
+        blockers.append({"code": "adaptive-request-failure-signals-invalid"})
+        return {}
+    failure_class = value.get("failureClass")
+    if failure_class is not None and failure_class not in FAILURE_CLASSES:
+        blockers.append({"code": "adaptive-request-failure-class-invalid", "failureClass": failure_class})
+        failure_class = None
+    confidence = value.get("confidence")
+    if confidence is not None and confidence not in {"LOW", "MEDIUM", "HIGH"}:
+        blockers.append({"code": "adaptive-request-failure-confidence-invalid", "confidence": confidence})
+        confidence = None
+    flake_status = value.get("flakeStatus")
+    if flake_status is not None and flake_status not in FLAKE_STATUSES:
+        blockers.append({"code": "adaptive-request-flake-status-invalid", "flakeStatus": flake_status})
+        flake_status = None
+    validation_status = value.get("validationStatus")
+    if validation_status is not None and not isinstance(validation_status, str):
+        blockers.append({"code": "adaptive-request-validation-status-invalid"})
+        validation_status = None
+    classification_digest = value.get("classificationDigest")
+    if classification_digest is not None and not _is_digest(classification_digest):
+        blockers.append({"code": "adaptive-request-classification-digest-invalid"})
+        classification_digest = None
+    return {
+        "failureClass": failure_class,
+        "confidence": confidence,
+        "retryCount": _non_negative_int(value.get("retryCount", 0), field="failureSignals.retryCount", blockers=blockers),
+        "remediationLoops": _non_negative_int(value.get("remediationLoops", 0), field="failureSignals.remediationLoops", blockers=blockers),
+        "validationStatus": validation_status,
+        "flakeStatus": flake_status,
+        "classificationDigest": classification_digest,
+    }
 
 
 def _monetary_blockers(value: Any, *, budget_mode: str) -> list[dict[str, Any]]:
@@ -318,6 +379,10 @@ def _walk(value: Any, prefix: str = "$") -> list[tuple[str, Any]]:
 def _is_monetary_key(key: str) -> bool:
     normalized = key.replace("_", "").replace("-", "").lower()
     return "usd" in normalized or "cost" in normalized
+
+
+def _is_digest(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value)
 
 
 def _risk_list(value: Any) -> list[str]:

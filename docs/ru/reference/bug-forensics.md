@@ -17,6 +17,8 @@ symptom -> reproduction -> failure fingerprint -> hypotheses -> root cause -> mi
   падает, артефакты привязаны digest.
 - `agent-failure-fingerprint.v1`: стабильный fingerprint ошибки с опциональной
   связью на `findingId` и `rootCauseDigest`.
+- `agent-failure-classification-receipt.v1`: нейтральный failure class,
+  confidence, matched evidence и digest provenance.
 - `agent-bug-hypothesis-ledger.v1`: принятые и отвергнутые гипотезы плюс
   minimal-patch gate.
 - `agent-regression-proof-receipt.v1`: тот же fingerprint красный до фикса и
@@ -31,6 +33,10 @@ bug-specific fix-impact schema не вводится.
 
 Для рискованных багов можно явно включить Release 1.12 cross-check. Он остаётся
 capped в tokens/resources и advisory, пока frozen plan не требует blocking.
+
+Failure classification и flake signals можно привязать к gate receipt. Если
+security или race classification совмещены с S2/security risk задачи, gate
+требует cross-check evidence вместо тихого принятия слабой проверки.
 
 ## Recipes
 
@@ -47,7 +53,8 @@ Recipes не вводят новые receipt schemas. Они ссылаются 
 Forensics, proof-integrity и cross-check receipts, выключены по умолчанию и
 используют tokens/resources вместо обязательного USD-cost.
 
-## Phase 2
+## Deferred Analysis
 
-Suspect graph, flake detector и bug-class classifier описаны как следующий
-этап и не блокируют v1 profile.
+Suspect graph остаётся optional. Flake signals и failure classification уже
+могут фиксироваться, но не заменяют reproduction, fingerprint, hypothesis
+ledger, regression proof или fix-impact evidence.

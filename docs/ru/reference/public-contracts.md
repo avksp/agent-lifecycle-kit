@@ -36,6 +36,8 @@
 - `agent-proof-finding.v1`: стабильная идентичность finding.
 - `agent-root-cause-evidence.v1`: подтверждение root cause.
 - `agent-fix-impact-receipt.v1`: канонический receipt влияния исправления.
+- `agent-failure-classification-receipt.v1`: нейтральный класс ошибки.
+- `agent-failure-classification-validation.v1`: проверка classification receipt.
 - `agent-receipt-hash-chain.v1`: append-only цепочка receipts.
 - `agent-proof-integrity-receipt.v1`: общий receipt целостности
   подтверждений.
@@ -94,6 +96,10 @@ check`. Изменение контракта без тестов и докум�
 исправления. Он связывает changed files, finding ids, digest root cause,
 изменённые и сохранённые behavior contracts, regression evidence и проверку
 побочного влияния.
+
+`agent-failure-classification-receipt.v1` классифицирует failure как edge case,
+API contract, race, flaky test, security bug или unknown. Receipt фиксирует
+confidence, matched evidence и digest provenance без provider/model names в core.
 
 `agent-sandbox-receipt.v1` не заменяет
 `agent-worktree-attempt-receipt.v1`. Worktree receipt ограничивает пути записи
