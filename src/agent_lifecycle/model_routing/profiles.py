@@ -27,6 +27,25 @@ TOOL_USE = {"supported", "unsupported"}
 USAGE_ACCOUNTING = {"host-attested", "required", "unavailable"}
 DATA_POLICIES = {"cloud-allowed", "local-only", "restricted"}
 CALIBRATION_STATUSES = {"PASSED", "PENDING", "FAILED", "UNKNOWN"}
+ESCALATION_LADDER_STEPS = {
+    "no-model",
+    "local-small-packet",
+    "standard-implementation",
+    "stronger-review",
+    "optional-cross-check",
+}
+FAILURE_CLASSES = {
+    "edge-case",
+    "api-contract",
+    "serialization",
+    "race",
+    "permission",
+    "migration",
+    "performance",
+    "flaky-test",
+    "security-bug",
+    "unknown",
+}
 HOST_MODEL_PROFILE_SCHEMAS = {
     "agent-lifecycle-host-model-profile.v1",
     "agent-host-model-selection-profile.v1",
@@ -73,6 +92,9 @@ def validate_model_routing_profile(profile: dict[str, Any]) -> dict[str, Any]:
     policy_presets = profile.get("policyPresets", {})
     if policy_presets is not None:
         _validate_policy_presets(policy_presets)
+    progressive = profile.get("progressiveEscalation", {})
+    if progressive is not None:
+        _validate_progressive_escalation(progressive)
     return {
         "schemaVersion": "agent-lifecycle-model-routing-profile-validation.v1",
         "profileId": profile_id,
@@ -80,6 +102,7 @@ def validate_model_routing_profile(profile: dict[str, Any]) -> dict[str, Any]:
         "phaseRuleCount": len(phase_rules),
         "criticalReviewPhases": sorted(critical_phases),
         "policyPresets": sorted(policy_presets),
+        "progressiveEscalation": bool(progressive.get("enabled")) if isinstance(progressive, dict) else False,
         "profileDigest": canonical_digest(profile),
     }
 
@@ -226,6 +249,29 @@ def _validate_policy_presets(value: Any) -> None:
     for policy, payload in value.items():
         if not isinstance(payload, dict):
             raise LifecycleError("invalid-model-routing-profile", "policy preset must be an object", {"policy": policy})
+
+
+def _validate_progressive_escalation(value: Any) -> None:
+    if not isinstance(value, dict):
+        raise LifecycleError("invalid-model-routing-profile", "progressiveEscalation must be an object")
+    enabled = value.get("enabled", False)
+    if not isinstance(enabled, bool):
+        raise LifecycleError("invalid-model-routing-profile", "progressiveEscalation.enabled must be boolean")
+    ladder = value.get("ladder", [])
+    if not isinstance(ladder, list) or ladder != [
+        "no-model",
+        "local-small-packet",
+        "standard-implementation",
+        "stronger-review",
+        "optional-cross-check",
+    ]:
+        raise LifecycleError("invalid-model-routing-profile", "progressiveEscalation.ladder must use the canonical order")
+    classes = value.get("failureClasses", [])
+    if not isinstance(classes, list) or sorted(classes) != sorted(FAILURE_CLASSES):
+        raise LifecycleError("invalid-model-routing-profile", "progressiveEscalation.failureClasses must list neutral failure classes")
+    triggers = value.get("evidenceTriggers", [])
+    if not isinstance(triggers, list) or any(not isinstance(item, str) or not item for item in triggers):
+        raise LifecycleError("invalid-model-routing-profile", "progressiveEscalation.evidenceTriggers must be strings")
 
 
 def _required_str(payload: dict[str, Any], key: str, label: str) -> str:

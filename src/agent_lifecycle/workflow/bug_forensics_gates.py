@@ -15,6 +15,10 @@ from agent_lifecycle.quality.bug_forensics import (
     validate_regression_proof_receipt,
 )
 from agent_lifecycle.quality.cross_check import validate_cross_check_receipt
+from agent_lifecycle.quality.failure_classification import (
+    HIGH_RISK_FAILURE_CLASSES,
+    validate_failure_classification_receipt,
+)
 
 BUG_FORENSICS_GATE_RECEIPT_SCHEMA = "agent-bug-forensics-gate-receipt.v1"
 BUG_FORENSICS_GATE_VALIDATION_SCHEMA = "agent-bug-forensics-gate-validation.v1"
@@ -40,6 +44,8 @@ def build_bug_forensics_gate_receipt(
     profile: dict[str, Any] | None = None,
     reproduction_receipt: dict[str, Any] | None = None,
     failure_fingerprint: dict[str, Any] | None = None,
+    failure_classification: dict[str, Any] | None = None,
+    flake_signal: dict[str, Any] | None = None,
     hypothesis_ledger: dict[str, Any] | None = None,
     regression_proof: dict[str, Any] | None = None,
     fix_impact_receipt: dict[str, Any] | None = None,
@@ -63,6 +69,8 @@ def build_bug_forensics_gate_receipt(
             task=task,
             reproduction_receipt=reproduction_receipt,
             failure_fingerprint=failure_fingerprint,
+            failure_classification=failure_classification,
+            flake_signal=flake_signal,
             hypothesis_ledger=hypothesis_ledger,
             regression_proof=regression_proof,
             fix_impact_receipt=fix_impact_receipt,
@@ -73,6 +81,8 @@ def build_bug_forensics_gate_receipt(
     evidence = {
         "reproduction": _digest_ref(reproduction_receipt, "receiptDigest"),
         "failureFingerprint": _digest_ref(failure_fingerprint, "fingerprintDigest"),
+        "failureClassification": _digest_ref(failure_classification, "classificationDigest"),
+        "flakeSignal": _flake_signal_summary(flake_signal),
         "hypothesisLedger": _digest_ref(hypothesis_ledger, "ledgerDigest"),
         "regressionProof": _digest_ref(regression_proof, "proofDigest"),
         "fixImpact": _digest_ref(fix_impact_receipt, "impactDigest"),
@@ -147,6 +157,8 @@ def _collect_active_gate_blockers(
     task: dict[str, Any],
     reproduction_receipt: dict[str, Any] | None,
     failure_fingerprint: dict[str, Any] | None,
+    failure_classification: dict[str, Any] | None,
+    flake_signal: dict[str, Any] | None,
     hypothesis_ledger: dict[str, Any] | None,
     regression_proof: dict[str, Any] | None,
     fix_impact_receipt: dict[str, Any] | None,
@@ -176,7 +188,18 @@ def _collect_active_gate_blockers(
         before = regression_proof.get("before") if isinstance(regression_proof, dict) else {}
         if isinstance(before, dict) and before.get("fingerprintDigest") != failure_fingerprint.get("fingerprintDigest"):
             blockers.append({"code": "bug-forensics-fingerprint-regression-mismatch"})
-    if _cross_check_required(task):
+    if _classification_required(task) and failure_classification is None:
+        blockers.append({"code": "bug-forensics-failure-classification-missing"})
+    if failure_classification is not None:
+        validation = validate_failure_classification_receipt(failure_classification)
+        validations["failureClassification"] = validation
+        if validation.get("status") != "PASS" or validation.get("receiptStatus") != "PASS":
+            blockers.append({"code": "bug-forensics-failure-classification-invalid", "validation": validation})
+    if flake_signal is not None:
+        validations["flakeSignal"] = _validate_flake_signal(flake_signal)
+        if validations["flakeSignal"]["status"] != "PASS":
+            blockers.append({"code": "bug-forensics-flake-signal-invalid", "validation": validations["flakeSignal"]})
+    if _cross_check_required(task, failure_classification):
         if cross_check_receipt is None:
             blockers.append({"code": "bug-forensics-cross-check-missing"})
         else:
@@ -191,19 +214,65 @@ def _collect_active_gate_blockers(
             blockers.append({"code": "bug-forensics-cross-check-invalid", "validation": validation})
 
 
-def _cross_check_required(task: dict[str, Any]) -> bool:
+def _cross_check_required(task: dict[str, Any], failure_classification: dict[str, Any] | None = None) -> bool:
     if task.get("blockingCrossCheckRequired") is True or task.get("crossCheckRequired") is True:
         return True
     config = task.get("bugForensics")
     if isinstance(config, dict) and config.get("crossCheckRequired") is True:
         return True
+    if _high_risk_classification(task, failure_classification):
+        return True
     return False
+
+
+def _classification_required(task: dict[str, Any]) -> bool:
+    config = task.get("bugForensics")
+    if isinstance(config, dict) and config.get("requireFailureClassification") is True:
+        return True
+    return task.get("requireFailureClassification") is True
+
+
+def _high_risk_classification(task: dict[str, Any], failure_classification: dict[str, Any] | None) -> bool:
+    if not isinstance(failure_classification, dict):
+        return False
+    if failure_classification.get("failureClass") not in HIGH_RISK_FAILURE_CLASSES:
+        return False
+    risks = task.get("riskFlags", {})
+    active_security = bool(risks.get("security")) if isinstance(risks, dict) else "security" in risks if isinstance(risks, list) else False
+    return task.get("sddTier") == "S2" or active_security
 
 
 def _digest_ref(value: dict[str, Any] | None, key: str) -> dict[str, Any] | None:
     if value is None:
         return None
     return {"schemaVersion": value.get("schemaVersion"), "digest": value.get(key)}
+
+
+def _flake_signal_summary(value: dict[str, Any] | None) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    return {
+        "status": value.get("status") or value.get("flakeStatus"),
+        "runs": value.get("runs"),
+        "failures": value.get("failures"),
+    }
+
+
+def _validate_flake_signal(value: dict[str, Any]) -> dict[str, Any]:
+    blockers: list[dict[str, Any]] = []
+    status = value.get("status") or value.get("flakeStatus")
+    if status not in {"stable-fail", "stable-pass", "flaky", "inconclusive"}:
+        blockers.append({"code": "flake-signal-status-invalid", "status": status})
+    for field in ("runs", "failures"):
+        if field in value and (not isinstance(value[field], int) or isinstance(value[field], bool) or value[field] < 0):
+            blockers.append({"code": "flake-signal-count-invalid", "field": field})
+    body = {
+        "schemaVersion": "agent-flake-signal-validation.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "flakeStatus": status if isinstance(status, str) else None,
+        "blockers": blockers,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
 
 
 __all__ = [

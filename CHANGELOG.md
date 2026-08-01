@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.29.0 - 2026-08-01
+
+- Added neutral failure classification receipts for edge-case, API-contract,
+  serialization, race, permission, migration, performance, flaky-test,
+  security-bug and unknown failures.
+- Added failure-aware model routing with bounded progressive escalation,
+  no-downgrade-after-failure protection and optional cross-check
+  recommendations.
+- Integrated failure and flake signals with adaptive lifecycle decisions and
+  Bug Forensics gates while preserving quality floors and provider-neutral
+  routing.
+
 ## 1.28.0 - 2026-08-01
 
 - Added local outcome indexes and quality-cost signals from explicit lifecycle

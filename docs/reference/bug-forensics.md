@@ -18,6 +18,8 @@ symptom -> reproduction -> failure fingerprint -> hypotheses -> root cause -> mi
 - `agent-failure-fingerprint.v1`: stable failure identity based on exception,
   assertion, log pattern, stack top, and affected symbols. It can reference
   `findingId` and `rootCauseDigest` from proof-integrity evidence.
+- `agent-failure-classification-receipt.v1`: neutral failure class,
+  confidence, matched evidence and digest provenance.
 - `agent-bug-hypothesis-ledger.v1`: accepted and rejected hypotheses plus the
   minimal-patch gate.
 - `agent-regression-proof-receipt.v1`: proves the same fingerprint is red
@@ -42,6 +44,11 @@ High-risk bug fixes can request a secondary review through the Release 1.12
 cross-check profile. It remains token/resource-capped, not USD-canonical, and
 advisory unless the frozen plan explicitly opts into blocking behavior.
 
+Failure classification and flake signals can be attached to the gate receipt.
+When a security or race classification is combined with S2/security task risk,
+the gate requires cross-check evidence instead of silently accepting a weaker
+review path.
+
 ## Recipes
 
 Bug Forensics recipes are optional metadata for common defect-repair stages:
@@ -59,13 +66,8 @@ Recipes do not introduce new receipt schemas. They reference the existing
 Bug Forensics, proof-integrity and cross-check receipts, stay disabled by
 default and use tokens/resources rather than mandatory USD cost.
 
-## Phase 2
+## Deferred Analysis
 
-The v1 profile documents but does not require:
-
-- suspect graph;
-- flake detector;
-- bug-class classifier.
-
-Those features can be added by a later plan without changing the phase-1
-evidence chain.
+Suspect graph remains optional. Flake signals and failure classification can be
+recorded now, but they do not replace reproduction, fingerprint, hypothesis
+ledger, regression proof or fix-impact evidence.

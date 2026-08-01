@@ -60,6 +60,12 @@ Local quality-cost learning can recommend future modes from historical
 receipts, but it remains advisory and cannot lower the floor. Low-confidence
 signals keep the current or minimum safe mode.
 
+Failure signals can also raise the selected mode. API-contract,
+serialization, permission, migration or performance failures can raise light
+work to standard. Security bugs, race conditions, flaky tests and repeated
+failure loops raise the mode to strict. The policy never lowers the current
+mode after failure evidence and still cannot select below the quality floor.
+
 ## Resource policy
 
 Optimization is based on tokens and resources, not live currency lookup:

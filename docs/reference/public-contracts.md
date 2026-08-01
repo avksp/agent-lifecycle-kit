@@ -111,6 +111,8 @@ Stable schema ids:
 - `agent-proof-finding.v1`
 - `agent-root-cause-evidence.v1`
 - `agent-fix-impact-receipt.v1`
+- `agent-failure-classification-receipt.v1`
+- `agent-failure-classification-validation.v1`
 - `agent-receipt-hash-chain.v1`
 - `agent-hash-chain-migration-policy.v1`
 - `agent-proof-integrity-receipt.v1`
@@ -119,6 +121,11 @@ Stable schema ids:
 `agent-fix-impact-receipt.v1` is the canonical fix-impact contract. It binds
 changed files, related finding ids, root-cause digests, behavior changes,
 preserved contracts, validation evidence and collateral-damage checks.
+
+`agent-failure-classification-receipt.v1` classifies failures into neutral
+classes such as edge-case, API contract, race, flaky test, security bug or
+unknown. It records confidence, matched evidence and digest provenance without
+provider/model names in core.
 
 ## Sandbox boundaries
 
@@ -242,6 +249,8 @@ Stable schema ids:
 - `agent-bug-reproduction-receipt-validation.v1`
 - `agent-failure-fingerprint.v1`
 - `agent-failure-fingerprint-validation.v1`
+- `agent-failure-classification-receipt.v1`
+- `agent-failure-classification-validation.v1`
 - `agent-bug-hypothesis-ledger.v1`
 - `agent-bug-hypothesis-ledger-validation.v1`
 - `agent-regression-proof-receipt.v1`
