@@ -157,8 +157,8 @@ contracts, Bug Forensics contracts и usage export details находятся в
   runtime containment и могут оставаться `UNKNOWN` до отдельной проверки.
 - Внешние dialect imports и retrieved episodes помогают с контекстом, но не
   заменяют проверенные ALK source-of-truth artifacts.
-- Optional cross-check и runner recovery receipts добавляют evidence только
-  при запросе задачи или плана; это не default multi-model execution.
+- Optional cross-check, runtime policy и write-back receipts добавляют evidence
+  только при запросе задачи или плана; это не default multi-model execution.
 
 ## Документы
 

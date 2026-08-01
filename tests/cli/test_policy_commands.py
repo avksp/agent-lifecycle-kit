@@ -114,6 +114,51 @@ class PolicyCommandTests(unittest.TestCase):
         self.assertEqual(context_code, 0)
         self.assertEqual(context_payload["status"], "PASS")
 
+    def test_policy_runtime_receipt_and_check_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subject = root / "subject.json"
+            evidence = root / "adapter-evidence.json"
+            receipt = root / "runtime-policy-receipt.json"
+            subject.write_text(json.dumps({"taskId": "WS-01", "capability": "network"}), encoding="utf-8")
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "preExecutionEnforcement": True,
+                        "decisionRecordedBeforeExecution": True,
+                        "source": "host-protocol-envelope",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            code, payload = _run_cli(
+                [
+                    "policy",
+                    "runtime-receipt",
+                    "--policy-id",
+                    "network-egress",
+                    "--action",
+                    "DENY",
+                    "--subject",
+                    str(subject),
+                    "--adapter-evidence",
+                    str(evidence),
+                    "--enforcement-mode",
+                    "enforced",
+                    "--out",
+                    str(receipt),
+                ]
+            )
+            check_code, check_payload = _run_cli(["policy", "runtime-check", "--receipt", str(receipt)])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["schemaVersion"], "agent-runtime-policy-receipt.v1")
+        self.assertTrue(payload["enforcementClaimed"])
+        self.assertEqual(check_code, 0)
+        self.assertEqual(check_payload["schemaVersion"], "agent-runtime-policy-receipt-validation.v1")
+        self.assertEqual(check_payload["status"], "PASS")
+
 
 def _recommendation() -> dict[str, object]:
     return {

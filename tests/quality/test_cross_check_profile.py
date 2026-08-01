@@ -61,6 +61,53 @@ class CrossCheckProfileTests(unittest.TestCase):
         with self.assertRaises(LifecycleError):
             require_cross_check_receipt_pass(validation)
 
+    def test_cross_check_independence_required_uses_neutral_identity_hashes(self) -> None:
+        profile = build_cross_check_profile(independence_required=True)
+        receipt = build_cross_check_receipt(
+            profile=profile,
+            subject={
+                "taskId": "WS22-03",
+                "blockingCrossCheckRequired": True,
+                "hostIdentityHash": "a" * 64,
+                "modelIdentityHash": "b" * 64,
+            },
+            reviewer={
+                "hostIdentityHash": "c" * 64,
+                "modelIdentityHash": "d" * 64,
+            },
+            budget_usage={"invocations": 1, "inputTokens": 1000, "outputTokens": 200, "wallSeconds": 20},
+            blocking=True,
+        )
+
+        validation = validate_cross_check_receipt(receipt, profile=profile)
+
+        self.assertEqual(receipt["status"], "PASS")
+        self.assertEqual(receipt["independence"]["status"], "INDEPENDENT")
+        self.assertFalse(receipt["independence"]["providerNamesCompared"])
+        self.assertEqual(validation["status"], "PASS")
+
+    def test_cross_check_same_identity_fails_when_independence_required(self) -> None:
+        profile = build_cross_check_profile(independence_required=True)
+        receipt = build_cross_check_receipt(
+            profile=profile,
+            subject={
+                "taskId": "WS22-03",
+                "hostIdentityHash": "a" * 64,
+                "modelIdentityHash": "b" * 64,
+            },
+            reviewer={
+                "hostIdentityHash": "a" * 64,
+                "modelIdentityHash": "d" * 64,
+            },
+            budget_usage={"invocations": 1, "inputTokens": 1000, "outputTokens": 200, "wallSeconds": 20},
+        )
+
+        validation = validate_cross_check_receipt(receipt, profile=profile)
+
+        self.assertEqual(receipt["status"], "FAIL")
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn("cross-check-independence-not-proven", {item["code"] for item in validation["blockers"]})
+
     def test_money_caps_are_rejected(self) -> None:
         with self.assertRaises(LifecycleError):
             build_cross_check_profile(budget_cap={"maxInvocations": 1, "maxUsd": 1})
