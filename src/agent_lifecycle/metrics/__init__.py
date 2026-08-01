@@ -12,9 +12,15 @@ from agent_lifecycle.metrics.phase_resources import (
     require_phase_resource_measurement_pass,
     validate_phase_resource_measurement,
 )
+from agent_lifecycle.metrics.outcome_index import (
+    build_quality_cost_signal_summary,
+    build_quality_cost_signals,
+    build_task_outcome_index,
+)
 from agent_lifecycle.metrics.recommendations import (
     build_lifecycle_recommendation_summary,
     recommend_lifecycle_mode,
+    recommend_from_quality_cost_signals,
     require_lifecycle_recommendation_pass,
     summarize_lifecycle_overhead,
     validate_lifecycle_baselines,
@@ -34,7 +40,11 @@ __all__ = [
     "build_phase_resource_measurement",
     "build_lifecycle_cost_summary",
     "build_lifecycle_recommendation_summary",
+    "build_quality_cost_signal_summary",
+    "build_quality_cost_signals",
+    "build_task_outcome_index",
     "generate_lifecycle_cost_report",
+    "recommend_from_quality_cost_signals",
     "recommend_lifecycle_mode",
     "require_lifecycle_cost_pass",
     "require_lifecycle_recommendation_pass",

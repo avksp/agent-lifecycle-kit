@@ -21,6 +21,9 @@ class LifecycleRecommendationContractTests(unittest.TestCase):
             "agent-lifecycle-overhead-statistics.v1",
             "agent-lifecycle-recommendation.v1",
             "agent-lifecycle-recommendation-summary.v1",
+            "agent-task-outcome-index.v1",
+            "agent-quality-cost-signals.v1",
+            "agent-quality-cost-signals-summary.v1",
         ]:
             self.assertIn(schema_id, ids)
 
@@ -33,6 +36,9 @@ class LifecycleRecommendationContractTests(unittest.TestCase):
 
         self.assertEqual(rows["metrics recommend"]["schemaVersion"], "agent-lifecycle-recommendation.v1")
         self.assertEqual(rows["metrics recommend"]["compatibility"], "stable-json")
+        self.assertEqual(rows["metrics outcome-index"]["schemaVersion"], "agent-task-outcome-index.v1")
+        self.assertEqual(rows["metrics quality-signals"]["schemaVersion"], "agent-quality-cost-signals.v1")
+        self.assertEqual(rows["metrics learn-recommend"]["schemaVersion"], "agent-lifecycle-recommendation.v1")
 
 
 if __name__ == "__main__":
