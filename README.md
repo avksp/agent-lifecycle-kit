@@ -52,8 +52,8 @@ flowchart LR
   reusable recipes.
 - Phase resource measurements reuse the usage export envelope for tokens,
   duration and resource counters without mandatory USD-cost accounting.
-- Adaptive lifecycle policy, reversible proposals and runtime receipts choose
-  the lightest safe mode from neutral inputs and stay advisory unless opted in.
+- Adaptive lifecycle policy, local quality-cost learning, reversible proposals
+  and runtime receipts choose the lightest safe mode from neutral inputs.
 - Read-only diagnostics, event feeds and progress views over checkout/workflow state.
 
 ## Quick start
@@ -161,7 +161,7 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
 - [Issue to specification drafts](docs/guides/issue-to-spec.md)
 - [Adapter install](docs/adapters/install.md)
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
-- [Small-model packets](docs/reference/small-model-packets.md), [adaptive policy](docs/reference/adaptive-lifecycle-policy.md) and [lifecycle cost accounting](docs/reference/lifecycle-cost.md)
+- [Small-model packets](docs/reference/small-model-packets.md), [adaptive policy](docs/reference/adaptive-lifecycle-policy.md), [quality-cost learning](docs/reference/quality-cost-learning.md) and [lifecycle cost accounting](docs/reference/lifecycle-cost.md)
 - [Usage export](docs/reference/usage-export.md)
 - [Evidence integrity](docs/reference/evidence-integrity.md)
 - [Read-only status views](docs/reference/read-only-status-view.md)

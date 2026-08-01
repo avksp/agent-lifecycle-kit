@@ -56,6 +56,8 @@ read-only unless their own help says otherwise.
   `cost_usd` from explicit JSON artifact paths.
 - `agent-lifecycle metrics recommend`: suggest the lightest lifecycle mode that
   preserves the required quality floor.
+- `agent-lifecycle metrics outcome-index/quality-signals/learn-recommend`:
+  derive advisory local learning signals from explicit lifecycle receipts.
 - `agent-lifecycle policy tune`: build a read-only policy proposal or write an
   approved policy artifact with `--apply --output`.
 - `agent-lifecycle policy adaptive-decision/adaptive-check`: build and validate
