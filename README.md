@@ -28,7 +28,6 @@ flowchart LR
   in the core.
 - Compact context profiles and objective snapshots for small local models.
 - Cost and usage accounting that separates product work from lifecycle checks.
-- Deterministic cost reports from explicit lifecycle artifacts.
 - Usage/session exports with tokens, resources, receipt digests, and optional
   host-reported `cost_usd`.
 - Optional proof-integrity evidence for bug fixes and high-risk final proofs:
@@ -37,9 +36,8 @@ flowchart LR
   containment and redacted credential proxy evidence separate from git scope.
 - Release-time adapter capability bench tools for bounded probe plans and
   live-receipt drift validation without maturity changes.
-- Import mapper profiles for generic workflow/agent dialects,
-  Constitution/ADR and AGENTS/agentskills inputs; imported artifacts remain
-  untrusted drafts with dialect profile digests.
+- Import mappers and issue-to-spec intake keep external workflows, agent
+  dialects and tickets as untrusted draft inputs.
 - Draft-only task templates for bugfix, idea-to-PR, PR review, merge-conflict
   repair and release-readiness work.
 - Lightweight episode retrieval over receipt/session summaries with digest
@@ -55,8 +53,8 @@ flowchart LR
 - Phase resource measurements reuse the usage export envelope for tokens,
   duration and resource counters without mandatory USD-cost accounting.
 - Advisory lifecycle mode recommendations from accumulated cost reports.
-- Explicit lifecycle policy proposals with reversible apply and runtime receipts.
-- Read-only diagnostics for the current checkout and adapter readiness.
+- Lifecycle policy proposals with reversible apply and runtime receipts.
+- Read-only diagnostics, event feeds and progress views over checkout/workflow state.
 
 ## Quick start
 
@@ -160,11 +158,13 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
 - [English documentation](docs/README.md)
 - [Русская документация](docs/ru/README.md)
 - [Quickstart](docs/guides/quickstart.md)
+- [Issue to specification drafts](docs/guides/issue-to-spec.md)
 - [Adapter install](docs/adapters/install.md)
 - [Readiness diagnostics](docs/reference/readiness-diagnostics.md)
 - [Lifecycle cost accounting](docs/reference/lifecycle-cost.md)
 - [Usage export](docs/reference/usage-export.md)
 - [Evidence integrity](docs/reference/evidence-integrity.md)
+- [Read-only status views](docs/reference/read-only-status-view.md)
 - [Sandbox boundaries](docs/reference/sandbox-boundaries.md)
 - [Import mappers](docs/reference/import-mappers.md)
 - [Episode retrieval](docs/reference/episode-retrieval.md)

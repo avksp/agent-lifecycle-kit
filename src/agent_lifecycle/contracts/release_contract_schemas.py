@@ -211,6 +211,32 @@ RELEASE_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
             "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
         },
     ),
+    "agent-adapter-package-discovery.v1": _open_object_schema(
+        "agent-adapter-package-discovery.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "adapterRoot",
+            "advisoryOnly",
+            "sourceTreeDescriptorsAuthoritative",
+            "discoveryCanOverrideDescriptors",
+            "packageCount",
+            "packages",
+            "productionPromotionClaimed",
+            "discoveryDigest",
+        ],
+        properties={
+            "status": {"const": "PASS"},
+            "adapterRoot": {"type": "string", "minLength": 1},
+            "advisoryOnly": {"const": True},
+            "sourceTreeDescriptorsAuthoritative": {"const": True},
+            "discoveryCanOverrideDescriptors": {"const": False},
+            "packageCount": {"type": "integer", "minimum": 0},
+            "packages": {"type": "array", "items": {"type": "object"}},
+            "productionPromotionClaimed": {"const": False},
+            "discoveryDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
     "agent-live-host-promotion-plan.v1": _open_object_schema(
         "agent-live-host-promotion-plan.v1",
         required=[

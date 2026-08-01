@@ -159,6 +159,14 @@ def _add_report_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     status_view.add_argument("--max-items", type=int, default=12)
     status_view.add_argument("--target-window", default="8k")
     status_view.add_argument("--out")
+    event_feed = report_sub.add_parser("event-feed")
+    event_feed.add_argument("--state", required=True)
+    event_feed.add_argument("--out")
+    progress = report_sub.add_parser("progress")
+    progress.add_argument("--state", required=True)
+    progress.add_argument("--usage-receipt", action="append", default=[])
+    progress.add_argument("--change-summary")
+    progress.add_argument("--out")
 
 
 def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

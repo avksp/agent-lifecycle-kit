@@ -128,6 +128,8 @@ class ContractTests(unittest.TestCase):
         self.assertIn("agent-behavior-check-run.v1", ids)
         self.assertIn("agent-diagnostic-bundle.v1", ids)
         self.assertIn("agent-readonly-status-view.v1", ids)
+        self.assertIn("agent-workflow-event-feed.v1", ids)
+        self.assertIn("agent-lifecycle-progress-view.v1", ids)
         self.assertIn("agent-completion-signal.v1", ids)
         self.assertIn("agent-completion-signal-validation.v1", ids)
         self.assertIn("agent-completion-check.v1", ids)
@@ -182,6 +184,7 @@ class ContractTests(unittest.TestCase):
             "agent-adapter-probe-profile.v1",
             "agent-adapter-probe-plan.v1",
             "agent-adapter-probe-evidence-validation.v1",
+            "agent-adapter-package-discovery.v1",
             "agent-live-host-promotion-plan.v1",
             "agent-live-host-promotion-plan-validation.v1",
             "agent-digest-authority-evidence.v1",
@@ -265,6 +268,10 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-optional-quality-pack.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-diagnostic-bundle.v1")["properties"]["sourceOfTruth"], {"const": False})
         self.assertEqual(get_schema("agent-readonly-status-view.v1")["properties"]["sourceOfTruth"], {"const": False})
+        self.assertEqual(get_schema("agent-workflow-event-feed.v1")["properties"]["readOnly"], {"const": True})
+        self.assertEqual(get_schema("agent-workflow-event-feed.v1")["properties"]["modelCallsStarted"], {"const": False})
+        self.assertEqual(get_schema("agent-lifecycle-progress-view.v1")["properties"]["tokenSpendForProgress"], {"const": False})
+        self.assertEqual(get_schema("agent-lifecycle-progress-view.v1")["properties"]["stateWritten"], {"const": False})
         self.assertEqual(get_schema("agent-adapter-conformance-verification.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertIn("commands", get_schema("agent-packaging-smoke-evidence.v1")["required"])
         self.assertEqual(get_schema("agent-completion-check.v1")["properties"]["kind"]["enum"], ["verification", "external-action"])
@@ -300,6 +307,8 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-adapter-probe-plan.v1")["properties"]["liveCallsStarted"], {"const": False})
         self.assertEqual(get_schema("agent-adapter-probe-plan.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-adapter-probe-evidence-validation.v1")["properties"]["maturityChangeClaimed"], {"const": False})
+        self.assertEqual(get_schema("agent-adapter-package-discovery.v1")["properties"]["advisoryOnly"], {"const": True})
+        self.assertEqual(get_schema("agent-adapter-package-discovery.v1")["properties"]["discoveryCanOverrideDescriptors"], {"const": False})
         self.assertEqual(get_schema("agent-cross-check-profile.v1")["properties"]["enabledByDefault"], {"const": False})
         self.assertEqual(get_schema("agent-cross-check-profile.v1")["properties"]["budgetUnits"], {"const": "tokens-and-resources"})
         self.assertEqual(get_schema("agent-runner-attempt-snapshot-receipt.v1")["properties"]["productionPromotionClaimed"], {"const": False})

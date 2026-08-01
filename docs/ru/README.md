@@ -46,6 +46,7 @@ flowchart LR
 - Import mapper profiles для generic workflow/agent dialects, Constitution/ADR
   и AGENTS/agentskills; результат остаётся untrusted draft с digest dialect
   profile.
+- Issue-to-spec intake держит внешние тикеты как draft-only вход до review/freeze.
 - Draft-only task templates для bugfix, idea-to-PR, PR review,
   merge-conflict repair и release-readiness задач.
 - Лёгкий episode retrieval по receipt/session summaries с digest provenance и
@@ -62,8 +63,8 @@ flowchart LR
 - Рекомендации по режиму жизненного цикла строятся по накопленной статистике.
 - Предложения по настройке правил остаются рекомендательными и применяются
   только явно, с возможностью отката.
-- Диагностика готовности по умолчанию не пишет файлы и не запускает реальные
-  модельные вызовы.
+- Диагностика готовности, event feeds и lifecycle progress views по умолчанию
+  не пишут state и не запускают реальные модельные вызовы.
 
 ## Быстрый старт
 
@@ -163,6 +164,7 @@ contracts, Bug Forensics contracts и usage export details находятся в
 ## Документы
 
 - [Быстрый старт](quickstart.md)
+- [Issue to specification drafts](issue-to-spec.md)
 - [Установка адаптеров](adapters/install.md)
 - [Матрица поддержки адаптеров](adapters/support-matrix.md)
 - [Справочник команд](reference/cli.md)
@@ -172,6 +174,7 @@ contracts, Bug Forensics contracts и usage export details находятся в
 - [Учёт расхода жизненного цикла](reference/lifecycle-cost.md)
 - [Экспорт использования](reference/usage-export.md)
 - [Целостность подтверждений](reference/evidence-integrity.md)
+- [Read-only status views](reference/read-only-status-view.md)
 - [Sandbox boundaries](reference/sandbox-boundaries.md)
 - [Import mappers](reference/import-mappers.md)
 - [Episode retrieval](reference/episode-retrieval.md)

@@ -59,10 +59,14 @@ Stable schema ids:
 - `agent-bug-forensics-recipe-validation.v1`
 - `agent-diagnostic-bundle.v1`
 - `agent-readonly-status-view.v1`
+- `agent-workflow-event-feed.v1`
+- `agent-lifecycle-progress-view.v1`
 
 `completionCheck` is the task-level completion gate. Optional quality packs and
 read-only reports add bounded evidence, but they do not replace source-of-truth
-lifecycle artifacts.
+lifecycle artifacts. Event feeds and progress views are projections over
+existing state/receipts; they do not start model calls, spend tokens, or mutate
+state.
 
 ## Evidence integrity
 
@@ -119,10 +123,15 @@ Stable schema ids:
 - `agent-adapter-probe-profile.v1`
 - `agent-adapter-probe-plan.v1`
 - `agent-adapter-probe-evidence-validation.v1`
+- `agent-adapter-package-discovery.v1`
 
 `agent-adapter-probe-plan.v1` keeps `liveCallsStarted: false`,
 `promotionDecision: NOT_EVALUATED`, `maturityChangeClaimed: false` and
 `productionPromotionClaimed: false`.
+
+`agent-adapter-package-discovery.v1` is advisory release inspection over
+source-tree descriptors and capability manifests. It cannot override descriptor
+maturity or claim production promotion.
 
 ## Import interop and episode retrieval
 
