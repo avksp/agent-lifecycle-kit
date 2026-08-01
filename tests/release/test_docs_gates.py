@@ -293,9 +293,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "This matrix is the authoritative source-tree support claim.\n"
         "Codex CLI 0.6.0 live evidence.\n"
         "Claude Code 0.5.0 live evidence.\n"
-        "OpenCode GLM 5.2 live evidence.\n"
-        "Hermes GLM 5.2 live evidence.\n"
-        "Qwen Code GLM 5.2 live evidence.\n"
+        "OpenCode Host-Local Live Evidence.\n"
+        "Hermes Host-Local Live Evidence.\n"
+        "Qwen Code Host-Local Live Evidence.\n"
         "Cursor. Gemini CLI. Goose. Grok Build. Kimi Code. OpenInterpreter. Pi.\n"
         "`adapter-event-stream`.\n"
         "`agent-adapter-event-stream-receipt.v1`.\n"
@@ -328,6 +328,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "validate_adapter_conformance.py.\n"
         "validate_live_host_conformance.py.\n"
         "validate_live_calibration.py.\n"
+        "validate_host_env_hygiene.py.\n"
         "validate_support_matrix.py.\n",
     )
     _write_text(
@@ -416,7 +417,20 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "small local model.\n"
         "agent-lifecycle report status-view.\n",
     )
-    for host in ("claude", "codex", "cursor", "gemini-cli", "goose", "grok-build", "hermes", "kimi-code", "opencode", "qwen-code"):
+    for host in (
+        "claude",
+        "codex",
+        "cursor",
+        "gemini-cli",
+        "goose",
+        "grok-build",
+        "hermes",
+        "kimi-code",
+        "opencode",
+        "openinterpreter",
+        "pi",
+        "qwen-code",
+    ):
         _write_text(
             root / f"docs/adapters/{host}.md",
             (

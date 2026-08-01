@@ -8,6 +8,8 @@
 
 - `git diff --check`;
 - отсутствие секретов и локальных путей в отслеживаемых текстовых файлах;
+- если live harness использует host-local env-file, должен быть явный
+  `--host-env-allow` и evidence от `validate_host_env_hygiene.py`;
 - `agent-lifecycle contract check`;
 - `agent-lifecycle diagnose --no-install-plans`;
 - актуальность заметок релиза и changelog.

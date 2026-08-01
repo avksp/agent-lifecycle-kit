@@ -5,11 +5,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SECONDARY = ("openinterpreter", "pi")
+EXPERIMENTAL_SECONDARY = ("pi",)
 
 
 def test_secondary_adapters_are_experimental_without_live_range() -> None:
-    for adapter_id in SECONDARY:
+    for adapter_id in EXPERIMENTAL_SECONDARY:
         descriptor = _load_json(ROOT / "adapters" / adapter_id / "adapter.descriptor.json")
         conformance = _load_json(ROOT / "conformance" / "adapters" / adapter_id / "offline-baseline.json")
 
@@ -17,6 +17,18 @@ def test_secondary_adapters_are_experimental_without_live_range() -> None:
         assert descriptor["liveTestedHostRange"] is None
         assert conformance["liveRuntimeRequired"] is False
         assert conformance["requiredMaturity"] == "EXPERIMENTAL"
+
+
+def test_openinterpreter_secondary_adapter_is_verified_with_live_range() -> None:
+    descriptor = _load_json(ROOT / "adapters/openinterpreter/adapter.descriptor.json")
+    conformance = _load_json(ROOT / "conformance/adapters/openinterpreter/offline-baseline.json")
+
+    assert descriptor["maturity"] == "VERIFIED"
+    assert descriptor["modelRouting"]["liveVerified"] is True
+    assert descriptor["liveTestedHostRange"]["host"] == "openinterpreter"
+    assert "docs/adapters/evidence/openinterpreter-live-verified.md" in descriptor["liveTestedHostRange"]["evidence"]
+    assert conformance["liveRuntimeRequired"] is False
+    assert conformance["requiredMaturity"] == "EXPERIMENTAL"
 
 
 def _load_json(path: Path) -> dict:

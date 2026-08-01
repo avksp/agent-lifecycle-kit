@@ -51,7 +51,7 @@ usage calibration and lifecycle proof with explicit live-run budget caps.
 
 Superseding evidence:
 
-- `docs/adapters/evidence/opencode-glm52-live-2026-07-29.md`;
+- `docs/adapters/evidence/opencode-host-local-live-2026-07-29.md`;
 - `work/release-0-7/evidence/opencode/live-host-conformance-opencode.json`;
 - `work/release-0-7/evidence/opencode/live-calibration-verification-opencode.json`;
 - `work/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json`.

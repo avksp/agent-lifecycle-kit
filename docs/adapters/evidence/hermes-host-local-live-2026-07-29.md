@@ -1,4 +1,4 @@
-# Hermes GLM 5.2 live evidence
+# Hermes Host-Local Live Evidence
 
 Status: host-specific `VERIFIED` for Hermes Agent `v0.19.0`.
 
@@ -6,6 +6,7 @@ Scope:
 
 - Host: Hermes Agent `v0.19.0`.
 - Host source revision: `d71033a4`.
+- Provider/model binding: host-local, redacted in committed docs.
 - Tested at: `2026-07-29`.
 - Maturity claim: `VERIFIED` for this host range only.
 - Production promotion: not claimed.
@@ -15,7 +16,7 @@ Accepted evidence:
 
 | Gate | Status | Evidence |
 | --- | --- | --- |
-| Live preflight | `PASS` | `work/release-0-8/evidence/hermes/preflight/hermes-glm52-preflight-report.json` |
+| Live preflight | `PASS` | host-local preflight receipt retained under ignored `work/` evidence |
 | Live host conformance | `PASS` | `work/release-0-8/evidence/hermes/live-host-conformance-hermes.json` |
 | Live host receipt | `PASS` | `work/release-0-8/evidence/hermes/live-host-receipts/hermes.json`, receipt hash `090d0163fe4911f8b9c80679fc8fce3df6e3c0f934a7bf19cfe0029c32b4b7f8` |
 | Live calibration | `PASS` | `work/release-0-8/evidence/hermes/live-calibration-verification-hermes.json` |

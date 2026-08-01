@@ -1,12 +1,12 @@
 # Grok Build Adapter
 
 Grok Build is a host-specific `VERIFIED` ALK adapter projection for Grok Build
-`0.2.117` on the tested local `grok-4.5` binding. This adapter is `VERIFIED`
-for Grok Build `0.2.117`; live conformance exists and it does not claim public
-approval. Its descriptor declares an ACP transport behind a required local
-probe. The probe receipt does not start live model calls, and a failed probe
-leaves the adapter fail-closed instead of silently falling back to an
-unverified transport.
+`0.2.117` on the tested host-local provider/model binding. This adapter is
+`VERIFIED` for Grok Build `0.2.117`; live conformance exists and it does not
+claim public approval. Its descriptor declares an ACP transport behind a
+required local probe. The probe receipt does not start live model calls, and a
+failed probe leaves the adapter fail-closed instead of silently falling back to
+an unverified transport.
 
 Tracked source artifacts:
 

@@ -12,6 +12,7 @@
     "hermes",
     "kimi-code",
     "opencode",
+    "openinterpreter",
     "qwen-code"
   ],
   "requiredScenarios": [

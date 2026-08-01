@@ -30,6 +30,35 @@ agent-lifecycle adapter inspect \
 `adapter inspect` is a safe source and command-surface check. It is not live
 host conformance.
 
+## Host-local secrets
+
+Adapters that call a real model should receive credentials through the host's
+normal mechanism: environment variables, the host credential store or an
+operator-managed secret launcher. ALK does not store provider keys in tracked
+config, descriptors, receipts or release evidence.
+
+For live harnesses, use `--host-env-file` only as a scoped process-launch
+helper when you do not want to export a key globally. The file is a private
+dotenv-style operator file outside the repository, and each variable must be
+explicitly allowed for that harness invocation:
+
+```bash
+python tools/live_hosts/<host>_harness.py \
+  --mode preflight \
+  --host-env-file ~/.config/alk/hosts/<host>.env \
+  --host-env-allow PROVIDER_API_KEY \
+  --report work/<release>/evidence/<host>-preflight.json
+```
+
+The harness passes only the allowed names to the child host process and records
+only `agent-host-env-file-redacted.v1` metadata. `tools/release/validate_host_env_hygiene.py`
+checks that the secret value is absent from reports and receipts.
+
+This rule applies to every provider-flexible adapter. If the host can switch
+providers or models, the selected provider remains responsible for the
+credential name and source; ALK only receives the operator-approved variable
+name for the current harness run.
+
 ## Codex
 
 Files:
@@ -131,8 +160,8 @@ agent-lifecycle adapter inspect \
   --skip-host-commands
 ```
 
-Qwen Code is host-specific `VERIFIED` only for the tested GLM 5.2 binding and
-host range in the support matrix.
+Qwen Code is host-specific `VERIFIED` only for the tested host-local
+provider/model binding and host range in the support matrix.
 
 ## Gemini CLI
 
@@ -166,9 +195,10 @@ goose --help
 agent-lifecycle adapter install-plan --descriptor adapters/goose/adapter.descriptor.json
 ```
 
-Goose is host-specific `VERIFIED` only for Goose `1.45.0` on the tested local
-ZAI GLM 5.2 binding. Live promotion used bounded no-session/no-profile
-invocations with explicit provider/model selection and clean-worktree checks.
+Goose is host-specific `VERIFIED` only for Goose `1.45.0` on the tested
+host-local provider/model binding. Live promotion used bounded
+no-session/no-profile invocations with explicit provider/model selection and
+clean-worktree checks.
 
 ## Kimi Code
 
@@ -199,18 +229,44 @@ agent-lifecycle adapter install-plan --descriptor adapters/grok-build/adapter.de
 ```
 
 Grok Build has host-specific `VERIFIED` support for Grok Build `0.2.117` on the
-tested local `grok-4.5` binding. The ACP path remains probe-gated, and a failed
-probe is recorded as fail-closed evidence.
+tested host-local provider/model binding. The ACP path remains probe-gated, and
+a failed probe is recorded as fail-closed evidence.
 
 ## OpenInterpreter
 
 ```bash
 interpreter --version
+interpreter doctor --json
 agent-lifecycle adapter install-plan --descriptor adapters/openinterpreter/adapter.descriptor.json
 ```
 
-OpenInterpreter is a host-local compatible CLI projection without a live
-promotion claim.
+OpenInterpreter has host-specific `VERIFIED` support for `interpreter` 0.0.34
+on the tested host-local provider/model binding. The selected model
+credentials must be visible to the `interpreter` process before a local live
+rerun can start. OpenInterpreter chooses the required variable from the selected
+provider: custom providers declare `env_key` in
+`~/.openinterpreter/config.toml` or `.openinterpreter/config.toml`; built-in
+providers use their documented provider variables. The key value should come
+from environment or the host credential store, not from repository config.
+
+To scope the selected provider key to the ALK harness process, put it in a
+private operator env file and explicitly allow that variable for the run:
+
+```bash
+python tools/live_hosts/openinterpreter_harness.py \
+  --mode preflight \
+  --interpreter-model <model-id> \
+  --host-env-file ~/.config/alk/hosts/openinterpreter.env \
+  --host-env-allow PROVIDER_API_KEY \
+  --budget-mode subscription \
+  --max-invocations 14 \
+  --max-billable-tokens 1000 \
+  --allow-live \
+  --report work/release-1-18/evidence/preflight/openinterpreter-preflight-report.json
+```
+
+Replace `PROVIDER_API_KEY` with the selected provider's configured or
+documented env-key name.
 
 ## Pi
 

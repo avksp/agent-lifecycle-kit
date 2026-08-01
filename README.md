@@ -109,13 +109,13 @@ required only for metered modes.
 | Claude Code | `VERIFIED` for Claude Code 2.1.220. Official directory approval is not claimed. |
 | OpenCode | `VERIFIED` for OpenCode CLI 1.18.9. npm publication is not claimed. |
 | Hermes | `VERIFIED` for Hermes Agent v0.19.0. Public directory approval is not claimed. |
-| Qwen Code | `VERIFIED` for Qwen Code 0.21.0 on the tested GLM 5.2 binding. Public package approval is not claimed. |
+| Qwen Code | `VERIFIED` for Qwen Code 0.21.0 on the tested host-local provider/model binding. Public package approval is not claimed. |
 | Cursor | `EXPERIMENTAL`; local safe inspection passed, but accepted live receipts are incomplete. |
 | Gemini CLI | `EXPERIMENTAL`; local live canary is blocked by the current Gemini Code Assist tier. |
-| Goose | `VERIFIED` for Goose 1.45.0 on the tested ZAI GLM 5.2 binding. Public directory approval is not claimed. |
+| Goose | `VERIFIED` for Goose 1.45.0 on the tested host-local provider/model binding. Public directory approval is not claimed. |
 | Kimi Code | `EXPERIMENTAL`; live proof requires a configured provider and model alias. |
-| Grok Build | `VERIFIED` for Grok Build 0.2.117 on the tested grok-4.5 binding. Public directory approval is not claimed. |
-| OpenInterpreter | `EXPERIMENTAL`; host-local compatible CLI projection with offline conformance only. |
+| Grok Build | `VERIFIED` for Grok Build 0.2.117 on the tested host-local provider/model binding. Public directory approval is not claimed. |
+| OpenInterpreter | `VERIFIED` for `interpreter` 0.0.34 on the tested host-local provider/model binding. Public directory approval is not claimed. |
 | Pi | `EXPERIMENTAL`; RPC/JSON and AGENTS/agentskills projection with no live promotion claim. |
 
 Adapter installation and maturity details live in
