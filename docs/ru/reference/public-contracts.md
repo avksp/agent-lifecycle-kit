@@ -62,6 +62,12 @@
 - `agent-adaptive-lifecycle-policy-request.v1`: neutral adaptive policy input.
 - `agent-adaptive-lifecycle-policy-decision.v1`: adaptive lifecycle decision.
 - `agent-adaptive-lifecycle-policy-decision-validation.v1`: проверка decision.
+- `agent-small-model-task-packet.v1`: small-model execution packet.
+- `agent-small-model-task-packet-index.v1`: индекс small-model packets.
+- `agent-small-model-output-contract.v1`: обязательный output contract.
+- `agent-small-model-task-result.v1`: результат worker-а по output contract.
+- `agent-small-model-output-validation.v1`: fail-closed проверка результата.
+- `agent-small-model-packet-compile-result.v1`: CLI compile result.
 - `agent-bug-forensics-profile.v1`: optional профиль для bug/regression repair.
 - `agent-bug-reproduction-receipt.v1`: reproduction-before-modification
   evidence.
@@ -127,6 +133,10 @@ Adaptive lifecycle policy выбирает самый лёгкий безопа�
 decision; автоматический выбор требует opt-in и не может быть ниже quality
 floor. Provider/model names и live currency lookup не используются в portable
 core.
+
+Small-model packets сужают implementation surface: exact write scope, compact
+context receipt и required output contract. Они не расширяют authority и сами
+по себе не закрывают critical review.
 
 Bug Forensics включается только явным task/profile marker. Для impact он
 использует существующий `agent-fix-impact-receipt.v1`, а для high-risk

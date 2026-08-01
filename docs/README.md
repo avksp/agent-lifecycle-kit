@@ -43,6 +43,7 @@ and does not depend on a source project.
 - [Task templates](../templates/tasks/README.md)
 - [Diagnostic bundles](reference/diagnostic-bundles.md)
 - [Read-only status views](reference/read-only-status-view.md)
+- [Small-model packets](reference/small-model-packets.md)
 - [Controlled runner](reference/runner.md)
 - [Public contracts](reference/public-contracts.md)
 - [Adaptive lifecycle policy](reference/adaptive-lifecycle-policy.md)

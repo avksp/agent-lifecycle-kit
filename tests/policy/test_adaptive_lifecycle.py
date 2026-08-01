@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
-from agent_lifecycle.policy import build_adaptive_lifecycle_decision, validate_adaptive_lifecycle_decision  # noqa: E402
+from agent_lifecycle.policy import build_adaptive_lifecycle_decision, small_model_packet_eligibility, validate_adaptive_lifecycle_decision  # noqa: E402
 
 
 class AdaptiveLifecyclePolicyTests(unittest.TestCase):
@@ -90,6 +90,18 @@ class AdaptiveLifecyclePolicyTests(unittest.TestCase):
 
         self.assertEqual(decision["recommendedMode"], "strict")
         self.assertIn("retry-escalation", decision["reasonCodes"])
+
+    def test_small_model_packet_eligibility_requires_low_quality_floor(self) -> None:
+        allowed = build_adaptive_lifecycle_decision(_request(taskShape="small-fix"), _baselines())
+        blocked = build_adaptive_lifecycle_decision(
+            _request(taskShape="small-fix", sddTier="S2", riskFlags=["security"]),
+            _baselines(),
+        )
+
+        self.assertTrue(small_model_packet_eligibility(allowed)["smallModelPacketEligible"])
+        blocked_eligibility = small_model_packet_eligibility(blocked)
+        self.assertFalse(blocked_eligibility["smallModelPacketEligible"])
+        self.assertIn("small-model-quality-floor-blocked", {item["code"] for item in blocked_eligibility["blockers"]})
 
 
 def _request(**overrides: object) -> dict[str, object]:

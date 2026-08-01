@@ -4,6 +4,7 @@ from agent_lifecycle.policy.apply import apply_policy_proposal, build_tuned_poli
 from agent_lifecycle.policy.adaptive_lifecycle import (
     build_adaptive_lifecycle_decision,
     require_adaptive_lifecycle_decision_pass,
+    small_model_packet_eligibility,
     validate_adaptive_lifecycle_decision,
 )
 from agent_lifecycle.policy.proposals import (
@@ -30,6 +31,7 @@ __all__ = [
     "require_policy_proposal_pass",
     "require_runtime_policy_receipt_pass",
     "resolve_quality_floor",
+    "small_model_packet_eligibility",
     "validate_adaptive_lifecycle_decision",
     "validate_runtime_policy_receipt",
 ]

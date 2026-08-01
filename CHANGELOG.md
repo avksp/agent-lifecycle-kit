@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.26.0 - 2026-08-01
+
+- Added small-model packet compilation from frozen task packets with exact
+  write scope, compact context receipts and required output contracts.
+- Added fail-closed small-model output validation for missing fields, digest
+  drift, production-promotion claims and changed files outside write scope.
+- Added `agent-lifecycle task compile-small` and documented small/local model
+  limits, including adaptive quality-floor eligibility.
+
 ## 1.25.0 - 2026-08-01
 
 - Added adaptive lifecycle policy decisions that choose the lightest safe mode

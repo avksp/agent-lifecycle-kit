@@ -155,6 +155,28 @@ def require_adaptive_lifecycle_decision_pass(validation: dict[str, Any]) -> dict
     return validation
 
 
+def small_model_packet_eligibility(decision: dict[str, Any]) -> dict[str, Any]:
+    """Return whether a small-model packet surface is allowed by the decision."""
+
+    validation = validate_adaptive_lifecycle_decision(decision)
+    blockers = []
+    if validation.get("status") != "PASS" or validation.get("decisionStatus") != "PASS":
+        blockers.append({"code": "small-model-adaptive-decision-invalid", "validation": validation})
+    floor = decision.get("qualityFloor")
+    if floor not in {"light", "standard"}:
+        blockers.append({"code": "small-model-quality-floor-blocked", "qualityFloor": floor})
+    body = {
+        "status": "PASS" if not blockers else "FAIL",
+        "decisionDigest": decision.get("decisionDigest"),
+        "qualityFloor": floor,
+        "recommendedMode": decision.get("recommendedMode"),
+        "smallModelPacketEligible": not blockers,
+        "advisoryOnly": decision.get("advisoryOnly") is True,
+        "blockers": blockers,
+    }
+    return {**body, "eligibilityDigest": canonical_digest(body)}
+
+
 def _normalize_request(request: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     blockers: list[dict[str, Any]] = []
     if not isinstance(request, dict):
