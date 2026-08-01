@@ -87,8 +87,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "9d446e180c810bf7490b3c73a5b6ba1cb74319f17efdac78e42730a078cc6e35",
-      "bytes": 21517
+      "sha256": "ed50792eed590fc3cbcaf3dbb04e08161afdfa1ef82458ab57e2cb022827d8da",
+      "bytes": 22010
     },
     {
       "path": "CONTRIBUTING.md",
@@ -107,8 +107,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "e616e996f6fe3108c78b5df97b6266e067b585f5537314a12863a06bc20d7f89",
-      "bytes": 9037
+      "sha256": "c3a57b31d8b0e43d23bbc244627591ba893b64bdb286aab3619ba0307aeb103e",
+      "bytes": 9151
     },
     {
       "path": "SECURITY.md",
@@ -596,6 +596,11 @@
       "bytes": 3660
     },
     {
+      "path": "conformance/core/adapter-probe-profile.v1.json",
+      "sha256": "59ee34d3b27a514ce80142a9ab6eb8d4f6d4136d25b99f4405a464554a07f900",
+      "bytes": 852
+    },
+    {
       "path": "conformance/core/budget-targets.v1.json",
       "sha256": "e3fb9c832f14aa8598ba867a61969ed1950cdca5f9c2f17165e836de85ee63d0",
       "bytes": 1412
@@ -797,8 +802,8 @@
     },
     {
       "path": "docs/adapters/live-promotion-runbook.md",
-      "sha256": "1b6fc9e781a2b04dad0efcd875f14b2f03327d4343a4f44e759b3dfbc44cd5d8",
-      "bytes": 4997
+      "sha256": "af12d5ec81ba53bbe34f8a20c9d6aaf989c4aab7cc9cf823681d452bf3e374ac",
+      "bytes": 5695
     },
     {
       "path": "docs/adapters/opencode.md",
@@ -827,8 +832,8 @@
     },
     {
       "path": "docs/adapters/support-matrix.md",
-      "sha256": "d31b3516599b39ce9a88da5b5aeff16d4751351ff9f33925f771ea5da9597e1b",
-      "bytes": 23399
+      "sha256": "c1ddb3e86bc489bbbfc271e7d15110d8d9c372fb9c6f00ec8b6f0419ed6f0bb4",
+      "bytes": 24275
     },
     {
       "path": "docs/architecture/modular-controller.md",
@@ -992,8 +997,8 @@
     },
     {
       "path": "docs/reference/public-contracts.md",
-      "sha256": "1a3ef2badfefa0952b003574c1e2fb44f9b5a7669d694c09a442925037ecd6ff",
-      "bytes": 7434
+      "sha256": "88b7f0183bb94b526a266d3e212b3d7e80cdfab897e6cb97e3850bf84cd69524",
+      "bytes": 8105
     },
     {
       "path": "docs/reference/read-only-status-view.md",
@@ -1022,8 +1027,8 @@
     },
     {
       "path": "docs/reference/sandbox-boundaries.md",
-      "sha256": "d696050b441011642201f745e34026ce5d3407ea76b5d0a5bba7ea3dbd9244a9",
-      "bytes": 3115
+      "sha256": "98f9c1eba0a7e6afc454bdafcbe582f3974206047124cf44c36e25f6ce9beeb1",
+      "bytes": 4020
     },
     {
       "path": "docs/reference/source-of-truth.md",
@@ -1042,8 +1047,8 @@
     },
     {
       "path": "docs/ru/README.md",
-      "sha256": "df744d9b4547e28029d6931efa5452f0c26b2321d2db2d24e94b85843045819c",
-      "bytes": 13350
+      "sha256": "20315a5914a4687f515fce4046140532a3933896a9b0f23f99bc00f437271dd4",
+      "bytes": 13604
     },
     {
       "path": "docs/ru/adapters/install.md",
@@ -1052,8 +1057,8 @@
     },
     {
       "path": "docs/ru/adapters/support-matrix.md",
-      "sha256": "0e1952e62dde3754384ad7c47d7945425da54dea2f4da899b562bbe937162073",
-      "bytes": 2405
+      "sha256": "8bad1673cf6203d47264469d3d4f45806ab01053155270f64b07d47b4c55d8ea",
+      "bytes": 3210
     },
     {
       "path": "docs/ru/quickstart.md",
@@ -1102,8 +1107,8 @@
     },
     {
       "path": "docs/ru/reference/public-contracts.md",
-      "sha256": "8d2cfadd2e5a903d79844d4905d017e5df5d3ae7c5ef1d9f66293ca3afca0e6e",
-      "bytes": 7297
+      "sha256": "fd7f45da728af54d215198118d8faa0cddd6adebee986c53211f1c82aab1eac5",
+      "bytes": 7913
     },
     {
       "path": "docs/ru/reference/readiness-diagnostics.md",
@@ -1117,8 +1122,8 @@
     },
     {
       "path": "docs/ru/reference/sandbox-boundaries.md",
-      "sha256": "07427ab6fcaa0b025c86e7f3d0be36f7dbfc36e32cec74a34a0a010e0ca0b1c7",
-      "bytes": 4304
+      "sha256": "2197d138b328756751b86af9a486210f3f4d0d5863815831fd5c105b9abef1d4",
+      "bytes": 5534
     },
     {
       "path": "docs/ru/reference/source-of-truth.md",
@@ -1247,7 +1252,7 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "1f0718c987786003e15a9d64bd14d4cc112db62127709ca6b28214d80ad32a52",
+      "sha256": "60be07760adfb34c485ca1a5684a417ab37736420a07004c07d081b23af8afc4",
       "bytes": 1134
     },
     {
@@ -1297,7 +1302,7 @@
     },
     {
       "path": "src/agent_lifecycle/_version.py",
-      "sha256": "f127ab6f7cd153bf36d450a5760102ee766e44a45ee06d99b6cc26f41d3a7dca",
+      "sha256": "f631cfe67a234c8a60093dea440d94a979e175734bf921191e4e16235247c639",
       "bytes": 47
     },
     {
@@ -1502,8 +1507,8 @@
     },
     {
       "path": "src/agent_lifecycle/contracts/release_contract_schemas.py",
-      "sha256": "b128070de0ea6b6fe32b628b23a03a8f823f2ca7bfa3fa6f2f58fa150544fb52",
-      "bytes": 13168
+      "sha256": "233cc02952afe31fc04e3533c7349e6935b7a48c445219c4245f685bda586476",
+      "bytes": 16810
     },
     {
       "path": "src/agent_lifecycle/contracts/review_quality_schemas.py",
@@ -1517,8 +1522,8 @@
     },
     {
       "path": "src/agent_lifecycle/contracts/sandbox_schemas.py",
-      "sha256": "e474976251d1743ff3e951748495344db4158cdd9e373bf619e5d4498ef9c680",
-      "bytes": 6039
+      "sha256": "9459073d5eb9ecb7e8bfb3ffad880fcd5da60149c1b5e786e1289099414d0468",
+      "bytes": 6546
     },
     {
       "path": "src/agent_lifecycle/contracts/schema_builders.py",
@@ -1957,8 +1962,8 @@
     },
     {
       "path": "src/agent_lifecycle/runner/__init__.py",
-      "sha256": "ecd794874aa9589ca6a4536f9b2158204a75b442af4bdb90c3a6deaf1403870f",
-      "bytes": 1200
+      "sha256": "acf0ece76383ce4330b83f65d36f1b0696937f950915b71dc27f572dfc91315b",
+      "bytes": 1348
     },
     {
       "path": "src/agent_lifecycle/runner/attempt_snapshots.py",
@@ -1972,8 +1977,8 @@
     },
     {
       "path": "src/agent_lifecycle/runner/sandbox_receipts.py",
-      "sha256": "7b78a077b1c2a3365418972883e59eef2422f0cf2df64ea1500339b724a72345",
-      "bytes": 21474
+      "sha256": "cb17fc46a5f98040e4d014be6d6feb2b0bb8e34853327871493fb4a8ca3860ba",
+      "bytes": 29474
     },
     {
       "path": "src/agent_lifecycle/specification/__init__.py",
@@ -2092,8 +2097,8 @@
     },
     {
       "path": "src/agent_lifecycle/workflow/sandbox_policy.py",
-      "sha256": "91ec7367a6a16fda42e48caf1fd9eb9e1be0d16957a4707dcf5154b9886a4a3a",
-      "bytes": 8231
+      "sha256": "330a183ff1273363953f4c5459853b7f88ea6153086921d549b3bbbc73a9d7a8",
+      "bytes": 9256
     },
     {
       "path": "src/agent_lifecycle/workflow/selectors.py",
@@ -2462,8 +2467,8 @@
     },
     {
       "path": "tests/contracts/test_contracts.py",
-      "sha256": "e2a76b16949144cb27bcc46369a0a3e136016857d6cf230ab6c7fce16f86c3d9",
-      "bytes": 18771
+      "sha256": "96272ed051c21d60883f358e29134283d5ddadf027940c3204735b0fcff37707",
+      "bytes": 19530
     },
     {
       "path": "tests/contracts/test_cross_check_schemas.py",
@@ -2787,7 +2792,7 @@
     },
     {
       "path": "tests/package/test_foundation.py",
-      "sha256": "3abe5fbec7f3df7999d000669aeb9ea8453c74ffaa0e9fa0bf266689c41c6c9a",
+      "sha256": "1af5519fba06d8a5b813f11812d1ac25d73dcf9094d5f20822e38988c9468379",
       "bytes": 7804
     },
     {
@@ -2861,6 +2866,16 @@
       "bytes": 18683
     },
     {
+      "path": "tests/release/test_adapter_probe_evidence.py",
+      "sha256": "1b6f7c614ccacba45c088051a640057f3ed29324351477069fca95801b4ee32d",
+      "bytes": 3579
+    },
+    {
+      "path": "tests/release/test_adapter_probe_plan.py",
+      "sha256": "2ca1af5660fd6f8b113701eec3be2ed34346528ea53c6014c4b1b251eb7a6565",
+      "bytes": 1601
+    },
+    {
       "path": "tests/release/test_docs_gates.py",
       "sha256": "defa0b364f62618eef11f4a1921f35ddc0becb093ee67f82f87f517608880662",
       "bytes": 21336
@@ -2882,8 +2897,8 @@
     },
     {
       "path": "tests/release/test_live_host_conformance_validator.py",
-      "sha256": "3bd9f912c23d45b6b9a2db8064f6f7732a87772d97e2f9f367aa3d1ee0d3477c",
-      "bytes": 3922
+      "sha256": "052da874abcd5544a313cc0da9bce4df53643abb2a226a5292f78c5c7cce87a1",
+      "bytes": 5474
     },
     {
       "path": "tests/release/test_live_host_promotion_plan.py",
@@ -2902,8 +2917,8 @@
     },
     {
       "path": "tests/release/test_release_inventory.py",
-      "sha256": "00b0e38a09bcfff3d0fcc199f3e707fa50e819d68611ee817ca6bae8c5039395",
-      "bytes": 7173
+      "sha256": "cc0637441ace32f179d5350ebe80fd2e630faa1e468c5237968a878d2be5cf68",
+      "bytes": 7433
     },
     {
       "path": "tests/release/test_task_packet_context.py",
@@ -2937,8 +2952,8 @@
     },
     {
       "path": "tests/runner/test_sandbox_receipts.py",
-      "sha256": "0d320d279c7e2cc19fb2f68b6f78d95d68484e540d2490cd161922d518c26885",
-      "bytes": 3908
+      "sha256": "691fba2daf9f407d19737da2a99ebd2db2f138c5670cdae307c452edd4e7194d",
+      "bytes": 8255
     },
     {
       "path": "tests/security/test_release_security.py",
@@ -3027,8 +3042,8 @@
     },
     {
       "path": "tests/workflow/test_sandbox_policy.py",
-      "sha256": "daed6f518c826c5e7fa364262b38c0fad404d8c0e9c207b8e5bed5a321cdd9c1",
-      "bytes": 4218
+      "sha256": "6c0998946c75dc928147186993d1fbc00e1209e018a6dd941021b171c8cc3020",
+      "bytes": 5466
     },
     {
       "path": "tests/workflow/test_state_transitions.py",
@@ -3131,6 +3146,11 @@
       "bytes": 1686
     },
     {
+      "path": "tools/release/generate_adapter_probe_plan.py",
+      "sha256": "9d8c8ca0f8030cbb857be693d223ed36a5db74163e76b4e11f6b84874d069a41",
+      "bytes": 8075
+    },
+    {
       "path": "tools/release/release_common.py",
       "sha256": "b2a47494eb101e31d0168f8cae186d913c36af4fa7689ed89c0439f3d33b2ac8",
       "bytes": 3242
@@ -3139,6 +3159,11 @@
       "path": "tools/release/validate_adapter_conformance.py",
       "sha256": "3bcd287e1b4c75a6698b2f680db58ba14fd2d0dc69bf5672b10e84e2add42b1e",
       "bytes": 9232
+    },
+    {
+      "path": "tools/release/validate_adapter_probe_evidence.py",
+      "sha256": "67d71e08a799bbb80eff809794c83be91aee64874676e25a1ee71dbc8ef690d2",
+      "bytes": 8731
     },
     {
       "path": "tools/release/validate_deferred_promotion.py",
@@ -3162,8 +3187,8 @@
     },
     {
       "path": "tools/release/validate_live_host_conformance.py",
-      "sha256": "a314b00f2140e06e0aacbda685dab6f447599c217e3d2741d116c5b92254a543",
-      "bytes": 8866
+      "sha256": "b0425ffcfbd213c4e24a3d6b4771d4c12cd7e3dabe628bd7eaa423d1a7ae98d7",
+      "bytes": 10652
     },
     {
       "path": "tools/release/validate_live_host_promotion_plan.py",
@@ -3202,9 +3227,9 @@
     },
     {
       "path": "uv.lock",
-      "sha256": "e0c9df0b627d6c463c804454ecfbca198dc153ced8e1d397354a0b49e38d7f69",
+      "sha256": "046448e10e66df3678ec632c96543f83c67e5344eb75cb0092d608da2ee9cf54",
       "bytes": 186
     }
   ],
-  "candidatePayloadInventoryDigest": "b4c5e191a01fec3e0ab8fb9f521c60eece43df443300e46eab558ab3c69d6e92"
+  "candidatePayloadInventoryDigest": "e11810f7d99dce4c7570090f6eb80745b8b20550e07f3dffed9aba17ec51b845"
 }

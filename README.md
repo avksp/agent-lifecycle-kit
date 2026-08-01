@@ -33,9 +33,10 @@ flowchart LR
   host-reported `cost_usd`.
 - Optional proof-integrity evidence for bug fixes and high-risk final proofs:
   stable findings, root-cause digests, fix-impact receipts and hash chains.
-- Optional sandbox boundary receipts for high-risk work: filesystem, network,
-  process, environment and enforcement-source evidence kept separate from git
-  write scope.
+- Optional sandbox boundary receipts for high-risk work, including partial
+  containment and redacted credential proxy evidence separate from git scope.
+- Release-time adapter capability bench tools for bounded probe plans and
+  live-receipt drift validation without maturity changes.
 - Import mapper profiles for generic workflow/agent dialects,
   Constitution/ADR and AGENTS/agentskills inputs; imported artifacts remain
   untrusted drafts with dialect profile digests.

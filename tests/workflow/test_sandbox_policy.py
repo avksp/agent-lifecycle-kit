@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from agent_lifecycle.contracts import LifecycleError
-from agent_lifecycle.runner import build_sandbox_receipt
+from agent_lifecycle.runner import build_partial_process_boundary, build_sandbox_receipt
 from agent_lifecycle.workflow import (
     build_sandbox_requirement_policy,
     require_task_sandbox_evidence_pass,
@@ -83,6 +83,33 @@ class SandboxPolicyTests(unittest.TestCase):
 
         self.assertFalse(validation["required"])
         self.assertEqual(validation["status"], "PASS")
+
+    def test_task_policy_can_accept_partial_unknown_sandbox_receipt(self) -> None:
+        task = {
+            "id": "WS32-partial",
+            "tier": "S2",
+            "executionPolicy": {"sandbox": {"acceptedSandboxStatuses": ["PASS", "UNKNOWN"]}},
+        }
+        boundaries = _enforced_boundaries()
+        boundaries["process"] = build_partial_process_boundary(
+            evidence_ids=["ev-process-partial"],
+            covered=["direct-child-process"],
+            limitations=["windows-process-tree-grandchildren-not-guaranteed"],
+        )
+        receipt = build_sandbox_receipt(
+            lineage=_lineage(),
+            task_id="WS32-partial",
+            attempt=1,
+            boundaries=boundaries,
+            enforcement={"source": "HOST", "verified": True, "evidenceIds": ["ev-process-partial"], "details": {}},
+            verifier={"tool": "unit-test"},
+        )
+
+        validation = validate_task_sandbox_evidence(task, receipt=receipt, expected_lineage=_lineage(), attempt=1)
+
+        self.assertEqual(validation["status"], "PASS")
+        self.assertEqual(validation["sandboxStatus"], "UNKNOWN")
+        self.assertEqual(validation["acceptedSandboxStatuses"], ["PASS", "UNKNOWN"])
 
 
 def _lineage() -> dict:

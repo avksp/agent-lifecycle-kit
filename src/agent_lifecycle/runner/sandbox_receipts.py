@@ -20,6 +20,11 @@ UNKNOWN_ENFORCEMENT_SOURCES = {"UNKNOWN", "UNSUPPORTED"}
 SANDBOX_STATUSES = {"PASS", "FAIL", "UNKNOWN", "UNSUPPORTED"}
 CAPABILITY_STATUSES = {"VERIFIED", "DECLARED", "UNKNOWN", "UNSUPPORTED"}
 LINEAGE_KEYS = ("runId", "packageId", "planRevision", "planDigest", "sourceRevision")
+PARTIAL_CONTAINMENT_KEY = "partialContainment"
+CREDENTIAL_PROXY_KEY = "credentialProxy"
+CREDENTIAL_PROXY_PLACEHOLDERS = {"<redacted>", "<credential-proxy>", "<host-local>"}
+CREDENTIAL_PROXY_SOURCES = {"HOST_ENV", "HOST_CREDENTIAL_STORE", "HOST_APPROVED_ENV_FILE", "HOST_INTERACTIVE_LOGIN", "UNKNOWN"}
+SENSITIVE_VALUE_MARKERS = ("BEGIN PRIVATE KEY", "sk-", "xai-", "ghp_", "not-redacted-credential")
 
 
 def build_sandbox_receipt(
@@ -87,6 +92,8 @@ def validate_sandbox_receipt(
         blockers.append({"code": "sandbox-attempt-mismatch", "expected": attempt, "actual": actual_attempt})
     boundaries, unknown_boundary_count = _checked_boundaries(receipt.get("boundaries"), blockers)
     enforcement = _checked_enforcement(receipt.get("enforcement"), blockers)
+    partial_boundary_count = _check_partial_boundaries(boundaries, blockers)
+    credential_proxy_count = _check_credential_proxy_boundaries(boundaries, enforcement, blockers)
     _check_write_scope_boundary(receipt.get("writeScopeBoundary"), blockers)
     _check_string_list(receipt.get("evidenceIds", []), "sandbox-evidence-ids", blockers, allow_empty=True)
     policy_digest = receipt.get("policyDigest")
@@ -108,6 +115,9 @@ def validate_sandbox_receipt(
         "taskId": actual_task_id,
         "attempt": actual_attempt,
         "unknownBoundaryCount": unknown_boundary_count,
+        "partialBoundaryCount": partial_boundary_count,
+        "credentialProxyCount": credential_proxy_count,
+        "credentialProxyRedacted": not _has_credential_proxy_redaction_blocker(blockers),
         "blockers": blockers,
         "receiptDigest": receipt.get("receiptDigest"),
     }
@@ -139,6 +149,73 @@ def build_unknown_sandbox_capability(*, notes: list[str] | None = None) -> dict[
     }
 
 
+def build_partial_process_boundary(
+    *,
+    evidence_ids: list[str],
+    covered: list[str],
+    limitations: list[str],
+    platforms: list[str] | None = None,
+    summary: str = "Process containment is partially enforced by the host.",
+) -> dict[str, Any]:
+    """Build a process boundary that is explicit about partial containment."""
+
+    return {
+        "mode": "DECLARED",
+        "summary": summary,
+        "evidenceIds": _string_list(evidence_ids, label="boundary.evidenceIds", code="invalid-sandbox-receipt", allow_empty=False),
+        "details": {
+            PARTIAL_CONTAINMENT_KEY: {
+                "status": "PARTIAL",
+                "covered": _string_list(covered, label="partialContainment.covered", code="invalid-sandbox-receipt", allow_empty=False),
+                "limitations": _string_list(
+                    limitations,
+                    label="partialContainment.limitations",
+                    code="invalid-sandbox-receipt",
+                    allow_empty=False,
+                ),
+                "platforms": _string_list(
+                    platforms or [],
+                    label="partialContainment.platforms",
+                    code="invalid-sandbox-receipt",
+                    allow_empty=True,
+                ),
+            }
+        },
+    }
+
+
+def build_credential_proxy_details(
+    *,
+    source: str,
+    attachment: str,
+    egress_boundary: str,
+    allowed_env_names: list[str] | None = None,
+    sandbox_credential_value: str = "<credential-proxy>",
+) -> dict[str, Any]:
+    """Build redacted credential-proxy details for a sandbox boundary."""
+
+    return {
+        CREDENTIAL_PROXY_KEY: {
+            "source": _enum(source, CREDENTIAL_PROXY_SOURCES, label="credentialProxy.source", code="invalid-sandbox-receipt"),
+            "attachment": _required_string(attachment, label="credentialProxy.attachment", code="invalid-sandbox-receipt"),
+            "egressBoundary": _required_string(egress_boundary, label="credentialProxy.egressBoundary", code="invalid-sandbox-receipt"),
+            "allowedEnvNames": _string_list(
+                allowed_env_names or [],
+                label="credentialProxy.allowedEnvNames",
+                code="invalid-sandbox-receipt",
+                allow_empty=True,
+            ),
+            "sandboxCredentialValue": _enum(
+                sandbox_credential_value,
+                CREDENTIAL_PROXY_PLACEHOLDERS,
+                label="credentialProxy.sandboxCredentialValue",
+                code="invalid-sandbox-receipt",
+            ),
+            "secretValueStoredInReceipt": False,
+        }
+    }
+
+
 def validate_sandbox_capability(capability: dict[str, Any]) -> dict[str, Any]:
     """Validate an adapter sandbox capability declaration without requiring verification."""
 
@@ -152,6 +229,8 @@ def validate_sandbox_capability(capability: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "sandbox-capability-status-invalid", "status": sandbox_status})
     boundaries, unknown_boundary_count = _checked_boundaries(capability.get("boundaries"), blockers)
     enforcement = _checked_enforcement(capability.get("enforcement"), blockers)
+    partial_boundary_count = _check_partial_boundaries(boundaries, blockers)
+    credential_proxy_count = _check_credential_proxy_boundaries(boundaries, enforcement, blockers)
     _check_write_scope_boundary(capability.get("writeScopeBoundary"), blockers)
     if not isinstance(capability.get("verified"), bool):
         blockers.append({"code": "sandbox-capability-verified-invalid"})
@@ -168,6 +247,9 @@ def validate_sandbox_capability(capability: dict[str, Any]) -> dict[str, Any]:
         "status": "PASS" if not blockers else "FAIL",
         "sandboxStatus": sandbox_status if isinstance(sandbox_status, str) else None,
         "unknownBoundaryCount": unknown_boundary_count,
+        "partialBoundaryCount": partial_boundary_count,
+        "credentialProxyCount": credential_proxy_count,
+        "credentialProxyRedacted": not _has_credential_proxy_redaction_blocker(blockers),
         "blockers": blockers,
     }
     return {**body, "validationDigest": canonical_digest(body)}
@@ -216,6 +298,8 @@ def _derived_sandbox_status(
     if any(boundary.get("mode") == "UNSUPPORTED" for boundary in boundaries.values()) or enforcement.get("source") == "UNSUPPORTED":
         return "UNSUPPORTED"
     if any(boundary.get("mode") == "UNKNOWN" for boundary in boundaries.values()):
+        return "UNKNOWN"
+    if any(_boundary_is_partial(boundary) for boundary in boundaries.values()):
         return "UNKNOWN"
     if enforcement.get("source") == "UNKNOWN" or enforcement.get("verified") is not True:
         return "UNKNOWN"
@@ -271,10 +355,92 @@ def _check_pass_not_overclaimed(
     for name, boundary in boundaries.items():
         if boundary.get("mode") in UNKNOWN_BOUNDARY_MODES:
             blockers.append({"code": "sandbox-pass-overclaims-unknown-boundary", "boundary": name})
+        if _boundary_is_partial(boundary):
+            blockers.append({"code": "sandbox-pass-overclaims-partial-boundary", "boundary": name})
     if enforcement.get("source") in UNKNOWN_ENFORCEMENT_SOURCES:
         blockers.append({"code": "sandbox-pass-overclaims-enforcement-source", "source": enforcement.get("source")})
     if enforcement.get("verified") is not True:
         blockers.append({"code": "sandbox-pass-overclaims-unverified-enforcement"})
+
+
+def _check_partial_boundaries(boundaries: dict[str, Any], blockers: list[dict[str, Any]]) -> int:
+    count = 0
+    for name, boundary in boundaries.items():
+        details = boundary.get("details") if isinstance(boundary, dict) else None
+        if not isinstance(details, dict) or PARTIAL_CONTAINMENT_KEY not in details:
+            continue
+        count += 1
+        partial = details.get(PARTIAL_CONTAINMENT_KEY)
+        if not isinstance(partial, dict):
+            blockers.append({"code": "sandbox-partial-containment-invalid", "boundary": name})
+            continue
+        if partial.get("status") != "PARTIAL":
+            blockers.append({"code": "sandbox-partial-containment-status-invalid", "boundary": name})
+        _check_string_list(partial.get("covered"), "sandbox-partial-containment-covered-invalid", blockers, allow_empty=False)
+        _check_string_list(partial.get("limitations"), "sandbox-partial-containment-limitations-invalid", blockers, allow_empty=False)
+        if "platforms" in partial:
+            _check_string_list(partial.get("platforms"), "sandbox-partial-containment-platforms-invalid", blockers, allow_empty=True)
+    return count
+
+
+def _check_credential_proxy_boundaries(
+    boundaries: dict[str, Any],
+    enforcement: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> int:
+    details_items = [
+        (f"boundary:{name}", boundary.get("details"))
+        for name, boundary in boundaries.items()
+        if isinstance(boundary, dict)
+    ]
+    details_items.append(("enforcement", enforcement.get("details") if isinstance(enforcement, dict) else None))
+    count = 0
+    for location, details in details_items:
+        if not isinstance(details, dict) or CREDENTIAL_PROXY_KEY not in details:
+            continue
+        count += 1
+        proxy = details.get(CREDENTIAL_PROXY_KEY)
+        if not isinstance(proxy, dict):
+            blockers.append({"code": "sandbox-credential-proxy-invalid", "location": location})
+            continue
+        if proxy.get("source") not in CREDENTIAL_PROXY_SOURCES:
+            blockers.append({"code": "sandbox-credential-proxy-source-invalid", "location": location})
+        for field in ("attachment", "egressBoundary"):
+            if not isinstance(proxy.get(field), str) or not proxy[field]:
+                blockers.append({"code": "sandbox-credential-proxy-field-missing", "location": location, "field": field})
+        if proxy.get("sandboxCredentialValue") not in CREDENTIAL_PROXY_PLACEHOLDERS:
+            blockers.append({"code": "sandbox-credential-proxy-placeholder-invalid", "location": location})
+        if proxy.get("secretValueStoredInReceipt") is not False:
+            blockers.append({"code": "sandbox-credential-proxy-secret-stored", "location": location})
+        _check_string_list(proxy.get("allowedEnvNames", []), "sandbox-credential-proxy-env-names-invalid", blockers, allow_empty=True)
+        if _contains_secret_value(proxy):
+            blockers.append({"code": "sandbox-credential-proxy-secret-value", "location": location})
+    return count
+
+
+def _boundary_is_partial(boundary: dict[str, Any]) -> bool:
+    details = boundary.get("details") if isinstance(boundary, dict) else None
+    return isinstance(details, dict) and PARTIAL_CONTAINMENT_KEY in details
+
+
+def _contains_secret_value(value: Any) -> bool:
+    if isinstance(value, dict):
+        return any(_contains_secret_value(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_secret_value(item) for item in value)
+    if not isinstance(value, str):
+        return False
+    if value in CREDENTIAL_PROXY_PLACEHOLDERS:
+        return False
+    return any(marker in value for marker in SENSITIVE_VALUE_MARKERS)
+
+
+def _has_credential_proxy_redaction_blocker(blockers: list[dict[str, Any]]) -> bool:
+    return any(
+        str(item.get("code", "")).startswith("sandbox-credential-proxy")
+        for item in blockers
+        if isinstance(item, dict)
+    )
 
 
 def _check_capability_not_overclaimed(
