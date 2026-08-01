@@ -86,7 +86,13 @@ from agent_lifecycle.quality import (
     validate_bug_forensics_recipe_library,
     validate_quality_pack,
 )
-from agent_lifecycle.reporting import build_status_view, render_usage_export_json, render_usage_export_table
+from agent_lifecycle.reporting import (
+    build_lifecycle_progress_view,
+    build_status_view,
+    build_workflow_event_feed,
+    render_usage_export_json,
+    render_usage_export_table,
+)
 from agent_lifecycle.runner import (
     build_runner_snapshot,
     initialize_runner_state,
@@ -317,6 +323,20 @@ def _dispatch_report(args: argparse.Namespace) -> dict[str, Any]:
             artifact_paths=[Path(item) for item in args.artifact],
             max_items=args.max_items,
             target_window=args.target_window,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.report_command == "event-feed":
+        payload = build_workflow_event_feed(state_path=Path(args.state))
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.report_command == "progress":
+        payload = build_lifecycle_progress_view(
+            state_path=Path(args.state),
+            usage_receipt_paths=[Path(item) for item in args.usage_receipt],
+            change_summary_path=Path(args.change_summary) if args.change_summary else None,
         )
         if args.out:
             write_json_create(Path(args.out), payload)

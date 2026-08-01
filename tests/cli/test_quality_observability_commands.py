@@ -119,6 +119,97 @@ class CliQualityObservabilityCommandTests(unittest.TestCase):
             self.assertTrue(view_out.is_file())
             self.assertFalse(view["sourceOfTruth"])
 
+    def test_report_event_feed_and_progress_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state = root / "state.json"
+            usage = root / "usage.json"
+            changes = root / "changes.json"
+            feed_out = root / "out/feed.json"
+            progress_out = root / "out/progress.json"
+            state.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-workflow-state.v3",
+                        "runId": "run-1",
+                        "packageId": "package",
+                        "planRevision": 1,
+                        "planDigest": "0" * 64,
+                        "sourceRevision": "main",
+                        "stateRevision": 2,
+                        "phase": "COMPLETE",
+                        "authorization": {"mode": "approval-required"},
+                        "budgets": {},
+                        "tasks": [{"id": "WS-01", "status": "ACCEPTED", "attempt": 1, "required": True}],
+                        "lifecycleProgressSteps": [
+                            {"name": "review", "status": "DONE", "durationSeconds": 3661, "taskIds": ["WS-01"]}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            usage.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-lifecycle-model-usage-receipt.v1",
+                        "operationId": "op-1",
+                        "host": "codex",
+                        "modelClass": "balanced",
+                        "providerModelHash": "1" * 64,
+                        "taskId": "WS-01",
+                        "usage": {
+                            "inputTokens": 1100,
+                            "outputTokens": 200,
+                            "billableTokens": 1300,
+                            "cumulativeContextBytes": 0,
+                            "toolCalls": 0,
+                            "wallSeconds": 3661,
+                        },
+                        "attestation": {"source": "host", "status": "ATTESTED"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            changes.write_text(
+                json.dumps(
+                    {
+                        "filesChanged": 7,
+                        "insertions": 432,
+                        "deletions": 118,
+                        "modified": 5,
+                        "added": 1,
+                        "deleted": 1,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            code, feed = _run_cli(["report", "event-feed", "--state", str(state), "--out", str(feed_out)])
+            self.assertEqual(code, 0)
+            self.assertEqual(feed["schemaVersion"], "agent-workflow-event-feed.v1")
+            self.assertTrue(feed_out.is_file())
+            self.assertTrue(feed["readOnly"])
+
+            code, progress = _run_cli(
+                [
+                    "report",
+                    "progress",
+                    "--state",
+                    str(state),
+                    "--usage-receipt",
+                    str(usage),
+                    "--change-summary",
+                    str(changes),
+                    "--out",
+                    str(progress_out),
+                ]
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(progress["schemaVersion"], "agent-lifecycle-progress-view.v1")
+            self.assertTrue(progress_out.is_file())
+            self.assertIn("01:01:01", progress["lines"][0])
+            self.assertIn("↑0.2k/↓1.1k tok", progress["lines"][0])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -124,6 +124,18 @@ class ContextTests(unittest.TestCase):
         with self.assertRaises(LifecycleError):
             render_context(_profile(), _packet(), summary)
 
+    def test_fresh_context_is_documented_as_recipe_evidence_only(self) -> None:
+        docs = "\n".join(
+            [
+                (ROOT / "docs/reference/runner-recovery.md").read_text(encoding="utf-8"),
+                (ROOT / "docs/reference/plan-continuity.md").read_text(encoding="utf-8"),
+            ]
+        )
+        normalized = " ".join(docs.split())
+        self.assertIn("Fresh-context", docs)
+        self.assertIn("recipe/evidence only", docs)
+        self.assertIn("does not mutate lifecycle state by default", normalized)
+
 
 def _profile() -> dict:
     import json

@@ -17,6 +17,7 @@ SKILL_NAMES = {
     "agent-workflow-orchestrator",
     "audit-plan-implementation",
     "bug-forensics",
+    "issue-to-spec",
 }
 
 
