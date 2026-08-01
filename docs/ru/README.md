@@ -116,13 +116,13 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 | Claude Code | `VERIFIED` для Claude Code 2.1.220. Одобрение официального каталога не заявлено. |
 | OpenCode | `VERIFIED` для OpenCode CLI 1.18.9. Публикация в npm не заявлена. |
 | Hermes | `VERIFIED` для Hermes Agent v0.19.0. Одобрение публичного каталога не заявлено. |
-| Qwen Code | `VERIFIED` для Qwen Code 0.21.0 на проверенной связке GLM 5.2. Одобрение публичного пакета не заявлено. |
+| Qwen Code | `VERIFIED` для Qwen Code 0.21.0 на проверенной host-local provider/model связке. Одобрение публичного пакета не заявлено. |
 | Cursor | `EXPERIMENTAL`; безопасный локальный осмотр прошёл, но подтверждений из реального запуска недостаточно. |
 | Gemini CLI | `EXPERIMENTAL`; локальная проверка на реальном вызове ограничена текущим уровнем Gemini Code Assist. |
-| Goose | `VERIFIED` для Goose 1.45.0 на проверенной связке ZAI GLM 5.2. Одобрение публичного каталога не заявлено. |
+| Goose | `VERIFIED` для Goose 1.45.0 на проверенной host-local provider/model связке. Одобрение публичного каталога не заявлено. |
 | Kimi Code | `EXPERIMENTAL`; для проверки нужен настроенный провайдер и псевдоним модели. |
-| Grok Build | `VERIFIED` для Grok Build 0.2.117 на проверенной связке grok-4.5. Одобрение публичного каталога не заявлено. |
-| OpenInterpreter | `EXPERIMENTAL`; host-local compatible CLI projection с offline conformance. |
+| Grok Build | `VERIFIED` для Grok Build 0.2.117 на проверенной host-local provider/model связке. Одобрение публичного каталога не заявлено. |
+| OpenInterpreter | `VERIFIED` для `interpreter` 0.0.34 на проверенной host-local provider/model связке. Одобрение публичного каталога не заявлено. |
 | Pi | `EXPERIMENTAL`; RPC/JSON и AGENTS/agentskills projection без заявления о live promotion. |
 
 Подробнее: [Установка адаптеров](adapters/install.md) и

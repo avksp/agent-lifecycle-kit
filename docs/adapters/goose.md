@@ -1,7 +1,7 @@
 # Goose Adapter
 
 The Goose adapter is a host-specific `VERIFIED` ALK adapter projection for
-Goose `1.45.0` on the tested local ZAI GLM 5.2 binding.
+Goose `1.45.0` on the tested host-local provider/model binding.
 
 ## Files
 

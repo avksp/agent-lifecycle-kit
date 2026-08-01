@@ -1,10 +1,12 @@
 # Goose live evidence
 
-Status: `VERIFIED` for Goose `1.45.0` on the tested local ZAI GLM 5.2 binding.
+Status: `VERIFIED` for Goose `1.45.0` on the tested host-local
+provider/model binding.
 
 Scope:
 
 - Host: Goose `1.45.0`.
+- Provider/model binding: host-local, redacted in committed docs.
 - Adapter descriptor: `adapters/goose/adapter.descriptor.json`.
 - Capability manifest: `adapters/goose/capabilities.manifest.json`.
 - Source revision used for live receipts:

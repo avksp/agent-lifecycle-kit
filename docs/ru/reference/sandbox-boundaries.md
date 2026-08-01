@@ -20,6 +20,13 @@ Sandbox boundaries — это необязательный слой структ
 - `enforcement.source`: кто обеспечил ограничение: `HOST`, `OS`,
   `CONTAINER`, `ADAPTER`, `EXTERNAL`, `UNKNOWN` или `UNSUPPORTED`.
 
+Live host harness может опционально передать provider credentials из приватного
+operator env-file. Это boundary окружения, а не metadata адаптера: оператор
+явно перечисляет каждое разрешённое имя через `--host-env-allow`, harness
+передаёт дочернему host-процессу только эти имена, а receipts содержат только
+`agent-host-env-file-redacted.v1`. Значения секретов и полные локальные пути к
+env-file не являются допустимым содержимым receipt.
+
 Неизвестная поддержка фиксируется явно. Receipt или capability может быть
 валидным со `status: UNKNOWN`, но high-risk задача, для которой sandbox
 evidence обязателен, по умолчанию принимает только `PASS`.

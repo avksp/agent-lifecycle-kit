@@ -2,4 +2,11 @@
 
 OpenInterpreter is represented as a host-local compatible CLI surface with ALK envelopes at the boundary.
 
-Maturity is `EXPERIMENTAL`. Live host conformance, usage receipts, sandbox evidence and lifecycle proof are required before any `VERIFIED` claim. Unsupported operations fail closed and lifecycle semantics stay delegated to ALK core.
+Maturity is host-specific `VERIFIED` for `interpreter` 0.0.34 on the tested
+host-local provider/model binding. The bounded JSONL live harness uses
+`interpreter exec` with ephemeral read-only invocation, no approval prompts and
+post-invocation clean-worktree checks. The selected provider's key must come
+from OpenInterpreter's normal credential source; ALK can scope a private env
+file to the harness process only with an explicit `--host-env-allow` variable
+name. Unsupported operations fail closed and lifecycle semantics stay delegated
+to ALK core.
