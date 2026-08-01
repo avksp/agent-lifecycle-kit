@@ -17,7 +17,7 @@ Use it when you want Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi,
 Grok Build, or another CLI to follow the same quality loop without putting
 provider, model, or secret policy into the core.
 
-## Quick Start
+## Quick start
 
 From a source checkout:
 
@@ -31,7 +31,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md). The
 Russian documentation starts at [Документация на русском](docs/ru/README.md).
 
-## Why Try It
+## Why try it
 
 - Finish-oriented lifecycle: plan, execute, review, and prove the result.
 - Provider-neutral adapters: host-specific commands stay outside the core.
@@ -42,9 +42,9 @@ Russian documentation starts at [Документация на русском](d
 - Usage visibility: token/resource accounting is native; USD cost is optional
   and only used when a metered host reports it.
 
-## Feature Areas
+## Feature areas
 
-### Plan And Execute
+### Plan and execute
 
 - Reviewed specification and plan flow before implementation starts.
 - Deterministic task packets for splitting work across agents.
@@ -53,7 +53,7 @@ Russian documentation starts at [Документация на русском](d
 - Draft-only task templates for bugfix, idea-to-PR, PR review, merge-conflict
   repair, and release-readiness work.
 
-### Quality And Proof
+### Quality and proof
 
 - Implementation audits compare results with the frozen plan and acceptance
   evidence.
@@ -65,7 +65,7 @@ Russian documentation starts at [Документация на русском](d
 - Optional cross-check, runtime policy, and write-back receipts stay off by
   default and become blocking only when the plan says so.
 
-### Routing And Cost Control
+### Routing and cost control
 
 - Compact context profiles, small-model packets, objective snapshots, and
   local quality-cost learning help choose the lightest safe mode.
@@ -74,7 +74,7 @@ Russian documentation starts at [Документация на русском](d
 - Usage/session exports include tokens, resources, receipt digests, and optional
   host-reported `cost_usd`.
 
-### Adapters And Interop
+### Adapters and interop
 
 - Adapter contracts keep host-specific projections separate from lifecycle
   schemas.
@@ -94,14 +94,14 @@ Russian documentation starts at [Документация на русском](d
 - Read-only diagnostics, event feeds, and progress views inspect checkout and
   workflow state without model calls.
 
-## Daily Flow
+## Daily flow
 
 Spec -> frozen plan -> bounded work -> implementation audit -> final proof.
 Core commands cover specification, plan, workflow, audit, adapters, imports,
 metrics, policy, diagnostics, and runner state. See [CLI reference](docs/reference/cli.md)
 and [Source of truth](docs/reference/source-of-truth.md).
 
-## Adapter Maturity
+## Adapter maturity
 
 `EXPERIMENTAL` means the adapter has source projection metadata and deterministic
 offline checks, but it is not promoted. `VERIFIED` is host-specific and requires
@@ -128,13 +128,13 @@ Adapter installation and maturity details live in
 [Adapter install](docs/adapters/install.md) and
 [Adapter support matrix](docs/adapters/support-matrix.md).
 
-## Contract Map
+## Contract map
 
 The public lifecycle surface is schema-backed. Full stable schema ids,
 compatibility rules, runner recovery, cross-check, Bug Forensics, and usage
 export details are listed in [Public contracts](docs/reference/public-contracts.md).
 
-## Design Boundaries
+## Design boundaries
 
 - The core stays provider-neutral. Concrete host commands and model bindings
   belong to adapters or host-local profiles.
