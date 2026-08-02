@@ -25,6 +25,7 @@ from tools.live_hosts.common import BudgetPolicy, BudgetTracker, CommandResult, 
 HOST = "cursor"
 LIVE_HOST_RECEIPT_SCHEMA = "agent-lifecycle-live-host-conformance-receipt.v1"
 LIVE_CALIBRATION_RECEIPT_SCHEMA = "agent-lifecycle-live-calibration-receipt.v1"
+CONTAINMENT_RECEIPT_SCHEMA = "agent-cursor-live-containment-receipt.v1"
 HARNESS_REPORT_SCHEMA = "agent-cursor-live-harness-report.v1"
 DEFAULT_BASELINE = Path("conformance/core/adapter-baseline.v1.json")
 DEFAULT_PROFILE = Path("conformance/core/live-calibration-profile.v1.json")
@@ -108,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-live", action="store_true")
     parser.add_argument("--report", required=True)
     parser.add_argument("--receipt")
+    parser.add_argument("--containment-receipt")
     parser.add_argument("--diagnostic-dir", default="work/release-0-3/evidence/live-host-diagnostics/cursor")
     args = parser.parse_args(argv)
 
@@ -137,6 +139,7 @@ def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
             worktree=Path(args.worktree) if args.worktree else None,
             budget_policy=budget_policy,
             allow_live=args.allow_live,
+            containment_receipt_path=Path(args.containment_receipt) if args.containment_receipt else None,
         )
     if args.mode == "fixture-check":
         return run_fixture_check(Path(args.baseline))
@@ -175,6 +178,7 @@ def run_preflight(
     worktree: Path | None,
     budget_policy: BudgetPolicy,
     allow_live: bool,
+    containment_receipt_path: Path | None = None,
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     checks: list[dict[str, Any]] = []
@@ -188,10 +192,13 @@ def run_preflight(
             blockers.append({"code": "cursor-model-unavailable", "message": f"Cursor Agent does not list requested model: {cursor_model}"})
     baseline = _load_json(baseline_path)
     operations = required_operations(baseline)
+    containment_policy = _containment_policy(cursor_model=cursor_model)
     if not operations:
         blockers.append({"code": "invalid-adapter-baseline", "message": "adapter baseline has no required operations"})
-    if "--print" not in help_result["stdout"] or "stream-json" not in help_result["stdout"]:
-        blockers.append({"code": "BLOCKED_NON_INTERACTIVE_HOST_SURFACE", "message": "Cursor Agent does not advertise scriptable stream-json output"})
+    _validate_containment(containment_policy, blockers)
+    missing_surface = [token for token in ("--print", "stream-json", "--workspace", "--trust", "--sandbox", "--model") if token not in help_result["stdout"]]
+    if missing_surface:
+        blockers.append({"code": "BLOCKED_NON_INTERACTIVE_HOST_SURFACE", "message": f"Cursor Agent does not advertise required bounded script surface: {', '.join(missing_surface)}"})
     if not _cursor_auth_ok(status, about):
         blockers.append({"code": "BLOCKED_HOST_AUTH", "message": "Cursor Agent is not authenticated; run cursor agent login or provide CURSOR_API_KEY/CURSOR_AUTH_TOKEN"})
     if allow_live:
@@ -206,13 +213,26 @@ def run_preflight(
             blockers.append({"code": "BLOCKED_DIRTY_WORKTREE", "message": "live runs require a clean dedicated worktree"})
     checks.append({"name": "budget-gate", "status": "PASS" if allow_live and not blockers else "BLOCKED", "details": {"budgetPolicy": budget_policy.to_json(), "allowLive": allow_live}})
     surface_ok = version["returncode"] == 0 and help_result["returncode"] == 0
+    status_value = "PASS" if not blockers and surface_ok else "FAIL"
+    if containment_receipt_path is not None:
+        _write_json(
+            containment_receipt_path,
+            _containment_receipt(
+                status=status_value,
+                blockers=blockers,
+                policy=containment_policy,
+                cursor_agent_version=_first_line(version["stdout"]),
+            ),
+        )
     return {
-        **_base_report("PASS" if not blockers and surface_ok else "FAIL", blockers),
+        **_base_report(status_value, blockers),
         "checks": checks,
         "cursorAgentVersion": _first_line(version["stdout"]),
         "cursorAgentAbout": _sanitize_lines(about["stdout"]),
         "baselineDigest": canonical_digest(baseline),
         "requiredOperationCount": len(operations),
+        "containmentPolicy": containment_policy,
+        "containmentReceipt": _file_identity(containment_receipt_path) if containment_receipt_path and containment_receipt_path.exists() else None,
         "budgetPolicy": budget_policy.to_json(),
         "budgetMode": budget_policy.mode,
         "budgetCapUsd": budget_policy.budget_cap_usd,
@@ -270,6 +290,7 @@ def run_live_host_receipt(
     baseline = _load_json(baseline_path)
     operations = required_operations(baseline)
     budget_policy = budget_policy or BudgetPolicy(mode="metered")
+    blockers.extend(_containment_blockers(cursor_model=cursor_model))
     _validate_live_inputs(blockers, checks, budget_policy, allow_live, len(operations), worktree, clean_worktree_checker, receipt_path, "live-host-receipt")
     _append_auth_check(blockers, checks, auth_checker(cursor_bin))
     if blockers:
@@ -293,6 +314,9 @@ def run_live_host_receipt(
         live_calls_started = True
         transcript = _write_invocation_diagnostic(diagnostic_dir, operation_name, invocation_id, result)
         checks.append({"name": f"cursor-live-{operation_name}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": _display_path(transcript)}})
+        _record_post_invocation_cleanliness(checks, blockers, worktree, clean_worktree_checker, f"cursor-post-live-{operation_name}")
+        if blockers:
+            break
         usage = _usage_or_block(result, budget_policy, blockers, operation_name)
         if usage is None:
             break
@@ -358,6 +382,7 @@ def run_live_calibration(
     requested_runs = runs_per_scenario_cohort or minimum_runs
     required_invocations = len(scenarios) * len(cohorts) * requested_runs
     budget_policy = budget_policy or BudgetPolicy(mode="metered")
+    blockers.extend(_containment_blockers(cursor_model=cursor_model))
     _validate_calibration_inputs(profile, targets, blockers, scenarios, cohorts, requested_runs, minimum_runs)
     _validate_live_inputs(blockers, checks, budget_policy, allow_live, required_invocations, worktree, clean_worktree_checker, receipt_path, "live-calibration")
     _append_auth_check(blockers, checks, auth_checker(cursor_bin))
@@ -384,6 +409,9 @@ def run_live_calibration(
                 live_calls_started = True
                 transcript = _write_invocation_diagnostic(diagnostic_dir, f"{scenario}-{cohort}-{run_index:02d}", invocation_id, result)
                 checks.append({"name": f"cursor-calibration-{scenario}-{cohort}-{run_index:02d}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": _display_path(transcript)}})
+                _record_post_invocation_cleanliness(checks, blockers, worktree, clean_worktree_checker, f"cursor-post-calibration-{scenario}-{cohort}-{run_index:02d}")
+                if blockers:
+                    break
                 usage = _calibration_usage_or_block(result, budget_policy, blockers, f"{scenario}/{cohort}/{run_index}", prompt)
                 if usage is None:
                     break
@@ -586,6 +614,60 @@ def _blocked_live_report(blockers: list[dict[str, Any]], checks: list[dict[str, 
     return {**_base_report("FAIL", blockers), "checks": checks, "budgetPolicy": budget_policy.to_json(), "budgetMode": budget_policy.mode, "liveCallsStarted": False, "productionPromotionClaimed": False}
 
 
+def _containment_blockers(*, cursor_model: str | None) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    _validate_containment(_containment_policy(cursor_model=cursor_model), blockers)
+    return blockers
+
+
+def _containment_policy(*, cursor_model: str | None) -> dict[str, Any]:
+    return {
+        "schemaVersion": "agent-cursor-live-containment-policy.v1",
+        "host": HOST,
+        "printMode": True,
+        "streamJson": True,
+        "workspaceScoped": True,
+        "trustExplicit": True,
+        "sandboxMode": "enabled",
+        "planModeForCalibration": True,
+        "modelOverridePresent": cursor_model is not None,
+        "postInvocationCleanWorktreeRequired": True,
+        "promptPolicy": "bounded-json-probe-no-unrequested-file-modifications",
+    }
+
+
+def _validate_containment(policy: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
+    if policy.get("printMode") is not True or policy.get("streamJson") is not True:
+        blockers.append({"code": "BLOCKED_NON_INTERACTIVE_HOST_SURFACE", "message": "cursor live promotion requires --print stream-json output"})
+    if policy.get("workspaceScoped") is not True or policy.get("trustExplicit") is not True:
+        blockers.append({"code": "BLOCKED_UNBOUNDED_HOST_WORKSPACE", "message": "cursor live promotion requires explicit workspace and trust boundaries"})
+    if policy.get("sandboxMode") != "enabled":
+        blockers.append({"code": "BLOCKED_UNBOUNDED_HOST_TOOLS", "message": "cursor live promotion requires sandbox=enabled"})
+    if policy.get("modelOverridePresent") is not True:
+        blockers.append({"code": "BLOCKED_MODEL_BINDING_UNDECLARED", "message": "cursor live promotion requires explicit host-local model"})
+    if policy.get("postInvocationCleanWorktreeRequired") is not True:
+        blockers.append({"code": "BLOCKED_WORKTREE_CONTAINMENT_UNDECLARED", "message": "cursor live promotion requires clean worktree checks after live invocations"})
+
+
+def _containment_receipt(*, status: str, blockers: list[dict[str, Any]], policy: dict[str, Any], cursor_agent_version: str | None) -> dict[str, Any]:
+    return {
+        "schemaVersion": CONTAINMENT_RECEIPT_SCHEMA,
+        "status": status,
+        "host": HOST,
+        "cursorAgentVersion": cursor_agent_version,
+        "policy": policy,
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+
+
+def _record_post_invocation_cleanliness(checks: list[dict[str, Any]], blockers: list[dict[str, Any]], worktree: Path, clean_worktree_checker: Callable[[Path], dict[str, Any]], name: str) -> None:
+    clean = clean_worktree_checker(worktree)
+    checks.append({"name": name, "status": "PASS" if clean.get("clean") else "FAIL", "details": clean})
+    if not clean.get("clean"):
+        blockers.append({"code": "BLOCKED_WORKTREE_MUTATED", "message": "cursor live invocation left the worktree dirty"})
+
+
 def _live_report(
     status: str,
     blockers: list[dict[str, Any]],
@@ -634,7 +716,7 @@ def _prompt_for_operation(operation_name: str) -> str:
     return (
         "Agent Lifecycle Kit Cursor live host conformance probe. "
         f"Operation: {operation_name}. "
-        "Do not modify files unless the operation is tool-execution. "
+        "Do not modify files, including for tool-execution. "
         "Return a compact JSON object with operation and status PASS."
     )
 
