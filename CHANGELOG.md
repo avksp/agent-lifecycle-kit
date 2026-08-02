@@ -4,6 +4,12 @@
 
 - No changes yet.
 
+## 1.29.1 - 2026-08-02
+
+- Fixed plugin publication manifests so Codex, Claude Code and Cursor
+  installation snapshots point at the current release tag instead of the stale
+  `v1.19.0` metadata.
+
 ## 1.29.0 - 2026-08-01
 
 - Added neutral failure classification receipts for edge-case, API-contract,
