@@ -24,7 +24,7 @@
     <path d="M432 156h336" stroke="#5eb4ff" stroke-width="6" stroke-linecap="round"/>
     <path d="M432 168h186" stroke="#a468ff" stroke-width="5" stroke-linecap="round"/>
     <path d="M98 182h1004" stroke="#202a37" stroke-width="2"/>
-    <text x="600" y="214" text-anchor="middle" font-size="25" font-weight="600" fill="#d7e2ee">Provider-neutral control layer for coding agents</text>
+    <text x="600" y="214" text-anchor="middle" font-size="25" font-weight="600" fill="#d7e2ee">One workflow for coding agents: plan, run, verify, finish</text>
     <text x="600" y="248" text-anchor="middle" font-size="19" fill="#95a8bb">From a task request to a reviewed spec, frozen plan, bounded work, audit, and final proof.</text>
 
     <g fill="none" stroke="#5eb4ff" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)">
