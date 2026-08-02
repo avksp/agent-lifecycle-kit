@@ -1,9 +1,9 @@
 # Целостность подтверждений
 
-Целостность подтверждений — это дополнительный слой финального proof для
+Целостность подтверждений — это дополнительный слой финального подтверждения для
 запусков, где нужно показать не только факт прохождения финальной проверки, но
 и причинную цепочку исправления. Режим подходит для багфиксов, регрессий,
-security-дефектов, release blockers и других рискованных изменений.
+дефектов безопасности, блокеров релиза и других рискованных изменений.
 
 Цепочка выглядит так:
 
@@ -21,24 +21,27 @@ finding -> root cause -> fix impact -> regression evidence -> hash chain -> fina
 - `agent-proof-finding.v1`: стабильная идентичность finding. `findingId`
   строится из нормализованных rule/category/severity/path/symbol/message, а не
   из номера строки или временного id ревью.
-- `agent-root-cause-evidence.v1`: подтверждение root cause со статусом
+- `agent-root-cause-evidence.v1`: подтверждение основной причины со статусом
   `CONFIRMED`, `REJECTED` или `INCONCLUSIVE`. Для обязательных findings
-  финальная проверка требует подтверждённый root cause.
-- `agent-fix-impact-receipt.v1`: канонический receipt влияния исправления. Он
-  фиксирует изменённые файлы, связанные findings, digest root cause, изменения
-  поведения, сохранённые контракты, regression evidence и проверку побочного
-  влияния.
-- `agent-receipt-hash-chain.v1`: append-only цепочка receipts. Каждая запись
-  хэширует artifact identity и предыдущий entry hash.
+  финальная проверка требует подтверждённую основную причину.
+- `agent-fix-impact-receipt.v1`: канонический артефакт влияния исправления. Он
+  фиксирует изменённые файлы, связанные findings, отпечаток основной причины,
+  изменения поведения, сохранённые контракты, регрессионное подтверждение и
+  проверку побочного влияния.
+- `agent-receipt-hash-chain.v1`: добавляемая только в конец цепочка артефактов.
+  Каждая запись хэширует идентичность артефакта и хэш предыдущей записи.
 - `agent-hash-chain-migration-policy.v1`: политика миграции. Новые запуски
-  требуют chain; старые запуски без chain требуют явный exemption или backfill.
-- `agent-proof-integrity-receipt.v1`: общий receipt, который связывает finding,
-  root cause, fix impact, chain и migration evidence.
-- `agent-proof-integrity-validation.v1`: результат fail-closed проверки.
+  требуют цепочку; старые запуски без цепочки требуют явное исключение или
+  восстановление данных.
+- `agent-proof-integrity-receipt.v1`: общий артефакт, который связывает finding,
+  основную причину, влияние исправления, цепочку и подтверждение миграции.
+- `agent-proof-integrity-validation.v1`: результат проверки, которая падает при
+  недостатке обязательных данных.
 
 ## Финализация
 
-`workflow finalize` принимает необязательный proof-integrity receipt:
+`workflow finalize` принимает необязательный артефакт целостности
+подтверждений:
 
 ```bash
 agent-lifecycle workflow finalize \
@@ -52,24 +55,26 @@ agent-lifecycle workflow finalize \
   --reason "accepted release evidence"
 ```
 
-Если proof integrity обязателен, но `--proof-integrity` не передан,
-финализация падает с `proof-integrity-receipt-missing`. Если receipt передан,
-но lineage, digest, required finding ids, required root-cause digests,
-fix-impact digests или hash-chain links не совпадают, финализация падает с
-`proof-integrity-validation-failed`.
+Если контроль целостности подтверждений обязателен, но `--proof-integrity` не
+передан, финализация падает с `proof-integrity-receipt-missing`. Если артефакт
+передан,
+но происхождение, отпечатки, обязательные `findingId`, обязательные отпечатки
+основной причины, отпечатки влияния исправления или ссылки цепочки хэшей не
+совпадают, финализация падает с `proof-integrity-validation-failed`.
 
-При успешной проверке final proof получает блок `proofIntegrity` с identity
-receipt и validation result, а workflow state сохраняет `proofIntegrityReceipt`.
+При успешной проверке финальное подтверждение получает блок `proofIntegrity` с
+идентичностью артефакта и результатом валидации, а состояние рабочего цикла
+сохраняет `proofIntegrityReceipt`.
 
 ## Миграция
 
 Стандартная политика — `required-for-new-runs`:
 
 - новые запуски должны иметь `agent-receipt-hash-chain.v1`;
-- legacy-запуски могут быть без chain только со структурированным
+- старые запуски могут быть без цепочки только со структурированным
   `legacyHashChainExemption`;
-- если старые артефакты доступны, предпочтителен backfill;
-- текстовое описание не заменяет digest-проверяемые receipts.
+- если старые артефакты доступны, предпочтительно восстановить цепочку;
+- текстовое описание не заменяет артефакты, проверяемые по отпечатку.
 
 Так старые запуски остаются читаемыми, а новые подтверждения становятся
-append-only и проверяемыми по digest.
+добавляемыми только в конец и проверяемыми по отпечатку.
