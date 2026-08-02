@@ -52,8 +52,8 @@ Russian documentation starts at [Документация на русском](d
 - Deterministic task packets for splitting work across agents.
 - Execution records capture completion checks, blockers, retries, and final
   proof; missing required evidence fails the step.
-- Task templates cover bugfix, idea-to-PR, PR review, merge-conflict repair,
-  and release-readiness work.
+- Ready-made task templates cover bug fixes, idea-to-PR flow, PR review,
+  merge-conflict repair, and release-readiness work.
 
 ### Quality and proof
 
@@ -64,8 +64,8 @@ Russian documentation starts at [Документация на русском](d
   regression proof, and reusable recipes.
 - Optional proof-integrity evidence for high-risk final proofs: stable findings,
   root-cause digests, fix-impact receipts, and hash chains.
-- Optional cross-check, runtime policy, and write-back receipts stay off by
-  default and become blocking only when the plan says so.
+- Cross-checks and runtime-policy receipts are opt-in controls; plans can
+  require proof for an external system update before acceptance.
 
 ### Routing and resource control
 
@@ -75,6 +75,14 @@ Russian documentation starts at [Документация на русском](d
   duration, and resource counters without mandatory monetary accounting.
 - Usage/session exports include tokens, resources, receipt digests, and optional
   host-reported `cost_usd`.
+
+### Security and containment
+
+- Neutrality filters use host-supplied deny rules to keep local paths, secrets, trust roots, and signing keys out of portable artifacts.
+- Host env files require explicit `--host-env-allow`; receipts store redacted metadata, not secret values or private env-file paths.
+- Imports, diagnostics, and usage exports redact local paths and common secret markers before validation.
+- Sandbox receipts separate runtime filesystem, network, process, and environment containment from git write-scope.
+- Release security gates reject leaked local paths, credentials, and unsupported adapter or production claims.
 
 ### Adapters and interop
 
@@ -93,8 +101,6 @@ Russian documentation starts at [Документация на русском](d
 
 - Runner recovery receipts cover attempt snapshot, restore, abandon, selected
   attempt, worker lease, and heartbeat state.
-- Optional sandbox boundary receipts record runtime containment separately from
-  git write scope.
 - Read-only diagnostics, event feeds, and progress views inspect checkout and
   workflow state without model calls.
 
@@ -107,14 +113,12 @@ and [Source of truth](docs/reference/source-of-truth.md).
 
 ## Adapter maturity
 
-`EXPERIMENTAL` means the adapter has source projection metadata and deterministic
-offline checks. `VERIFIED` is host-specific and requires bounded live host
-conformance, usage/resource calibration, accepted redacted evidence, and
+`EXPERIMENTAL` means offline checks exist; bounded live host conformance and
+usage/resource calibration are still required before `VERIFIED`. The verified
+claim is host-specific and also requires accepted redacted evidence and
 lifecycle final proof for the tested host range. New hosts can be added as
 adapters first and promoted only for the exact CLI/version/provider binding that
 has evidence. Monetary accounting is required only for metered modes.
-In short, `EXPERIMENTAL` means bounded live host conformance and usage/resource
-calibration are still required before a public `VERIFIED` claim.
 
 | Host | Current claim |
 | --- | --- |
