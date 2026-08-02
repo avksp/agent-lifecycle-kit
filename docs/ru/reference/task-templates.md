@@ -1,16 +1,16 @@
-# Task Templates
+# Шаблоны задач
 
-Task templates — draft-only заготовки для подготовки ALK plan. Они помогают
+Шаблоны задач — черновые заготовки для подготовки плана ALK. Они помогают
 структурировать входную задачу, но не утверждают план, не запускают выполнение и
-не заменяют review/freeze gates.
+не заменяют проверку и заморозку.
 
 Доступные шаблоны:
 
-- `bugfix`: defect repair с optional Bug Forensics profile.
-- `idea-to-pr`: путь от идеи до reviewed implementation plan.
+- `bugfix`: исправление дефекта с дополнительным профилем Bug Forensics.
+- `idea-to-pr`: путь от идеи до проверенного плана реализации.
 - `pr-review`: проверка существующего изменения.
-- `merge-conflict-repair`: минимальный repair merge conflicts.
-- `release-readiness`: подготовка release candidate и evidence.
+- `merge-conflict-repair`: минимальное исправление конфликтов слияния.
+- `release-readiness`: подготовка кандидата релиза и подтверждений.
 
 Проверка:
 
@@ -19,5 +19,5 @@ agent-lifecycle quality template-list
 agent-lifecycle quality template-check --template-id bugfix
 ```
 
-Все templates должны содержать `DRAFT-ONLY`, требовать review/freeze и не
-хранить runtime defaults.
+Все шаблоны должны содержать `DRAFT-ONLY`, требовать проверки и заморозки и не
+хранить настройки среды выполнения по умолчанию.

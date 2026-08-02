@@ -1,45 +1,47 @@
-# Runner Recovery Receipts
+# Артефакты восстановления запуска
 
-Runner recovery receipts — дополнительные артефакты для долгих задач и
-нескольких попыток. Они не заменяют workflow state; их задача — зафиксировать,
-что произошло с попыткой: snapshot, restore, abandon или selected-attempt.
+Артефакты восстановления запуска нужны для долгих задач и нескольких попыток.
+Они не заменяют состояние рабочего цикла; их задача — зафиксировать, что
+произошло с попыткой: снимок, восстановление, отказ от попытки или выбор
+попытки.
 
-## Attempt Snapshots
+## Снимки попыток
 
 `agent-runner-attempt-snapshot-receipt.v1` фиксирует одно действие:
 
-- `snapshot`: digest-bound снимок runner/attempt state.
-- `restore`: digest снимка, из которого восстановили попытку.
+- `snapshot`: привязанный к отпечатку снимок состояния запуска и попытки.
+- `restore`: отпечаток снимка, из которого восстановили попытку.
 - `abandon`: причина, по которой попытка больше не выбрана.
-- `select`: выбранная попытка и digest выбранного результата.
+- `select`: выбранная попытка и отпечаток выбранного результата.
 
-Валидация пересчитывает digest snapshot и receipt, проверяет lineage и падает,
-если restore или selected attempt заявлены без нужного digest.
+Валидация пересчитывает отпечатки снимка и артефакта, проверяет происхождение
+данных и падает, если восстановление или выбранная попытка заявлены без нужного
+отпечатка.
 
-## Worker Leases
+## Закрепление исполнителей
 
-`agent-worker-lease-receipt.v1` фиксирует lease и heartbeat worker-а.
-Состояние вычисляется детерминированно:
+`agent-worker-lease-receipt.v1` фиксирует закрепление исполнителя и сигнал
+активности. Состояние вычисляется детерминированно:
 
 - `active`, если `observedAt` не позже `expiresAt`;
 - `expired`, если `observedAt` позже `expiresAt`;
 - `completed`, если указан `completedAt`.
 
-Это recovery metadata, а не второй scheduler.
+Это метаданные восстановления, а не второй планировщик.
 
-## Phase Resources
+## Ресурсы по фазам
 
-`agent-phase-resource-measurement.v1` фиксирует токены, длительность и resource
-counters по фазам через envelope Release 1.8 usage export. Phase measurements
-не используют обязательный USD-cost и отклоняют monetary fields вроде
-`cost_usd`.
+`agent-phase-resource-measurement.v1` фиксирует токены, длительность и счётчики
+ресурсов по фазам через оболочку экспорта использования из Release 1.8.
+Измерения по фазам не требуют обязательного `USD-cost` и отклоняют денежные
+поля вроде `cost_usd`.
 
-Receipt содержит вложенный `agent-usage-export.v1`, чтобы переиспользовать
-существующие totals и redaction checks.
+Артефакт содержит вложенный `agent-usage-export.v1`, чтобы переиспользовать
+существующие итоговые значения и проверки маскирования.
 
-## Small-model packets
+## Пакеты для маленьких моделей
 
-`agent-small-model-task-packet.v1` — отдельный execution packet для маленьких
-implementation attempts. Он содержит точный write scope, output contract и
-compact context receipt. Такой packet не заменяет runner state, review, final
-audit или production promotion evidence.
+`agent-small-model-task-packet.v1` — отдельный пакет выполнения для маленьких
+моделей. Он содержит точные границы записи, контракт результата и компактный
+артефакт контекста. Такой пакет не заменяет состояние запуска, проверку,
+финальный аудит или подтверждение промышленной готовности.
