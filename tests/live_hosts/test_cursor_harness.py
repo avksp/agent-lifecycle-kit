@@ -191,6 +191,20 @@ class CursorHarnessTests(unittest.TestCase):
             self.assertIn("BLOCKED_WORKTREE_MUTATED", {item["code"] for item in report["blockers"]})
             self.assertTrue(any(check["name"].startswith("cursor-post-live-") and check["status"] == "FAIL" for check in report["checks"]))
 
+    def test_invocation_failure_classifies_cursor_usage_limit(self) -> None:
+        blocker = cursor_harness._cursor_invocation_failure_blocker(
+            cursor_harness.CommandResult(
+                returncode=1,
+                stdout="ActionRequiredError: You've hit your usage limit",
+                stderr="Get Cursor Pro for more Agent usage",
+                wall_seconds=0.1,
+            ),
+            "install",
+        )
+
+        self.assertEqual(blocker["code"], "BLOCKED_HOST_USAGE_LIMIT")
+        self.assertNotIn("ActionRequiredError", blocker["message"])
+
     def test_live_host_receipt_with_fake_runner_writes_validator_compatible_receipt(self) -> None:
         baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
         calls: list[list[str]] = []

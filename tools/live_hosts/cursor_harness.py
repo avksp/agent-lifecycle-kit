@@ -576,7 +576,7 @@ def _append_auth_check(blockers: list[dict[str, Any]], checks: list[dict[str, An
 
 def _usage_or_block(result: CommandResult, budget_policy: BudgetPolicy, blockers: list[dict[str, Any]], label: str) -> CursorUsage | None:
     if result.returncode != 0:
-        blockers.append({"code": "cursor-live-invocation-failed", "message": f"{label} returned {result.returncode}"})
+        blockers.append(_cursor_invocation_failure_blocker(result, label))
         return None
     usage = parse_cursor_jsonl(result.stdout, wall_seconds=result.wall_seconds)
     if not usage.has_usage_attestation:
@@ -596,6 +596,15 @@ def _calibration_usage_or_block(result: CommandResult, budget_policy: BudgetPoli
         blockers.append({"code": "BLOCKED_USAGE_ATTESTATION", "message": f"{label} did not expose all required usage metrics"})
         return None
     return usage
+
+
+def _cursor_invocation_failure_blocker(result: CommandResult, label: str) -> dict[str, Any]:
+    combined = f"{result.stdout}\n{result.stderr}".lower()
+    if "usage limit" in combined or "get cursor pro" in combined:
+        return {"code": "BLOCKED_HOST_USAGE_LIMIT", "message": f"{label} could not start because Cursor Agent usage is exhausted"}
+    if "named models unavailable" in combined:
+        return {"code": "BLOCKED_MODEL_BINDING_UNAVAILABLE", "message": f"{label} could not start because Cursor Agent rejected the selected model binding"}
+    return {"code": "cursor-live-invocation-failed", "message": f"{label} returned {result.returncode}"}
 
 
 def _cursor_command(cursor_bin: str, prompt: str, worktree: Path, mode: str | None, cursor_model: str | None = None) -> list[str]:
