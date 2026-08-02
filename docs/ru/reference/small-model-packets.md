@@ -1,9 +1,10 @@
-# Small-model packets
+# Пакеты для маленьких моделей
 
-Small-model packets уменьшают execution surface для маленьких или локальных
-моделей без ослабления lifecycle. Они компилируются из frozen
-`agent-task-packet.v1` и сохраняют plan digest, acceptance ids, evidence ids и
-write-scope authority.
+Пакеты для маленьких моделей уменьшают поверхность выполнения для маленьких или
+локальных моделей без ослабления жизненного цикла. Они компилируются из
+зафиксированного `agent-task-packet.v1` и сохраняют отпечаток плана,
+идентификаторы критериев приёмки, идентификаторы подтверждений и полномочия на
+запись.
 
 ```bash
 agent-lifecycle task compile-small \
@@ -13,17 +14,18 @@ agent-lifecycle task compile-small \
   --write
 ```
 
-CLI возвращает `agent-small-model-packet-compile-result.v1`. Пакеты имеют
-schema `agent-small-model-task-packet.v1`, индекс —
+CLI возвращает `agent-small-model-packet-compile-result.v1`. Пакеты используют
+схему `agent-small-model-task-packet.v1`, индекс —
 `agent-small-model-task-packet-index.v1`.
 
-Каждый packet содержит exact write scope, compact context receipt и
-`agent-small-model-output-contract.v1`. Worker должен вернуть
+Каждый пакет содержит точные границы записи (`write scope`), компактный артефакт
+контекста и `agent-small-model-output-contract.v1`. Исполнитель должен вернуть
 `agent-small-model-task-result.v1`; `agent-small-model-output-validation.v1`
-падает, если поля отсутствуют, digest не совпадает или changed files выходят
-за write scope.
+падает, если поля отсутствуют, отпечаток не совпадает или изменённые файлы
+выходят за границы записи.
 
-Если передан adaptive lifecycle decision, small-model packet selection
-разрешается только при допустимом quality floor. Strict/release floors
-блокируют automatic small-model packet selection. Такие packets не заменяют
-critical review, final audit или production promotion evidence.
+Если передано решение адаптивного жизненного цикла, выбор пакета для маленькой
+модели разрешается только при допустимом `quality floor`. Минимальные режимы
+`strict` и `release` блокируют автоматический выбор пакета для маленькой
+модели. Такие пакеты не заменяют критическую проверку, финальный аудит или
+подтверждение промышленной готовности.

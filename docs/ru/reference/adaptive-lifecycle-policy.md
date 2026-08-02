@@ -1,28 +1,29 @@
-# Adaptive lifecycle policy
+# Адаптивная политика жизненного цикла
 
-Adaptive lifecycle policy выбирает самый лёгкий безопасный режим жизненного
-цикла по нейтральным входам задачи. Цель — сохранить качество решения и не
-тратить лишние токены/время на процесс там, где это не нужно.
+Адаптивная политика жизненного цикла выбирает самый лёгкий безопасный режим по
+нейтральным входным данным задачи. Цель — сохранить качество решения и не
+тратить лишние токены или время там, где это не нужно.
 
-Используются только portable inputs:
+Используются только переносимые входные данные:
 
-- task shape;
-- SDD tier;
-- risk flags;
-- required evidence;
+- форма задачи;
+- уровень SDD;
+- признаки риска;
+- обязательные подтверждения;
 - число прошлых попыток;
 - размер контекста в токенах;
-- resource caps для вызовов, wall time и billable tokens.
+- ограничения ресурсов для вызовов, общего времени и оплачиваемых токенов.
 
-Provider names, concrete model names, API keys и auth details не попадают в
-portable policy request или decision. Выбор конкретной модели остаётся
-host-local задачей адаптера.
+Имена провайдеров, конкретные модели, API-ключи и данные авторизации не
+попадают в переносимый запрос политики или решение. Выбор конкретной модели
+остаётся локальной задачей адаптера.
 
-## Quality floor
+## Минимальный уровень качества
 
 `agent-lifecycle-quality-floor-decision.v1` фиксирует минимальный режим, ниже
-которого нельзя опускаться. Security/S2 work требует минимум `strict`,
-release-proof и production-promotion требуют `release`.
+которого нельзя опускаться. Для задач класса `security` и `S2` требуется как
+минимум `strict`; подтверждение релиза и промышленная готовность требуют
+`release`.
 
 ## Команды
 
@@ -35,13 +36,13 @@ agent-lifecycle policy adaptive-decision \
 agent-lifecycle policy adaptive-check --decision <adaptive-decision.json>
 ```
 
-По умолчанию decision остаётся advisory. Автоматический выбор разрешён только
-при `automaticSelectionEnabled: true`, отсутствии blockers и режиме не ниже
-quality floor.
-Decision receipt использует `agent-adaptive-lifecycle-policy-decision.v1`.
+По умолчанию решение остаётся рекомендательным. Автоматический выбор разрешён
+только при `automaticSelectionEnabled: true`, отсутствии блокеров и режиме не
+ниже `quality floor`.
+Артефакт решения использует `agent-adaptive-lifecycle-policy-decision.v1`.
 
 ## Расход
 
 Решение использует `resourceBasis: "tokens-and-resources"` и всегда оставляет
-`monetaryFieldsUsed: false`. Monetary metadata допустима только для
-`budgetMode: "metered"` и не участвует в выборе режима.
+`monetaryFieldsUsed: false`. Денежные метаданные допустимы только для
+`budgetMode: "metered"` и не участвуют в выборе режима.

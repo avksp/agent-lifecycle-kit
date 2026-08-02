@@ -1,8 +1,8 @@
-# Issue to specification drafts
+# Черновик спецификации из issue
 
-Внешние issue, тикеты и payloads трекеров являются входом для анализа, а не
-разрешением на выполнение. Skill `issue-to-spec` переводит такой вход в
-draft-only ALK specification input.
+Внешние issue, тикеты и данные трекеров являются входом для анализа, а не
+разрешением на выполнение. Навык `issue-to-spec` переводит такой вход в
+черновой вход спецификации ALK.
 
 Результат должен сохранять:
 
@@ -11,11 +11,12 @@ draft-only ALK specification input.
 - `freezeBlocked: true`
 - `executionAuthorized: false`
 
-Draft фиксирует source issue ids, candidate requirements, acceptance checks,
-ограничения, риски, недостающие evidence и вопросы, которые блокируют freeze.
+Черновик фиксирует исходные идентификаторы issue, требования-кандидаты,
+проверки приёмки, ограничения, риски, недостающие подтверждения и вопросы,
+которые блокируют заморозку.
 После этого он проходит обычный путь через `agent-first-planning` и
 `audit-agent-plan`.
 
-Если issue описывает дефект, draft может рекомендовать optional Bug Forensics
-profile, но reproduction и repair evidence всё равно принадлежат проверенному
-плану.
+Если issue описывает дефект, черновик может рекомендовать дополнительный профиль
+Bug Forensics, но воспроизведение и подтверждения исправления всё равно
+принадлежат проверенному плану.
