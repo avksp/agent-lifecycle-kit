@@ -62,6 +62,62 @@ class CursorHarnessTests(unittest.TestCase):
         self.assertEqual(usage.cost_usd, 0.02)
         self.assertEqual(usage.wall_seconds, 1.4)
 
+    def test_containment_blocks_missing_explicit_model(self) -> None:
+        blockers = cursor_harness._containment_blockers(cursor_model=None)
+
+        self.assertIn("BLOCKED_MODEL_BINDING_UNDECLARED", {item["code"] for item in blockers})
+
+    def test_preflight_writes_containment_receipt_with_fake_commands(self) -> None:
+        original_run_command = cursor_harness._run_command
+        original_clean_worktree = cursor_harness.check_clean_worktree
+
+        def fake_run_command(command: list[str], checks: list[dict], name: str) -> dict:
+            checks.append({"name": name, "status": "PASS", "returncode": 0})
+            if name == "cursor-agent-version":
+                return {"returncode": 0, "stdout": "2026.07.23-test\n", "stderr": ""}
+            if name == "cursor-agent-help":
+                return {
+                    "returncode": 0,
+                    "stdout": "--print --output-format stream-json --workspace --trust --sandbox --model",
+                    "stderr": "",
+                }
+            if name == "cursor-agent-models":
+                return {"returncode": 0, "stdout": "test-strong-model\n", "stderr": ""}
+            if name == "cursor-agent-status":
+                return {"returncode": 0, "stdout": "Logged in\n", "stderr": ""}
+            if name == "cursor-agent-about":
+                return {"returncode": 0, "stdout": "User Email <redacted>\n", "stderr": ""}
+            raise AssertionError(f"unexpected command: {command}")
+
+        try:
+            cursor_harness._run_command = fake_run_command
+            cursor_harness.check_clean_worktree = lambda _: {"clean": True, "dirtyEntryCount": 0}
+            with tempfile.TemporaryDirectory() as tmp:
+                tmp_path = Path(tmp)
+                receipt = tmp_path / "cursor-containment.json"
+                report = cursor_harness.run_preflight(
+                    cursor_bin="cursor",
+                    cursor_model="test-strong-model",
+                    baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json",
+                    worktree=tmp_path / "clean-worktree",
+                    budget_policy=cursor_harness.BudgetPolicy(mode="subscription", max_invocations=14, max_billable_tokens=1000),
+                    allow_live=True,
+                    containment_receipt_path=receipt,
+                )
+
+                payload = json.loads(receipt.read_text(encoding="utf-8"))
+                self.assertEqual(report["status"], "PASS")
+                self.assertEqual(payload["schemaVersion"], cursor_harness.CONTAINMENT_RECEIPT_SCHEMA)
+                self.assertEqual(payload["status"], "PASS")
+                self.assertEqual(payload["policy"]["host"], "cursor")
+                self.assertTrue(payload["policy"]["modelOverridePresent"])
+                self.assertFalse(payload["productionPromotionClaimed"])
+                self.assertEqual(report["containmentReceipt"]["path"], receipt.name)
+                self.assertFalse(report["liveCallsStarted"])
+        finally:
+            cursor_harness._run_command = original_run_command
+            cursor_harness.check_clean_worktree = original_clean_worktree
+
     def test_live_host_receipt_blocks_when_cursor_agent_is_not_authenticated(self) -> None:
         baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
 
@@ -90,6 +146,50 @@ class CursorHarnessTests(unittest.TestCase):
             self.assertFalse(report["liveCallsStarted"])
             self.assertFalse(receipt.exists())
             self.assertIn("BLOCKED_HOST_AUTH", {item["code"] for item in report["blockers"]})
+
+    def test_live_host_receipt_blocks_when_post_invocation_dirty(self) -> None:
+        baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
+        clean_results = iter(
+            [
+                {"clean": True, "dirtyEntryCount": 0},
+                {"clean": False, "dirtyEntryCount": 1},
+            ]
+        )
+
+        def fake_runner(command: list[str], cwd: Path | None) -> cursor_harness.CommandResult:
+            return cursor_harness.CommandResult(
+                returncode=0,
+                stdout=json.dumps({"type": "assistant", "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15}}),
+                stderr="",
+                wall_seconds=0.1,
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            receipt = tmp_path / "cursor.json"
+            report = cursor_harness.run_live_host_receipt(
+                cursor_bin="cursor",
+                cursor_model="test-strong-model",
+                baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json",
+                worktree=tmp_path / "clean-worktree",
+                allow_live=True,
+                receipt_path=receipt,
+                diagnostic_dir=tmp_path / "diagnostics",
+                budget_policy=cursor_harness.BudgetPolicy(
+                    mode="subscription",
+                    max_invocations=len(baseline["requiredOperations"]),
+                    max_billable_tokens=1000,
+                ),
+                runner=fake_runner,
+                clean_worktree_checker=lambda _: next(clean_results),
+                auth_checker=lambda _: {"authenticated": True},
+            )
+
+            self.assertEqual(report["status"], "FAIL")
+            self.assertTrue(report["liveCallsStarted"])
+            self.assertFalse(receipt.exists())
+            self.assertIn("BLOCKED_WORKTREE_MUTATED", {item["code"] for item in report["blockers"]})
+            self.assertTrue(any(check["name"].startswith("cursor-post-live-") and check["status"] == "FAIL" for check in report["checks"]))
 
     def test_live_host_receipt_with_fake_runner_writes_validator_compatible_receipt(self) -> None:
         baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
