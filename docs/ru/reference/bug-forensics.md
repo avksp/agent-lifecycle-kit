@@ -1,8 +1,9 @@
-# Bug Forensics Profile
+# Профиль расследования ошибок
 
-Bug Forensics — дополнительный профиль качества для задач, где явно нужно
-найти или исправить баг, регрессию, flaky failure, инцидент или security bug.
-Для обычных feature-задач профиль выключен по умолчанию.
+Bug Forensics — дополнительный профиль качества для задач, где явно нужно найти
+или исправить баг, регрессию, нестабильное падение, инцидент или дефект
+безопасности. Для обычных задач по функциональности профиль выключен по
+умолчанию.
 
 Профиль требует доказать цепочку:
 
@@ -10,51 +11,58 @@ Bug Forensics — дополнительный профиль качества �
 symptom -> reproduction -> failure fingerprint -> hypotheses -> root cause -> minimal fix -> regression proof -> no collateral damage
 ```
 
-## Phase 1 Contracts
+## Контракты первой фазы
 
-- `agent-bug-forensics-profile.v1`: описание optional профиля.
+- `agent-bug-forensics-profile.v1`: описание дополнительного профиля.
 - `agent-bug-reproduction-receipt.v1`: баг воспроизведён до правки, команда
-  падает, артефакты привязаны digest.
-- `agent-failure-fingerprint.v1`: стабильный fingerprint ошибки с опциональной
+  падает, артефакты привязаны отпечатком.
+- `agent-failure-fingerprint.v1`: стабильный отпечаток ошибки с опциональной
   связью на `findingId` и `rootCauseDigest`.
-- `agent-failure-classification-receipt.v1`: нейтральный failure class,
-  confidence, matched evidence и digest provenance.
+- `agent-failure-classification-receipt.v1`: нейтральный класс ошибки,
+  уверенность, найденные подтверждения и происхождение отпечатка.
 - `agent-bug-hypothesis-ledger.v1`: принятые и отвергнутые гипотезы плюс
-  minimal-patch gate.
-- `agent-regression-proof-receipt.v1`: тот же fingerprint красный до фикса и
+  проверка минимальности правки.
+- `agent-regression-proof-receipt.v1`: тот же отпечаток красный до фикса и
   зелёный после.
-- `agent-bug-forensics-gate-receipt.v1`: результат workflow gate.
-- `agent-bug-forensics-audit.v1`: audit summary для gate receipt.
+- `agent-bug-forensics-gate-receipt.v1`: результат проверки рабочего цикла.
+- `agent-bug-forensics-audit.v1`: резюме аудита для артефакта проверки.
 
-Для impact используется существующий `agent-fix-impact-receipt.v1`; отдельная
-bug-specific fix-impact schema не вводится.
+Для влияния правки используется существующий `agent-fix-impact-receipt.v1`;
+отдельная схема влияния правки только для багов не вводится.
 
-## Cross-Check
+## Перепроверка
 
-Для рискованных багов можно явно включить Release 1.12 cross-check. Он остаётся
-capped в tokens/resources и advisory, пока frozen plan не требует blocking.
+Для рискованных багов можно явно включить перепроверку из Release 1.12. Она
+остаётся ограниченной по токенам и ресурсам и носит рекомендательный характер,
+пока зафиксированный план не требует обязательного результата.
 
-Failure classification и flake signals можно привязать к gate receipt. Если
-security или race classification совмещены с S2/security risk задачи, gate
-требует cross-check evidence вместо тихого принятия слабой проверки.
+Классификацию ошибки и сигналы нестабильности можно привязать к артефакту
+проверки. Если классификация `security` или `race` совмещена с риском задачи
+`S2` или `security`, проверка требует подтверждения перепроверки вместо тихого
+принятия слабой проверки.
 
-## Recipes
+## Рецепты
 
-Bug Forensics recipes — optional metadata для типовых этапов defect repair:
+Рецепты Bug Forensics — дополнительные метаданные для типовых этапов
+исправления дефектов:
 
 - `issue-classification`: определить класс дефекта и необходимость профиля.
-- `reproduction`: доказать red-состояние до правки и привязать artifacts
-  digest.
-- `investigation`: вести accepted/rejected hypotheses и minimal-patch scope.
-- `validation`: доказать same-fingerprint red-to-green и fix impact.
-- `review`: проверить gate receipt и optional cross-check evidence.
+- `reproduction`: доказать красное состояние до правки и привязать артефакты
+  отпечатком.
+- `investigation`: вести принятые и отвергнутые гипотезы и границы минимальной
+  правки.
+- `validation`: доказать переход того же отпечатка из красного состояния в
+  зелёное и влияние правки.
+- `review`: проверить артефакт проверки и дополнительные подтверждения
+  перепроверки.
 
-Recipes не вводят новые receipt schemas. Они ссылаются на существующие Bug
-Forensics, proof-integrity и cross-check receipts, выключены по умолчанию и
-используют tokens/resources вместо обязательного USD-cost.
+Рецепты не вводят новые схемы артефактов. Они ссылаются на существующие
+артефакты Bug Forensics, proof-integrity и cross-check, выключены по умолчанию
+и используют токены и ресурсы вместо обязательного `USD-cost`.
 
-## Deferred Analysis
+## Отложенный анализ
 
-Suspect graph остаётся optional. Flake signals и failure classification уже
-могут фиксироваться, но не заменяют reproduction, fingerprint, hypothesis
-ledger, regression proof или fix-impact evidence.
+Граф подозреваемых модулей остаётся дополнительным. Сигналы нестабильности и
+классификация ошибки уже могут фиксироваться, но не заменяют воспроизведение,
+отпечаток, журнал гипотез, регрессионное подтверждение или подтверждение
+влияния правки.

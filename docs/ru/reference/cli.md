@@ -12,14 +12,15 @@ JSON, чтобы результат можно было проверять ав�
 
 ## Планирование
 
-- `agent-lifecycle specification`: проверки спецификации и completion gate.
+- `agent-lifecycle specification`: проверки спецификации и проверки
+  завершения.
 - `agent-lifecycle plan check`: проверка плана и файла блокировки.
 - `agent-lifecycle plan acceptance-check`: проверка трассируемости критериев
   приёмки.
-- `issue-to-spec` skill: перевод внешних issue в draft-only ALK specification
-  input.
+- `issue-to-spec` skill: перевод внешних issue в черновой вход спецификации
+  ALK.
 - `agent-lifecycle quality template-list/template-check`: просмотр и проверка
-  draft-only task templates.
+  черновых шаблонов задач.
 
 ## Выполнение
 
@@ -29,26 +30,28 @@ JSON, чтобы результат можно было проверять ав�
   `--proof-integrity <proof-integrity.json>`; для обязательного решения
   завершения принимает `--completion-gate-receipt <completion-gate.json>`.
 - `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.
-- `agent-lifecycle task compile-small`: small-model packets с output contract и
-  compact context receipt.
+- `agent-lifecycle task compile-small`: пакеты для маленьких моделей с
+  контрактом результата и компактным артефактом контекста.
 
 ## Проверка качества
 
 - `agent-lifecycle audit`: проверка плана, реализации и вердиктов.
 - `agent-lifecycle quality`: дополнительные проверочные наборы.
 - `agent-lifecycle quality bug-recipe-list/bug-recipe-check`: просмотр
-  reusable Bug Forensics recipes, которые используют существующие receipts.
+  переиспользуемых рецептов Bug Forensics, которые используют существующие
+  артефакты.
 
 ## Расход и настройки
 
 - `agent-lifecycle metrics`: отчёты о расходе, экспорт использования и
   рекомендации по режиму.
 - `agent-lifecycle metrics outcome-index/quality-signals/learn-recommend`:
-  advisory learning по локальным receipts без auto-apply.
-- `agent-lifecycle metrics usage-export`: экспорт сессий, digest
+  рекомендательное обучение по локальным артефактам без автоматического
+  применения.
+- `agent-lifecycle metrics usage-export`: экспорт сессий, отпечатков
   подтверждений, токенов, ресурсов, длительности, решений по бюджету и
-  необязательного `cost_usd`, если его сообщает metered-хост.
-- `agent-lifecycle policy`: adaptive decisions, runtime receipts и
+  необязательного `cost_usd`, если его сообщает тарифицируемый хост.
+- `agent-lifecycle policy`: адаптивные решения, артефакты правил запуска и
   рекомендательные предложения по настройке правил.
 
 ## Адаптеры
@@ -63,5 +66,5 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle goal`: снимки цели.
 - `agent-lifecycle followup`: учёт продолжений, которые не должны потеряться.
 - `agent-lifecycle evidence`: индекс подтверждающих артефактов.
-- `agent-lifecycle report status-view/event-feed/progress`: read-only
-  представления статуса, событий workflow и lifecycle progress.
+- `agent-lifecycle report status-view/event-feed/progress`: представления без
+  записи для статуса, событий рабочего цикла и прогресса жизненного цикла.
