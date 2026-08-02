@@ -14,17 +14,17 @@
   <path d="M120 490c220 86 728 86 960-28" fill="none" stroke="#1b6f6c" stroke-width="2" opacity=".45"/>
 
   <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
-    <g transform="translate(445 26)">
-      <rect width="310" height="34" rx="17" fill="#121b26" stroke="#2c3c50"/>
+    <g transform="translate(460 26)">
+      <rect width="280" height="34" rx="17" fill="#121b26" stroke="#2c3c50"/>
       <circle cx="22" cy="17" r="5" fill="#35d4c9"/>
-      <text x="165" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#c5d2e2">ОТКРЫТЫЙ КОД · Apache-2.0</text>
+      <text x="150" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="#c5d2e2">OPEN SOURCE · Apache-2.0</text>
     </g>
 
     <text x="600" y="130" text-anchor="middle" font-size="58" font-weight="800" fill="#ffffff">Agent Lifecycle Kit</text>
     <path d="M432 156h336" stroke="#5eb4ff" stroke-width="6" stroke-linecap="round"/>
     <path d="M432 168h186" stroke="#a468ff" stroke-width="5" stroke-linecap="round"/>
     <path d="M98 182h1004" stroke="#202a37" stroke-width="2"/>
-    <text x="600" y="214" text-anchor="middle" font-size="25" font-weight="600" fill="#d7e2ee">Нейтральный слой управления для кодовых агентов</text>
+    <text x="600" y="214" text-anchor="middle" font-size="25" font-weight="600" fill="#d7e2ee">Единый процесс для кодовых агентов: план, работа, проверка, итог</text>
     <text x="600" y="248" text-anchor="middle" font-size="19" fill="#95a8bb">От задачи к спецификации, плану, работе, проверке и подтверждению результата.</text>
 
     <g fill="none" stroke="#5eb4ff" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)">
