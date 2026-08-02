@@ -12,15 +12,16 @@ agent-lifecycle adapter inspect --descriptor adapters/codex/adapter.descriptor.j
 agent-lifecycle adapter install-plan --descriptor adapters/codex/adapter.descriptor.json
 ```
 
-## Host-local секреты
+## Локальные секреты хоста
 
 Адаптеры, которые вызывают реальную модель, должны получать ключи через
-штатный механизм хоста: переменные окружения, credential store хоста или
-операторский secret launcher. ALK не хранит provider keys в tracked config,
-descriptor, receipts или release evidence.
+штатный механизм хоста: переменные окружения, хранилище учётных данных хоста
+или операторский запуск с секретами. ALK не хранит ключи провайдера в
+отслеживаемой конфигурации, дескрипторах, артефактах подтверждения или релизных
+доказательствах.
 
-Для live harness можно использовать `--host-env-file`, если ключ не нужно
-экспортировать глобально. Это приватный dotenv-style файл оператора вне
+Для обвязки реального хоста можно использовать `--host-env-file`, если ключ не
+нужно экспортировать глобально. Это приватный файл оператора в стиле dotenv вне
 репозитория; каждое имя переменной явно разрешается для конкретного запуска:
 
 ```bash
@@ -31,14 +32,14 @@ python tools/live_hosts/<host>_harness.py \
   --report work/<release>/evidence/<host>-preflight.json
 ```
 
-Harness передаёт дочернему host-процессу только разрешённые имена и пишет в
-evidence только `agent-host-env-file-redacted.v1`. Проверку отсутствия значений
-секретов в отчётах выполняет `tools/release/validate_host_env_hygiene.py`.
+Обвязка передаёт дочернему процессу хоста только разрешённые имена и пишет в
+подтверждения только `agent-host-env-file-redacted.v1`. Проверку отсутствия
+значений секретов в отчётах выполняет `tools/release/validate_host_env_hygiene.py`.
 
-Это правило относится ко всем provider-flexible адаптерам. Если хост умеет
-переключать providers или models, выбранный provider остаётся источником имени
-и механизма credential; ALK получает только явно разрешённое оператором имя
-переменной для текущего harness-запуска.
+Это правило относится ко всем адаптерам с переключаемыми провайдерами. Если
+хост умеет переключать провайдеры или модели, выбранный провайдер остаётся
+источником имени переменной и механизма учётных данных; ALK получает только
+явно разрешённое оператором имя переменной для текущего запуска обвязки.
 
 ## Codex
 
@@ -96,10 +97,10 @@ goose --help
 agent-lifecycle adapter install-plan --descriptor adapters/goose/adapter.descriptor.json
 ```
 
-Goose имеет host-specific `VERIFIED` только для Goose `1.45.0` на проверенной
-host-local provider/model связке. Live promotion использовал ограниченные
-no-session/no-profile запуски с явным provider/model и проверкой чистого
-worktree после каждого вызова.
+Goose имеет статус `VERIFIED` только для Goose `1.45.0` на проверенной
+локальной связке провайдера и модели. Продвижение по реальным проверкам
+использовало ограниченные запуски без сессии и профиля, с явным провайдером и
+моделью, а также проверкой чистого рабочего дерева после каждого вызова.
 
 ## Kimi Code
 
@@ -116,9 +117,9 @@ grok agent --help
 agent-lifecycle adapter install-plan --descriptor adapters/grok-build/adapter.descriptor.json
 ```
 
-Grok Build имеет host-specific `VERIFIED` для Grok Build `0.2.117` на
-проверенной host-local provider/model связке. ACP-путь остаётся probe-gated, а
-неудачный probe фиксируется как fail-closed evidence.
+Grok Build имеет статус `VERIFIED` для Grok Build `0.2.117` на проверенной
+локальной связке провайдера и модели. Путь ACP остаётся закрыт проверочной
+пробой, а неудачная проба фиксируется как подтверждение с закрытым отказом.
 
 ## OpenInterpreter
 
@@ -128,17 +129,18 @@ interpreter doctor --json
 agent-lifecycle adapter install-plan --descriptor adapters/openinterpreter/adapter.descriptor.json
 ```
 
-OpenInterpreter имеет host-specific `VERIFIED` для `interpreter` 0.0.34 на
-проверенной host-local provider/model связке. Учётные данные выбранной модели
-должны быть видны процессу `interpreter` перед локальным live rerun.
-OpenInterpreter берёт имя нужной переменной из выбранного provider: custom
-provider указывает `env_key` в `~/.openinterpreter/config.toml` или
-`.openinterpreter/config.toml`, а встроенные providers используют свои
-документированные переменные. Значение ключа должно приходить из окружения или
-credential store хоста, а не из repository config.
+OpenInterpreter имеет статус `VERIFIED` для `interpreter` 0.0.34 на проверенной
+локальной связке провайдера и модели. Учётные данные выбранной модели должны
+быть видны процессу `interpreter` перед локальным повторным реальным запуском.
+OpenInterpreter берёт имя нужной переменной из выбранного провайдера:
+пользовательский провайдер указывает `env_key` в
+`~/.openinterpreter/config.toml` или `.openinterpreter/config.toml`, а
+встроенные провайдеры используют свои документированные переменные. Значение
+ключа должно приходить из окружения или хранилища учётных данных хоста, а не из
+конфигурации репозитория.
 
-Чтобы дать ключ выбранного provider только ALK harness-процессу, помести его в
-приватный operator env-file и явно разреши это имя:
+Чтобы дать ключ выбранного провайдера только процессу обвязки ALK, помести его
+в приватный env-файл оператора и явно разреши это имя:
 
 ```bash
 python tools/live_hosts/openinterpreter_harness.py \
@@ -153,7 +155,7 @@ python tools/live_hosts/openinterpreter_harness.py \
   --report work/release-1-18/evidence/preflight/openinterpreter-preflight-report.json
 ```
 
-`PROVIDER_API_KEY` нужно заменить на имя env-key из выбранного provider.
+`PROVIDER_API_KEY` нужно заменить на имя env-key из выбранного провайдера.
 
 ## Pi
 
@@ -162,13 +164,14 @@ pi --version
 agent-lifecycle adapter install-plan --descriptor adapters/pi/adapter.descriptor.json
 ```
 
-Pi имеет host-specific `VERIFIED` для Pi `0.83.0` на проверенной host-local
-provider/model связке. Учётные данные выбранного provider должны быть видны
-процессу `pi` перед локальным live rerun. Имя env-key берётся из документации
-или конфигурации выбранного Pi provider; ALK не хардкодит provider secret names.
+Pi имеет статус `VERIFIED` для Pi `0.83.0` на проверенной локальной связке
+провайдера и модели. Учётные данные выбранного провайдера должны быть видны
+процессу `pi` перед локальным повторным реальным запуском. Имя env-key берётся
+из документации или конфигурации выбранного провайдера Pi; ALK не хардкодит
+имена секретов провайдера.
 
-Чтобы дать ключ только ALK harness-процессу, используй приватный operator
-env-file и явно разреши переменную выбранного provider:
+Чтобы дать ключ только процессу обвязки ALK, используй приватный env-файл
+оператора и явно разреши переменную выбранного провайдера:
 
 ```bash
 python tools/live_hosts/pi_harness.py \
@@ -184,8 +187,8 @@ python tools/live_hosts/pi_harness.py \
   --report work/<release>/evidence/preflight/pi-preflight-report.json
 ```
 
-Проверенный Pi claim не заявляет ACP support, public directory approval или
-production promotion.
+Проверенное заявление Pi не означает поддержку ACP, одобрение публичного
+каталога или промышленную готовность.
 
 ## Граница продвижения
 
