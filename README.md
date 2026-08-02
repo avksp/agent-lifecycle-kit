@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/agent-lifecycle-kit-banner.svg?v=2026-08-01-2" alt="Agent Lifecycle Kit - plan, execute, prove, finish agent work" width="100%">
+  <img src="docs/assets/agent-lifecycle-kit-banner.svg?v=2026-08-02-1" alt="Agent Lifecycle Kit - plan, execute, prove, finish agent work" width="100%">
 </p>
 
 # Agent Lifecycle Kit
@@ -8,14 +8,15 @@
 [![Release](https://img.shields.io/github/v/release/avksp/agent-lifecycle-kit?label=release)](https://github.com/avksp/agent-lifecycle-kit/releases)
 ![Python](https://img.shields.io/badge/python-3.11--3.13-blue.svg)
 
-**Agent Lifecycle Kit (ALK)** is a provider-neutral control layer for coding
-agents. It turns a user task into a reviewed spec, frozen plan, bounded work,
-implementation review, and final proof, so agents finish the job instead of
-stopping at a patch.
+**Agent Lifecycle Kit (ALK)** gives coding agents one delivery workflow from
+request to verified result. It turns a user task into a reviewed specification,
+an approved plan, bounded implementation work, review, and final proof, so
+agents finish the job instead of stopping at a patch.
 
-Use it when you want Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi,
-Grok Build, or another CLI to follow the same quality loop without putting
-provider, model, or secret policy into the core.
+The workflow is provider-neutral. Codex, Claude Code, Qwen Code, Goose,
+OpenInterpreter, Pi, Grok Build, or another CLI can follow the same lifecycle,
+while provider commands, model choice, and secret handling stay in adapters or
+host-local profiles.
 
 ## Quick start
 
@@ -31,16 +32,17 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md). The
 Russian documentation starts at [Документация на русском](docs/ru/README.md).
 
-## Why try it
+## What it gives you
 
-- Finish-oriented lifecycle: plan, execute, review, and prove the result.
-- Provider-neutral adapters: host-specific commands stay outside the core.
+- A finish-oriented lifecycle: plan, execute, review, and prove the result.
+- One process for different CLIs: adapter-specific commands stay outside the
+  core, and new adapters can be added without changing lifecycle schemas.
 - Small-model friendly packets: compact context, clear next actions, and
   deterministic checks for local or cheaper models.
 - Quality without overengineering: optional profiles turn on only when risk or
   task type requires them.
-- Usage visibility: token/resource accounting is native; USD cost is optional
-  and only used when a metered host reports it.
+- Usage visibility: tokens, time, and resource counters are native; monetary
+  cost is optional and only used when a metered host reports it.
 
 ## Feature areas
 
@@ -48,29 +50,29 @@ Russian documentation starts at [Документация на русском](d
 
 - Reviewed specification and plan flow before implementation starts.
 - Deterministic task packets for splitting work across agents.
-- Fail-closed execution receipts, completion gates, blockers, retries, and
-  final proof.
-- Draft-only task templates for bugfix, idea-to-PR, PR review, merge-conflict
-  repair, and release-readiness work.
+- Execution records capture completion checks, blockers, retries, and final
+  proof; missing required evidence fails the step.
+- Task templates cover bugfix, idea-to-PR, PR review, merge-conflict repair,
+  and release-readiness work.
 
 ### Quality and proof
 
 - Implementation audits compare results with the frozen plan and acceptance
   evidence.
-- Optional Bug Forensics profile for explicit bug/regression repair:
-  reproduction, fingerprint, failure class, hypothesis ledger, minimal patch,
-  proof, and reusable recipes.
+- For explicit bug and regression repair, the optional Bug Forensics profile
+  records reproduction, fingerprint, failure class, hypotheses, minimal patch,
+  regression proof, and reusable recipes.
 - Optional proof-integrity evidence for high-risk final proofs: stable findings,
   root-cause digests, fix-impact receipts, and hash chains.
 - Optional cross-check, runtime policy, and write-back receipts stay off by
   default and become blocking only when the plan says so.
 
-### Routing and cost control
+### Routing and resource control
 
 - Compact context profiles, small-model packets, objective snapshots, and
   local quality-cost learning help choose the lightest safe mode.
 - Phase resource measurements reuse the usage export envelope for tokens,
-  duration, and resource counters without mandatory USD-cost accounting.
+  duration, and resource counters without mandatory monetary accounting.
 - Usage/session exports include tokens, resources, receipt digests, and optional
   host-reported `cost_usd`.
 
@@ -78,8 +80,10 @@ Russian documentation starts at [Документация на русском](d
 
 - Adapter contracts keep host-specific projections separate from lifecycle
   schemas.
-- Release-time adapter capability bench tools build bounded probe plans and
-  validate live-receipt drift without automatic maturity changes.
+- New CLI hosts start as adapters: descriptor, command projection, environment
+  boundary, and verification evidence live outside the lifecycle core.
+- Adapter capability checks build bounded probe plans and compare live receipts
+  without automatic maturity changes.
 - Import mappers and issue-to-spec intake treat external workflows, agent
   dialects, and tickets as untrusted draft inputs.
 - Lightweight episode retrieval over receipt/session summaries keeps digest
@@ -104,10 +108,13 @@ and [Source of truth](docs/reference/source-of-truth.md).
 ## Adapter maturity
 
 `EXPERIMENTAL` means the adapter has source projection metadata and deterministic
-offline checks, but it is not promoted. `VERIFIED` is host-specific and requires
-bounded live host conformance, usage/resource calibration, accepted redacted
-evidence, and lifecycle final proof for the tested host range. USD accounting is
-required only for metered modes.
+offline checks. `VERIFIED` is host-specific and requires bounded live host
+conformance, usage/resource calibration, accepted redacted evidence, and
+lifecycle final proof for the tested host range. New hosts can be added as
+adapters first and promoted only for the exact CLI/version/provider binding that
+has evidence. Monetary accounting is required only for metered modes.
+In short, `EXPERIMENTAL` means bounded live host conformance and usage/resource
+calibration are still required before a public `VERIFIED` claim.
 
 | Host | Current claim |
 | --- | --- |
@@ -138,10 +145,12 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
 
 - The core stays provider-neutral. Concrete host commands and model bindings
   belong to adapters or host-local profiles.
+- New CLIs are integrated through adapters: descriptor, command projection,
+  environment boundary, and verification evidence. The lifecycle schemas remain
+  stable while host support grows.
 - Small models get compact packets, deterministic checks, and explicit
   next-action lists instead of long narrative state.
 - Larger models keep the same gates; better reasoning does not bypass evidence.
-- A dry run, scaffold, inspection, or synthetic replay cannot promote an adapter.
 - Public release claims are limited to tracked source files and redacted
   evidence summaries.
 - External dialect imports and retrieved episodes are context aids only; they
@@ -154,7 +163,7 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
 - Start: [English documentation](docs/README.md), [Русская документация](docs/ru/README.md), and [Quickstart](docs/guides/quickstart.md).
 - Planning and adapters: [Issue to specification drafts](docs/guides/issue-to-spec.md), [Adapter install](docs/adapters/install.md), and [Adapter support matrix](docs/adapters/support-matrix.md).
 - Reference: [CLI reference](docs/reference/cli.md), [Source of truth](docs/reference/source-of-truth.md), [Public contracts](docs/reference/public-contracts.md), and [Readiness diagnostics](docs/reference/readiness-diagnostics.md).
-- Quality and cost: [Small-model packets](docs/reference/small-model-packets.md), [model routing](docs/reference/model-routing.md), [adaptive policy](docs/reference/adaptive-lifecycle-policy.md), [quality-cost learning](docs/reference/quality-cost-learning.md), [lifecycle cost accounting](docs/reference/lifecycle-cost.md), [Usage export](docs/reference/usage-export.md), and [Evidence integrity](docs/reference/evidence-integrity.md).
+- Quality and resources: [Small-model packets](docs/reference/small-model-packets.md), [model routing](docs/reference/model-routing.md), [adaptive policy](docs/reference/adaptive-lifecycle-policy.md), [quality-cost learning](docs/reference/quality-cost-learning.md), [lifecycle cost accounting](docs/reference/lifecycle-cost.md), [Usage export](docs/reference/usage-export.md), and [Evidence integrity](docs/reference/evidence-integrity.md).
 - Profiles and operations: [Read-only status views](docs/reference/read-only-status-view.md), [Sandbox boundaries](docs/reference/sandbox-boundaries.md), [Import mappers](docs/reference/import-mappers.md), [Episode retrieval](docs/reference/episode-retrieval.md), [Runner recovery](docs/reference/runner-recovery.md), [Cross-check profile](docs/reference/cross-check-profile.md), [Bug Forensics profile](docs/reference/bug-forensics.md), and [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md).
 - Release assets: [Task templates](templates/tasks/README.md) and [Release security](docs/security/release-security.md).
 
