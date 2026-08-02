@@ -8,14 +8,14 @@
 
 - `git diff --check`;
 - отсутствие секретов и локальных путей в отслеживаемых текстовых файлах;
-- если live harness использует host-local env-file, должен быть явный
-  `--host-env-allow` и evidence от `validate_host_env_hygiene.py`;
+- если обвязка реального хоста использует локальный файл окружения, должен быть
+  явный `--host-env-allow` и подтверждение от `validate_host_env_hygiene.py`;
 - `agent-lifecycle contract check`;
 - `agent-lifecycle diagnose --no-install-plans`;
 - актуальность заметок релиза и changelog.
 
 ## Что нельзя заявлять
 
-Нельзя заявлять публичное одобрение каталога, production promotion или
+Нельзя заявлять публичное одобрение каталога, промышленную готовность или
 зрелость `VERIFIED`, если для этого нет проверенных артефактов и принятого
 финального подтверждения.

@@ -1,17 +1,17 @@
-# Import mappers
+# Импорт внешних форматов
 
-Import mappers переводят внешние planning/instruction dialects в draft
-артефакты ALK. Импортированный контент никогда не считается доверенным
+Импорт внешних форматов переводит сторонние форматы планирования и инструкций в
+черновые артефакты ALK. Импортированный контент никогда не считается доверенным
 автоматически.
 
-## Поддерживаемые dialect profiles
+## Поддерживаемые профили форматов
 
-- `external-workflow-generic`: generic workflow-like YAML или JSON со step/job/
-  check hints.
-- `external-agent-generic`: generic agent/harness-like YAML или JSON с role,
-  policy, tool и env hints.
-- `constitution-adr`: документы в стиле Constitution или ADR с principles,
-  constraints, decisions и numbered requirements.
+- `external-workflow-generic`: YAML или JSON, похожий на рабочий процесс, с
+  подсказками по шагам, задачам и проверкам.
+- `external-agent-generic`: YAML или JSON, похожий на конфигурацию агента или
+  запуска, с подсказками по роли, правилам, инструментам и окружению.
+- `constitution-adr`: документы в стиле Constitution или ADR с принципами,
+  ограничениями, решениями и нумерованными требованиями.
 - `agents-agentskills`: файлы `AGENTS.md` или инструкции в стиле agentskills.
 
 Каждый профиль использует `agent-import-dialect-profile.v1` и фиксирует:
@@ -24,27 +24,30 @@ Import mappers переводят внешние planning/instruction dialects �
 
 ## Поведение импорта
 
-Dialect imports используют тот же untrusted planning import path, что и
+Импорт форматов использует тот же недоверенный путь импорта плана, что и
 обычный импорт. Результат `agent-planning-import-result.v1` содержит
-`nativeDialectProfileDigest`, а candidate plan записывает этот же digest в
+`nativeDialectProfileDigest`, а план-кандидат записывает этот же отпечаток в
 `candidatePlan.importState.nativeDialectProfileDigest`.
 
-Candidate plan остаётся `DRAFT` с обязательными review, audit и freeze gates.
-Перед реализацией оператор должен пройти обычный ALK review и freeze.
+План-кандидат остаётся `DRAFT` с обязательными проверками, аудитом и
+заморозкой. Перед реализацией оператор должен пройти обычные этапы проверки и
+заморозки ALK.
 
-Generic external imports добавляют family/profile слой перед созданием draft:
+Общий импорт внешних данных добавляет слой семейства и профиля перед созданием
+черновика:
 
 ```text
 parse -> normalize -> sanitize/redact -> draft artifact -> validate -> review/freeze
 ```
 
-Workflow-family imports переводят steps/jobs/checks в draft requirements, work
-hints и validation hints. Это контекст для review; ALK не выполняет импортированные
-workflow nodes.
+Импорт семейства workflow переводит шаги, задачи и проверки в черновые
+требования, рабочие подсказки и подсказки для проверки. Это контекст для
+проверки; ALK не выполняет импортированные узлы workflow.
 
-Agent-family imports переводят role/policy hints в draft requirements. Provider,
-model, auth, environment и tool hints считаются host-local metadata. Значения
-redacted или представлены digest и не могут стать portable defaults.
+Импорт семейства agent переводит подсказки по роли и правилам в черновые
+требования. Подсказки `provider`, `model`, `auth`, `environment` и `tool`
+считаются локальными метаданными хоста. Значения маскируются или представлены
+отпечатком и не могут стать переносимыми настройками по умолчанию.
 
 ```bash
 agent-lifecycle import profile-list
@@ -72,12 +75,13 @@ agent_result = import_external_agent(Path("agent.yaml"))
 validation = validate_import_result(result)
 ```
 
-## Safety rules
+## Правила безопасности
 
-- Внешний dialect input не может обойти ALK review.
-- Локальные пути и явные secret markers блокируют импорт.
-- Resource caps применяются до генерации candidate plan.
-- Drift `profileDigest` приводит к FAIL.
-- Импортированные workflow nodes никогда не выполняются.
-- Provider, model, auth, environment и tool hints из agent-family inputs
-  остаются host-local и не становятся portable core defaults.
+- Внешний входной формат не может обойти проверку ALK.
+- Локальные пути и явные признаки секретов блокируют импорт.
+- Ограничения ресурсов применяются до генерации плана-кандидата.
+- Изменение `profileDigest` приводит к `FAIL`.
+- Импортированные узлы workflow никогда не выполняются.
+- Подсказки `provider`, `model`, `auth`, `environment` и `tool` из входных
+  данных семейства agent остаются локальными для хоста и не становятся
+  переносимыми настройками ядра.
