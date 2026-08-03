@@ -42,6 +42,9 @@ Stable schema ids:
 - `agent-objective-snapshot.v1`
 - `agent-runner-state.v1`
 - `agent-runner-snapshot.v1`
+- `agent-managed-lifecycle-next-action.v1`
+- `agent-managed-lifecycle-runner-receipt.v1`
+- `agent-no-model-call-scan.v1`
 - `agent-follow-up-register.v1`
 - `agent-follow-up-summary.v1`
 - `agent-worktree-isolation-policy.v1`
@@ -82,7 +85,9 @@ a deterministic stop/continue/escalate/split/follow-up decision over current
 evidence. Optional quality packs and read-only reports add bounded evidence,
 but they do not replace source-of-truth lifecycle artifacts. Event feeds and
 progress views are projections over existing state/receipts; they do not start
-model calls, spend tokens, or mutate state.
+model calls, spend tokens, or mutate state. The managed lifecycle runner adds a
+typed read-only `workflow run` projection that checks frozen plan/state lineage
+and returns the next host-owned action.
 
 Adaptive lifecycle policy chooses the lightest safe mode from neutral
 task/risk/evidence/resource inputs. It is advisory by default; automatic

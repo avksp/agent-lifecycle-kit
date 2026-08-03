@@ -13,6 +13,12 @@
 - `agent-objective-snapshot.v1`: компактный снимок цели.
 - `agent-runner-state.v1`: состояние управляемого выполнения.
 - `agent-runner-snapshot.v1`: компактный снимок состояния запуска.
+- `agent-managed-lifecycle-next-action.v1`: следующий шаг жизненного цикла для
+  хоста без запуска модели.
+- `agent-managed-lifecycle-runner-receipt.v1`: подтверждение управляемого шага
+  жизненного цикла.
+- `agent-no-model-call-scan.v1`: релизная проверка отсутствия прямых
+  модельных и сетевых импортов в управляемом шаге.
 - `agent-follow-up-register.v1`: реестр продолжений.
 - `agent-follow-up-summary.v1`: краткое состояние продолжений.
 - `agent-worktree-isolation-policy.v1`: политика изоляции рабочего дерева.
