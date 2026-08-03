@@ -7,6 +7,55 @@ from typing import Any
 from agent_lifecycle.contracts.schema_builders import open_object_schema as _open_object_schema
 
 PLAN_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-plan-completeness-profile.v1": _open_object_schema(
+        "agent-plan-completeness-profile.v1",
+        required=["schemaVersion", "profileId", "profiles", "profileDigest"],
+        properties={
+            "profileId": {"type": "string", "minLength": 1},
+            "profiles": {"type": "object"},
+            "profileDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-plan-completeness-profile-validation.v1": _open_object_schema(
+        "agent-plan-completeness-profile-validation.v1",
+        required=["schemaVersion", "status", "profileId", "blockers", "profileDigest", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "profileId": {"type": ["string", "null"]},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "profileDigest": {
+                "anyOf": [
+                    {"type": "string", "minLength": 64, "maxLength": 64},
+                    {"type": "null"},
+                ],
+            },
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-plan-completeness-validation.v1": _open_object_schema(
+        "agent-plan-completeness-validation.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "packageId",
+            "tier",
+            "requiredChecks",
+            "blockers",
+            "profileDigest",
+            "planDigest",
+            "validationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "packageId": {"type": ["string", "null"]},
+            "tier": {"enum": ["S0", "S1", "S2"]},
+            "requiredChecks": {"type": "array", "items": {"type": "string"}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "profileDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "planDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
     "agent-plan-reference-validation.v1": _open_object_schema(
         "agent-plan-reference-validation.v1",
         required=["schemaVersion", "status", "packageId", "referenceCount", "repositoryIds", "blockers", "validationDigest"],

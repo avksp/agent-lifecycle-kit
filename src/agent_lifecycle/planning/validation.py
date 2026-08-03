@@ -6,15 +6,21 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
+from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
 
 
-def validate_plan_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+def validate_plan_manifest(
+    manifest: dict[str, Any],
+    *,
+    require_completeness: bool = False,
+    completeness_profile: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     _require_package(manifest)
     workstreams = _workstreams(manifest)
     overlaps = _write_overlaps(workstreams)
     if overlaps:
         raise LifecycleError("plan-write-overlap", "workstream write sets overlap", {"overlaps": overlaps})
-    return {
+    payload: dict[str, Any] = {
         "schemaVersion": "agent-plan-validation.v1",
         "packageId": manifest["package"]["id"],
         "planRevision": manifest.get("planRevision"),
@@ -22,6 +28,11 @@ def validate_plan_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
         "workstreamCount": len(workstreams),
         "planDigest": canonical_digest(manifest),
     }
+    if require_completeness:
+        completeness = validate_plan_completeness(manifest, profile=completeness_profile)
+        require_plan_completeness_pass(completeness)
+        payload["completeness"] = completeness
+    return payload
 
 
 def _require_package(manifest: dict[str, Any]) -> None:

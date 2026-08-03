@@ -35,6 +35,7 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn(("metrics recommend", "agent-lifecycle-recommendation.v1"), cli_outputs)
         self.assertIn(("metrics learn-recommend", "agent-lifecycle-recommendation.v1"), cli_outputs)
         self.assertIn(("policy tune", "agent-lifecycle-policy-tune-result.v1"), cli_outputs)
+        self.assertIn(("plan completeness-check", "agent-plan-completeness-validation.v1"), cli_outputs)
         self.assertIn(("quality template-list", "agent-task-template-library.v1"), cli_outputs)
         self.assertIn(("quality template-check", "agent-task-template-library-validation.v1"), cli_outputs)
         self.assertIn(("quality bug-recipe-list", "agent-bug-forensics-recipe-library.v1"), cli_outputs)

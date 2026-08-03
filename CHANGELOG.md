@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.34.0 - 2026-08-03
+
+- Added structural plan completeness profiles for `S0`, `S1` and `S2`,
+  including the default `profiles/plan-completeness-profile.v1.json`.
+- Added `agent-lifecycle plan completeness-check` and
+  `plan check --require-completeness` to produce or enforce
+  `agent-plan-completeness-validation.v1` blockers.
+- Documented compact-but-complete planning for small/local models and updated
+  planning skills, public contracts and release publication metadata.
+
 ## 1.33.0 - 2026-08-03
 
 - Added `agent-lifecycle audit implementation` and

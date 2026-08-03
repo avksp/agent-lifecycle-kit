@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "agent-plan-completeness-profile.v1",
+  "profileId": "alk-default-plan-completeness",
+  "profiles": {
+    "S0": {
+      "description": "Bounded mechanical work with exact write scope and one validation route.",
+      "requiredChecks": [
+        "single-workstream",
+        "write-ownership",
+        "validation-command"
+      ]
+    },
+    "S1": {
+      "description": "Standard single-owner work with requirements, acceptance, evidence and validation.",
+      "requiredChecks": [
+        "requirements",
+        "acceptance",
+        "evidence-route",
+        "write-ownership",
+        "validation-command",
+        "release-impact"
+      ]
+    },
+    "S2": {
+      "description": "Large or risky work with complete authority, evidence, budgets and final gates.",
+      "requiredChecks": [
+        "requirements",
+        "acceptance",
+        "evidence-route",
+        "write-ownership",
+        "dag",
+        "budget-policy",
+        "context-limits",
+        "security-release-gates",
+        "final-audit-gates"
+      ]
+    }
+  },
+  "profileDigest": "50940d9c911b90367cc31d477c6e051bacb7cc49f69a0a3e8ea20f791c5e0184"
+}
