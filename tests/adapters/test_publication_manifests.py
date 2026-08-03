@@ -9,7 +9,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "1.31.0"
+VERSION = "1.32.0"
 PLUGIN_NAME = "agent-lifecycle-kit"
 TOOLS_RELEASE = ROOT / "tools" / "release"
 if str(TOOLS_RELEASE) not in sys.path:

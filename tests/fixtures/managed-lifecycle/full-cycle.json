@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "agent-managed-lifecycle-fixture.v1",
+  "description": "Minimal managed lifecycle sequence. workflow run is read-only and returns the next host-owned action.",
+  "sequence": [
+    {
+      "command": "agent_lifecycle workflow run --state run.state.json --manifest plans/package/plan.manifest.json --operation-id managed-1 --expected-revision 1 --source-revision source",
+      "expectedReceipt": {
+        "schemaVersion": "agent-managed-lifecycle-runner-receipt.v1",
+        "status": "PASS",
+        "nextAction.type": "launch-tasks",
+        "modelCallsStarted": false,
+        "stateWritten": false,
+        "hostLaunchStarted": false
+      }
+    },
+    {
+      "command": "agent_lifecycle workflow task-start --state run.state.json --task WS-01 --operation-id task-start-1 --expected-revision 1 --source-revision source --reason launch",
+      "owner": "controller"
+    },
+    {
+      "command": "agent_lifecycle workflow task-result --state run.state.json --task WS-01 --operation-id task-result-1 --expected-revision 2 --source-revision source --result work/WS-01/attempt-1/task-result.json --reason done",
+      "owner": "controller"
+    },
+    {
+      "command": "agent_lifecycle workflow task-accept --state run.state.json --task WS-01 --operation-id task-accept-1 --expected-revision 3 --review work/WS-01/attempt-1/task-review.json --reason accepted",
+      "owner": "controller"
+    },
+    {
+      "command": "agent_lifecycle workflow finalize --state run.state.json --operation-id finalize-1 --expected-revision 4 --source-revision source --final-audit final/final-audit.json --proof final/proof.json --reason complete",
+      "owner": "controller"
+    }
+  ],
+  "invariants": {
+    "modelCallsStartedByWorkflowRun": false,
+    "stateWrittenByWorkflowRun": false,
+    "hostLaunchStartedByWorkflowRun": false
+  }
+}
