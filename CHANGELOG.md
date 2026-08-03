@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.35.0 - 2026-08-03
+
+- Added bounded `agent-lifecycle report progress --watch` receipts for
+  host-side lifecycle progress displays without model calls or state writes.
+- Added `agent-lifecycle report change-summary` to produce Git-style counters
+  for files changed, insertions, deletions, modified, added and deleted.
+- Documented progress bridge integration for Codex, Claude Code, OpenCode and
+  other host adapters, and updated publication metadata to `1.35.0`.
+
 ## 1.34.0 - 2026-08-03
 
 - Added structural plan completeness profiles for `S0`, `S1` and `S2`,

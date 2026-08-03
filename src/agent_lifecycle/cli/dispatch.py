@@ -98,7 +98,9 @@ from agent_lifecycle.quality import (
     validate_quality_pack,
 )
 from agent_lifecycle.reporting import (
+    build_change_summary_receipt,
     build_lifecycle_progress_view,
+    build_lifecycle_progress_watch,
     build_status_view,
     build_workflow_event_feed,
     render_usage_export_json,
@@ -345,10 +347,30 @@ def _dispatch_report(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         return payload
     if args.report_command == "progress":
-        payload = build_lifecycle_progress_view(
-            state_path=Path(args.state),
-            usage_receipt_paths=[Path(item) for item in args.usage_receipt],
-            change_summary_path=Path(args.change_summary) if args.change_summary else None,
+        if args.watch:
+            payload = build_lifecycle_progress_watch(
+                state_path=Path(args.state),
+                usage_receipt_paths=[Path(item) for item in args.usage_receipt],
+                change_summary_path=Path(args.change_summary) if args.change_summary else None,
+                iterations=args.watch_iterations,
+                interval_seconds=args.watch_interval,
+            )
+        else:
+            payload = build_lifecycle_progress_view(
+                state_path=Path(args.state),
+                usage_receipt_paths=[Path(item) for item in args.usage_receipt],
+                change_summary_path=Path(args.change_summary) if args.change_summary else None,
+            )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.report_command == "change-summary":
+        payload = build_change_summary_receipt(
+            project_root=Path(args.project_root),
+            base=args.base,
+            head=args.head,
+            staged=args.staged,
+            paths=args.path,
         )
         if args.out:
             write_json_create(Path(args.out), payload)

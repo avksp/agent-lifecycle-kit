@@ -73,6 +73,8 @@ Stable schema ids:
 - `agent-readonly-status-view.v1`
 - `agent-workflow-event-feed.v1`
 - `agent-lifecycle-progress-view.v1`
+- `agent-lifecycle-progress-watch.v1`
+- `agent-change-summary-receipt.v1`
 - `agent-lifecycle-quality-floor-decision.v1`
 - `agent-adaptive-lifecycle-policy-request.v1`
 - `agent-adaptive-lifecycle-policy-decision.v1`
