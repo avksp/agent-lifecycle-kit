@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.31.0 - 2026-08-03
+
+- Added a publication version contract and validator for package metadata,
+  plugin manifests, marketplace source refs and adapter-local plugin
+  projections.
+- Added fail-closed checks for stale plugin versions and stale marketplace refs
+  so installable plugin snapshots cannot drift behind release tags.
+- Documented immutable semver publication as the default path and limited a
+  floating `last` channel to opt-in source refs only.
+
 ## 1.29.1 - 2026-08-02
 
 - Fixed plugin publication manifests so Codex, Claude Code and Cursor

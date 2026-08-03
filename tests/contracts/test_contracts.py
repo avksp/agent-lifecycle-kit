@@ -200,6 +200,8 @@ class ContractTests(unittest.TestCase):
             "agent-negative-suite-coverage.v1",
             "agent-task-packet-context-fit.v1",
             "agent-packaging-smoke-evidence.v1",
+            "agent-publication-manifest.v1",
+            "agent-publication-version-validation.v1",
             "agent-adapter-scaffold-result.v1",
             "agent-workflow-lineage-check.v1",
             "agent-public-contract-policy.v1",
@@ -289,6 +291,8 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-small-model-packet-compile-result.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-adapter-conformance-verification.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertIn("commands", get_schema("agent-packaging-smoke-evidence.v1")["required"])
+        self.assertEqual(get_schema("agent-publication-manifest.v1")["properties"]["productionPromotionClaimed"], {"const": False})
+        self.assertEqual(get_schema("agent-publication-version-validation.v1")["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(get_schema("agent-completion-check.v1")["properties"]["kind"]["enum"], ["verification", "external-action"])
         self.assertEqual(get_schema("agent-completion-check-receipt-validation.v1")["properties"]["status"], {"const": "PASS"})
         self.assertEqual(
