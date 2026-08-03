@@ -83,5 +83,7 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle goal`: снимки цели.
 - `agent-lifecycle followup`: учёт продолжений, которые не должны потеряться.
 - `agent-lifecycle evidence`: индекс подтверждающих артефактов.
-- `agent-lifecycle report status-view/event-feed/progress`: представления без
-  записи для статуса, событий рабочего цикла и прогресса жизненного цикла.
+- `agent-lifecycle report status-view/event-feed/progress/change-summary`:
+  представления без записи для статуса, событий рабочего цикла, прогресса
+  жизненного цикла и счётчика изменений. Прогресс поддерживает ограниченный
+  режим `--watch`.

@@ -130,6 +130,8 @@ class ContractTests(unittest.TestCase):
         self.assertIn("agent-readonly-status-view.v1", ids)
         self.assertIn("agent-workflow-event-feed.v1", ids)
         self.assertIn("agent-lifecycle-progress-view.v1", ids)
+        self.assertIn("agent-lifecycle-progress-watch.v1", ids)
+        self.assertIn("agent-change-summary-receipt.v1", ids)
         self.assertIn("agent-small-model-task-packet.v1", ids)
         self.assertIn("agent-small-model-task-packet-index.v1", ids)
         self.assertIn("agent-small-model-output-contract.v1", ids)

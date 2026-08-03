@@ -96,6 +96,12 @@ codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 Restart the host session after installation. Codex is host-specific `VERIFIED`
 only for the tested Codex CLI range in the support matrix.
 
+Progress bridge: after `workflow run` or a workflow transition, a Codex wrapper
+can call `agent-lifecycle report progress --watch --state <state>` and render
+the returned lines locally. Pass host-attested usage receipts with
+`--usage-receipt` and a Git change summary with `--change-summary` when those
+artifacts exist; ALK does not infer token counts.
+
 ## Claude Code
 
 Files:
@@ -113,6 +119,10 @@ claude plugin install agent-lifecycle-kit@agent-lifecycle-kit
 
 Reload the host session after installation. Claude Code is host-specific
 `VERIFIED` only for the tested range in the support matrix.
+
+Progress bridge: invoke `agent-lifecycle report progress --state <state>` after
+lifecycle transitions, or bounded `--watch` while the run is active. Claude Code
+keeps native telemetry collection; ALK only reads supplied receipts.
 
 ## Cursor
 
@@ -142,6 +152,10 @@ Operator flow depends on whether the user wants project-level or user-level
 configuration. The dry-run install plan shows the exact source files to copy or
 link. OpenCode is host-specific `VERIFIED` only for the tested range in the
 support matrix.
+
+Progress bridge: OpenCode integrations should render ALK progress from
+`agent-lifecycle report progress --watch` and keep provider or model telemetry
+normalization in the OpenCode-side adapter.
 
 ## Hermes
 

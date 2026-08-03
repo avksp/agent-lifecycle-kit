@@ -534,11 +534,15 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-readonly-status-view.v1`.\n"
         "`agent-workflow-event-feed.v1`.\n"
         "`agent-lifecycle-progress-view.v1`.\n"
+        "`agent-lifecycle-progress-watch.v1`.\n"
+        "`agent-change-summary-receipt.v1`.\n"
         "not source of truth.\n"
         "small local model.\n"
         "agent-lifecycle report status-view.\n"
         "agent-lifecycle report event-feed.\n"
-        "agent-lifecycle report progress.\n",
+        "agent-lifecycle report progress.\n"
+        "agent-lifecycle report change-summary.\n"
+        "--watch.\n",
     )
     for host in (
         "claude",

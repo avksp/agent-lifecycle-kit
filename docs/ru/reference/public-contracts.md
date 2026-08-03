@@ -54,6 +54,10 @@
   рабочего цикла.
 - `agent-lifecycle-progress-view.v1`: представление прогресса жизненного цикла
   без записи.
+- `agent-lifecycle-progress-watch.v1`: ограниченное наблюдение за прогрессом
+  без записи и модельных вызовов.
+- `agent-change-summary-receipt.v1`: счётчик изменений в стиле Git для
+  отображения прогресса.
 - `agent-proof-finding.v1`: стабильная идентичность finding.
 - `agent-root-cause-evidence.v1`: подтверждение основной причины.
 - `agent-fix-impact-receipt.v1`: канонический артефакт влияния исправления.

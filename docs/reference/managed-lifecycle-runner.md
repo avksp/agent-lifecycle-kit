@@ -57,15 +57,22 @@ network client imports such as `openai`, `anthropic`, `requests`, `httpx` and
 ## Typical host loop
 
 1. Call `workflow run`.
-2. If `status` is `FAIL`, surface the typed blocker.
-3. If `nextAction.type` is `launch-tasks`, the host launches the listed task
+2. Call `report progress --watch` or render one `report progress` projection
+   after a lifecycle transition when the host wants a visible status line.
+3. If `status` is `FAIL`, surface the typed blocker.
+4. If `nextAction.type` is `launch-tasks`, the host launches the listed task
    packets and later records `workflow task-result`.
-4. If the plan requires implementation audit, run `agent-lifecycle audit
+5. If the plan requires implementation audit, run `agent-lifecycle audit
    implementation` and pass the accepted report to `workflow task-accept`.
-5. If `nextAction.type` is `run-final-audit`, run the independent final audit.
-6. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
+6. If `nextAction.type` is `run-final-audit`, run the independent final audit.
+7. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
    accepted final audit and proof path.
 
 The loop remains deterministic because every state mutation still goes through
 the existing workflow transition commands with `operation-id`,
 `expected-revision` and `source-revision`.
+
+Progress rendering is outside the state transition path. It reads workflow
+state, optional host-attested usage receipts and optional change-summary
+receipts, so it can be shown in Codex, Claude Code, OpenCode or another host
+without adding prompt context.
