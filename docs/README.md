@@ -30,6 +30,7 @@ project.
 - [Runner extension map](architecture/runner-extension-map.md)
 - [CLI reference](reference/cli.md)
 - [Source of truth](reference/source-of-truth.md)
+- [Plugin publication](reference/plugin-publication.md)
 - [Completion check](reference/completion-check.md)
 - [Goal continuity](reference/goal-continuity.md)
 - [Follow-up register](reference/follow-up-register.md)
