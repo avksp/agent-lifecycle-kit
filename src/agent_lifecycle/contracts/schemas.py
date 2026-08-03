@@ -20,6 +20,7 @@ from agent_lifecycle.contracts.policy_schemas import POLICY_SCHEMAS
 from agent_lifecycle.contracts.proof_integrity_schemas import PROOF_INTEGRITY_SCHEMAS
 from agent_lifecycle.contracts.release_contract_schemas import RELEASE_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHEMAS
+from agent_lifecycle.contracts.runner_schemas import RUNNER_SCHEMAS
 from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SCHEMAS
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
@@ -36,6 +37,7 @@ _SCHEMA_GROUPS = (
     IMPORT_DIALECT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,
     TASK_TEMPLATE_SCHEMAS,
+    RUNNER_SCHEMAS,
     RUNNER_WORKTREE_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
     CROSS_CHECK_SCHEMAS,

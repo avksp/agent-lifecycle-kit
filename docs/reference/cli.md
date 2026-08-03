@@ -28,6 +28,9 @@ read-only unless their own help says otherwise.
 
 ## Execution
 
+- `agent-lifecycle workflow run`: verify the frozen plan/state binding and
+  return the next host-owned action without mutating state or starting model
+  work.
 - `agent-lifecycle workflow task-start`: open a bounded task attempt.
 - `agent-lifecycle workflow task-result`: submit implementation evidence.
 - `agent-lifecycle workflow task-accept`: accept a completed task.
