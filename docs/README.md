@@ -39,6 +39,7 @@ project.
 - [Host capabilities](reference/host-capabilities.md)
 - [Runner recovery receipts](reference/runner-recovery.md)
 - [Managed lifecycle runner](reference/managed-lifecycle-runner.md)
+- [Implementation audit](reference/implementation-audit.md)
 - [Adapter event capture](reference/adapter-event-capture.md)
 - [Review verdicts](reference/review-verdict.md)
 - [Optional quality packs](reference/optional-quality-packs.md)

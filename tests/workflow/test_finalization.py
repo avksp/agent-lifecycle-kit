@@ -479,6 +479,62 @@ class WorkflowFinalizationTests(unittest.TestCase):
                     reason="done",
                 )
 
+    def test_finalize_run_rejects_missing_required_implementation_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["implementationAuditRequired"] = True
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "implementation-audit-required")
+
+    def test_finalize_run_rejects_missing_final_implementation_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            _accept_only_task(state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["finalImplementationAuditRequired"] = True
+            state["tasks"][0]["implementationAuditReport"] = {
+                "path": "work/WS-01/attempt-1/implementation-audit.json",
+                "sha256": "4" * 64,
+                "bytes": 10,
+                "taskId": "WS-01",
+                "attempt": 1,
+                "verdict": "ACCEPTED",
+                "reportDigest": "5" * 64,
+                "validation": {"status": "PASS", "validationDigest": "6" * 64},
+            }
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            write_json_create(root / "final/final-audit.json", _final_audit())
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "final-implementation-audit-required")
+
 def _accept_only_task(state_path: Path) -> None:
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["tasks"][0]["status"] = "ACCEPTED"

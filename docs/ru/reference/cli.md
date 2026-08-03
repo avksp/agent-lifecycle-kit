@@ -32,6 +32,9 @@ JSON, чтобы результат можно было проверять ав�
   цепочки `workflow finalize` принимает
   `--proof-integrity <proof-integrity.json>`; для обязательного решения
   завершения принимает `--completion-gate-receipt <completion-gate.json>`.
+  Если план требует аудит реализации, `workflow task-accept` принимает
+  `--implementation-audit <implementation-audit.json>`, а `workflow finalize`
+  принимает `--final-implementation-audit <final-implementation-audit.json>`.
 - `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.
 - `agent-lifecycle task compile-small`: пакеты для маленьких моделей с
   контрактом результата и компактным артефактом контекста.
@@ -39,6 +42,12 @@ JSON, чтобы результат можно было проверять ав�
 ## Проверка качества
 
 - `agent-lifecycle audit`: проверка плана, реализации и вердиктов.
+- `agent-lifecycle audit implementation`: структурированный отчёт
+  `agent-implementation-audit-report.v1` по результату задачи и независимой
+  проверке.
+- `agent-lifecycle audit final-implementation`: итоговый отчёт
+  `agent-final-implementation-audit.v1` перед финальным подтверждением
+  workflow.
 - `agent-lifecycle quality`: дополнительные проверочные наборы.
 - `agent-lifecycle quality bug-recipe-list/bug-recipe-check`: просмотр
   переиспользуемых рецептов Bug Forensics, которые используют существующие

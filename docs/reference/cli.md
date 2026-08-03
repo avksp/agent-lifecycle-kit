@@ -33,12 +33,16 @@ read-only unless their own help says otherwise.
   work.
 - `agent-lifecycle workflow task-start`: open a bounded task attempt.
 - `agent-lifecycle workflow task-result`: submit implementation evidence.
-- `agent-lifecycle workflow task-accept`: accept a completed task.
+- `agent-lifecycle workflow task-accept`: accept a completed task. Add
+  `--implementation-audit <implementation-audit.json>` when the plan or task
+  requires accepted implementation audit evidence.
 - `agent-lifecycle workflow block/resolve-blocker`: record external blockers.
 - `agent-lifecycle workflow finalize`: produce final lifecycle proof. Add
   `--proof-integrity <receipt.json>` when the run or final audit requires
   proof-integrity evidence, and `--completion-gate-receipt <receipt.json>` when
-  completion gate binding is required.
+  completion gate binding is required. Add
+  `--final-implementation-audit <final-implementation-audit.json>` when final
+  implementation audit is mandatory.
 - `agent-lifecycle runner start/status/transition/stop/resume`: control
   bounded execution state.
 - `agent-lifecycle task compile-small`: compile frozen task packets into
@@ -47,6 +51,11 @@ read-only unless their own help says otherwise.
 ## Review and quality
 
 - `agent-lifecycle audit review-check`: validate review verdicts.
+- `agent-lifecycle audit implementation`: emit
+  `agent-implementation-audit-report.v1` for a task result and independent
+  review.
+- `agent-lifecycle audit final-implementation`: aggregate accepted
+  implementation audit reports before final workflow proof.
 - `agent-lifecycle quality pack-check`: validate optional quality packs.
 - `agent-lifecycle quality behavior-check`: run fixture-backed behavior checks.
 - `agent-lifecycle quality bug-recipe-list/bug-recipe-check`: inspect reusable

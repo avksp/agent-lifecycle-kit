@@ -19,6 +19,11 @@ from agent_lifecycle.followup import validate_followup_register
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.final_proof_integrity import validate_final_proof_integrity
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
+from agent_lifecycle.workflow.implementation_audit_gate import (
+    final_implementation_audit_required,
+    missing_required_implementation_audits,
+    require_final_implementation_audit_pass,
+)
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.state import now_iso
@@ -36,6 +41,7 @@ def finalize_run(
     goal_record_path: str | None = None,
     follow_up_register_path: str | None = None,
     completion_gate_receipt_path: str | None = None,
+    final_implementation_audit_path: str | None = None,
     reason: str,
 ) -> dict[str, Any]:
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
@@ -46,6 +52,13 @@ def finalize_run(
     missing = _missing_required_acceptance(state)
     if missing:
         raise LifecycleError("finalization-precondition-failed", "required tasks are not accepted", {"tasks": missing})
+    missing_implementation_audits = missing_required_implementation_audits(state_path, state)
+    if missing_implementation_audits:
+        raise LifecycleError(
+            "implementation-audit-required",
+            "required implementation audit reports are missing",
+            {"tasks": missing_implementation_audits},
+        )
     root = package_root(state_path, state)
     final_audit_rel = normalize_repo_path(final_audit_path)
     final_audit = read_json_object(root / final_audit_rel, label="final audit")
@@ -63,6 +76,12 @@ def finalize_run(
         follow_up_register_path=follow_up_register_path,
     )
     proof_integrity = _validate_proof_integrity(state, root, final_audit, proof_integrity_path)
+    final_implementation_audit = _validate_final_implementation_audit(
+        state_path,
+        state,
+        root,
+        final_implementation_audit_path=final_implementation_audit_path,
+    )
     finalization_gate_receipts = _validate_finalization_gates(
         state_path,
         state,
@@ -78,6 +97,7 @@ def finalize_run(
         goal_record=goal_record,
         follow_up_register=follow_up_register,
         proof_integrity=proof_integrity,
+        final_implementation_audit=final_implementation_audit,
         finalization_gate_receipts=finalization_gate_receipts,
         reason=reason,
     )
@@ -95,6 +115,8 @@ def finalize_run(
         state["followUpRegister"] = follow_up_register["register"]
     if proof_integrity is not None:
         state["proofIntegrityReceipt"] = proof_integrity["receipt"]
+    if final_implementation_audit is not None:
+        state["finalImplementationAudit"] = final_implementation_audit["audit"]
     state["phase"] = "COMPLETE"
     commit_state(
         state_path,
@@ -108,6 +130,7 @@ def finalize_run(
             "goalRecord": goal_record,
             "followUpRegister": follow_up_register,
             "proofIntegrity": proof_integrity,
+            "finalImplementationAudit": final_implementation_audit,
             "finalizationGateReceipts": finalization_gate_receipts,
             "proof": state["finalProof"],
             "reason": reason,
@@ -294,6 +317,36 @@ def _validate_proof_integrity(
     return {"receipt": identity, "validation": validation}
 
 
+def _validate_final_implementation_audit(
+    state_path: Path,
+    state: dict[str, Any],
+    root: Path,
+    *,
+    final_implementation_audit_path: str | None,
+) -> dict[str, Any] | None:
+    if final_implementation_audit_path is None:
+        if final_implementation_audit_required(state_path, state):
+            raise LifecycleError(
+                "final-implementation-audit-required",
+                "final implementation audit is required before workflow finalization",
+            )
+        return None
+    from agent_lifecycle.audit import validate_final_implementation_audit
+
+    rel = normalize_repo_path(final_implementation_audit_path, label="final implementation audit")
+    audit = read_json_object(root / rel, label="final implementation audit")
+    validation = validate_final_implementation_audit(audit, state=state)
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "final-implementation-audit-invalid",
+            "final implementation audit validation failed",
+            {"validation": validation},
+        )
+    require_final_implementation_audit_pass(audit)
+    identity = artifact_identity(root, rel, audit)
+    return {"audit": identity, "validation": validation}
+
+
 def _proof_body(
     state: dict[str, Any],
     *,
@@ -304,6 +357,7 @@ def _proof_body(
     goal_record: dict[str, Any] | None,
     follow_up_register: dict[str, Any] | None,
     proof_integrity: dict[str, Any] | None,
+    final_implementation_audit: dict[str, Any] | None,
     finalization_gate_receipts: list[dict[str, Any]],
     reason: str,
 ) -> dict[str, Any]:
@@ -334,6 +388,7 @@ def _proof_body(
         "goalRecord": goal_record,
         "followUpRegister": follow_up_register,
         "proofIntegrity": proof_integrity,
+        "finalImplementationAudit": final_implementation_audit,
         "finalizationGateReceipts": finalization_gate_receipts,
         "reason": reason,
         "createdAt": now_iso(),

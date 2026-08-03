@@ -16,6 +16,29 @@ contract, acceptance criteria, evidence rules, task result, implementation
 diff, and previous reviews. In final mode, read all accepted task results,
 reviews, evidence receipts, and the workflow state.
 
+When the installed CLI exposes the implementation audit facade, use it as the
+typed evidence producer:
+
+```bash
+agent-lifecycle audit implementation \
+  --manifest plans/package/plan.manifest.json \
+  --state run.state.json \
+  --task WS-01 \
+  --result work/WS-01/attempt-1/task-result.json \
+  --review work/WS-01/attempt-1/task-review.json \
+  --out work/WS-01/attempt-1/implementation-audit.json
+
+agent-lifecycle audit final-implementation \
+  --manifest plans/package/plan.manifest.json \
+  --state run.state.json \
+  --report work/WS-01/attempt-1/implementation-audit.json \
+  --out final/final-implementation-audit.json
+```
+
+The command output is the machine-readable source for acceptance gates. The
+skill still supplies semantic review guidance when a human or host reviewer must
+interpret findings.
+
 ## Task audit
 
 For each planned item, verify:
@@ -58,3 +81,6 @@ state, results, reviews, evidence, source, and release inventory.
 
 Return findings, coverage matrix, validation commands and outcomes, verdict,
 dependency unlock status, required remediation, and whether refreeze is needed.
+For CLI-backed runs, emit or reference `agent-implementation-audit-report.v1`
+for each accepted task and `agent-final-implementation-audit.v1` before final
+workflow proof.
