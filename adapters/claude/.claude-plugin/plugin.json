@@ -1,6 +1,6 @@
 {
   "name": "agent-lifecycle-kit",
-  "version": "1.33.0",
+  "version": "1.34.0",
   "description": "Lifecycle skills and adapter metadata for reviewed planning, budgeted execution, adapter conformance, audit, and final proof.",
   "author": {
     "name": "Agent Lifecycle Kit contributors"

@@ -34,6 +34,11 @@ Check every item for:
 - adapter neutrality and absence of project-specific assumptions unless the
   target project explicitly owns them.
 
+When available, run `agent-lifecycle plan completeness-check --manifest
+<plan.manifest.json>` and treat `agent-plan-completeness-validation.v1` blockers
+as deterministic pre-audit findings. For freeze gates that opt in to structural
+enforcement, also check `agent-lifecycle plan check --require-completeness`.
+
 ## Verdicts
 
 - `READY_TO_FREEZE`: no open Medium or High finding; freeze inputs are complete.
@@ -48,6 +53,8 @@ Check every item for:
 - Do not rewrite the plan during independent review unless explicitly asked.
 - Do not approve a plan that lacks a developer overview, write ownership,
   evidence gates, or final audit route.
+- Do not ask for longer prose when the defect is missing structure. Require the
+  smallest tier-appropriate field or receipt route that closes the blocker.
 - Do not accept self-review as independent review.
 - Do not downgrade required runtime, security, or performance evidence to
   synthetic-only checks unless the plan explicitly narrows the claim.

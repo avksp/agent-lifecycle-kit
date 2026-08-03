@@ -45,6 +45,9 @@ Stable schema ids:
 - `agent-managed-lifecycle-next-action.v1`
 - `agent-managed-lifecycle-runner-receipt.v1`
 - `agent-no-model-call-scan.v1`
+- `agent-plan-completeness-profile.v1`
+- `agent-plan-completeness-profile-validation.v1`
+- `agent-plan-completeness-validation.v1`
 - `agent-implementation-audit-report.v1`
 - `agent-implementation-audit-report-validation.v1`
 - `agent-final-implementation-audit.v1`
@@ -94,6 +97,9 @@ typed read-only `workflow run` projection that checks frozen plan/state lineage
 and returns the next host-owned action. Implementation audit reports bind task
 results, independent reviews, ownership, evidence and sandbox checks before a
 task or run can pass a mandatory audit gate.
+Plan completeness validation checks the selected SDD tier before audit, so
+small plans can stay compact while risky S2 work still has requirements,
+acceptance, evidence routes, ownership, budgets, context limits and final gates.
 
 Adaptive lifecycle policy chooses the lightest safe mode from neutral
 task/risk/evidence/resource inputs. It is advisory by default; automatic

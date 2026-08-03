@@ -33,6 +33,17 @@ before work starts. The output is a frozen-ready package, not implementation.
 7. Route the candidate plan to `audit-agent-plan`. Revise until it is
    `READY_TO_FREEZE`, explicitly blocked, or the review budget is exhausted.
 
+When the CLI is available, run the structural gate before independent review:
+
+```bash
+agent-lifecycle plan completeness-check --manifest <plan.manifest.json>
+agent-lifecycle plan check --manifest <plan.manifest.json> --require-completeness
+```
+
+The goal is compact-but-complete authority for the selected tier, not long
+prose. S0/S1 plans can stay short, but the fields required by their tier must
+be present.
+
 ## Planning rules
 
 - Do not implement code while planning.
@@ -44,6 +55,9 @@ before work starts. The output is a frozen-ready package, not implementation.
   criteria, and evidence routes only.
 - For small-context hosts, require compact packet rendering with
   `small-context-profile.v1`; do not depend on full plan context.
+- Do not use shortness as a reason to omit required tier structure. Missing
+  evidence routes, write ownership, budgets, context limits, or final gates are
+  blockers when the selected tier requires them.
 
 ## Output
 

@@ -16,7 +16,11 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle specification check`: validate specification shape.
 - `agent-lifecycle specification completion-gate`: build a deterministic
   stop/continue/escalate/split/follow-up receipt from current evidence.
-- `agent-lifecycle plan check`: validate a plan manifest and optional lock.
+- `agent-lifecycle plan check`: validate a plan manifest and optional lock. Add
+  `--require-completeness` to enforce structural completeness for the selected
+  SDD tier.
+- `agent-lifecycle plan completeness-check`: return
+  `agent-plan-completeness-validation.v1` with actionable tier blockers.
 - `agent-lifecycle plan snapshot/reconcile/handoff`: maintain compact,
   reviewable plan state.
 - `agent-lifecycle import plan/check`: keep imported work draft-only until

@@ -14,7 +14,12 @@ JSON, чтобы результат можно было проверять ав�
 
 - `agent-lifecycle specification`: проверки спецификации и проверки
   завершения.
-- `agent-lifecycle plan check`: проверка плана и файла блокировки.
+- `agent-lifecycle plan check`: проверка плана и файла блокировки. Флаг
+  `--require-completeness` включает структурную проверку полноты выбранного SDD
+  tier.
+- `agent-lifecycle plan completeness-check`: возвращает
+  `agent-plan-completeness-validation.v1` с конкретными blockers по выбранному
+  tier.
 - `agent-lifecycle plan acceptance-check`: проверка трассируемости критериев
   приёмки.
 - `issue-to-spec` skill: перевод внешних issue в черновой вход спецификации
