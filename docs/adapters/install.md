@@ -70,6 +70,14 @@ providers or models, the selected provider remains responsible for the
 credential name and source; ALK only receives the operator-approved variable
 name for the current harness run.
 
+## Managed lifecycle handoff
+
+Hosts that want one deterministic lifecycle loop can call
+`agent-lifecycle workflow run` before launching work. The command returns the
+next action and fail-closed blockers, but it does not start a model, mutate
+workflow state or write host secrets into receipts. Adapters remain responsible
+for native launches, waits, cancellation and telemetry.
+
 ## Codex
 
 Files:

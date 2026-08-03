@@ -19,6 +19,7 @@ from agent_lifecycle.workflow.controller import (
     status,
     validate_budget_exceeded_policy,
 )
+from agent_lifecycle.workflow.managed_runner import run_managed_lifecycle_step
 from agent_lifecycle.workflow.bug_forensics_gates import (
     build_bug_forensics_gate_receipt,
     bug_forensics_activated,
@@ -64,6 +65,7 @@ __all__ = [
     "require_worker_lease_receipt_pass",
     "resolve_blocker",
     "resume_external_action",
+    "run_managed_lifecycle_step",
     "sandbox_evidence_required",
     "select_auto_budget_action",
     "start_execution",

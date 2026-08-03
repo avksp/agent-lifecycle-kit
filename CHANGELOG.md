@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.32.0 - 2026-08-03
+
+- Added `agent-lifecycle workflow run`, a read-only managed lifecycle
+  step-function that validates frozen plan/state lineage and returns the next
+  host-owned action.
+- Added managed runner receipts and public schemas for next actions,
+  fail-closed blockers and no-model-call release scans.
+- Added a release validator that rejects direct model or network client imports
+  in managed lifecycle runner modules.
+
 ## 1.31.0 - 2026-08-03
 
 - Added a publication version contract and validator for package metadata,

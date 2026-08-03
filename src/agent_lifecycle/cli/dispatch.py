@@ -118,6 +118,7 @@ from agent_lifecycle.workflow import (
     next_action,
     pause_for_budget_decision,
     resolve_blocker,
+    run_managed_lifecycle_step,
     start_execution,
     start_task,
     status,
@@ -355,6 +356,19 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         return status(state_path, full=args.full)
     if args.workflow_command == "next":
         return next_action(status(state_path, full=True)["state"])
+    if args.workflow_command == "run":
+        payload = run_managed_lifecycle_step(
+            state_path=state_path,
+            manifest_path=Path(args.manifest),
+            lock_path=Path(args.lock) if args.lock else None,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            reason=args.reason,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.workflow_command == "adopt-plan":
         return adopt_plan(
             state_path,
