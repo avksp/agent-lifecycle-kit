@@ -30,6 +30,17 @@ agent-lifecycle adapter inspect \
 `adapter inspect` is a safe source and command-surface check. It is not live
 host conformance.
 
+## Publication channels
+
+Install from immutable semantic-version refs by default. Root plugin manifests
+and adapter-local plugin projections must declare the real semver in `version`.
+Marketplace source refs use `source.ref: vX.Y.Z` when the host installs from a
+repository tag.
+
+A floating `last` channel, when supported by a host, is opt-in only and may
+point to an accepted release commit as a source ref. It must not become the
+default install path and must not replace semver inside `plugin.json`.
+
 ## Host-local secrets
 
 Adapters that call a real model should receive credentials through the host's

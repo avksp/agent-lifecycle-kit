@@ -2,14 +2,21 @@ from __future__ import annotations
 
 import json
 import runpy
+import sys
 import unittest
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "1.29.1"
+VERSION = "1.31.0"
 PLUGIN_NAME = "agent-lifecycle-kit"
+TOOLS_RELEASE = ROOT / "tools" / "release"
+if str(TOOLS_RELEASE) not in sys.path:
+    sys.path.insert(0, str(TOOLS_RELEASE))
+
+from publication_contract import PUBLICATION_ENTRIES  # noqa: E402
+
 SKILL_NAMES = {
     "agent-first-planning",
     "audit-agent-plan",
@@ -146,6 +153,22 @@ class PublicationManifestTests(unittest.TestCase):
                 "opencode.json",
                 "skills.sh.json",
             }.issubset(payload_roots)
+        )
+
+    def test_publication_contract_covers_current_projection_paths(self) -> None:
+        paths = {entry["path"] for entry in PUBLICATION_ENTRIES}
+        self.assertTrue(
+            {
+                ".codex-plugin/plugin.json",
+                ".agents/plugins/marketplace.json",
+                ".claude-plugin/plugin.json",
+                ".claude-plugin/marketplace.json",
+                ".cursor-plugin/plugin.json",
+                ".cursor-plugin/marketplace.json",
+                "adapters/claude/.claude-plugin/plugin.json",
+                "adapters/codex/.codex-plugin/plugin.json",
+                "adapters/cursor/.cursor-plugin/plugin.json",
+            }.issubset(paths)
         )
 
 
