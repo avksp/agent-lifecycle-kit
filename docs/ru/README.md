@@ -17,7 +17,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 Главная цель проекта - закрывать задачу полностью, с максимально возможным
 качеством для выбранной модели, без оверинжиринга и с контролем расхода токенов.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.33.0 · **Python:** 3.11-3.13
+**Лицензия:** Apache-2.0 · **Версия:** 1.34.0 · **Python:** 3.11-3.13
 
 ## Что даёт ALK
 
@@ -180,7 +180,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 
 - Старт: [Быстрый старт](quickstart.md) и [черновик спецификации из issue](issue-to-spec.md).
 - Адаптеры: [Установка адаптеров](adapters/install.md) и [матрица поддержки адаптеров](adapters/support-matrix.md).
-- Справочник: [Команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [аудит реализации](reference/implementation-audit.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md) и [диагностика готовности](reference/readiness-diagnostics.md).
+- Справочник: [Команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [аудит реализации](reference/implementation-audit.md), [полнота плана](reference/plan-completeness.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md) и [диагностика готовности](reference/readiness-diagnostics.md).
 - Качество, ресурсы и безопасность: [компактные пакеты для маленьких моделей](reference/small-model-packets.md), [адаптивные правила](reference/adaptive-lifecycle-policy.md), [локальная статистика качества](reference/quality-cost-learning.md), [учёт расхода жизненного цикла](reference/lifecycle-cost.md), [экспорт использования](reference/usage-export.md), [целостность подтверждений](reference/evidence-integrity.md), [границы песочницы](reference/sandbox-boundaries.md) и [безопасность релиза](security/release-security.md).
 - Профили и операции: [представления статуса без записи](reference/read-only-status-view.md), [импорт внешних форматов](reference/import-mappers.md), [поиск по прошлым эпизодам](reference/episode-retrieval.md), [восстановление запуска](reference/runner-recovery.md), [профиль перепроверки](reference/cross-check-profile.md), [профиль расследования ошибок](reference/bug-forensics.md) и [бюджет контекста для расследования ошибок](reference/bug-forensics-context-budget.md).
 - Релизные материалы: [шаблоны задач](reference/task-templates.md).

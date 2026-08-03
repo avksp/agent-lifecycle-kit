@@ -14,6 +14,11 @@ Use them when a task is suitable for a small execution surface:
 - explicit validation commands or validation ids;
 - forbidden actions such as expanding write scope or claiming final audit.
 
+Before compiling packets for a plan, run `agent-lifecycle plan
+completeness-check`. Compact packets should be short because they carry only the
+active authority, not because requirements, evidence routes, write ownership or
+validation commands were omitted.
+
 ```bash
 agent-lifecycle task compile-small \
   --manifest <plan.manifest.json> \
