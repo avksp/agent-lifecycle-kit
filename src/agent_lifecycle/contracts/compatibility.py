@@ -43,6 +43,8 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "quality template-check", "schemaVersion": "agent-task-template-library-validation.v1", "compatibility": "stable-json"},
     {"command": "quality bug-recipe-list", "schemaVersion": "agent-bug-forensics-recipe-library.v1", "compatibility": "stable-json"},
     {"command": "quality bug-recipe-check", "schemaVersion": "agent-bug-forensics-recipe-validation.v1", "compatibility": "stable-json"},
+    {"command": "audit implementation", "schemaVersion": "agent-implementation-audit-report.v1", "compatibility": "stable-json"},
+    {"command": "audit final-implementation", "schemaVersion": "agent-final-implementation-audit.v1", "compatibility": "stable-json"},
     {"command": "report status-view", "schemaVersion": "agent-readonly-status-view.v1", "compatibility": "stable-json"},
     {"command": "report event-feed", "schemaVersion": "agent-workflow-event-feed.v1", "compatibility": "stable-json"},
     {"command": "report progress", "schemaVersion": "agent-lifecycle-progress-view.v1", "compatibility": "stable-json"},

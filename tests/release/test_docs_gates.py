@@ -283,6 +283,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-managed-lifecycle-next-action.v1`.\n"
         "`agent-managed-lifecycle-runner-receipt.v1`.\n"
         "`agent-no-model-call-scan.v1`.\n"
+        "`agent-implementation-audit-report.v1`.\n"
+        "`agent-final-implementation-audit.v1`.\n"
         "`agent-follow-up-register.v1`.\n"
         "`agent-follow-up-summary.v1`.\n"
         "`agent-worktree-isolation-policy.v1`.\n"
@@ -314,6 +316,16 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/public-contracts.md", public_contracts)
     _write_text(root / "docs/ru/reference/public-contracts.md", public_contracts)
+    implementation_audit = (
+        "`agent-implementation-audit-report.v1`.\n"
+        "`agent-final-implementation-audit.v1`.\n"
+        "agent-lifecycle audit implementation.\n"
+        "agent-lifecycle audit final-implementation.\n"
+        "`workflow task-accept`.\n"
+        "`workflow finalize`.\n"
+    )
+    _write_text(root / "docs/reference/implementation-audit.md", implementation_audit)
+    _write_text(root / "docs/ru/reference/implementation-audit.md", implementation_audit)
     adaptive_policy = (
         "`agent-lifecycle-quality-floor-decision.v1`.\n"
         "`agent-adaptive-lifecycle-policy-decision.v1`.\n"

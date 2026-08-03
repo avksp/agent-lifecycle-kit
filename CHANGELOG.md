@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.33.0 - 2026-08-03
+
+- Added `agent-lifecycle audit implementation` and
+  `agent-lifecycle audit final-implementation` to emit typed implementation
+  audit reports from frozen plan, workflow state, task result, review,
+  ownership and evidence inputs.
+- Added workflow gates so plans can require accepted implementation audit
+  reports before `workflow task-accept`, managed runner continuation and direct
+  `workflow finalize`.
+- Added public schemas and docs for implementation audit reports, final
+  implementation audit aggregation and validation outputs.
+
 ## 1.32.0 - 2026-08-03
 
 - Added `agent-lifecycle workflow run`, a read-only managed lifecycle

@@ -7,7 +7,13 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle import __version__
-from agent_lifecycle.audit import build_ownership_report, require_review_verdict_pass, validate_review_verdict
+from agent_lifecycle.audit import (
+    build_final_implementation_audit,
+    build_implementation_audit_report,
+    build_ownership_report,
+    require_review_verdict_pass,
+    validate_review_verdict,
+)
 from agent_lifecycle.audit.ownership import report_has_category
 from agent_lifecycle.changesets import changed_files
 from agent_lifecycle.compiler import compile_small_model_packets, compile_task_packets
@@ -401,6 +407,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             goal_record_path=args.goal_record,
             follow_up_register_path=args.follow_up_register,
             completion_gate_receipt_path=args.completion_gate_receipt,
+            final_implementation_audit_path=args.final_implementation_audit,
             reason=args.reason,
         )
     return _dispatch_workflow_task(args, state_path)
@@ -480,6 +487,7 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
             operation_id=args.operation_id,
             expected_revision=args.expected_revision,
             review_path=args.review,
+            implementation_audit_path=args.implementation_audit,
             reason=args.reason,
         )
     raise LifecycleError("command-not-implemented", "workflow command is not implemented")
@@ -497,6 +505,35 @@ def _dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:
         verdict = review.get("reviewVerdict", review)
         findings = review.get("findings", []) if isinstance(review.get("findings", []), list) else []
         return require_review_verdict_pass(validate_review_verdict(verdict, findings=findings))
+    if args.audit_command == "implementation":
+        payload = build_implementation_audit_report(
+            manifest_path=Path(args.manifest),
+            state_path=Path(args.state),
+            task_id=args.task,
+            result_path=args.result,
+            review_path=args.review,
+            evidence_paths=args.evidence,
+            sandbox_receipt_paths=args.sandbox_receipt,
+            changed_paths=args.path or None,
+            expected_revision=args.expected_revision,
+            base=args.base,
+            auditor_id=args.auditor_id,
+            auditor_surface=args.auditor_surface,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.audit_command == "final-implementation":
+        payload = build_final_implementation_audit(
+            manifest_path=Path(args.manifest),
+            state_path=Path(args.state),
+            report_paths=args.report,
+            auditor_id=args.auditor_id,
+            auditor_surface=args.auditor_surface,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     paths = args.path or changed_files(Path.cwd(), base=args.base)
     report = build_ownership_report(Path(args.manifest), paths, base=args.base)
     if args.fail_on_forbidden and report_has_category(report, {"forbidden"}):
