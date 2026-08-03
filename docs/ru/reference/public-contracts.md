@@ -19,6 +19,10 @@
   жизненного цикла.
 - `agent-no-model-call-scan.v1`: релизная проверка отсутствия прямых
   модельных и сетевых импортов в управляемом шаге.
+- `agent-plan-completeness-profile.v1`: профиль структурной полноты плана по
+  SDD tier.
+- `agent-plan-completeness-profile-validation.v1`: проверка профиля полноты.
+- `agent-plan-completeness-validation.v1`: результат проверки полноты плана.
 - `agent-implementation-audit-report.v1`: отчёт аудита реализации по задаче.
 - `agent-implementation-audit-report-validation.v1`: проверка отчёта аудита
   реализации.

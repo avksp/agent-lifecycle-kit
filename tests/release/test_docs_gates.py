@@ -283,6 +283,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-managed-lifecycle-next-action.v1`.\n"
         "`agent-managed-lifecycle-runner-receipt.v1`.\n"
         "`agent-no-model-call-scan.v1`.\n"
+        "`agent-plan-completeness-profile.v1`.\n"
+        "`agent-plan-completeness-validation.v1`.\n"
         "`agent-implementation-audit-report.v1`.\n"
         "`agent-final-implementation-audit.v1`.\n"
         "`agent-follow-up-register.v1`.\n"
@@ -326,6 +328,16 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/implementation-audit.md", implementation_audit)
     _write_text(root / "docs/ru/reference/implementation-audit.md", implementation_audit)
+    plan_completeness = (
+        "`agent-plan-completeness-profile.v1`.\n"
+        "`agent-plan-completeness-validation.v1`.\n"
+        "agent-lifecycle plan completeness-check.\n"
+        "--require-completeness.\n"
+        "missing-evidence-route.\n"
+        "missing-budget-policy.\n"
+    )
+    _write_text(root / "docs/reference/plan-completeness.md", plan_completeness)
+    _write_text(root / "docs/ru/reference/plan-completeness.md", plan_completeness)
     adaptive_policy = (
         "`agent-lifecycle-quality-floor-decision.v1`.\n"
         "`agent-adaptive-lifecycle-policy-decision.v1`.\n"

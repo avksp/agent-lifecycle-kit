@@ -72,6 +72,7 @@ from agent_lifecycle.metrics import (
     validate_usage_export,
 )
 from agent_lifecycle.planning import (
+    load_plan_completeness_profile,
     build_plan_snapshot,
     build_task_template_library,
     reconcile_plan_snapshot,
@@ -81,6 +82,7 @@ from agent_lifecycle.planning import (
     require_repository_references_pass,
     resolve_sdd_tier,
     validate_acceptance_checklist,
+    validate_plan_completeness,
     validate_plan_manifest,
     validate_repository_references,
     validate_task_template_library,
@@ -834,11 +836,27 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
     if args.plan_command == "check":
         manifest = read_json_object(Path(args.manifest), label="plan manifest")
         lock = read_json_object(Path(args.lock), label="plan lock") if args.lock else None
+        completeness_profile = (
+            load_plan_completeness_profile(Path(args.completeness_profile))
+            if args.completeness_profile
+            else None
+        )
         return {
             "schemaVersion": "agent-plan-check.v1",
-            "manifest": validate_plan_manifest(manifest),
+            "manifest": validate_plan_manifest(
+                manifest,
+                require_completeness=args.require_completeness,
+                completeness_profile=completeness_profile,
+            ),
             "lock": verify_plan_lock(manifest, lock) if lock else None,
         }
+    if args.plan_command == "completeness-check":
+        manifest = read_json_object(Path(args.manifest), label="plan manifest")
+        profile = load_plan_completeness_profile(Path(args.profile)) if args.profile else None
+        payload = validate_plan_completeness(manifest, profile=profile)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.plan_command == "acceptance-check":
         manifest_path = Path(args.manifest)
         acceptance_path = Path(args.acceptance)
