@@ -45,6 +45,10 @@ Stable schema ids:
 - `agent-managed-lifecycle-next-action.v1`
 - `agent-managed-lifecycle-runner-receipt.v1`
 - `agent-no-model-call-scan.v1`
+- `agent-implementation-audit-report.v1`
+- `agent-implementation-audit-report-validation.v1`
+- `agent-final-implementation-audit.v1`
+- `agent-final-implementation-audit-validation.v1`
 - `agent-follow-up-register.v1`
 - `agent-follow-up-summary.v1`
 - `agent-worktree-isolation-policy.v1`
@@ -87,7 +91,9 @@ but they do not replace source-of-truth lifecycle artifacts. Event feeds and
 progress views are projections over existing state/receipts; they do not start
 model calls, spend tokens, or mutate state. The managed lifecycle runner adds a
 typed read-only `workflow run` projection that checks frozen plan/state lineage
-and returns the next host-owned action.
+and returns the next host-owned action. Implementation audit reports bind task
+results, independent reviews, ownership, evidence and sandbox checks before a
+task or run can pass a mandatory audit gate.
 
 Adaptive lifecycle policy chooses the lightest safe mode from neutral
 task/risk/evidence/resource inputs. It is advisory by default; automatic

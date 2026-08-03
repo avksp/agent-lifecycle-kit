@@ -261,6 +261,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_accept.add_argument("--operation-id", required=True)
     workflow_accept.add_argument("--expected-revision", required=True, type=int)
     workflow_accept.add_argument("--review", required=True)
+    workflow_accept.add_argument("--implementation-audit")
     workflow_accept.add_argument("--reason", required=True)
     workflow_finalize = workflow_sub.add_parser("finalize")
     workflow_finalize.add_argument("--state", required=True)
@@ -273,6 +274,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_finalize.add_argument("--goal-record")
     workflow_finalize.add_argument("--follow-up-register")
     workflow_finalize.add_argument("--completion-gate-receipt")
+    workflow_finalize.add_argument("--final-implementation-audit")
     workflow_finalize.add_argument("--reason", required=True)
 
 
@@ -287,6 +289,27 @@ def _add_audit_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     ownership.add_argument("--fail-on-forbidden", action="store_true")
     review_check = audit_sub.add_parser("review-check")
     review_check.add_argument("--review", required=True)
+    implementation = audit_sub.add_parser("implementation")
+    implementation.add_argument("--manifest", required=True)
+    implementation.add_argument("--state", required=True)
+    implementation.add_argument("--task", required=True)
+    implementation.add_argument("--result", required=True)
+    implementation.add_argument("--review", required=True)
+    implementation.add_argument("--evidence", action="append", default=[])
+    implementation.add_argument("--sandbox-receipt", action="append", default=[])
+    implementation.add_argument("--path", action="append", default=[])
+    implementation.add_argument("--base")
+    implementation.add_argument("--expected-revision", type=int)
+    implementation.add_argument("--auditor-id", default="implementation-auditor")
+    implementation.add_argument("--auditor-surface", default="cli")
+    implementation.add_argument("--out")
+    final_implementation = audit_sub.add_parser("final-implementation")
+    final_implementation.add_argument("--manifest", required=True)
+    final_implementation.add_argument("--state", required=True)
+    final_implementation.add_argument("--report", action="append", required=True)
+    final_implementation.add_argument("--auditor-id", default="final-implementation-auditor")
+    final_implementation.add_argument("--auditor-surface", default="cli")
+    final_implementation.add_argument("--out")
 
 
 def _add_context_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

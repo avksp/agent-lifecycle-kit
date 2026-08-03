@@ -14,6 +14,10 @@ from agent_lifecycle.workflow.artifacts import (
     package_root,
 )
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
+from agent_lifecycle.workflow.implementation_audit_gate import (
+    task_implementation_audit_required,
+    validate_task_implementation_audit_artifact,
+)
 from agent_lifecycle.workflow.model_usage import (
     model_usage_receipt_required,
     validate_attempt_model_route,
@@ -164,6 +168,7 @@ def accept_task(
     operation_id: str,
     expected_revision: int,
     review_path: str,
+    implementation_audit_path: str | None = None,
     reason: str,
 ) -> dict[str, Any]:
     state = _mutable_state(state_path, operation_id, expected_revision)
@@ -189,8 +194,16 @@ def accept_task(
     validate_task_review(state, task, review)
     result = _read_committed_result(root, task)
     ownership_receipt = _validate_task_write_scope(state, task, result)
+    implementation_audit = _validate_implementation_audit(
+        state_path,
+        state,
+        task,
+        implementation_audit_path=implementation_audit_path,
+    )
     record_gate_receipts(task, gate_receipts)
     task["ownershipReceipt"] = ownership_receipt
+    if implementation_audit is not None:
+        task["implementationAuditReport"] = implementation_audit
     _mark_task_accepted(state, task, review, identity, reason)
     commit_state(
         state_path,
@@ -200,6 +213,25 @@ def accept_task(
         payload={"taskId": task_id, "attempt": task["attempt"], "review": task["review"], "reason": reason},
     )
     return status(state_path)
+
+
+def _validate_implementation_audit(
+    state_path: Path,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    *,
+    implementation_audit_path: str | None,
+) -> dict[str, Any] | None:
+    required = task_implementation_audit_required(state_path, state, task)
+    if implementation_audit_path is None:
+        if required:
+            raise LifecycleError(
+                "implementation-audit-required",
+                "task acceptance requires an accepted implementation audit report",
+                {"taskId": task.get("id")},
+            )
+        return None
+    return validate_task_implementation_audit_artifact(state_path, state, task, implementation_audit_path)
 
 
 def _mutable_state(

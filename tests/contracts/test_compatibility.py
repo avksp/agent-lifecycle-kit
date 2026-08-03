@@ -39,6 +39,8 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn(("quality template-check", "agent-task-template-library-validation.v1"), cli_outputs)
         self.assertIn(("quality bug-recipe-list", "agent-bug-forensics-recipe-library.v1"), cli_outputs)
         self.assertIn(("quality bug-recipe-check", "agent-bug-forensics-recipe-validation.v1"), cli_outputs)
+        self.assertIn(("audit implementation", "agent-implementation-audit-report.v1"), cli_outputs)
+        self.assertIn(("audit final-implementation", "agent-final-implementation-audit.v1"), cli_outputs)
         self.assertIn(("report status-view", "agent-readonly-status-view.v1"), cli_outputs)
         self.assertIn(("report event-feed", "agent-workflow-event-feed.v1"), cli_outputs)
         self.assertIn(("report progress", "agent-lifecycle-progress-view.v1"), cli_outputs)
