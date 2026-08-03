@@ -19,6 +19,13 @@
   жизненного цикла.
 - `agent-no-model-call-scan.v1`: релизная проверка отсутствия прямых
   модельных и сетевых импортов в управляемом шаге.
+- `agent-implementation-audit-report.v1`: отчёт аудита реализации по задаче.
+- `agent-implementation-audit-report-validation.v1`: проверка отчёта аудита
+  реализации.
+- `agent-final-implementation-audit.v1`: итоговый аудит реализации перед
+  финальным подтверждением запуска.
+- `agent-final-implementation-audit-validation.v1`: проверка итогового аудита
+  реализации.
 - `agent-follow-up-register.v1`: реестр продолжений.
 - `agent-follow-up-summary.v1`: краткое состояние продолжений.
 - `agent-worktree-isolation-policy.v1`: политика изоляции рабочего дерева.

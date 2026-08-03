@@ -37,7 +37,8 @@ Important fields:
 - `stateWritten: false`: the command never mutates durable state.
 - `hostLaunchStarted: false`: adapters remain responsible for actual launches.
 - `blockers`: fail-closed reasons such as stale state revision, non-frozen
-  plan, lock mismatch or source revision mismatch.
+  plan, lock mismatch, source revision mismatch, or missing mandatory
+  implementation audit reports.
 
 ## Boundary with `runner`
 
@@ -59,8 +60,10 @@ network client imports such as `openai`, `anthropic`, `requests`, `httpx` and
 2. If `status` is `FAIL`, surface the typed blocker.
 3. If `nextAction.type` is `launch-tasks`, the host launches the listed task
    packets and later records `workflow task-result`.
-4. If `nextAction.type` is `run-final-audit`, run the independent final audit.
-5. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
+4. If the plan requires implementation audit, run `agent-lifecycle audit
+   implementation` and pass the accepted report to `workflow task-accept`.
+5. If `nextAction.type` is `run-final-audit`, run the independent final audit.
+6. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
    accepted final audit and proof path.
 
 The loop remains deterministic because every state mutation still goes through

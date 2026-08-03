@@ -1,0 +1,133 @@
+"""Implementation audit contract schemas."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from agent_lifecycle.contracts.schema_builders import open_object_schema as _open_object_schema
+
+
+AUDIT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-implementation-audit-report.v1": _open_object_schema(
+        "agent-implementation-audit-report.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "verdict",
+            "runId",
+            "packageId",
+            "taskId",
+            "attempt",
+            "planRevision",
+            "planDigest",
+            "sourceRevision",
+            "auditor",
+            "ownership",
+            "coverage",
+            "evidence",
+            "sandbox",
+            "findings",
+            "blockers",
+            "productionPromotionClaimed",
+            "reportDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "verdict": {"enum": ["ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"]},
+            "runId": {"type": "string", "minLength": 1},
+            "packageId": {"type": "string", "minLength": 1},
+            "taskId": {"type": "string", "minLength": 1},
+            "attempt": {"type": "integer", "minimum": 1},
+            "planRevision": {"type": "integer", "minimum": 1},
+            "planDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "sourceRevision": {"type": "string", "minLength": 1},
+            "auditor": {"type": "object"},
+            "ownership": {"type": "object"},
+            "coverage": {"type": "object"},
+            "evidence": {"type": "object"},
+            "sandbox": {"type": "object"},
+            "findings": {"type": "array", "items": {"type": "object"}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "productionPromotionClaimed": {"const": False},
+            "reportDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-final-implementation-audit.v1": _open_object_schema(
+        "agent-final-implementation-audit.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "runId",
+            "packageId",
+            "planRevision",
+            "planDigest",
+            "sourceRevision",
+            "auditor",
+            "reports",
+            "missingTaskIds",
+            "findings",
+            "blockers",
+            "productionPromotionClaimed",
+            "auditDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "runId": {"type": "string", "minLength": 1},
+            "packageId": {"type": "string", "minLength": 1},
+            "planRevision": {"type": "integer", "minimum": 1},
+            "planDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "sourceRevision": {"type": "string", "minLength": 1},
+            "auditor": {"type": "object"},
+            "reports": {"type": "array", "items": {"type": "object"}},
+            "missingTaskIds": {"type": "array", "items": {"type": "string"}},
+            "findings": {"type": "array", "items": {"type": "object"}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "productionPromotionClaimed": {"const": False},
+            "auditDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-implementation-audit-report-validation.v1": _open_object_schema(
+        "agent-implementation-audit-report-validation.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "verdict",
+            "blockers",
+            "reportDigest",
+            "validationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "verdict": {"enum": ["ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"]},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "reportDigest": {
+                "anyOf": [
+                    {"type": "string", "minLength": 64, "maxLength": 64},
+                    {"type": "null"},
+                ],
+            },
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-final-implementation-audit-validation.v1": _open_object_schema(
+        "agent-final-implementation-audit-validation.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "blockers",
+            "auditDigest",
+            "validationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "auditDigest": {
+                "anyOf": [
+                    {"type": "string", "minLength": 64, "maxLength": 64},
+                    {"type": "null"},
+                ],
+            },
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+}

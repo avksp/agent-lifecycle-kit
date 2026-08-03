@@ -13,6 +13,7 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.workflow.next_action import MODEL_CALLS_STARTED, build_managed_next_action
+from agent_lifecycle.workflow.implementation_audit_gate import implementation_audit_blockers
 from agent_lifecycle.workflow.state import load_state, state_identity
 
 
@@ -50,6 +51,10 @@ def run_managed_lifecycle_step(
         )
         if not blockers:
             next_action = build_managed_next_action(state)
+            audit_blockers = implementation_audit_blockers(state_path, state)
+            if audit_blockers:
+                blockers.extend(audit_blockers)
+                next_action = None
     except LifecycleError as exc:
         blockers.append(_blocker(exc.code, exc.message, exc.details))
 
