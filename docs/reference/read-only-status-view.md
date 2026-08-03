@@ -49,6 +49,27 @@ agent-lifecycle report progress --state <workflow-state.json> \
   --change-summary <changes.json>
 ```
 
+For host-side progress displays, use bounded watch mode. It repeatedly reads
+the same local artifacts and returns `agent-lifecycle-progress-watch.v1`; it
+does not mutate workflow state and does not make model calls.
+
+```bash
+agent-lifecycle report progress --state <workflow-state.json> \
+  --watch \
+  --watch-iterations 10 \
+  --watch-interval 1
+```
+
 Change summaries use git-style counters: files changed, insertions, deletions,
-modified, added and deleted. The command never runs `git`; callers provide a
-summary artifact when they want those counters displayed.
+modified, added and deleted. Build `agent-change-summary-receipt.v1` from a
+tracked Git diff when the host wants code-change counters:
+
+```bash
+agent-lifecycle report change-summary \
+  --project-root . \
+  --base <start-revision> \
+  --out work/run/change-summary.json
+```
+
+The progress command only reads a supplied summary artifact; Git access stays
+inside the dedicated change-summary helper.

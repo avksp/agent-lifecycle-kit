@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -209,6 +210,54 @@ class CliQualityObservabilityCommandTests(unittest.TestCase):
             self.assertTrue(progress_out.is_file())
             self.assertIn("01:01:01", progress["lines"][0])
             self.assertIn("↑0.2k/↓1.1k tok", progress["lines"][0])
+
+            watch_out = root / "out/watch.json"
+            code, watch = _run_cli(
+                [
+                    "report",
+                    "progress",
+                    "--state",
+                    str(state),
+                    "--watch",
+                    "--watch-iterations",
+                    "2",
+                    "--watch-interval",
+                    "0",
+                    "--out",
+                    str(watch_out),
+                ]
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(watch["schemaVersion"], "agent-lifecycle-progress-watch.v1")
+            self.assertTrue(watch_out.is_file())
+            self.assertTrue(watch["readOnly"])
+            self.assertFalse(watch["tokenSpendForProgress"])
+
+    def test_report_change_summary_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _git(root, "init")
+            _git(root, "config", "user.email", "test@example.com")
+            _git(root, "config", "user.name", "Test User")
+            (root / "a.txt").write_text("one\n", encoding="utf-8")
+            _git(root, "add", ".")
+            _git(root, "commit", "-m", "initial")
+            (root / "a.txt").write_text("one\ntwo\n", encoding="utf-8")
+            out = root / "out/change-summary.json"
+
+            code, summary = _run_cli(["report", "change-summary", "--project-root", str(root), "--out", str(out)])
+            out_exists = out.is_file()
+
+        self.assertEqual(code, 0)
+        self.assertEqual(summary["schemaVersion"], "agent-change-summary-receipt.v1")
+        self.assertEqual(summary["filesChanged"], 1)
+        self.assertEqual(summary["insertions"], 1)
+        self.assertTrue(summary["readOnly"])
+        self.assertTrue(out_exists)
+
+
+def _git(root: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(root), *args], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 if __name__ == "__main__":

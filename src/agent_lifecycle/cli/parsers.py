@@ -166,7 +166,17 @@ def _add_report_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     progress.add_argument("--state", required=True)
     progress.add_argument("--usage-receipt", action="append", default=[])
     progress.add_argument("--change-summary")
+    progress.add_argument("--watch", action="store_true")
+    progress.add_argument("--watch-iterations", type=int, default=5)
+    progress.add_argument("--watch-interval", type=float, default=1.0)
     progress.add_argument("--out")
+    change_summary = report_sub.add_parser("change-summary")
+    change_summary.add_argument("--project-root", default=".")
+    change_summary.add_argument("--base")
+    change_summary.add_argument("--head")
+    change_summary.add_argument("--staged", action="store_true")
+    change_summary.add_argument("--path", action="append", default=[])
+    change_summary.add_argument("--out")
 
 
 def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

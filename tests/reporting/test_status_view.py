@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agent_lifecycle.reporting import build_lifecycle_progress_view, build_status_view
+from agent_lifecycle.reporting import build_lifecycle_progress_view, build_lifecycle_progress_watch, build_status_view
 
 
 class StatusViewTests(unittest.TestCase):
@@ -171,6 +171,40 @@ class StatusViewTests(unittest.TestCase):
             view = build_lifecycle_progress_view(state_path=state, usage_receipt_paths=[usage])
 
         self.assertIn("↑?/↓? tok", view["lines"][0])
+
+    def test_lifecycle_progress_watch_rereads_without_state_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state = root / "state.json"
+            state.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-workflow-state.v3",
+                        "runId": "run-1",
+                        "packageId": "package",
+                        "planRevision": 1,
+                        "planDigest": "0" * 64,
+                        "sourceRevision": "main",
+                        "stateRevision": 1,
+                        "phase": "RUNNING",
+                        "authorization": {"mode": "approval-required"},
+                        "budgets": {},
+                        "tasks": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            before = state.read_bytes()
+
+            watch = build_lifecycle_progress_watch(state_path=state, iterations=2, interval_seconds=0)
+            after = state.read_bytes()
+
+        self.assertEqual(watch["schemaVersion"], "agent-lifecycle-progress-watch.v1")
+        self.assertEqual(watch["frameCount"], 2)
+        self.assertTrue(watch["readOnly"])
+        self.assertFalse(watch["stateWritten"])
+        self.assertFalse(watch["tokenSpendForProgress"])
+        self.assertEqual(after, before)
 
 
 if __name__ == "__main__":
