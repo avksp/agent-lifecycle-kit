@@ -102,8 +102,9 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle diagnose`: build one redacted checkout readiness report.
 - `agent-lifecycle diagnostics bundle`: collect selected evidence into a
   redacted bundle.
-- `agent-lifecycle report status-view/event-feed/progress`: render read-only
-  status, workflow event and lifecycle progress views.
+- `agent-lifecycle report status-view/event-feed/progress/change-summary`:
+  render read-only status, workflow event, lifecycle progress and Git-style
+  change summary receipts. Progress supports bounded `--watch`.
 - `agent-lifecycle evidence index/search`: build and query compact evidence
   indexes.
 - `agent-lifecycle model profile-check/route/usage-check`: validate routing and

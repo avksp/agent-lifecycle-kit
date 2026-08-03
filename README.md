@@ -43,6 +43,8 @@ Russian documentation starts at [Документация на русском](d
   task type requires them.
 - Usage visibility: tokens, time, and resource counters are native; monetary
   cost is optional and only used when a metered host reports it.
+- Read-only progress: host UIs can show lifecycle state, `hh:mm:ss`, attested
+  input/output tokens and Git-style change counters without spending tokens.
 
 ## Feature areas
 
@@ -101,8 +103,9 @@ Russian documentation starts at [Документация на русском](d
 
 - Runner recovery receipts cover attempt snapshot, restore, abandon, selected
   attempt, worker lease, and heartbeat state.
-- Read-only diagnostics, event feeds, managed lifecycle steps, and progress
-  views inspect checkout and workflow state without model calls.
+- Read-only diagnostics, event feeds, managed lifecycle steps, progress watch
+  receipts, and change summaries inspect checkout and workflow state without
+  model calls.
 
 ## Daily flow
 

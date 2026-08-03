@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import canonical_digest, read_json_object
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.reporting.change_summary import format_change_summary_line
 from agent_lifecycle.workflow.state import TERMINAL_PHASES, load_state, state_identity
 
 PROGRESS_VIEW_SCHEMA = "agent-lifecycle-progress-view.v1"
+PROGRESS_WATCH_SCHEMA = "agent-lifecycle-progress-watch.v1"
 
 
 def build_lifecycle_progress_view(
@@ -57,6 +60,60 @@ def build_lifecycle_progress_view(
         "productionPromotionClaimed": False,
     }
     return {**body, "progressDigest": canonical_digest(body)}
+
+
+def build_lifecycle_progress_watch(
+    *,
+    state_path: Path,
+    usage_receipt_paths: list[Path] | None = None,
+    change_summary_path: Path | None = None,
+    iterations: int = 5,
+    interval_seconds: float = 1.0,
+) -> dict[str, Any]:
+    """Build bounded watch frames by re-reading progress artifacts only."""
+
+    if iterations <= 0:
+        raise LifecycleError("progress-watch-invalid-iterations", "watch iterations must be positive")
+    if interval_seconds < 0:
+        raise LifecycleError("progress-watch-invalid-interval", "watch interval must be non-negative")
+    frames: list[dict[str, Any]] = []
+    for index in range(iterations):
+        view = build_lifecycle_progress_view(
+            state_path=state_path,
+            usage_receipt_paths=usage_receipt_paths,
+            change_summary_path=change_summary_path,
+        )
+        frames.append(
+            {
+                "index": index,
+                "capturedAt": _now_utc(),
+                "stateIdentity": view["stateIdentity"],
+                "progressDigest": view["progressDigest"],
+                "terminal": view["terminal"],
+                "lines": view["lines"],
+                "terminalSummary": view["terminalSummary"],
+            }
+        )
+        if view["terminal"] or index == iterations - 1:
+            break
+        if interval_seconds:
+            time.sleep(interval_seconds)
+    body = {
+        "schemaVersion": PROGRESS_WATCH_SCHEMA,
+        "status": "PASS",
+        "sourceOfTruth": False,
+        "readOnly": True,
+        "modelCallsStarted": False,
+        "stateWritten": False,
+        "tokenSpendForProgress": False,
+        "requestedIterations": iterations,
+        "intervalSeconds": interval_seconds,
+        "frameCount": len(frames),
+        "frames": frames,
+        "terminal": frames[-1]["terminal"],
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "watchDigest": canonical_digest(body)}
 
 
 def _load_usage_receipts(paths: list[Path]) -> list[dict[str, Any]]:
@@ -177,6 +234,10 @@ def _parse_iso(value: str) -> datetime | None:
         return None
 
 
+def _now_utc() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
 def _format_duration_seconds(seconds: int) -> str:
     hours, remainder = divmod(max(0, seconds), 3600)
     minutes, secs = divmod(remainder, 60)
@@ -207,11 +268,7 @@ def _compact_change_line(summary: dict[str, int]) -> str:
 
 
 def _aggregate_line(summary: dict[str, int]) -> str:
-    return (
-        f"{summary['filesChanged']} files changed · {summary['insertions']} insertions · "
-        f"{summary['deletions']} deletions · {summary['modified']} modified · "
-        f"{summary['added']} added · {summary['deleted']} deleted"
-    )
+    return format_change_summary_line(summary)
 
 
 def _compact_text(value: str, width: int) -> str:
