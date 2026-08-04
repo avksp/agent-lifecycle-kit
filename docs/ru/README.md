@@ -17,7 +17,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 Главная цель проекта - закрывать задачу полностью, с максимально возможным
 качеством для выбранной модели, без оверинжиринга и с контролем расхода токенов.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.37.0 · **Python:** 3.11-3.13
+**Лицензия:** Apache-2.0 · **Версия:** 1.38.0 · **Python:** 3.11-3.13
 
 ## Что даёт ALK
 
@@ -32,8 +32,9 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
   или уровень риска.
 - Учёт расхода показывает токены, время и ресурсы; денежная стоимость
   необязательна и используется только если её сообщает платный хост.
-- Прогресс можно показывать без вызова модели: состояние жизненного цикла,
-  `hh:mm:ss`, подтверждённые входящие/исходящие токены и счётчик изменений.
+- Прогресс и управляемые сессии работают без вызова модели: можно показать
+  состояние, токены и счётчик изменений, а `adapter run` связывает работу с
+  зафиксированным workflow state без заявления native launch хоста.
 
 ## Области возможностей
 
@@ -146,8 +147,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 | OpenInterpreter | `VERIFIED` для `interpreter` 0.0.34 на проверенной локальной связке провайдера и модели. Одобрение публичного каталога не заявлено. |
 | Pi | `VERIFIED` для Pi 0.83.0 на проверенной локальной связке провайдера и модели. Одобрение публичного каталога не заявлено. |
 
-Подробнее: [Установка адаптеров](adapters/install.md) и
-[матрица поддержки адаптеров](adapters/support-matrix.md).
+Подробнее: [Установка адаптеров](adapters/install.md), [матрица поддержки адаптеров](adapters/support-matrix.md) и [поддержка управляемых сессий](adapters/managed-session-support.md).
 
 ## Карта контрактов
 
@@ -181,8 +181,8 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 ## Документы
 
 - Старт: [Быстрый старт](quickstart.md) и [черновик спецификации из issue](issue-to-spec.md).
-- Адаптеры: [Установка](adapters/install.md), [поддержка](adapters/support-matrix.md) и [прогресс](adapters/progress-bridge-matrix.md).
-- Справочник: [Команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [аудит реализации](reference/implementation-audit.md), [полнота плана](reference/plan-completeness.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md) и [диагностика готовности](reference/readiness-diagnostics.md).
+- Адаптеры: [Установка](adapters/install.md), [поддержка](adapters/support-matrix.md), [управляемые сессии](adapters/managed-session-support.md) и [прогресс](adapters/progress-bridge-matrix.md).
+- Справочник: [Команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [управляемые сессии адаптеров](reference/managed-adapter-sessions.md), [аудит реализации](reference/implementation-audit.md), [полнота плана](reference/plan-completeness.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md) и [диагностика готовности](reference/readiness-diagnostics.md).
 - Качество, ресурсы и безопасность: [компактные пакеты для маленьких моделей](reference/small-model-packets.md), [адаптивные правила](reference/adaptive-lifecycle-policy.md), [локальная статистика качества](reference/quality-cost-learning.md), [учёт расхода жизненного цикла](reference/lifecycle-cost.md), [экспорт использования](reference/usage-export.md), [целостность подтверждений](reference/evidence-integrity.md), [границы песочницы](reference/sandbox-boundaries.md) и [безопасность релиза](security/release-security.md).
 - Профили и операции: [статус без записи](reference/read-only-status-view.md), [прогресс](reference/automatic-progress-bridge.md), [импорт](reference/import-mappers.md), [эпизоды](reference/episode-retrieval.md), [восстановление](reference/runner-recovery.md), [перепроверка](reference/cross-check-profile.md), [Bug Forensics](reference/bug-forensics.md) и [бюджет контекста](reference/bug-forensics-context-budget.md).
 - Релизные материалы: [шаблоны задач](reference/task-templates.md).

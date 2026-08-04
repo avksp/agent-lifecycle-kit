@@ -102,6 +102,13 @@ read-only unless their own help says otherwise.
   skeleton.
 - `agent-lifecycle adapter install-plan`: preview host setup without writes.
 - `agent-lifecycle adapter event-check`: validate event capture receipts.
+- `agent-lifecycle adapter session start/status/resume/promote`: record and
+  resume adapter sessions. Plain interactive sessions return
+  `WAITING_FOR_TASK`; promoted sessions bind to workflow state and task lineage.
+- `agent-lifecycle adapter run`: bind an adapter session to a frozen workflow
+  state and return an ALK-managed next action. Progress is shown on stderr by
+  default for this managed path, while JSON stdout stays
+  `agent-adapter-session-receipt.v1`.
 
 ## Diagnostics and evidence
 

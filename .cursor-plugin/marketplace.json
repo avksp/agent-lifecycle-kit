@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Provider-neutral lifecycle kit for reviewed SDD planning, budgeted execution, adapter conformance, independent audits, and final proof.",
-    "version": "1.37.0"
+    "version": "1.38.0"
   },
   "plugins": [
     {
       "name": "agent-lifecycle-kit",
       "source": ".",
       "description": "Reviewed SDD planning, budgeted execution, adapter conformance, implementation audit, and final proof.",
-      "version": "1.37.0",
+      "version": "1.38.0",
       "author": {
         "name": "Agent Lifecycle Kit contributors"
       },

@@ -1,6 +1,6 @@
 {
   "adapterId": "opencode",
-  "descriptorDigest": "14ad33a3c0f7585d11b229f1a898831668ea14b2bacdebe6f70bd02fcfc2348d",
+  "descriptorDigest": "918b93ca5281f38e8588d9168aca02e66301fcc82d03a14f61b3c341abc6785a",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "2660e01336059be098c7787788f6e87a05441efd05c85b650900b742dd01071e",
@@ -25,5 +25,5 @@
   "status": "PASS",
   "taskId": "adapter-event-capture",
   "terminalEvent": "task.completed",
-  "receiptDigest": "7b4ef031a5dfeec98007d587528cba712f3098f0363188a289e0bda3e5ecd169"
+  "receiptDigest": "0804068cd7d96adb719bb1a7c7ffd7cc17fe735b352f1c485be83212842ece7f"
 }

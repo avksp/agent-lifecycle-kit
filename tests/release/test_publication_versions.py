@@ -14,8 +14,8 @@ sys.path.insert(0, str(TOOLS_RELEASE))
 from publication_contract import build_publication_manifest, validate_publication_tree  # noqa: E402
 
 
-TARGET_VERSION = "1.37.0"
-TARGET_REF = "v1.37.0"
+TARGET_VERSION = "1.38.0"
+TARGET_REF = "v1.38.0"
 
 
 class PublicationVersionTests(unittest.TestCase):

@@ -11,7 +11,7 @@
     "boundary": "adapter-owned",
     "portableEventSchema": "agent-adapter-event.v1"
   },
-  "descriptorDigest": "675515c48d234921ed8fc0b515d215c12066fdec2cf610851a1c6d4529145feb",
+  "descriptorDigest": "58eef00223913a841f1eb139561deb4cb4ee2072c5da46c965b8516e85851474",
   "eventStreamDigest": "1dd4889f819b335ddb3574cca11ec94ffb6a4714eb23f47f5eaf452f62182006",
   "eventCount": 6,
   "eventTypes": [
@@ -25,5 +25,5 @@
   "terminalEvent": "task.completed",
   "emittedAt": "2026-07-31T00:23:00Z",
   "productionPromotionClaimed": false,
-  "receiptDigest": "b4e6a223133febe3b96fd0a36f12631ee5d08601c5735a8b40dd989afa52b6cd"
+  "receiptDigest": "bf574e2c601392b0aa0a6a5de3af5320a17a40928a2339f4cd6e4b1b5b14923d"
 }

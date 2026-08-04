@@ -83,6 +83,14 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle adapter validate`: проверка дескриптора.
 - `agent-lifecycle adapter inspect`: безопасный осмотр адаптера.
 - `agent-lifecycle adapter install-plan`: пробный план установки без записи.
+- `agent-lifecycle adapter session start/status/resume/promote`: запись и
+  возобновление сессий адаптеров. Обычная интерактивная сессия возвращает
+  `WAITING_FOR_TASK`; promoted-сессия связывается с состоянием workflow и
+  задачей.
+- `agent-lifecycle adapter run`: связывает сессию адаптера с зафиксированным
+  workflow state и возвращает управляемый следующий шаг ALK. Для этого
+  управляемого пути прогресс по умолчанию показывается в stderr, а JSON stdout
+  остаётся `agent-adapter-session-receipt.v1`.
 
 ## Контекст и продолжение
 
