@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "2af506b0ac54f0d27aa5c70035b366f46ee4ea3ebdfa772e90dd76c4aa7dbc43",
+  "descriptorDigest": "d00b0c9d573244db8e17d1f2d2c45c9d65ae5bb9d542dd37592233c62c4658fb",
   "eventCapture": {
     "categories": [
       "command",

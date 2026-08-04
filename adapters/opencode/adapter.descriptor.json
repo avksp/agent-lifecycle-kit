@@ -175,5 +175,18 @@
     ],
     "producerBoundary": "adapter-owned",
     "promotionRequired": false
+  },
+  "managedLaunch": {
+    "status": "WRAPPER_ONLY",
+    "reason": "No shipped descriptor argv profile for native host launch yet; use ALK-managed run/promote for lifecycle proof or a host-local wrapper.",
+    "shell": false,
+    "timeoutSeconds": 30.0,
+    "env": {
+      "allow": [],
+      "allowPatterns": [],
+      "projectPolicyAllowed": true
+    },
+    "writesNativeConfig": false,
+    "promptInjectionDefault": false
   }
 }

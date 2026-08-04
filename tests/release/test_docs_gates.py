@@ -286,6 +286,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-runner-snapshot.v1`.\n"
         "`agent-managed-lifecycle-next-action.v1`.\n"
         "`agent-managed-lifecycle-runner-receipt.v1`.\n"
+        "`agent-adapter-session-receipt.v1`.\n"
+        "`agent-managed-adapter-launch-receipt.v1`.\n"
+        "`agent-adapter-session-resume-receipt.v1`.\n"
         "`agent-no-model-call-scan.v1`.\n"
         "`agent-plan-completeness-profile.v1`.\n"
         "`agent-plan-completeness-validation.v1`.\n"
@@ -328,6 +331,24 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/public-contracts.md", public_contracts)
     _write_text(root / "docs/ru/reference/public-contracts.md", public_contracts)
+    cli = (
+        "adapter session start/status/resume/promote.\n"
+        "adapter run.\n"
+        "`WAITING_FOR_TASK`.\n"
+        "`agent-adapter-session-receipt.v1`.\n"
+    )
+    _write_text(root / "docs/reference/cli.md", cli)
+    _write_text(root / "docs/ru/reference/cli.md", cli)
+    install = (
+        "`agent-lifecycle adapter session start/status/resume/promote`.\n"
+        "`agent-lifecycle adapter run`.\n"
+        "`agent-adapter-session-receipt.v1`.\n"
+        "`managedLaunch.status: WRAPPER_ONLY`.\n"
+        "docs/adapters/managed-session-support.md.\n"
+        "docs/ru/adapters/managed-session-support.md.\n"
+    )
+    _write_text(root / "docs/adapters/install.md", install)
+    _write_text(root / "docs/ru/adapters/install.md", install)
     implementation_audit = (
         "`agent-implementation-audit-report.v1`.\n"
         "`agent-final-implementation-audit.v1`.\n"
@@ -597,6 +618,30 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Адаптеры хостов отвечают.\n",
     )
     _write_text(
+        root / "docs/reference/managed-adapter-sessions.md",
+        "`agent-adapter-session-receipt.v1`.\n"
+        "`agent-managed-adapter-launch-receipt.v1`.\n"
+        "`agent-adapter-session-resume-receipt.v1`.\n"
+        "adapter session start.\n"
+        "adapter session resume.\n"
+        "adapter run.\n"
+        "`WRAPPER_ONLY`.\n"
+        "shell: false.\n"
+        "plugin installation alone.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/managed-adapter-sessions.md",
+        "`agent-adapter-session-receipt.v1`.\n"
+        "`agent-managed-adapter-launch-receipt.v1`.\n"
+        "`agent-adapter-session-resume-receipt.v1`.\n"
+        "adapter session start.\n"
+        "adapter session resume.\n"
+        "adapter run.\n"
+        "`WRAPPER_ONLY`.\n"
+        "shell: false.\n"
+        "установка plugin.\n",
+    )
+    _write_text(
         root / "docs/adapters/progress-bridge-matrix.md",
         "Progress support is documented separately from adapter maturity.\n"
         "`AUTO`. `WATCH`. `MANUAL`. `UNSUPPORTED`.\n"
@@ -609,6 +654,22 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`AUTO`. `WATCH`. `MANUAL`. `UNSUPPORTED`.\n"
         "agent-lifecycle report progress-bridge.\n"
         "не заявляет неподдерживаемые native hooks.\n",
+    )
+    _write_text(
+        root / "docs/adapters/managed-session-support.md",
+        "Managed session support is separate from adapter maturity.\n"
+        "`WRAPPER_ONLY`.\n"
+        "agent-lifecycle adapter run.\n"
+        "does not claim safe native argv launch.\n"
+        "plugin installation.\n",
+    )
+    _write_text(
+        root / "docs/ru/adapters/managed-session-support.md",
+        "Поддержка управляемых сессий отделена от зрелости адаптера.\n"
+        "`WRAPPER_ONLY`.\n"
+        "agent-lifecycle adapter run.\n"
+        "не заявляет безопасный запуск нативного CLI.\n"
+        "lifecycle proof.\n",
     )
     for host in (
         "claude",

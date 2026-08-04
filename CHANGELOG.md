@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.38.0 - 2026-08-04
+
+- Added managed adapter session receipts and commands for `adapter session
+  start/status/resume/promote` and `adapter run`, with lineage-checked resume
+  and managed workflow proof boundaries.
+- Added descriptor-driven `managedLaunch` profiles for all bundled adapters and
+  secure launch validation for argv arrays, `shell=False`, env allowlists,
+  redaction and no native config writes.
+- Documented managed session support separately from plugin installation,
+  adapter maturity and progress support, and updated publication metadata to
+  `1.38.0`.
+
 ## 1.37.0 - 2026-08-04
 
 - Added opt-in progress hooks for `workflow run`, `workflow task-result`,
