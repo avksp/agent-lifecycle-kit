@@ -57,8 +57,9 @@ network client imports such as `openai`, `anthropic`, `requests`, `httpx` and
 ## Typical host loop
 
 1. Call `workflow run`.
-2. Call `report progress --watch` or render one `report progress` projection
-   after a lifecycle transition when the host wants a visible status line.
+2. Call `report progress --terminal` for a one-shot status line, `report
+   progress --watch` for bounded watching, or `report progress-bridge` when an
+   adapter wrapper needs a stable bridge receipt.
 3. If `status` is `FAIL`, surface the typed blocker.
 4. If `nextAction.type` is `launch-tasks`, the host launches the listed task
    packets and later records `workflow task-result`.
