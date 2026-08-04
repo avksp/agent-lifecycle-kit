@@ -16,3 +16,7 @@ to ALK core.
 Support level: `MANUAL`. Use `agent-lifecycle report progress --state <state>
 --terminal` after ALK workflow transitions. Provider credentials and telemetry
 remain outside ALK core.
+
+ALK-managed workflow commands can also use `--progress-hook stderr` or
+`--progress-hook receipt --progress-receipt <path>`. This records managed
+workflow proof, not an OpenInterpreter native hook.

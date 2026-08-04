@@ -12,6 +12,8 @@ Progress bridge помогает адаптеру показать прогре�
 - `agent-lifecycle report progress-bridge` возвращает
   `agent-progress-bridge-receipt.v1` для обёрток адаптеров.
 - `agent-progress-bridge-config.v1` фиксирует уровень поддержки адаптера.
+- `agent-progress-hook-policy.v1` и `agent-progress-hook-receipt.v1` фиксируют
+  включаемый hook от ALK-managed workflow команд.
 - Существующие JSON-команды остаются стандартным машинным контрактом.
 
 Bridge не является источником правды. Авторитетным остаётся состояние рабочего
@@ -19,11 +21,37 @@ Bridge не является источником правды. Авторите
 `stateWritten: false`, `tokenSpendForProgress: false` и
 `hostTelemetryParsedInCore: false`.
 
+## Hook для управляемого рабочего цикла
+
+Команды рабочего цикла под управлением ALK могут показать прогресс после
+успешного перехода:
+
+```bash
+agent-lifecycle workflow run \
+  --state <workflow-state.json> \
+  --manifest <plan.manifest.json> \
+  --operation-id <id> \
+  --expected-revision <n> \
+  --source-revision <git-sha> \
+  --progress-hook stderr
+```
+
+Поддерживаются `workflow run`, `workflow task-result`, `workflow task-accept`
+и `workflow finalize`. Hook выключен по умолчанию. `--progress-hook stderr`
+пишет текст прогресса в stderr. `--progress-hook receipt --progress-receipt
+<path>` пишет `agent-progress-hook-receipt.v1` и не меняет stdout. Обёртки
+могут использовать `ALK_PROGRESS_HOOK=stderr`, но CLI-флаги остаются
+каноничным способом включения.
+
+`AUTO` для прогресса требует подтверждения, что команда была управляемой
+командой ALK. Сам факт установки plugin или skill не является доказательством
+полного жизненного цикла.
+
 ## Уровни поддержки
 
 | Уровень | Значение |
 | --- | --- |
-| `AUTO` | Интеграция хоста может вызывать bridge из своего lifecycle hook. |
+| `AUTO` | Интеграция хоста может вызывать bridge из управляемой команды ALK или поставляемой обёртки с proof. |
 | `WATCH` | Оператор или обёртка может запустить наблюдение в отдельном терминале. |
 | `MANUAL` | Оператор может выполнить разовую команду прогресса. |
 | `UNSUPPORTED` | Поддерживаемого hook или описанной обёртки пока нет. |
@@ -71,7 +99,7 @@ agent-lifecycle report progress-bridge \
 
 ## Ответственность хоста
 
-Адаптеры хостов отвечают за нативный запуск, отмену, ожидание, provider/model
-telemetry и автоматические hook. Core ALK не патчит host CLI, не запускает
-фоновых демонов, не добавляет prompt injection и не разбирает host-specific
-telemetry.
+Адаптеры хостов отвечают за нативный запуск, отмену, ожидание, telemetry
+провайдера/модели и native hook. Core ALK не изменяет host CLI, не запускает
+фоновых демонов, не добавляет текст в запрос к модели и не разбирает
+host-specific telemetry.

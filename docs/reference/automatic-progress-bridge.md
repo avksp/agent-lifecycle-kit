@@ -11,6 +11,8 @@ The bridge is intentionally small:
 - `agent-lifecycle report progress-bridge` returns
   `agent-progress-bridge-receipt.v1` for adapter wrappers.
 - `agent-progress-bridge-config.v1` records an adapter support declaration.
+- `agent-progress-hook-policy.v1` and `agent-progress-hook-receipt.v1` record
+  opt-in hooks from ALK-managed workflow commands.
 - Existing JSON commands stay the default machine contract.
 
 The bridge is not source of truth. Workflow state remains authoritative. The
@@ -18,13 +20,37 @@ bridge reports `readOnly: true`, `modelCallsStarted: false`,
 `stateWritten: false`, `tokenSpendForProgress: false` and
 `hostTelemetryParsedInCore: false`.
 
+## Managed workflow hooks
+
+ALK-managed workflow commands can emit progress after a successful transition:
+
+```bash
+agent-lifecycle workflow run \
+  --state <workflow-state.json> \
+  --manifest <plan.manifest.json> \
+  --operation-id <id> \
+  --expected-revision <n> \
+  --source-revision <git-sha> \
+  --progress-hook stderr
+```
+
+The supported commands are `workflow run`, `workflow task-result`,
+`workflow task-accept` and `workflow finalize`. The hook is off by default.
+`--progress-hook stderr` writes terminal progress to stderr. `--progress-hook
+receipt --progress-receipt <path>` writes `agent-progress-hook-receipt.v1`
+without changing stdout. Wrapper scripts may set `ALK_PROGRESS_HOOK=stderr`,
+but flags are the canonical interface.
+
+`AUTO` progress requires proof that the command is ALK-managed. Installing a
+plugin or skill is not lifecycle proof by itself.
+
 ## Support levels
 
 Adapters document one support level:
 
 | Level | Meaning |
 | --- | --- |
-| `AUTO` | The host integration can call the bridge from a native lifecycle hook. |
+| `AUTO` | The host integration can call the bridge from an ALK-managed command or shipped wrapper with proof. |
 | `WATCH` | The operator or wrapper can run a side terminal watch. |
 | `MANUAL` | The operator can run a one-shot progress command. |
 | `UNSUPPORTED` | No supported hook or documented wrapper exists yet. |
@@ -72,5 +98,5 @@ dedicated Git helper.
 ## Host responsibility
 
 Host adapters remain responsible for native launches, cancellation, waits,
-provider/model telemetry and any automatic hook. Core ALK does not patch host
+provider/model telemetry and any native hook. Core ALK does not patch host
 CLIs, run a background daemon, inject prompts, or parse host-specific telemetry.
