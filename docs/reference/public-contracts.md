@@ -44,6 +44,9 @@ Stable schema ids:
 - `agent-runner-snapshot.v1`
 - `agent-managed-lifecycle-next-action.v1`
 - `agent-managed-lifecycle-runner-receipt.v1`
+- `agent-adapter-session-receipt.v1`
+- `agent-managed-adapter-launch-receipt.v1`
+- `agent-adapter-session-resume-receipt.v1`
 - `agent-no-model-call-scan.v1`
 - `agent-plan-completeness-profile.v1`
 - `agent-plan-completeness-profile-validation.v1`
@@ -108,6 +111,13 @@ typed read-only `workflow run` projection that checks frozen plan/state lineage
 and returns the next host-owned action. Implementation audit reports bind task
 results, independent reviews, ownership, evidence and sandbox checks before a
 task or run can pass a mandatory audit gate.
+Managed adapter session receipts bind an adapter session to a workflow state
+and task lineage only when the operator uses an ALK-managed command such as
+`adapter run` or `adapter session promote`. Plain plugin installation and
+plain interactive sessions do not claim lifecycle coverage. Managed launch
+receipts use descriptor-owned argv profiles, `shell: false`, allowlisted
+environment names and redacted output; current bundled adapters declare
+`WRAPPER_ONLY` rather than unsupported native launch claims.
 Plan completeness validation checks the selected SDD tier before audit, so
 small plans can stay compact while risky S2 work still has requirements,
 acceptance, evidence routes, ownership, budgets, context limits and final gates.

@@ -50,6 +50,11 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn(("report progress --watch", "agent-lifecycle-progress-watch.v1"), cli_outputs)
         self.assertIn(("report progress-bridge", "agent-progress-bridge-receipt.v1"), cli_outputs)
         self.assertIn(("workflow * --progress-hook receipt", "agent-progress-hook-receipt.v1"), cli_outputs)
+        self.assertIn(("adapter session start", "agent-adapter-session-receipt.v1"), cli_outputs)
+        self.assertIn(("adapter session status", "agent-adapter-session-receipt.v1"), cli_outputs)
+        self.assertIn(("adapter session promote", "agent-adapter-session-receipt.v1"), cli_outputs)
+        self.assertIn(("adapter session resume", "agent-adapter-session-resume-receipt.v1"), cli_outputs)
+        self.assertIn(("adapter run", "agent-adapter-session-receipt.v1"), cli_outputs)
         self.assertIn(("report change-summary", "agent-change-summary-receipt.v1"), cli_outputs)
         self.assertFalse(policy["productionPromotionClaimed"])
 

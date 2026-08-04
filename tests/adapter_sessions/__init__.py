@@ -1,0 +1,1 @@
+"""Adapter session tests."""

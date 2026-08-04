@@ -52,6 +52,9 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-runner-snapshot.v1`",
             "`agent-managed-lifecycle-next-action.v1`",
             "`agent-managed-lifecycle-runner-receipt.v1`",
+            "`agent-adapter-session-receipt.v1`",
+            "`agent-managed-adapter-launch-receipt.v1`",
+            "`agent-adapter-session-resume-receipt.v1`",
             "`agent-no-model-call-scan.v1`",
             "`agent-plan-completeness-profile.v1`",
             "`agent-plan-completeness-validation.v1`",
@@ -107,6 +110,9 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-runner-snapshot.v1`",
             "`agent-managed-lifecycle-next-action.v1`",
             "`agent-managed-lifecycle-runner-receipt.v1`",
+            "`agent-adapter-session-receipt.v1`",
+            "`agent-managed-adapter-launch-receipt.v1`",
+            "`agent-adapter-session-resume-receipt.v1`",
             "`agent-no-model-call-scan.v1`",
             "`agent-plan-completeness-profile.v1`",
             "`agent-plan-completeness-validation.v1`",
@@ -463,6 +469,44 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/cli.md",
+        (
+            "adapter session start/status/resume/promote",
+            "adapter run",
+            "`WAITING_FOR_TASK`",
+            "`agent-adapter-session-receipt.v1`",
+        ),
+    ),
+    (
+        "docs/ru/reference/cli.md",
+        (
+            "adapter session start/status/resume/promote",
+            "adapter run",
+            "`WAITING_FOR_TASK`",
+            "`agent-adapter-session-receipt.v1`",
+        ),
+    ),
+    (
+        "docs/adapters/install.md",
+        (
+            "`agent-lifecycle adapter session start/status/resume/promote`",
+            "`agent-lifecycle adapter run`",
+            "`agent-adapter-session-receipt.v1`",
+            "`managedLaunch.status: WRAPPER_ONLY`",
+            "docs/adapters/managed-session-support.md",
+        ),
+    ),
+    (
+        "docs/ru/adapters/install.md",
+        (
+            "`agent-lifecycle adapter session start/status/resume/promote`",
+            "`agent-lifecycle adapter run`",
+            "`agent-adapter-session-receipt.v1`",
+            "`managedLaunch.status: WRAPPER_ONLY`",
+            "docs/ru/adapters/managed-session-support.md",
+        ),
+    ),
+    (
         "docs/reference/automatic-progress-bridge.md",
         (
             "`agent-progress-bridge-receipt.v1`",
@@ -491,6 +535,34 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/managed-adapter-sessions.md",
+        (
+            "`agent-adapter-session-receipt.v1`",
+            "`agent-managed-adapter-launch-receipt.v1`",
+            "`agent-adapter-session-resume-receipt.v1`",
+            "adapter session start",
+            "adapter session resume",
+            "adapter run",
+            "`WRAPPER_ONLY`",
+            "shell: false",
+            "plugin installation alone",
+        ),
+    ),
+    (
+        "docs/ru/reference/managed-adapter-sessions.md",
+        (
+            "`agent-adapter-session-receipt.v1`",
+            "`agent-managed-adapter-launch-receipt.v1`",
+            "`agent-adapter-session-resume-receipt.v1`",
+            "adapter session start",
+            "adapter session resume",
+            "adapter run",
+            "`WRAPPER_ONLY`",
+            "shell: false",
+            "установка plugin",
+        ),
+    ),
+    (
         "docs/adapters/progress-bridge-matrix.md",
         (
             "Progress support is documented separately from adapter maturity",
@@ -500,6 +572,26 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`UNSUPPORTED`",
             "agent-lifecycle report progress-bridge",
             "No adapter claims unsupported native hooks",
+        ),
+    ),
+    (
+        "docs/adapters/managed-session-support.md",
+        (
+            "Managed session support is separate from adapter maturity",
+            "`WRAPPER_ONLY`",
+            "agent-lifecycle adapter run",
+            "does not claim safe native argv launch",
+            "plugin installation",
+        ),
+    ),
+    (
+        "docs/ru/adapters/managed-session-support.md",
+        (
+            "Поддержка управляемых сессий отделена от зрелости адаптера",
+            "`WRAPPER_ONLY`",
+            "agent-lifecycle adapter run",
+            "не заявляет безопасный запуск нативного CLI",
+            "lifecycle proof",
         ),
     ),
     (
