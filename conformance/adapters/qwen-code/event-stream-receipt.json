@@ -1,6 +1,6 @@
 {
   "adapterId": "qwen-code",
-  "descriptorDigest": "aded035685b105583ecd33ed11de8ad3dcd2cceef5347c78e10f06029c977249",
+  "descriptorDigest": "21389ddebb806504d4a1547573a8533ed961142b741bfbed8b4a018b358c6683",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "c23a411fab3dd994eb2898cb483eac3eb8fb19109812881844fa728dd464df0f",
@@ -25,5 +25,5 @@
   "status": "PASS",
   "taskId": "adapter-event-capture",
   "terminalEvent": "task.completed",
-  "receiptDigest": "644cf3becf0a87f57a57c15888a4d20cf57d8acde8afd16fdbaae27bc457598d"
+  "receiptDigest": "7ee66150df390077b2a1d7c30b9f3057f6cb832bf9d7447b2494f6d50cf648d8"
 }

@@ -62,6 +62,11 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
         "schemaVersion": "agent-progress-hook-receipt.v1",
         "compatibility": "explicit-side-receipt-json",
     },
+    {"command": "adapter session start", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
+    {"command": "adapter session status", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
+    {"command": "adapter session promote", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
+    {"command": "adapter session resume", "schemaVersion": "agent-adapter-session-resume-receipt.v1", "compatibility": "stable-json"},
+    {"command": "adapter run", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
     {"command": "specification completion-gate", "schemaVersion": "agent-completion-gate-receipt.v1", "compatibility": "stable-json"},
     {"command": "task compile-small", "schemaVersion": "agent-small-model-packet-compile-result.v1", "compatibility": "stable-json"},
 )

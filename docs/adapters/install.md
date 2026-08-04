@@ -78,6 +78,16 @@ next action and fail-closed blockers, but it does not start a model, mutate
 workflow state or write host secrets into receipts. Adapters remain responsible
 for native launches, waits, cancellation and telemetry.
 
+For an ALK-owned entrypoint around adapter sessions, use
+`agent-lifecycle adapter session start/status/resume/promote` or
+`agent-lifecycle adapter run`. These commands produce
+`agent-adapter-session-receipt.v1` and
+`agent-adapter-session-resume-receipt.v1` receipts, bind managed runs to frozen
+workflow state, and keep plugin installation separate from lifecycle proof. The
+current bundled adapters declare `managedLaunch.status: WRAPPER_ONLY`; ALK can
+record managed session proof, but it does not claim safe native argv launch for
+those host CLIs from core. See `docs/adapters/managed-session-support.md`.
+
 ## Adapter progress bridge
 
 Adapters can expose progress without changing the lifecycle state. Use

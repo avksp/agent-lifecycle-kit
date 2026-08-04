@@ -1,6 +1,6 @@
 {
   "adapterId": "pi",
-  "descriptorDigest": "d40d694ce18ec45546d619eef5a11b12327e2197a013ad850d89c7202b04a82f",
+  "descriptorDigest": "1f55e2f940c1a6dacc06373430b9c83f1dc4eb7b78bf2532bb2522ae4a07a019",
   "emittedAt": "2026-07-31T00:23:00Z",
   "eventCount": 6,
   "eventStreamDigest": "d810ba2ada1f51876732fa74dbcb472f25355438839a00899c7d924b2d216c36",
@@ -25,5 +25,5 @@
   "status": "PASS",
   "taskId": "adapter-event-capture",
   "terminalEvent": "task.completed",
-  "receiptDigest": "4f6a4028d494261c2327858a7eb2c803b9a316075b17bf288cb78a8a46268499"
+  "receiptDigest": "d20c7cdb0a08a0252e068856a57597037f4d44bcfc769167759a7be31ef612b6"
 }
