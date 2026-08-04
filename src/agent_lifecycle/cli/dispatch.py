@@ -101,8 +101,11 @@ from agent_lifecycle.reporting import (
     build_change_summary_receipt,
     build_lifecycle_progress_view,
     build_lifecycle_progress_watch,
+    build_progress_bridge_receipt,
     build_status_view,
     build_workflow_event_feed,
+    render_progress_bridge_terminal,
+    render_progress_terminal,
     render_usage_export_json,
     render_usage_export_table,
 )
@@ -136,7 +139,7 @@ from agent_lifecycle.workflow import (
 )
 
 
-def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] | None:
+def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] | str | None:
     if args.command == "version":
         return {"schemaVersion": "agent-lifecycle-version.v1", "version": __version__}
     if args.command == "schema":
@@ -330,7 +333,7 @@ def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
     raise LifecycleError("command-not-implemented", "quality command is not implemented")
 
 
-def _dispatch_report(args: argparse.Namespace) -> dict[str, Any]:
+def _dispatch_report(args: argparse.Namespace) -> dict[str, Any] | str:
     if args.report_command == "status-view":
         payload = build_status_view(
             project_root=Path(args.project_root),
@@ -340,6 +343,24 @@ def _dispatch_report(args: argparse.Namespace) -> dict[str, Any]:
         )
         if args.out:
             write_json_create(Path(args.out), payload)
+        return payload
+    if args.report_command == "progress-bridge":
+        payload = build_progress_bridge_receipt(
+            adapter_id=args.adapter,
+            support_level=args.support_level,
+            hook_point=args.hook_point,
+            state_path=Path(args.state),
+            usage_receipt_paths=[Path(item) for item in args.usage_receipt],
+            change_summary_path=Path(args.change_summary) if args.change_summary else None,
+            display_mode=args.display_mode,
+            watch=args.watch,
+            iterations=args.watch_iterations,
+            interval_seconds=args.watch_interval,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        if args.terminal:
+            return render_progress_bridge_terminal(payload)
         return payload
     if args.report_command == "event-feed":
         payload = build_workflow_event_feed(state_path=Path(args.state))
@@ -363,6 +384,8 @@ def _dispatch_report(args: argparse.Namespace) -> dict[str, Any]:
             )
         if args.out:
             write_json_create(Path(args.out), payload)
+        if args.terminal:
+            return render_progress_terminal(payload)
         return payload
     if args.report_command == "change-summary":
         payload = build_change_summary_receipt(

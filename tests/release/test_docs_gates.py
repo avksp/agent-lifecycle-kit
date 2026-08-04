@@ -52,7 +52,9 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/README.md",
             "docs/ru/quickstart.md",
             "docs/ru/adapters/install.md",
+            "docs/ru/adapters/progress-bridge-matrix.md",
             "docs/ru/adapters/support-matrix.md",
+            "docs/ru/reference/automatic-progress-bridge.md",
             "docs/ru/reference/cli.md",
             "docs/ru/reference/source-of-truth.md",
             "docs/ru/reference/public-contracts.md",
@@ -63,6 +65,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/lifecycle-cost.md",
             "docs/ru/security/release-security.md",
             "docs/adapters/install.md",
+            "docs/adapters/progress-bridge-matrix.md",
+            "docs/reference/automatic-progress-bridge.md",
             "docs/reference/cli.md",
             "docs/reference/source-of-truth.md",
             "docs/reference/adaptive-lifecycle-policy.md",
@@ -301,6 +305,10 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-readonly-status-view.v1`.\n"
         "`agent-workflow-event-feed.v1`.\n"
         "`agent-lifecycle-progress-view.v1`.\n"
+        "`agent-lifecycle-progress-watch.v1`.\n"
+        "`agent-change-summary-receipt.v1`.\n"
+        "`agent-progress-bridge-config.v1`.\n"
+        "`agent-progress-bridge-receipt.v1`.\n"
         "`agent-lifecycle-quality-floor-decision.v1`.\n"
         "`agent-adaptive-lifecycle-policy-request.v1`.\n"
         "`agent-adaptive-lifecycle-policy-decision.v1`.\n"
@@ -536,13 +544,69 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-lifecycle-progress-view.v1`.\n"
         "`agent-lifecycle-progress-watch.v1`.\n"
         "`agent-change-summary-receipt.v1`.\n"
+        "`agent-progress-bridge-receipt.v1`.\n"
         "not source of truth.\n"
         "small local model.\n"
         "agent-lifecycle report status-view.\n"
         "agent-lifecycle report event-feed.\n"
         "agent-lifecycle report progress.\n"
+        "agent-lifecycle report progress-bridge.\n"
         "agent-lifecycle report change-summary.\n"
-        "--watch.\n",
+        "--watch.\n"
+        "--terminal.\n"
+        "host-specific telemetry.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/read-only-status-view.md",
+        "`agent-readonly-status-view.v1`.\n"
+        "`agent-workflow-event-feed.v1`.\n"
+        "`agent-lifecycle-progress-view.v1`.\n"
+        "`agent-lifecycle-progress-watch.v1`.\n"
+        "`agent-change-summary-receipt.v1`.\n"
+        "`agent-progress-bridge-receipt.v1`.\n"
+        "не является источником правды.\n"
+        "agent-lifecycle report progress-bridge.\n"
+        "--watch.\n"
+        "--terminal.\n"
+        "host-specific telemetry.\n",
+    )
+    _write_text(
+        root / "docs/reference/automatic-progress-bridge.md",
+        "`agent-progress-bridge-receipt.v1`.\n"
+        "`agent-progress-bridge-config.v1`.\n"
+        "readOnly: true.\n"
+        "modelCallsStarted: false.\n"
+        "tokenSpendForProgress: false.\n"
+        "hostTelemetryParsedInCore: false.\n"
+        "agent-lifecycle report progress-bridge.\n"
+        "does not infer missing counts.\n"
+        "Host adapters remain responsible.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/automatic-progress-bridge.md",
+        "`agent-progress-bridge-receipt.v1`.\n"
+        "`agent-progress-bridge-config.v1`.\n"
+        "readOnly: true.\n"
+        "modelCallsStarted: false.\n"
+        "tokenSpendForProgress: false.\n"
+        "hostTelemetryParsedInCore: false.\n"
+        "agent-lifecycle report progress-bridge.\n"
+        "не вычисляет токены.\n"
+        "Адаптеры хостов отвечают.\n",
+    )
+    _write_text(
+        root / "docs/adapters/progress-bridge-matrix.md",
+        "Progress support is documented separately from adapter maturity.\n"
+        "`AUTO`. `WATCH`. `MANUAL`. `UNSUPPORTED`.\n"
+        "agent-lifecycle report progress-bridge.\n"
+        "No adapter claims unsupported native hooks.\n",
+    )
+    _write_text(
+        root / "docs/ru/adapters/progress-bridge-matrix.md",
+        "Поддержка прогресса описывается отдельно от зрелости адаптера.\n"
+        "`AUTO`. `WATCH`. `MANUAL`. `UNSUPPORTED`.\n"
+        "agent-lifecycle report progress-bridge.\n"
+        "не заявляет неподдерживаемые native hooks.\n",
     )
     for host in (
         "claude",

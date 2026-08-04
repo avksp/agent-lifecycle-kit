@@ -46,6 +46,7 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn(("report event-feed", "agent-workflow-event-feed.v1"), cli_outputs)
         self.assertIn(("report progress", "agent-lifecycle-progress-view.v1"), cli_outputs)
         self.assertIn(("report progress --watch", "agent-lifecycle-progress-watch.v1"), cli_outputs)
+        self.assertIn(("report progress-bridge", "agent-progress-bridge-receipt.v1"), cli_outputs)
         self.assertIn(("report change-summary", "agent-change-summary-receipt.v1"), cli_outputs)
         self.assertFalse(policy["productionPromotionClaimed"])
 

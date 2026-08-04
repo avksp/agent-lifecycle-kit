@@ -50,6 +50,7 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "report event-feed", "schemaVersion": "agent-workflow-event-feed.v1", "compatibility": "stable-json"},
     {"command": "report progress", "schemaVersion": "agent-lifecycle-progress-view.v1", "compatibility": "stable-json"},
     {"command": "report progress --watch", "schemaVersion": "agent-lifecycle-progress-watch.v1", "compatibility": "stable-json"},
+    {"command": "report progress-bridge", "schemaVersion": "agent-progress-bridge-receipt.v1", "compatibility": "stable-json"},
     {"command": "report change-summary", "schemaVersion": "agent-change-summary-receipt.v1", "compatibility": "stable-json"},
     {
         "command": "workflow run",

@@ -11,3 +11,10 @@ invalid invocation contract must fail closed.
 
 This adapter does not claim public directory approval, production platform
 promotion, universal ACP support, or verified OS sandbox containment.
+
+## Progress bridge
+
+Support level: `WATCH`. Goose wrappers can call `agent-lifecycle report
+progress-bridge --adapter goose --support-level WATCH --hook-point
+side-terminal-watch --state <state>`. This is a local read-only display; ACP
+support remains separately probe-gated.

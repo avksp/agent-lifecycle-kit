@@ -10,3 +10,9 @@ from OpenInterpreter's normal credential source; ALK can scope a private env
 file to the harness process only with an explicit `--host-env-allow` variable
 name. Unsupported operations fail closed and lifecycle semantics stay delegated
 to ALK core.
+
+## Progress bridge
+
+Support level: `MANUAL`. Use `agent-lifecycle report progress --state <state>
+--terminal` after ALK workflow transitions. Provider credentials and telemetry
+remain outside ALK core.
