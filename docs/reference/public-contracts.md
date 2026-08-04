@@ -77,6 +77,8 @@ Stable schema ids:
 - `agent-change-summary-receipt.v1`
 - `agent-progress-bridge-config.v1`
 - `agent-progress-bridge-receipt.v1`
+- `agent-progress-hook-policy.v1`
+- `agent-progress-hook-receipt.v1`
 - `agent-lifecycle-quality-floor-decision.v1`
 - `agent-adaptive-lifecycle-policy-request.v1`
 - `agent-adaptive-lifecycle-policy-decision.v1`
@@ -98,7 +100,10 @@ but they do not replace source-of-truth lifecycle artifacts. Event feeds and
 progress views are projections over existing state/receipts; they do not start
 model calls, spend tokens, or mutate state. Adapter progress bridge receipts
 package those projections for host wrappers without parsing host-specific
-telemetry in core or changing adapter maturity. The managed lifecycle runner adds a
+telemetry in core or changing adapter maturity. Progress hook receipts bind the
+same projection to supported ALK-managed workflow commands while preserving
+JSON stdout and keeping plugin installation separate from lifecycle proof. The
+managed lifecycle runner adds a
 typed read-only `workflow run` projection that checks frozen plan/state lineage
 and returns the next host-owned action. Implementation audit reports bind task
 results, independent reviews, ownership, evidence and sandbox checks before a
