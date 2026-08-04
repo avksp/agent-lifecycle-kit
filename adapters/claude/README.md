@@ -15,3 +15,7 @@ Support level: `WATCH`. Claude Code wrappers can call `agent-lifecycle report
 progress-bridge --adapter claude --support-level WATCH --hook-point
 side-terminal-watch --state <state>`. Host telemetry remains native; ALK reads
 only supplied receipts.
+
+ALK-managed workflow commands can also use `--progress-hook stderr` or
+`--progress-hook receipt --progress-receipt <path>`. This records managed
+workflow proof; it does not claim a native Claude Code progress hook.

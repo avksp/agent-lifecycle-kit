@@ -16,3 +16,7 @@ progress-bridge --adapter codex --support-level WATCH --hook-point
 side-terminal-watch --state <state>` after ALK lifecycle transitions. The bridge
 is read-only, does not start model calls and does not parse Codex telemetry in
 core.
+
+ALK-managed workflow commands can also use `--progress-hook stderr` or
+`--progress-hook receipt --progress-receipt <path>`. This records managed
+workflow proof; it does not claim a native Codex progress hook.

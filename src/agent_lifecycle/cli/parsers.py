@@ -8,6 +8,7 @@ from agent_lifecycle.cli.adapter import add_adapter_parser
 from agent_lifecycle.cli.followup import add_followup_parser
 from agent_lifecycle.cli.metrics_parser import add_metrics_parser
 from agent_lifecycle.cli.policy import add_policy_parser
+from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
 from agent_lifecycle.cli.worktree import add_worktree_parser
 
 
@@ -221,6 +222,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_run.add_argument("--source-revision", required=True)
     workflow_run.add_argument("--reason")
     workflow_run.add_argument("--out")
+    add_progress_hook_args(workflow_run)
     workflow_adopt = workflow_sub.add_parser("adopt-plan")
     workflow_adopt.add_argument("--state", required=True)
     workflow_adopt.add_argument("--manifest", required=True)
@@ -269,6 +271,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_result.add_argument("--model-usage-receipt")
     workflow_result.add_argument("--budget-targets")
     workflow_result.add_argument("--reason", required=True)
+    add_progress_hook_args(workflow_result)
     workflow_budget = workflow_sub.add_parser("budget-decision")
     workflow_budget.add_argument("--state", required=True)
     workflow_budget.add_argument("--task", required=True)
@@ -298,6 +301,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_accept.add_argument("--review", required=True)
     workflow_accept.add_argument("--implementation-audit")
     workflow_accept.add_argument("--reason", required=True)
+    add_progress_hook_args(workflow_accept)
     workflow_finalize = workflow_sub.add_parser("finalize")
     workflow_finalize.add_argument("--state", required=True)
     workflow_finalize.add_argument("--operation-id", required=True)
@@ -311,6 +315,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_finalize.add_argument("--completion-gate-receipt")
     workflow_finalize.add_argument("--final-implementation-audit")
     workflow_finalize.add_argument("--reason", required=True)
+    add_progress_hook_args(workflow_finalize)
 
 
 def _add_audit_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

@@ -14,3 +14,7 @@ Support level: `WATCH`. OpenCode wrappers can call `agent-lifecycle report
 progress-bridge --adapter opencode --support-level WATCH --hook-point
 side-terminal-watch --state <state>`. OpenCode-specific telemetry
 normalization stays outside ALK core.
+
+ALK-managed workflow commands can also use `--progress-hook stderr` or
+`--progress-hook receipt --progress-receipt <path>`. This records managed
+workflow proof; it does not claim a native OpenCode progress hook.
