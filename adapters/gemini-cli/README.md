@@ -12,3 +12,7 @@ calibration and lifecycle proof are accepted for a concrete host range.
 Support level: `MANUAL`. Use `agent-lifecycle report progress --state <state>
 --terminal` after ALK workflow transitions. This does not change adapter
 maturity and does not claim unsupported native Gemini CLI hooks.
+
+ALK-managed workflow commands can also use `--progress-hook stderr` or
+`--progress-hook receipt --progress-receipt <path>`. This records managed
+workflow proof, not a Gemini CLI native hook.

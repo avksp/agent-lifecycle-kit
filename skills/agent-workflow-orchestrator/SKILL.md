@@ -33,6 +33,11 @@ cancellation, and telemetry.
 12. After all required tasks are accepted, run final implementation audit and
     publish completion only from a reproducible proof.
 
+Managed workflow commands may show progress with `--progress-hook stderr` or
+write `agent-progress-hook-receipt.v1` with `--progress-hook receipt
+--progress-receipt <path>`. Use this only as a display/proof-of-managed-command
+layer; installing a plugin or skill is not proof that the lifecycle ran.
+
 ## State rules
 
 - Immutable authority: plan manifest, plan lock, frozen packets.
@@ -60,3 +65,5 @@ cancellation, and telemetry.
 
 Return the next typed action, current run phase, locked tasks, active blockers,
 accepted evidence, remaining budget, and concrete next command or host action.
+When progress hooks are enabled, keep stdout JSON unchanged and treat stderr or
+the hook receipt as display evidence only.

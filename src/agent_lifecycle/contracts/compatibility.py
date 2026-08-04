@@ -57,6 +57,11 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
         "schemaVersion": "agent-managed-lifecycle-runner-receipt.v1",
         "compatibility": "stable-json",
     },
+    {
+        "command": "workflow * --progress-hook receipt",
+        "schemaVersion": "agent-progress-hook-receipt.v1",
+        "compatibility": "explicit-side-receipt-json",
+    },
     {"command": "specification completion-gate", "schemaVersion": "agent-completion-gate-receipt.v1", "compatibility": "stable-json"},
     {"command": "task compile-small", "schemaVersion": "agent-small-model-packet-compile-result.v1", "compatibility": "stable-json"},
 )
@@ -225,5 +230,5 @@ def _check_cli_row(row: dict[str, Any], registry_ids: set[str], blockers: list[d
     schema_version = row.get("schemaVersion")
     if schema_version != "<requested-schema>" and schema_version not in registry_ids:
         blockers.append({"code": "contract-policy-cli-schema", "command": row.get("command"), "schemaVersion": schema_version})
-    if row.get("compatibility") != "stable-json":
+    if row.get("compatibility") not in {"stable-json", "explicit-side-receipt-json"}:
         blockers.append({"code": "contract-policy-cli-compatibility", "command": row.get("command")})
