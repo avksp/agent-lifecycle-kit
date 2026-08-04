@@ -3,7 +3,7 @@
   "adapterId": "grok-build",
   "host": "grok-build",
   "maturity": "VERIFIED",
-  "descriptorDigest": "675515c48d234921ed8fc0b515d215c12066fdec2cf610851a1c6d4529145feb",
+  "descriptorDigest": "58eef00223913a841f1eb139561deb4cb4ee2072c5da46c965b8516e85851474",
   "unsupportedOperationPolicy": "fail-closed",
   "coreSemantics": "delegated-to-agent-lifecycle-core",
   "capabilities": [

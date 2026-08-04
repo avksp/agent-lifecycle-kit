@@ -123,6 +123,15 @@ def _descriptor(host: str) -> dict[str, Any]:
         },
         "unsupportedOperationPolicy": "fail-closed",
         "coreSemantics": "delegated-to-agent-lifecycle-core",
+        "managedLaunch": {
+            "status": "UNSUPPORTED",
+            "reason": "Scaffolded adapter has no managed native launch profile yet.",
+            "shell": False,
+            "timeoutSeconds": 30.0,
+            "env": {"allow": [], "allowPatterns": [], "projectPolicyAllowed": True},
+            "writesNativeConfig": False,
+            "promptInjectionDefault": False,
+        },
         "modelRouting": {
             "status": "workflow-enforced",
             "profileSupport": "host-local",
