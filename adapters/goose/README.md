@@ -18,3 +18,7 @@ Support level: `WATCH`. Goose wrappers can call `agent-lifecycle report
 progress-bridge --adapter goose --support-level WATCH --hook-point
 side-terminal-watch --state <state>`. This is a local read-only display; ACP
 support remains separately probe-gated.
+
+ALK-managed workflow commands can also use `--progress-hook stderr` or
+`--progress-hook receipt --progress-receipt <path>`. This records managed
+workflow proof; it does not claim a native Goose progress hook.

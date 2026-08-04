@@ -62,6 +62,10 @@
   для адаптера.
 - `agent-progress-bridge-receipt.v1`: read-only receipt для отображения
   прогресса в обёртках адаптеров.
+- `agent-progress-hook-policy.v1`: политика включаемого вывода прогресса для
+  управляемых команд ALK.
+- `agent-progress-hook-receipt.v1`: подтверждение вывода прогресса после
+  управляемой команды без изменения JSON stdout.
 - `agent-proof-finding.v1`: стабильная идентичность finding.
 - `agent-root-cause-evidence.v1`: подтверждение основной причины.
 - `agent-fix-impact-receipt.v1`: канонический артефакт влияния исправления.

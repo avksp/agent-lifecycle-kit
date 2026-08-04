@@ -14,3 +14,7 @@ Support level: `WATCH`. Grok Build wrappers can call `agent-lifecycle report
 progress-bridge --adapter grok-build --support-level WATCH --hook-point
 side-terminal-watch --state <state>` after host-side lifecycle steps. The ACP
 path remains probe-gated, and ALK does not parse Grok-specific telemetry in core.
+
+ALK-managed workflow commands can also use `--progress-hook stderr` or
+`--progress-hook receipt --progress-receipt <path>`. This records managed
+workflow proof; it does not claim a native Grok Build progress hook.

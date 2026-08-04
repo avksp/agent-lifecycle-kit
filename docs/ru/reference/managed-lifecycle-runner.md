@@ -19,6 +19,7 @@ agent-lifecycle workflow run \
   --operation-id managed-step-1 \
   --expected-revision 1 \
   --source-revision <git-sha> \
+  --progress-hook stderr \
   --out work/run/managed-step-1.json
 ```
 
@@ -60,10 +61,11 @@ start/status/transition/stop/resume`. Существующий runner управ
 ## Обычный цикл хоста
 
 1. Вызвать `workflow run`.
-2. Если нужен видимый статус, вызвать `report progress --terminal` для
-   разового вывода, `report progress --watch` для ограниченного наблюдения или
-   `report progress-bridge`, когда обёртке адаптера нужен стабильный bridge
-   receipt.
+2. Для управляемых команд добавить `--progress-hook stderr`, чтобы увидеть
+   прогресс в терминале, или `--progress-hook receipt --progress-receipt
+   <path>`, чтобы сохранить структурированное подтверждение. Для отдельного
+   терминала можно вызвать `report progress --terminal`, `report progress
+   --watch` или `report progress-bridge`.
 3. Если `status` равен `FAIL`, показать структурированную причину остановки.
 4. Если `nextAction.type` равен `launch-tasks`, хост запускает указанные
    пакеты задач и позже записывает `workflow task-result`.
@@ -82,3 +84,7 @@ start/status/transition/stop/resume`. Существующий runner управ
 состояние жизненного цикла, подтверждённые хостом артефакты использования и
 необязательный счётчик изменений. Поэтому его можно показывать в Codex, Claude
 Code, OpenCode или другом хосте без добавления этих строк в запрос к модели.
+
+Установка plugin или skill не доказывает, что задача прошла жизненный цикл.
+`AUTO` для прогресса требует управляемой команды ALK или поставляемой обёртки
+адаптера, которая записывает proof управляемого workflow.

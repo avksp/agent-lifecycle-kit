@@ -31,7 +31,10 @@ JSON, чтобы результат можно было проверять ав�
 
 - `agent-lifecycle workflow run`: проверяет связь зафиксированного плана и
   сохранённого состояния, затем возвращает следующий шаг для хоста без записи
-  в состояние и без запуска модели.
+  в состояние и без запуска модели. Добавьте `--progress-hook stderr`, чтобы
+  показать прогресс в stderr, или `--progress-hook receipt --progress-receipt
+  <path>`, чтобы сохранить `agent-progress-hook-receipt.v1` без изменения JSON
+  в stdout.
 - `agent-lifecycle workflow`: переходы жизненного цикла, отчёты задач и
   финальное подтверждение. Для запусков с обязательной проверкой причинной
   цепочки `workflow finalize` принимает
@@ -40,6 +43,10 @@ JSON, чтобы результат можно было проверять ав�
   Если план требует аудит реализации, `workflow task-accept` принимает
   `--implementation-audit <implementation-audit.json>`, а `workflow finalize`
   принимает `--final-implementation-audit <final-implementation-audit.json>`.
+- Управляемый вывод прогресса поддерживают только `workflow run`,
+  `workflow task-result`, `workflow task-accept` и `workflow finalize`.
+  `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка plugin
+  сама по себе не доказывает полный жизненный цикл.
 - `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.
 - `agent-lifecycle task compile-small`: пакеты для маленьких моделей с
   контрактом результата и компактным артефактом контекста.

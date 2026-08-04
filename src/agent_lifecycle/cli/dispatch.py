@@ -37,6 +37,7 @@ from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.cli.adapter import dispatch_adapter
 from agent_lifecycle.cli.followup import dispatch_followup
 from agent_lifecycle.cli.policy import dispatch_policy
+from agent_lifecycle.cli.progress_hooks import maybe_emit_workflow_progress_hook, validate_workflow_progress_hook_request
 from agent_lifecycle.cli.worktree import dispatch_worktree
 from agent_lifecycle.goal import build_objective_snapshot, update_goal_record, validate_goal_record
 from agent_lifecycle.imports import (
@@ -410,6 +411,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
     if args.workflow_command == "next":
         return next_action(status(state_path, full=True)["state"])
     if args.workflow_command == "run":
+        validate_workflow_progress_hook_request(args, command="workflow run")
         payload = run_managed_lifecycle_step(
             state_path=state_path,
             manifest_path=Path(args.manifest),
@@ -421,6 +423,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         )
         if args.out:
             write_json_create(Path(args.out), payload)
+        maybe_emit_workflow_progress_hook(args, command="workflow run", state_path=state_path)
         return payload
     if args.workflow_command == "adopt-plan":
         return adopt_plan(
@@ -443,7 +446,8 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             reason=args.reason,
         )
     if args.workflow_command == "finalize":
-        return finalize_run(
+        validate_workflow_progress_hook_request(args, command="workflow finalize")
+        payload = finalize_run(
             state_path,
             operation_id=args.operation_id,
             expected_revision=args.expected_revision,
@@ -457,6 +461,8 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             final_implementation_audit_path=args.final_implementation_audit,
             reason=args.reason,
         )
+        maybe_emit_workflow_progress_hook(args, command="workflow finalize", state_path=state_path)
+        return payload
     return _dispatch_workflow_task(args, state_path)
 
 
@@ -486,7 +492,8 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
             reason=args.reason,
         )
     if args.workflow_command == "task-result":
-        return commit_task_result(
+        validate_workflow_progress_hook_request(args, command="workflow task-result")
+        payload = commit_task_result(
             state_path,
             task_id=args.task,
             operation_id=args.operation_id,
@@ -497,6 +504,8 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
             budget_targets_path=args.budget_targets,
             reason=args.reason,
         )
+        maybe_emit_workflow_progress_hook(args, command="workflow task-result", state_path=state_path)
+        return payload
     if args.workflow_command == "budget-decision":
         if args.action:
             _require_args(args, ["decision_receipt", "receipt"], mode="budget-decision apply")
@@ -528,7 +537,8 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
             reason=args.reason,
         )
     if args.workflow_command == "task-accept":
-        return accept_task(
+        validate_workflow_progress_hook_request(args, command="workflow task-accept")
+        payload = accept_task(
             state_path,
             task_id=args.task,
             operation_id=args.operation_id,
@@ -537,6 +547,8 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
             implementation_audit_path=args.implementation_audit,
             reason=args.reason,
         )
+        maybe_emit_workflow_progress_hook(args, command="workflow task-accept", state_path=state_path)
+        return payload
     raise LifecycleError("command-not-implemented", "workflow command is not implemented")
 
 

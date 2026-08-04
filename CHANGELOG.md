@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.37.0 - 2026-08-04
+
+- Added opt-in progress hooks for `workflow run`, `workflow task-result`,
+  `workflow task-accept` and `workflow finalize` with stderr rendering or
+  `agent-progress-hook-receipt.v1` side receipts.
+- Added `agent-progress-hook-policy.v1` and managed workflow proof checks so
+  `AUTO` progress cannot be claimed from plugin installation alone.
+- Documented managed progress hook boundaries for every adapter and updated
+  publication metadata to `1.37.0`.
+
 ## 1.36.0 - 2026-08-04
 
 - Added explicit terminal progress rendering with `agent-lifecycle report

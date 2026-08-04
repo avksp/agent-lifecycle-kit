@@ -71,6 +71,11 @@ progress --state <state> --terminal`, ограниченный режим `--wat
 Уровни поддержки progress bridge перечислены в
 `docs/ru/adapters/progress-bridge-matrix.md`. Они не меняют зрелость адаптера.
 
+Управляемые команды ALK также могут показывать прогресс напрямую при флаге
+`--progress-hook stderr` или сохранять `agent-progress-hook-receipt.v1` через
+`--progress-hook receipt --progress-receipt <path>`. Это включается явно и не
+доказывает, что обычная сессия plugin прошла полный жизненный цикл.
+
 ## Codex
 
 ```bash
