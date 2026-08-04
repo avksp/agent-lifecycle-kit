@@ -61,6 +61,17 @@ python tools/live_hosts/<host>_harness.py \
 меняет состояние и не записывает секреты хоста в подтверждения. Нативные
 запуски, ожидание, отмена и телеметрия остаются ответственностью адаптера.
 
+Если нужна ALK-точка входа вокруг сессий адаптера, используй
+`agent-lifecycle adapter session start/status/resume/promote` или
+`agent-lifecycle adapter run`. Эти команды создают
+`agent-adapter-session-receipt.v1` и
+`agent-adapter-session-resume-receipt.v1`, связывают управляемый запуск с
+зафиксированным workflow state и отделяют установку plugin от доказательства
+жизненного цикла. Текущие встроенные адаптеры объявляют
+`managedLaunch.status: WRAPPER_ONLY`: ALK может записать proof управляемой
+сессии, но core не заявляет безопасный native argv-запуск этих host CLI.
+Сводка: `docs/ru/adapters/managed-session-support.md`.
+
 Codex, Claude Code, OpenCode и другие хосты могут показывать прогресс тем же
 способом: после переходов жизненного цикла вызвать `agent-lifecycle report
 progress --state <state> --terminal`, ограниченный режим `--watch` или

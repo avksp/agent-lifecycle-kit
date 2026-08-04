@@ -20,3 +20,13 @@ remain outside ALK core.
 ALK-managed workflow commands can also use `--progress-hook stderr` or
 `--progress-hook receipt --progress-receipt <path>`. This records managed
 workflow proof, not an OpenInterpreter native hook.
+
+## Managed adapter sessions
+Managed session support: `WRAPPER_ONLY`. `agent-lifecycle adapter session start
+--adapter openinterpreter` records an interactive session without lifecycle coverage.
+`agent-lifecycle adapter run --adapter openinterpreter --state <state> --manifest
+<manifest> --task <task-id>` binds the session to ALK workflow proof and shows managed
+progress on stderr by default.
+
+The descriptor does not claim safe native argv launch for this host CLI. Provider
+credentials, native launch, waits, cancellation and telemetry remain host-owned.

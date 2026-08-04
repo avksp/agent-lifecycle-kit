@@ -38,6 +38,12 @@ write `agent-progress-hook-receipt.v1` with `--progress-hook receipt
 --progress-receipt <path>`. Use this only as a display/proof-of-managed-command
 layer; installing a plugin or skill is not proof that the lifecycle ran.
 
+For adapter-backed work, prefer `agent-lifecycle adapter run` when the operator
+has a frozen workflow state and task id. Use `adapter session start` only to
+record an interactive `WAITING_FOR_TASK` session; it does not claim lifecycle
+coverage until `adapter session promote` binds it to workflow state and task
+lineage. Native host launching remains descriptor-driven and host-owned.
+
 ## State rules
 
 - Immutable authority: plan manifest, plan lock, frozen packets.
