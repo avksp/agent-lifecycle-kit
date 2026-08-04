@@ -78,6 +78,14 @@ next action and fail-closed blockers, but it does not start a model, mutate
 workflow state or write host secrets into receipts. Adapters remain responsible
 for native launches, waits, cancellation and telemetry.
 
+## Adapter progress bridge
+
+Adapters can expose progress without changing the lifecycle state. Use
+`agent-lifecycle report progress-bridge` for a stable
+`agent-progress-bridge-receipt.v1`, or `agent-lifecycle report progress
+--terminal` for a one-shot terminal line. Support levels are tracked in
+`docs/adapters/progress-bridge-matrix.md` and do not change adapter maturity.
+
 ## Codex
 
 Files:
@@ -97,7 +105,8 @@ Restart the host session after installation. Codex is host-specific `VERIFIED`
 only for the tested Codex CLI range in the support matrix.
 
 Progress bridge: after `workflow run` or a workflow transition, a Codex wrapper
-can call `agent-lifecycle report progress --watch --state <state>` and render
+can call `agent-lifecycle report progress-bridge --adapter codex --support-level
+WATCH --hook-point side-terminal-watch --state <state> --terminal` and render
 the returned lines locally. Pass host-attested usage receipts with
 `--usage-receipt` and a Git change summary with `--change-summary` when those
 artifacts exist; ALK does not infer token counts.
@@ -140,6 +149,10 @@ but it is not promotion evidence:
 ln -s <checkout> ~/.cursor/plugins/local/agent-lifecycle-kit
 ```
 
+Progress bridge: Cursor currently documents `MANUAL` support only. Run
+`agent-lifecycle report progress --state <state> --terminal` after ALK workflow
+transitions; this does not promote Cursor maturity.
+
 ## OpenCode
 
 Files:
@@ -154,7 +167,8 @@ link. OpenCode is host-specific `VERIFIED` only for the tested range in the
 support matrix.
 
 Progress bridge: OpenCode integrations should render ALK progress from
-`agent-lifecycle report progress --watch` and keep provider or model telemetry
+`agent-lifecycle report progress-bridge --adapter opencode --support-level WATCH
+--hook-point side-terminal-watch` and keep provider or model telemetry
 normalization in the OpenCode-side adapter.
 
 ## Hermes
@@ -174,6 +188,10 @@ hermes skills install https://raw.githubusercontent.com/avksp/agent-lifecycle-ki
 
 Repeat for each required lifecycle skill. Hermes is host-specific `VERIFIED`
 only for the tested range in the support matrix.
+
+Progress bridge: Hermes documents `MANUAL` support. Run
+`agent-lifecycle report progress --state <state> --terminal` after workflow
+transitions.
 
 ## Qwen Code
 
@@ -196,6 +214,9 @@ agent-lifecycle adapter inspect \
 Qwen Code is host-specific `VERIFIED` only for the tested host-local
 provider/model binding and host range in the support matrix.
 
+Progress bridge: Qwen Code documents `MANUAL` support. Run the bridge after ALK
+workflow transitions; model telemetry remains host-local.
+
 ## Gemini CLI
 
 Files:
@@ -213,6 +234,9 @@ gemini --version
 
 Gemini CLI remains `EXPERIMENTAL` until accepted live conformance, usage
 calibration, and lifecycle proof exist for a concrete host range.
+
+Progress bridge: Gemini CLI documents `MANUAL` support only. This does not
+change its maturity.
 
 ## Goose
 
@@ -232,6 +256,9 @@ Goose is host-specific `VERIFIED` only for Goose `1.45.0` on the tested
 host-local provider/model binding. Live promotion used bounded
 no-session/no-profile invocations with explicit provider/model selection and
 clean-worktree checks.
+
+Progress bridge: Goose can use `WATCH` support from a side terminal or wrapper.
+ACP support remains separately probe-gated.
 
 ## Kimi Code
 
@@ -253,6 +280,9 @@ kimi --version
 Kimi Code remains `EXPERIMENTAL` until provider/model configuration, live
 conformance, usage calibration, and lifecycle proof are accepted.
 
+Progress bridge: Kimi Code documents `MANUAL` support only. This does not
+change its maturity.
+
 ## Grok Build
 
 ```bash
@@ -264,6 +294,9 @@ agent-lifecycle adapter install-plan --descriptor adapters/grok-build/adapter.de
 Grok Build has host-specific `VERIFIED` support for Grok Build `0.2.117` on the
 tested host-local provider/model binding. The ACP path remains probe-gated, and
 a failed probe is recorded as fail-closed evidence.
+
+Progress bridge: Grok Build can use `WATCH` support from a side terminal or
+wrapper after Grok-side lifecycle steps.
 
 ## OpenInterpreter
 
@@ -301,6 +334,9 @@ python tools/live_hosts/openinterpreter_harness.py \
 Replace `PROVIDER_API_KEY` with the selected provider's configured or
 documented env-key name.
 
+Progress bridge: OpenInterpreter documents `MANUAL` support. Provider
+credentials and telemetry stay outside ALK core.
+
 ## Pi
 
 ```bash
@@ -333,6 +369,9 @@ python tools/live_hosts/pi_harness.py \
 
 The verified Pi claim does not claim ACP support, public directory approval or
 production promotion.
+
+Progress bridge: Pi documents `MANUAL` support. Provider credentials and
+telemetry stay outside ALK core.
 
 ## Promotion boundary
 

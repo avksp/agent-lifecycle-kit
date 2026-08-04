@@ -60,8 +60,10 @@ start/status/transition/stop/resume`. Существующий runner управ
 ## Обычный цикл хоста
 
 1. Вызвать `workflow run`.
-2. После перехода жизненного цикла, если нужен видимый статус, вызвать
-   `report progress --watch` или один раз построить `report progress`.
+2. Если нужен видимый статус, вызвать `report progress --terminal` для
+   разового вывода, `report progress --watch` для ограниченного наблюдения или
+   `report progress-bridge`, когда обёртке адаптера нужен стабильный bridge
+   receipt.
 3. Если `status` равен `FAIL`, показать структурированную причину остановки.
 4. Если `nextAction.type` равен `launch-tasks`, хост запускает указанные
    пакеты задач и позже записывает `workflow task-result`.

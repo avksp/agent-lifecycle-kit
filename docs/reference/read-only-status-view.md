@@ -49,6 +49,13 @@ agent-lifecycle report progress --state <workflow-state.json> \
   --change-summary <changes.json>
 ```
 
+Use `--terminal` when a human-readable terminal line is needed instead of the
+default JSON receipt:
+
+```bash
+agent-lifecycle report progress --state <workflow-state.json> --terminal
+```
+
 For host-side progress displays, use bounded watch mode. It repeatedly reads
 the same local artifacts and returns `agent-lifecycle-progress-watch.v1`; it
 does not mutate workflow state and does not make model calls.
@@ -73,3 +80,22 @@ agent-lifecycle report change-summary \
 
 The progress command only reads a supplied summary artifact; Git access stays
 inside the dedicated change-summary helper.
+
+## Adapter progress bridge
+
+`agent-progress-bridge-receipt.v1` packages the same progress projection for
+host adapter wrappers. It records the adapter id, declared progress support
+level, hook point, rendered terminal lines and the digest of the underlying
+progress view or watch receipt.
+
+```bash
+agent-lifecycle report progress-bridge \
+  --adapter <adapter-id> \
+  --support-level WATCH \
+  --hook-point side-terminal-watch \
+  --state <workflow-state.json>
+```
+
+The bridge is display-only: it is not source of truth, does not parse
+host-specific telemetry in core, does not infer token counts and does not make
+model calls.

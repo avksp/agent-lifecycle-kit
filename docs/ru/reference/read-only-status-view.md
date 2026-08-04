@@ -46,6 +46,12 @@ agent-lifecycle report progress --state <workflow-state.json> \
   --watch-interval 1
 ```
 
+Если нужен текст для терминала вместо JSON, используйте явный флаг:
+
+```bash
+agent-lifecycle report progress --state <workflow-state.json> --terminal
+```
+
 Счётчик изменений формируется отдельной командой. Она считает изменения в
 отслеживаемом Git diff и создаёт `agent-change-summary-receipt.v1`, который
 затем можно передать в прогресс:
@@ -56,3 +62,22 @@ agent-lifecycle report change-summary \
   --base <start-revision> \
   --out work/run/change-summary.json
 ```
+
+## Отображение прогресса для адаптеров
+
+`agent-progress-bridge-receipt.v1` упаковывает ту же проекцию прогресса для
+обёрток адаптеров. Он фиксирует adapter id, уровень поддержки прогресса, hook
+point, строки для терминала и отпечаток исходного progress view или watch
+receipt.
+
+```bash
+agent-lifecycle report progress-bridge \
+  --adapter <adapter-id> \
+  --support-level WATCH \
+  --hook-point side-terminal-watch \
+  --state <workflow-state.json>
+```
+
+Bridge только отображает данные: он не является источником правды, не разбирает
+host-specific telemetry в core, не вычисляет токены самостоятельно и не
+запускает модель.

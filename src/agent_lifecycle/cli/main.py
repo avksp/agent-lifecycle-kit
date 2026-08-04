@@ -22,12 +22,19 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if payload is None:
         return 0
+    if isinstance(payload, str):
+        _write_text(payload)
+        return 0
     _write(payload)
     return 0
 
 
 def _write(payload: dict[str, object]) -> None:
     sys.stdout.write(canonical_bytes(payload).decode("utf-8") + "\n")
+
+
+def _write_text(payload: str) -> None:
+    sys.stdout.write(payload.rstrip("\n") + "\n")
 
 
 if __name__ == "__main__":
