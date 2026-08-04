@@ -309,6 +309,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-change-summary-receipt.v1`.\n"
         "`agent-progress-bridge-config.v1`.\n"
         "`agent-progress-bridge-receipt.v1`.\n"
+        "`agent-progress-hook-policy.v1`.\n"
+        "`agent-progress-hook-receipt.v1`.\n"
         "`agent-lifecycle-quality-floor-decision.v1`.\n"
         "`agent-adaptive-lifecycle-policy-request.v1`.\n"
         "`agent-adaptive-lifecycle-policy-decision.v1`.\n"

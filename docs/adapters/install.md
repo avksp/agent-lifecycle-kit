@@ -86,6 +86,11 @@ Adapters can expose progress without changing the lifecycle state. Use
 --terminal` for a one-shot terminal line. Support levels are tracked in
 `docs/adapters/progress-bridge-matrix.md` and do not change adapter maturity.
 
+ALK-managed workflow commands can also emit progress directly when called with
+`--progress-hook stderr`, or persist `agent-progress-hook-receipt.v1` with
+`--progress-hook receipt --progress-receipt <path>`. This is still opt-in and
+does not prove that a plain plugin session followed the lifecycle.
+
 ## Codex
 
 Files:

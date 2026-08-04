@@ -34,7 +34,9 @@ read-only unless their own help says otherwise.
 
 - `agent-lifecycle workflow run`: verify the frozen plan/state binding and
   return the next host-owned action without mutating state or starting model
-  work.
+  work. Add `--progress-hook stderr` for opt-in terminal progress on stderr, or
+  `--progress-hook receipt --progress-receipt <path>` to persist
+  `agent-progress-hook-receipt.v1` while preserving JSON stdout.
 - `agent-lifecycle workflow task-start`: open a bounded task attempt.
 - `agent-lifecycle workflow task-result`: submit implementation evidence.
 - `agent-lifecycle workflow task-accept`: accept a completed task. Add
@@ -47,6 +49,10 @@ read-only unless their own help says otherwise.
   completion gate binding is required. Add
   `--final-implementation-audit <final-implementation-audit.json>` when final
   implementation audit is mandatory.
+- `workflow run`, `workflow task-result`, `workflow task-accept` and
+  `workflow finalize` are the only workflow commands with managed progress
+  hooks in this release. `ALK_PROGRESS_HOOK=stderr` is supported for wrappers;
+  plugin installation alone is not lifecycle proof.
 - `agent-lifecycle runner start/status/transition/stop/resume`: control
   bounded execution state.
 - `agent-lifecycle task compile-small`: compile frozen task packets into

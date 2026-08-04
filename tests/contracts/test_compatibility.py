@@ -28,6 +28,8 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn("agent-task-outcome-index.v1", schema_ids)
         self.assertIn("agent-quality-cost-signals.v1", schema_ids)
         self.assertIn("agent-lifecycle-policy-tune-result.v1", schema_ids)
+        self.assertIn("agent-progress-hook-policy.v1", schema_ids)
+        self.assertIn("agent-progress-hook-receipt.v1", schema_ids)
         cli_outputs = {(item["command"], item["schemaVersion"]) for item in policy["cliOutputs"]}
         self.assertIn(("metrics cost-report", "agent-lifecycle-cost-generation.v1"), cli_outputs)
         self.assertIn(("metrics outcome-index", "agent-task-outcome-index.v1"), cli_outputs)
@@ -47,6 +49,7 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn(("report progress", "agent-lifecycle-progress-view.v1"), cli_outputs)
         self.assertIn(("report progress --watch", "agent-lifecycle-progress-watch.v1"), cli_outputs)
         self.assertIn(("report progress-bridge", "agent-progress-bridge-receipt.v1"), cli_outputs)
+        self.assertIn(("workflow * --progress-hook receipt", "agent-progress-hook-receipt.v1"), cli_outputs)
         self.assertIn(("report change-summary", "agent-change-summary-receipt.v1"), cli_outputs)
         self.assertFalse(policy["productionPromotionClaimed"])
 

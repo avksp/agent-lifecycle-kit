@@ -18,6 +18,7 @@ agent-lifecycle workflow run \
   --operation-id managed-step-1 \
   --expected-revision 1 \
   --source-revision <git-sha> \
+  --progress-hook stderr \
   --out work/run/managed-step-1.json
 ```
 
@@ -57,9 +58,10 @@ network client imports such as `openai`, `anthropic`, `requests`, `httpx` and
 ## Typical host loop
 
 1. Call `workflow run`.
-2. Call `report progress --terminal` for a one-shot status line, `report
-   progress --watch` for bounded watching, or `report progress-bridge` when an
-   adapter wrapper needs a stable bridge receipt.
+2. For managed commands, add `--progress-hook stderr` for visible terminal
+   progress or `--progress-hook receipt --progress-receipt <path>` for a typed
+   hook receipt. For side terminals, call `report progress --terminal`,
+   `report progress --watch`, or `report progress-bridge`.
 3. If `status` is `FAIL`, surface the typed blocker.
 4. If `nextAction.type` is `launch-tasks`, the host launches the listed task
    packets and later records `workflow task-result`.
@@ -77,3 +79,7 @@ Progress rendering is outside the state transition path. It reads workflow
 state, optional host-attested usage receipts and optional change-summary
 receipts, so it can be shown in Codex, Claude Code, OpenCode or another host
 without adding prompt context.
+
+Installing a plugin or skill does not prove that the task used the lifecycle.
+`AUTO` progress requires an ALK-managed workflow command or a shipped adapter
+wrapper that records managed workflow proof.
