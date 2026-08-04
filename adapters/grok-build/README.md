@@ -7,3 +7,10 @@ host-local provider/model binding. The live harness uses single-turn JSON output
 disabled subagents/memory/web search, plan permission mode, an empty tools
 allowlist and post-invocation clean-worktree checks. Unsupported operations
 fail closed and lifecycle semantics stay delegated to ALK core.
+
+## Progress bridge
+
+Support level: `WATCH`. Grok Build wrappers can call `agent-lifecycle report
+progress-bridge --adapter grok-build --support-level WATCH --hook-point
+side-terminal-watch --state <state>` after host-side lifecycle steps. The ACP
+path remains probe-gated, and ALK does not parse Grok-specific telemetry in core.

@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.36.0 - 2026-08-04
+
+- Added explicit terminal progress rendering with `agent-lifecycle report
+  progress --terminal` while keeping JSON output as the default.
+- Added adapter progress bridge receipts and schemas for host wrappers:
+  `agent-progress-bridge-config.v1` and
+  `agent-progress-bridge-receipt.v1`.
+- Documented progress support levels for all adapters and updated publication
+  metadata to `1.36.0`.
+
 ## 1.35.0 - 2026-08-03
 
 - Added bounded `agent-lifecycle report progress --watch` receipts for

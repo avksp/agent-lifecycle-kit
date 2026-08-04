@@ -104,7 +104,11 @@ read-only unless their own help says otherwise.
   redacted bundle.
 - `agent-lifecycle report status-view/event-feed/progress/change-summary`:
   render read-only status, workflow event, lifecycle progress and Git-style
-  change summary receipts. Progress supports bounded `--watch`.
+  change summary receipts. Progress supports bounded `--watch` and explicit
+  `--terminal` text output.
+- `agent-lifecycle report progress-bridge`: build
+  `agent-progress-bridge-receipt.v1` for adapter wrappers that need a stable
+  JSON receipt and optional terminal text.
 - `agent-lifecycle evidence index/search`: build and query compact evidence
   indexes.
 - `agent-lifecycle model profile-check/route/usage-check`: validate routing and

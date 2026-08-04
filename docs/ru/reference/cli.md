@@ -86,4 +86,7 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle report status-view/event-feed/progress/change-summary`:
   представления без записи для статуса, событий рабочего цикла, прогресса
   жизненного цикла и счётчика изменений. Прогресс поддерживает ограниченный
-  режим `--watch`.
+  режим `--watch` и явный текстовый вывод `--terminal`.
+- `agent-lifecycle report progress-bridge`: создаёт
+  `agent-progress-bridge-receipt.v1` для обёрток адаптеров, которым нужен
+  стабильный JSON receipt и, при необходимости, текст для терминала.

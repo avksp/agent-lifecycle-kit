@@ -14,6 +14,7 @@ project.
 ## English documentation
 
 - [Adapter support matrix](adapters/support-matrix.md)
+- [Adapter progress bridge matrix](adapters/progress-bridge-matrix.md)
 - [Adapter install](adapters/install.md)
 - [Adapter live-promotion runbook](adapters/live-promotion-runbook.md)
 - [Goose adapter](adapters/goose.md)
@@ -50,6 +51,7 @@ project.
 - [Task templates](../templates/tasks/README.md)
 - [Diagnostic bundles](reference/diagnostic-bundles.md)
 - [Read-only status views](reference/read-only-status-view.md)
+- [Adapter progress bridge](reference/automatic-progress-bridge.md)
 - [Small-model packets](reference/small-model-packets.md)
 - [Controlled runner](reference/runner.md)
 - [Public contracts](reference/public-contracts.md)
