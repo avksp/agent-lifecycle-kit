@@ -12,6 +12,11 @@ from agent_lifecycle.adapter_sessions.session_store import (
     session_path,
     update_session,
 )
+from agent_lifecycle.adapter_sessions.task_intake import (
+    ADAPTER_TASK_RUN_REQUEST_SCHEMA,
+    ADAPTER_TASK_START_RECEIPT_SCHEMA,
+    start_adapter_task,
+)
 from agent_lifecycle.adapter_sessions.workflow_bridge import (
     managed_adapter_run,
     promote_session_to_workflow,
@@ -23,11 +28,14 @@ __all__ = [
     "build_launch_receipt",
     "build_resume_receipt",
     "create_session",
+    "ADAPTER_TASK_RUN_REQUEST_SCHEMA",
+    "ADAPTER_TASK_START_RECEIPT_SCHEMA",
     "launch_from_descriptor",
     "load_session",
     "managed_adapter_run",
     "promote_session_to_workflow",
     "resume_adapter_session",
     "session_path",
+    "start_adapter_task",
     "update_session",
 ]

@@ -3,10 +3,14 @@
 Managed adapter sessions give operators one ALK entrypoint for adapter-backed
 work without making ALK a second coding-agent runtime.
 
-There are two modes:
+There are three operator-facing modes:
 
 - interactive session: `adapter session start --adapter <id>` records a
   session and returns `WAITING_FOR_TASK`; it does not claim lifecycle coverage;
+- task intake: `adapter task start --adapter <id> --file task.md` or
+  `--text "..."` creates reviewed draft intake. It can recommend the optional
+  Bug Forensics profile for defect-shaped tasks or an analysis-first workstream
+  for inspection-first tasks, but raw input never starts execution;
 - managed run: `adapter run --adapter <id> --state <state> --manifest
   <manifest> --task <task-id>` binds the session to a frozen workflow state and
   returns the next ALK-owned lifecycle action.
@@ -29,6 +33,9 @@ agent-lifecycle adapter session resume \
   --session <session-id> \
   --state <workflow-state.json> \
   --task <task-id>
+agent-lifecycle adapter task start --adapter codex --file task.md
+agent-lifecycle adapter task start --adapter codex --task-text "Fix the regression"
+agent-lifecycle adapter task start --adapter codex --file adapter-run-request.json
 agent-lifecycle adapter run \
   --adapter codex \
   --state <workflow-state.json> \
@@ -37,10 +44,16 @@ agent-lifecycle adapter run \
   --task <task-id>
 ```
 
-`adapter run` and `adapter session promote` enable terminal progress on stderr
-by default because they are ALK-managed paths. JSON stdout remains stable. Use
-`--progress-hook off` to suppress terminal output, or `--progress-hook receipt
---progress-receipt <path>` to persist `agent-progress-hook-receipt.v1`.
+`adapter task start` emits `agent-adapter-task-start-receipt.v1`. For raw text
+or Markdown, the receipt stores only source label, digest and byte count, not
+the raw task text. Use `--candidate-out <path>` when the draft planning import
+artifact should be persisted.
+
+`adapter run`, `adapter task start` on the frozen-run path, and `adapter
+session promote` enable terminal progress on stderr by default because they are
+ALK-managed paths. JSON stdout remains stable. Use `--progress-hook off` to
+suppress terminal output, or `--progress-hook receipt --progress-receipt <path>`
+to persist `agent-progress-hook-receipt.v1`.
 
 ## Launch profile
 
@@ -70,5 +83,7 @@ Managed adapter sessions are fail-closed and display-safe:
 - plugin installation alone is not managed lifecycle proof.
 
 The stable receipts are `agent-adapter-session-receipt.v1`,
-`agent-managed-adapter-launch-receipt.v1` and
-`agent-adapter-session-resume-receipt.v1`.
+`agent-managed-adapter-launch-receipt.v1`,
+`agent-adapter-session-resume-receipt.v1`,
+`agent-adapter-task-start-receipt.v1` and
+`agent-adapter-task-run-request.v1`.

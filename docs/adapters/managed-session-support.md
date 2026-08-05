@@ -6,7 +6,7 @@ adapter descriptor declares a safe native launch profile.
 
 | Adapter | Managed session | Native launch profile | Notes |
 | --- | --- | --- | --- |
-| Codex | Supported | `WRAPPER_ONLY` | Use `adapter run` or a host wrapper for lifecycle proof. |
+| Codex | Supported | `WRAPPER_ONLY` | Use `adapter task start`, `adapter run` or a host wrapper for lifecycle proof. |
 | Claude Code | Supported | `WRAPPER_ONLY` | Native launch remains host-owned. |
 | Cursor | Supported | `WRAPPER_ONLY` | Does not change Cursor maturity. |
 | Gemini CLI | Supported | `WRAPPER_ONLY` | No native argv launch claim. |
@@ -19,7 +19,19 @@ adapter descriptor declares a safe native launch profile.
 | Pi | Supported | `WRAPPER_ONLY` | Provider credentials stay host-local. |
 | Qwen Code | Supported | `WRAPPER_ONLY` | Lifecycle proof requires managed ALK command use. |
 
-Common managed command:
+Common task intake command:
+
+```bash
+agent-lifecycle adapter task start \
+  --adapter <adapter-id> \
+  --file task.md
+```
+
+Raw text and Markdown return review-gated draft intake. To start managed work
+immediately, pass a frozen `agent-adapter-task-run-request.v1` file or a frozen
+manifest plus workflow binding flags.
+
+Common managed run command:
 
 ```bash
 agent-lifecycle adapter run \
