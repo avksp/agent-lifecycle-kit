@@ -26,6 +26,7 @@ agent-lifecycle audit implementation \
   --task WS-01 \
   --result work/WS-01/attempt-1/task-result.json \
   --review work/WS-01/attempt-1/task-review.json \
+  --review-mesh-quorum work/review-mesh/implementation-quorum.json \
   --out work/WS-01/attempt-1/implementation-audit.json
 
 agent-lifecycle audit final-implementation \
@@ -38,6 +39,10 @@ agent-lifecycle audit final-implementation \
 The command output is the machine-readable source for acceptance gates. The
 skill still supplies semantic review guidance when a human or host reviewer must
 interpret findings.
+
+Use `--review-mesh-quorum` only when the frozen plan requires Review Mesh for
+the audited phase. Missing or failed quorum evidence is a blocking audit
+finding; optional Review Mesh output remains advisory.
 
 ## Task audit
 

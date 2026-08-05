@@ -99,10 +99,18 @@ from agent_lifecycle.quality import (
     validate_quality_pack,
 )
 from agent_lifecycle.review_mesh import (
+    build_quorum_from_synthesis,
+    build_review_mesh_assignment_packet,
+    build_review_mesh_profile,
+    import_review_mesh_result,
     recommend_review_mesh_for_intake,
     recommend_review_mesh_for_plan_manifest,
     recommend_review_mesh_for_text,
     require_review_mesh_recommendation_pass,
+    source_from_handoff,
+    source_from_intake,
+    source_from_manifest,
+    synthesize_review_mesh_results,
     validate_review_mesh_recommendation,
 )
 from agent_lifecycle.reporting import (
@@ -369,6 +377,68 @@ def _dispatch_review_mesh(args: argparse.Namespace) -> dict[str, Any]:
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
+    if args.review_mesh_command == "assign":
+        if args.manifest:
+            source = source_from_manifest(read_json_object(Path(args.manifest), label="plan manifest"))
+        elif args.intake:
+            source = source_from_intake(read_json_object(Path(args.intake), label="adapter task intake receipt"))
+        elif args.handoff:
+            source = source_from_handoff(read_json_object(Path(args.handoff), label="plan handoff"))
+        else:
+            raise LifecycleError("review-mesh-assignment-source-missing", "one assignment source is required")
+        profile = read_json_object(Path(args.profile), label="review mesh profile") if args.profile else build_review_mesh_profile(default_mode=args.mode, independence_required=False)
+        payload = build_review_mesh_assignment_packet(
+            source=source,
+            mode=args.mode,
+            phase=args.phase,
+            assignment_id=args.assignment_id,
+            reviewer_id=args.reviewer_id,
+            reviewer_role=args.reviewer_role,
+            reviewer_model_class=args.reviewer_model_class,
+            reviewer_host_identity_hash=args.reviewer_host_identity_hash,
+            reviewer_model_identity_hash=args.reviewer_model_identity_hash,
+            blocking=args.blocking,
+            profile=profile,
+            evidence_ids=args.evidence_id,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.review_mesh_command == "import-result":
+        assignment_payload = read_json_object(Path(args.assignment), label="review mesh assignment")
+        assignment = assignment_payload.get("assignment") if isinstance(assignment_payload.get("assignment"), dict) else assignment_payload
+        payload = import_review_mesh_result(
+            profile=read_json_object(Path(args.profile), label="review mesh profile"),
+            assignment=assignment,
+            reviewer_output=read_json_object(Path(args.reviewer_output), label="reviewer output"),
+            allow_local_evidence_refs=args.allow_local_evidence_ref,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.review_mesh_command == "synthesize":
+        payload = synthesize_review_mesh_results(
+            profile=read_json_object(Path(args.profile), label="review mesh profile"),
+            results=[read_json_object(Path(path), label="review mesh result") for path in args.result],
+            mode=args.mode,
+            accepted_finding_ids=args.accepted_finding_id,
+            rejected_finding_ids=args.rejected_finding_id,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.review_mesh_command == "quorum":
+        profile = read_json_object(Path(args.profile), label="review mesh profile")
+        synthesis = read_json_object(Path(args.synthesis), label="review mesh synthesis")
+        payload = build_quorum_from_synthesis(
+            profile=profile,
+            synthesis=synthesis,
+            quorum_policy={"minReviewers": args.min_reviewers, "requiredRoles": args.required_role},
+            reviewer_roles=args.reviewer_role,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     raise LifecycleError("command-not-implemented", "review-mesh command is not implemented")
 
 
@@ -497,6 +567,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             follow_up_register_path=args.follow_up_register,
             completion_gate_receipt_path=args.completion_gate_receipt,
             final_implementation_audit_path=args.final_implementation_audit,
+            review_mesh_quorum_paths=args.review_mesh_quorum,
             reason=args.reason,
         )
         maybe_emit_workflow_progress_hook(args, command="workflow finalize", state_path=state_path)
@@ -611,6 +682,7 @@ def _dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:
             review_path=args.review,
             evidence_paths=args.evidence,
             sandbox_receipt_paths=args.sandbox_receipt,
+            review_mesh_quorum_paths=args.review_mesh_quorum,
             changed_paths=args.path or None,
             expected_revision=args.expected_revision,
             base=args.base,

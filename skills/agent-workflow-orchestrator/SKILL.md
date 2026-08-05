@@ -51,6 +51,13 @@ command, and use `adapter session start` only to record an interactive
 `WAITING_FOR_TASK` session. Native host launching remains descriptor-driven and
 host-owned.
 
+If a frozen plan opts into Review Mesh, generate assignments with
+`agent-lifecycle review-mesh assign`, have host adapters or operators run the
+reviewers, import their outputs with `review-mesh import-result`, synthesize
+with `review-mesh synthesize`, and require `review-mesh quorum` receipts only
+for the phases named by the plan. Do not treat Review Mesh as authority to
+inject prompts into hosts or bypass review/freeze.
+
 ## State rules
 
 - Immutable authority: plan manifest, plan lock, frozen packets.
