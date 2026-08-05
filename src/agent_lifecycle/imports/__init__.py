@@ -26,6 +26,7 @@ from agent_lifecycle.imports.external_dialects import (
 from agent_lifecycle.imports.external_workflow import import_external_workflow
 from agent_lifecycle.imports.planning import (
     import_planning_input,
+    import_planning_text,
     require_import_validation_pass,
     require_skill_proposal_pass,
     validate_import_result,
@@ -43,6 +44,7 @@ __all__ = [
     "import_external_dialect",
     "import_external_workflow",
     "import_planning_input",
+    "import_planning_text",
     "require_dialect_profile_pass",
     "require_external_import_pass",
     "require_external_profile_pass",

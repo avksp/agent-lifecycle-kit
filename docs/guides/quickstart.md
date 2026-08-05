@@ -57,6 +57,19 @@ agent-lifecycle plan check \
 The plan remains the source of truth for ownership, write scope, acceptance,
 validation, and evidence expectations.
 
+## Start adapter task intake
+
+For a task file or short text:
+
+```bash
+agent-lifecycle adapter task start --adapter codex --file task.md
+agent-lifecycle adapter task start --adapter codex --text "Fix the failing test"
+```
+
+This does not start implementation for raw input. It returns a review-gated
+draft receipt. Managed execution requires a frozen run request or a frozen plan
+with workflow binding.
+
 ## Keep context small
 
 Use the compact profile before handing work to a constrained model:

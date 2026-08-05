@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.39.0 - 2026-08-05
+
+- Added `agent-lifecycle adapter task start` for adapter-specific task intake
+  from text, Markdown files, frozen run requests and frozen manifests with
+  workflow binding.
+- Added `agent-adapter-task-start-receipt.v1` and
+  `agent-adapter-task-run-request.v1` with review/freeze boundaries, raw-text
+  redaction, Bug Forensics recommendations and analysis-first draft markers.
+- Documented adapter task intake, updated workflow-orchestrator guidance and
+  refreshed publication metadata to `1.39.0`.
+
 ## 1.38.0 - 2026-08-04
 
 - Added managed adapter session receipts and commands for `adapter session
