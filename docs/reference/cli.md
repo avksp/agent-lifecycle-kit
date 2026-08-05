@@ -105,6 +105,13 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle adapter session start/status/resume/promote`: record and
   resume adapter sessions. Plain interactive sessions return
   `WAITING_FOR_TASK`; promoted sessions bind to workflow state and task lineage.
+- `agent-lifecycle adapter task start --adapter <id> (--file task.md |
+  --text "...")`: accept task input for a selected adapter. Raw text and
+  Markdown produce `agent-adapter-task-start-receipt.v1` with
+  `REVIEW_REQUIRED`; `--task-file` and `--task-text` are aliases. Structured
+  `agent-adapter-task-run-request.v1` files or frozen manifests with `--state`,
+  `--lock`, `--task`, `--operation-id`, `--expected-revision` and
+  `--source-revision` delegate to the managed run path.
 - `agent-lifecycle adapter run`: bind an adapter session to a frozen workflow
   state and return an ALK-managed next action. Progress is shown on stderr by
   default for this managed path, while JSON stdout stays
