@@ -46,7 +46,6 @@ def import_planning_input(
 
     _check_positive_cap(max_input_bytes, "maxInputBytes")
     _check_positive_cap(target_tokens, "targetTokens")
-    native_dialect_profile_digest = _profile_digest(dialect_profile)
     blockers: list[dict[str, Any]] = []
     if not source_path.is_file():
         blockers.append({"code": "planning-import-source-missing", "sourceLabel": source_path.name})
@@ -58,6 +57,59 @@ def import_planning_input(
             data = b""
         else:
             data = source_path.read_bytes()
+    return _build_import_result(
+        data,
+        source_label=source_path.name,
+        package_id=package_id,
+        max_input_bytes=max_input_bytes,
+        target_tokens=target_tokens,
+        dialect_profile=dialect_profile,
+        blockers=blockers,
+    )
+
+
+def import_planning_text(
+    text: str,
+    *,
+    source_label: str = "inline-task",
+    package_id: str = "imported-plan",
+    max_input_bytes: int = DEFAULT_MAX_INPUT_BYTES,
+    target_tokens: int = DEFAULT_TARGET_TOKENS,
+    dialect_profile: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a draft ALK candidate from explicit untrusted inline text."""
+
+    _check_positive_cap(max_input_bytes, "maxInputBytes")
+    _check_positive_cap(target_tokens, "targetTokens")
+    if not isinstance(text, str):
+        raise LifecycleError("invalid-planning-text", "text must be a string")
+    data = text.encode("utf-8")
+    blockers: list[dict[str, Any]] = []
+    if len(data) > max_input_bytes:
+        blockers.append({"code": "planning-import-input-cap-exceeded", "inputBytes": len(data), "cap": max_input_bytes})
+        data = b""
+    return _build_import_result(
+        data,
+        source_label=source_label,
+        package_id=package_id,
+        max_input_bytes=max_input_bytes,
+        target_tokens=target_tokens,
+        dialect_profile=dialect_profile,
+        blockers=blockers,
+    )
+
+
+def _build_import_result(
+    data: bytes,
+    *,
+    source_label: str,
+    package_id: str,
+    max_input_bytes: int,
+    target_tokens: int,
+    dialect_profile: dict[str, Any] | None,
+    blockers: list[dict[str, Any]],
+) -> dict[str, Any]:
+    native_dialect_profile_digest = _profile_digest(dialect_profile)
     text = _decode_text(data, blockers) if data and len(data) <= max_input_bytes else ""
     blockers.extend(_content_blockers(text))
     candidate = (
@@ -65,7 +117,7 @@ def import_planning_input(
             text,
             data,
             package_id=package_id,
-            source_label=source_path.name,
+            source_label=source_label,
             native_dialect_profile_digest=native_dialect_profile_digest,
             dialect_profile=dialect_profile,
         )
@@ -84,7 +136,7 @@ def import_planning_input(
         "reviewGates": ["plan check", "independent audit", "freeze approval"],
         "resourceCaps": {"maxInputBytes": max_input_bytes, "targetTokens": target_tokens},
         "source": {
-            "label": source_path.name,
+            "label": source_label,
             "digest": sha256_hex(data),
             "inputBytes": len(data),
         },
@@ -348,6 +400,10 @@ def _extract_requirements(text: str, parsed: dict[str, Any] | None) -> list[dict
                 extracted.append(stripped[2:])
             elif re.match(r"^\d+\.\s+", stripped):
                 extracted.append(re.sub(r"^\d+\.\s+", "", stripped))
+    if not extracted:
+        fallback = " ".join(line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith("#"))
+        if fallback:
+            extracted.append(fallback)
     cleaned = [_clean_line(item, limit=MAX_REQUIREMENT_CHARS) for item in extracted if item.strip()]
     return [{"id": f"R-IMPORT-{index + 1}", "description": item} for index, item in enumerate(cleaned[:MAX_REQUIREMENTS])]
 

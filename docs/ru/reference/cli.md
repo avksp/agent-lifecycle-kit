@@ -87,6 +87,13 @@ JSON, чтобы результат можно было проверять ав�
   возобновление сессий адаптеров. Обычная интерактивная сессия возвращает
   `WAITING_FOR_TASK`; promoted-сессия связывается с состоянием workflow и
   задачей.
+- `agent-lifecycle adapter task start --adapter <id> (--file task.md |
+  --text "...")`: принимает задачу для выбранного адаптера. Обычный текст и
+  Markdown возвращают `agent-adapter-task-start-receipt.v1` со статусом
+  `REVIEW_REQUIRED`; `--task-file` и `--task-text` являются псевдонимами.
+  Структурированный `agent-adapter-task-run-request.v1` или зафиксированный
+  manifest с `--state`, `--lock`, `--task`, `--operation-id`,
+  `--expected-revision` и `--source-revision` передаются в управляемый запуск.
 - `agent-lifecycle adapter run`: связывает сессию адаптера с зафиксированным
   workflow state и возвращает управляемый следующий шаг ALK. Для этого
   управляемого пути прогресс по умолчанию показывается в stderr, а JSON stdout

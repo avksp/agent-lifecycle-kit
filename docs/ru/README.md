@@ -17,7 +17,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 Главная цель проекта - закрывать задачу полностью, с максимально возможным
 качеством для выбранной модели, без оверинжиринга и с контролем расхода токенов.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.38.0 · **Python:** 3.11-3.13
+**Лицензия:** Apache-2.0 · **Версия:** 1.39.0 · **Python:** 3.11-3.13
 
 ## Что даёт ALK
 
@@ -184,7 +184,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 - Адаптеры: [Установка](adapters/install.md), [поддержка](adapters/support-matrix.md), [управляемые сессии](adapters/managed-session-support.md) и [прогресс](adapters/progress-bridge-matrix.md).
 - Справочник: [Команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [управляемые сессии адаптеров](reference/managed-adapter-sessions.md), [аудит реализации](reference/implementation-audit.md), [полнота плана](reference/plan-completeness.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md) и [диагностика готовности](reference/readiness-diagnostics.md).
 - Качество, ресурсы и безопасность: [компактные пакеты для маленьких моделей](reference/small-model-packets.md), [адаптивные правила](reference/adaptive-lifecycle-policy.md), [локальная статистика качества](reference/quality-cost-learning.md), [учёт расхода жизненного цикла](reference/lifecycle-cost.md), [экспорт использования](reference/usage-export.md), [целостность подтверждений](reference/evidence-integrity.md), [границы песочницы](reference/sandbox-boundaries.md) и [безопасность релиза](security/release-security.md).
-- Профили и операции: [статус без записи](reference/read-only-status-view.md), [прогресс](reference/automatic-progress-bridge.md), [импорт](reference/import-mappers.md), [эпизоды](reference/episode-retrieval.md), [восстановление](reference/runner-recovery.md), [перепроверка](reference/cross-check-profile.md), [Bug Forensics](reference/bug-forensics.md) и [бюджет контекста](reference/bug-forensics-context-budget.md).
+- Профили и операции: [статус без записи](reference/read-only-status-view.md), [прогресс](reference/automatic-progress-bridge.md), [индекс подтверждений и импорт](reference/evidence-imports.md), [импорт внешних форматов](reference/import-mappers.md), [эпизоды](reference/episode-retrieval.md), [восстановление](reference/runner-recovery.md), [перепроверка](reference/cross-check-profile.md), [Bug Forensics](reference/bug-forensics.md) и [бюджет контекста](reference/bug-forensics-context-budget.md).
 - Релизные материалы: [шаблоны задач](reference/task-templates.md).
 
 **Лицензия:** Apache-2.0. Текст лицензии находится в корне репозитория.
