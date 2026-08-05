@@ -91,6 +91,12 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-task-outcome-index.v1`",
             "`agent-quality-cost-signals.v1`",
             "`agent-quality-cost-signals-summary.v1`",
+            "`agent-review-mesh-profile.v1`",
+            "`agent-review-mesh-assignment.v1`",
+            "`agent-review-mesh-result.v1`",
+            "`agent-review-mesh-synthesis.v1`",
+            "`agent-review-mesh-quorum-receipt.v1`",
+            "`agent-review-mesh-quorum-validation.v1`",
             "`agent-failure-classification-receipt.v1`",
             "`agent-failure-classification-validation.v1`",
             "Quality-cost learning",
@@ -149,6 +155,12 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-task-outcome-index.v1`",
             "`agent-quality-cost-signals.v1`",
             "`agent-quality-cost-signals-summary.v1`",
+            "`agent-review-mesh-profile.v1`",
+            "`agent-review-mesh-assignment.v1`",
+            "`agent-review-mesh-result.v1`",
+            "`agent-review-mesh-synthesis.v1`",
+            "`agent-review-mesh-quorum-receipt.v1`",
+            "`agent-review-mesh-quorum-validation.v1`",
             "`agent-failure-classification-receipt.v1`",
             "`agent-failure-classification-validation.v1`",
             "Quality-cost learning",
@@ -563,6 +575,45 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/review-mesh.md",
+        (
+            "`agent-review-mesh-profile.v1`",
+            "`agent-review-mesh-assignment.v1`",
+            "`agent-review-mesh-result.v1`",
+            "`agent-review-mesh-synthesis.v1`",
+            "`agent-review-mesh-quorum-receipt.v1`",
+            "`agent-review-mesh-quorum-validation.v1`",
+            "leader-draft-multi-review",
+            "parallel-research-synthesis",
+            "implementation-audit-panel",
+            "not part of the default lifecycle",
+            "does not recommend",
+            "launch adapters",
+            "tokens, invocation count and wall-clock resources",
+            "hostIdentityHash",
+            "modelIdentityHash",
+        ),
+    ),
+    (
+        "docs/ru/reference/review-mesh.md",
+        (
+            "`agent-review-mesh-profile.v1`",
+            "`agent-review-mesh-assignment.v1`",
+            "`agent-review-mesh-result.v1`",
+            "`agent-review-mesh-synthesis.v1`",
+            "`agent-review-mesh-quorum-receipt.v1`",
+            "`agent-review-mesh-quorum-validation.v1`",
+            "leader-draft-multi-review",
+            "parallel-research-synthesis",
+            "implementation-audit-panel",
+            "базовый жизненный цикл",
+            "не запускает адаптеры",
+            "токенами, числом вызовов и временем выполнения",
+            "hostIdentityHash",
+            "modelIdentityHash",
+        ),
+    ),
+    (
         "docs/adapters/progress-bridge-matrix.md",
         (
             "Progress support is documented separately from adapter maturity",
@@ -623,6 +674,11 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
 )
 
+OPTIONAL_DOC_RULE_PATHS = {
+    "docs/reference/review-mesh.md",
+    "docs/ru/reference/review-mesh.md",
+}
+
 ADAPTER_DOCS = (
     "docs/adapters/claude.md",
     "docs/adapters/codex.md",
@@ -679,7 +735,13 @@ def main() -> int:
     checks: list[dict[str, Any]] = []
     verified_doc_hosts = LEGACY_VERIFIED_DOC_HOSTS | _verified_doc_hosts_from_evidence_index(root, blockers)
 
+    review_mesh_docs_available = (root / "docs/reference/review-mesh.md").is_file()
     for relative, required in DOC_RULES:
+        if relative in OPTIONAL_DOC_RULE_PATHS and not (root / relative).is_file():
+            checks.append({"path": relative, "status": "SKIPPED", "required": list(required), "identity": None})
+            continue
+        if relative in {"docs/reference/public-contracts.md", "docs/ru/reference/public-contracts.md"} and not review_mesh_docs_available:
+            required = tuple(item for item in required if "agent-review-mesh" not in item)
         checks.append(_check_doc(root, relative, required, blockers, verified_doc_hosts))
     for relative in ADAPTER_DOCS:
         checks.append(_check_adapter_doc(root, relative, blockers, verified_doc_hosts))

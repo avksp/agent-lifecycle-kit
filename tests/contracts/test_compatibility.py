@@ -32,6 +32,12 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn("agent-progress-hook-receipt.v1", schema_ids)
         self.assertIn("agent-adapter-task-start-receipt.v1", schema_ids)
         self.assertIn("agent-adapter-task-run-request.v1", schema_ids)
+        self.assertIn("agent-review-mesh-profile.v1", schema_ids)
+        self.assertIn("agent-review-mesh-assignment.v1", schema_ids)
+        self.assertIn("agent-review-mesh-result.v1", schema_ids)
+        self.assertIn("agent-review-mesh-synthesis.v1", schema_ids)
+        self.assertIn("agent-review-mesh-quorum-receipt.v1", schema_ids)
+        self.assertIn("agent-review-mesh-quorum-validation.v1", schema_ids)
         cli_outputs = {(item["command"], item["schemaVersion"]) for item in policy["cliOutputs"]}
         self.assertIn(("metrics cost-report", "agent-lifecycle-cost-generation.v1"), cli_outputs)
         self.assertIn(("metrics outcome-index", "agent-task-outcome-index.v1"), cli_outputs)
