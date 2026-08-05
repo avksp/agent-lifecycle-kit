@@ -8,6 +8,7 @@ from typing import Any
 from agent_lifecycle.contracts.adapter_contract_schemas import ADAPTER_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.adapter_event_schemas import ADAPTER_EVENT_SCHEMAS
 from agent_lifecycle.contracts.adapter_session_schemas import ADAPTER_SESSION_SCHEMAS
+from agent_lifecycle.contracts.adapter_task_schemas import ADAPTER_TASK_SCHEMAS
 from agent_lifecycle.contracts.audit_schemas import AUDIT_SCHEMAS
 from agent_lifecycle.contracts.bug_forensics_schemas import BUG_FORENSICS_SCHEMAS
 from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
@@ -37,6 +38,7 @@ _SCHEMA_GROUPS = (
     CORE_SCHEMAS,
     AUDIT_SCHEMAS,
     ADAPTER_SESSION_SCHEMAS,
+    ADAPTER_TASK_SCHEMAS,
     ADAPTER_EVENT_SCHEMAS,
     REVIEW_QUALITY_SCHEMAS,
     EVIDENCE_IMPORT_SCHEMAS,

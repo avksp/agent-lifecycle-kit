@@ -16,6 +16,7 @@ from agent_lifecycle.adapter_sessions import (
     managed_adapter_run,
     promote_session_to_workflow,
     resume_adapter_session,
+    start_adapter_task,
     update_session,
 )
 from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, managed_launch_profile
@@ -93,6 +94,28 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     session_promote.add_argument("--progress-hook", choices=["stderr", "receipt", "off"], default="stderr")
     session_promote.add_argument("--progress-receipt")
     session_promote.add_argument("--out")
+    adapter_task = adapter_sub.add_parser("task")
+    task_sub = adapter_task.add_subparsers(dest="adapter_task_command", required=True)
+    task_start = task_sub.add_parser("start")
+    task_start.add_argument("--adapter", required=True)
+    source_group = task_start.add_mutually_exclusive_group(required=True)
+    source_group.add_argument("--file", "--task-file", dest="task_file")
+    source_group.add_argument("--text", "--task-text", dest="task_text")
+    task_start.add_argument("--descriptor")
+    task_start.add_argument("--session-root")
+    task_start.add_argument("--state")
+    task_start.add_argument("--lock")
+    task_start.add_argument("--task")
+    task_start.add_argument("--operation-id")
+    task_start.add_argument("--expected-revision", type=int)
+    task_start.add_argument("--source-revision")
+    task_start.add_argument("--candidate-out")
+    task_start.add_argument("--package-id", default="adapter-task-intake")
+    task_start.add_argument("--max-input-bytes", type=int, default=32768)
+    task_start.add_argument("--target-tokens", type=int, default=4096)
+    task_start.add_argument("--progress-hook", choices=["stderr", "receipt", "off"], default="stderr")
+    task_start.add_argument("--progress-receipt")
+    task_start.add_argument("--out")
     adapter_run = adapter_sub.add_parser("run")
     adapter_run.add_argument("--adapter", required=True)
     adapter_run.add_argument("--descriptor")
@@ -168,6 +191,8 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
         )
     if args.adapter_command == "session":
         return _dispatch_adapter_session(args)
+    if args.adapter_command == "task":
+        return _dispatch_adapter_task(args)
     if args.adapter_command == "run":
         _validate_adapter_progress_args(args)
         payload = managed_adapter_run(
@@ -187,6 +212,34 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         return payload
     raise LifecycleError("command-not-implemented", "adapter command is not implemented")
+
+
+def _dispatch_adapter_task(args: argparse.Namespace) -> dict[str, Any]:
+    if args.adapter_task_command != "start":
+        raise LifecycleError("command-not-implemented", "adapter task command is not implemented")
+    payload = start_adapter_task(
+        adapter_id=args.adapter,
+        task_file=Path(args.task_file) if args.task_file else None,
+        task_text=args.task_text,
+        candidate_out=Path(args.candidate_out) if args.candidate_out else None,
+        descriptor_path=Path(args.descriptor) if args.descriptor else None,
+        session_root=Path(args.session_root) if args.session_root else None,
+        state_path=Path(args.state) if args.state else None,
+        lock_path=Path(args.lock) if args.lock else None,
+        task_id=args.task,
+        operation_id=args.operation_id,
+        expected_revision=args.expected_revision,
+        source_revision=args.source_revision,
+        max_input_bytes=args.max_input_bytes,
+        target_tokens=args.target_tokens,
+        package_id=args.package_id,
+    )
+    binding = payload.get("workflowBinding") if isinstance(payload.get("workflowBinding"), dict) else {}
+    if payload.get("executionStarted") and binding.get("state") and binding.get("task"):
+        _emit_adapter_progress(args, adapter_id=args.adapter, state_path=Path(binding["state"]), task_id=str(binding["task"]))
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
 
 
 def _dispatch_adapter_session(args: argparse.Namespace) -> dict[str, Any]:
