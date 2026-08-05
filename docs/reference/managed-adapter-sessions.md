@@ -10,7 +10,9 @@ There are three operator-facing modes:
 - task intake: `adapter task start --adapter <id> --file task.md` or
   `--text "..."` creates reviewed draft intake. It can recommend the optional
   Bug Forensics profile for defect-shaped tasks or an analysis-first workstream
-  for inspection-first tasks, but raw input never starts execution;
+  for inspection-first tasks. It also includes advisory Review Mesh
+  recommendation when extra reviewers may improve planning, research or audit
+  quality, but raw input never starts execution;
 - managed run: `adapter run --adapter <id> --state <state> --manifest
   <manifest> --task <task-id>` binds the session to a frozen workflow state and
   returns the next ALK-owned lifecycle action.
@@ -46,8 +48,9 @@ agent-lifecycle adapter run \
 
 `adapter task start` emits `agent-adapter-task-start-receipt.v1`. For raw text
 or Markdown, the receipt stores only source label, digest and byte count, not
-the raw task text. Use `--candidate-out <path>` when the draft planning import
-artifact should be persisted.
+the raw task text. The `reviewMeshRecommendation` field is advisory and cannot
+activate blocking review by itself. Use `--candidate-out <path>` when the draft
+planning import artifact should be persisted.
 
 `adapter run`, `adapter task start` on the frozen-run path, and `adapter
 session promote` enable terminal progress on stderr by default because they are
@@ -86,4 +89,5 @@ The stable receipts are `agent-adapter-session-receipt.v1`,
 `agent-managed-adapter-launch-receipt.v1`,
 `agent-adapter-session-resume-receipt.v1`,
 `agent-adapter-task-start-receipt.v1` and
-`agent-adapter-task-run-request.v1`.
+`agent-adapter-task-run-request.v1`. Review Mesh recommendations use
+`agent-review-mesh-recommendation.v1`.
