@@ -10,6 +10,7 @@ from agent_lifecycle.cli.metrics_parser import add_metrics_parser
 from agent_lifecycle.cli.policy import add_policy_parser
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
 from agent_lifecycle.cli.worktree import add_worktree_parser
+from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -164,6 +165,43 @@ def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.Argu
     recommend.add_argument("--sdd-tier", choices=["S0", "S1", "S2"])
     recommend.add_argument("--risk-flag", action="append", default=[])
     recommend.add_argument("--out")
+    assign = review_mesh_sub.add_parser("assign")
+    assign_source = assign.add_mutually_exclusive_group(required=True)
+    assign_source.add_argument("--manifest")
+    assign_source.add_argument("--intake")
+    assign_source.add_argument("--handoff")
+    assign.add_argument("--profile")
+    assign.add_argument("--mode", choices=list(REVIEW_MESH_MODE_IDS), required=True)
+    assign.add_argument("--phase", required=True)
+    assign.add_argument("--assignment-id", required=True)
+    assign.add_argument("--reviewer-id", required=True)
+    assign.add_argument("--reviewer-role", default="reviewer")
+    assign.add_argument("--reviewer-model-class", default="strong-reasoning")
+    assign.add_argument("--reviewer-host-identity-hash")
+    assign.add_argument("--reviewer-model-identity-hash")
+    assign.add_argument("--blocking", action="store_true")
+    assign.add_argument("--evidence-id", action="append", default=[])
+    assign.add_argument("--out")
+    import_result = review_mesh_sub.add_parser("import-result")
+    import_result.add_argument("--profile", required=True)
+    import_result.add_argument("--assignment", required=True)
+    import_result.add_argument("--reviewer-output", required=True)
+    import_result.add_argument("--allow-local-evidence-ref", action="store_true")
+    import_result.add_argument("--out")
+    synthesize = review_mesh_sub.add_parser("synthesize")
+    synthesize.add_argument("--profile", required=True)
+    synthesize.add_argument("--result", action="append", required=True)
+    synthesize.add_argument("--mode", choices=list(REVIEW_MESH_MODE_IDS))
+    synthesize.add_argument("--accepted-finding-id", action="append", default=[])
+    synthesize.add_argument("--rejected-finding-id", action="append", default=[])
+    synthesize.add_argument("--out")
+    quorum = review_mesh_sub.add_parser("quorum")
+    quorum.add_argument("--profile", required=True)
+    quorum.add_argument("--synthesis", required=True)
+    quorum.add_argument("--min-reviewers", type=int, required=True)
+    quorum.add_argument("--required-role", action="append", default=[])
+    quorum.add_argument("--reviewer-role", action="append", default=[])
+    quorum.add_argument("--out")
 
 
 def _add_report_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -329,6 +367,7 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_finalize.add_argument("--follow-up-register")
     workflow_finalize.add_argument("--completion-gate-receipt")
     workflow_finalize.add_argument("--final-implementation-audit")
+    workflow_finalize.add_argument("--review-mesh-quorum", action="append", default=[])
     workflow_finalize.add_argument("--reason", required=True)
     add_progress_hook_args(workflow_finalize)
 
@@ -352,6 +391,7 @@ def _add_audit_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     implementation.add_argument("--review", required=True)
     implementation.add_argument("--evidence", action="append", default=[])
     implementation.add_argument("--sandbox-receipt", action="append", default=[])
+    implementation.add_argument("--review-mesh-quorum", action="append", default=[])
     implementation.add_argument("--path", action="append", default=[])
     implementation.add_argument("--base")
     implementation.add_argument("--expected-revision", type=int)

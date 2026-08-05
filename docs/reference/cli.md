@@ -48,7 +48,8 @@ read-only unless their own help says otherwise.
   proof-integrity evidence, and `--completion-gate-receipt <receipt.json>` when
   completion gate binding is required. Add
   `--final-implementation-audit <final-implementation-audit.json>` when final
-  implementation audit is mandatory.
+  implementation audit is mandatory, and `--review-mesh-quorum <path>` when an
+  opted-in plan requires final-audit quorum.
 - `workflow run`, `workflow task-result`, `workflow task-accept` and
   `workflow finalize` are the only workflow commands with managed progress
   hooks in this release. `ALK_PROGRESS_HOOK=stderr` is supported for wrappers;
@@ -63,7 +64,8 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle audit review-check`: validate review verdicts.
 - `agent-lifecycle audit implementation`: emit
   `agent-implementation-audit-report.v1` for a task result and independent
-  review.
+  review. Add `--review-mesh-quorum <path>` when an opted-in plan requires
+  Review Mesh quorum for implementation audit.
 - `agent-lifecycle audit final-implementation`: aggregate accepted
   implementation audit reports before final workflow proof.
 - `agent-lifecycle quality pack-check`: validate optional quality packs.
@@ -88,6 +90,10 @@ read-only unless their own help says otherwise.
   adapter task intake receipt or a plan manifest and emit
   `agent-review-mesh-recommendation.v1`. The receipt is advisory only and does
   not create assignments, launch adapters or enable blocking gates.
+- `agent-lifecycle review-mesh assign/import-result/synthesize/quorum`: create
+  host-owned reviewer packets, import redacted reviewer output, synthesize
+  findings and build a quorum receipt. These commands do not call models or
+  launch host CLIs.
 
 ## Context and continuity
 

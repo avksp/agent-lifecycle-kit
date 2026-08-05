@@ -12,6 +12,7 @@ from agent_lifecycle.specification import validate_completion_check
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
+from agent_lifecycle.workflow.review_mesh_gate import require_review_mesh_quorum_gate_pass, validate_review_mesh_quorum_path
 from agent_lifecycle.workflow.selectors import unlock_ready_tasks
 from agent_lifecycle.workflow.state import (
     TERMINAL_PHASES,
@@ -127,6 +128,15 @@ def _verify_frozen_manifest(root: Path, manifest: dict[str, Any]) -> str:
         raise LifecycleError("plan-lock-mismatch", "plan lock manifestHash does not match manifest")
     if lock.get("planRevision") != manifest.get("planRevision"):
         raise LifecycleError("plan-lock-mismatch", "plan lock revision does not match manifest")
+    review_mesh = manifest.get("reviewMesh") if isinstance(manifest.get("reviewMesh"), dict) else None
+    require_review_mesh_quorum_gate_pass(
+        validate_review_mesh_quorum_path(
+            root=root,
+            phase="freeze",
+            config=review_mesh,
+            receipt_path=None,
+        )
+    )
     return digest
 
 
@@ -197,6 +207,7 @@ def _build_tasks(
             "evidenceIds": list(workstream.get("evidenceIds", [])),
             "executionPolicy": workstream.get("executionPolicy", {}),
             "modelRoute": dict(workstream.get("modelRoute", {})) if isinstance(workstream.get("modelRoute"), dict) else None,
+            "reviewMesh": dict(workstream.get("reviewMesh", {})) if isinstance(workstream.get("reviewMesh"), dict) else None,
             "artifactPaths": workstream.get("artifactPaths", _default_artifacts(manifest, task_id)),
             "controllerGates": _task_gates(gates, task_id),
             "packet": packets.get(task_id),
@@ -252,6 +263,7 @@ def _task_contract_compatible(
         "evidenceIds",
         "executionPolicy",
         "modelRoute",
+        "reviewMesh",
         "artifactPaths",
         "required",
     )
@@ -337,6 +349,10 @@ def _replace_plan_state(
         "forbiddenWrites": list(manifest.get("forbiddenWrites", [])),
         "leadOwned": list(manifest.get("leadOwned", [])),
     }
+    if isinstance(manifest.get("reviewMesh"), dict):
+        state["reviewMesh"] = dict(manifest["reviewMesh"])
+    else:
+        state.pop("reviewMesh", None)
     _replace_completion_check_state(state, manifest)
     state["runDeadlineAt"] = deadline_after(state["runStartedAt"], int(state["budgets"].get("maxRunWallSeconds", 86400)))
     state["packetSet"] = packet_set

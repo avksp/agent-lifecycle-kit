@@ -26,6 +26,7 @@ from agent_lifecycle.workflow.implementation_audit_gate import (
 )
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
+from agent_lifecycle.workflow.review_mesh_gate import require_review_mesh_quorum_gate_pass, validate_review_mesh_quorum_path
 from agent_lifecycle.workflow.state import now_iso
 
 
@@ -42,6 +43,7 @@ def finalize_run(
     follow_up_register_path: str | None = None,
     completion_gate_receipt_path: str | None = None,
     final_implementation_audit_path: str | None = None,
+    review_mesh_quorum_paths: list[str] | None = None,
     reason: str,
 ) -> dict[str, Any]:
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
@@ -87,6 +89,11 @@ def finalize_run(
         state,
         operation_id=operation_id,
     )
+    review_mesh_quorum = _validate_review_mesh_final_quorum(
+        root,
+        state,
+        review_mesh_quorum_paths or [],
+    )
     proof_rel = normalize_repo_path(proof_path)
     proof = _proof_body(
         state,
@@ -99,6 +106,7 @@ def finalize_run(
         proof_integrity=proof_integrity,
         final_implementation_audit=final_implementation_audit,
         finalization_gate_receipts=finalization_gate_receipts,
+        review_mesh_quorum=review_mesh_quorum,
         reason=reason,
     )
     write_json_create(root / proof_rel, proof)
@@ -117,6 +125,8 @@ def finalize_run(
         state["proofIntegrityReceipt"] = proof_integrity["receipt"]
     if final_implementation_audit is not None:
         state["finalImplementationAudit"] = final_implementation_audit["audit"]
+    if review_mesh_quorum is not None:
+        state["reviewMeshFinalQuorum"] = review_mesh_quorum
     state["phase"] = "COMPLETE"
     commit_state(
         state_path,
@@ -132,6 +142,7 @@ def finalize_run(
             "proofIntegrity": proof_integrity,
             "finalImplementationAudit": final_implementation_audit,
             "finalizationGateReceipts": finalization_gate_receipts,
+            "reviewMeshQuorum": review_mesh_quorum,
             "proof": state["finalProof"],
             "reason": reason,
         },
@@ -206,6 +217,19 @@ def _validate_finalization_gates(
         record_gate_receipts(task, task_receipts)
         receipts.extend(task_receipts)
     return receipts
+
+
+def _validate_review_mesh_final_quorum(root: Path, state: dict[str, Any], quorum_receipt_paths: list[str]) -> dict[str, Any] | None:
+    config = state.get("reviewMesh") if isinstance(state.get("reviewMesh"), dict) else None
+    receipt_path = quorum_receipt_paths[0] if quorum_receipt_paths else None
+    gate = validate_review_mesh_quorum_path(
+        root=root,
+        phase="final-audit",
+        config=config,
+        receipt_path=receipt_path,
+    )
+    require_review_mesh_quorum_gate_pass(gate)
+    return gate if gate.get("required") or receipt_path else None
 
 
 def _validate_completion_check(state: dict[str, Any], root: Path) -> dict[str, Any] | None:
@@ -359,6 +383,7 @@ def _proof_body(
     proof_integrity: dict[str, Any] | None,
     final_implementation_audit: dict[str, Any] | None,
     finalization_gate_receipts: list[dict[str, Any]],
+    review_mesh_quorum: dict[str, Any] | None,
     reason: str,
 ) -> dict[str, Any]:
     accepted = [
@@ -390,6 +415,7 @@ def _proof_body(
         "proofIntegrity": proof_integrity,
         "finalImplementationAudit": final_implementation_audit,
         "finalizationGateReceipts": finalization_gate_receipts,
+        "reviewMeshQuorum": review_mesh_quorum,
         "reason": reason,
         "createdAt": now_iso(),
     }
