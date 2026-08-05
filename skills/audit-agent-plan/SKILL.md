@@ -33,6 +33,9 @@ Check every item for:
 - plan/freeze/run artifact separation;
 - adapter neutrality and absence of project-specific assumptions unless the
   target project explicitly owns them.
+- optional Review Mesh scope: any blocking multi-review requirement must be
+  off by default, provider-neutral, token/resource capped, phase-scoped, and
+  backed by assignment/result/synthesis/quorum evidence routes.
 
 When available, run `agent-lifecycle plan completeness-check --manifest
 <plan.manifest.json>` and treat `agent-plan-completeness-validation.v1` blockers

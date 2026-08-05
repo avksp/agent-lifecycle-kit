@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.42.0 - 2026-08-05
+
+- Added semi-automatic Review Mesh assignment packets, reviewer result import,
+  synthesis and quorum receipts for opted-in planning, research and
+  implementation-audit phases.
+- Added workflow, implementation-audit and finalization quorum gates that fail
+  closed only when the frozen plan explicitly requires Review Mesh evidence.
+- Documented Review Mesh assignment/quorum usage in EN/RU docs and refreshed
+  publication metadata to `1.42.0`.
+
 ## 1.41.0 - 2026-08-05
 
 - Added `agent-review-mesh-recommendation.v1` and a deterministic
