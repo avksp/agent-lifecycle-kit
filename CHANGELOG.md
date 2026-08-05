@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.40.0 - 2026-08-05
+
+- Added optional Review Mesh public schemas for multi-reviewer planning,
+  research synthesis and implementation-audit panel workflows.
+- Added provider-neutral Review Mesh validators that reuse cross-check budget
+  and independence semantics without launching adapters or model providers.
+- Documented Review Mesh boundaries in EN/RU docs and refreshed publication
+  metadata to `1.40.0`.
+
 ## 1.39.0 - 2026-08-05
 
 - Added `agent-lifecycle adapter task start` for adapter-specific task intake

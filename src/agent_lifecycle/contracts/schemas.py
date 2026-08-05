@@ -24,6 +24,7 @@ from agent_lifecycle.contracts.proof_integrity_schemas import PROOF_INTEGRITY_SC
 from agent_lifecycle.contracts.progress_bridge_schemas import PROGRESS_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.progress_hook_schemas import PROGRESS_HOOK_SCHEMAS
 from agent_lifecycle.contracts.release_contract_schemas import RELEASE_CONTRACT_SCHEMAS
+from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_SCHEMAS
 from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHEMAS
 from agent_lifecycle.contracts.runner_schemas import RUNNER_SCHEMAS
 from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SCHEMAS
@@ -49,6 +50,7 @@ _SCHEMA_GROUPS = (
     RUNNER_WORKTREE_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
     CROSS_CHECK_SCHEMAS,
+    REVIEW_MESH_SCHEMAS,
     SANDBOX_SCHEMAS,
     HOST_CAPABILITY_SCHEMAS,
     USAGE_EXPORT_SCHEMAS,
