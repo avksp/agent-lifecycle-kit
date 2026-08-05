@@ -262,6 +262,7 @@ Stable schema ids:
 - `agent-review-mesh-synthesis.v1`
 - `agent-review-mesh-quorum-receipt.v1`
 - `agent-review-mesh-quorum-validation.v1`
+- `agent-review-mesh-recommendation.v1`
 - `agent-runtime-policy-receipt.v1`
 - `agent-runtime-policy-receipt-validation.v1`
 
@@ -277,10 +278,11 @@ canonical.
 Review Mesh builds on that cross-check contract for optional multi-reviewer
 work. `agent-review-mesh-profile.v1` defines the mode enum:
 `leader-draft-multi-review`, `parallel-research-synthesis` and
-`implementation-audit-panel`. Assignment, result, synthesis and quorum receipts
-remain provider-neutral, token/resource-capped and disabled unless a reviewed
-plan opts in. Release 1.40 defines the contracts and validators only; it does
-not launch adapters or enforce quorum by default.
+`implementation-audit-panel`. `agent-review-mesh-recommendation.v1` can advise
+one of those modes, or `off`, from bounded local signals. Assignment, result,
+synthesis and quorum receipts remain provider-neutral, token/resource-capped
+and disabled unless a reviewed plan opts in. Review Mesh does not launch
+adapters or enforce quorum by default.
 
 `agent-runtime-policy-receipt.v1` distinguishes proven pre-execution
 enforcement from advisory-only logging. `agent-worktree-writeback-receipt.v1`

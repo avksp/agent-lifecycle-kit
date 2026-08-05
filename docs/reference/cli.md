@@ -84,6 +84,10 @@ read-only unless their own help says otherwise.
   approved policy artifact with `--apply --output`.
 - `agent-lifecycle policy adaptive-decision/adaptive-check`: build and validate
   neutral adaptive lifecycle mode decisions.
+- `agent-lifecycle review-mesh recommend`: inspect task text, a task file, an
+  adapter task intake receipt or a plan manifest and emit
+  `agent-review-mesh-recommendation.v1`. The receipt is advisory only and does
+  not create assignments, launch adapters or enable blocking gates.
 
 ## Context and continuity
 
@@ -108,8 +112,10 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle adapter task start --adapter <id> (--file task.md |
   --text "...")`: accept task input for a selected adapter. Raw text and
   Markdown produce `agent-adapter-task-start-receipt.v1` with
-  `REVIEW_REQUIRED`; `--task-file` and `--task-text` are aliases. Structured
-  `agent-adapter-task-run-request.v1` files or frozen manifests with `--state`,
+  `REVIEW_REQUIRED`; `--task-file` and `--task-text` are aliases. The receipt
+  may include advisory `reviewMeshRecommendation` when extra reviewers may help,
+  but it remains draft-only. Structured `agent-adapter-task-run-request.v1`
+  files or frozen manifests with `--state`,
   `--lock`, `--task`, `--operation-id`, `--expected-revision` and
   `--source-revision` delegate to the managed run path.
 - `agent-lifecycle adapter run`: bind an adapter session to a frozen workflow

@@ -77,6 +77,11 @@ JSON, чтобы результат можно было проверять ав�
   необязательного `cost_usd`, если его сообщает тарифицируемый хост.
 - `agent-lifecycle policy`: адаптивные решения, артефакты правил запуска и
   рекомендательные предложения по настройке правил.
+- `agent-lifecycle review-mesh recommend`: анализирует текст задачи, файл
+  задачи, receipt приёма задачи или manifest плана и возвращает
+  `agent-review-mesh-recommendation.v1`. Receipt только рекомендует режим: он
+  не создаёт назначения, не запускает адаптеры и не включает обязательные
+  gates.
 
 ## Адаптеры
 
@@ -90,7 +95,9 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle adapter task start --adapter <id> (--file task.md |
   --text "...")`: принимает задачу для выбранного адаптера. Обычный текст и
   Markdown возвращают `agent-adapter-task-start-receipt.v1` со статусом
-  `REVIEW_REQUIRED`; `--task-file` и `--task-text` являются псевдонимами.
+  `REVIEW_REQUIRED`; `--task-file` и `--task-text` являются псевдонимами. В
+  receipt может быть рекомендательное поле `reviewMeshRecommendation`, если
+  дополнительные проверяющие могут помочь, но вход остаётся черновым.
   Структурированный `agent-adapter-task-run-request.v1` или зафиксированный
   manifest с `--state`, `--lock`, `--task`, `--operation-id`,
   `--expected-revision` и `--source-revision` передаются в управляемый запуск.
