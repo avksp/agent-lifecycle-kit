@@ -70,6 +70,19 @@ This does not start implementation for raw input. It returns a review-gated
 draft receipt. Managed execution requires a frozen run request or a frozen plan
 with workflow binding.
 
+## Optional multi-review advice
+
+For research, planning or audit-heavy work, ask for a local Review Mesh
+recommendation before putting it into a plan:
+
+```bash
+agent-lifecycle review-mesh recommend --file task.md
+```
+
+If a reviewed frozen plan opts in, use `review-mesh assign`,
+`import-result`, `synthesize` and `quorum` to coordinate reviewer evidence
+without launching reviewer hosts from ALK core.
+
 ## Keep context small
 
 Use the compact profile before handing work to a constrained model:
