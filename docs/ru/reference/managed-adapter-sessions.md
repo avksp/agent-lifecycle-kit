@@ -3,11 +3,16 @@
 Управляемые сессии адаптеров дают оператору одну точку входа ALK для работы
 через адаптеры, но не превращают ALK во второй runtime кодового агента.
 
-Есть два режима:
+Есть три режима:
 
 - интерактивная сессия: `adapter session start --adapter <id>` записывает
   сессию и возвращает `WAITING_FOR_TASK`; покрытие жизненного цикла не
   заявляется;
+- приём задачи: `adapter task start --adapter <id> --file task.md` или
+  `--text "..."` создаёт черновой вход для проверки. Для задач по ошибкам он
+  может рекомендовать дополнительный профиль `Bug Forensics`, а для задач
+  предварительного осмотра - отдельный аналитический шаг. Обычный текст не
+  запускает выполнение;
 - управляемый запуск: `adapter run --adapter <id> --state <state> --manifest
   <manifest> --task <task-id>` связывает сессию с зафиксированным состоянием
   workflow и возвращает следующий шаг жизненного цикла ALK.
@@ -31,6 +36,9 @@ agent-lifecycle adapter session resume \
   --session <session-id> \
   --state <workflow-state.json> \
   --task <task-id>
+agent-lifecycle adapter task start --adapter codex --file task.md
+agent-lifecycle adapter task start --adapter codex --task-text "Исправь регрессию"
+agent-lifecycle adapter task start --adapter codex --file adapter-run-request.json
 agent-lifecycle adapter run \
   --adapter codex \
   --state <workflow-state.json> \
@@ -39,10 +47,16 @@ agent-lifecycle adapter run \
   --task <task-id>
 ```
 
-`adapter run` и `adapter session promote` по умолчанию показывают прогресс в
-stderr, потому что это управляемые ALK-команды. JSON в stdout не меняется.
-Используй `--progress-hook off`, чтобы выключить текстовый вывод, или
-`--progress-hook receipt --progress-receipt <path>`, чтобы сохранить
+`adapter task start` возвращает `agent-adapter-task-start-receipt.v1`. Для
+обычного текста и Markdown receipt хранит только метку источника, отпечаток и
+размер в байтах, но не исходный текст задачи. `--candidate-out <path>`
+сохраняет черновой артефакт импорта для проверки.
+
+`adapter run`, `adapter task start` на зафиксированном пути запуска и
+`adapter session promote` по умолчанию показывают прогресс в stderr, потому
+что это управляемые ALK-команды. JSON в stdout не меняется. Используй
+`--progress-hook off`, чтобы выключить текстовый вывод, или `--progress-hook
+receipt --progress-receipt <path>`, чтобы сохранить
 `agent-progress-hook-receipt.v1`.
 
 ## Профиль запуска
@@ -75,5 +89,7 @@ stderr, потому что это управляемые ALK-команды. JS
   жизненного цикла.
 
 Стабильные receipts: `agent-adapter-session-receipt.v1`,
-`agent-managed-adapter-launch-receipt.v1` и
-`agent-adapter-session-resume-receipt.v1`.
+`agent-managed-adapter-launch-receipt.v1`,
+`agent-adapter-session-resume-receipt.v1`,
+`agent-adapter-task-start-receipt.v1` и
+`agent-adapter-task-run-request.v1`.

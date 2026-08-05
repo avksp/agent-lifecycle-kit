@@ -44,8 +44,9 @@ Russian documentation starts at [Документация на русском](d
 - Usage visibility: tokens, time, and resource counters are native; monetary
   cost is optional and only used when a metered host reports it.
 - Read-only progress and managed sessions: host UIs can show lifecycle state,
-  attested tokens and Git-style change counters; `adapter run` can bind work to
-  frozen workflow state without claiming native host launch.
+  attested tokens and Git-style change counters; `adapter task start` accepts
+  task text, Markdown or frozen run requests while preserving review/freeze
+  boundaries.
 
 ## Feature areas
 
@@ -111,9 +112,8 @@ Russian documentation starts at [Документация на русском](d
 ## Daily flow
 
 Spec -> frozen plan -> bounded work -> implementation audit -> final proof.
-Core commands cover specification, plan, workflow, audit, adapters, imports,
-metrics, policy, diagnostics, and runner state. See [CLI reference](docs/reference/cli.md)
-and [Source of truth](docs/reference/source-of-truth.md).
+Core commands cover specification, plan, workflow, audit, adapters, imports, metrics,
+policy, diagnostics, runner state, and adapter task intake. See [CLI reference](docs/reference/cli.md) and [Source of truth](docs/reference/source-of-truth.md).
 
 ## Adapter maturity
 

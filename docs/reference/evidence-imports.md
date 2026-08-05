@@ -36,6 +36,18 @@ agent-lifecycle import plan --source incoming-plan.md --out imported-plan.json
 agent-lifecycle import check --candidate imported-plan.json
 ```
 
+Adapter task intake uses the same review boundary for operator-facing adapter
+work:
+
+```bash
+agent-lifecycle adapter task start --adapter codex --file task.md
+agent-lifecycle adapter task start --adapter codex --task-text "Analyze code before implementing the feature"
+```
+
+The command writes `agent-adapter-task-start-receipt.v1`. It stores source
+digest and byte count, not raw task text. Use `--candidate-out <path>` to save
+the full draft planning import artifact for review.
+
 Import blocks sensitive local paths and secret markers before building a
 candidate. The command output uses the source digest and file label rather than
 embedding absolute paths.
