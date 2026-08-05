@@ -14,6 +14,7 @@ from agent_lifecycle.contracts import (
     write_json_create,
 )
 from agent_lifecycle.imports import import_planning_input, import_planning_text
+from agent_lifecycle.review_mesh.recommendation import recommend_review_mesh_for_text
 
 ADAPTER_TASK_START_RECEIPT_SCHEMA = "agent-adapter-task-start-receipt.v1"
 ADAPTER_TASK_RUN_REQUEST_SCHEMA = "agent-adapter-task-run-request.v1"
@@ -170,6 +171,10 @@ def _planning_intake(
     if candidate_out is not None:
         write_json_create(candidate_out, planning)
     shape = _classify_task(source.get("text", ""))
+    review_mesh_recommendation = recommend_review_mesh_for_text(
+        source.get("text", ""),
+        source_label=source["label"],
+    )
     blockers = [{"code": item.get("code", "planning-import-blocker"), **({"source": "planning-import"} if "code" in item else {})} for item in planning.get("blockers", [])]
     status = "BLOCKED" if planning.get("status") != "PASS" else "REVIEW_REQUIRED"
     action = "BLOCKED" if status == "BLOCKED" else ("DRAFT_PLAN_REVIEW" if _parse_json(source["data"]) else "DRAFT_INTAKE")
@@ -183,6 +188,7 @@ def _planning_intake(
         detected_task_shape=shape["taskShape"],
         recommended_quality_profiles=shape["recommendedQualityProfiles"],
         pre_implementation_analysis=shape["preImplementationAnalysis"],
+        review_mesh_recommendation=review_mesh_recommendation,
         requires_review=True,
         audit_required=True,
         freeze_blocked=True,
@@ -422,6 +428,7 @@ def _receipt(
     audit_required: bool = False,
     freeze_blocked: bool = False,
     workflow_binding: dict[str, Any] | None = None,
+    review_mesh_recommendation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     body = {
         "schemaVersion": ADAPTER_TASK_START_RECEIPT_SCHEMA,
@@ -442,6 +449,7 @@ def _receipt(
         "planningImport": planning_import,
         "adapterSessionReceipt": adapter_session_receipt,
         "workflowBinding": workflow_binding,
+        "reviewMeshRecommendation": review_mesh_recommendation,
         "modelCallsStarted": False,
         "hostLaunchStarted": bool(adapter_session_receipt.get("hostLaunchStarted")) if isinstance(adapter_session_receipt, dict) else False,
         "secretsWritten": False,

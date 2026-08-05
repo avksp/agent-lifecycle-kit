@@ -49,6 +49,7 @@ project.
 - [Optional quality packs](reference/optional-quality-packs.md)
 - [Optional cross-check profile](reference/cross-check-profile.md)
 - [Review Mesh](reference/review-mesh.md)
+- [Review Mesh recommendation](reference/review-mesh.md#recommendation-advisor)
 - [Bug Forensics profile](reference/bug-forensics.md)
 - [Bug Forensics context budget](reference/bug-forensics-context-budget.md)
 - [Task templates](../templates/tasks/README.md)

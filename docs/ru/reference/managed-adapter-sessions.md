@@ -11,7 +11,9 @@
 - приём задачи: `adapter task start --adapter <id> --file task.md` или
   `--text "..."` создаёт черновой вход для проверки. Для задач по ошибкам он
   может рекомендовать дополнительный профиль `Bug Forensics`, а для задач
-  предварительного осмотра - отдельный аналитический шаг. Обычный текст не
+  предварительного осмотра - отдельный аналитический шаг. Также он может
+  добавить рекомендательный Review Mesh, если дополнительные проверяющие могут
+  повысить качество планирования, исследования или аудита. Обычный текст не
   запускает выполнение;
 - управляемый запуск: `adapter run --adapter <id> --state <state> --manifest
   <manifest> --task <task-id>` связывает сессию с зафиксированным состоянием
@@ -49,8 +51,10 @@ agent-lifecycle adapter run \
 
 `adapter task start` возвращает `agent-adapter-task-start-receipt.v1`. Для
 обычного текста и Markdown receipt хранит только метку источника, отпечаток и
-размер в байтах, но не исходный текст задачи. `--candidate-out <path>`
-сохраняет черновой артефакт импорта для проверки.
+размер в байтах, но не исходный текст задачи. Поле
+`reviewMeshRecommendation` носит рекомендательный характер и само не включает
+обязательную перепроверку. `--candidate-out <path>` сохраняет черновой артефакт
+импорта для проверки.
 
 `adapter run`, `adapter task start` на зафиксированном пути запуска и
 `adapter session promote` по умолчанию показывают прогресс в stderr, потому
@@ -92,4 +96,5 @@ receipt --progress-receipt <path>`, чтобы сохранить
 `agent-managed-adapter-launch-receipt.v1`,
 `agent-adapter-session-resume-receipt.v1`,
 `agent-adapter-task-start-receipt.v1` и
-`agent-adapter-task-run-request.v1`.
+`agent-adapter-task-run-request.v1`. Рекомендации Review Mesh используют
+`agent-review-mesh-recommendation.v1`.

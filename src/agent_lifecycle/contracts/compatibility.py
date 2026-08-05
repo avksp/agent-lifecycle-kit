@@ -68,6 +68,7 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "adapter session resume", "schemaVersion": "agent-adapter-session-resume-receipt.v1", "compatibility": "stable-json"},
     {"command": "adapter run", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
     {"command": "adapter task start", "schemaVersion": "agent-adapter-task-start-receipt.v1", "compatibility": "stable-json"},
+    {"command": "review-mesh recommend", "schemaVersion": "agent-review-mesh-recommendation.v1", "compatibility": "stable-json"},
     {"command": "specification completion-gate", "schemaVersion": "agent-completion-gate-receipt.v1", "compatibility": "stable-json"},
     {"command": "task compile-small", "schemaVersion": "agent-small-model-packet-compile-result.v1", "compatibility": "stable-json"},
 )
