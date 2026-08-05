@@ -107,6 +107,14 @@
 - `agent-cross-check-profile.v1`: дополнительный профиль перепроверки,
   выключенный по умолчанию и ограниченный токенами и ресурсами.
 - `agent-cross-check-receipt.v1`: артефакт дополнительной проверки.
+- `agent-review-mesh-profile.v1`: дополнительный профиль Review Mesh для
+  нескольких проверяющих.
+- `agent-review-mesh-assignment.v1`: назначение проверяющему без запуска хоста.
+- `agent-review-mesh-result.v1`: нормализованный результат проверяющего.
+- `agent-review-mesh-synthesis.v1`: объединение выводов нескольких
+  проверяющих.
+- `agent-review-mesh-quorum-receipt.v1`: артефакт кворума Review Mesh.
+- `agent-review-mesh-quorum-validation.v1`: проверка артефакта кворума.
 - `agent-runtime-policy-receipt.v1`: артефакт решения по правилам запуска.
 - `agent-lifecycle-quality-floor-decision.v1`: минимальный безопасный режим.
 - `agent-adaptive-lifecycle-policy-request.v1`: нейтральный вход адаптивной
@@ -196,6 +204,13 @@ host-specific telemetry в core.
 перепроверки. Независимость проверяется по
 нейтральным `hostIdentityHash` и `modelIdentityHash`, а не по именам
 провайдеров.
+
+Review Mesh использует этот же контракт перепроверки для бюджетов и
+независимости, но добавляет режимы для нескольких проверяющих:
+`leader-draft-multi-review`, `parallel-research-synthesis` и
+`implementation-audit-panel`. Назначения, результаты, объединение выводов и
+кворум остаются дополнительными артефактами. Релиз 1.40 определяет контракты и
+валидаторы, но не запускает адаптеры и не включает кворум по умолчанию.
 
 `agent-runtime-policy-receipt.v1` отделяет доказанное принудительное ограничение
 до выполнения от рекомендательного журналирования после факта.
