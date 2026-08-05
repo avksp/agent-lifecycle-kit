@@ -17,6 +17,14 @@ from agent_lifecycle.review_mesh.contracts import (
     validate_review_mesh_synthesis,
     validate_review_mesh_quorum_receipt,
 )
+from agent_lifecycle.review_mesh.recommendation import (
+    build_review_mesh_recommendation,
+    recommend_review_mesh_for_intake,
+    recommend_review_mesh_for_plan_manifest,
+    recommend_review_mesh_for_text,
+    require_review_mesh_recommendation_pass,
+    validate_review_mesh_recommendation,
+)
 
 __all__ = [
     "REVIEW_MESH_MODE_IDS",
@@ -25,13 +33,19 @@ __all__ = [
     "build_review_mesh_result",
     "build_review_mesh_synthesis",
     "build_review_mesh_quorum_receipt",
+    "build_review_mesh_recommendation",
+    "recommend_review_mesh_for_intake",
+    "recommend_review_mesh_for_plan_manifest",
+    "recommend_review_mesh_for_text",
     "require_review_mesh_profile_pass",
     "require_review_mesh_assignment_pass",
     "require_review_mesh_result_pass",
     "require_review_mesh_quorum_pass",
+    "require_review_mesh_recommendation_pass",
     "validate_review_mesh_assignment",
     "validate_review_mesh_profile",
     "validate_review_mesh_result",
     "validate_review_mesh_synthesis",
     "validate_review_mesh_quorum_receipt",
+    "validate_review_mesh_recommendation",
 ]
