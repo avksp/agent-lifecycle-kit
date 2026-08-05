@@ -41,12 +41,15 @@ layer; installing a plugin or skill is not proof that the lifecycle ran.
 For adapter-backed work, prefer `agent-lifecycle adapter task start` as the
 operator-facing entrypoint. Raw `--file`/`--task-file` and `--text`/`--task-text`
 inputs create reviewed draft intake only; they do not claim lifecycle coverage
-or start implementation. When the operator already has a frozen workflow state
-and task id, `adapter task start` can consume a frozen run request or frozen
-manifest binding and delegate to the managed run path. Use `adapter run` for
-the lower-level managed command, and use `adapter session start` only to record
-an interactive `WAITING_FOR_TASK` session. Native host launching remains
-descriptor-driven and host-owned.
+or start implementation. If the receipt includes
+`reviewMeshRecommendation`, surface it as advice and ask for operator or
+reviewed-plan confirmation before treating Review Mesh as required evidence.
+When the operator already has a frozen workflow state and task id, `adapter
+task start` can consume a frozen run request or frozen manifest binding and
+delegate to the managed run path. Use `adapter run` for the lower-level managed
+command, and use `adapter session start` only to record an interactive
+`WAITING_FOR_TASK` session. Native host launching remains descriptor-driven and
+host-owned.
 
 ## State rules
 

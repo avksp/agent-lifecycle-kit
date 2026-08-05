@@ -98,6 +98,13 @@ from agent_lifecycle.quality import (
     validate_bug_forensics_recipe_library,
     validate_quality_pack,
 )
+from agent_lifecycle.review_mesh import (
+    recommend_review_mesh_for_intake,
+    recommend_review_mesh_for_plan_manifest,
+    recommend_review_mesh_for_text,
+    require_review_mesh_recommendation_pass,
+    validate_review_mesh_recommendation,
+)
 from agent_lifecycle.reporting import (
     build_change_summary_receipt,
     build_lifecycle_progress_view,
@@ -170,6 +177,8 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         return _dispatch_import(args)
     if args.command == "quality":
         return _dispatch_quality(args)
+    if args.command == "review-mesh":
+        return _dispatch_review_mesh(args)
     if args.command == "report":
         return _dispatch_report(args)
     if args.command == "policy":
@@ -332,6 +341,35 @@ def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         return payload
     raise LifecycleError("command-not-implemented", "quality command is not implemented")
+
+
+def _dispatch_review_mesh(args: argparse.Namespace) -> dict[str, Any]:
+    if args.review_mesh_command == "recommend":
+        if args.text is not None:
+            payload = recommend_review_mesh_for_text(
+                args.text,
+                sdd_tier=args.sdd_tier,
+                risk_flags=args.risk_flag,
+            )
+        elif args.file:
+            path = Path(args.file)
+            payload = recommend_review_mesh_for_text(
+                path.read_text(encoding="utf-8"),
+                source_label=path.name,
+                sdd_tier=args.sdd_tier,
+                risk_flags=args.risk_flag,
+            )
+        elif args.intake:
+            payload = recommend_review_mesh_for_intake(read_json_object(Path(args.intake), label="adapter task intake receipt"))
+        elif args.manifest:
+            payload = recommend_review_mesh_for_plan_manifest(read_json_object(Path(args.manifest), label="plan manifest"))
+        else:
+            raise LifecycleError("review-mesh-recommendation-source-missing", "one recommendation source is required")
+        require_review_mesh_recommendation_pass(validate_review_mesh_recommendation(payload))
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    raise LifecycleError("command-not-implemented", "review-mesh command is not implemented")
 
 
 def _dispatch_report(args: argparse.Namespace) -> dict[str, Any] | str:

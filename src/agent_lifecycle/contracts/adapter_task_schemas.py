@@ -50,6 +50,7 @@ ADAPTER_TASK_SCHEMAS: dict[str, dict[str, Any]] = {
             "reviewBlockers": {"type": "array", "items": {"type": "object"}},
             "planningImport": {"type": ["object", "null"]},
             "adapterSessionReceipt": {"type": ["object", "null"]},
+            "reviewMeshRecommendation": {"type": ["object", "null"]},
             "modelCallsStarted": {"const": False},
             "hostLaunchStarted": {"type": "boolean"},
             "secretsWritten": {"const": False},
