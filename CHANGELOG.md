@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.41.0 - 2026-08-05
+
+- Added `agent-review-mesh-recommendation.v1` and a deterministic
+  `review-mesh recommend` advisor for task text, task files, adapter task
+  intake receipts and plan manifests.
+- Integrated advisory Review Mesh recommendations into adapter task intake
+  without changing draft-only raw-input execution boundaries.
+- Documented Review Mesh recommendations in EN/RU docs and refreshed
+  publication metadata to `1.41.0`.
+
 ## 1.40.0 - 2026-08-05
 
 - Added optional Review Mesh public schemas for multi-reviewer planning,

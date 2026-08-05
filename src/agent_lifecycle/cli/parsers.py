@@ -24,6 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_evidence_parser(subparsers)
     _add_import_parser(subparsers)
     _add_quality_parser(subparsers)
+    _add_review_mesh_parser(subparsers)
     _add_report_parser(subparsers)
     add_policy_parser(subparsers)
     _add_workflow_parser(subparsers)
@@ -149,6 +150,20 @@ def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     bug_recipe_check = quality_sub.add_parser("bug-recipe-check")
     bug_recipe_check.add_argument("--recipe-id")
     bug_recipe_check.add_argument("--out")
+
+
+def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    review_mesh = subparsers.add_parser("review-mesh", help="optional Review Mesh commands")
+    review_mesh_sub = review_mesh.add_subparsers(dest="review_mesh_command", required=True)
+    recommend = review_mesh_sub.add_parser("recommend")
+    source = recommend.add_mutually_exclusive_group(required=True)
+    source.add_argument("--text")
+    source.add_argument("--file")
+    source.add_argument("--intake")
+    source.add_argument("--manifest")
+    recommend.add_argument("--sdd-tier", choices=["S0", "S1", "S2"])
+    recommend.add_argument("--risk-flag", action="append", default=[])
+    recommend.add_argument("--out")
 
 
 def _add_report_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

@@ -115,6 +115,8 @@
   проверяющих.
 - `agent-review-mesh-quorum-receipt.v1`: артефакт кворума Review Mesh.
 - `agent-review-mesh-quorum-validation.v1`: проверка артефакта кворума.
+- `agent-review-mesh-recommendation.v1`: рекомендация режима Review Mesh по
+  локальным признакам задачи или плана.
 - `agent-runtime-policy-receipt.v1`: артефакт решения по правилам запуска.
 - `agent-lifecycle-quality-floor-decision.v1`: минимальный безопасный режим.
 - `agent-adaptive-lifecycle-policy-request.v1`: нейтральный вход адаптивной
