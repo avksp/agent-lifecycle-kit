@@ -29,8 +29,7 @@ agent-lifecycle diagnose --no-install-plans
 agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json
 ```
 
-For a short walkthrough, use [Quickstart](docs/guides/quickstart.md). The
-Russian documentation starts at [Документация на русском](docs/ru/README.md).
+For a short walkthrough, use [Quickstart](docs/guides/quickstart.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
 
 ## What it gives you
 
@@ -70,6 +69,9 @@ Russian documentation starts at [Документация на русском](d
   root-cause digests, fix-impact receipts, and hash chains.
 - Cross-checks and runtime-policy receipts are opt-in controls; plans can
   require proof for an external system update before acceptance.
+- Optional Review Mesh contracts describe multi-review workflows for
+  leader-draft review, parallel research synthesis and implementation audit
+  panels without making multi-agent review the default path.
 
 ### Routing and resource control
 
@@ -146,8 +148,8 @@ Adapter installation and maturity details live in
 ## Contract map
 
 The public lifecycle surface is schema-backed. Full stable schema ids,
-compatibility rules, runner recovery, cross-check, Bug Forensics, and usage
-export details are listed in [Public contracts](docs/reference/public-contracts.md).
+compatibility rules, runner recovery, cross-check, Review Mesh, Bug Forensics,
+and usage export details are listed in [Public contracts](docs/reference/public-contracts.md).
 
 ## Design boundaries
 
@@ -163,8 +165,8 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
   evidence summaries.
 - External dialect imports and retrieved episodes are context aids only; they
   do not replace reviewed ALK source-of-truth artifacts.
-- Optional cross-check and runner recovery receipts add evidence only when a
-  task or plan requests them; they are not default multi-model execution.
+- Optional cross-check, Review Mesh and runner recovery receipts add evidence
+  only when a task or plan requests them; they are not default multi-model execution.
 
 ## Documentation
 
@@ -172,9 +174,7 @@ export details are listed in [Public contracts](docs/reference/public-contracts.
 - Planning and adapters: [Issue to specification drafts](docs/guides/issue-to-spec.md), [Adapter install](docs/adapters/install.md), and [Adapter support matrix](docs/adapters/support-matrix.md).
 - Reference: [CLI reference](docs/reference/cli.md), [Source of truth](docs/reference/source-of-truth.md), [Managed lifecycle runner](docs/reference/managed-lifecycle-runner.md), [Managed adapter sessions](docs/reference/managed-adapter-sessions.md), [Implementation audit](docs/reference/implementation-audit.md), [Plan completeness](docs/reference/plan-completeness.md), [Public contracts](docs/reference/public-contracts.md), and [Readiness diagnostics](docs/reference/readiness-diagnostics.md).
 - Quality and resources: [Small-model packets](docs/reference/small-model-packets.md), [model routing](docs/reference/model-routing.md), [adaptive policy](docs/reference/adaptive-lifecycle-policy.md), [quality-cost learning](docs/reference/quality-cost-learning.md), [lifecycle cost accounting](docs/reference/lifecycle-cost.md), [Usage export](docs/reference/usage-export.md), and [Evidence integrity](docs/reference/evidence-integrity.md).
-- Profiles and operations: [Read-only status views](docs/reference/read-only-status-view.md), [Adapter progress bridge](docs/reference/automatic-progress-bridge.md), [Sandbox boundaries](docs/reference/sandbox-boundaries.md), [Import mappers](docs/reference/import-mappers.md), [Episode retrieval](docs/reference/episode-retrieval.md), [Runner recovery](docs/reference/runner-recovery.md), [Cross-check profile](docs/reference/cross-check-profile.md), [Bug Forensics profile](docs/reference/bug-forensics.md), and [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md).
+- Profiles and operations: [Read-only status views](docs/reference/read-only-status-view.md), [Adapter progress bridge](docs/reference/automatic-progress-bridge.md), [Sandbox boundaries](docs/reference/sandbox-boundaries.md), [Import mappers](docs/reference/import-mappers.md), [Episode retrieval](docs/reference/episode-retrieval.md), [Runner recovery](docs/reference/runner-recovery.md), [Cross-check profile](docs/reference/cross-check-profile.md), [Review Mesh](docs/reference/review-mesh.md), [Bug Forensics profile](docs/reference/bug-forensics.md), and [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md).
 - Release assets: [Task templates](templates/tasks/README.md) and [Release security](docs/security/release-security.md).
-
-## License
 
 Apache-2.0. See [LICENSE](LICENSE).

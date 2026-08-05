@@ -32,3 +32,10 @@ model names and account names are not canonical contract fields.
 
 This makes cross-check useful for S2, security, release and bug-fix tasks while
 keeping ordinary work on the normal lifecycle path.
+
+## Review Mesh relationship
+
+Review Mesh reuses this profile for budget and independence semantics. It adds
+lifecycle mode ids and assignment/result/synthesis/quorum receipts for
+multi-reviewer workflows, but it does not create a separate budget model or a
+second way to prove reviewer independence.
