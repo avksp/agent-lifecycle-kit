@@ -69,9 +69,9 @@ For a short walkthrough, use [Quickstart](docs/guides/quickstart.md). Russian do
   root-cause digests, fix-impact receipts, and hash chains.
 - Cross-checks and runtime-policy receipts are opt-in controls; plans can
   require proof for an external system update before acceptance.
-- Optional Review Mesh contracts describe leader-draft review, parallel
-  research synthesis and implementation audit panels. The advisor can suggest a
-  mode from local signals, but does not create assignments or start hosts.
+- Optional Review Mesh covers leader-draft review, parallel research synthesis
+  and audit panels. The advisor can suggest a mode; opted-in plans can require
+  assignment/result/synthesis/quorum receipts, but ALK core does not start hosts.
 
 ### Routing and resource control
 

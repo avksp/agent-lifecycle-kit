@@ -13,10 +13,10 @@ The supported mode ids are:
 - `implementation-audit-panel`: several auditors review implementation
   evidence after work is complete.
 
-Release 1.41 adds deterministic recommendation advice. It can suggest a mode
-from task text, intake receipts or plan manifests, but it still does not create
-reviewer assignments, launch adapters, import reviewer output or enforce
-quorum. Those steps are separate optional layers.
+Release 1.41 added deterministic recommendation advice. Release 1.42 adds the
+semi-automatic layer around it: assignment packets, reviewer result import,
+synthesis and quorum validation. ALK still does not run reviewer adapters; the
+operator or host wrapper runs them and returns evidence for import.
 
 ## Stable schemas
 
@@ -50,6 +50,34 @@ gates, create assignments, enforce quorum, start model calls or launch host
 CLIs. A reviewed frozen plan must opt in before Review Mesh can become required
 evidence. It does not recommend bypassing review/freeze or asking ALK core to
 launch adapters.
+
+## Assignments, results, synthesis and quorum
+
+After a reviewed plan opts in, ALK can coordinate Review Mesh evidence without
+becoming a model broker:
+
+```bash
+agent-lifecycle review-mesh assign --intake adapter-task-start.json \
+  --mode leader-draft-multi-review --phase plan-review \
+  --assignment-id RM-1 --reviewer-id claude-reviewer --out rm-assignment.json
+
+agent-lifecycle review-mesh import-result --profile rm-profile.json \
+  --assignment rm-assignment.json --reviewer-output reviewer-output.json \
+  --out rm-result.json
+
+agent-lifecycle review-mesh synthesize --profile rm-profile.json \
+  --result rm-result-a.json --result rm-result-b.json --out rm-synthesis.json
+
+agent-lifecycle review-mesh quorum --profile rm-profile.json \
+  --synthesis rm-synthesis.json --min-reviewers 2 --out rm-quorum.json
+```
+
+Assignments are compact packets for host-owned reviewer execution. Imported
+results redact secret-like markers and reject local absolute paths unless the
+plan explicitly allows local evidence references. Synthesis records agreement,
+conflicts, accepted findings, rejected findings and unresolved findings.
+Quorum receipts can block freeze, implementation audit or final audit only when
+the frozen plan declares Review Mesh as required for that phase.
 
 ## Contract rules
 

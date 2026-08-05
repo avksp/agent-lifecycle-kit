@@ -12,6 +12,7 @@ from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.reviews import validate_task_result, validate_task_review
 from agent_lifecycle.workflow.sandbox_policy import validate_task_sandbox_evidence
 from agent_lifecycle.workflow.selectors import find_task
+from agent_lifecycle.workflow.review_mesh_gate import validate_review_mesh_quorum_path
 from agent_lifecycle.workflow.state import load_state
 
 
@@ -29,6 +30,7 @@ def build_implementation_audit_report(
     review_path: str,
     evidence_paths: list[str] | None = None,
     sandbox_receipt_paths: list[str] | None = None,
+    review_mesh_quorum_paths: list[str] | None = None,
     changed_paths: list[str] | None = None,
     expected_revision: int | None = None,
     base: str | None = None,
@@ -92,6 +94,19 @@ def build_implementation_audit_report(
                 context=blocker,
             )
 
+    review_mesh = _review_mesh_summary(root, state, task, review_mesh_quorum_paths or [])
+    if review_mesh["validation"]["status"] != "PASS":
+        for blocker in review_mesh["validation"]["blockers"]:
+            _add_finding(
+                findings,
+                blockers,
+                code=str(blocker.get("code") or "review-mesh-quorum-failed"),
+                severity="HIGH",
+                category="review-mesh",
+                message="required Review Mesh quorum evidence did not pass",
+                context=blocker,
+            )
+
     coverage = _coverage_summary(task, result, review)
     for missing in coverage["missingAcceptanceIds"]:
         _add_finding(
@@ -134,6 +149,7 @@ def build_implementation_audit_report(
         "coverage": coverage,
         "evidence": evidence,
         "sandbox": sandbox,
+        "reviewMesh": review_mesh,
         "findings": findings,
         "blockers": blockers,
         "productionPromotionClaimed": False,
@@ -402,6 +418,18 @@ def _sandbox_summary(root: Path, state: dict[str, Any], task: dict[str, Any], sa
     }
     validation = validate_task_sandbox_evidence(task, receipt=receipt, expected_lineage=lineage, attempt=task.get("attempt"))
     return {"receipt": receipt_identity, "validation": validation}
+
+
+def _review_mesh_summary(root: Path, state: dict[str, Any], task: dict[str, Any], quorum_receipt_paths: list[str]) -> dict[str, Any]:
+    config = task.get("reviewMesh") if isinstance(task.get("reviewMesh"), dict) else state.get("reviewMesh")
+    receipt_path = quorum_receipt_paths[0] if quorum_receipt_paths else None
+    validation = validate_review_mesh_quorum_path(
+        root=root,
+        phase="implementation-audit",
+        config=config if isinstance(config, dict) else None,
+        receipt_path=receipt_path,
+    )
+    return {"receiptPath": receipt_path, "validation": validation}
 
 
 def _coverage_summary(task: dict[str, Any], result: dict[str, Any], review: dict[str, Any]) -> dict[str, Any]:

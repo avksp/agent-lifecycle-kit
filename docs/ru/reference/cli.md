@@ -43,6 +43,8 @@ JSON, чтобы результат можно было проверять ав�
   Если план требует аудит реализации, `workflow task-accept` принимает
   `--implementation-audit <implementation-audit.json>`, а `workflow finalize`
   принимает `--final-implementation-audit <final-implementation-audit.json>`.
+  Для плана с обязательным Review Mesh на финальном аудите `workflow finalize`
+  принимает `--review-mesh-quorum <path>`.
 - Управляемый вывод прогресса поддерживают только `workflow run`,
   `workflow task-result`, `workflow task-accept` и `workflow finalize`.
   `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка plugin
@@ -56,7 +58,8 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle audit`: проверка плана, реализации и вердиктов.
 - `agent-lifecycle audit implementation`: структурированный отчёт
   `agent-implementation-audit-report.v1` по результату задачи и независимой
-  проверке.
+  проверке. Если зафиксированный план требует Review Mesh для аудита
+  реализации, используйте `--review-mesh-quorum <path>`.
 - `agent-lifecycle audit final-implementation`: итоговый отчёт
   `agent-final-implementation-audit.v1` перед финальным подтверждением
   workflow.
@@ -82,6 +85,10 @@ JSON, чтобы результат можно было проверять ав�
   `agent-review-mesh-recommendation.v1`. Receipt только рекомендует режим: он
   не создаёт назначения, не запускает адаптеры и не включает обязательные
   gates.
+- `agent-lifecycle review-mesh assign/import-result/synthesize/quorum`:
+  создаёт пакеты назначений для выполнения на стороне хоста, импортирует
+  обезличенный результат проверяющего, объединяет выводы и формирует receipt
+  кворума. Эти команды не вызывают модели и не запускают host CLI.
 
 ## Адаптеры
 
