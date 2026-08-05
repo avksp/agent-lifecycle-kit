@@ -239,7 +239,7 @@ receipt/session artifacts. Results keep artifact digests and report
 `chainVerified` only when a supplied hash chain contains the same path and
 digest; otherwise they are `chainUnchecked`.
 
-## Runner recovery and optional cross-check
+## Runner recovery, optional cross-check and Review Mesh
 
 Runner recovery contracts are additive receipts for multi-attempt work. They do
 not replace workflow state or the controlled runner state.
@@ -256,6 +256,12 @@ Stable schema ids:
 - `agent-cross-check-profile-validation.v1`
 - `agent-cross-check-receipt.v1`
 - `agent-cross-check-receipt-validation.v1`
+- `agent-review-mesh-profile.v1`
+- `agent-review-mesh-assignment.v1`
+- `agent-review-mesh-result.v1`
+- `agent-review-mesh-synthesis.v1`
+- `agent-review-mesh-quorum-receipt.v1`
+- `agent-review-mesh-quorum-validation.v1`
 - `agent-runtime-policy-receipt.v1`
 - `agent-runtime-policy-receipt-validation.v1`
 
@@ -267,6 +273,14 @@ fields; USD-cost is not required for local or non-metered models.
 advisory unless a plan explicitly opts into blocking use. Optional independence
 evidence compares neutral host/model identity hashes; provider names are not
 canonical.
+
+Review Mesh builds on that cross-check contract for optional multi-reviewer
+work. `agent-review-mesh-profile.v1` defines the mode enum:
+`leader-draft-multi-review`, `parallel-research-synthesis` and
+`implementation-audit-panel`. Assignment, result, synthesis and quorum receipts
+remain provider-neutral, token/resource-capped and disabled unless a reviewed
+plan opts in. Release 1.40 defines the contracts and validators only; it does
+not launch adapters or enforce quorum by default.
 
 `agent-runtime-policy-receipt.v1` distinguishes proven pre-execution
 enforcement from advisory-only logging. `agent-worktree-writeback-receipt.v1`
