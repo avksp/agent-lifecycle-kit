@@ -593,7 +593,32 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-adapter-event.v1`.\n"
         "`agent-adapter-event-stream-receipt.v1`.\n"
         "`agent-adapter-event-capture-validation.v1`.\n"
+        "`adapter-owned`.\n"
+        "No automatic hook installation.\n"
+        "Adapter event capture matrix.\n"
         "fails closed.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/adapter-event-capture.md",
+        "`adapter-event-stream`.\n"
+        "`agent-adapter-event.v1`.\n"
+        "`agent-adapter-event-stream-receipt.v1`.\n"
+        "`adapter-owned`.\n"
+        "Автоматическая установка: нет.\n"
+        "матрице захвата событий адаптеров.\n",
+    )
+    event_matrix = (
+        "`agent-adapter-event.v1`.\n"
+        "`agent-adapter-event-stream-receipt.v1`.\n"
+        "No automatic hook installation.\n"
+        "`adapter-owned`.\n"
+        "conformance/adapters/codex/event-stream-receipt.json.\n"
+        "conformance/adapters/qwen-code/event-stream-receipt.json.\n"
+    )
+    _write_text(root / "docs/adapters/event-capture-matrix.md", event_matrix)
+    _write_text(
+        root / "docs/ru/adapters/event-capture-matrix.md",
+        event_matrix.replace("No automatic hook installation", "Автоматическая установка: нет"),
     )
     _write_text(
         root / "docs/reference/review-verdict.md",

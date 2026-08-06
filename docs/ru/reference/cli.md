@@ -108,6 +108,11 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle adapter validate`: проверка дескриптора.
 - `agent-lifecycle adapter inspect`: безопасный осмотр адаптера.
 - `agent-lifecycle adapter install-plan`: пробный план установки без записи.
+- `agent-lifecycle adapter event-check`: проверка нейтрального потока событий
+  адаптера.
+- `agent-lifecycle adapter event-capture-check`: проверка объявленного
+  `adapter-owned` захвата событий через дескриптор, манифест возможностей,
+  поток событий и `agent-adapter-event-stream-receipt.v1`.
 - `agent-lifecycle adapter session start/status/resume/promote`: запись и
   возобновление сессий адаптеров. Обычная интерактивная сессия возвращает
   `WAITING_FOR_TASK`; повышенная сессия связывается с состоянием рабочего цикла

@@ -123,7 +123,11 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle adapter scaffold`: create an `EXPERIMENTAL` adapter
   skeleton.
 - `agent-lifecycle adapter install-plan`: preview host setup without writes.
-- `agent-lifecycle adapter event-check`: validate event capture receipts.
+- `agent-lifecycle adapter event-check`: validate neutral adapter event
+  streams.
+- `agent-lifecycle adapter event-capture-check`: validate declared
+  adapter-owned event capture with descriptor, optional capability manifest,
+  stream and `agent-adapter-event-stream-receipt.v1`.
 - `agent-lifecycle adapter session start/status/resume/promote`: record and
   resume adapter sessions. Plain interactive sessions return
   `WAITING_FOR_TASK`; promoted sessions bind to workflow state and task lineage.

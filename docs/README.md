@@ -15,6 +15,7 @@ project.
 
 - [Adapter support matrix](adapters/support-matrix.md)
 - [Adapter progress bridge matrix](adapters/progress-bridge-matrix.md)
+- [Adapter event capture matrix](adapters/event-capture-matrix.md)
 - [Managed adapter session support](adapters/managed-session-support.md)
 - [Adapter install](adapters/install.md)
 - [Adapter live-promotion runbook](adapters/live-promotion-runbook.md)
