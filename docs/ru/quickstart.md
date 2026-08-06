@@ -74,7 +74,7 @@ agent-lifecycle adapter task start --adapter codex --text "Исправь пад
 ## Дополнительная перепроверка
 
 Для исследования, планирования или сложного аудита можно сначала получить
-локальную рекомендацию Review Mesh:
+локальную рекомендацию групповой проверки:
 
 ```bash
 agent-lifecycle review-mesh recommend --file task.md
@@ -83,7 +83,8 @@ agent-lifecycle review-mesh recommend --file task.md
 Если проверенный зафиксированный план явно включает этот режим, используйте
 `review-mesh assign`, `import-result`, `synthesize` и `quorum`, чтобы
 координировать подтверждения проверяющих без запуска хостов из ядра ALK.
-Подробные примеры: [практические сценарии Review Mesh](review-mesh-workflow.md).
+Подробные примеры:
+[практические сценарии групповой проверки](review-mesh-workflow.md).
 
 ## Компактный контекст
 
