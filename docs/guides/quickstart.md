@@ -81,7 +81,8 @@ agent-lifecycle review-mesh recommend --file task.md
 
 If a reviewed frozen plan opts in, use `review-mesh assign`,
 `import-result`, `synthesize` and `quorum` to coordinate reviewer evidence
-without launching reviewer hosts from ALK core.
+without launching reviewer hosts from ALK core. See the
+[Review Mesh workflow cookbook](review-mesh-workflow.md) for common task cases.
 
 ## Keep context small
 

@@ -79,6 +79,9 @@ conflicts, accepted findings, rejected findings and unresolved findings.
 Quorum receipts can block freeze, implementation audit or final audit only when
 the frozen plan declares Review Mesh as required for that phase.
 
+For command-by-command examples for common tasks, see the
+[Review Mesh workflow cookbook](../guides/review-mesh-workflow.md).
+
 ## Contract rules
 
 Review Mesh is fail-closed and provider-neutral:
