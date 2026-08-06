@@ -12,7 +12,8 @@ Runtime defaults: none.
 Available templates:
 
 - `bugfix`: reproduce, diagnose and repair a defect with optional Bug
-  Forensics.
+  Forensics. Intake can recommend the profile, but the gate is advisory until
+  review/freeze opt-in.
 - `idea-to-pr`: turn an idea into a reviewed implementation plan.
 - `pr-review`: review an existing change for correctness, scope and evidence.
 - `merge-conflict-repair`: repair merge conflicts with minimal behavioral

@@ -9,6 +9,10 @@ Use this skill only when the task explicitly asks to find or repair a bug,
 regression, flaky failure, incident, or security bug. The profile is optional
 and disabled by default for ordinary feature work.
 
+Adapter task intake may recommend this profile through `bugForensicsAdvisory`.
+Treat that as an advisory marker only. Do not claim the workflow gate is active
+unless the reviewed task or frozen plan explicitly opts in.
+
 ## Contract
 
 Before accepting a patch, collect schema-backed evidence for:

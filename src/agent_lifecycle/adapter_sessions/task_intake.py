@@ -14,29 +14,14 @@ from agent_lifecycle.contracts import (
     write_json_create,
 )
 from agent_lifecycle.imports import import_planning_input, import_planning_text
+from agent_lifecycle.quality.bug_forensics_advisor import (
+    bug_forensics_recommended,
+    build_bug_forensics_advisory,
+)
 from agent_lifecycle.review_mesh.recommendation import recommend_review_mesh_for_text
 
 ADAPTER_TASK_START_RECEIPT_SCHEMA = "agent-adapter-task-start-receipt.v1"
 ADAPTER_TASK_RUN_REQUEST_SCHEMA = "agent-adapter-task-run-request.v1"
-
-_DEFECT_MARKERS = (
-    "bug",
-    "defect",
-    "regression",
-    "failing",
-    "failure",
-    "flaky",
-    "incident",
-    "security bug",
-    "vulnerability",
-    "ошиб",
-    "баг",
-    "регресс",
-    "падает",
-    "не проходит",
-    "сбой",
-    "уязвим",
-)
 
 _ANALYSIS_FIRST_MARKERS = (
     "analyze code",
@@ -187,6 +172,7 @@ def _planning_intake(
         planning_import=_planning_summary(planning),
         detected_task_shape=shape["taskShape"],
         recommended_quality_profiles=shape["recommendedQualityProfiles"],
+        bug_forensics_advisory=shape["bugForensicsAdvisory"],
         pre_implementation_analysis=shape["preImplementationAnalysis"],
         review_mesh_recommendation=review_mesh_recommendation,
         requires_review=True,
@@ -355,9 +341,10 @@ def _run_request_blockers(adapter_id: str, request: dict[str, Any]) -> list[dict
 
 def _classify_task(text: str) -> dict[str, Any]:
     lowered = text.lower()
-    defect = any(marker in lowered for marker in _DEFECT_MARKERS)
+    advisory = build_bug_forensics_advisory(text)
+    defect = bug_forensics_recommended(advisory)
     analysis = any(marker in lowered for marker in _ANALYSIS_FIRST_MARKERS)
-    profiles = ["bug-forensics"] if defect else []
+    profiles = list(advisory["recommendedQualityProfiles"]) if defect else []
     task_shape = "bugfix" if defect else ("analysis-first" if analysis else ("feature" if text.strip() else "unknown"))
     purpose = None
     if analysis:
@@ -365,6 +352,7 @@ def _classify_task(text: str) -> dict[str, Any]:
     return {
         "taskShape": task_shape,
         "recommendedQualityProfiles": profiles,
+        "bugForensicsAdvisory": advisory,
         "preImplementationAnalysis": {
             "required": analysis,
             "purpose": purpose,
@@ -429,6 +417,7 @@ def _receipt(
     freeze_blocked: bool = False,
     workflow_binding: dict[str, Any] | None = None,
     review_mesh_recommendation: dict[str, Any] | None = None,
+    bug_forensics_advisory: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     body = {
         "schemaVersion": ADAPTER_TASK_START_RECEIPT_SCHEMA,
@@ -450,6 +439,7 @@ def _receipt(
         "adapterSessionReceipt": adapter_session_receipt,
         "workflowBinding": workflow_binding,
         "reviewMeshRecommendation": review_mesh_recommendation,
+        "bugForensicsAdvisory": bug_forensics_advisory,
         "modelCallsStarted": False,
         "hostLaunchStarted": bool(adapter_session_receipt.get("hostLaunchStarted")) if isinstance(adapter_session_receipt, dict) else False,
         "secretsWritten": False,

@@ -38,6 +38,12 @@ The profile activates only when a task explicitly sets `qualityProfile:
 bug-forensics`, includes `bug-forensics` in `qualityProfiles`, or sets
 `bugForensics.enabled: true`. A normal feature task receives a `SKIPPED` gate.
 
+`agent-lifecycle adapter task start` can emit a deterministic
+`bugForensicsAdvisory` object when the task text looks like a bug, regression,
+flaky failure, incident or security bug. The advisory is non-blocking:
+`activeWorkflowGateClaimed` remains false and blocking behavior still requires
+reviewed or frozen plan opt-in.
+
 ## Cross-Check
 
 High-risk bug fixes can request a secondary review through the Release 1.12
@@ -71,3 +77,8 @@ default and use tokens/resources rather than mandatory USD cost.
 Suspect graph remains optional. Flake signals and failure classification can be
 recorded now, but they do not replace reproduction, fingerprint, hypothesis
 ledger, regression proof or fix-impact evidence.
+
+## Cookbook
+
+Practical defect search, regression repair, flaky failure and security-bug
+examples are in [Bug Forensics workflows](../guides/bug-forensics-workflows.md).
