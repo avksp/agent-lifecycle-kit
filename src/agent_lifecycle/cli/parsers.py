@@ -455,6 +455,22 @@ def _add_context_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     context_render.add_argument("--summary", required=True)
     context_render.add_argument("--target-window")
     context_render.add_argument("--latest-user", default="")
+    external_import = context_sub.add_parser("external-import")
+    external_import.add_argument("--source", required=True)
+    external_import.add_argument("--citation")
+    external_import.add_argument("--source-id")
+    external_import.add_argument("--max-input-bytes", type=int, default=32768)
+    external_import.add_argument("--target-tokens", type=int, default=2048)
+    external_import.add_argument("--out")
+    episode_retrieve = context_sub.add_parser("episode-retrieve")
+    episode_retrieve.add_argument("--project-root", default=".")
+    episode_retrieve.add_argument("--artifact", action="append", required=True)
+    episode_retrieve.add_argument("--external-context", action="append", default=[])
+    episode_retrieve.add_argument("--query", default="")
+    episode_retrieve.add_argument("--max-results", type=int, default=8)
+    episode_retrieve.add_argument("--max-external-context-hints", type=int, default=4)
+    episode_retrieve.add_argument("--target-tokens", type=int, default=2048)
+    episode_retrieve.add_argument("--out")
 
 
 def _add_goal_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
