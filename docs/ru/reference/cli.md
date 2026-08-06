@@ -30,6 +30,8 @@ JSON, чтобы результат можно было проверять ав�
   ALK.
 - `agent-lifecycle quality template-list/template-check`: просмотр и проверка
   черновых шаблонов задач.
+- Частые сценарии собраны в `docs/ru/lifecycle-cookbook.md`: исследование,
+  проверка Markdown, проверка изменений и аудит реализации.
 
 ## Выполнение
 

@@ -19,3 +19,8 @@ Available templates:
   change.
 - `release-readiness`: prepare a release candidate with evidence and residual
   risk.
+- `research-plan`: research an area and stop with a reviewed plan, not code.
+- `markdown-plan-review`: review one Markdown plan file or a folder import.
+- `implementation-audit`: audit completed frozen-scope work against evidence.
+- `cross-review`: coordinate optional independent reviewers without host
+  auto-launch.

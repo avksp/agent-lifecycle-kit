@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.45.0 - 2026-08-06
+
+- Added EN/RU lifecycle cookbook recipes for research-only work, Markdown plan
+  review, code review, implementation audit and optional cross-review.
+- Added draft-only task templates for research plans, Markdown plan review,
+  implementation audit and cross-review.
+- Linked cookbook guidance from quickstarts, CLI references and workflow/audit
+  skills so beginners can start with recipes while advanced users can use
+  atomic commands.
+- Updated package and plugin publication metadata to `1.45.0`.
+
 ## 1.44.0 - 2026-08-06
 
 - Added draft-only OpenSpec, GitHub Spec Kit, BMAD and Spec Kitty planning
