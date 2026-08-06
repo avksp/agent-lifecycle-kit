@@ -1,8 +1,18 @@
-# Qwen Code support matrix stub
+# Qwen Code support summary
 
-Initial maturity: `EXPERIMENTAL`.
+Current maturity: `VERIFIED`.
 
-Do not claim `VERIFIED`, public directory approval, or production
-promotion until bounded live host conformance, usage calibration,
-redaction scan, and support-matrix review all pass for a concrete host
-version range.
+Qwen Code is verified only for Qwen Code `0.21.0` on the tested host-local
+provider/model binding. The claim is source-tree compatibility evidence, not a
+public package approval, public directory approval or production-promotion
+claim.
+
+Authoritative details live in:
+
+- `docs/adapters/qwen-code.md`;
+- `docs/adapters/support-matrix.md`;
+- `docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md`.
+
+Do not broaden this claim to other Qwen Code versions, providers, model
+bindings or publication surfaces without new bounded live host conformance,
+usage calibration, redaction scan, support-matrix review and lifecycle proof.

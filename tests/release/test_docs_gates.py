@@ -330,7 +330,11 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Quality-cost learning avoids provider/model leaderboards.\n"
     )
     _write_text(root / "docs/reference/public-contracts.md", public_contracts)
-    _write_text(root / "docs/ru/reference/public-contracts.md", public_contracts)
+    _write_text(
+        root / "docs/ru/reference/public-contracts.md",
+        public_contracts
+        + "Локальная статистика качества и расхода избегает рейтинги провайдеров.\n",
+    )
     cli = (
         "adapter session start/status/resume/promote.\n"
         "adapter run.\n"
@@ -591,7 +595,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "agent-lifecycle report progress-bridge.\n"
         "--watch.\n"
         "--terminal.\n"
-        "host-specific telemetry.\n",
+        "телеметрию конкретного хоста.\n",
     )
     _write_text(
         root / "docs/reference/automatic-progress-bridge.md",
@@ -639,7 +643,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "adapter run.\n"
         "`WRAPPER_ONLY`.\n"
         "shell: false.\n"
-        "установка plugin.\n",
+        "установка плагина.\n",
     )
     _write_text(
         root / "docs/adapters/progress-bridge-matrix.md",
@@ -653,7 +657,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Поддержка прогресса описывается отдельно от зрелости адаптера.\n"
         "`AUTO`. `WATCH`. `MANUAL`. `UNSUPPORTED`.\n"
         "agent-lifecycle report progress-bridge.\n"
-        "не заявляет неподдерживаемые native hooks.\n",
+        "не заявляет неподтверждённые прямые hooks хоста.\n",
     )
     _write_text(
         root / "docs/adapters/managed-session-support.md",
@@ -668,8 +672,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Поддержка управляемых сессий отделена от зрелости адаптера.\n"
         "`WRAPPER_ONLY`.\n"
         "agent-lifecycle adapter run.\n"
-        "не заявляет безопасный запуск нативного CLI.\n"
-        "lifecycle proof.\n",
+        "не заявляет безопасный прямой запуск CLI.\n"
+        "подтверждением жизненного цикла.\n",
     )
     for host in (
         "claude",
