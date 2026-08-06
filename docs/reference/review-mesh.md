@@ -18,6 +18,11 @@ semi-automatic layer around it: assignment packets, reviewer result import,
 synthesis and quorum validation. ALK still does not run reviewer adapters; the
 operator or host wrapper runs them and returns evidence for import.
 
+Release 1.46 adds operator templates and `review-mesh prepare`. The command
+turns a task intake receipt, plan manifest or handoff into a local profile,
+assignment packets and `agent-review-mesh-prepare-receipt.v1`. It still does
+not start reviewers.
+
 ## Stable schemas
 
 - `agent-review-mesh-profile.v1`
@@ -50,6 +55,45 @@ gates, create assignments, enforce quorum, start model calls or launch host
 CLIs. A reviewed frozen plan must opt in before Review Mesh can become required
 evidence. It does not recommend bypassing review/freeze or asking ALK core to
 launch adapters.
+
+## Operator templates and prepare
+
+Use `template-list` to see the built-in local templates:
+
+```bash
+agent-lifecycle review-mesh template-list
+```
+
+The current templates are:
+
+- `leader-draft-review`: prepare plan-review packets for a lead draft.
+- `parallel-research-synthesis`: prepare independent research packets before
+  synthesis.
+- `implementation-audit-panel`: prepare implementation-audit packets after
+  task evidence exists.
+
+Use `prepare` when you want ALK to create the profile and assignments in one
+step:
+
+```bash
+agent-lifecycle review-mesh prepare \
+  --intake intake.json \
+  --template parallel-research-synthesis \
+  --reviewer codex-example:architecture-reviewer:strong-reasoning \
+  --reviewer claude-example:risk-reviewer:strong-reasoning \
+  --reviewer opencode-glm-example:local-reviewer:local-strong-review \
+  --out-dir work/review-mesh/plan-review \
+  --out work/review-mesh/prepare-receipt.json
+```
+
+The reviewer ids are examples. Concrete model selection stays in the selected
+CLI, such as Codex, Claude Code or OpenCode. In the portable ALK receipt, use
+provider-neutral model classes such as `strong-reasoning` and
+`local-strong-review`.
+
+`prepare` writes `profile.json`, one packet per reviewer under `assignments/`,
+and a receipt with `hostExecutionStarted: false`, `modelCallsStarted: false`
+and `providerBrokerStarted: false`.
 
 ## Assignments, results, synthesis and quorum
 

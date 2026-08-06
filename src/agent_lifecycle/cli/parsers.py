@@ -11,6 +11,7 @@ from agent_lifecycle.cli.policy import add_policy_parser
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
 from agent_lifecycle.cli.worktree import add_worktree_parser
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
+from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -158,6 +159,8 @@ def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.Argument
 def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     review_mesh = subparsers.add_parser("review-mesh", help="optional Review Mesh commands")
     review_mesh_sub = review_mesh.add_subparsers(dest="review_mesh_command", required=True)
+    template_list = review_mesh_sub.add_parser("template-list")
+    template_list.add_argument("--out")
     profile = review_mesh_sub.add_parser("profile")
     profile.add_argument("--profile-id", default="optional-review-mesh")
     profile.add_argument("--mode", choices=list(REVIEW_MESH_MODE_IDS), action="append", default=[])
@@ -180,6 +183,19 @@ def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.Argu
     recommend.add_argument("--sdd-tier", choices=["S0", "S1", "S2"])
     recommend.add_argument("--risk-flag", action="append", default=[])
     recommend.add_argument("--out")
+    prepare = review_mesh_sub.add_parser("prepare")
+    prepare_source = prepare.add_mutually_exclusive_group(required=True)
+    prepare_source.add_argument("--manifest")
+    prepare_source.add_argument("--intake")
+    prepare_source.add_argument("--handoff")
+    prepare.add_argument("--template", choices=list(REVIEW_MESH_OPERATOR_TEMPLATE_IDS), default="leader-draft-review")
+    prepare.add_argument("--profile-id")
+    prepare.add_argument("--phase")
+    prepare.add_argument("--reviewer", action="append", default=[])
+    prepare.add_argument("--blocking", action="store_true")
+    prepare.add_argument("--evidence-id", action="append", default=[])
+    prepare.add_argument("--out-dir")
+    prepare.add_argument("--out")
     assign = review_mesh_sub.add_parser("assign")
     assign_source = assign.add_mutually_exclusive_group(required=True)
     assign_source.add_argument("--manifest")

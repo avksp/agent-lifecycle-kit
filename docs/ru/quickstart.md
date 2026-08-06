@@ -22,7 +22,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.45.0
+python -m pip install agent-lifecycle-kit==1.46.0
 agent-lifecycle version
 ```
 
@@ -148,9 +148,22 @@ GitHub, GitLab, архитектуры и аудита реализации:
 agent-lifecycle review-mesh recommend --file task.md
 ```
 
+Чтобы подготовить локальные пакеты проверяющих из артефакта приёма задачи:
+
+```bash
+agent-lifecycle review-mesh prepare \
+  --intake work/code-review/current/intake.json \
+  --template leader-draft-review \
+  --reviewer codex-example:plan-reviewer:strong-reasoning \
+  --reviewer claude-example:risk-reviewer:strong-reasoning \
+  --out-dir work/code-review/current/review-mesh \
+  --out work/code-review/current/review-mesh-prepare.json
+```
+
 Если проверенный зафиксированный план явно включает этот режим, используйте
-`review-mesh assign`, `import-result`, `synthesize` и `quorum`, чтобы
-координировать подтверждения проверяющих без запуска хостов из ядра ALK.
+`review-mesh prepare` или атомарные команды `assign`, `import-result`,
+`synthesize` и `quorum`, чтобы координировать подтверждения проверяющих без
+запуска хостов из ядра ALK.
 Подробные примеры:
 [практические сценарии групповой проверки](review-mesh-workflow.md).
 Сценарии, которые останавливаются на исследовании, плане, проверке Markdown или

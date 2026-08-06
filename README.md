@@ -30,7 +30,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 ```
 
 Package install, when available for the release:
-`python -m pip install agent-lifecycle-kit==1.45.0`.
+`python -m pip install agent-lifecycle-kit==1.46.0`.
 
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). Russian documentation starts at [Документация на русском](docs/ru/README.md). For positioning against runtimes, workflow engines, specification tools and memory systems, see [Project comparison](docs/reference/project-comparison.md).
 
@@ -73,7 +73,8 @@ For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Li
 - Cross-checks and runtime-policy receipts are opt-in controls; plans can
   require proof for an external system update before acceptance.
 - Optional Review Mesh covers leader-draft review, parallel research synthesis
-  and audit panels. The advisor can suggest a mode; opted-in plans can require
+  and audit panels. The advisor can suggest a mode; `review-mesh prepare`
+  creates local reviewer packets; opted-in plans can require
   assignment/result/synthesis/quorum receipts, but ALK core does not start hosts.
 
 ### Routing and resource control
