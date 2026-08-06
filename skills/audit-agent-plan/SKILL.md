@@ -41,6 +41,9 @@ When available, run `agent-lifecycle plan completeness-check --manifest
 <plan.manifest.json>` and treat `agent-plan-completeness-validation.v1` blockers
 as deterministic pre-audit findings. For freeze gates that opt in to structural
 enforcement, also check `agent-lifecycle plan check --require-completeness`.
+For Markdown-only plan packages or plan folders, use the cookbook path in
+`docs/guides/lifecycle-cookbook.md` and `docs/guides/code-review-workflows.md`
+to keep the review draft-only until a real ALK plan is frozen.
 
 ## Verdicts
 

@@ -22,7 +22,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.44.0
+python -m pip install agent-lifecycle-kit==1.45.0
 agent-lifecycle version
 ```
 
@@ -153,6 +153,8 @@ agent-lifecycle review-mesh recommend --file task.md
 координировать подтверждения проверяющих без запуска хостов из ядра ALK.
 Подробные примеры:
 [практические сценарии групповой проверки](review-mesh-workflow.md).
+Сценарии, которые останавливаются на исследовании, плане, проверке Markdown или
+аудите реализации: [практические сценарии жизненного цикла](lifecycle-cookbook.md).
 
 ## Компактный контекст
 
@@ -170,5 +172,6 @@ agent-lifecycle context check \
 
 - [Установка адаптеров](adapters/install.md)
 - [Сценарии проверки кода](code-review-workflows.md)
+- [Практические сценарии жизненного цикла](lifecycle-cookbook.md)
 - [Справочник команд](reference/cli.md)
 - [Диагностика готовности](reference/readiness-diagnostics.md)

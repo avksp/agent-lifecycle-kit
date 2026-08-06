@@ -49,12 +49,14 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "README.md",
             "docs/README.md",
             "docs/guides/code-review-workflows.md",
+            "docs/guides/lifecycle-cookbook.md",
             "docs/guides/README.ru.md",
             "docs/guides/quickstart.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
             "docs/ru/architecture/system-architecture.md",
             "docs/ru/code-review-workflows.md",
+            "docs/ru/lifecycle-cookbook.md",
             "docs/ru/quickstart.md",
             "docs/ru/adapters/install.md",
             "docs/ru/adapters/progress-bridge-matrix.md",
@@ -114,6 +116,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("agent-lifecycle plan check", text)
             self.assertIn("agent-lifecycle import plan", text)
             self.assertIn("agent-lifecycle context check", text)
+        self.assertIn("lifecycle-cookbook.md", quickstart)
+        self.assertIn("lifecycle-cookbook.md", quickstart_ru)
         for command in (
             "agent-lifecycle adapter validate",
             "agent-lifecycle adapter inspect",
@@ -358,6 +362,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "import plan --source <file-or-folder>.\n"
         "openspec|spec-kit|bmad|spec-kitty.\n"
         "import plan/check.\n"
+        "docs/guides/lifecycle-cookbook.md.\n"
+        "docs/ru/lifecycle-cookbook.md.\n"
         "adapter session start/status/resume/promote.\n"
         "adapter run.\n"
         "`WAITING_FOR_TASK`.\n"
@@ -365,6 +371,23 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/cli.md", cli)
     _write_text(root / "docs/ru/reference/cli.md", cli)
+    cookbook = (
+        "Research and planning only.\n"
+        "Review a Markdown plan folder.\n"
+        "Review code changes.\n"
+        "Audit implementation evidence.\n"
+        "Coordinate cross-review.\n"
+        "Исследование и планирование.\n"
+        "Проверка папки с Markdown-планом.\n"
+        "Проверка изменений кода.\n"
+        "Аудит подтверждений реализации.\n"
+        "Согласованная перепроверка.\n"
+        "agent-lifecycle adapter task start.\n"
+        "agent-lifecycle import plan.\n"
+        "review-mesh recommend.\n"
+    )
+    _write_text(root / "docs/guides/lifecycle-cookbook.md", cookbook)
+    _write_text(root / "docs/ru/lifecycle-cookbook.md", cookbook)
     import_mappers = (
         "`openspec-planning`.\n"
         "`github-spec-kit-planning`.\n"

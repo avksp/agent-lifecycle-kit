@@ -13,6 +13,7 @@ Use this guide when a task needs stronger planning or audit confidence:
 - high-risk bug, security or release work.
 
 For ordinary low-risk edits, keep the default lifecycle and skip Review Mesh.
+For a shorter scenario map, start with [Lifecycle cookbook](lifecycle-cookbook.md).
 
 ## Choose the right path
 
