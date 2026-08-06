@@ -1,8 +1,9 @@
 # Modular controller architecture
 
 This document defines the production shape of the Agent Lifecycle Kit
-controller. It is intentionally host-neutral and applies to Codex, Claude Code,
-Cursor, Hermes, OpenCode, and future adapters.
+controller. It is intentionally host-neutral and applies to every adapter under
+`adapters/*`, including Codex, Claude Code, Cursor, Gemini CLI, Goose, Grok
+Build, Hermes, Kimi Code, OpenCode, OpenInterpreter, Pi and Qwen Code.
 
 ## Status
 
@@ -11,10 +12,10 @@ standalone production source. It remains a characterization and bootstrap
 reference only in source projects that still carry it.
 
 The standalone release implements the controller as a modular Python package
-with thin CLI entry points. The current structure is intentionally smaller than
-the full target boundary map below: missing packages are reserved seams, not a
-release requirement unless their responsibility becomes implemented runtime
-logic.
+with thin entry points and domain packages behind them. The target boundary map
+below is no longer only a future shape: most major seams now have production
+modules. Reserved seams should still become packages only when behavior exists
+or when splitting prevents a file/context limit breach.
 
 ## Current implementation map
 
@@ -24,22 +25,38 @@ This is the current source map for the standalone package:
 | --- | --- | --- |
 | Stable contracts, canonical JSON, digests, schemas, typed errors | `contracts/*` | Implemented |
 | Git diff discovery for ownership audit | `changesets/git.py` | Implemented |
-| Ownership audit over frozen plan write sets | `audit/ownership.py` | Implemented |
+| Ownership, implementation, proof-integrity and review-verdict audit | `audit/*` | Implemented |
 | SDD tier and plan manifest validation | `planning/*`, `specification/*`, `review/*` | Implemented validators |
 | Plan lock verification | `freeze/locks.py` | Implemented |
-| Frozen DAG to task-packet compilation | `compiler/task_packets.py` | Implemented |
-| Compact context profiles and receipts | `context/*` | Implemented |
+| Frozen DAG to task-packet and small-model packet compilation | `compiler/*` | Implemented |
+| Compact context profiles, rendering and episode retrieval | `context/*` | Implemented |
 | Durable workflow state, operation kernel, event log, task/run transitions, gate checks, finalization | `workflow/*` | Implemented |
 | Neutrality authority, scanning, signed receipts, controller-gate helper | `neutrality/*` | Implemented |
-| Host capability descriptors | `host_protocol/contracts.py`, `host_protocol/validation.py`, adapter metadata files | Implemented as offline descriptors and validation contracts |
+| Host capability descriptors, inspection, event capture and validation | `host_protocol/*`, adapter metadata files | Implemented as offline descriptors and validation contracts |
+| Adapter task intake, sessions, launch profiles and workflow bridge | `adapter_sessions/*` | Implemented |
+| External workflow, dialect and planning imports | `imports/*` | Implemented as draft-only import mappers |
+| Readiness diagnostics and diagnostic bundles | `diagnostics/*` | Implemented |
+| Evidence indexes and episode indexes | `evidence_index/*` | Implemented |
+| Goal, objective and follow-up records | `goal/*`, `objective/*`, `followup/*` | Implemented |
+| Usage, phase resources, cost accounting and outcome signals | `metrics/*` | Implemented |
+| Model class routing and provider-neutral receipts | `model_routing/*` | Implemented |
+| Adaptive lifecycle policy and quality-floor decisions | `policy/*` | Implemented |
+| Optional quality profiles, cross-check and bug forensics | `quality/*` | Implemented |
+| Read-only status, progress, event feed and change summaries | `reporting/*` | Implemented |
+| Optional multi-review coordination, assignments, result import, synthesis and quorum | `review_mesh/*` | Implemented |
+| Controlled runner, attempt snapshots and sandbox receipts | `runner/*` | Implemented |
+| Worktree isolation receipts | `worktree/*` | Implemented |
 | Root CLI dispatch | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py` | Implemented thin entrypoint with split parser and dispatcher modules; no lifecycle semantics should move here |
-| Release, terminal, live adapter promotion | Metadata/docs only | Reserved until verified host evidence exists |
+| Release checks and live adapter promotion evidence | `tools/release/*`, `tools/live_hosts/*`, metadata and docs | Implemented as release validators and host-local evidence tooling |
 
 Current size check: all production Python files are below the hard limits in
-this document. `cli/main.py` is now a thin entrypoint at roughly 34 lines after
-the parser/dispatcher split. The largest current controller modules remain
-below 400 lines, including `workflow/plan_adoption.py`; new budget-decision
-behavior lives in its own workflow module rather than expanding the root CLI.
+this document. `cli/main.py` is now a thin entrypoint at 41 lines after the
+parser/dispatcher split. The largest controller files are still below the
+general 1200-line hard limit; `cli/dispatch.py` is the largest split candidate
+at about 1100 lines, and `workflow/plan_adoption.py`,
+`workflow/finalization.py` and `workflow/task_transitions.py` are about
+420-440 lines. New lifecycle behavior should prefer a focused domain module
+and a small dispatch branch instead of expanding these files further.
 
 ## Target shape
 
@@ -68,13 +85,28 @@ when splitting prevents a file/context limit breach:
 - `runner`: bounded execution loop over existing workflow primitives; the
   transition-state contract and extension points are documented in
   `runner-transition-contract.md` and `runner-extension-map.md`.
-- `validation`: controller gates, command receipts, and validation indexes;
-  currently `workflow/gates.py` and `neutrality/gate.py`.
-- `audit`: ownership, task review, final audit validators; currently
-  `audit/ownership.py`, `workflow/reviews.py`, and `workflow/finalization.py`.
+- `validation`: controller gates, command receipts, release validators and
+  validation indexes; currently `workflow/gates.py`, `neutrality/gate.py` and
+  `tools/release/*`.
+- `audit`: ownership, implementation audit, proof integrity, review verdicts
+  and final audit validators; currently `audit/*`, `workflow/reviews.py` and
+  `workflow/finalization.py`.
+- `quality`: bug-forensics, cross-check, failure classification and optional
+  quality packs.
+- `review_mesh`: optional multi-review recommendation, assignments, imported
+  results, synthesis and quorum validation.
+- `adapter_sessions`: descriptor-driven task intake, session records, secure
+  launch profiles and the managed workflow bridge.
+- `reporting`: read-only status, event feed, lifecycle progress, progress
+  hooks and change summaries.
+- `metrics`: token/resource accounting, usage export, outcome indexes and
+  quality-cost recommendations.
+- `model_routing`: provider-neutral model class decisions and receipts.
+- `worktree`: worktree isolation policies and attempt receipts.
 - `release`: release candidate, release inventory, and support matrix; currently
-  docs and metadata only.
-- `terminal`: terminal host operations and independent terminal review; reserved.
+  docs, metadata and release validators.
+- `terminal`: terminal progress rendering only; direct terminal host operations
+  remain outside core.
 - `finalization`: final proof, terminal proof, and COMPLETE replay checks;
   currently final proof and final audit validation in `workflow/finalization.py`.
 - `adapters`: host-specific projections only, with no lifecycle semantics.
@@ -95,8 +127,10 @@ function limits are therefore release gates, not style preferences.
 - Production Python source file hard limit: 1200 lines.
 - Function or method target: 80 lines or less.
 - Function or method hard limit: 150 lines.
-- CLI dispatcher target: 300 lines or less.
-- CLI dispatcher hard limit: 500 lines.
+- Root CLI entrypoint target: 80 lines or less.
+- Root CLI entrypoint hard limit: 150 lines.
+- Parser and dispatcher modules should stay below the production hard limit;
+  files above the 800-line source target are explicit split candidates.
 - External launcher target: 12 lines or less.
 - External launcher hard limit: 24 lines.
 - Top-level symbols target per module: 40 or fewer.
@@ -182,7 +216,7 @@ A release candidate fails if any of these are true:
 - a module exceeds the hard size/context limits without an approved split;
 - security-sensitive canonicalization, signing, receipt, or WAL logic has more
   than one authoritative implementation path;
-- Codex, Claude Code, Cursor, Hermes, or OpenCode support is claimed above the
-  conformance evidence actually present in the support matrix;
+- any adapter support is claimed above the conformance evidence actually present
+  in the support matrix;
 - samples, fixtures, or evaluations contain source-project names, paths,
   credentials, or artifacts.
