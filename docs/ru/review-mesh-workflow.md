@@ -129,6 +129,88 @@ agent-lifecycle review-mesh recommend \
 `implementation-audit-panel`, это всё ещё только совет. Обязательным он станет
 только после явного включения в проверенный зафиксированный план.
 
+### Проверить один Markdown-файл с задачей
+
+Когда задача уже записана в Markdown, передайте этот файл как единственный
+вход. Например `tasks/review/adapter-sessions.md` может содержать исследование,
+запрет на реализацию и ожидаемый формат результата:
+
+```markdown
+# Задача
+
+Проверь текущий процесс управляемых сессий адаптеров и составь план улучшения.
+Реализацию не начинать.
+
+Нужно проверить:
+- полноту жизненного цикла;
+- безопасность возобновления;
+- что план не вводит второй механизм выполнения для агента.
+```
+
+```bash
+agent-lifecycle adapter task start \
+  --adapter codex \
+  --file tasks/review/adapter-sessions.md \
+  --out intake.json
+
+agent-lifecycle review-mesh recommend \
+  --intake intake.json \
+  --out review-recommendation.json
+```
+
+### Проверить папку с несколькими Markdown-файлами
+
+`--file` принимает один подготовленный входной файл. Если план разложен по
+нескольким `.md`, есть два безопасных варианта.
+
+Если проверяющие работают в том же репозитории, можно дать задачу со ссылкой на
+путь:
+
+```bash
+cat > task.md <<'EOF'
+# Задача
+
+Проверь Markdown-пакет плана в `tasks/release-1-40/`.
+Смотреть все `.md` файлы в этой папке.
+
+Фокус проверки:
+- требования и критерии приёмки;
+- подтверждения и команды проверки;
+- владение файлами;
+- риски безопасности и релиза.
+
+Реализацию не начинать. Вернуть только замечания и итоговую рекомендацию.
+EOF
+
+agent-lifecycle adapter task start --adapter codex --file task.md --out intake.json
+agent-lifecycle review-mesh recommend --intake intake.json --out review-recommendation.json
+```
+
+Если нужно передать переносимый пакет без зависимости от доступа к репозиторию,
+соберите несколько Markdown-файлов в один входной файл обычными командами
+оболочки:
+
+```bash
+mkdir -p work/group-review
+{
+  printf '# Задача\n\n'
+  printf 'Проверь объединённый Markdown-пакет плана. Реализацию не начинать.\n\n'
+  find tasks/release-1-40 -maxdepth 1 -name '*.md' -print | sort | while IFS= read -r file; do
+    printf '\n\n---\n\n## %s\n\n' "$file"
+    cat "$file"
+  done
+} > work/group-review/plan-review-input.md
+
+agent-lifecycle adapter task start \
+  --adapter codex \
+  --file work/group-review/plan-review-input.md \
+  --out intake.json
+
+agent-lifecycle review-mesh recommend \
+  --intake intake.json \
+  --out review-recommendation.json
+```
+
 ## Средний путь: небольшая группа проверяющих
 
 Создайте профиль для проверки. Он хранит лимиты по токенам/ресурсам и
@@ -202,23 +284,27 @@ claude --model <claude-model-alias> --print --output-format json \
   > reviewer-b-output.json
 
 opencode models <provider>
-opencode run --model <provider>/glm-5.2 --format json \
+opencode run --model <provider>/<model-id> --format json \
   --file rm-assignment-glm.json \
   "Проверь назначение и верни только JSON reviewer-output.v1" \
   > reviewer-glm-output.json
 ```
 
-Для OpenCode сначала проверьте, что нужная модель GLM видна в списке
-`opencode models <provider>`, затем используйте тот же `<provider>/glm-5.2` в
-`opencode run --model`. Если модель настроена как модель по умолчанию в самом
-CLI, всё равно лучше указывать `--model` в проверочном запуске, чтобы в
-локальных подтверждениях было понятно, какая модель использовалась.
+Для OpenCode сначала проверьте, что нужная модель видна в списке
+`opencode models <provider>`, затем используйте тот же `<provider>/<model-id>` в
+`opencode run --model`. GLM-5.2 здесь только пример: если он настроен в вашем
+OpenCode, модель может выглядеть как `<provider>/glm-5.2`; для другой модели
+укажите её собственный `<provider>/<model-id>`. Если модель настроена как модель
+по умолчанию в самом CLI, всё равно лучше указывать `--model` в проверочном
+запуске, чтобы в локальных подтверждениях было понятно, какая модель
+использовалась.
 
 Если зафиксированный план требует доказать независимость проверяющих, передайте
 в ALK не сырое имя модели, а нейтральный хэш:
 
 ```bash
-GLM_MODEL_HASH=$(printf '%s' 'opencode:<provider>/glm-5.2' | shasum -a 256 | cut -d ' ' -f 1)
+MODEL_ID='<provider>/glm-5.2'
+MODEL_HASH=$(printf '%s' "opencode:${MODEL_ID}" | shasum -a 256 | cut -d ' ' -f 1)
 
 agent-lifecycle review-mesh assign \
   --intake intake.json \
@@ -229,9 +315,13 @@ agent-lifecycle review-mesh assign \
   --reviewer-id opencode-glm-reviewer \
   --reviewer-role plan-reviewer \
   --reviewer-model-class strong-reasoning \
-  --reviewer-model-identity-hash "$GLM_MODEL_HASH" \
+  --reviewer-model-identity-hash "$MODEL_HASH" \
   --out rm-assignment-glm.json
 ```
+
+`MODEL_ID='<provider>/glm-5.2'` — пример для GLM. Для другой модели замените
+значение переменной, например на модель Codex, Claude, Qwen или локальную модель,
+которую поддерживает выбранный CLI.
 
 Передайте каждый пакет назначения выбранному хосту или оператору. ALK не
 запускает этих проверяющих. Каждый проверяющий должен вернуть небольшой JSON с
