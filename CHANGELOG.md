@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.50.0 - 2026-08-06
+
+- Added deterministic Bug Forensics advisory policy for defect, regression,
+  flaky failure, incident and security-bug task signals.
+- Embedded advisory-only Bug Forensics recommendations in adapter task intake
+  receipts without activating workflow gates.
+- Added EN/RU Bug Forensics workflow guides and linked defect-repair examples
+  from the lifecycle cookbook, task template and skill.
+- Updated package and plugin publication metadata to `1.50.0`.
+
 ## 1.49.0 - 2026-08-06
 
 - Added `agent-goal-progress-view.v1` and `agent-lifecycle goal view` to show

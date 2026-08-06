@@ -21,6 +21,7 @@ from agent_lifecycle.workflow import (
     bug_forensics_activated,
     validate_bug_forensics_gate_receipt,
 )
+from agent_lifecycle.quality import build_bug_forensics_advisory
 
 
 class BugForensicsGateTests(unittest.TestCase):
@@ -39,6 +40,14 @@ class BugForensicsGateTests(unittest.TestCase):
         self.assertTrue(bug_forensics_activated({"qualityProfiles": ["bug-forensics"]}))
         self.assertEqual(receipt["status"], "FAIL")
         self.assertIn("bug-forensics-reproduction-missing", {item["code"] for item in receipt["blockers"]})
+
+    def test_advisory_recommendation_does_not_activate_gate_by_itself(self) -> None:
+        advisory = build_bug_forensics_advisory("Find and fix a security regression")
+        receipt = build_bug_forensics_gate_receipt(task={"id": "BUG-1", "bugForensicsAdvisory": advisory})
+
+        self.assertEqual(receipt["status"], "SKIPPED")
+        self.assertFalse(receipt["activated"])
+        self.assertFalse(bug_forensics_activated({"bugForensicsAdvisory": advisory}))
 
     def test_active_profile_passes_full_chain_and_reuses_cross_check(self) -> None:
         refs = _refs()

@@ -14,6 +14,7 @@ execution.
 | Review several Markdown plan files | [Review a Markdown plan folder](#review-a-markdown-plan-folder) | Yes |
 | Review code or a PR/MR | [Review code changes](#review-code-changes) | Yes |
 | Audit completed ALK work | [Audit implementation evidence](#audit-implementation-evidence) | No, it audits completed work |
+| Find or fix a bug | [Bug Forensics repair](#bug-forensics-repair) | No, after a frozen plan authorizes repair |
 | Ask several reviewers | [Coordinate cross-review](#coordinate-cross-review) | Yes, unless a frozen plan requires quorum |
 | Inspect an active run | [View goal and progress](#view-goal-and-progress) | Yes |
 
@@ -153,6 +154,25 @@ agent-lifecycle goal view \
 
 The command does not claim completion. It only combines the goal record,
 workflow state, progress rows, token receipts and Git-style change summary.
+
+## Bug Forensics repair
+
+For defects, regressions, flaky failures, incidents and security bugs, start
+with task intake and let ALK add advisory-only Bug Forensics markers:
+
+```bash
+agent-lifecycle adapter task start \
+  --adapter codex \
+  --file work/bugs/checkout-regression.md \
+  --out work/bugs/checkout-intake.json
+```
+
+The advisory does not activate the workflow gate. A reviewed frozen plan must
+explicitly opt in before the gate can require reproduction, fingerprint,
+hypothesis ledger, regression proof and fix-impact receipts.
+
+See [Bug Forensics workflows](bug-forensics-workflows.md) for concrete defect
+search, regression, flaky failure and security-bug examples.
 
 ## Coordinate cross-review
 
