@@ -29,7 +29,10 @@ agent-lifecycle diagnose --no-install-plans
 agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json
 ```
 
-For a short walkthrough, use [Quickstart](docs/guides/quickstart.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
+Package install, when available for the release:
+`python -m pip install agent-lifecycle-kit==1.43.0`.
+
+For a short walkthrough, use [Quickstart](docs/guides/quickstart.md). Russian documentation starts at [Документация на русском](docs/ru/README.md). For positioning against runtimes, workflow engines, specification tools and memory systems, see [Project comparison](docs/reference/project-comparison.md).
 
 ## What it gives you
 
@@ -141,15 +144,11 @@ has evidence. Monetary accounting is required only for metered modes.
 | OpenInterpreter | `VERIFIED` for `interpreter` 0.0.34 on the tested host-local provider/model binding. Public directory approval is not claimed. |
 | Pi | `VERIFIED` for Pi 0.83.0 on the tested host-local provider/model binding. Public directory approval is not claimed. |
 
-Adapter installation and maturity details live in
-[Adapter install](docs/adapters/install.md) and
-[Adapter support matrix](docs/adapters/support-matrix.md).
+Adapter installation and maturity details live in [Adapter install](docs/adapters/install.md) and [Adapter support matrix](docs/adapters/support-matrix.md).
 
 ## Contract map
 
-The public lifecycle surface is schema-backed. Full stable schema ids,
-compatibility rules, runner recovery, cross-check, Review Mesh, Bug Forensics,
-and usage export details are listed in [Public contracts](docs/reference/public-contracts.md).
+The public lifecycle surface is schema-backed. Full stable schema ids, compatibility rules, runner recovery, cross-check, Review Mesh, Bug Forensics and usage export details are listed in [Public contracts](docs/reference/public-contracts.md).
 
 ## Design boundaries
 

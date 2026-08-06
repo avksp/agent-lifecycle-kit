@@ -561,6 +561,23 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/project-comparison.md",
+        (
+            "lifecycle controller",
+            "not a runtime",
+            "not a model broker",
+            "Source of truth remains the frozen ALK plan",
+        ),
+    ),
+    (
+        "docs/ru/reference/project-comparison.md",
+        (
+            "не кодовый агент",
+            "не платформа запуска моделей",
+            "Источником правды остаётся зафиксированный план ALK",
+        ),
+    ),
+    (
         "docs/ru/reference/managed-adapter-sessions.md",
         (
             "`agent-adapter-session-receipt.v1`",
