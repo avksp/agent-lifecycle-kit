@@ -37,6 +37,7 @@ project.
 - [Offline source-release checks](guides/release-candidate.md)
 - [Verified-adapter release checklist](guides/verified-adapter-release-checklist.md)
 - [Production resource and security guide](guides/production-resource-security.md)
+- [System architecture](architecture/system-architecture.md)
 - [Release architecture](architecture/release-architecture.md)
 - [Runner transition contract](architecture/runner-transition-contract.md)
 - [Runner extension map](architecture/runner-extension-map.md)

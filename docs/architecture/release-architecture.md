@@ -33,6 +33,8 @@ Local execution gates run before any production-promotion claim:
 - task acceptance rejects unowned, read-only or forbidden changed files;
 - each attempt binds to its launch baseline and requires reconciliation on
   drift;
+- optional multi-review quorum receipts are enforced only when a frozen plan
+  opts in for that phase;
 - finalization requires a completion signal or explicit evidence-bound waiver;
 - an adopted `completionCheck` requires a matching completion-check receipt
   before final proof can be written;
