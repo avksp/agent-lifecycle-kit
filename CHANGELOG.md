@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.46.0 - 2026-08-06
+
+- Added provider-neutral Review Mesh operator templates for leader draft
+  review, parallel research synthesis and implementation-audit panels.
+- Added `agent-lifecycle review-mesh template-list` and `review-mesh prepare`
+  to build local profiles, assignment packets and prepare receipts without
+  launching reviewer hosts or providers.
+- Documented replaceable Codex, Claude Code and OpenCode/GLM examples while
+  keeping portable contracts on neutral model classes.
+- Updated package and plugin publication metadata to `1.46.0`.
+
 ## 1.45.0 - 2026-08-06
 
 - Added EN/RU lifecycle cookbook recipes for research-only work, Markdown plan
