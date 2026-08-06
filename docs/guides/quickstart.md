@@ -21,7 +21,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 When the package is available for the release, install the exact semver version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.43.0
+python -m pip install agent-lifecycle-kit==1.44.0
 agent-lifecycle version
 ```
 
@@ -70,6 +70,30 @@ agent-lifecycle plan check \
 
 The plan remains the source of truth for ownership, write scope, acceptance,
 validation, and evidence expectations.
+
+## Import planning files
+
+To review an external planning file before turning it into an ALK plan:
+
+```bash
+agent-lifecycle import plan \
+  --source specs/checkout.md \
+  --dialect openspec \
+  --out work/imports/checkout-import.json
+```
+
+To review a folder with several Markdown files:
+
+```bash
+agent-lifecycle import plan \
+  --source specs/checkout/ \
+  --dialect spec-kit \
+  --out work/imports/checkout-folder-import.json
+```
+
+The same command supports `--dialect bmad` and `--dialect spec-kitty`.
+Imported material remains a draft candidate. It cannot start implementation or
+replace a frozen ALK plan until it is reviewed and frozen.
 
 ## Start adapter task intake
 

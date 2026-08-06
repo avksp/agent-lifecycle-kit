@@ -41,12 +41,17 @@ from agent_lifecycle.cli.progress_hooks import maybe_emit_workflow_progress_hook
 from agent_lifecycle.cli.worktree import dispatch_worktree
 from agent_lifecycle.goal import build_objective_snapshot, update_goal_record, validate_goal_record
 from agent_lifecycle.imports import (
+    bmad_profile,
     external_dialect_registry,
     import_external_dialect,
+    import_markdown_collection,
     import_planning_input,
+    openspec_profile,
     require_external_import_pass,
     require_import_validation_pass,
     require_skill_proposal_pass,
+    spec_kit_profile,
+    spec_kitty_profile,
     validate_external_import_result,
     validate_import_result,
     validate_skill_improvement_proposal,
@@ -288,12 +293,24 @@ def _dispatch_import(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         return payload
     if args.import_command == "plan":
-        payload = import_planning_input(
-            Path(args.source),
-            package_id=args.package_id,
-            max_input_bytes=args.max_input_bytes,
-            target_tokens=args.target_tokens,
-        )
+        source = Path(args.source)
+        dialect_profile = _planning_import_profile(args.dialect, max_input_bytes=args.max_input_bytes, target_tokens=args.target_tokens)
+        if source.is_dir() or dialect_profile is not None:
+            payload = import_markdown_collection(
+                source,
+                package_id=args.package_id,
+                max_input_bytes=args.max_input_bytes,
+                target_tokens=args.target_tokens,
+                max_files=args.max_files,
+                dialect_profile=dialect_profile,
+            )
+        else:
+            payload = import_planning_input(
+                source,
+                package_id=args.package_id,
+                max_input_bytes=args.max_input_bytes,
+                target_tokens=args.target_tokens,
+            )
         require_import_validation_pass(validate_import_result(payload))
         if args.out:
             write_json_create(Path(args.out), payload)
@@ -318,6 +335,23 @@ def _dispatch_import(args: argparse.Namespace) -> dict[str, Any]:
     if args.import_command == "proposal-check":
         return require_skill_proposal_pass(validate_skill_improvement_proposal(read_json_object(Path(args.proposal), label="skill proposal")))
     raise LifecycleError("command-not-implemented", "import command is not implemented")
+
+
+def _planning_import_profile(
+    dialect: str | None,
+    *,
+    max_input_bytes: int,
+    target_tokens: int,
+) -> dict[str, Any] | None:
+    if dialect is None:
+        return None
+    builders = {
+        "openspec": openspec_profile,
+        "spec-kit": spec_kit_profile,
+        "bmad": bmad_profile,
+        "spec-kitty": spec_kitty_profile,
+    }
+    return builders[dialect](max_input_bytes=max_input_bytes, target_tokens=target_tokens)
 
 
 def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:

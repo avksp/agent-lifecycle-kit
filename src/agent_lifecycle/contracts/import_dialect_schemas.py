@@ -41,6 +41,32 @@ IMPORT_DIALECT_SCHEMAS: dict[str, dict[str, Any]] = {
             "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
         },
     ),
+    "agent-markdown-source-collection.v1": open_object_schema(
+        "agent-markdown-source-collection.v1",
+        required=[
+            "schemaVersion",
+            "sourceKind",
+            "sourceLabel",
+            "ordering",
+            "fileCount",
+            "totalInputBytes",
+            "resourceCaps",
+            "files",
+            "blockers",
+            "collectionDigest",
+        ],
+        properties={
+            "sourceKind": {"enum": ["file", "directory", "missing"]},
+            "sourceLabel": {"type": "string"},
+            "ordering": {"const": "lexical-relative-posix"},
+            "fileCount": {"type": "integer", "minimum": 0},
+            "totalInputBytes": {"type": "integer", "minimum": 0},
+            "resourceCaps": {"type": "object"},
+            "files": {"type": "array", "items": {"type": "object"}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "collectionDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
     "agent-episode-index.v1": open_object_schema(
         "agent-episode-index.v1",
         required=[
