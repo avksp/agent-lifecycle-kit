@@ -29,7 +29,7 @@ agent-lifecycle diagnose --no-install-plans
 agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json
 ```
 
-Пошаговый пример: [Быстрый старт](quickstart.md).
+Пошаговый пример: [Быстрый старт](quickstart.md). Устройство проекта описывает [архитектура системы](architecture/system-architecture.md), а отличие от похожих инструментов показывает [сравнение проекта](reference/project-comparison.md).
 
 ## Что даёт ALK
 

@@ -30,6 +30,20 @@ ALK is useful when the team wants to:
 - coordinate optional multi-review without making the core a provider broker;
 - continue long tasks across sessions without losing plan and evidence state.
 
+## What ALK includes
+
+ALK also includes these optional capabilities:
+
+- managed adapter sessions and task intake accept task text, Markdown files and
+  frozen run requests while keeping host launch policy in adapter descriptors;
+- imported OpenSpec, Spec Kit, BMAD and related materials remain reviewed draft
+  input until an ALK plan is frozen;
+- optional Review Mesh creates reviewer assignments, imports redacted results,
+  synthesizes findings and checks quorum only when a frozen plan opts in;
+- adapter event capture, external memory context, read-only goal/progress views
+  and Bug Forensics advisory receipts add evidence without making ALK a model
+  broker or memory database.
+
 ## Where ALK can be unnecessary
 
 ALK can be too much when the task is a one-off small edit, an exploratory chat,
