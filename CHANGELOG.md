@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.44.0 - 2026-08-06
+
+- Added draft-only OpenSpec, GitHub Spec Kit, BMAD and Spec Kitty planning
+  import profiles on top of the existing ALK planning import path.
+- Added deterministic Markdown file and folder import provenance with stable
+  source digests, bounded input size and redacted file labels.
+- Extended `agent-lifecycle import plan` with `--dialect` and folder support,
+  plus EN/RU docs and CLI examples for external planning imports.
+- Updated package and plugin publication metadata to `1.44.0`.
+
 ## 1.43.0 - 2026-08-06
 
 - Added a Review Mesh workflow cookbook with common planning, research, bug
