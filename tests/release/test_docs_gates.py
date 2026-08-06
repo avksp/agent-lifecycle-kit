@@ -33,10 +33,12 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/guides/quickstart.md",
             "docs/adapters/install.md",
             "docs/reference/cli.md",
+            "docs/reference/project-comparison.md",
             "docs/reference/source-of-truth.md",
         ):
             self.assertIn(required, english)
         self.assertIn("quickstart.md", russian)
+        self.assertIn("reference/project-comparison.md", russian)
         self.assertIn("reference/cli.md", russian)
         for adapter in ("Goose", "Grok Build", "OpenInterpreter", "Pi"):
             self.assertIn(adapter, english)
@@ -59,6 +61,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/adapters/support-matrix.md",
             "docs/ru/reference/automatic-progress-bridge.md",
             "docs/ru/reference/cli.md",
+            "docs/ru/reference/project-comparison.md",
             "docs/ru/reference/source-of-truth.md",
             "docs/ru/reference/public-contracts.md",
             "docs/ru/reference/adaptive-lifecycle-policy.md",
@@ -72,6 +75,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/architecture/system-architecture.md",
             "docs/reference/automatic-progress-bridge.md",
             "docs/reference/cli.md",
+            "docs/reference/project-comparison.md",
             "docs/reference/source-of-truth.md",
             "docs/reference/adaptive-lifecycle-policy.md",
             "docs/reference/model-routing.md",
@@ -338,6 +342,14 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         root / "docs/ru/reference/public-contracts.md",
         public_contracts
         + "Локальная статистика качества и расхода избегает рейтинги провайдеров.\n",
+    )
+    _write_text(
+        root / "docs/reference/project-comparison.md",
+        "lifecycle controller. not a runtime. not a model broker. Source of truth remains the frozen ALK plan.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/project-comparison.md",
+        "не кодовый агент. не платформа запуска моделей. Источником правды остаётся зафиксированный план ALK.\n",
     )
     cli = (
         "adapter session start/status/resume/promote.\n"

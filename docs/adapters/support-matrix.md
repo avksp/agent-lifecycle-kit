@@ -16,22 +16,27 @@ Public contract compatibility is checked through
 deprecated inputs, CLI JSON envelopes and error codes. It does not promote an
 adapter by itself.
 
+Managed session support is documented separately from maturity. Current bundled
+adapters declare `managedLaunch.status: WRAPPER_ONLY`: ALK can bind lifecycle
+proof through managed commands or wrappers, but it does not claim safe native
+argv launch. See [Managed adapter session support](managed-session-support.md).
+
 ## Runtime support
 
-| Host | Projection | Current maturity | Install/publication claim |
-| --- | --- | --- | --- |
-| Codex | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | VERIFIED | Codex CLI 0.145.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; public Plugins Directory review not claimed |
-| Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
-| Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | Cursor Agent 2026.07.23-e383d2b safe inspection passed on local Free tier; bounded smoke cannot promote without usage/resource calibration and lifecycle proof; marketplace approval not claimed |
-| Gemini CLI | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Gemini CLI 0.46.0 safe inspection and bounded harness shape passed; local live canary is blocked by unsupported Gemini Code Assist client tier; live receipts, usage calibration, lifecycle proof, and publication not claimed |
-| Goose | ACP host-capability projection, bounded no-profile live harness, and capability manifest | VERIFIED | Goose 1.45.0 live host conformance, live calibration, and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
-| Grok Build | ACP probe-gated CLI projection, bounded plan-mode live harness and capability manifest | VERIFIED | Grok Build 0.2.117 live host conformance, live calibration, ACP probe and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
-| Hermes | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | VERIFIED | Hermes Agent v0.19.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory/publication review not claimed |
-| Kimi Code | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | Kimi Code 0.30.0 safe inspection and bounded harness shape passed; local live canary is blocked until a provider/model alias is configured; live receipts, usage calibration, lifecycle proof, and publication not claimed |
-| OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | OpenCode CLI 1.18.9 live host conformance, live calibration, and ALK lifecycle proof passed locally; npm publication not claimed |
-| OpenInterpreter | Host-local compatible CLI projection, bounded JSONL live harness and capability manifest | VERIFIED | `interpreter` 0.0.34 live host conformance, live calibration, containment and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
-| Pi | RPC/JSON plus AGENTS/agentskills projection, bounded JSONL live harness and capability manifest | VERIFIED | Pi 0.83.0 live host conformance, live calibration, containment, host-env hygiene and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
-| Qwen Code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | Qwen Code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on a host-local provider/model binding; public package approval not claimed |
+| Host | Projection | Current maturity | Managed launch | Install/publication claim |
+| --- | --- | --- | --- | --- |
+| Codex | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | VERIFIED | `WRAPPER_ONLY` | Codex CLI 0.145.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; public Plugins Directory review not claimed |
+| Claude Code | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | `WRAPPER_ONLY` | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
+| Cursor | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | `WRAPPER_ONLY` | Cursor Agent 2026.07.23-e383d2b safe inspection passed on local Free tier; bounded smoke cannot promote without usage/resource calibration and lifecycle proof; marketplace approval not claimed |
+| Gemini CLI | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | `WRAPPER_ONLY` | Gemini CLI 0.46.0 safe inspection and bounded harness shape passed; local live canary is blocked by unsupported Gemini Code Assist client tier; live receipts, usage calibration, lifecycle proof, and publication not claimed |
+| Goose | ACP host-capability projection, bounded no-profile live harness, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Goose 1.45.0 live host conformance, live calibration, and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
+| Grok Build | ACP probe-gated CLI projection, bounded plan-mode live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | Grok Build 0.2.117 live host conformance, live calibration, ACP probe and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
+| Hermes | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Hermes Agent v0.19.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory/publication review not claimed |
+| Kimi Code | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | `WRAPPER_ONLY` | Kimi Code 0.30.0 safe inspection and bounded harness shape passed; local live canary is blocked until a provider/model alias is configured; live receipts, usage calibration, lifecycle proof, and publication not claimed |
+| OpenCode | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | `WRAPPER_ONLY` | OpenCode CLI 1.18.9 live host conformance, live calibration, and ALK lifecycle proof passed locally; npm publication not claimed |
+| OpenInterpreter | Host-local compatible CLI projection, bounded JSONL live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | `interpreter` 0.0.34 live host conformance, live calibration, containment and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
+| Pi | RPC/JSON plus AGENTS/agentskills projection, bounded JSONL live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | Pi 0.83.0 live host conformance, live calibration, containment, host-env hygiene and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
+| Qwen Code | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Qwen Code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on a host-local provider/model binding; public package approval not claimed |
 
 ## Event capture support
 

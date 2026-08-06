@@ -16,6 +16,20 @@ Without installation, run from the checkout:
 PYTHONPATH=src python -m agent_lifecycle version
 ```
 
+## Install from package
+
+When the package is available for the release, install the exact semver version:
+
+```bash
+python -m pip install agent-lifecycle-kit==1.43.0
+agent-lifecycle version
+```
+
+If the package is not available yet, use the source checkout path above. A Git
+tag alone is not enough for plugin installation; plugin manifests inside the
+tag must also carry the same version. See
+[Plugin publication](../reference/plugin-publication.md).
+
 ## Check readiness
 
 ```bash
