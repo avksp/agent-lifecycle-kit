@@ -167,6 +167,25 @@ class AdapterEventStreamTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(payload["status"], "PASS")
 
+    def test_codex_claude_and_opencode_event_fixtures_validate(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        for adapter_id in ("codex", "claude", "opencode"):
+            with self.subTest(adapter_id=adapter_id):
+                descriptor = json.loads((root / "adapters" / adapter_id / "adapter.descriptor.json").read_text(encoding="utf-8"))
+                capability_manifest = json.loads((root / "adapters" / adapter_id / "capabilities.manifest.json").read_text(encoding="utf-8"))
+                events = json.loads((root / "conformance" / "adapters" / adapter_id / "event-stream.json").read_text(encoding="utf-8"))
+                receipt = json.loads((root / "conformance" / "adapters" / adapter_id / "event-stream-receipt.json").read_text(encoding="utf-8"))
+
+                validation = validate_event_capture_conformance(
+                    descriptor=descriptor,
+                    capability_manifest=capability_manifest,
+                    events=events,
+                    receipt=receipt,
+                )
+
+                self.assertEqual(validation["status"], "PASS")
+                self.assertTrue(validation["declaredEventCapture"])
+
 
 def _completed_stream() -> list[dict[str, object]]:
     return _base_stream() + [

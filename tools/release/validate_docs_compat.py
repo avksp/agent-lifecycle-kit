@@ -408,7 +408,43 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-adapter-event.v1`",
             "`agent-adapter-event-stream-receipt.v1`",
             "`agent-adapter-event-capture-validation.v1`",
+            "`adapter-owned`",
+            "No automatic hook installation",
+            "Adapter event capture matrix",
             "fails closed",
+        ),
+    ),
+    (
+        "docs/ru/reference/adapter-event-capture.md",
+        (
+            "`adapter-event-stream`",
+            "`agent-adapter-event.v1`",
+            "`agent-adapter-event-stream-receipt.v1`",
+            "`adapter-owned`",
+            "Автоматическая установка: нет",
+            "матрице захвата событий адаптеров",
+        ),
+    ),
+    (
+        "docs/adapters/event-capture-matrix.md",
+        (
+            "`agent-adapter-event.v1`",
+            "`agent-adapter-event-stream-receipt.v1`",
+            "No automatic hook installation",
+            "`adapter-owned`",
+            "conformance/adapters/codex/event-stream-receipt.json",
+            "conformance/adapters/qwen-code/event-stream-receipt.json",
+        ),
+    ),
+    (
+        "docs/ru/adapters/event-capture-matrix.md",
+        (
+            "`agent-adapter-event.v1`",
+            "`agent-adapter-event-stream-receipt.v1`",
+            "Автоматическая установка: нет",
+            "`adapter-owned`",
+            "conformance/adapters/codex/event-stream-receipt.json",
+            "conformance/adapters/qwen-code/event-stream-receipt.json",
         ),
     ),
     (

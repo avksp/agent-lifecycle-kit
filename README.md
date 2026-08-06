@@ -30,7 +30,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 ```
 
 Package install, when available for the release:
-`python -m pip install agent-lifecycle-kit==1.46.0`.
+`python -m pip install agent-lifecycle-kit==1.47.0`.
 
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). Russian documentation starts at [Документация на русском](docs/ru/README.md). For positioning against runtimes, workflow engines, specification tools and memory systems, see [Project comparison](docs/reference/project-comparison.md).
 
