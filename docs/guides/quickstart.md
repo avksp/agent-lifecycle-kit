@@ -70,6 +70,33 @@ This does not start implementation for raw input. It returns a review-gated
 draft receipt. Managed execution requires a frozen run request or a frozen plan
 with workflow binding.
 
+## Review code changes
+
+For a local branch, GitHub pull request or GitLab merge request, first prepare a
+diff and a short review task:
+
+```bash
+mkdir -p work/code-review/current
+git diff origin/main...HEAD > work/code-review/current/diff.patch
+```
+
+Then pass the task to ALK without starting implementation:
+
+```bash
+agent-lifecycle adapter task start \
+  --adapter codex \
+  --file work/code-review/current/review-task.md \
+  --out work/code-review/current/intake.json
+
+agent-lifecycle review-mesh recommend \
+  --intake work/code-review/current/intake.json \
+  --out work/code-review/current/recommendation.json
+```
+
+Use this for ordinary diff review, architecture review, security review and
+pre-merge risk review. Full GitHub, GitLab, architecture and implementation
+audit examples are in [Code review workflows](code-review-workflows.md).
+
 ## Optional multi-review advice
 
 For research, planning or audit-heavy work, ask for a local Review Mesh
