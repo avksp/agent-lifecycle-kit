@@ -83,6 +83,7 @@ agent-lifecycle review-mesh recommend --file task.md
 Если проверенный зафиксированный план явно включает этот режим, используйте
 `review-mesh assign`, `import-result`, `synthesize` и `quorum`, чтобы
 координировать подтверждения проверяющих без запуска хостов из ядра ALK.
+Подробные примеры: [практические сценарии Review Mesh](review-mesh-workflow.md).
 
 ## Компактный контекст
 
