@@ -16,13 +16,13 @@ JSON, чтобы результат можно было проверять ав�
   завершения.
 - `agent-lifecycle plan check`: проверка плана и файла блокировки. Флаг
   `--require-completeness` включает структурную проверку полноты выбранного SDD
-  tier.
+  уровня.
 - `agent-lifecycle plan completeness-check`: возвращает
-  `agent-plan-completeness-validation.v1` с конкретными blockers по выбранному
-  tier.
+  `agent-plan-completeness-validation.v1` с конкретными блокерами по выбранному
+  уровню.
 - `agent-lifecycle plan acceptance-check`: проверка трассируемости критериев
   приёмки.
-- `issue-to-spec` skill: перевод внешних issue в черновой вход спецификации
+- навык `issue-to-spec`: перевод внешних тикетов в черновой вход спецификации
   ALK.
 - `agent-lifecycle quality template-list/template-check`: просмотр и проверка
   черновых шаблонов задач.
@@ -47,7 +47,7 @@ JSON, чтобы результат можно было проверять ав�
   `workflow finalize` принимает `--review-mesh-quorum <path>`.
 - Управляемый вывод прогресса поддерживают только `workflow run`,
   `workflow task-result`, `workflow task-accept` и `workflow finalize`.
-  `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка plugin
+  `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка плагина
   сама по себе не доказывает полный жизненный цикл.
 - `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.
 - `agent-lifecycle task compile-small`: пакеты для маленьких моделей с
@@ -62,11 +62,11 @@ JSON, чтобы результат можно было проверять ав�
   реализации, используйте `--review-mesh-quorum <path>`.
 - `agent-lifecycle audit final-implementation`: итоговый отчёт
   `agent-final-implementation-audit.v1` перед финальным подтверждением
-  workflow.
+  рабочего цикла.
 - `agent-lifecycle quality`: дополнительные проверочные наборы.
 - `agent-lifecycle quality bug-recipe-list/bug-recipe-check`: просмотр
-  переиспользуемых рецептов Bug Forensics, которые используют существующие
-  артефакты.
+  переиспользуемых рецептов профиля расследования ошибок, которые используют
+  существующие артефакты.
 
 ## Расход и настройки
 
@@ -83,7 +83,7 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle review-mesh profile`: создаёт профиль групповой проверки с
   лимитами по токенам/ресурсам и нейтральными классами моделей.
 - `agent-lifecycle review-mesh recommend`: анализирует текст задачи, файл
-  задачи, артефакт приёма задачи или manifest плана и возвращает
+  задачи, артефакт приёма задачи или манифест плана и возвращает
   `agent-review-mesh-recommendation.v1`. Полученный артефакт только рекомендует
   режим: он не создаёт назначения, не запускает адаптеры и не включает
   обязательные контрольные точки.
@@ -99,20 +99,20 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle adapter install-plan`: пробный план установки без записи.
 - `agent-lifecycle adapter session start/status/resume/promote`: запись и
   возобновление сессий адаптеров. Обычная интерактивная сессия возвращает
-  `WAITING_FOR_TASK`; promoted-сессия связывается с состоянием workflow и
-  задачей.
+  `WAITING_FOR_TASK`; повышенная сессия связывается с состоянием рабочего цикла
+  и задачей.
 - `agent-lifecycle adapter task start --adapter <id> (--file task.md |
   --text "...")`: принимает задачу для выбранного адаптера. Обычный текст и
   Markdown возвращают `agent-adapter-task-start-receipt.v1` со статусом
   `REVIEW_REQUIRED`; `--task-file` и `--task-text` являются псевдонимами. В
-  receipt может быть рекомендательное поле `reviewMeshRecommendation`, если
-  дополнительные проверяющие могут помочь, но вход остаётся черновым.
+  подтверждении может быть рекомендательное поле `reviewMeshRecommendation`,
+  если дополнительные проверяющие могут помочь, но вход остаётся черновым.
   Структурированный `agent-adapter-task-run-request.v1` или зафиксированный
-  manifest с `--state`, `--lock`, `--task`, `--operation-id`,
+  манифест с `--state`, `--lock`, `--task`, `--operation-id`,
   `--expected-revision` и `--source-revision` передаются в управляемый запуск.
 - `agent-lifecycle adapter run`: связывает сессию адаптера с зафиксированным
-  workflow state и возвращает управляемый следующий шаг ALK. Для этого
-  управляемого пути прогресс по умолчанию показывается в stderr, а JSON stdout
+  состоянием рабочего цикла и возвращает управляемый следующий шаг ALK. Для
+  этого управляемого пути прогресс по умолчанию показывается в stderr, а JSON stdout
   остаётся `agent-adapter-session-receipt.v1`.
 
 ## Контекст и продолжение
@@ -127,4 +127,4 @@ JSON, чтобы результат можно было проверять ав�
   режим `--watch` и явный текстовый вывод `--terminal`.
 - `agent-lifecycle report progress-bridge`: создаёт
   `agent-progress-bridge-receipt.v1` для обёрток адаптеров, которым нужен
-  стабильный JSON receipt и, при необходимости, текст для терминала.
+  стабильное JSON-подтверждение и, при необходимости, текст для терминала.

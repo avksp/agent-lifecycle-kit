@@ -163,8 +163,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-review-mesh-quorum-validation.v1`",
             "`agent-failure-classification-receipt.v1`",
             "`agent-failure-classification-validation.v1`",
-            "Quality-cost learning",
-            "provider/model leaderboards",
+            "Локальная статистика качества и расхода",
+            "рейтинги провайдеров",
         ),
     ),
     (
@@ -477,7 +477,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "agent-lifecycle report progress-bridge",
             "--watch",
             "--terminal",
-            "host-specific telemetry",
+            "телеметрию конкретного хоста",
         ),
     ),
     (
@@ -571,7 +571,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "adapter run",
             "`WRAPPER_ONLY`",
             "shell: false",
-            "установка plugin",
+            "установка плагина",
         ),
     ),
     (
@@ -641,8 +641,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "Поддержка управляемых сессий отделена от зрелости адаптера",
             "`WRAPPER_ONLY`",
             "agent-lifecycle adapter run",
-            "не заявляет безопасный запуск нативного CLI",
-            "lifecycle proof",
+            "не заявляет безопасный прямой запуск CLI",
+            "подтверждением жизненного цикла",
         ),
     ),
     (
@@ -654,7 +654,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`MANUAL`",
             "`UNSUPPORTED`",
             "agent-lifecycle report progress-bridge",
-            "не заявляет неподдерживаемые native hooks",
+            "не заявляет неподтверждённые прямые",
         ),
     ),
     (
