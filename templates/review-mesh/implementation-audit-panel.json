@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "agent-review-mesh-operator-template.v1",
+  "templateId": "implementation-audit-panel",
+  "mode": "implementation-audit-panel",
+  "phase": "implementation-audit",
+  "description": "Multiple auditors check implementation evidence after task completion.",
+  "requiredReviewers": 2,
+  "defaultReviewers": [
+    {
+      "id": "auditor-a",
+      "role": "implementation-auditor",
+      "modelClass": "strong-reasoning"
+    },
+    {
+      "id": "auditor-b",
+      "role": "release-auditor",
+      "modelClass": "strong-reasoning"
+    }
+  ],
+  "budgetCap": {
+    "maxInvocations": 2,
+    "maxInputTokens": 12000,
+    "maxOutputTokens": 4000,
+    "maxWallSeconds": 900
+  },
+  "independenceRequired": true,
+  "independenceDimensions": [
+    "host",
+    "model"
+  ],
+  "blockingDefault": false,
+  "hostExecutionStarted": false,
+  "modelCallsStarted": false,
+  "providerBrokerStarted": false,
+  "productionPromotionClaimed": false
+}
