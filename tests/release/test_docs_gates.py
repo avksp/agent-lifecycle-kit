@@ -46,10 +46,12 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         for relative in (
             "README.md",
             "docs/README.md",
+            "docs/guides/code-review-workflows.md",
             "docs/guides/README.ru.md",
             "docs/guides/quickstart.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
+            "docs/ru/code-review-workflows.md",
             "docs/ru/quickstart.md",
             "docs/ru/adapters/install.md",
             "docs/ru/adapters/progress-bridge-matrix.md",

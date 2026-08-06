@@ -31,6 +31,7 @@ project.
 - [Pi adapter](adapters/pi.md)
 - [Qwen Code adapter](adapters/qwen-code.md)
 - [Quickstart](guides/quickstart.md)
+- [Code review workflows](guides/code-review-workflows.md)
 - [Review Mesh workflow cookbook](guides/review-mesh-workflow.md)
 - [Issue to specification drafts](guides/issue-to-spec.md)
 - [Offline source-release checks](guides/release-candidate.md)
