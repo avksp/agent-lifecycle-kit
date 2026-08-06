@@ -24,7 +24,9 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle plan snapshot/reconcile/handoff`: maintain compact,
   reviewable plan state.
 - `agent-lifecycle import plan/check`: keep imported work draft-only until
-  reviewed.
+  reviewed. `import plan --source <file-or-folder> --dialect
+  openspec|spec-kit|bmad|spec-kitty` imports OpenSpec, Spec Kit, BMAD or Spec
+  Kitty Markdown planning material with deterministic provenance.
 - `issue-to-spec` skill: convert external issues into draft-only ALK
   specification input.
 - `agent-lifecycle quality template-list/template-check`: inspect and validate

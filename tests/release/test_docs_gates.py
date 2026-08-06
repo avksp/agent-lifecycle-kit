@@ -61,6 +61,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/adapters/support-matrix.md",
             "docs/ru/reference/automatic-progress-bridge.md",
             "docs/ru/reference/cli.md",
+            "docs/ru/reference/import-mappers.md",
             "docs/ru/reference/project-comparison.md",
             "docs/ru/reference/source-of-truth.md",
             "docs/ru/reference/public-contracts.md",
@@ -75,6 +76,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/architecture/system-architecture.md",
             "docs/reference/automatic-progress-bridge.md",
             "docs/reference/cli.md",
+            "docs/reference/import-mappers.md",
             "docs/reference/project-comparison.md",
             "docs/reference/source-of-truth.md",
             "docs/reference/adaptive-lifecycle-policy.md",
@@ -110,6 +112,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("agent-lifecycle diagnose --no-install-plans", text)
             self.assertIn("agent-lifecycle adapter install-plan", text)
             self.assertIn("agent-lifecycle plan check", text)
+            self.assertIn("agent-lifecycle import plan", text)
             self.assertIn("agent-lifecycle context check", text)
         for command in (
             "agent-lifecycle adapter validate",
@@ -352,6 +355,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "не кодовый агент. не платформа запуска моделей. Источником правды остаётся зафиксированный план ALK.\n",
     )
     cli = (
+        "import plan --source <file-or-folder>.\n"
+        "openspec|spec-kit|bmad|spec-kitty.\n"
+        "import plan/check.\n"
         "adapter session start/status/resume/promote.\n"
         "adapter run.\n"
         "`WAITING_FOR_TASK`.\n"
@@ -359,6 +365,17 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/cli.md", cli)
     _write_text(root / "docs/ru/reference/cli.md", cli)
+    import_mappers = (
+        "`openspec-planning`.\n"
+        "`github-spec-kit-planning`.\n"
+        "`bmad-method-planning`.\n"
+        "`spec-kitty-planning`.\n"
+        "agent-markdown-source-collection.v1.\n"
+        "--dialect openspec.\n"
+        "--dialect spec-kit.\n"
+    )
+    _write_text(root / "docs/reference/import-mappers.md", import_mappers)
+    _write_text(root / "docs/ru/reference/import-mappers.md", import_mappers)
     install = (
         "`agent-lifecycle adapter session start/status/resume/promote`.\n"
         "`agent-lifecycle adapter run`.\n"
