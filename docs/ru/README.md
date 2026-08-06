@@ -33,7 +33,8 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
   необязательна и используется только если её сообщает платный хост.
 - Прогресс и управляемые сессии работают без вызова модели: можно показать
   состояние, токены и счётчик изменений, а `adapter run` связывает работу с
-  зафиксированным workflow state без заявления native launch хоста.
+  зафиксированным состоянием рабочего цикла без заявления прямого запуска
+  хоста.
 
 ## Области возможностей
 
@@ -52,8 +53,8 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 
 - Аудит реализации сравнивает результат с зафиксированным планом и
   подтверждениями приёмки.
-- Дополнительный профиль расследования ошибок (`Bug Forensics`) для задач по
-  дефектам и регрессиям фиксирует воспроизведение до правки, устойчивый
+- Дополнительный профиль расследования ошибок для задач по дефектам и
+  регрессиям фиксирует воспроизведение до правки, устойчивый
   отпечаток ошибки, журнал гипотез, минимальную правку и регрессионную проверку.
 - Контроль целостности для рискованных финальных подтверждений хранит
   устойчивые выводы проверки, отпечатки причины, влияние правки и цепочку хэшей.
@@ -89,8 +90,8 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
   жизненного цикла.
 - Новый CLI подключается через дескриптор, правила запуска, границу окружения и
   отдельные подтверждения проверки; ядро при этом не меняется.
-- Progress bridge показывает состояние жизненного цикла без изменения зрелости
-  адаптера и без разбора host telemetry в core.
+- Отображение прогресса показывает состояние жизненного цикла без изменения
+  зрелости адаптера и без разбора телеметрии хоста в ядре.
 - Проверки возможностей адаптера строят ограниченные планы пробных запусков и
   сравнивают реальные подтверждения без автоматического изменения статуса.
 - Импорт внешних процессов, форматов агентов и тикетов используется только как
@@ -183,8 +184,6 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 ## Документы
 
 - Старт: [Быстрый старт](quickstart.md), [практические сценарии групповой проверки](review-mesh-workflow.md) и [черновик спецификации из issue](issue-to-spec.md).
-- Адаптеры: [Установка](adapters/install.md), [поддержка](adapters/support-matrix.md), [управляемые сессии](adapters/managed-session-support.md) и [прогресс](adapters/progress-bridge-matrix.md).
-- Справочник: [Команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [управляемые сессии адаптеров](reference/managed-adapter-sessions.md), [аудит реализации](reference/implementation-audit.md), [полнота плана](reference/plan-completeness.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md) и [диагностика готовности](reference/readiness-diagnostics.md).
-- Качество, ресурсы и безопасность: [компактные пакеты для маленьких моделей](reference/small-model-packets.md), [адаптивные правила](reference/adaptive-lifecycle-policy.md), [локальная статистика качества](reference/quality-cost-learning.md), [учёт расхода жизненного цикла](reference/lifecycle-cost.md), [экспорт использования](reference/usage-export.md), [целостность подтверждений](reference/evidence-integrity.md), [границы песочницы](reference/sandbox-boundaries.md) и [безопасность релиза](security/release-security.md).
-- Профили и операции: [статус без записи](reference/read-only-status-view.md), [прогресс](reference/automatic-progress-bridge.md), [индекс подтверждений и импорт](reference/evidence-imports.md), [импорт внешних форматов](reference/import-mappers.md), [эпизоды](reference/episode-retrieval.md), [восстановление](reference/runner-recovery.md), [перепроверка](reference/cross-check-profile.md), [групповая проверка](reference/review-mesh.md), [рекомендация групповой проверки](reference/review-mesh.md#рекомендация-режима), [Bug Forensics](reference/bug-forensics.md) и [бюджет контекста](reference/bug-forensics-context-budget.md).
-- Релизные материалы: [шаблоны задач](reference/task-templates.md).
+- Адаптеры: [Установка](adapters/install.md), [поддержка](adapters/support-matrix.md), [управляемые сессии](adapters/managed-session-support.md), [прогресс](adapters/progress-bridge-matrix.md), [создание адаптера](adapters/authoring.md), [порядок перевода в VERIFIED](adapters/live-promotion-runbook.md), [Codex](adapters/codex.md), [Claude Code](adapters/claude.md), [Cursor](adapters/cursor.md), [Gemini CLI](adapters/gemini-cli.md), [Goose](adapters/goose.md), [Grok Build](adapters/grok-build.md), [Hermes](adapters/hermes.md), [Kimi Code](adapters/kimi-code.md), [OpenCode](adapters/opencode.md), [OpenInterpreter](adapters/openinterpreter.md), [Pi](adapters/pi.md) и [Qwen Code](adapters/qwen-code.md).
+- Основной справочник: [Команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [управляемые сессии адаптеров](reference/managed-adapter-sessions.md), [аудит реализации](reference/implementation-audit.md), [полнота плана](reference/plan-completeness.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md), [диагностика готовности](reference/readiness-diagnostics.md), [компактные пакеты](reference/small-model-packets.md), [адаптивные правила](reference/adaptive-lifecycle-policy.md), [локальная статистика](reference/quality-cost-learning.md), [учёт расхода](reference/lifecycle-cost.md), [экспорт использования](reference/usage-export.md), [целостность подтверждений](reference/evidence-integrity.md), [границы песочницы](reference/sandbox-boundaries.md) и [безопасность релиза](security/release-security.md).
+- Дополнительный справочник: [статус без записи](reference/read-only-status-view.md), [прогресс](reference/automatic-progress-bridge.md), [индекс подтверждений и импорт](reference/evidence-imports.md), [импорт внешних форматов](reference/import-mappers.md), [эпизоды](reference/episode-retrieval.md), [восстановление](reference/runner-recovery.md), [перепроверка](reference/cross-check-profile.md), [групповая проверка](reference/review-mesh.md), [рекомендация групповой проверки](reference/review-mesh.md#рекомендация-режима), [профиль расследования ошибок](reference/bug-forensics.md), [бюджет контекста для него](reference/bug-forensics-context-budget.md), [проверка завершения](reference/completion-check.md), [непрерывность цели](reference/goal-continuity.md), [реестр отложенной работы](reference/follow-up-register.md), [изоляция рабочего дерева](reference/worktree-isolation.md), [возможности хоста](reference/host-capabilities.md), [захват событий адаптера](reference/adapter-event-capture.md), [вердикт проверки](reference/review-verdict.md), [дополнительные пакеты качества](reference/optional-quality-packs.md), [маршрутизация моделей](reference/model-routing.md), [предложения правил](reference/policy.md), [промышленная готовность](reference/production-promotion.md), [калибровка реального расхода](reference/live-cost-calibration.md), [непрерывность плана](reference/plan-continuity.md), [диагностические пакеты](reference/diagnostic-bundles.md), [контролируемый запуск](reference/runner.md) и [шаблоны задач](reference/task-templates.md).
