@@ -28,3 +28,11 @@ by default.
 
 The descriptor does not claim safe native argv launch for this host CLI. Provider
 credentials, native launch, waits, cancellation and telemetry remain host-owned.
+
+## Event capture
+
+Event capture is declared as `adapter-owned` and uses
+`agent-adapter-event.v1` plus `agent-adapter-event-stream-receipt.v1`. See
+[OpenCode event bridge](event-bridge.md). No automatic hook installation is
+claimed, and event capture guidance does not change the OpenCode `VERIFIED`
+maturity claim.

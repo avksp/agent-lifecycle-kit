@@ -3,6 +3,12 @@
 Adapter event capture records host activity as neutral ALK evidence. Adapter
 metadata declares the capability with `adapter-event-stream` and
 `agent-adapter-event.v1`; this declaration does not change adapter maturity.
+The producer boundary is `adapter-owned`.
+
+No automatic hook installation: ALK core does not install native host hooks or
+write host configuration. Adapters or operators may produce receipts from a
+wrapper route or from a host-native hook they own, but the portable receipt
+must stay neutral.
 
 An event stream must validate with `agent-adapter-event-stream-validation.v1`.
 Completed streams include session start, task launch, command completion,
@@ -23,3 +29,8 @@ agent-lifecycle adapter event-capture-check --descriptor <adapter.descriptor.jso
 Event categories stay generic: command, file-change, lifecycle-transition,
 model-usage, user-decision and validation. Core does not depend on native host
 callback names.
+
+The adapter-level matrix is in
+[Adapter event capture matrix](../adapters/event-capture-matrix.md). It lists
+native-hook status, wrapper route, receipt route and automatic-hook claim
+status for the bundled adapters.

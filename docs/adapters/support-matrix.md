@@ -47,6 +47,12 @@ fixtures that bind event stream digests to descriptor digests. This is an
 evidence-quality contract and does not change adapter maturity or claim
 production promotion.
 
+No automatic hook installation: event capture is `adapter-owned`. ALK core does
+not install native host hooks, write host configuration or parse raw host
+telemetry. The per-adapter native hook, wrapper route, receipt route and
+automatic-hook claim status are documented in
+[Adapter event capture matrix](event-capture-matrix.md).
+
 ## Compact context support
 
 The source release includes `profiles/small-context-profile.v1.json` and a

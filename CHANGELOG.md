@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.47.0 - 2026-08-06
+
+- Added EN/RU adapter event capture matrices covering native-hook status,
+  wrapper routes, receipt routes, automatic-hook claims and adapter-owned
+  boundaries.
+- Added Codex, Claude Code and OpenCode event bridge guidance linked to
+  existing neutral event stream conformance fixtures.
+- Added `validate_adapter_event_guidance.py` to fail closed when declared
+  event capture lacks documentation, receipt routes or truthful hook
+  boundaries.
+- Updated package and plugin publication metadata to `1.47.0`.
+
 ## 1.46.0 - 2026-08-06
 
 - Added provider-neutral Review Mesh operator templates for leader draft
