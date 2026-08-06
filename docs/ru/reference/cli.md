@@ -43,8 +43,8 @@ JSON, чтобы результат можно было проверять ав�
   Если план требует аудит реализации, `workflow task-accept` принимает
   `--implementation-audit <implementation-audit.json>`, а `workflow finalize`
   принимает `--final-implementation-audit <final-implementation-audit.json>`.
-  Для плана с обязательным Review Mesh на финальном аудите `workflow finalize`
-  принимает `--review-mesh-quorum <path>`.
+  Для плана с обязательной групповой проверкой на финальном аудите
+  `workflow finalize` принимает `--review-mesh-quorum <path>`.
 - Управляемый вывод прогресса поддерживают только `workflow run`,
   `workflow task-result`, `workflow task-accept` и `workflow finalize`.
   `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка plugin
@@ -58,7 +58,7 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle audit`: проверка плана, реализации и вердиктов.
 - `agent-lifecycle audit implementation`: структурированный отчёт
   `agent-implementation-audit-report.v1` по результату задачи и независимой
-  проверке. Если зафиксированный план требует Review Mesh для аудита
+  проверке. Если зафиксированный план требует групповую проверку для аудита
   реализации, используйте `--review-mesh-quorum <path>`.
 - `agent-lifecycle audit final-implementation`: итоговый отчёт
   `agent-final-implementation-audit.v1` перед финальным подтверждением
@@ -80,15 +80,17 @@ JSON, чтобы результат можно было проверять ав�
   необязательного `cost_usd`, если его сообщает тарифицируемый хост.
 - `agent-lifecycle policy`: адаптивные решения, артефакты правил запуска и
   рекомендательные предложения по настройке правил.
+- `agent-lifecycle review-mesh profile`: создаёт профиль групповой проверки с
+  лимитами по токенам/ресурсам и нейтральными классами моделей.
 - `agent-lifecycle review-mesh recommend`: анализирует текст задачи, файл
-  задачи, receipt приёма задачи или manifest плана и возвращает
-  `agent-review-mesh-recommendation.v1`. Receipt только рекомендует режим: он
-  не создаёт назначения, не запускает адаптеры и не включает обязательные
-  gates.
+  задачи, артефакт приёма задачи или manifest плана и возвращает
+  `agent-review-mesh-recommendation.v1`. Полученный артефакт только рекомендует
+  режим: он не создаёт назначения, не запускает адаптеры и не включает
+  обязательные контрольные точки.
 - `agent-lifecycle review-mesh assign/import-result/synthesize/quorum`:
   создаёт пакеты назначений для выполнения на стороне хоста, импортирует
-  обезличенный результат проверяющего, объединяет выводы и формирует receipt
-  кворума. Эти команды не вызывают модели и не запускают host CLI.
+  обезличенный результат проверяющего, объединяет выводы и формирует артефакт
+  кворума. Эти команды не вызывают модели и не запускают CLI хоста.
 
 ## Адаптеры
 

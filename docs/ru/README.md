@@ -60,7 +60,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 - Перепроверка и проверка правил запуска включаются по требованию плана. Если
   задача должна записать результат во внешнюю систему, план может потребовать
   отдельное подтверждение такой записи до приёмки.
-- Дополнительный Review Mesh описывает проверку черновика ведущего,
+- Дополнительная групповая проверка описывает проверку черновика ведущего,
   параллельное исследование и группу аудиторов реализации. План может
   потребовать артефакты назначения, результата, объединения выводов и кворума,
   но ядро ALK не запускает проверяющие хосты.
@@ -176,15 +176,15 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
   ограничения среды запуска и могут оставаться `UNKNOWN` до отдельной проверки.
 - Импорт внешних форматов и найденные прошлые эпизоды помогают с контекстом, но
   не заменяют проверенные исходные артефакты ALK.
-- Дополнительная перепроверка, Review Mesh и правила запуска добавляют
+- Дополнительная перепроверка, групповая проверка и правила запуска добавляют
   подтверждения только при запросе задачи или плана; это не режим
   одновременного запуска нескольких моделей по умолчанию.
 
 ## Документы
 
-- Старт: [Быстрый старт](quickstart.md), [практические сценарии Review Mesh](review-mesh-workflow.md) и [черновик спецификации из issue](issue-to-spec.md).
+- Старт: [Быстрый старт](quickstart.md), [практические сценарии групповой проверки](review-mesh-workflow.md) и [черновик спецификации из issue](issue-to-spec.md).
 - Адаптеры: [Установка](adapters/install.md), [поддержка](adapters/support-matrix.md), [управляемые сессии](adapters/managed-session-support.md) и [прогресс](adapters/progress-bridge-matrix.md).
 - Справочник: [Команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [управляемые сессии адаптеров](reference/managed-adapter-sessions.md), [аудит реализации](reference/implementation-audit.md), [полнота плана](reference/plan-completeness.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md) и [диагностика готовности](reference/readiness-diagnostics.md).
 - Качество, ресурсы и безопасность: [компактные пакеты для маленьких моделей](reference/small-model-packets.md), [адаптивные правила](reference/adaptive-lifecycle-policy.md), [локальная статистика качества](reference/quality-cost-learning.md), [учёт расхода жизненного цикла](reference/lifecycle-cost.md), [экспорт использования](reference/usage-export.md), [целостность подтверждений](reference/evidence-integrity.md), [границы песочницы](reference/sandbox-boundaries.md) и [безопасность релиза](security/release-security.md).
-- Профили и операции: [статус без записи](reference/read-only-status-view.md), [прогресс](reference/automatic-progress-bridge.md), [индекс подтверждений и импорт](reference/evidence-imports.md), [импорт внешних форматов](reference/import-mappers.md), [эпизоды](reference/episode-retrieval.md), [восстановление](reference/runner-recovery.md), [перепроверка](reference/cross-check-profile.md), [Review Mesh](reference/review-mesh.md), [рекомендация Review Mesh](reference/review-mesh.md#рекомендация-режима), [Bug Forensics](reference/bug-forensics.md) и [бюджет контекста](reference/bug-forensics-context-budget.md).
+- Профили и операции: [статус без записи](reference/read-only-status-view.md), [прогресс](reference/automatic-progress-bridge.md), [индекс подтверждений и импорт](reference/evidence-imports.md), [импорт внешних форматов](reference/import-mappers.md), [эпизоды](reference/episode-retrieval.md), [восстановление](reference/runner-recovery.md), [перепроверка](reference/cross-check-profile.md), [групповая проверка](reference/review-mesh.md), [рекомендация групповой проверки](reference/review-mesh.md#рекомендация-режима), [Bug Forensics](reference/bug-forensics.md) и [бюджет контекста](reference/bug-forensics-context-budget.md).
 - Релизные материалы: [шаблоны задач](reference/task-templates.md).
