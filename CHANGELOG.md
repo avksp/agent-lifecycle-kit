@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- No changes yet.
+- Added a Review Mesh workflow cookbook with common planning, research, bug
+  investigation, implementation-audit and release/security review scenarios in
+  EN/RU docs.
 
 ## 1.42.0 - 2026-08-05
 

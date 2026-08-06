@@ -280,9 +280,10 @@ work. `agent-review-mesh-profile.v1` defines the mode enum:
 `leader-draft-multi-review`, `parallel-research-synthesis` and
 `implementation-audit-panel`. `agent-review-mesh-recommendation.v1` can advise
 one of those modes, or `off`, from bounded local signals. Assignment, result,
-synthesis and quorum receipts remain provider-neutral, token/resource-capped
-and disabled unless a reviewed plan opts in. Review Mesh does not launch
-adapters or enforce quorum by default.
+synthesis and quorum receipts let ALK coordinate reviewer evidence without
+launching reviewer adapters. The receipts remain provider-neutral,
+token/resource-capped and disabled unless a reviewed plan opts in. Review Mesh
+does not launch adapters or enforce quorum by default.
 
 `agent-runtime-policy-receipt.v1` distinguishes proven pre-execution
 enforcement from advisory-only logging. `agent-worktree-writeback-receipt.v1`
