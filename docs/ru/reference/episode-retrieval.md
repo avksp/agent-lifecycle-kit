@@ -25,6 +25,23 @@
 Это важно: поиск помогает подобрать контекст, но непроверенный результат поиска
 не является доказательством.
 
+## Подсказки из внешнего контекста
+
+Поиск по эпизодам может учитывать импортированные артефакты внешнего контекста:
+
+```bash
+agent-lifecycle context episode-retrieve \
+  --project-root . \
+  --artifact work/run/final-proof.json \
+  --external-context work/context/project-memory.external-context.json \
+  --query "регрессионное подтверждение"
+```
+
+Внешний контекст выводится как `externalContextHints` с
+`sourceOfTruth: false` и `proof: false`. Он помогает оператору подобрать
+контекст, но не закрывает требования по доказательствам, проверке или
+финальному подтверждению.
+
 ## Python API
 
 ```python
@@ -36,6 +53,7 @@ context = build_episode_context(
     Path("."),
     ["final/final-proof.json", "reviews/task-review.json"],
     query="regression proof",
+    external_context_hints=[],
     max_results=4,
 )
 ```
@@ -46,4 +64,6 @@ context = build_episode_context(
 - Он не читает произвольные пути; вызывающая сторона передаёт пути артефактов
   относительно репозитория.
 - Он не возвращает исходное содержимое артефактов.
+- Подсказки из внешнего контекста являются дополнительными и не считаются
+  доказательством.
 - Он падает закрыто, если результат превышает целевой бюджет контекста.

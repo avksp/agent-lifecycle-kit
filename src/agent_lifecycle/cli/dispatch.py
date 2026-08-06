@@ -25,6 +25,7 @@ from agent_lifecycle.contracts.compatibility import (
 )
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.context import check_context, load_context_profile, render_context
+from agent_lifecycle.context.external_memory import build_episode_retrieval_with_external_context, import_external_memory_context
 from agent_lifecycle.diagnostics import build_diagnostic_bundle, build_readiness_report
 from agent_lifecycle.evidence_index import (
     build_evidence_index,
@@ -839,6 +840,30 @@ def _dispatch_context(args: argparse.Namespace) -> dict[str, Any]:
             window=args.target_window,
         )
         return _require_context_pass(result)
+    if args.context_command == "external-import":
+        payload = import_external_memory_context(
+            Path(args.source),
+            citation=args.citation,
+            source_id=args.source_id,
+            max_input_bytes=args.max_input_bytes,
+            target_tokens=args.target_tokens,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.context_command == "episode-retrieve":
+        payload = build_episode_retrieval_with_external_context(
+            Path(args.project_root),
+            list(args.artifact),
+            external_context_paths=[Path(item) for item in args.external_context],
+            query=args.query,
+            max_results=args.max_results,
+            max_external_context_hints=args.max_external_context_hints,
+            target_tokens=args.target_tokens,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     raise LifecycleError("command-not-implemented", "context command is not implemented")
 
 

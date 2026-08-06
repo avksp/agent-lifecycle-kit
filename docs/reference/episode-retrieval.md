@@ -25,6 +25,22 @@ no matching chain is available, retrieval still works but returns
 This is intentional: retrieval may help context selection, but unchecked
 retrieval is not proof.
 
+## External context hints
+
+Episode retrieval can include imported external context receipts:
+
+```bash
+agent-lifecycle context episode-retrieve \
+  --project-root . \
+  --artifact work/run/final-proof.json \
+  --external-context work/context/project-memory.external-context.json \
+  --query "regression proof"
+```
+
+The external context is returned as `externalContextHints` with
+`sourceOfTruth: false` and `proof: false`. It can help the operator choose
+context, but it cannot satisfy evidence, review or final proof requirements.
+
 ## Python API
 
 ```python
@@ -36,6 +52,7 @@ context = build_episode_context(
     Path("."),
     ["final/final-proof.json", "reviews/task-review.json"],
     query="regression proof",
+    external_context_hints=[],
     max_results=4,
 )
 ```
@@ -45,4 +62,5 @@ context = build_episode_context(
 - Episode retrieval is optional and disabled unless called explicitly.
 - It does not read arbitrary paths; callers pass repository-relative artifacts.
 - It does not return raw artifact bodies.
+- External context hints are optional and non-proof.
 - It fails closed when the result exceeds the target context budget.

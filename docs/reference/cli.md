@@ -110,6 +110,11 @@ read-only unless their own help says otherwise.
 ## Context and continuity
 
 - `agent-lifecycle context check/render`: validate and render compact context.
+- `agent-lifecycle context external-import`: import one local external memory or
+  context file as `agent-external-context-import-receipt.v1` without network,
+  model or provider calls.
+- `agent-lifecycle context episode-retrieve`: build `agent-episode-retrieval.v1`
+  from explicit artifacts and optional `--external-context` receipts.
 - `agent-lifecycle goal check/summarize/update`: keep user intent traceable.
 - `agent-lifecycle followup check/add/close/sweep`: track deferred work.
 - `agent-lifecycle worktree policy-check/receipt/check`: verify write-scope and

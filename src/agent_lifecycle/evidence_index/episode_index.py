@@ -112,16 +112,24 @@ def retrieve_episodes(
     *,
     query: str = "",
     max_results: int = 8,
+    external_context_hints: list[dict[str, Any]] | None = None,
+    max_external_context_hints: int = 4,
     target_tokens: int = 2048,
 ) -> dict[str, Any]:
     """Return bounded episode retrieval results with chain provenance."""
 
     _positive_int(max_results, "maxResults")
+    _positive_int(max_external_context_hints, "maxExternalContextHints")
     _positive_int(target_tokens, "targetTokens")
     validation = validate_episode_index(index)
     episodes = index.get("episodes") if isinstance(index.get("episodes"), list) else []
     ranked = _rank_episodes([item for item in episodes if isinstance(item, dict)], query)
     results = [_retrieval_projection(item) for item in ranked[:max_results]]
+    external_hints = _project_external_context_hints(
+        external_context_hints or [],
+        query=query,
+        max_hints=max_external_context_hints,
+    )
     body = {
         "schemaVersion": EPISODE_RETRIEVAL_SCHEMA,
         "status": "PASS",
@@ -131,6 +139,14 @@ def retrieve_episodes(
         "maxResults": max_results,
         "results": results,
         "omittedResultCount": max(0, len(ranked) - len(results)),
+        "externalContextPolicy": {
+            "sourceOfTruth": False,
+            "proof": False,
+            "enabledByDefault": False,
+            "role": "optional-context-hint",
+        },
+        "externalContextHintCount": len(external_hints),
+        "externalContextHints": external_hints,
         "indexDigest": index.get("indexDigest"),
         "blockers": [] if validation["status"] == "PASS" else [{"code": "episode-index-invalid"}],
         "chainStateCounts": _chain_state_counts(results),
@@ -250,6 +266,44 @@ def _retrieval_projection(episode: dict[str, Any]) -> dict[str, Any]:
         "chainUnchecked": provenance.get("chainUnchecked"),
         "chainEntryHash": provenance.get("chainEntryHash"),
     }
+
+
+def _project_external_context_hints(
+    hints: list[dict[str, Any]],
+    *,
+    query: str,
+    max_hints: int,
+) -> list[dict[str, Any]]:
+    ranked = _rank_external_context_hints([item for item in hints if isinstance(item, dict)], query)
+    projected: list[dict[str, Any]] = []
+    for hint in ranked[:max_hints]:
+        projected.append(
+            {
+                "hintId": hint.get("hintId"),
+                "contextRole": "optional-external-context",
+                "sourceOfTruth": False,
+                "proof": False,
+                "citation": hint.get("citation"),
+                "sourceDigest": hint.get("sourceDigest"),
+                "redactionStatus": hint.get("redactionStatus"),
+                "text": hint.get("text"),
+            }
+        )
+    return projected
+
+
+def _rank_external_context_hints(hints: list[dict[str, Any]], query: str) -> list[dict[str, Any]]:
+    terms = [term for term in query.lower().split() if term]
+    if not terms:
+        return sorted(hints, key=lambda item: str(item.get("hintId") or item.get("citation")))
+    ranked: list[tuple[int, str, dict[str, Any]]] = []
+    for hint in hints:
+        haystack = json.dumps(hint, ensure_ascii=False, sort_keys=True).lower()
+        score = sum(1 for term in terms if term in haystack)
+        if score:
+            ranked.append((score, str(hint.get("hintId") or hint.get("citation")), hint))
+    ranked.sort(key=lambda item: (-item[0], item[1]))
+    return [hint for _, _, hint in ranked]
 
 
 def _compact_summary(summary: dict[str, Any]) -> dict[str, Any]:

@@ -50,6 +50,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/README.md",
             "docs/guides/code-review-workflows.md",
             "docs/guides/lifecycle-cookbook.md",
+            "docs/guides/production-resource-security.md",
             "docs/guides/README.ru.md",
             "docs/guides/quickstart.md",
             "docs/guides/quickstart.ru.md",
@@ -58,12 +59,15 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/code-review-workflows.md",
             "docs/ru/lifecycle-cookbook.md",
             "docs/ru/quickstart.md",
+            "docs/ru/guides/production-resource-security.md",
             "docs/ru/adapters/install.md",
             "docs/ru/adapters/progress-bridge-matrix.md",
             "docs/ru/adapters/support-matrix.md",
             "docs/ru/reference/automatic-progress-bridge.md",
             "docs/ru/reference/cli.md",
+            "docs/ru/reference/external-memory.md",
             "docs/ru/reference/import-mappers.md",
+            "docs/ru/reference/episode-retrieval.md",
             "docs/ru/reference/project-comparison.md",
             "docs/ru/reference/source-of-truth.md",
             "docs/ru/reference/public-contracts.md",
@@ -78,7 +82,9 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/architecture/system-architecture.md",
             "docs/reference/automatic-progress-bridge.md",
             "docs/reference/cli.md",
+            "docs/reference/external-memory.md",
             "docs/reference/import-mappers.md",
+            "docs/reference/episode-retrieval.md",
             "docs/reference/project-comparison.md",
             "docs/reference/source-of-truth.md",
             "docs/reference/adaptive-lifecycle-policy.md",
@@ -342,6 +348,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-quality-cost-signals-summary.v1`.\n"
         "`agent-failure-classification-receipt.v1`.\n"
         "`agent-failure-classification-validation.v1`.\n"
+        "`agent-external-context-import-receipt.v1`.\n"
+        "`agent-external-context-import-validation.v1`.\n"
         "Quality-cost learning avoids provider/model leaderboards.\n"
     )
     _write_text(root / "docs/reference/public-contracts.md", public_contracts)
@@ -400,6 +408,20 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/import-mappers.md", import_mappers)
     _write_text(root / "docs/ru/reference/import-mappers.md", import_mappers)
+    external_memory = (
+        "`agent-external-context-import-receipt.v1`.\n"
+        "`sourceOfTruth: false`.\n"
+        "`rawContentStored: false`.\n"
+        "`modelCallsStarted: false`.\n"
+        "`networkCallsStarted: false`.\n"
+        "`providerApiCallsStarted: false`.\n"
+        "agent-lifecycle context external-import.\n"
+        "agent-lifecycle context episode-retrieve.\n"
+        "cannot satisfy evidence, review or final proof requirements.\n"
+        "не закрывает требования по доказательствам.\n"
+    )
+    _write_text(root / "docs/reference/external-memory.md", external_memory)
+    _write_text(root / "docs/ru/reference/external-memory.md", external_memory)
     install = (
         "`agent-lifecycle adapter session start/status/resume/promote`.\n"
         "`agent-lifecycle adapter run`.\n"
