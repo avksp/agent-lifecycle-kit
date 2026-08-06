@@ -38,6 +38,8 @@ class AdapterTaskCommandTests(unittest.TestCase):
         self.assertEqual(stderr, "")
         self.assertEqual(payload["status"], "REVIEW_REQUIRED")
         self.assertFalse(payload["executionStarted"])
+        self.assertEqual(payload["bugForensicsAdvisory"]["recommendation"], "SUGGEST")
+        self.assertFalse(payload["bugForensicsAdvisory"]["gateBoundary"]["activeWorkflowGateClaimed"])
         self.assertEqual(candidate_payload["schemaVersion"], "agent-planning-import-result.v1")
 
     def test_task_start_aliases_are_supported(self) -> None:
