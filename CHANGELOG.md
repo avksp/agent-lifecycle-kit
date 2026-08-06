@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.49.0 - 2026-08-06
+
+- Added `agent-goal-progress-view.v1` and `agent-lifecycle goal view` to show
+  current goal, lifecycle phase, next action, elapsed time, token usage and
+  Git-style change counters from existing artifacts.
+- Added terminal rendering for goal/progress views while keeping JSON output as
+  the default machine-readable contract.
+- Documented EN/RU goal progress examples in quickstarts, lifecycle cookbook,
+  CLI reference and read-only status references.
+- Updated package and plugin publication metadata to `1.49.0`.
+
 ## 1.48.0 - 2026-08-06
 
 - Added `agent-external-context-import-receipt.v1` and validation for

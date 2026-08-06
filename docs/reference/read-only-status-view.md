@@ -81,6 +81,25 @@ agent-lifecycle report change-summary \
 The progress command only reads a supplied summary artifact; Git access stays
 inside the dedicated change-summary helper.
 
+## Goal and progress view
+
+`agent-goal-progress-view.v1` combines the current goal record with the same
+read-only lifecycle progress projection. Use it when an operator or small model
+needs one compact line of sight across the requested outcome, lifecycle phase,
+next action, elapsed time, token usage and code-change counters.
+
+```bash
+agent-lifecycle goal view \
+  --record <goal-record.json> \
+  --state <workflow-state.json> \
+  --usage-receipt <usage.json> \
+  --change-summary <changes.json> \
+  --terminal
+```
+
+The workflow state and goal record remain the source artifacts. The view is a
+display receipt only.
+
 ## Adapter progress bridge
 
 `agent-progress-bridge-receipt.v1` packages the same progress projection for
