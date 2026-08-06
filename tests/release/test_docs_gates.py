@@ -385,6 +385,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "agent-lifecycle adapter task start.\n"
         "agent-lifecycle import plan.\n"
         "review-mesh recommend.\n"
+        "review-mesh prepare.\n"
     )
     _write_text(root / "docs/guides/lifecycle-cookbook.md", cookbook)
     _write_text(root / "docs/ru/lifecycle-cookbook.md", cookbook)

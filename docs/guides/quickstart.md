@@ -21,7 +21,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 When the package is available for the release, install the exact semver version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.45.0
+python -m pip install agent-lifecycle-kit==1.46.0
 agent-lifecycle version
 ```
 
@@ -144,9 +144,21 @@ recommendation before putting it into a plan:
 agent-lifecycle review-mesh recommend --file task.md
 ```
 
-If a reviewed frozen plan opts in, use `review-mesh assign`,
-`import-result`, `synthesize` and `quorum` to coordinate reviewer evidence
-without launching reviewer hosts from ALK core. See the
+To prepare local reviewer packets from a task intake receipt:
+
+```bash
+agent-lifecycle review-mesh prepare \
+  --intake work/code-review/current/intake.json \
+  --template leader-draft-review \
+  --reviewer codex-example:plan-reviewer:strong-reasoning \
+  --reviewer claude-example:risk-reviewer:strong-reasoning \
+  --out-dir work/code-review/current/review-mesh \
+  --out work/code-review/current/review-mesh-prepare.json
+```
+
+If a reviewed frozen plan opts in, use `review-mesh prepare` or the atomic
+`assign`, `import-result`, `synthesize` and `quorum` commands to coordinate
+reviewer evidence without launching reviewer hosts from ALK core. See the
 [Review Mesh workflow cookbook](review-mesh-workflow.md) for common task cases.
 For cookbook recipes that stop at research, planning, Markdown review or
 implementation audit, see [Lifecycle cookbook](lifecycle-cookbook.md).

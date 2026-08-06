@@ -24,7 +24,7 @@ ALK в посредника для моделей. ALK готовит назна
 | Уровень | Когда использовать | Команды |
 | --- | --- | --- |
 | Начальный | Понять, нужна ли дополнительная проверка | `adapter task start`, `review-mesh recommend` |
-| Средний | Провести небольшую группу проверяющих | `recommend`, `assign`, `import-result`, `synthesize`, `quorum` |
+| Средний | Подготовить небольшую группу проверяющих | `recommend`, `prepare`, `import-result`, `synthesize`, `quorum` |
 | Продвинутый | Встроить групповую проверку в обязательные этапы плана | атомарные команды `review-mesh` и `--review-mesh-quorum` |
 
 ## Частые сценарии
@@ -131,6 +131,47 @@ agent-lifecycle review-mesh recommend \
 `implementation-audit-panel`, это всё ещё только совет. Обязательным он станет
 только после явного включения в проверенный зафиксированный план.
 
+## Быстрый путь: подготовка пакетов одной командой
+
+Используйте `prepare`, когда рекомендация показывает, что несколько
+проверяющих будут полезны, а ALK должен подготовить локальный профиль и пакеты
+назначений:
+
+```bash
+agent-lifecycle review-mesh prepare \
+  --intake intake.json \
+  --template parallel-research-synthesis \
+  --reviewer codex-example:architecture-reviewer:strong-reasoning \
+  --reviewer claude-example:risk-reviewer:strong-reasoning \
+  --reviewer opencode-glm-example:local-reviewer:local-strong-review \
+  --evidence-id EV-PLAN \
+  --out-dir work/review-mesh/plan-review \
+  --out work/review-mesh/prepare-receipt.json
+```
+
+Команда записывает:
+
+- `work/review-mesh/plan-review/profile.json`;
+- отдельный пакет назначения для каждого проверяющего в
+  `work/review-mesh/plan-review/assignments/`;
+- `work/review-mesh/prepare-receipt.json`.
+
+Идентификаторы проверяющих выше являются примерами. Codex, Claude Code и
+OpenCode/GLM можно заменить на другие доступные CLI. Точная модель выбирается в
+самом CLI или его локальных настройках; ALK хранит только нейтральные классы
+моделей, например `strong-reasoning` и `local-strong-review`.
+
+Передайте каждый пакет назначения выбранному CLI. Для OpenCode/GLM модель
+GLM-5.2 указана только как пример:
+
+```bash
+opencode models <provider>
+opencode run --model <provider>/<model-id> --format json \
+  --file work/review-mesh/plan-review/assignments/parallel-research-synthesis-3.json \
+  "Проверь назначение и верни только JSON reviewer-output.v1" \
+  > reviewer-glm-output.json
+```
+
 ### Проверить один Markdown-файл с задачей
 
 Когда задача уже записана в Markdown, передайте этот файл как единственный
@@ -213,7 +254,7 @@ agent-lifecycle review-mesh recommend \
   --out review-recommendation.json
 ```
 
-## Средний путь: небольшая группа проверяющих
+## Ручной путь: небольшая группа проверяющих
 
 Создайте профиль для проверки. Он хранит лимиты по токенам/ресурсам и
 нейтральные правила независимости. Python-код для этого не нужен:

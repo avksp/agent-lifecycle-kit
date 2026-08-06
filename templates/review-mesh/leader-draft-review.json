@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "agent-review-mesh-operator-template.v1",
+  "templateId": "leader-draft-review",
+  "mode": "leader-draft-multi-review",
+  "phase": "plan-review",
+  "description": "One lead draft is checked by independent reviewers before freeze.",
+  "requiredReviewers": 2,
+  "defaultReviewers": [
+    {
+      "id": "reviewer-a",
+      "role": "plan-reviewer",
+      "modelClass": "strong-reasoning"
+    },
+    {
+      "id": "reviewer-b",
+      "role": "risk-reviewer",
+      "modelClass": "strong-reasoning"
+    }
+  ],
+  "budgetCap": {
+    "maxInvocations": 2,
+    "maxInputTokens": 12000,
+    "maxOutputTokens": 4000,
+    "maxWallSeconds": 900
+  },
+  "independenceRequired": true,
+  "independenceDimensions": [
+    "host",
+    "model"
+  ],
+  "blockingDefault": false,
+  "hostExecutionStarted": false,
+  "modelCallsStarted": false,
+  "providerBrokerStarted": false,
+  "productionPromotionClaimed": false
+}
