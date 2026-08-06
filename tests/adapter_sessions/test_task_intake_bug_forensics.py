@@ -12,6 +12,9 @@ class AdapterTaskIntakeBugForensicsTests(unittest.TestCase):
         self.assertEqual(receipt["status"], "REVIEW_REQUIRED")
         self.assertEqual(receipt["detectedTaskShape"], "bugfix")
         self.assertIn("bug-forensics", receipt["recommendedQualityProfiles"])
+        self.assertEqual(receipt["bugForensicsAdvisory"]["recommendation"], "SUGGEST")
+        self.assertTrue(receipt["bugForensicsAdvisory"]["gateBoundary"]["advisoryOnly"])
+        self.assertFalse(receipt["bugForensicsAdvisory"]["gateBoundary"]["activeWorkflowGateClaimed"])
         self.assertFalse(receipt["preImplementationAnalysis"]["activeWorkflowGateClaimed"])
         self.assertFalse(receipt["lifecycleCoverageClaimed"])
 
@@ -20,6 +23,7 @@ class AdapterTaskIntakeBugForensicsTests(unittest.TestCase):
 
         self.assertEqual(receipt["status"], "REVIEW_REQUIRED")
         self.assertNotIn("bug-forensics", receipt["recommendedQualityProfiles"])
+        self.assertEqual(receipt["bugForensicsAdvisory"]["recommendation"], "NOT_APPLICABLE")
 
 
 if __name__ == "__main__":
