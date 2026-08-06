@@ -15,6 +15,60 @@ except ImportError:
 
 
 class ReviewMeshCliTests(unittest.TestCase):
+    def test_template_list_and_prepare_commands_build_local_packets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            intake_path = root / "intake.json"
+            out_dir = root / "prepared"
+            receipt_path = root / "prepare-receipt.json"
+            write_json_create(
+                intake_path,
+                {
+                    "schemaVersion": "agent-adapter-task-start-receipt.v1",
+                    "status": "REVIEW_REQUIRED",
+                    "adapterId": "codex",
+                    "input": {"label": "task.md"},
+                    "receiptDigest": "b" * 64,
+                },
+            )
+
+            code, library = _run_cli(["review-mesh", "template-list"])
+            self.assertEqual(code, 0)
+            self.assertIn("parallel-research-synthesis", library["templateIds"])
+            self.assertFalse(library["hostExecutionStarted"])
+
+            code, receipt = _run_cli(
+                [
+                    "review-mesh",
+                    "prepare",
+                    "--intake",
+                    intake_path.as_posix(),
+                    "--template",
+                    "parallel-research-synthesis",
+                    "--reviewer",
+                    "codex-example:architecture-reviewer:strong-reasoning",
+                    "--reviewer",
+                    "claude-example:risk-reviewer:strong-reasoning",
+                    "--reviewer",
+                    "opencode-glm-example:local-reviewer:local-strong-review",
+                    "--evidence-id",
+                    "EV-PLAN",
+                    "--out-dir",
+                    out_dir.as_posix(),
+                    "--out",
+                    receipt_path.as_posix(),
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(receipt["schemaVersion"], "agent-review-mesh-prepare-receipt.v1")
+            self.assertEqual(receipt["reviewerCount"], 3)
+            self.assertFalse(receipt["hostExecutionStarted"])
+            self.assertFalse(receipt["modelCallsStarted"])
+            self.assertTrue((out_dir / "profile.json").is_file())
+            self.assertEqual(len(list((out_dir / "assignments").glob("*.json"))), 3)
+            self.assertTrue(receipt_path.is_file())
+
     def test_profile_command_writes_provider_neutral_profile(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

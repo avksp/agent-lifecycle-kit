@@ -57,12 +57,15 @@ planning-only, Markdown plan review, code review, implementation audit and
 cross-review flows. Beginner paths should start from those recipes; advanced
 users can continue with the atomic commands listed in the CLI reference.
 
-If a frozen plan opts into Review Mesh, generate assignments with
-`agent-lifecycle review-mesh assign`, have host adapters or operators run the
-reviewers, import their outputs with `review-mesh import-result`, synthesize
-with `review-mesh synthesize`, and require `review-mesh quorum` receipts only
-for the phases named by the plan. Do not treat Review Mesh as authority to
-inject prompts into hosts or bypass review/freeze.
+If a frozen plan opts into Review Mesh, prefer
+`agent-lifecycle review-mesh prepare` for common operator flows: it builds a
+local profile, reviewer packets and `agent-review-mesh-prepare-receipt.v1`
+without launching hosts. Advanced flows may still use atomic
+`review-mesh assign`; host adapters or operators run the reviewers, ALK imports
+their outputs with `review-mesh import-result`, synthesizes with
+`review-mesh synthesize`, and requires `review-mesh quorum` receipts only for
+the phases named by the plan. Do not treat Review Mesh as authority to inject
+prompts into hosts or bypass review/freeze.
 
 ## State rules
 

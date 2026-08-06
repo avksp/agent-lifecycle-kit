@@ -97,6 +97,11 @@ read-only unless their own help says otherwise.
   adapter task intake receipt or a plan manifest and emit
   `agent-review-mesh-recommendation.v1`. The receipt is advisory only and does
   not create assignments, launch adapters or enable blocking gates.
+- `agent-lifecycle review-mesh template-list/prepare`: inspect built-in
+  operator templates and prepare a local profile plus assignment packets from
+  an intake receipt, manifest or handoff. `prepare` writes
+  `agent-review-mesh-prepare-receipt.v1` and does not call providers or launch
+  reviewer CLIs.
 - `agent-lifecycle review-mesh assign/import-result/synthesize/quorum`: create
   host-owned reviewer packets, import redacted reviewer output, synthesize
   findings and build a quorum receipt. These commands do not call models or
