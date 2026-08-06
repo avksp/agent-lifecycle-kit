@@ -3,6 +3,11 @@
 This guide shows the smallest useful source-checkout flow. It performs no live
 model calls and does not write host configuration.
 
+For the project structure, read
+[System architecture](../architecture/system-architecture.md). For how ALK
+differs from coding agents, runtimes, specification tools and memory systems,
+read [Project comparison](../reference/project-comparison.md).
+
 ## Install from source
 
 ```bash
