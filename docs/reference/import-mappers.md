@@ -5,6 +5,13 @@ draft artifacts. Imported content is never trusted automatically.
 
 ## Supported dialect profiles
 
+- `openspec-planning`: OpenSpec planning documents with spec, proposal,
+  capability and change hints.
+- `github-spec-kit-planning`: GitHub Spec Kit specifications, plans and task
+  breakdowns.
+- `bmad-method-planning`: BMAD planning, PRD, architecture and story material.
+- `spec-kitty-planning`: Spec Kitty requirement, design, task and verification
+  material.
 - `external-workflow-generic`: generic workflow-like YAML or JSON with
   step/job/check hints.
 - `external-agent-generic`: generic agent/harness-like YAML or JSON with
@@ -47,10 +54,20 @@ are redacted or represented by digests and cannot become portable defaults.
 
 ```bash
 agent-lifecycle import profile-list
+agent-lifecycle import plan --source specs/checkout.md --dialect openspec --out import.json
+agent-lifecycle import plan --source specs/ --dialect spec-kit --out import.json
+agent-lifecycle import plan --source docs/stories/ --dialect bmad --out import.json
+agent-lifecycle import plan --source specs/story.md --dialect spec-kitty --out import.json
 agent-lifecycle import external --family workflow --source workflow.yaml --out import.json
 agent-lifecycle import external --family agent --source agent.yaml --out import.json
+agent-lifecycle import check --candidate import.json
 agent-lifecycle import external-check --candidate import.json
 ```
+
+`import plan --source <folder>` reads only Markdown files, sorts them by
+relative POSIX path and stores redacted provenance in
+`agent-markdown-source-collection.v1`. The receipt contains file labels,
+digests and byte counts, but not private absolute paths.
 
 ## Python API
 
@@ -58,14 +75,24 @@ agent-lifecycle import external-check --candidate import.json
 from pathlib import Path
 
 from agent_lifecycle.imports import (
+    import_bmad_planning,
     import_external_agent,
     import_external_workflow,
+    import_markdown_collection,
     import_agentskills_dialect,
     import_constitution_adr,
+    import_openspec_planning,
+    import_spec_kit_planning,
+    import_spec_kitty_planning,
     validate_import_result,
 )
 
 result = import_constitution_adr(Path("architecture-decision.md"))
+openspec_result = import_openspec_planning(Path("specs/checkout.md"))
+spec_kit_result = import_spec_kit_planning(Path("spec.md"))
+bmad_result = import_bmad_planning(Path("story.md"))
+spec_kitty_result = import_spec_kitty_planning(Path("design.md"))
+folder_result = import_markdown_collection(Path("specs"))
 workflow_result = import_external_workflow(Path("workflow.yaml"))
 agent_result = import_external_agent(Path("agent.yaml"))
 validation = validate_import_result(result)
@@ -77,6 +104,8 @@ validation = validate_import_result(result)
 - Local paths and obvious secret markers block import.
 - Resource caps apply before candidate generation.
 - Profile digest drift fails validation.
+- Markdown folder imports use deterministic ordering and bounded file/input
+  caps.
 - Imported workflow nodes are never executed.
 - Provider, model, auth, environment and tool hints from agent-family inputs
   stay host-local and cannot become portable core defaults.

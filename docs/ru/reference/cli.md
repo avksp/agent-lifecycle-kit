@@ -22,6 +22,10 @@ JSON, чтобы результат можно было проверять ав�
   уровню.
 - `agent-lifecycle plan acceptance-check`: проверка трассируемости критериев
   приёмки.
+- `agent-lifecycle import plan/check`: перевод файла или папки Markdown в
+  черновой план-кандидат. Флаг `--dialect openspec|spec-kit|bmad|spec-kitty`
+  выбирает профиль OpenSpec, Spec Kit, BMAD или Spec Kitty; результат требует
+  проверки и заморозки перед реализацией.
 - навык `issue-to-spec`: перевод внешних тикетов в черновой вход спецификации
   ALK.
 - `agent-lifecycle quality template-list/template-check`: просмотр и проверка
