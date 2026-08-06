@@ -8,6 +8,7 @@ from pathlib import Path
 from agent_lifecycle.reporting import (
     build_lifecycle_progress_view,
     build_lifecycle_progress_watch,
+    render_goal_view_terminal,
     render_progress_terminal,
 )
 
@@ -39,6 +40,31 @@ class ProgressTerminalTests(unittest.TestCase):
 
         self.assertEqual(watch["schemaVersion"], "agent-lifecycle-progress-watch.v1")
         self.assertIn("RUNNING", rendered)
+        self.assertIn("TOTAL", rendered)
+
+    def test_renders_goal_progress_view(self) -> None:
+        payload = {
+            "schemaVersion": "agent-goal-progress-view.v1",
+            "goal": {"goalStatus": "ACTIVE"},
+            "lifecycle": {"phase": "RUNNING", "nextAction": {"type": "launch-tasks", "taskIds": ["WS-01"]}},
+            "progress": {
+                "lines": ["implementation         DONE       00:00:30 ↑0.1k/↓0.8k tok 1 files · +3 -1"],
+                "terminalSummary": {
+                    "line": "TOTAL                  OPEN       00:00:30 ↑0.1k/↓0.8k tok 1 files changed · 3 insertions · 1 deletions · 1 modified · 0 added · 0 deleted"
+                },
+            },
+            "metrics": {
+                "duration": "00:00:30",
+                "tokens": "↑0.1k/↓0.8k tok",
+                "changeSummary": "1 files changed · 3 insertions · 1 deletions · 1 modified · 0 added · 0 deleted",
+            },
+        }
+
+        rendered = render_goal_view_terminal(payload)
+
+        self.assertIn("GOAL", rendered)
+        self.assertIn("LIFECYCLE", rendered)
+        self.assertIn("launch-tasks WS-01", rendered)
         self.assertIn("TOTAL", rendered)
 
 

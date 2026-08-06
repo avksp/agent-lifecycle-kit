@@ -40,7 +40,7 @@ from agent_lifecycle.cli.followup import dispatch_followup
 from agent_lifecycle.cli.policy import dispatch_policy
 from agent_lifecycle.cli.progress_hooks import maybe_emit_workflow_progress_hook, validate_workflow_progress_hook_request
 from agent_lifecycle.cli.worktree import dispatch_worktree
-from agent_lifecycle.goal import build_objective_snapshot, update_goal_record, validate_goal_record
+from agent_lifecycle.goal import build_goal_progress_view, build_objective_snapshot, update_goal_record, validate_goal_record
 from agent_lifecycle.imports import (
     bmad_profile,
     external_dialect_registry,
@@ -132,6 +132,7 @@ from agent_lifecycle.reporting import (
     build_status_view,
     build_workflow_event_feed,
     render_progress_bridge_terminal,
+    render_goal_view_terminal,
     render_progress_terminal,
     render_usage_export_json,
     render_usage_export_table,
@@ -876,6 +877,19 @@ def _dispatch_goal(args: argparse.Namespace) -> dict[str, Any]:
         state = read_json_object(Path(args.state), label="workflow state")
         profile = read_json_object(Path(args.profile), label="context profile") if args.profile else None
         return build_objective_snapshot(record, state, profile=profile, window=args.target_window)
+    if args.goal_command == "view":
+        payload = build_goal_progress_view(
+            record_path=Path(args.record),
+            state_path=Path(args.state),
+            usage_receipt_paths=[Path(item) for item in args.usage_receipt],
+            change_summary_path=Path(args.change_summary) if args.change_summary else None,
+            require_current=not args.allow_stale_goal,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        if args.terminal:
+            return render_goal_view_terminal(payload)
+        return payload
     if args.goal_command == "update":
         state = read_json_object(Path(args.state), label="workflow state")
         updated = update_goal_record(
