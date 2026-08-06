@@ -21,7 +21,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 When the package is available for the release, install the exact semver version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.48.0
+python -m pip install agent-lifecycle-kit==1.49.0
 agent-lifecycle version
 ```
 
@@ -174,3 +174,21 @@ agent-lifecycle context check \
 
 The profile keeps summaries short and explicit while preserving the gates that
 protect final quality.
+
+## View goal and progress
+
+When a run already has a goal record and workflow state, use one read-only view
+to inspect the current outcome, lifecycle phase, elapsed time, token usage and
+code-change counters:
+
+```bash
+agent-lifecycle goal view \
+  --record work/run/goal.json \
+  --state work/run/state.json \
+  --usage-receipt work/run/usage.json \
+  --change-summary work/run/change-summary.json \
+  --terminal
+```
+
+The command only reads existing artifacts. It is safe to run in a second
+terminal while another adapter is working.

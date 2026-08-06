@@ -11,6 +11,8 @@ def render_progress_terminal(payload: dict[str, Any], *, include_summary: bool =
     """Render a progress view or watch receipt as terminal text."""
 
     schema = payload.get("schemaVersion")
+    if schema == "agent-goal-progress-view.v1":
+        return render_goal_view_terminal(payload, include_summary=include_summary)
     if schema == "agent-lifecycle-progress-view.v1":
         return _render_lines(
             lines=_strings(payload.get("lines")),
@@ -30,6 +32,39 @@ def render_progress_terminal(payload: dict[str, Any], *, include_summary: bool =
     raise LifecycleError("progress-terminal-unsupported-schema", "unsupported progress receipt schema", {"schemaVersion": schema})
 
 
+def render_goal_view_terminal(payload: dict[str, Any], *, include_summary: bool = True) -> str:
+    """Render a goal progress view as terminal text."""
+
+    if payload.get("schemaVersion") != "agent-goal-progress-view.v1":
+        raise LifecycleError(
+            "goal-view-terminal-unsupported-schema",
+            "unsupported goal view receipt schema",
+            {"schemaVersion": payload.get("schemaVersion")},
+        )
+    goal = payload.get("goal")
+    lifecycle = payload.get("lifecycle")
+    progress = payload.get("progress")
+    metrics = payload.get("metrics")
+    if (
+        not isinstance(goal, dict)
+        or not isinstance(lifecycle, dict)
+        or not isinstance(progress, dict)
+        or not isinstance(metrics, dict)
+    ):
+        raise LifecycleError("goal-view-terminal-invalid", "goal view receipt is missing renderable sections")
+    lines = [
+        f"GOAL                   {str(goal.get('goalStatus') or 'UNKNOWN'):<10} "
+        f"{str(metrics.get('duration') or '00:00:00'):<8} {str(metrics.get('tokens') or '↑?/↓? tok'):<15} "
+        f"{metrics.get('changeSummary') or ''}",
+        f"LIFECYCLE              {str(lifecycle.get('phase') or 'UNKNOWN'):<10} "
+        f"{str(metrics.get('duration') or '00:00:00'):<8} {str(metrics.get('tokens') or '↑?/↓? tok'):<15} "
+        f"next: {_next_action_text(lifecycle.get('nextAction'))}",
+        *_strings(progress.get("lines")),
+    ]
+    summary = _summary_line(progress.get("terminalSummary"))
+    return _render_lines(lines=lines, terminal_summary=summary, include_summary=include_summary)
+
+
 def _render_lines(*, lines: list[str], terminal_summary: str | None, include_summary: bool) -> str:
     rendered = [line for line in lines if line]
     if include_summary and terminal_summary:
@@ -47,3 +82,14 @@ def _summary_line(value: Any) -> str | None:
     if isinstance(value, dict) and isinstance(value.get("line"), str):
         return value["line"]
     return None
+
+
+def _next_action_text(value: Any) -> str:
+    if isinstance(value, dict):
+        action = value.get("type")
+        if isinstance(action, str) and action:
+            task_ids = value.get("taskIds")
+            if isinstance(task_ids, list) and task_ids:
+                return f"{action} {','.join(str(item) for item in task_ids if isinstance(item, str))}"
+            return action
+    return "unknown"

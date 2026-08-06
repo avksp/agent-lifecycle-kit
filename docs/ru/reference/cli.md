@@ -141,7 +141,10 @@ JSON, чтобы результат можно было проверять ав�
 - `agent-lifecycle context episode-retrieve`: создание
   `agent-episode-retrieval.v1` по явно переданным артефактам и необязательным
   `--external-context` артефактам.
-- `agent-lifecycle goal`: снимки цели.
+- `agent-lifecycle goal`: проверка, краткий снимок, объединённое представление
+  цели и прогресса, обновление записи цели. `goal view` читает запись цели,
+  состояние рабочего цикла, необязательные подтверждения расхода и счётчик
+  изменений без изменения состояния.
 - `agent-lifecycle followup`: учёт продолжений, которые не должны потеряться.
 - `agent-lifecycle evidence`: индекс подтверждающих артефактов.
 - `agent-lifecycle report status-view/event-feed/progress/change-summary`:

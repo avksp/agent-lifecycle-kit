@@ -15,6 +15,7 @@ execution.
 | Review code or a PR/MR | [Review code changes](#review-code-changes) | Yes |
 | Audit completed ALK work | [Audit implementation evidence](#audit-implementation-evidence) | No, it audits completed work |
 | Ask several reviewers | [Coordinate cross-review](#coordinate-cross-review) | Yes, unless a frozen plan requires quorum |
+| Inspect an active run | [View goal and progress](#view-goal-and-progress) | Yes |
 
 ## Research and planning only
 
@@ -135,6 +136,23 @@ agent-lifecycle audit implementation \
 
 Add `--review-mesh-quorum <path>` only when the frozen plan requires a quorum
 receipt for that phase.
+
+## View goal and progress
+
+Use this when another adapter is working and you need a compact, read-only
+status line:
+
+```bash
+agent-lifecycle goal view \
+  --record work/run/goal.json \
+  --state work/run/state.json \
+  --usage-receipt work/run/usage.json \
+  --change-summary work/run/change-summary.json \
+  --terminal
+```
+
+The command does not claim completion. It only combines the goal record,
+workflow state, progress rows, token receipts and Git-style change summary.
 
 ## Coordinate cross-review
 
