@@ -22,7 +22,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.48.0
+python -m pip install agent-lifecycle-kit==1.49.0
 agent-lifecycle version
 ```
 
@@ -180,6 +180,24 @@ agent-lifecycle context check \
 
 Профиль удерживает контекст коротким и явным, но не отключает обязательные
 проверки качества.
+
+## Просмотр цели и прогресса
+
+Если для запуска уже есть запись цели и состояние рабочего цикла, используйте
+одно представление без записи, чтобы увидеть ожидаемый результат, текущую фазу,
+время, расход токенов и счётчик изменений:
+
+```bash
+agent-lifecycle goal view \
+  --record work/run/goal.json \
+  --state work/run/state.json \
+  --usage-receipt work/run/usage.json \
+  --change-summary work/run/change-summary.json \
+  --terminal
+```
+
+Команда только читает существующие артефакты. Её можно запускать во втором
+терминале, пока адаптер выполняет работу.
 
 ## Что дальше
 

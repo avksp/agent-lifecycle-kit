@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+import contextlib
 import sys
 import tempfile
 import unittest
+from io import StringIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
+from agent_lifecycle.cli import main  # noqa: E402
 try:
     from .helpers import _run_cli  # noqa: E402
 except ImportError:
@@ -80,6 +83,45 @@ class GoalCommandTests(unittest.TestCase):
             self.assertEqual(payload["lineage"]["stateRevision"], 4)
             self.assertEqual(json.loads(out_path.read_text(encoding="utf-8")), payload)
 
+    def test_goal_view_returns_json_and_optional_terminal_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, record_path = _write_goal_inputs(root)
+            out_path = root / "goal-view.json"
+
+            code, payload = _run_cli([
+                "goal",
+                "view",
+                "--record",
+                str(record_path),
+                "--state",
+                str(state_path),
+                "--out",
+                str(out_path),
+            ])
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-goal-progress-view.v1")
+            self.assertTrue(payload["readOnly"])
+            self.assertFalse(payload["modelCallsStarted"])
+            self.assertEqual(payload["goal"]["goalId"], "release-015")
+            self.assertEqual(json.loads(out_path.read_text(encoding="utf-8")), payload)
+
+            code, terminal = _run_cli_text([
+                "goal",
+                "view",
+                "--record",
+                str(record_path),
+                "--state",
+                str(state_path),
+                "--terminal",
+            ])
+
+            self.assertEqual(code, 0)
+            self.assertIn("GOAL", terminal)
+            self.assertIn("LIFECYCLE", terminal)
+            self.assertNotIn('"schemaVersion"', terminal)
+
     def test_goal_check_rejects_stale_record(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -129,6 +171,13 @@ def _write_goal_inputs(root: Path) -> tuple[Path, Path]:
     state_path.write_text(json.dumps(state), encoding="utf-8")
     record_path.write_text(json.dumps(record), encoding="utf-8")
     return state_path, record_path
+
+
+def _run_cli_text(args: list[str]) -> tuple[int, str]:
+    stdout = StringIO()
+    with contextlib.redirect_stdout(stdout):
+        code = main(args)
+    return code, stdout.getvalue()
 
 
 if __name__ == "__main__":

@@ -63,6 +63,25 @@ agent-lifecycle report change-summary \
   --out work/run/change-summary.json
 ```
 
+## Цель и прогресс
+
+`agent-goal-progress-view.v1` объединяет текущую запись цели с тем же
+представлением прогресса без записи. Используйте его, когда оператору или
+маленькой модели нужно коротко увидеть ожидаемый результат, фазу рабочего
+цикла, следующее действие, время, расход токенов и счётчик изменений.
+
+```bash
+agent-lifecycle goal view \
+  --record <goal-record.json> \
+  --state <workflow-state.json> \
+  --usage-receipt <usage.json> \
+  --change-summary <changes.json> \
+  --terminal
+```
+
+Источниками остаются состояние рабочего цикла и запись цели. Представление
+только показывает данные.
+
 ## Отображение прогресса для адаптеров
 
 `agent-progress-bridge-receipt.v1` упаковывает ту же проекцию прогресса для

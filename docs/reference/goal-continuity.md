@@ -14,6 +14,7 @@ is valid only when its lineage matches the current state.
 ```bash
 agent-lifecycle goal check --record <goal-record.json> --state <run.state.json> --current
 agent-lifecycle goal summarize --record <goal-record.json> --state <run.state.json> --profile profiles/small-context-profile.v1.json --target-window 8k
+agent-lifecycle goal view --record <goal-record.json> --state <run.state.json> --usage-receipt <usage.json> --change-summary <changes.json>
 agent-lifecycle goal update --record <goal-record.json> --state <run.state.json> --status READY_FOR_FINALIZATION --evidence-id <evidence-id> --reason "<reason>" --out <goal-record.updated.json>
 ```
 
@@ -28,6 +29,36 @@ The compact snapshot is not a quality downgrade for larger models. Larger
 models can still inspect the full plan, workflow state, evidence, reviews and
 final audit. The snapshot only reduces continuation overhead; acceptance,
 audits and final proof remain tied to the authoritative artifacts.
+
+## Goal and progress view
+
+`goal view` emits `agent-goal-progress-view.v1`. It combines the goal record,
+the current workflow phase, next action, task status counts, lifecycle progress
+rows, optional attested token usage and optional Git-style change counters.
+
+Use JSON when another tool should consume the view:
+
+```bash
+agent-lifecycle goal view \
+  --record <goal-record.json> \
+  --state <run.state.json> \
+  --usage-receipt <usage.json> \
+  --change-summary <changes.json> \
+  --out work/run/goal-progress-view.json
+```
+
+Use `--terminal` for a human-readable summary:
+
+```bash
+agent-lifecycle goal view \
+  --record <goal-record.json> \
+  --state <run.state.json> \
+  --terminal
+```
+
+The command is read-only. It does not write workflow state, does not update the
+goal record, does not start host CLIs and does not make model calls. Unknown or
+unattested token usage is displayed as `↑?/↓? tok`.
 
 `workflow finalize` accepts an optional `--goal-record <goal-record.json>`.
 When supplied, the record must match the same run, package, plan revision, plan

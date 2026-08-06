@@ -115,7 +115,9 @@ read-only unless their own help says otherwise.
   model or provider calls.
 - `agent-lifecycle context episode-retrieve`: build `agent-episode-retrieval.v1`
   from explicit artifacts and optional `--external-context` receipts.
-- `agent-lifecycle goal check/summarize/update`: keep user intent traceable.
+- `agent-lifecycle goal check/summarize/view/update`: keep user intent
+  traceable. `goal view` combines the goal record with lifecycle progress,
+  optional usage receipts and optional change summaries without mutating state.
 - `agent-lifecycle followup check/add/close/sweep`: track deferred work.
 - `agent-lifecycle worktree policy-check/receipt/check`: verify write-scope and
   attempt isolation.
