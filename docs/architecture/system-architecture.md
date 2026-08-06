@@ -1,0 +1,452 @@
+# System architecture
+
+This document describes Agent Lifecycle Kit (ALK) as a provider-neutral
+lifecycle controller for coding-agent work. It uses C4-style levels plus a C0
+mission view:
+
+- C0 explains the mission boundary.
+- C1 shows ALK in its external environment.
+- C2 breaks ALK into deployable/source containers.
+- C3 breaks the runtime package into components.
+- C4 names the code-level call paths and design patterns.
+
+The detailed module boundary map remains in
+[Modular controller architecture](modular-controller.md). This document focuses
+on how the pieces work together for common operator flows.
+
+## C0: mission context
+
+ALK exists to move a task from request to verified completion without turning
+the lifecycle core into another coding-agent runtime. It provides contracts,
+state transitions, gates and evidence. Host CLIs still perform model work,
+editing and tool execution.
+
+```mermaid
+flowchart LR
+  operator[Operator or host wrapper]
+  request[Task, issue, plan, PR or MR]
+  alk[Agent Lifecycle Kit]
+  hosts[Host CLIs and models]
+  repo[Source repository]
+  evidence[Receipts and proof]
+
+  operator --> request
+  request --> alk
+  alk --> evidence
+  alk --> repo
+  operator --> hosts
+  hosts --> repo
+  hosts --> evidence
+  evidence --> alk
+```
+
+The main architectural rule is separation of authority:
+
+- ALK owns lifecycle truth: specification, plan, state, receipts, gates and
+  final proof.
+- The repository owns source code, tests, documentation and release metadata.
+- Adapters own host-specific command projection, environment boundaries and
+  local launch profiles.
+- Hosts own model execution and provider credentials.
+- Reviewers own semantic judgement; ALK records and validates the evidence.
+
+## C1: system context
+
+At system level ALK is a local CLI and Python package used inside a source
+checkout. It reads and writes structured artifacts, but does not require a
+server, daemon, database or provider API.
+
+```mermaid
+flowchart TB
+  user[User or automation]
+  cli[agent-lifecycle CLI]
+  source[Source checkout]
+  adapters[Adapter descriptors]
+  host[Host CLI: Codex, Claude, OpenCode, Goose, Pi, others]
+  ci[CI and release checks]
+  docs[Documentation and skills]
+  local[Host-local config and secrets]
+
+  user --> cli
+  cli --> source
+  cli --> adapters
+  cli --> docs
+  source --> ci
+  adapters --> host
+  local -. host-owned .-> host
+  host --> source
+  host --> cli
+```
+
+Important boundaries:
+
+- Portable artifacts must not store raw secrets, private environment values or
+  absolute local paths.
+- `adapter task start` accepts raw task text or Markdown only as draft intake.
+- Managed execution requires a frozen run request or a frozen plan bound to
+  workflow state.
+- Optional multi-review evidence is host-owned: ALK prepares assignments,
+  imports redacted results, synthesizes findings and validates quorum.
+
+## C2: containers
+
+The repository is source-only. The "containers" here are source/runtime
+containers, not Docker services.
+
+```mermaid
+flowchart TB
+  subgraph package[Python package: src/agent_lifecycle]
+    cli[CLI parsers and dispatch]
+    contracts[Contracts and schemas]
+    domain[Lifecycle domain services]
+    adapters_runtime[Adapter session runtime]
+    reporting[Read-only reporting]
+  end
+
+  subgraph source[Repository assets]
+    adapter_files[adapters/* descriptors and manifests]
+    docs[docs, skills and templates]
+    tests[tests and release validators]
+    release[release metadata]
+  end
+
+  subgraph local[Host-local boundary]
+    host_cli[Host CLI processes]
+    host_env[Env files and credentials]
+    raw_receipts[Ignored raw evidence]
+  end
+
+  cli --> contracts
+  cli --> domain
+  cli --> adapters_runtime
+  cli --> reporting
+  domain --> contracts
+  adapters_runtime --> adapter_files
+  adapters_runtime --> contracts
+  reporting --> contracts
+  source --> tests
+  host_env --> host_cli
+  host_cli --> raw_receipts
+  raw_receipts --> domain
+```
+
+| Container | Responsibility | Must not do |
+| --- | --- | --- |
+| `src/agent_lifecycle/cli` | Parse arguments, route commands, render stable JSON or terminal progress. | Hold lifecycle semantics or provider logic. |
+| `src/agent_lifecycle/contracts` | Public schemas, canonical JSON, digests, typed errors and compatibility policy. | Depend on host CLIs. |
+| Domain packages | Planning, workflow, audit, context, metrics, quality, review coordination and reporting. | Start provider API calls directly. |
+| `src/agent_lifecycle/adapter_sessions` | Descriptor-driven session records, task intake and managed-run bridge. | Inject prompts or parse host telemetry in core. |
+| `adapters/*` | Host descriptors, operation projections, support manifests and evidence summaries. | Change lifecycle schemas. |
+| `tools/release` and tests | Release gates, validators, conformance and docs compatibility. | Claim live host maturity from synthetic data. |
+
+## C3: runtime component map
+
+```mermaid
+flowchart LR
+  cli[cli]
+  contracts[contracts]
+  planning[planning and specification]
+  freeze[freeze]
+  workflow[workflow]
+  audit[audit]
+  adapter_sessions[adapter sessions]
+  host_protocol[host protocol]
+  review_mesh[review mesh]
+  reporting[reporting]
+  metrics[metrics and policy]
+  context[context and evidence]
+  quality[quality profiles]
+  runner[runner]
+
+  cli --> planning
+  cli --> workflow
+  cli --> audit
+  cli --> adapter_sessions
+  cli --> review_mesh
+  cli --> reporting
+  cli --> metrics
+  cli --> context
+  cli --> runner
+  planning --> contracts
+  freeze --> contracts
+  workflow --> contracts
+  workflow --> audit
+  workflow --> quality
+  workflow --> review_mesh
+  adapter_sessions --> workflow
+  adapter_sessions --> host_protocol
+  adapter_sessions --> planning
+  review_mesh --> contracts
+  review_mesh --> metrics
+  audit --> workflow
+  audit --> review_mesh
+  reporting --> workflow
+  metrics --> contracts
+  context --> contracts
+  runner --> workflow
+```
+
+| Component | Main modules | Called when |
+| --- | --- | --- |
+| CLI routing | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/adapter.py` | Any `agent-lifecycle ...` command starts here. |
+| Contracts | `contracts/*` | Every public receipt, schema, digest and validation envelope. |
+| Planning | `planning/*`, `specification/*`, `freeze/locks.py` | SDD tier, plan checks, completeness, acceptance and lock verification. |
+| Workflow | `workflow/*` | State mutation, task transitions, finalization and managed next actions. |
+| Adapter sessions | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`. |
+| Host protocol | `host_protocol/*` | Adapter validation, inspection, event capture and capability checks. |
+| Audit | `audit/*` | Ownership checks, review verdicts, implementation audit, proof integrity. |
+| Review coordination | `review_mesh/*` | Optional recommendation, reviewer assignments, result import, synthesis and quorum. |
+| Reporting | `reporting/*` | Read-only status, event feed, progress, change summary and progress bridge. |
+| Metrics and policy | `metrics/*`, `policy/*`, `model_routing/*` | Usage export, token/resource policy, quality-cost signals and model class routing. |
+| Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, objective snapshots and continuation records. |
+| Runner | `runner/*` | Bounded execution-loop state over existing workflow primitives. |
+
+## C4: code-level call paths
+
+The C4 level below names concrete functions and modules. It is intentionally
+limited to the public paths operators actually use.
+
+### Command dispatch
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Main as cli/main.py
+  participant Parser as cli/parsers.py
+  participant Dispatch as cli/dispatch.py
+  participant Service as Domain service
+  participant Contracts as contracts/*
+
+  User->>Main: agent-lifecycle <command>
+  Main->>Parser: build_parser()
+  Main->>Dispatch: dispatch(args, remainder)
+  Dispatch->>Service: call selected service
+  Service->>Contracts: validate, digest, read/write JSON
+  Service-->>Dispatch: typed receipt or report
+  Dispatch-->>Main: JSON-compatible object
+  Main-->>User: stable JSON stdout
+```
+
+Pattern: command dispatcher plus functional core. CLI modules should stay thin;
+domain services own behavior and tests.
+
+### Raw task or Markdown intake
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant AdapterCLI as cli/adapter.py
+  participant Intake as adapter_sessions/task_intake.py
+  participant Import as imports/planning.py
+  participant Advisor as review_mesh/recommendation.py
+  participant Out as agent-adapter-task-start-receipt.v1
+
+  User->>AdapterCLI: adapter task start --file task.md
+  AdapterCLI->>Intake: start_adapter_task()
+  Intake->>Import: import_planning_input()
+  Intake->>Advisor: recommend_review_mesh_for_text()
+  Intake-->>Out: REVIEW_REQUIRED or BLOCKED
+```
+
+Called for raw task text, Markdown, code-review packets and imported planning
+input. It never starts implementation. The receipt stores source label, digest
+and byte count, not raw task text.
+
+### Frozen managed adapter run
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant AdapterCLI as cli/adapter.py
+  participant Bridge as adapter_sessions/workflow_bridge.py
+  participant Runner as workflow/managed_runner.py
+  participant Workflow as workflow/next_action.py
+  participant Progress as reporting/progress_hooks.py
+
+  User->>AdapterCLI: adapter run --state --manifest --task
+  AdapterCLI->>Bridge: managed_adapter_run()
+  Bridge->>Runner: run_managed_lifecycle_step()
+  Runner->>Workflow: build_managed_next_action()
+  AdapterCLI->>Progress: optional stderr or receipt hook
+  Runner-->>User: agent-adapter-session-receipt.v1
+```
+
+Called only when a frozen plan and workflow binding are supplied. ALK returns
+the next lifecycle action; it does not become the host model runtime.
+
+### Workflow state mutation
+
+```mermaid
+sequenceDiagram
+  participant CLI
+  participant Transition as workflow/task_transitions.py
+  participant Gates as workflow/gates.py
+  participant Kernel as workflow/operation_kernel.py
+  participant Events as workflow/events.py
+  participant State as workflow/state.py
+
+  CLI->>Transition: start_task / commit_task_result / accept_task
+  Transition->>Kernel: load_for_update(operationId, expectedRevision)
+  Kernel->>State: load_state()
+  Kernel->>State: require expected revision and unused operation
+  Transition->>Gates: validate_controller_gates()
+  Transition->>Kernel: commit_state()
+  Kernel->>Events: append_event()
+  Kernel->>State: write_state_replace()
+```
+
+Patterns: state machine, operation kernel, optimistic revision check,
+idempotency key and append-only event log. Mutating workflow commands fail
+closed on stale revisions, duplicate operation ids and missing required gates.
+
+### Code review for GitHub or GitLab changes
+
+```mermaid
+flowchart LR
+  pr[GitHub PR or GitLab MR]
+  diff[git diff artifact]
+  task[review-task.md]
+  intake[adapter task start]
+  advice[review-mesh recommend]
+  reviewers[host-owned reviewers]
+  synthesis[import, synthesize, quorum]
+
+  pr --> diff
+  diff --> task
+  task --> intake
+  intake --> advice
+  advice --> reviewers
+  reviewers --> synthesis
+```
+
+Called when the operator wants a structured review of a local branch, GitHub
+pull request or GitLab merge request. Git integration remains outside ALK; ALK
+receives a stable review packet.
+
+### Optional multi-review coordination
+
+```mermaid
+sequenceDiagram
+  participant CLI
+  participant Profile as review_mesh/contracts.py
+  participant Assign as review_mesh/assignments.py
+  participant Host as Host reviewer
+  participant Import as review_mesh/results.py
+  participant Synth as review_mesh/synthesis.py
+  participant Quorum as review_mesh/quorum.py
+
+  CLI->>Profile: build_review_mesh_profile()
+  CLI->>Assign: build_review_mesh_assignment_packet()
+  Assign-->>Host: host-owned packet
+  Host-->>CLI: reviewer-output.v1
+  CLI->>Import: import_review_mesh_result()
+  CLI->>Synth: synthesize_review_mesh_results()
+  CLI->>Quorum: build_quorum_from_synthesis()
+```
+
+Called for leader-draft review, parallel research synthesis or implementation
+audit panels. The core does not launch reviewers. Quorum blocks only when the
+frozen plan explicitly opts in for that phase.
+
+### Implementation audit
+
+```mermaid
+sequenceDiagram
+  participant CLI
+  participant Audit as audit/implementation.py
+  participant State as workflow/state.py
+  participant Review as workflow/reviews.py
+  participant Ownership as audit/ownership.py
+  participant Gates as workflow/review_mesh_gate.py
+
+  CLI->>Audit: audit implementation
+  Audit->>State: load_state()
+  Audit->>Review: validate_task_result() and validate_task_review()
+  Audit->>Ownership: build_ownership_report()
+  Audit->>Gates: validate_review_mesh_quorum_path()
+  Audit-->>CLI: agent-implementation-audit-report.v1
+```
+
+Called after an implementation attempt has a task result and independent
+review. It verifies lineage, ownership, evidence, acceptance coverage,
+sandbox receipts and optional multi-review quorum.
+
+### Read-only progress and reporting
+
+```mermaid
+flowchart LR
+  state[workflow state]
+  usage[usage receipts]
+  changes[change summary]
+  progress[reporting/progress_view.py]
+  terminal[reporting/progress_terminal.py]
+  bridge[reporting/progress_bridge.py]
+
+  state --> progress
+  usage --> progress
+  changes --> progress
+  progress --> terminal
+  progress --> bridge
+```
+
+Called by `report progress`, `report progress-bridge` and progress hooks on
+managed workflow commands. Reporting is read-only, starts no model calls and
+does not parse host-specific telemetry in the core.
+
+## Work variants and call routing
+
+| Variant | Operator command | Primary modules | Output |
+| --- | --- | --- | --- |
+| Readiness check | `diagnose --no-install-plans` | `diagnostics/readiness.py`, `host_protocol/*`, `context/*` | Redacted readiness report. |
+| Adapter validation | `adapter validate/inspect/install-plan` | `cli/adapter.py`, `host_protocol/*`, `diagnostics/readiness.py` | Validation, safe inspection or dry-run install plan. |
+| Raw task intake | `adapter task start --file/--text` | `adapter_sessions/task_intake.py`, `imports/planning.py`, `review_mesh/recommendation.py` | Review-gated intake receipt. |
+| Plan validation | `plan check`, `plan completeness-check`, `plan acceptance-check` | `planning/*`, `freeze/locks.py` | PASS/FAIL plan evidence. |
+| Managed next action | `workflow run` or `adapter run` | `workflow/managed_runner.py`, `workflow/next_action.py`, `adapter_sessions/workflow_bridge.py` | Next action receipt, no host launch. |
+| Task mutation | `workflow task-start/task-result/task-accept` | `workflow/task_transitions.py`, `workflow/operation_kernel.py`, `workflow/gates.py` | Updated workflow state and event log. |
+| Implementation audit | `audit implementation` | `audit/implementation.py`, `audit/ownership.py`, `workflow/reviews.py` | Implementation audit report. |
+| Group review | `review-mesh profile/assign/import-result/synthesize/quorum` | `review_mesh/*`, `model_routing/profiles.py`, `quality/cross_check.py` | Assignment, result, synthesis and quorum receipts. |
+| Code review | Git/host CLI plus `adapter task start` | Git outside ALK, then `adapter_sessions/task_intake.py` and optional `review_mesh/*` | Review packet intake and optional quorum. |
+| Bug repair | `adapter task start` plus frozen plan gates | `adapter_sessions/task_intake.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Defect-shaped recommendation, then plan-required receipts. |
+| Progress display | `report progress`, `report progress-bridge`, progress hooks | `reporting/*`, `cli/progress_hooks.py` | Terminal or JSON progress without model calls. |
+| Release check | Release tools and tests | `tools/release/*`, `contracts/release_contract_schemas.py`, docs/tests | Source-release validation and evidence. |
+
+## Design patterns
+
+| Pattern | Where it appears | Why it is used |
+| --- | --- | --- |
+| Ports and adapters | `adapters/*`, `host_protocol/*`, `adapter_sessions/*` | Keep host-specific commands, secrets and capabilities outside lifecycle core. |
+| Contract-first design | `contracts/*`, `schemas.py`, public `.v1` receipts | Make every lifecycle claim machine-checkable and portable. |
+| Command dispatcher | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py` | Keep CLI thin and route behavior to domain services. |
+| Functional core, imperative shell | Builders and validators return dictionaries; CLI handles paths and output. | Improve testability and small-model readability. |
+| State machine | `workflow/state.py`, `workflow/task_transitions.py`, `runner/core.py` | Make lifecycle phases explicit and fail closed on invalid transitions. |
+| Operation kernel | `workflow/operation_kernel.py` | Centralize expected revision checks, idempotency and state/event commits. |
+| Gate pipeline | `workflow/gates.py`, audit gates, completion gates, review quorum gates | Prevent acceptance or finalization when required evidence is missing. |
+| Strategy and policy | `policy/*`, `model_routing/*`, `metrics/recommendations.py` | Select safe lifecycle/model routes without hardcoding providers. |
+| Facade | `audit/implementation.py`, `diagnostics/bundles.py`, `reporting/*` | Package multiple checks into one typed receipt without duplicating lower-level logic. |
+| Builder and validator pair | Most contract modules and release validators | Produce deterministic receipts and verify them independently. |
+| Fail-closed boundary | Imports, adapter launch, review result import, release gates | Reject unsafe or under-evidenced paths instead of guessing. |
+
+## Architectural rules
+
+- Lifecycle semantics live in domain packages, not adapters or CLI rendering.
+- Adapters may describe host capabilities and local launch boundaries, but they
+  must not own workflow truth.
+- Raw input is never execution authority.
+- A recommendation is not a gate. A gate exists only when a frozen plan opts in.
+- Read-only views do not mutate state and do not start model calls.
+- Usage and progress use token/resource evidence; monetary cost is optional and
+  only accepted when a metered host reports it.
+- Public release claims must be backed by tracked summaries and, when needed,
+  host-local redacted live receipts.
+
+## Related documents
+
+- [Modular controller architecture](modular-controller.md)
+- [Runner transition contract](runner-transition-contract.md)
+- [Runner extension map](runner-extension-map.md)
+- [Release architecture](release-architecture.md)
+- [Source of truth](../reference/source-of-truth.md)
+- [Managed adapter sessions](../reference/managed-adapter-sessions.md)
+- [Implementation audit](../reference/implementation-audit.md)
+- [Review Mesh workflow cookbook](../guides/review-mesh-workflow.md)
+- [Code review workflows](../guides/code-review-workflows.md)
