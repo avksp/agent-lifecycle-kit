@@ -12,6 +12,7 @@ htmlcov/
 
 # Local lifecycle authority material and generated evidence are never committed.
 .agent-lifecycle-authority/
+.alk/
 plans/standalone-v1/evidence/
 plans/standalone-v1/workflow/validation/
 plans/standalone-v1/workflow/gates/
