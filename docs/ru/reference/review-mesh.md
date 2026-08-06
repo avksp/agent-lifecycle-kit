@@ -42,7 +42,7 @@ agent-lifecycle review-mesh recommend --intake adapter-task-start.json
 agent-lifecycle review-mesh recommend --manifest plan.manifest.json
 ```
 
-Receipt может рекомендовать `off`, `leader-draft-multi-review`,
+Полученный артефакт может рекомендовать `off`, `leader-draft-multi-review`,
 `parallel-research-synthesis` или `implementation-audit-panel`. В нём есть
 этапы жизненного цикла, причины рекомендации, число проверяющих, лимиты по
 токенам и ресурсам, нейтральные классы моделей и причина отказа, если
@@ -81,6 +81,9 @@ agent-lifecycle review-mesh quorum --profile rm-profile.json \
 замечания. Артефакт кворума может блокировать заморозку плана, аудит
 реализации или финальный аудит только тогда, когда зафиксированный план требует
 Review Mesh для этого этапа.
+
+Пошаговые примеры для частых задач:
+[практические сценарии Review Mesh](../review-mesh-workflow.md).
 
 ## Правила контракта
 
