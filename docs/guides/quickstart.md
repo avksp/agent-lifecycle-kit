@@ -21,7 +21,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 When the package is available for the release, install the exact semver version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.44.0
+python -m pip install agent-lifecycle-kit==1.45.0
 agent-lifecycle version
 ```
 
@@ -148,6 +148,8 @@ If a reviewed frozen plan opts in, use `review-mesh assign`,
 `import-result`, `synthesize` and `quorum` to coordinate reviewer evidence
 without launching reviewer hosts from ALK core. See the
 [Review Mesh workflow cookbook](review-mesh-workflow.md) for common task cases.
+For cookbook recipes that stop at research, planning, Markdown review or
+implementation audit, see [Lifecycle cookbook](lifecycle-cookbook.md).
 
 ## Keep context small
 

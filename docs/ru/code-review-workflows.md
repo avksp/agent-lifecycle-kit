@@ -204,6 +204,16 @@ agent-lifecycle adapter task start \
 Если план разложен по нескольким Markdown-файлам, можно дать ссылку на папку
 или собрать файлы в один входной пакет.
 
+Если сначала нужно получить детерминированное подтверждение импорта, используйте
+импорт папки Markdown:
+
+```bash
+agent-lifecycle import plan \
+  --source tasks/release-1-40/ \
+  --dialect spec-kit \
+  --out work/code-review/plan-import.json
+```
+
 Проверка внутри того же репозитория:
 
 ```bash
