@@ -37,7 +37,7 @@ agent-lifecycle adapter task start --adapter codex --file task.md
 agent-lifecycle adapter task start --adapter codex --task-text "Сначала проанализируй код перед внедрением функции"
 ```
 
-Команда возвращает `agent-adapter-task-start-receipt.v1`. В receipt сохраняются
+Команда возвращает `agent-adapter-task-start-receipt.v1`. В подтверждении сохраняются
 метка источника, отпечаток и размер в байтах, но не исходный текст задачи.
 `--candidate-out <path>` сохраняет полный черновой артефакт импорта для
 проверки.
