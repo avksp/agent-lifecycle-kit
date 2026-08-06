@@ -43,6 +43,10 @@ interpret findings.
 Use `--review-mesh-quorum` only when the frozen plan requires Review Mesh for
 the audited phase. Missing or failed quorum evidence is a blocking audit
 finding; optional Review Mesh output remains advisory.
+For operator-facing audit setup, point beginners to
+`docs/guides/lifecycle-cookbook.md#audit-implementation-evidence` and keep this
+skill focused on findings-first semantic verification plus typed audit
+receipts.
 
 ## Task audit
 
