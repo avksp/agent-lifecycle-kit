@@ -11,6 +11,13 @@ project.
 - [English documentation](README.md)
 - [Русская документация](ru/README.md)
 
+## Quick start
+
+- [Quickstart](guides/quickstart.md)
+- [Lifecycle cookbook](guides/lifecycle-cookbook.md)
+- [System architecture](architecture/system-architecture.md)
+- [Project comparison](reference/project-comparison.md)
+
 ## English documentation
 
 - [Adapter support matrix](adapters/support-matrix.md)
