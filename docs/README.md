@@ -23,6 +23,7 @@ project.
 - [OpenInterpreter adapter](adapters/openinterpreter.md)
 - [Pi adapter](adapters/pi.md)
 - [Quickstart](guides/quickstart.md)
+- [Review Mesh workflow cookbook](guides/review-mesh-workflow.md)
 - [Issue to specification drafts](guides/issue-to-spec.md)
 - [Offline source-release checks](guides/release-candidate.md)
 - [Verified-adapter release checklist](guides/verified-adapter-release-checklist.md)
