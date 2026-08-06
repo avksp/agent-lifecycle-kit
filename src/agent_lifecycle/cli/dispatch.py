@@ -106,11 +106,13 @@ from agent_lifecycle.review_mesh import (
     recommend_review_mesh_for_intake,
     recommend_review_mesh_for_plan_manifest,
     recommend_review_mesh_for_text,
+    require_review_mesh_profile_pass,
     require_review_mesh_recommendation_pass,
     source_from_handoff,
     source_from_intake,
     source_from_manifest,
     synthesize_review_mesh_results,
+    validate_review_mesh_profile,
     validate_review_mesh_recommendation,
 )
 from agent_lifecycle.reporting import (
@@ -352,6 +354,22 @@ def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_review_mesh(args: argparse.Namespace) -> dict[str, Any]:
+    if args.review_mesh_command == "profile":
+        budget_cap = _review_mesh_budget_cap(args)
+        payload = build_review_mesh_profile(
+            profile_id=args.profile_id,
+            modes=args.mode or None,
+            default_mode=args.default_mode,
+            budget_cap=budget_cap,
+            live_calls_allowed=args.allow_live_calls,
+            independence_required=args.require_independence,
+            independence_dimensions=args.independence_dimension or None,
+            reviewer_model_classes=args.reviewer_model_class or None,
+        )
+        require_review_mesh_profile_pass(validate_review_mesh_profile(payload))
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.review_mesh_command == "recommend":
         if args.text is not None:
             payload = recommend_review_mesh_for_text(
@@ -440,6 +458,20 @@ def _dispatch_review_mesh(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         return payload
     raise LifecycleError("command-not-implemented", "review-mesh command is not implemented")
+
+
+def _review_mesh_budget_cap(args: argparse.Namespace) -> dict[str, int] | None:
+    budget_cap = {
+        key: value
+        for key, value in {
+            "maxInvocations": args.max_invocations,
+            "maxInputTokens": args.max_input_tokens,
+            "maxOutputTokens": args.max_output_tokens,
+            "maxWallSeconds": args.max_wall_seconds,
+        }.items()
+        if value is not None
+    }
+    return budget_cap or None
 
 
 def _dispatch_report(args: argparse.Namespace) -> dict[str, Any] | str:
