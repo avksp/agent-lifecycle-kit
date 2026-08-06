@@ -20,6 +20,8 @@ class ImportDialectSchemaTests(unittest.TestCase):
             "agent-episode-index.v1",
             "agent-episode-index-validation.v1",
             "agent-episode-retrieval.v1",
+            "agent-external-context-import-receipt.v1",
+            "agent-external-context-import-validation.v1",
         ):
             with self.subTest(schema_id=schema_id):
                 self.assertIn(schema_id, schema_ids)
@@ -43,6 +45,13 @@ class ImportDialectSchemaTests(unittest.TestCase):
 
         self.assertIn("nativeDialectProfileDigest", schema["properties"])
         self.assertEqual(schema["properties"]["dialectProfile"]["type"], ["object", "null"])
+
+    def test_external_context_import_schema_is_non_authoritative(self) -> None:
+        schema = get_schema("agent-external-context-import-receipt.v1")
+
+        self.assertFalse(schema["properties"]["sourceOfTruth"]["const"])
+        self.assertFalse(schema["properties"]["enabledByDefault"]["const"])
+        self.assertEqual(schema["properties"]["activationMode"]["const"], "explicit-command")
 
 
 if __name__ == "__main__":

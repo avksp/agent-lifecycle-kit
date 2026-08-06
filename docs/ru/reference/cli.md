@@ -133,7 +133,14 @@ JSON, чтобы результат можно было проверять ав�
 
 ## Контекст и продолжение
 
-- `agent-lifecycle context`: проверка компактного контекста.
+- `agent-lifecycle context check/render`: проверка и подготовка компактного
+  контекста.
+- `agent-lifecycle context external-import`: импорт одного локального файла
+  внешнего контекста как `agent-external-context-import-receipt.v1` без вызовов
+  сети, модели или провайдера.
+- `agent-lifecycle context episode-retrieve`: создание
+  `agent-episode-retrieval.v1` по явно переданным артефактам и необязательным
+  `--external-context` артефактам.
 - `agent-lifecycle goal`: снимки цели.
 - `agent-lifecycle followup`: учёт продолжений, которые не должны потеряться.
 - `agent-lifecycle evidence`: индекс подтверждающих артефактов.
