@@ -108,6 +108,9 @@ from agent_lifecycle.review_mesh import (
     build_review_mesh_assignment_packet,
     build_review_mesh_profile,
     import_review_mesh_result,
+    list_review_mesh_operator_templates,
+    parse_reviewer_spec,
+    prepare_review_mesh_operator_packets,
     recommend_review_mesh_for_intake,
     recommend_review_mesh_for_plan_manifest,
     recommend_review_mesh_for_text,
@@ -388,6 +391,11 @@ def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_review_mesh(args: argparse.Namespace) -> dict[str, Any]:
+    if args.review_mesh_command == "template-list":
+        payload = list_review_mesh_operator_templates()
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.review_mesh_command == "profile":
         budget_cap = _review_mesh_budget_cap(args)
         payload = build_review_mesh_profile(
@@ -426,6 +434,28 @@ def _dispatch_review_mesh(args: argparse.Namespace) -> dict[str, Any]:
         else:
             raise LifecycleError("review-mesh-recommendation-source-missing", "one recommendation source is required")
         require_review_mesh_recommendation_pass(validate_review_mesh_recommendation(payload))
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.review_mesh_command == "prepare":
+        if args.manifest:
+            source = source_from_manifest(read_json_object(Path(args.manifest), label="plan manifest"))
+        elif args.intake:
+            source = source_from_intake(read_json_object(Path(args.intake), label="adapter task intake receipt"))
+        elif args.handoff:
+            source = source_from_handoff(read_json_object(Path(args.handoff), label="plan handoff"))
+        else:
+            raise LifecycleError("review-mesh-prepare-source-missing", "one prepare source is required")
+        payload = prepare_review_mesh_operator_packets(
+            source=source,
+            template_id=args.template,
+            reviewers=[parse_reviewer_spec(spec) for spec in args.reviewer] if args.reviewer else None,
+            profile_id=args.profile_id,
+            phase=args.phase,
+            blocking=args.blocking,
+            evidence_ids=args.evidence_id,
+            out_dir=Path(args.out_dir) if args.out_dir else None,
+        )
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload

@@ -20,7 +20,7 @@ For a shorter scenario map, start with [Lifecycle cookbook](lifecycle-cookbook.m
 | User level | Use | Commands |
 | --- | --- | --- |
 | Beginner | Decide whether extra review is useful | `adapter task start`, `review-mesh recommend` |
-| Intermediate | Coordinate a small review panel | `recommend`, `assign`, `import-result`, `synthesize`, `quorum` |
+| Intermediate | Prepare a small review panel | `recommend`, `prepare`, `import-result`, `synthesize`, `quorum` |
 | Advanced | Wire Review Mesh into frozen gates | atomic `review-mesh` commands plus `--review-mesh-quorum` |
 
 ## Common task recipes
@@ -121,6 +121,46 @@ If the recommendation is `off`, keep the normal ALK workflow. If it recommends
 `implementation-audit-panel`, treat that as advice. It becomes mandatory only
 after a reviewed frozen plan opts in.
 
+## Quick prepare path: one command for packets
+
+Use `prepare` when the recommendation says that several reviewers are useful
+and you want ALK to create the local profile and assignment packets:
+
+```bash
+agent-lifecycle review-mesh prepare \
+  --intake intake.json \
+  --template parallel-research-synthesis \
+  --reviewer codex-example:architecture-reviewer:strong-reasoning \
+  --reviewer claude-example:risk-reviewer:strong-reasoning \
+  --reviewer opencode-glm-example:local-reviewer:local-strong-review \
+  --evidence-id EV-PLAN \
+  --out-dir work/review-mesh/plan-review \
+  --out work/review-mesh/prepare-receipt.json
+```
+
+This writes:
+
+- `work/review-mesh/plan-review/profile.json`;
+- one assignment packet per reviewer under
+  `work/review-mesh/plan-review/assignments/`;
+- `work/review-mesh/prepare-receipt.json`.
+
+The reviewer ids above are examples. Codex, Claude Code and OpenCode/GLM are
+replaceable host choices. The exact model is selected in the host CLI or its
+local config; ALK stores only provider-neutral model classes such as
+`strong-reasoning` and `local-strong-review`.
+
+Give each assignment packet to the selected CLI. For OpenCode/GLM, GLM-5.2 is
+only an example:
+
+```bash
+opencode models <provider>
+opencode run --model <provider>/<model-id> --format json \
+  --file work/review-mesh/plan-review/assignments/parallel-research-synthesis-3.json \
+  "Review the assignment and return only reviewer-output.v1 JSON" \
+  > reviewer-glm-output.json
+```
+
 ### Review one Markdown task file
 
 When the task already lives in Markdown, pass that file as the single intake
@@ -203,7 +243,7 @@ agent-lifecycle review-mesh recommend \
   --out review-recommendation.json
 ```
 
-## Intermediate path: run a small review panel
+## Manual path: run a small review panel
 
 Create a profile once for the review. The profile stores token/resource caps
 and neutral independence rules:

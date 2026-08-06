@@ -21,6 +21,11 @@
 адаптеры проверяющих: оператор или обёртка хоста запускает их отдельно и
 возвращает подтверждение для импорта.
 
+Версия 1.46 добавляет шаблоны для оператора и команду `review-mesh prepare`.
+Команда превращает артефакт приёма задачи, манифест плана или handoff в
+локальный профиль, пакеты назначений и `agent-review-mesh-prepare-receipt.v1`.
+Проверяющие по-прежнему не запускаются из ALK.
+
 ## Стабильные схемы
 
 - `agent-review-mesh-profile.v1`
@@ -54,6 +59,45 @@ agent-lifecycle review-mesh recommend --manifest plan.manifest.json
 модель, не запускает адаптеры и не запускает CLI хоста. Чтобы групповая
 проверка стала обязательным подтверждением, это должно быть явно принято в
 проверенном зафиксированном плане.
+
+## Шаблоны и подготовка
+
+Список встроенных локальных шаблонов:
+
+```bash
+agent-lifecycle review-mesh template-list
+```
+
+Текущие шаблоны:
+
+- `leader-draft-review`: пакеты для проверки черновика плана.
+- `parallel-research-synthesis`: независимые пакеты исследования перед
+  объединением выводов.
+- `implementation-audit-panel`: пакеты аудита реализации после появления
+  результата и подтверждений.
+
+Команда `prepare` нужна, когда профиль и назначения нужно подготовить одним
+шагом:
+
+```bash
+agent-lifecycle review-mesh prepare \
+  --intake intake.json \
+  --template parallel-research-synthesis \
+  --reviewer codex-example:architecture-reviewer:strong-reasoning \
+  --reviewer claude-example:risk-reviewer:strong-reasoning \
+  --reviewer opencode-glm-example:local-reviewer:local-strong-review \
+  --out-dir work/review-mesh/plan-review \
+  --out work/review-mesh/prepare-receipt.json
+```
+
+Идентификаторы проверяющих выше являются примерами. Конкретная модель
+выбирается в выбранном CLI, например Codex, Claude Code или OpenCode. В
+переносимом артефакте ALK указывайте нейтральные классы моделей:
+`strong-reasoning`, `local-strong-review` и другие поддерживаемые классы.
+
+`prepare` записывает `profile.json`, отдельный пакет для каждого проверяющего в
+`assignments/` и подтверждение с `hostExecutionStarted: false`,
+`modelCallsStarted: false`, `providerBrokerStarted: false`.
 
 ## Назначения, результаты, объединение выводов и кворум
 

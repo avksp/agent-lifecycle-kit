@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "agent-review-mesh-operator-template.v1",
+  "templateId": "parallel-research-synthesis",
+  "mode": "parallel-research-synthesis",
+  "phase": "research",
+  "description": "Independent research packets are prepared before synthesis.",
+  "requiredReviewers": 3,
+  "defaultReviewers": [
+    {
+      "id": "researcher-a",
+      "role": "architecture-researcher",
+      "modelClass": "strong-reasoning"
+    },
+    {
+      "id": "researcher-b",
+      "role": "risk-researcher",
+      "modelClass": "strong-reasoning"
+    },
+    {
+      "id": "researcher-c",
+      "role": "local-reviewer",
+      "modelClass": "local-strong-review"
+    }
+  ],
+  "budgetCap": {
+    "maxInvocations": 3,
+    "maxInputTokens": 16000,
+    "maxOutputTokens": 6000,
+    "maxWallSeconds": 1200
+  },
+  "independenceRequired": true,
+  "independenceDimensions": [
+    "host",
+    "model"
+  ],
+  "blockingDefault": false,
+  "hostExecutionStarted": false,
+  "modelCallsStarted": false,
+  "providerBrokerStarted": false,
+  "productionPromotionClaimed": false
+}
