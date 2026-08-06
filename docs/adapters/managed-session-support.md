@@ -3,6 +3,8 @@
 Managed session support is separate from adapter maturity and progress support.
 It describes whether ALK can create a managed session receipt and whether the
 adapter descriptor declares a safe native launch profile.
+The main [adapter support matrix](support-matrix.md) surfaces the current
+`managedLaunch.status` value; this page explains the boundary.
 
 | Adapter | Managed session | Native launch profile | Notes |
 | --- | --- | --- | --- |

@@ -409,6 +409,26 @@ RELEASE_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
             "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
         },
     ),
+    "agent-publication-adoption-validation.v1": _open_object_schema(
+        "agent-publication-adoption-validation.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "targetVersion",
+            "checks",
+            "blockers",
+            "productionPromotionClaimed",
+            "validationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "targetVersion": {"type": "string", "minLength": 1},
+            "checks": {"type": "array", "items": {"type": "object"}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
     "agent-public-contract-policy.v1": _open_object_schema(
         "agent-public-contract-policy.v1",
         required=[

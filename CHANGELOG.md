@@ -2,11 +2,22 @@
 
 ## Unreleased
 
+- No changes yet.
+
+## 1.43.0 - 2026-08-06
+
 - Added a Review Mesh workflow cookbook with common planning, research, bug
   investigation, implementation-audit and release/security review scenarios in
   EN/RU docs.
 - Added `review-mesh profile` for command-only profile creation and refreshed
   RU terminology/examples for grouped review workflows.
+- Added `agent-publication-adoption-validation.v1` and a local adoption
+  validator for quickstart, support-matrix and project-comparison documentation.
+- Surfaced `managedLaunch.status: WRAPPER_ONLY` in the public adapter support
+  matrix without changing adapter maturity claims.
+- Added EN/RU project-comparison pages explaining ALK as a lifecycle
+  controller rather than a runtime, model broker or memory system.
+- Updated package and plugin publication metadata to `1.43.0`.
 
 ## 1.42.0 - 2026-08-05
 
