@@ -51,6 +51,12 @@ command, and use `adapter session start` only to record an interactive
 `WAITING_FOR_TASK` session. Native host launching remains descriptor-driven and
 host-owned.
 
+For common operator requests, route through the cookbook before dropping to
+atomic commands: `docs/guides/lifecycle-cookbook.md` covers research-only,
+planning-only, Markdown plan review, code review, implementation audit and
+cross-review flows. Beginner paths should start from those recipes; advanced
+users can continue with the atomic commands listed in the CLI reference.
+
 If a frozen plan opts into Review Mesh, generate assignments with
 `agent-lifecycle review-mesh assign`, have host adapters or operators run the
 reviewers, import their outputs with `review-mesh import-result`, synthesize

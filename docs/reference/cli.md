@@ -31,6 +31,8 @@ read-only unless their own help says otherwise.
   specification input.
 - `agent-lifecycle quality template-list/template-check`: inspect and validate
   draft-only task templates.
+- Cookbook entry points for common tasks are documented in
+  `docs/guides/lifecycle-cookbook.md`.
 
 ## Execution
 

@@ -30,9 +30,9 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 ```
 
 Package install, when available for the release:
-`python -m pip install agent-lifecycle-kit==1.43.0`.
+`python -m pip install agent-lifecycle-kit==1.45.0`.
 
-For a short walkthrough, use [Quickstart](docs/guides/quickstart.md). Russian documentation starts at [Документация на русском](docs/ru/README.md). For positioning against runtimes, workflow engines, specification tools and memory systems, see [Project comparison](docs/reference/project-comparison.md).
+For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). Russian documentation starts at [Документация на русском](docs/ru/README.md). For positioning against runtimes, workflow engines, specification tools and memory systems, see [Project comparison](docs/reference/project-comparison.md).
 
 ## What it gives you
 
@@ -169,7 +169,7 @@ The public lifecycle surface is schema-backed. Full stable schema ids, compatibi
 
 ## Documentation
 
-- Start: [English documentation](docs/README.md), [Русская документация](docs/ru/README.md), [Quickstart](docs/guides/quickstart.md), and [Code review workflows](docs/guides/code-review-workflows.md).
+- Start: [English documentation](docs/README.md), [Русская документация](docs/ru/README.md), [Quickstart](docs/guides/quickstart.md), [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md), and [Code review workflows](docs/guides/code-review-workflows.md).
 - Planning and adapters: [Issue to specification drafts](docs/guides/issue-to-spec.md), [Adapter install](docs/adapters/install.md), and [Adapter support matrix](docs/adapters/support-matrix.md).
 - Reference: [System architecture](docs/architecture/system-architecture.md), [CLI reference](docs/reference/cli.md), [Source of truth](docs/reference/source-of-truth.md), [Managed lifecycle runner](docs/reference/managed-lifecycle-runner.md), [Managed adapter sessions](docs/reference/managed-adapter-sessions.md), [Implementation audit](docs/reference/implementation-audit.md), [Plan completeness](docs/reference/plan-completeness.md), [Public contracts](docs/reference/public-contracts.md), and [Readiness diagnostics](docs/reference/readiness-diagnostics.md).
 - Quality and resources: [Small-model packets](docs/reference/small-model-packets.md), [model routing](docs/reference/model-routing.md), [adaptive policy](docs/reference/adaptive-lifecycle-policy.md), [quality-cost learning](docs/reference/quality-cost-learning.md), [lifecycle cost accounting](docs/reference/lifecycle-cost.md), [Usage export](docs/reference/usage-export.md), and [Evidence integrity](docs/reference/evidence-integrity.md).
