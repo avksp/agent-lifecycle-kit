@@ -65,7 +65,7 @@ flowchart TB
   cli[agent-lifecycle CLI]
   source[Исходное дерево]
   adapters[Дескрипторы адаптеров]
-  host[CLI хоста: Codex, Claude, OpenCode, Goose, Pi и другие]
+  host[CLI хоста: Codex, Claude, Cursor, OpenCode, Goose, Pi и другие]
   ci[CI и релизные проверки]
   docs[Документация и навыки]
   local[Локальные настройки и секреты хоста]
@@ -149,6 +149,8 @@ flowchart TB
 flowchart LR
   cli[cli]
   contracts[contracts]
+  changesets[changesets]
+  compiler[compiler]
   planning[planning и specification]
   freeze[freeze]
   workflow[Рабочий цикл]
@@ -160,9 +162,12 @@ flowchart LR
   metrics[metrics и policy]
   context[context и evidence]
   quality[quality]
+  neutrality[neutrality]
   runner[Контроллер выполнения]
+  worktree[worktree]
 
   cli --> planning
+  cli --> compiler
   cli --> workflow
   cli --> audit
   cli --> adapter_sessions
@@ -170,40 +175,52 @@ flowchart LR
   cli --> reporting
   cli --> metrics
   cli --> context
+  cli --> neutrality
   cli --> runner
+  cli --> worktree
   planning --> contracts
+  compiler --> contracts
   freeze --> contracts
   workflow --> contracts
   workflow --> audit
   workflow --> quality
   workflow --> review_mesh
+  workflow --> neutrality
   adapter_sessions --> workflow
   adapter_sessions --> host_protocol
   adapter_sessions --> planning
   review_mesh --> contracts
   review_mesh --> metrics
   audit --> workflow
+  audit --> changesets
   audit --> review_mesh
   reporting --> workflow
   metrics --> contracts
   context --> contracts
+  neutrality --> contracts
   runner --> workflow
+  runner --> worktree
+  worktree --> contracts
 ```
 
 | Компонент | Основные модули | Когда вызывается |
 | --- | --- | --- |
 | Маршрутизация CLI | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/adapter.py` | Любая команда `agent-lifecycle ...` начинается здесь. |
 | Контракты | `contracts/*` | Все публичные подтверждения, схемы, отпечатки и проверочные конверты. |
+| Поиск изменений | `changesets/git.py` | Аудит владения и реализации по Git-изменениям. |
+| Компиляция заданий | `compiler/task_packets.py`, `compiler/small_model_packets.py` | Преобразование зафиксированного графа задач в рабочие и компактные пакеты. |
 | Планирование | `planning/*`, `specification/*`, `freeze/locks.py` | SDD-уровень, проверка плана, полнота, приёмка и файл блокировки. |
 | Рабочий цикл | `workflow/*` | Изменение состояния, переходы задач, финализация и следующий управляемый шаг. |
 | Сессии адаптеров | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`. |
 | Протокол хоста | `host_protocol/*` | Проверка адаптера, безопасный осмотр, захват событий и возможности. |
 | Аудит | `audit/*` | Владение файлами, вердикты проверки, аудит реализации, целостность доказательств. |
-| Групповая проверка | `review_mesh/*` | Рекомендация, назначения проверяющим, импорт результатов, объединение выводов и кворум. |
+| Групповая проверка | `review_mesh/*` | Рекомендация, шаблоны оператора, подготовка пакетов проверяющих, назначения, импорт результатов, объединение выводов и кворум. |
 | Отчёты | `reporting/*` | Статус, лента событий, прогресс, счётчик изменений и мост прогресса. |
 | Метрики и правила | `metrics/*`, `policy/*`, `model_routing/*` | Экспорт расхода, политика токенов/ресурсов, локальная статистика и классы моделей. |
-| Контекст и подтверждения | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Компактные пакеты, поиск по эпизодам, снимки цели и продолжения. |
+| Контекст и подтверждения | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Компактные пакеты, поиск по эпизодам, импорт внешнего контекста, представление цели и продолжения. |
+| Нейтральность | `neutrality/*` | Проверка переносимых артефактов, полномочий и подписанных подтверждений нейтральности. |
 | Контроллер выполнения | `runner/*` | Ограниченное состояние цикла выполнения поверх существующего рабочего цикла. |
+| Рабочее дерево | `worktree/*`, `cli/worktree.py` | Правила изоляции рабочего дерева и подтверждения попыток. |
 
 ## C4: маршруты вызова на уровне кода
 
@@ -243,19 +260,23 @@ sequenceDiagram
   participant Intake as adapter_sessions/task_intake.py
   participant Import as imports/planning.py
   participant Advisor as review_mesh/recommendation.py
+  participant BugAdvisor as quality/bug_forensics_advisor.py
   participant Out as agent-adapter-task-start-receipt.v1
 
   User->>AdapterCLI: adapter task start --file task.md
   AdapterCLI->>Intake: start_adapter_task()
   Intake->>Import: import_planning_input()
   Intake->>Advisor: recommend_review_mesh_for_text()
+  Intake->>BugAdvisor: build_bug_forensics_advisory()
   Intake-->>Out: REVIEW_REQUIRED или BLOCKED
 ```
 
 Этот маршрут используется для обычного текста задачи, Markdown, пакетов
 проверки кода и импортированного планирования. Он не запускает реализацию.
 Подтверждение хранит метку источника, отпечаток и размер в байтах, но не
-исходный текст.
+исходный текст. Рекомендации групповой проверки и расследования ошибок остаются
+подсказками, пока проверенный и зафиксированный план не включит обязательные
+контрольные точки.
 
 ### Управляемый запуск адаптера
 
@@ -336,6 +357,7 @@ flowchart LR
 sequenceDiagram
   participant CLI
   participant Profile as review_mesh/contracts.py
+  participant Templates as review_mesh/operator_templates.py
   participant Assign as review_mesh/assignments.py
   participant Host as Проверяющий хост
   participant Import as review_mesh/results.py
@@ -343,6 +365,7 @@ sequenceDiagram
   participant Quorum as review_mesh/quorum.py
 
   CLI->>Profile: build_review_mesh_profile()
+  CLI->>Templates: prepare_review_mesh_packets()
   CLI->>Assign: build_review_mesh_assignment_packet()
   Assign-->>Host: пакет назначения
   Host-->>CLI: reviewer-output.v1
@@ -408,14 +431,16 @@ flowchart LR
 | --- | --- | --- | --- |
 | Проверка готовности | `diagnose --no-install-plans` | `diagnostics/readiness.py`, `host_protocol/*`, `context/*` | Очищенный отчёт готовности. |
 | Проверка адаптера | `adapter validate/inspect/install-plan` | `cli/adapter.py`, `host_protocol/*`, `diagnostics/readiness.py` | Проверка, безопасный осмотр или пробный план установки. |
-| Приём обычной задачи | `adapter task start --file/--text` | `adapter_sessions/task_intake.py`, `imports/planning.py`, `review_mesh/recommendation.py` | Черновое подтверждение, требующее проверки. |
+| Приём обычной задачи | `adapter task start --file/--text` | `adapter_sessions/task_intake.py`, `imports/planning.py`, `review_mesh/recommendation.py`, `quality/bug_forensics_advisor.py` | Черновое подтверждение, требующее проверки. |
 | Проверка плана | `plan check`, `plan completeness-check`, `plan acceptance-check` | `planning/*`, `freeze/locks.py` | PASS/FAIL подтверждение плана. |
 | Управляемый следующий шаг | `workflow run` или `adapter run` | `workflow/managed_runner.py`, `workflow/next_action.py`, `adapter_sessions/workflow_bridge.py` | Подтверждение следующего шага без запуска хоста. |
 | Изменение задачи | `workflow task-start/task-result/task-accept` | `workflow/task_transitions.py`, `workflow/operation_kernel.py`, `workflow/gates.py` | Обновлённое состояние и журнал событий. |
 | Аудит реализации | `audit implementation` | `audit/implementation.py`, `audit/ownership.py`, `workflow/reviews.py` | Отчёт аудита реализации. |
-| Групповая проверка | `review-mesh profile/assign/import-result/synthesize/quorum` | `review_mesh/*`, `model_routing/profiles.py`, `quality/cross_check.py` | Назначения, результаты, объединение выводов и кворум. |
+| Групповая проверка | `review-mesh profile/recommend/prepare/assign/import-result/synthesize/quorum` | `review_mesh/*`, `model_routing/profiles.py`, `quality/cross_check.py` | Рекомендация, подготовленные пакеты проверяющих, назначения, результаты, объединение выводов и кворум. |
 | Проверка кода | Git/CLI хоста и `adapter task start` | Git вне ALK, затем `adapter_sessions/task_intake.py` и при необходимости `review_mesh/*` | Приём пакета проверки и необязательный кворум. |
-| Исправление дефекта | `adapter task start` и контрольные точки зафиксированного плана | `adapter_sessions/task_intake.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Рекомендация профиля дефекта, затем обязательные подтверждения по плану. |
+| Исправление дефекта | `adapter task start` и контрольные точки зафиксированного плана | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Рекомендация профиля дефекта, затем обязательные подтверждения по плану. |
+| Внешний контекст | `context external-import` и поиск по эпизодам | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Необязательные подсказки контекста без права заменять доказательства. |
+| Статус цели | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Представление цели и прогресса без записи. |
 | Отображение прогресса | `report progress`, `report progress-bridge`, хуки прогресса | `reporting/*`, `cli/progress_hooks.py` | Текстовый или JSON-прогресс без вызова модели. |
 | Проверка релиза | Релизные инструменты и тесты | `tools/release/*`, `contracts/release_contract_schemas.py`, docs/tests | Проверка исходного релиза и подтверждений. |
 
@@ -457,6 +482,9 @@ flowchart LR
 - [Аудит реализации](../reference/implementation-audit.md)
 - [Практические сценарии групповой проверки](../review-mesh-workflow.md)
 - [Сценарии проверки кода](../code-review-workflows.md)
+- [Внешний контекст памяти](../reference/external-memory.md)
+- [Непрерывность цели](../reference/goal-continuity.md)
+- [Профиль расследования ошибок](../reference/bug-forensics.md)
 
 Дополнительные англоязычные архитектурные документы: `docs/architecture/release-architecture.md`,
 `docs/architecture/runner-transition-contract.md` и
