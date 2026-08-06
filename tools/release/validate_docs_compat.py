@@ -485,6 +485,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "import plan --source <file-or-folder>",
             "openspec|spec-kit|bmad|spec-kitty",
+            "docs/guides/lifecycle-cookbook.md",
             "adapter session start/status/resume/promote",
             "adapter run",
             "`WAITING_FOR_TASK`",
@@ -496,10 +497,37 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "import plan/check",
             "openspec|spec-kit|bmad|spec-kitty",
+            "docs/ru/lifecycle-cookbook.md",
             "adapter session start/status/resume/promote",
             "adapter run",
             "`WAITING_FOR_TASK`",
             "`agent-adapter-session-receipt.v1`",
+        ),
+    ),
+    (
+        "docs/guides/lifecycle-cookbook.md",
+        (
+            "Research and planning only",
+            "Review a Markdown plan folder",
+            "Review code changes",
+            "Audit implementation evidence",
+            "Coordinate cross-review",
+            "agent-lifecycle adapter task start",
+            "agent-lifecycle import plan",
+            "review-mesh recommend",
+        ),
+    ),
+    (
+        "docs/ru/lifecycle-cookbook.md",
+        (
+            "Исследование и планирование",
+            "Проверка папки с Markdown-планом",
+            "Проверка изменений кода",
+            "Аудит подтверждений реализации",
+            "Согласованная перепроверка",
+            "agent-lifecycle adapter task start",
+            "agent-lifecycle import plan",
+            "review-mesh recommend",
         ),
     ),
     (

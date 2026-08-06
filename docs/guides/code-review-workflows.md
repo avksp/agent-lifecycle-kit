@@ -202,6 +202,16 @@ independently recover architecture and then compare conclusions.
 For a plan split across several Markdown files, either point reviewers at the
 directory or combine files into one packet.
 
+If you want a deterministic import receipt first, use the external planning
+import added for Markdown folders:
+
+```bash
+agent-lifecycle import plan \
+  --source tasks/release-1-40/ \
+  --dialect spec-kit \
+  --out work/code-review/plan-import.json
+```
+
 Repository-local review:
 
 ```bash
