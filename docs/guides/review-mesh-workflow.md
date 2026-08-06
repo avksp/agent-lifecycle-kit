@@ -126,18 +126,16 @@ Create a profile once for the review. The profile stores token/resource caps
 and neutral independence rules:
 
 ```bash
-PYTHONPATH=src python3 - <<'PY'
-import json
-from pathlib import Path
-from agent_lifecycle.review_mesh import build_review_mesh_profile
-
-profile = build_review_mesh_profile(
-    profile_id="rm-plan-review",
-    default_mode="leader-draft-multi-review",
-    independence_required=False,
-)
-Path("rm-profile.json").write_text(json.dumps(profile, indent=2) + "\n")
-PY
+agent-lifecycle review-mesh profile \
+  --profile-id rm-plan-review \
+  --default-mode leader-draft-multi-review \
+  --reviewer-model-class strong-reasoning \
+  --reviewer-model-class local-strong-review \
+  --max-invocations 3 \
+  --max-input-tokens 12000 \
+  --max-output-tokens 3000 \
+  --max-wall-seconds 900 \
+  --out rm-profile.json
 ```
 
 Create one assignment per reviewer. The reviewer ids below are examples; they
@@ -152,6 +150,7 @@ agent-lifecycle review-mesh assign \
   --assignment-id RM-PLAN-A \
   --reviewer-id reviewer-a \
   --reviewer-role plan-reviewer \
+  --reviewer-model-class strong-reasoning \
   --out rm-assignment-a.json
 
 agent-lifecycle review-mesh assign \
@@ -162,7 +161,52 @@ agent-lifecycle review-mesh assign \
   --assignment-id RM-PLAN-B \
   --reviewer-id reviewer-b \
   --reviewer-role plan-reviewer \
+  --reviewer-model-class local-strong-review \
   --out rm-assignment-b.json
+```
+
+### Concrete host examples
+
+The adapter decides the concrete model in host-local configuration or explicit
+host CLI flags. ALK records provider-neutral model classes and optional identity
+hashes, not raw provider/model names.
+
+Use explicit host flags when you want the selected model to be clear:
+
+```bash
+codex exec --model <codex-model-id> \
+  "Review rm-assignment-a.json and return only reviewer-output.v1 JSON" \
+  > reviewer-a-output.json
+
+claude --model <claude-model-alias> --print --output-format json \
+  "Review rm-assignment-b.json and return only reviewer-output.v1 JSON" \
+  > reviewer-b-output.json
+
+opencode models <provider>
+opencode run --model <provider>/glm-5.2 --format json \
+  --file rm-assignment-glm.json \
+  "Review the assignment and return only reviewer-output.v1 JSON" \
+  > reviewer-glm-output.json
+```
+
+If a frozen plan requires independence evidence, pass neutral hashes into the
+assignment. Keep the raw model name in host-local notes, not in the portable
+plan:
+
+```bash
+GLM_MODEL_HASH=$(printf '%s' 'opencode:<provider>/glm-5.2' | shasum -a 256 | cut -d ' ' -f 1)
+
+agent-lifecycle review-mesh assign \
+  --intake intake.json \
+  --profile rm-profile.json \
+  --mode parallel-research-synthesis \
+  --phase plan-review \
+  --assignment-id RM-GLM \
+  --reviewer-id opencode-glm-reviewer \
+  --reviewer-role plan-reviewer \
+  --reviewer-model-class strong-reasoning \
+  --reviewer-model-identity-hash "$GLM_MODEL_HASH" \
+  --out rm-assignment-glm.json
 ```
 
 Give each assignment packet to the chosen host adapter or operator. ALK does

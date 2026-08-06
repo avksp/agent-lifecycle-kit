@@ -5,6 +5,8 @@
 - Added a Review Mesh workflow cookbook with common planning, research, bug
   investigation, implementation-audit and release/security review scenarios in
   EN/RU docs.
+- Added `review-mesh profile` for command-only profile creation and refreshed
+  RU terminology/examples for grouped review workflows.
 
 ## 1.42.0 - 2026-08-05
 

@@ -86,6 +86,9 @@ read-only unless their own help says otherwise.
   approved policy artifact with `--apply --output`.
 - `agent-lifecycle policy adaptive-decision/adaptive-check`: build and validate
   neutral adaptive lifecycle mode decisions.
+- `agent-lifecycle review-mesh profile`: create
+  `agent-review-mesh-profile.v1` from token/resource caps and provider-neutral
+  reviewer model classes.
 - `agent-lifecycle review-mesh recommend`: inspect task text, a task file, an
   adapter task intake receipt or a plan manifest and emit
   `agent-review-mesh-recommendation.v1`. The receipt is advisory only and does

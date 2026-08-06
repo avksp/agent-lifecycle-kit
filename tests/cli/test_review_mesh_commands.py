@@ -15,6 +15,43 @@ except ImportError:
 
 
 class ReviewMeshCliTests(unittest.TestCase):
+    def test_profile_command_writes_provider_neutral_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            profile_path = root / "profile.json"
+
+            code, profile = _run_cli(
+                [
+                    "review-mesh",
+                    "profile",
+                    "--profile-id",
+                    "rm-plan-review",
+                    "--default-mode",
+                    "parallel-research-synthesis",
+                    "--reviewer-model-class",
+                    "strong-reasoning",
+                    "--reviewer-model-class",
+                    "local-strong-review",
+                    "--max-invocations",
+                    "3",
+                    "--max-input-tokens",
+                    "12000",
+                    "--max-output-tokens",
+                    "3000",
+                    "--out",
+                    profile_path.as_posix(),
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(profile["schemaVersion"], "agent-review-mesh-profile.v1")
+            self.assertEqual(profile["profileId"], "rm-plan-review")
+            self.assertEqual(profile["defaultMode"], "parallel-research-synthesis")
+            self.assertEqual(profile["reviewerModelClasses"], ["strong-reasoning", "local-strong-review"])
+            self.assertEqual(profile["budgetCap"]["maxInvocations"], 3)
+            self.assertFalse(profile["independencePolicy"]["required"])
+            self.assertTrue(profile_path.is_file())
+
     def test_assign_import_synthesize_and_quorum_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

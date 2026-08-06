@@ -65,6 +65,7 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn(("adapter session resume", "agent-adapter-session-resume-receipt.v1"), cli_outputs)
         self.assertIn(("adapter run", "agent-adapter-session-receipt.v1"), cli_outputs)
         self.assertIn(("adapter task start", "agent-adapter-task-start-receipt.v1"), cli_outputs)
+        self.assertIn(("review-mesh profile", "agent-review-mesh-profile.v1"), cli_outputs)
         self.assertIn(("review-mesh recommend", "agent-review-mesh-recommendation.v1"), cli_outputs)
         self.assertIn(("report change-summary", "agent-change-summary-receipt.v1"), cli_outputs)
         self.assertFalse(policy["productionPromotionClaimed"])
