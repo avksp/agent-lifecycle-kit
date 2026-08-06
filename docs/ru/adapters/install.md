@@ -58,18 +58,18 @@ python tools/live_hosts/<host>_harness.py \
 Хосты, которым нужен единый детерминированный цикл, могут вызывать
 `agent-lifecycle workflow run` перед запуском работы. Команда возвращает
 следующее действие и причины закрытой остановки, но не запускает модель, не
-меняет состояние и не записывает секреты хоста в подтверждения. Нативные
+меняет состояние и не записывает секреты хоста в подтверждения. Прямые
 запуски, ожидание, отмена и телеметрия остаются ответственностью адаптера.
 
-Если нужна ALK-точка входа вокруг сессий адаптера, используй
+Если нужна точка входа ALK вокруг сессий адаптера, используйте
 `agent-lifecycle adapter session start/status/resume/promote` или
 `agent-lifecycle adapter run`. Эти команды создают
 `agent-adapter-session-receipt.v1` и
 `agent-adapter-session-resume-receipt.v1`, связывают управляемый запуск с
-зафиксированным workflow state и отделяют установку plugin от доказательства
-жизненного цикла. Текущие встроенные адаптеры объявляют
-`managedLaunch.status: WRAPPER_ONLY`: ALK может записать proof управляемой
-сессии, но core не заявляет безопасный native argv-запуск этих host CLI.
+зафиксированным состоянием рабочего цикла и отделяют установку плагина от доказательства жизненного цикла. Текущие встроенные адаптеры объявляют
+`managedLaunch.status: WRAPPER_ONLY`: ALK может записать подтверждение
+управляемой сессии, но ядро не заявляет безопасный прямой argv-запуск этих CLI
+хоста.
 Сводка: `docs/ru/adapters/managed-session-support.md`.
 
 Codex, Claude Code, OpenCode и другие хосты могут показывать прогресс тем же
@@ -79,13 +79,13 @@ progress --state <state> --terminal`, ограниченный режим `--wat
 подтверждённые хостом артефакты использования и счётчик изменений; разбор
 телеметрии конкретного хоста остаётся в адаптере.
 
-Уровни поддержки progress bridge перечислены в
+Уровни поддержки отображения прогресса перечислены в
 `docs/ru/adapters/progress-bridge-matrix.md`. Они не меняют зрелость адаптера.
 
 Управляемые команды ALK также могут показывать прогресс напрямую при флаге
 `--progress-hook stderr` или сохранять `agent-progress-hook-receipt.v1` через
 `--progress-hook receipt --progress-receipt <path>`. Это включается явно и не
-доказывает, что обычная сессия plugin прошла полный жизненный цикл.
+доказывает, что обычная сессия плагина прошла полный жизненный цикл.
 
 ## Codex
 
@@ -94,7 +94,7 @@ codex plugin list
 agent-lifecycle adapter install-plan --descriptor adapters/codex/adapter.descriptor.json
 ```
 
-Progress bridge: `WATCH` через отдельный терминал или обёртку после переходов
+Отображение прогресса: `WATCH` через отдельный терминал или обёртку после переходов
 жизненного цикла.
 
 ## Claude Code
@@ -104,8 +104,8 @@ claude plugin list
 agent-lifecycle adapter install-plan --descriptor adapters/claude/adapter.descriptor.json
 ```
 
-Progress bridge: `WATCH`; telemetry остаётся на стороне Claude Code, ALK
-читает только переданные receipts.
+Отображение прогресса: `WATCH`; телеметрия остаётся на стороне Claude Code, ALK
+читает только переданные подтверждения.
 
 ## Cursor
 
@@ -114,7 +114,7 @@ cursor --version
 agent-lifecycle adapter install-plan --descriptor adapters/cursor/adapter.descriptor.json
 ```
 
-Progress bridge: `MANUAL`. Это не является подтверждением `VERIFIED` для
+Отображение прогресса: `MANUAL`. Это не является подтверждением `VERIFIED` для
 Cursor.
 
 ## OpenCode
@@ -124,7 +124,7 @@ opencode --version
 agent-lifecycle adapter install-plan --descriptor adapters/opencode/adapter.descriptor.json
 ```
 
-Progress bridge: `WATCH`; нормализация host telemetry остаётся в адаптере
+Отображение прогресса: `WATCH`; нормализация телеметрии хоста остаётся в адаптере
 OpenCode.
 
 ## Hermes
@@ -134,7 +134,7 @@ hermes --version
 agent-lifecycle adapter install-plan --descriptor adapters/hermes/adapter.descriptor.json
 ```
 
-Progress bridge: `MANUAL` после переходов ALK workflow.
+Отображение прогресса: `MANUAL` после переходов рабочего цикла ALK.
 
 ## Qwen Code
 
@@ -143,7 +143,7 @@ qwen --version
 agent-lifecycle adapter install-plan --descriptor adapters/qwen-code/adapter.descriptor.json
 ```
 
-Progress bridge: `MANUAL`; telemetry модели остаётся host-local.
+Отображение прогресса: `MANUAL`; телеметрия модели остаётся локальной для хоста.
 
 ## Gemini CLI
 
@@ -152,7 +152,7 @@ gemini --version
 agent-lifecycle adapter install-plan --descriptor adapters/gemini-cli/adapter.descriptor.json
 ```
 
-Progress bridge: `MANUAL`. Это не меняет `EXPERIMENTAL` статус Gemini CLI.
+Отображение прогресса: `MANUAL`. Это не меняет статус `EXPERIMENTAL` для Gemini CLI.
 
 ## Goose
 
@@ -166,7 +166,7 @@ Goose имеет статус `VERIFIED` только для Goose `1.45.0` на
 использовало ограниченные запуски без сессии и профиля, с явным провайдером и
 моделью, а также проверкой чистого рабочего дерева после каждого вызова.
 
-Progress bridge: `WATCH`; ACP остаётся отдельно probe-gated.
+Отображение прогресса: `WATCH`; ACP остаётся за отдельной безопасной пробой.
 
 ## Kimi Code
 
@@ -175,7 +175,7 @@ kimi --version
 agent-lifecycle adapter install-plan --descriptor adapters/kimi-code/adapter.descriptor.json
 ```
 
-Progress bridge: `MANUAL`. Это не меняет `EXPERIMENTAL` статус Kimi Code.
+Отображение прогресса: `MANUAL`. Это не меняет статус `EXPERIMENTAL` для Kimi Code.
 
 ## Grok Build
 
@@ -189,8 +189,8 @@ Grok Build имеет статус `VERIFIED` для Grok Build `0.2.117` на �
 локальной связке провайдера и модели. Путь ACP остаётся закрыт проверочной
 пробой, а неудачная проба фиксируется как подтверждение с закрытым отказом.
 
-Progress bridge: `WATCH` через отдельный терминал или обёртку после шагов
-Grok-side lifecycle.
+Отображение прогресса: `WATCH` через отдельный терминал или обёртку после шагов
+жизненного цикла Grok Build.
 
 ## OpenInterpreter
 
@@ -228,8 +228,8 @@ python tools/live_hosts/openinterpreter_harness.py \
 
 `PROVIDER_API_KEY` нужно заменить на имя env-key из выбранного провайдера.
 
-Progress bridge: `MANUAL`; provider credentials и telemetry остаются вне ALK
-core.
+Отображение прогресса: `MANUAL`; учётные данные провайдера и телеметрия
+остаются вне ядра ALK.
 
 ## Pi
 
@@ -264,8 +264,8 @@ python tools/live_hosts/pi_harness.py \
 Проверенное заявление Pi не означает поддержку ACP, одобрение публичного
 каталога или промышленную готовность.
 
-Progress bridge: `MANUAL`; provider credentials и telemetry остаются вне ALK
-core.
+Отображение прогресса: `MANUAL`; учётные данные провайдера и телеметрия
+остаются вне ядра ALK.
 
 ## Граница продвижения
 

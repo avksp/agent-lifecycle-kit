@@ -45,7 +45,7 @@ class ManagedAdapterSessionDocsTests(unittest.TestCase):
         russian = (ROOT / "docs/ru/adapters/install.md").read_text(encoding="utf-8")
 
         self.assertIn("plugin installation separate from lifecycle proof", english)
-        self.assertIn("установку plugin от доказательства", russian)
+        self.assertIn("установку плагина от доказательства", russian)
         for text in (english, russian):
             self.assertIn("managedLaunch.status: WRAPPER_ONLY", text)
             self.assertIn("agent-adapter-session-receipt.v1", text)

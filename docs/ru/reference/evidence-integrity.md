@@ -8,7 +8,7 @@
 Цепочка выглядит так:
 
 ```text
-finding -> root cause -> fix impact -> regression evidence -> hash chain -> final proof
+находка -> причина -> влияние правки -> регрессионное подтверждение -> цепочка хэшей -> финальное подтверждение
 ```
 
 Режим не включается для обычных задач по умолчанию. Запуск включает его через
@@ -18,7 +18,7 @@ finding -> root cause -> fix impact -> regression evidence -> hash chain -> fina
 
 ## Контракты
 
-- `agent-proof-finding.v1`: стабильная идентичность finding. `findingId`
+- `agent-proof-finding.v1`: стабильная идентичность находки. `findingId`
   строится из нормализованных rule/category/severity/path/symbol/message, а не
   из номера строки или временного id ревью.
 - `agent-root-cause-evidence.v1`: подтверждение основной причины со статусом
@@ -33,7 +33,7 @@ finding -> root cause -> fix impact -> regression evidence -> hash chain -> fina
 - `agent-hash-chain-migration-policy.v1`: политика миграции. Новые запуски
   требуют цепочку; старые запуски без цепочки требуют явное исключение или
   восстановление данных.
-- `agent-proof-integrity-receipt.v1`: общий артефакт, который связывает finding,
+- `agent-proof-integrity-receipt.v1`: общий артефакт, который связывает находку,
   основную причину, влияние исправления, цепочку и подтверждение миграции.
 - `agent-proof-integrity-validation.v1`: результат проверки, которая падает при
   недостатке обязательных данных.
