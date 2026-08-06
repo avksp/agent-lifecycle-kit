@@ -36,11 +36,28 @@ Small models should receive compact snapshots and receipts first:
 These compact artifacts guide execution. They do not replace full evidence for
 final review.
 
+## External context
+
+External memory exports are optional hints, not authority:
+
+```bash
+agent-lifecycle context external-import \
+  --source work/context/project-memory.md \
+  --citation "operator-approved project memory export" \
+  --out work/context/project-memory.external-context.json
+```
+
+Only import files that the operator has chosen explicitly. ALK does not call
+MCP servers, RAG services, providers or host CLIs to fetch memory. Receipts must
+keep `sourceOfTruth: false`, redact secret-like values and avoid private local
+paths.
+
 ## Security boundary
 
 Release and production checks must keep these boundaries:
 
 - no private keys, tokens, cookies or local machine paths in tracked files;
+- no external memory as lifecycle proof or source of truth;
 - no adapter maturity promotion without host-bound evidence;
 - no public marketplace or directory approval claim without external evidence;
 - no host-specific semantics in shared core contracts.

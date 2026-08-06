@@ -222,6 +222,8 @@ Stable schema ids:
 - `agent-episode-index.v1`
 - `agent-episode-index-validation.v1`
 - `agent-episode-retrieval.v1`
+- `agent-external-context-import-receipt.v1`
+- `agent-external-context-import-validation.v1`
 
 `agent-import-dialect-profile.v1` requires `sourceTrusted: false`,
 `requiresReview: true` and `freezeBlocked: true`. Imported artifacts can carry
@@ -238,6 +240,12 @@ tool hints as host-local redacted metadata; they are not portable defaults.
 receipt/session artifacts. Results keep artifact digests and report
 `chainVerified` only when a supplied hash chain contains the same path and
 digest; otherwise they are `chainUnchecked`.
+
+`agent-external-context-import-receipt.v1` imports a local external memory or
+context export as optional retrieval hints. It requires `sourceOfTruth: false`,
+`enabledByDefault: false`, `rawContentStored: false` and no model, network or
+provider API calls. The receipt can guide context selection, but cannot satisfy
+evidence, review or final proof requirements.
 
 ## Runner recovery, optional cross-check and Review Mesh
 
