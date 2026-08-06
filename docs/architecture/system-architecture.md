@@ -62,7 +62,7 @@ flowchart TB
   cli[agent-lifecycle CLI]
   source[Source checkout]
   adapters[Adapter descriptors]
-  host[Host CLI: Codex, Claude, OpenCode, Goose, Pi, others]
+  host[Host CLI: Codex, Claude, Cursor, OpenCode, Goose, Pi, others]
   ci[CI and release checks]
   docs[Documentation and skills]
   local[Host-local config and secrets]
@@ -145,6 +145,8 @@ flowchart TB
 flowchart LR
   cli[cli]
   contracts[contracts]
+  changesets[changesets]
+  compiler[compiler]
   planning[planning and specification]
   freeze[freeze]
   workflow[workflow]
@@ -156,9 +158,12 @@ flowchart LR
   metrics[metrics and policy]
   context[context and evidence]
   quality[quality profiles]
+  neutrality[neutrality]
   runner[runner]
+  worktree[worktree]
 
   cli --> planning
+  cli --> compiler
   cli --> workflow
   cli --> audit
   cli --> adapter_sessions
@@ -166,40 +171,52 @@ flowchart LR
   cli --> reporting
   cli --> metrics
   cli --> context
+  cli --> neutrality
   cli --> runner
+  cli --> worktree
   planning --> contracts
+  compiler --> contracts
   freeze --> contracts
   workflow --> contracts
   workflow --> audit
   workflow --> quality
   workflow --> review_mesh
+  workflow --> neutrality
   adapter_sessions --> workflow
   adapter_sessions --> host_protocol
   adapter_sessions --> planning
   review_mesh --> contracts
   review_mesh --> metrics
   audit --> workflow
+  audit --> changesets
   audit --> review_mesh
   reporting --> workflow
   metrics --> contracts
   context --> contracts
+  neutrality --> contracts
   runner --> workflow
+  runner --> worktree
+  worktree --> contracts
 ```
 
 | Component | Main modules | Called when |
 | --- | --- | --- |
 | CLI routing | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/adapter.py` | Any `agent-lifecycle ...` command starts here. |
 | Contracts | `contracts/*` | Every public receipt, schema, digest and validation envelope. |
+| Change discovery | `changesets/git.py` | Ownership and implementation audit over Git diffs. |
+| Compilation | `compiler/task_packets.py`, `compiler/small_model_packets.py` | Frozen DAG to task packets and compact model packets. |
 | Planning | `planning/*`, `specification/*`, `freeze/locks.py` | SDD tier, plan checks, completeness, acceptance and lock verification. |
 | Workflow | `workflow/*` | State mutation, task transitions, finalization and managed next actions. |
 | Adapter sessions | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`. |
 | Host protocol | `host_protocol/*` | Adapter validation, inspection, event capture and capability checks. |
 | Audit | `audit/*` | Ownership checks, review verdicts, implementation audit, proof integrity. |
-| Review coordination | `review_mesh/*` | Optional recommendation, reviewer assignments, result import, synthesis and quorum. |
+| Review coordination | `review_mesh/*` | Optional recommendation, operator templates, reviewer packet preparation, assignments, result import, synthesis and quorum. |
 | Reporting | `reporting/*` | Read-only status, event feed, progress, change summary and progress bridge. |
 | Metrics and policy | `metrics/*`, `policy/*`, `model_routing/*` | Usage export, token/resource policy, quality-cost signals and model class routing. |
-| Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, objective snapshots and continuation records. |
+| Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, external context imports, goal views and continuation records. |
+| Neutrality | `neutrality/*` | Portable artifact scanning, authority checks and signed neutrality receipts. |
 | Runner | `runner/*` | Bounded execution-loop state over existing workflow primitives. |
+| Worktree | `worktree/*`, `cli/worktree.py` | Worktree isolation policies and attempt receipts. |
 
 ## C4: code-level call paths
 
@@ -239,18 +256,21 @@ sequenceDiagram
   participant Intake as adapter_sessions/task_intake.py
   participant Import as imports/planning.py
   participant Advisor as review_mesh/recommendation.py
+  participant BugAdvisor as quality/bug_forensics_advisor.py
   participant Out as agent-adapter-task-start-receipt.v1
 
   User->>AdapterCLI: adapter task start --file task.md
   AdapterCLI->>Intake: start_adapter_task()
   Intake->>Import: import_planning_input()
   Intake->>Advisor: recommend_review_mesh_for_text()
+  Intake->>BugAdvisor: build_bug_forensics_advisory()
   Intake-->>Out: REVIEW_REQUIRED or BLOCKED
 ```
 
 Called for raw task text, Markdown, code-review packets and imported planning
 input. It never starts implementation. The receipt stores source label, digest
-and byte count, not raw task text.
+and byte count, not raw task text. Review Mesh and Bug Forensics suggestions
+remain advisory until a reviewed frozen plan opts into blocking gates.
 
 ### Frozen managed adapter run
 
@@ -329,6 +349,7 @@ receives a stable review packet.
 sequenceDiagram
   participant CLI
   participant Profile as review_mesh/contracts.py
+  participant Templates as review_mesh/operator_templates.py
   participant Assign as review_mesh/assignments.py
   participant Host as Host reviewer
   participant Import as review_mesh/results.py
@@ -336,6 +357,7 @@ sequenceDiagram
   participant Quorum as review_mesh/quorum.py
 
   CLI->>Profile: build_review_mesh_profile()
+  CLI->>Templates: prepare_review_mesh_packets()
   CLI->>Assign: build_review_mesh_assignment_packet()
   Assign-->>Host: host-owned packet
   Host-->>CLI: reviewer-output.v1
@@ -399,14 +421,16 @@ does not parse host-specific telemetry in the core.
 | --- | --- | --- | --- |
 | Readiness check | `diagnose --no-install-plans` | `diagnostics/readiness.py`, `host_protocol/*`, `context/*` | Redacted readiness report. |
 | Adapter validation | `adapter validate/inspect/install-plan` | `cli/adapter.py`, `host_protocol/*`, `diagnostics/readiness.py` | Validation, safe inspection or dry-run install plan. |
-| Raw task intake | `adapter task start --file/--text` | `adapter_sessions/task_intake.py`, `imports/planning.py`, `review_mesh/recommendation.py` | Review-gated intake receipt. |
+| Raw task intake | `adapter task start --file/--text` | `adapter_sessions/task_intake.py`, `imports/planning.py`, `review_mesh/recommendation.py`, `quality/bug_forensics_advisor.py` | Review-gated intake receipt. |
 | Plan validation | `plan check`, `plan completeness-check`, `plan acceptance-check` | `planning/*`, `freeze/locks.py` | PASS/FAIL plan evidence. |
 | Managed next action | `workflow run` or `adapter run` | `workflow/managed_runner.py`, `workflow/next_action.py`, `adapter_sessions/workflow_bridge.py` | Next action receipt, no host launch. |
 | Task mutation | `workflow task-start/task-result/task-accept` | `workflow/task_transitions.py`, `workflow/operation_kernel.py`, `workflow/gates.py` | Updated workflow state and event log. |
 | Implementation audit | `audit implementation` | `audit/implementation.py`, `audit/ownership.py`, `workflow/reviews.py` | Implementation audit report. |
-| Group review | `review-mesh profile/assign/import-result/synthesize/quorum` | `review_mesh/*`, `model_routing/profiles.py`, `quality/cross_check.py` | Assignment, result, synthesis and quorum receipts. |
+| Group review | `review-mesh profile/recommend/prepare/assign/import-result/synthesize/quorum` | `review_mesh/*`, `model_routing/profiles.py`, `quality/cross_check.py` | Recommendation, prepared reviewer packets, assignment, result, synthesis and quorum receipts. |
 | Code review | Git/host CLI plus `adapter task start` | Git outside ALK, then `adapter_sessions/task_intake.py` and optional `review_mesh/*` | Review packet intake and optional quorum. |
-| Bug repair | `adapter task start` plus frozen plan gates | `adapter_sessions/task_intake.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Defect-shaped recommendation, then plan-required receipts. |
+| Bug repair | `adapter task start` plus frozen plan gates | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Defect-shaped recommendation, then plan-required receipts. |
+| External context | `context external-import` and episode retrieval | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Optional context hints with no proof authority. |
+| Goal status | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Read-only goal and lifecycle progress view. |
 | Progress display | `report progress`, `report progress-bridge`, progress hooks | `reporting/*`, `cli/progress_hooks.py` | Terminal or JSON progress without model calls. |
 | Release check | Release tools and tests | `tools/release/*`, `contracts/release_contract_schemas.py`, docs/tests | Source-release validation and evidence. |
 
@@ -450,3 +474,6 @@ does not parse host-specific telemetry in the core.
 - [Implementation audit](../reference/implementation-audit.md)
 - [Review Mesh workflow cookbook](../guides/review-mesh-workflow.md)
 - [Code review workflows](../guides/code-review-workflows.md)
+- [External memory](../reference/external-memory.md)
+- [Goal continuity](../reference/goal-continuity.md)
+- [Bug Forensics profile](../reference/bug-forensics.md)

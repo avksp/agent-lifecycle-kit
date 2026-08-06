@@ -14,8 +14,8 @@ input, host-owned execution, or optional context.
 | Project class | Examples | What they solve | ALK boundary |
 | --- | --- | --- | --- |
 | Coding agents | SWE-agent, Aider, Cline, Continue | Edit code and run tests | ALK does not edit code by itself; it controls plan, evidence and final proof around an executor. |
-| Agent runtimes | Omnigent, OpenHands, Archon | Launch agents, coordinate workflows, often provide UI/server/runtime | ALK keeps host launch outside the portable core and does not require a daemon or database. |
-| Specification tools | OpenSpec, GitHub Spec Kit, BMAD-METHOD | Describe what should be built | ALK can import those materials as reviewed drafts; the frozen ALK plan remains authoritative. |
+| Agent runtimes | Omnigent, OpenHands, Archon | Launch agents, coordinate workflows, often provide UI/server/runtime | ALK keeps provider execution outside the portable core. Managed launch is descriptor-declared, not a provider broker. |
+| Specification tools | OpenSpec, GitHub Spec Kit, BMAD-METHOD, Spec Kitty | Describe what should be built | ALK can import those materials as reviewed drafts; the frozen ALK plan remains authoritative. |
 | Skill and method libraries | superpowers, AGENTS.md, agent-skills | Guide agent behavior through instructions | ALK adds machine-checkable contracts, locks, receipts and gates. |
 | Memory systems | gbrain, mem0, zep | Retrieve long-term context and knowledge | ALK can use external memory as redacted context, not as proof or source of truth. |
 
@@ -36,25 +36,34 @@ ALK also includes these optional capabilities:
 
 - managed adapter sessions and task intake accept task text, Markdown files and
   frozen run requests while keeping host launch policy in adapter descriptors;
-- imported OpenSpec, Spec Kit, BMAD and related materials remain reviewed draft
-  input until an ALK plan is frozen;
+  bundled adapter descriptors currently declare `WRAPPER_ONLY` for managed
+  launch;
+- imported OpenSpec, Spec Kit, BMAD, Spec Kitty and related materials remain
+  reviewed draft input until an ALK plan is frozen;
 - optional Review Mesh creates reviewer assignments, imports redacted results,
   synthesizes findings and checks quorum only when a frozen plan opts in;
 - adapter event capture, external memory context, read-only goal/progress views
   and Bug Forensics advisory receipts add evidence without making ALK a model
   broker or memory database.
 
+## Named examples
+
+| Project | Similarity to ALK | Main difference |
+| --- | --- | --- |
+| oh-my-openagent | Improves long agent work with host-level skills, modes and team workflows. | It goes deeper into the host harness and agent runtime; ALK stays outside as a portable lifecycle and evidence layer. |
+| bmad-loop | Closest deterministic-loop neighbor: it emphasizes non-LLM control flow, verification and resumable work. | It runs host CLIs through its own loop; ALK keeps host execution at the adapter or wrapper boundary and covers the full spec-to-proof lifecycle. |
+| goalbuddy | Similar goal continuity and visible proof-loop intent. | It is a lighter goal-board workflow; ALK adds SDD, freeze, ownership, audit, adapters, optional multi-review and final proof. |
+
 ## Where ALK can be unnecessary
 
-ALK can be too much when the task is a one-off small edit, an exploratory chat,
-or a workflow that does not need stored plans, audit gates or final proof.
+ALK can be too much for a small one-off edit.
 
 ## Integration model
 
 | External layer | How it can work with ALK |
 | --- | --- |
-| OpenSpec, Spec Kit, BMAD documents | Import as draft input, then review and freeze an ALK plan. |
-| Codex, Claude Code, OpenCode, Goose, Pi, Qwen Code | Use as host executors through adapters and host-local profiles. |
+| OpenSpec, Spec Kit, BMAD and Spec Kitty documents | Import as draft input, then review and freeze an ALK plan. |
+| Codex, Claude Code, Cursor, Gemini CLI, Goose, Grok Build, Hermes, Kimi Code, OpenCode, OpenInterpreter, Pi, Qwen Code | Use as host executors through adapters and host-local profiles; current bundled descriptors are `WRAPPER_ONLY` for managed launch. |
 | SWE-agent or another code agent | Treat as an external executor whose output still needs ALK evidence. |
 | Agent runtimes or web UIs | Keep launch, UI and collaboration outside core; import receipts or results. |
 | Memory systems | Import redacted context with citations, source digests and no proof authority. |

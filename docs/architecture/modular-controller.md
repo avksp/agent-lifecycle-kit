@@ -28,35 +28,36 @@ This is the current source map for the standalone package:
 | Ownership, implementation, proof-integrity and review-verdict audit | `audit/*` | Implemented |
 | SDD tier and plan manifest validation | `planning/*`, `specification/*`, `review/*` | Implemented validators |
 | Plan lock verification | `freeze/locks.py` | Implemented |
-| Frozen DAG to task-packet and small-model packet compilation | `compiler/*` | Implemented |
-| Compact context profiles, rendering and episode retrieval | `context/*` | Implemented |
+| Frozen DAG to task-packet and small-model packet compilation | `compiler/task_packets.py`, `compiler/small_model_packets.py` | Implemented |
+| Compact context profiles, rendering, episode retrieval and external context | `context/*`, `context/external_memory.py`, `evidence_index/external_context.py` | Implemented |
 | Durable workflow state, operation kernel, event log, task/run transitions, gate checks, finalization | `workflow/*` | Implemented |
 | Neutrality authority, scanning, signed receipts, controller-gate helper | `neutrality/*` | Implemented |
 | Host capability descriptors, inspection, event capture and validation | `host_protocol/*`, adapter metadata files | Implemented as offline descriptors and validation contracts |
 | Adapter task intake, sessions, launch profiles and workflow bridge | `adapter_sessions/*` | Implemented |
-| External workflow, dialect and planning imports | `imports/*` | Implemented as draft-only import mappers |
+| External workflow, dialect and planning imports | `imports/*`, including OpenSpec, Spec Kit, BMAD and Spec Kitty profiles | Implemented as draft-only import mappers |
 | Readiness diagnostics and diagnostic bundles | `diagnostics/*` | Implemented |
-| Evidence indexes and episode indexes | `evidence_index/*` | Implemented |
-| Goal, objective and follow-up records | `goal/*`, `objective/*`, `followup/*` | Implemented |
+| Evidence indexes, episode indexes and external-context receipts | `evidence_index/core.py`, `evidence_index/episode_index.py`, `evidence_index/external_context.py` | Implemented |
+| Goal records, objective snapshots, read-only goal view and follow-up records | `goal/records.py`, `goal/view.py`, `followup/*` | Implemented |
 | Usage, phase resources, cost accounting and outcome signals | `metrics/*` | Implemented |
 | Model class routing and provider-neutral receipts | `model_routing/*` | Implemented |
 | Adaptive lifecycle policy and quality-floor decisions | `policy/*` | Implemented |
-| Optional quality profiles, cross-check and bug forensics | `quality/*` | Implemented |
+| Optional quality profiles, cross-check, bug forensics and Bug Forensics advisory | `quality/*`, `quality/bug_forensics_advisor.py` | Implemented |
 | Read-only status, progress, event feed and change summaries | `reporting/*` | Implemented |
-| Optional multi-review coordination, assignments, result import, synthesis and quorum | `review_mesh/*` | Implemented |
+| Optional multi-review coordination, operator templates, prepared packets, assignments, result import, synthesis and quorum | `review_mesh/*`, `review_mesh/operator_templates.py` | Implemented |
 | Controlled runner, attempt snapshots and sandbox receipts | `runner/*` | Implemented |
 | Worktree isolation receipts | `worktree/*` | Implemented |
 | Root CLI dispatch | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py` | Implemented thin entrypoint with split parser and dispatcher modules; no lifecycle semantics should move here |
 | Release checks and live adapter promotion evidence | `tools/release/*`, `tools/live_hosts/*`, metadata and docs | Implemented as release validators and host-local evidence tooling |
 
-Current size check: all production Python files are below the hard limits in
-this document. `cli/main.py` is now a thin entrypoint at 41 lines after the
-parser/dispatcher split. The largest controller files are still below the
-general 1200-line hard limit; `cli/dispatch.py` is the largest split candidate
-at about 1100 lines, and `workflow/plan_adoption.py`,
-`workflow/finalization.py` and `workflow/task_transitions.py` are about
+Current size check: `cli/main.py` is a thin entrypoint at 41 lines after the
+parser/dispatcher split. Most production Python files are below the hard limits
+in this document. `cli/dispatch.py` is the active exception: recent command
+growth pushed it to about 1220 lines, above the 1200-line hard limit. Treat it
+as split debt, not as a pattern to extend. `workflow/plan_adoption.py`,
+`workflow/finalization.py` and `workflow/task_transitions.py` remain about
 420-440 lines. New lifecycle behavior should prefer a focused domain module
-and a small dispatch branch instead of expanding these files further.
+and a small dispatch branch or dispatcher submodule instead of expanding
+`cli/dispatch.py` further.
 
 ## Target shape
 
