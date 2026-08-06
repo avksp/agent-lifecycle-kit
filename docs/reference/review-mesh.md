@@ -57,7 +57,10 @@ After a reviewed plan opts in, ALK can coordinate Review Mesh evidence without
 becoming a model broker:
 
 ```bash
+agent-lifecycle review-mesh profile --profile-id rm-profile --out rm-profile.json
+
 agent-lifecycle review-mesh assign --intake adapter-task-start.json \
+  --profile rm-profile.json \
   --mode leader-draft-multi-review --phase plan-review \
   --assignment-id RM-1 --reviewer-id claude-reviewer --out rm-assignment.json
 
