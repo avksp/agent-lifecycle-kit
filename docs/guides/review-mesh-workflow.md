@@ -120,6 +120,88 @@ If the recommendation is `off`, keep the normal ALK workflow. If it recommends
 `implementation-audit-panel`, treat that as advice. It becomes mandatory only
 after a reviewed frozen plan opts in.
 
+### Review one Markdown task file
+
+When the task already lives in Markdown, pass that file as the single intake
+source. For example, `tasks/review/adapter-sessions.md` can contain the research
+request, the no-implementation boundary and the expected output:
+
+```markdown
+# Task
+
+Review the current managed adapter session flow and write an improvement plan.
+Do not implement yet.
+
+Check:
+- lifecycle completeness;
+- safe resume behavior;
+- whether the plan avoids creating a second agent runtime.
+```
+
+```bash
+agent-lifecycle adapter task start \
+  --adapter codex \
+  --file tasks/review/adapter-sessions.md \
+  --out intake.json
+
+agent-lifecycle review-mesh recommend \
+  --intake intake.json \
+  --out review-recommendation.json
+```
+
+### Review a directory of Markdown files
+
+`--file` accepts one prepared input file. If a plan is split across several
+`.md` files, use one of two safe patterns.
+
+When reviewers work in the same repository, create a task that points at the
+directory:
+
+```bash
+cat > task.md <<'EOF'
+# Task
+
+Review the Markdown plan package in `tasks/release-1-40/`.
+Read every `.md` file in that directory.
+
+Focus on:
+- requirements and acceptance criteria;
+- evidence and validation commands;
+- file ownership;
+- security and release risks.
+
+Do not implement. Return only findings and a final recommendation.
+EOF
+
+agent-lifecycle adapter task start --adapter codex --file task.md --out intake.json
+agent-lifecycle review-mesh recommend --intake intake.json --out review-recommendation.json
+```
+
+When the review packet must be portable and should not depend on repository
+access, combine the Markdown files into one deterministic input file with shell
+commands:
+
+```bash
+mkdir -p work/group-review
+{
+  printf '# Task\n\n'
+  printf 'Review the combined Markdown plan package. Do not implement.\n\n'
+  find tasks/release-1-40 -maxdepth 1 -name '*.md' -print | sort | while IFS= read -r file; do
+    printf '\n\n---\n\n## %s\n\n' "$file"
+    cat "$file"
+  done
+} > work/group-review/plan-review-input.md
+
+agent-lifecycle adapter task start \
+  --adapter codex \
+  --file work/group-review/plan-review-input.md \
+  --out intake.json
+
+agent-lifecycle review-mesh recommend \
+  --intake intake.json \
+  --out review-recommendation.json
+```
+
 ## Intermediate path: run a small review panel
 
 Create a profile once for the review. The profile stores token/resource caps
@@ -183,18 +265,24 @@ claude --model <claude-model-alias> --print --output-format json \
   > reviewer-b-output.json
 
 opencode models <provider>
-opencode run --model <provider>/glm-5.2 --format json \
+opencode run --model <provider>/<model-id> --format json \
   --file rm-assignment-glm.json \
   "Review the assignment and return only reviewer-output.v1 JSON" \
   > reviewer-glm-output.json
 ```
+
+For OpenCode, first confirm the model appears in `opencode models <provider>`,
+then pass the same `<provider>/<model-id>` to `opencode run --model`. GLM-5.2 is
+only an example: if it is configured in your OpenCode setup, the model may look
+like `<provider>/glm-5.2`; otherwise replace it with any other configured model.
 
 If a frozen plan requires independence evidence, pass neutral hashes into the
 assignment. Keep the raw model name in host-local notes, not in the portable
 plan:
 
 ```bash
-GLM_MODEL_HASH=$(printf '%s' 'opencode:<provider>/glm-5.2' | shasum -a 256 | cut -d ' ' -f 1)
+MODEL_ID='<provider>/glm-5.2'
+MODEL_HASH=$(printf '%s' "opencode:${MODEL_ID}" | shasum -a 256 | cut -d ' ' -f 1)
 
 agent-lifecycle review-mesh assign \
   --intake intake.json \
@@ -205,9 +293,12 @@ agent-lifecycle review-mesh assign \
   --reviewer-id opencode-glm-reviewer \
   --reviewer-role plan-reviewer \
   --reviewer-model-class strong-reasoning \
-  --reviewer-model-identity-hash "$GLM_MODEL_HASH" \
+  --reviewer-model-identity-hash "$MODEL_HASH" \
   --out rm-assignment-glm.json
 ```
+
+`MODEL_ID='<provider>/glm-5.2'` is a GLM example. Replace it with a Codex,
+Claude, Qwen, local or other model id supported by the selected CLI.
 
 Give each assignment packet to the chosen host adapter or operator. ALK does
 not launch those reviewers. Each reviewer should return a small JSON object
