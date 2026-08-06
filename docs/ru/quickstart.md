@@ -71,6 +71,34 @@ agent-lifecycle adapter task start --adapter codex --text "Исправь пад
 зафиксированного запроса запуска или зафиксированного плана с привязкой к
 рабочему циклу.
 
+## Проверка изменений
+
+Для локальной ветки, запроса на слияние в GitHub или запроса на слияние в
+GitLab сначала подготовьте файл изменений и короткую задачу проверки:
+
+```bash
+mkdir -p work/code-review/current
+git diff origin/main...HEAD > work/code-review/current/diff.patch
+```
+
+Затем передайте задачу в ALK без запуска реализации:
+
+```bash
+agent-lifecycle adapter task start \
+  --adapter codex \
+  --file work/code-review/current/review-task.md \
+  --out work/code-review/current/intake.json
+
+agent-lifecycle review-mesh recommend \
+  --intake work/code-review/current/intake.json \
+  --out work/code-review/current/recommendation.json
+```
+
+Используйте этот путь для обычной проверки файла изменений, архитектурной проверки,
+проверки безопасности и оценки риска перед слиянием. Подробные примеры для
+GitHub, GitLab, архитектуры и аудита реализации:
+[сценарии проверки кода](code-review-workflows.md).
+
 ## Дополнительная перепроверка
 
 Для исследования, планирования или сложного аудита можно сначала получить
@@ -101,5 +129,6 @@ agent-lifecycle context check \
 ## Что дальше
 
 - [Установка адаптеров](adapters/install.md)
+- [Сценарии проверки кода](code-review-workflows.md)
 - [Справочник команд](reference/cli.md)
 - [Диагностика готовности](reference/readiness-diagnostics.md)
