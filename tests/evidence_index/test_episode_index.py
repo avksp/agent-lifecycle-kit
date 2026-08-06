@@ -67,6 +67,38 @@ class EpisodeIndexTests(unittest.TestCase):
             self.assertEqual(retrieval["status"], "FAIL")
             self.assertIn("episode-retrieval-target-tokens-exceeded", {item["code"] for item in retrieval["blockers"]})
 
+    def test_episode_retrieval_includes_external_context_as_non_proof_hint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact = root / "evidence/result.json"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_text(json.dumps({"schemaVersion": "artifact.v1", "status": "PASS", "taskId": "T-1"}), encoding="utf-8")
+            index = build_episode_index(root, ["evidence/result.json"], target_tokens=2048)
+
+            retrieval = retrieve_episodes(
+                index,
+                query="retry",
+                target_tokens=2048,
+                external_context_hints=[
+                    {
+                        "hintId": "hint-1",
+                        "contextRole": "optional-external-context",
+                        "sourceOfTruth": False,
+                        "proof": False,
+                        "citation": "operator memory export",
+                        "sourceDigest": "a" * 64,
+                        "redactionStatus": "PASS",
+                        "text": "Retry logic needs idempotency validation.",
+                    }
+                ],
+            )
+
+            self.assertEqual(retrieval["status"], "PASS")
+            self.assertFalse(retrieval["externalContextPolicy"]["sourceOfTruth"])
+            self.assertFalse(retrieval["externalContextPolicy"]["proof"])
+            self.assertEqual(retrieval["externalContextHintCount"], 1)
+            self.assertFalse(retrieval["externalContextHints"][0]["proof"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.48.0 - 2026-08-06
+
+- Added `agent-external-context-import-receipt.v1` and validation for
+  explicit local external context imports with source digests, citations and
+  redaction status.
+- Added `agent-lifecycle context external-import` and
+  `context episode-retrieve` so imported context can appear as optional,
+  non-proof episode retrieval hints.
+- Documented EN/RU external memory safety boundaries, including no network,
+  model, provider or hidden host calls from core.
+- Updated package and plugin publication metadata to `1.48.0`.
+
 ## 1.47.0 - 2026-08-06
 
 - Added EN/RU adapter event capture matrices covering native-hook status,

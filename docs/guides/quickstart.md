@@ -21,7 +21,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 When the package is available for the release, install the exact semver version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.47.0
+python -m pip install agent-lifecycle-kit==1.48.0
 agent-lifecycle version
 ```
 
