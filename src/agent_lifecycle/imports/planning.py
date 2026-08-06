@@ -184,6 +184,7 @@ def validate_import_result(result: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "planning-import-result-not-pass"})
     candidate = result.get("candidatePlan")
     candidate_digest = None
+    _validate_markdown_collection(result.get("markdownCollection"), blockers)
     if not isinstance(candidate, dict):
         blockers.append({"code": "planning-import-candidate-missing"})
     else:
@@ -430,6 +431,35 @@ def _content_blockers(text: str) -> list[dict[str, Any]]:
     return blockers
 
 
+def _validate_markdown_collection(collection: Any, blockers: list[dict[str, Any]]) -> None:
+    if collection is None:
+        return
+    if not isinstance(collection, dict):
+        blockers.append({"code": "markdown-collection-invalid"})
+        return
+    if collection.get("schemaVersion") != "agent-markdown-source-collection.v1":
+        blockers.append({"code": "markdown-collection-schema-invalid"})
+    if collection.get("ordering") != "lexical-relative-posix":
+        blockers.append({"code": "markdown-collection-ordering-invalid"})
+    if collection.get("blockers"):
+        blockers.append({"code": "markdown-collection-has-blockers"})
+    for label in _markdown_collection_labels(collection):
+        if label.startswith("/") or re.match(r"^[A-Za-z]:[\\/]", label):
+            blockers.append({"code": "markdown-collection-private-path"})
+            break
+    expected_digest = canonical_digest({key: value for key, value in collection.items() if key != "collectionDigest"})
+    if collection.get("collectionDigest") != expected_digest:
+        blockers.append({"code": "markdown-collection-digest-mismatch"})
+
+
+def _markdown_collection_labels(collection: dict[str, Any]) -> list[str]:
+    labels = [collection.get("sourceLabel")]
+    files = collection.get("files")
+    if isinstance(files, list):
+        labels.extend(item.get("label") for item in files if isinstance(item, dict))
+    return [item for item in labels if isinstance(item, str)]
+
+
 def _profile_digest(profile: dict[str, Any] | None) -> str | None:
     if profile is None:
         return None
@@ -479,3 +509,28 @@ def _clean_line(value: str, *, limit: int) -> str:
 def _check_positive_cap(value: int, field: str) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise LifecycleError("invalid-resource-cap", f"{field} must be a positive integer", {"field": field})
+
+
+def planning_dialect_profile(
+    *,
+    dialect_id: str,
+    dialect_kind: str,
+    markers: list[str],
+    mapping: dict[str, Any],
+    max_input_bytes: int = DEFAULT_MAX_INPUT_BYTES,
+    target_tokens: int = DEFAULT_TARGET_TOKENS,
+) -> dict[str, Any]:
+    """Build an untrusted planning dialect profile using the shared schema."""
+
+    body = {
+        "schemaVersion": "agent-import-dialect-profile.v1",
+        "dialectId": dialect_id,
+        "dialectKind": dialect_kind,
+        "sourceTrusted": False,
+        "requiresReview": True,
+        "freezeBlocked": True,
+        "markers": markers,
+        "resourceCaps": {"maxInputBytes": max_input_bytes, "targetTokens": target_tokens},
+        "mapping": {**mapping, "candidateStatus": "DRAFT"},
+    }
+    return {**body, "profileDigest": canonical_digest(body)}

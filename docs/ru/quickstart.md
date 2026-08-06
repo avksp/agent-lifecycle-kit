@@ -22,7 +22,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.43.0
+python -m pip install agent-lifecycle-kit==1.44.0
 agent-lifecycle version
 ```
 
@@ -71,6 +71,31 @@ agent-lifecycle plan check \
 
 План остаётся источником правды для владельца, границ записи, критериев
 приёмки, проверок и подтверждающих артефактов.
+
+## Импорт файлов планирования
+
+Чтобы проверить внешний файл планирования перед превращением в план ALK:
+
+```bash
+agent-lifecycle import plan \
+  --source specs/checkout.md \
+  --dialect openspec \
+  --out work/imports/checkout-import.json
+```
+
+Чтобы проверить папку с несколькими Markdown-файлами:
+
+```bash
+agent-lifecycle import plan \
+  --source specs/checkout/ \
+  --dialect spec-kit \
+  --out work/imports/checkout-folder-import.json
+```
+
+Эта же команда поддерживает `--dialect bmad` и `--dialect spec-kitty`.
+Импортированный материал остаётся черновым кандидатом. Он не запускает
+реализацию и не заменяет зафиксированный план ALK, пока не пройдёт проверку и
+заморозку.
 
 ## Приём задачи для адаптера
 

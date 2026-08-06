@@ -483,6 +483,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "docs/reference/cli.md",
         (
+            "import plan --source <file-or-folder>",
+            "openspec|spec-kit|bmad|spec-kitty",
             "adapter session start/status/resume/promote",
             "adapter run",
             "`WAITING_FOR_TASK`",
@@ -492,10 +494,36 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "docs/ru/reference/cli.md",
         (
+            "import plan/check",
+            "openspec|spec-kit|bmad|spec-kitty",
             "adapter session start/status/resume/promote",
             "adapter run",
             "`WAITING_FOR_TASK`",
             "`agent-adapter-session-receipt.v1`",
+        ),
+    ),
+    (
+        "docs/reference/import-mappers.md",
+        (
+            "`openspec-planning`",
+            "`github-spec-kit-planning`",
+            "`bmad-method-planning`",
+            "`spec-kitty-planning`",
+            "agent-markdown-source-collection.v1",
+            "--dialect openspec",
+            "--dialect spec-kit",
+        ),
+    ),
+    (
+        "docs/ru/reference/import-mappers.md",
+        (
+            "`openspec-planning`",
+            "`github-spec-kit-planning`",
+            "`bmad-method-planning`",
+            "`spec-kitty-planning`",
+            "agent-markdown-source-collection.v1",
+            "--dialect openspec",
+            "--dialect spec-kit",
         ),
     ),
     (

@@ -6,6 +6,13 @@
 
 ## Поддерживаемые профили форматов
 
+- `openspec-planning`: материалы планирования OpenSpec со спецификациями,
+  предложениями, возможностями и изменениями.
+- `github-spec-kit-planning`: спецификации, планы и перечни задач GitHub Spec
+  Kit.
+- `bmad-method-planning`: материалы BMAD: PRD, архитектура, планы и истории.
+- `spec-kitty-planning`: материалы Spec Kitty с требованиями, проектированием,
+  задачами и проверками.
 - `external-workflow-generic`: YAML или JSON, похожий на рабочий процесс, с
   подсказками по шагам, задачам и проверкам.
 - `external-agent-generic`: YAML или JSON, похожий на конфигурацию агента или
@@ -51,10 +58,20 @@ parse -> normalize -> sanitize/redact -> draft artifact -> validate -> review/fr
 
 ```bash
 agent-lifecycle import profile-list
+agent-lifecycle import plan --source specs/checkout.md --dialect openspec --out import.json
+agent-lifecycle import plan --source specs/ --dialect spec-kit --out import.json
+agent-lifecycle import plan --source docs/stories/ --dialect bmad --out import.json
+agent-lifecycle import plan --source specs/story.md --dialect spec-kitty --out import.json
 agent-lifecycle import external --family workflow --source workflow.yaml --out import.json
 agent-lifecycle import external --family agent --source agent.yaml --out import.json
+agent-lifecycle import check --candidate import.json
 agent-lifecycle import external-check --candidate import.json
 ```
+
+`import plan --source <folder>` читает только Markdown-файлы, сортирует их по
+относительному POSIX-пути и сохраняет обезличенное происхождение в
+`agent-markdown-source-collection.v1`. В подтверждении есть имена файлов,
+отпечатки и размеры, но нет приватных абсолютных путей.
 
 ## Python API
 
@@ -62,14 +79,24 @@ agent-lifecycle import external-check --candidate import.json
 from pathlib import Path
 
 from agent_lifecycle.imports import (
+    import_bmad_planning,
     import_external_agent,
     import_external_workflow,
+    import_markdown_collection,
     import_agentskills_dialect,
     import_constitution_adr,
+    import_openspec_planning,
+    import_spec_kit_planning,
+    import_spec_kitty_planning,
     validate_import_result,
 )
 
 result = import_constitution_adr(Path("architecture-decision.md"))
+openspec_result = import_openspec_planning(Path("specs/checkout.md"))
+spec_kit_result = import_spec_kit_planning(Path("spec.md"))
+bmad_result = import_bmad_planning(Path("story.md"))
+spec_kitty_result = import_spec_kitty_planning(Path("design.md"))
+folder_result = import_markdown_collection(Path("specs"))
 workflow_result = import_external_workflow(Path("workflow.yaml"))
 agent_result = import_external_agent(Path("agent.yaml"))
 validation = validate_import_result(result)
@@ -81,6 +108,8 @@ validation = validate_import_result(result)
 - Локальные пути и явные признаки секретов блокируют импорт.
 - Ограничения ресурсов применяются до генерации плана-кандидата.
 - Изменение `profileDigest` приводит к `FAIL`.
+- Импорт папки Markdown использует фиксированный порядок файлов и ограничения
+  на размер входа.
 - Импортированные узлы workflow никогда не выполняются.
 - Подсказки `provider`, `model`, `auth`, `environment` и `tool` из входных
   данных семейства agent остаются локальными для хоста и не становятся
