@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.50.1 - 2026-08-07
+
+- Added a PyPI Trusted Publisher workflow (`.github/workflows/publish.yml`)
+  gated on a `pypi` environment approval, triggered by GitHub Release
+  publication.
+- Version-only bump so the release tag's commit includes the new publish
+  workflow; no functional code changes.
+- Updated package and plugin publication metadata to `1.50.1`.
+
 ## 1.50.0 - 2026-08-06
 
 - Added deterministic Bug Forensics advisory policy for defect, regression,
