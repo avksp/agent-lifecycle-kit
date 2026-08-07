@@ -14,7 +14,7 @@ sys.path.insert(0, str(TOOLS_RELEASE))
 from validate_publication_adoption import validate_publication_adoption  # noqa: E402
 
 
-TARGET_VERSION = "1.50.0"
+TARGET_VERSION = "1.50.1"
 
 
 class PublicationAdoptionTests(unittest.TestCase):
