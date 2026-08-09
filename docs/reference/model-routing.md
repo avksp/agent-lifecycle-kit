@@ -160,6 +160,12 @@ Model-backed operations must produce
 ceilings. In workflow execution, missing, unattested or lineage-drifted usage
 blocks `workflow task-result` before a task can enter review.
 
+Risk-aware attempts add `usage.invocations` to the same host-attested receipt.
+The bound risk profile checks `billableTokens`, `invocations`, and
+`wallSeconds`; exceeding any cap rejects `workflow task-result`. This additive
+field is required only when `workflow task-start --risk-profile <path>` has
+authorized the attempt. See [Risk-aware execution](risk-aware-execution.md).
+
 ## Scope boundaries
 
 The v1 implementation enforces route receipts without becoming a provider

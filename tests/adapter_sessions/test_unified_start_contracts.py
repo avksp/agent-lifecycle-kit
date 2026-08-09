@@ -31,6 +31,8 @@ class UnifiedStartContractTests(unittest.TestCase):
         self.assertFalse(receipt["hostLaunchStarted"])
         self.assertFalse(receipt["lifecycleCoverageClaimed"])
         self.assertTrue(receipt["requiresReview"])
+        self.assertEqual(receipt["delegate"]["riskAdvisory"]["requestedRisk"], "auto")
+        self.assertFalse(receipt["delegate"]["riskAdvisory"]["executionProfileCreated"])
         self.assertNotIn(raw, json.dumps(receipt, ensure_ascii=False))
         managed_run.assert_not_called()
         host_launch.assert_not_called()
@@ -83,6 +85,7 @@ class UnifiedStartContractTests(unittest.TestCase):
         self.assertTrue(receipt["lifecycleCoverageClaimed"])
         self.assertFalse(receipt["hostLaunchStarted"])
         managed_run.assert_called_once()
+        self.assertEqual(managed_run.call_args.kwargs["requested_risk"], "auto")
 
     def test_implement_delegates_frozen_manifest_with_complete_bindings(self) -> None:
         managed_receipt = {

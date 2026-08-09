@@ -33,7 +33,28 @@ def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, 
         max_input_bytes=args.max_input_bytes,
         target_tokens=args.target_tokens,
         package_id=args.package_id,
+        requested_risk=args.risk,
+        risk_policy_path=Path(args.risk_policy),
+        routing_profile_path=Path(args.routing_profile),
+        baseline_profile_path=Path(args.baseline_profile),
+        host_model_profile_path=Path(args.host_model_profile) if args.host_model_profile else None,
     )
+    if args.risk_profile_out:
+        profile = _risk_profile(payload)
+        if profile is None:
+            raise LifecycleError(
+                "start-risk-profile-unavailable",
+                "--risk-profile-out requires a successful managed implement projection",
+            )
+        write_json_create(Path(args.risk_profile_out), profile)
     if args.out:
         write_json_create(Path(args.out), payload)
     return payload
+
+
+def _risk_profile(payload: dict[str, Any]) -> dict[str, Any] | None:
+    delegate = payload.get("delegate")
+    if not isinstance(delegate, dict):
+        return None
+    profile = delegate.get("riskExecutionProfile")
+    return profile if isinstance(profile, dict) else None

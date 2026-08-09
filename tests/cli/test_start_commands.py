@@ -34,6 +34,17 @@ class StartCommandTests(unittest.TestCase):
         self.assertEqual(canonical_file.task_file, alias_file.task_file)
         self.assertEqual(canonical_text.task_text, alias_text.task_text)
 
+    def test_risk_flags_have_safe_defaults_and_bounded_choices(self) -> None:
+        parser = build_parser()
+        parsed = parser.parse_args(["start", "--adapter", "codex", "--text", "task"])
+        explicit = parser.parse_args(["start", "--adapter", "codex", "--text", "task", "--risk", "S2"])
+
+        self.assertEqual(parsed.risk, "auto")
+        self.assertEqual(parsed.risk_policy, "profiles/risk-execution-policy.v1.json")
+        self.assertEqual(explicit.risk, "S2")
+        with contextlib.redirect_stderr(StringIO()), self.assertRaises(SystemExit):
+            parser.parse_args(["start", "--adapter", "codex", "--text", "task", "--risk", "LOW"])
+
     def test_parser_requires_adapter_and_exactly_one_action(self) -> None:
         parser = build_parser()
         cases = (
@@ -164,6 +175,41 @@ class StartCommandTests(unittest.TestCase):
         self.assertEqual(written, payload)
         self.assertEqual(unknown_code, 2)
         self.assertEqual(unknown["code"], "start-argument-unknown")
+
+    def test_risk_profile_out_writes_the_exact_projected_profile(self) -> None:
+        profile = {"schemaVersion": "agent-risk-execution-profile.v1", "profileDigest": "b" * 64}
+        managed_receipt = {
+            "schemaVersion": "agent-adapter-session-receipt.v1",
+            "status": "READY",
+            "blockers": [],
+            "lifecycleCoverageClaimed": True,
+            "hostLaunchStarted": False,
+            "nextAction": {"riskExecutionProfile": profile, "riskProfileRequiredAtTaskStart": True},
+            "receiptDigest": "a" * 64,
+        }
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "agent_lifecycle.adapter_sessions.task_intake.managed_adapter_run",
+            return_value=managed_receipt,
+        ):
+            out = Path(tmp) / "risk-profile.json"
+            code, payload, stderr = _run_cli(
+                [
+                    "start",
+                    "--adapter",
+                    "codex",
+                    "--mode",
+                    "implement",
+                    "--text",
+                    json.dumps(_run_request()),
+                    "--risk-profile-out",
+                    str(out),
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(stderr, "")
+            self.assertEqual(json.loads(out.read_text(encoding="utf-8")), profile)
+            self.assertEqual(payload["delegate"]["riskExecutionProfile"], profile)
 
 
 def _run_cli(args: list[str]) -> tuple[int, dict, str]:

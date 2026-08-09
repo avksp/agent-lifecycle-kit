@@ -80,6 +80,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/quality-cost-learning.md",
             "docs/ru/reference/readiness-diagnostics.md",
             "docs/ru/reference/lifecycle-cost.md",
+            "docs/ru/reference/model-routing.md",
+            "docs/ru/reference/risk-aware-execution.md",
             "docs/ru/security/release-security.md",
             "docs/adapters/install.md",
             "docs/adapters/progress-bridge-matrix.md",
@@ -93,6 +95,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/source-of-truth.md",
             "docs/reference/adaptive-lifecycle-policy.md",
             "docs/reference/model-routing.md",
+            "docs/reference/risk-aware-execution.md",
             "docs/reference/small-model-packets.md",
             "docs/reference/readiness-diagnostics.md",
         ):
@@ -130,6 +133,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("--mode research", text)
             self.assertIn("--mode implement", text)
             self.assertIn("--resume <session-id>", text)
+            self.assertIn("--risk auto", text)
+            self.assertIn("risk-aware-execution.md", text)
         self.assertIn("lifecycle-cookbook.md", quickstart)
         self.assertIn("lifecycle-cookbook.md", quickstart_ru)
         for command in (
@@ -144,6 +149,19 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "kimi --version",
         ):
             self.assertIn(command, install)
+
+    def test_risk_aware_execution_docs_cover_profile_handoff_and_usage(self) -> None:
+        for relative_path in (
+            "docs/reference/risk-aware-execution.md",
+            "docs/ru/reference/risk-aware-execution.md",
+        ):
+            with self.subTest(path=relative_path):
+                text = (ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn("--risk-profile-out", text)
+                self.assertIn("workflow task-start", text)
+                self.assertIn("--risk-profile", text)
+                self.assertIn("usage.invocations", text)
+                self.assertIn("agent-risk-execution-profile.v1", text)
 
     def test_python_package_guidance_is_synchronized(self) -> None:
         package_url = "https://pypi.org/project/agent-lifecycle-kit/"
@@ -278,6 +296,34 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             payload = json.loads(evidence.read_text(encoding="utf-8"))
             self.assertEqual(payload["status"], "PASS")
 
+    def test_docs_compat_rejects_missing_public_contract_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_min_docs(root, unsupported_verified_row=False)
+            public_contracts = root / "docs/reference/public-contracts.md"
+            public_contracts.write_text(
+                public_contracts.read_text(encoding="utf-8").replace(
+                    "`agent-risk-execution-profile.v1`.\n",
+                    "",
+                ),
+                encoding="utf-8",
+            )
+            evidence = root / "docs-compat.json"
+
+            result = _run_no_check(
+                "tools/release/validate_docs_compat.py",
+                "--root",
+                str(root),
+                "--evidence",
+                str(evidence),
+            )
+
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(payload["status"], "FAIL")
+            blockers = [item for item in payload["blockers"] if item["code"] == "docs-compat-required-text-missing"]
+            self.assertTrue(any("agent-risk-execution-profile.v1" in item["message"] for item in blockers))
+
     def test_docs_compat_rejects_versioned_feature_prose(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -357,6 +403,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-runner-snapshot.v1`.\n"
         "`agent-managed-lifecycle-next-action.v1`.\n"
         "`agent-managed-lifecycle-runner-receipt.v1`.\n"
+        "`agent-lifecycle-start-receipt.v1`.\n"
         "`agent-adapter-session-receipt.v1`.\n"
         "`agent-managed-adapter-launch-receipt.v1`.\n"
         "`agent-adapter-session-resume-receipt.v1`.\n"
@@ -385,7 +432,10 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-progress-bridge-receipt.v1`.\n"
         "`agent-progress-hook-policy.v1`.\n"
         "`agent-progress-hook-receipt.v1`.\n"
+        "`agent-risk-execution-policy.v1`.\n"
+        "`agent-risk-execution-profile.v1`.\n"
         "`agent-lifecycle-quality-floor-decision.v1`.\n"
+        "`agent-lifecycle-policy-proposal.v1`.\n"
         "`agent-adaptive-lifecycle-policy-request.v1`.\n"
         "`agent-adaptive-lifecycle-policy-decision.v1`.\n"
         "`agent-adaptive-lifecycle-policy-decision-validation.v1`.\n"
@@ -439,15 +489,19 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Review code changes.\n"
         "Audit implementation evidence.\n"
         "Coordinate cross-review.\n"
+        "Run a risk-aware task.\n"
         "Исследование и планирование.\n"
         "Проверка папки с Markdown-планом.\n"
         "Проверка изменений кода.\n"
         "Аудит подтверждений реализации.\n"
         "Согласованная перепроверка.\n"
+        "Запуск с учётом риска.\n"
         "agent-lifecycle start.\n"
         "agent-lifecycle import plan.\n"
         "review-mesh recommend.\n"
         "review-mesh prepare.\n"
+        "--risk-profile-out.\n"
+        "workflow task-start.\n"
     )
     _write_text(root / "docs/guides/lifecycle-cookbook.md", cookbook)
     _write_text(root / "docs/ru/lifecycle-cookbook.md", cookbook)
@@ -526,8 +580,31 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "no-model -> local-small-packet -> standard-implementation -> stronger-review -> optional-cross-check.\n"
         "optionalCrossCheckRecommended.\n"
         "downgradeBlocked.\n"
-        "providerModelNamesInCore: false.\n",
+        "providerModelNamesInCore: false.\n"
+        "`usage.invocations`.\n"
+        "workflow task-start --risk-profile.\n",
     )
+    _write_text(
+        root / "docs/ru/reference/model-routing.md",
+        "`agent-lifecycle-model-usage-receipt.v1`.\n"
+        "`usage.invocations`.\n"
+        "workflow task-start --risk-profile.\n"
+        "risk-aware-execution.md.\n",
+    )
+    risk_aware = (
+        "agent-risk-execution-profile.v1.\n"
+        "--risk-profile-out.\n"
+        "workflow task-start.\n"
+        "--risk-profile.\n"
+        "usage.invocations.\n"
+        "advisory only.\n"
+        "does not call a model or launch an adapter host.\n"
+        "рекомендацией.\n"
+        "не вызывает модель.\n"
+        "не запускает внешний инструмент.\n"
+    )
+    _write_text(root / "docs/reference/risk-aware-execution.md", risk_aware)
+    _write_text(root / "docs/ru/reference/risk-aware-execution.md", risk_aware)
     _write_text(
         root / "docs/reference/quality-cost-learning.md",
         "`agent-task-outcome-index.v1`.\n"
@@ -793,7 +870,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "shell: false.\n"
         "adapter-generic-launch-disabled.\n"
         "wildcard.\n"
-        "plugin installation alone.\n",
+        "plugin installation alone.\n"
+        "risk-aware-execution.md.\n"
+        "--risk-profile-out.\n",
     )
     _write_text(
         root / "docs/ru/reference/managed-adapter-sessions.md",
@@ -809,7 +888,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "shell: false.\n"
         "adapter-generic-launch-disabled.\n"
         "шаблоны.\n"
-        "установка плагина.\n",
+        "установка плагина.\n"
+        "risk-aware-execution.md.\n"
+        "--risk-profile-out.\n",
     )
     _write_text(
         root / "docs/reference/readiness-diagnostics.md",

@@ -18,7 +18,6 @@ from agent_lifecycle.policy.runtime_receipts import (
     require_runtime_policy_receipt_pass,
     validate_runtime_policy_receipt,
 )
-
 __all__ = [
     "apply_policy_proposal",
     "build_adaptive_lifecycle_decision",
