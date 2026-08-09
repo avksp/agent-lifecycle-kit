@@ -28,7 +28,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.51.0
+python -m pip install agent-lifecycle-kit==1.52.0
 agent-lifecycle version
 ```
 
@@ -103,18 +103,50 @@ The same command supports `--dialect bmad` and `--dialect spec-kitty`.
 Imported material remains a draft candidate. It cannot start implementation or
 replace a frozen ALK plan until it is reviewed and frozen.
 
-## Start adapter task intake
+## Start with one command
 
 For a task file or short text:
 
 ```bash
-agent-lifecycle adapter task start --adapter codex --file task.md
-agent-lifecycle adapter task start --adapter codex --text "Fix the failing test"
+agent-lifecycle start --adapter codex --file task.md
+agent-lifecycle start --adapter codex --text "Fix the failing test"
 ```
 
-This does not start implementation for raw input. It returns a review-gated
-draft receipt. Managed execution requires a frozen run request or a frozen plan
-with workflow binding.
+The default mode is `auto`. Raw input never starts implementation: it returns
+`agent-lifecycle-start-receipt.v1` with a review-gated draft result. Use an
+explicit non-executing mode when the requested outcome is narrower:
+
+```bash
+agent-lifecycle start --adapter codex --mode research --file research.md
+agent-lifecycle start --adapter codex --mode plan --file feature.md
+agent-lifecycle start --adapter codex --mode review --file proposed-plan.md
+```
+
+Only `--mode implement` can delegate to the existing managed-run path, and it
+requires a structured frozen run request with complete state, manifest, lock,
+task, operation and revision bindings:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode implement \
+  --file work/run/adapter-run-request.json
+```
+
+To resume a session recorded by ALK:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --resume <session-id> \
+  --session-root .alk/adapter-sessions
+```
+
+Resume verifies the stored adapter and workflow lineage. It does not interpret
+the value as a native Codex, Claude, OpenCode or other host conversation id.
+This release does not launch an external host CLI. Advanced automation can use
+the lower-level `adapter task start`, `adapter run` and `adapter session resume`
+commands documented in the [CLI reference](../reference/cli.md).
 
 ## Review code changes
 
@@ -129,13 +161,14 @@ git diff origin/main...HEAD > work/code-review/current/diff.patch
 Then pass the task to ALK without starting implementation:
 
 ```bash
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode review \
   --file work/code-review/current/review-task.md \
-  --out work/code-review/current/intake.json
+  --out work/code-review/current/start.json
 
 agent-lifecycle review-mesh recommend \
-  --intake work/code-review/current/intake.json \
+  --file work/code-review/current/review-task.md \
   --out work/code-review/current/recommendation.json
 ```
 
@@ -155,6 +188,11 @@ agent-lifecycle review-mesh recommend --file task.md
 To prepare local reviewer packets from a task intake receipt:
 
 ```bash
+agent-lifecycle adapter task start \
+  --adapter codex \
+  --file work/code-review/current/review-task.md \
+  --out work/code-review/current/intake.json
+
 agent-lifecycle review-mesh prepare \
   --intake work/code-review/current/intake.json \
   --template leader-draft-review \

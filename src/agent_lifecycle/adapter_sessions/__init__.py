@@ -1,7 +1,9 @@
 """Managed adapter session helpers."""
 
 from agent_lifecycle.adapter_sessions.contracts import (
+    LIFECYCLE_START_RECEIPT_SCHEMA,
     build_adapter_session_receipt,
+    build_lifecycle_start_receipt,
     build_launch_receipt,
     build_resume_receipt,
 )
@@ -17,6 +19,7 @@ from agent_lifecycle.adapter_sessions.task_intake import (
     ADAPTER_TASK_START_RECEIPT_SCHEMA,
     start_adapter_task,
 )
+from agent_lifecycle.adapter_sessions.unified_start import START_MODES, start_lifecycle
 from agent_lifecycle.adapter_sessions.workflow_bridge import (
     managed_adapter_run,
     promote_session_to_workflow,
@@ -25,11 +28,14 @@ from agent_lifecycle.adapter_sessions.workflow_bridge import (
 
 __all__ = [
     "build_adapter_session_receipt",
+    "build_lifecycle_start_receipt",
     "build_launch_receipt",
     "build_resume_receipt",
     "create_session",
     "ADAPTER_TASK_RUN_REQUEST_SCHEMA",
     "ADAPTER_TASK_START_RECEIPT_SCHEMA",
+    "LIFECYCLE_START_RECEIPT_SCHEMA",
+    "START_MODES",
     "launch_from_descriptor",
     "load_session",
     "managed_adapter_run",
@@ -37,5 +43,6 @@ __all__ = [
     "resume_adapter_session",
     "session_path",
     "start_adapter_task",
+    "start_lifecycle",
     "update_session",
 ]

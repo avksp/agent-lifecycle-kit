@@ -126,6 +126,10 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("agent-lifecycle plan check", text)
             self.assertIn("agent-lifecycle import plan", text)
             self.assertIn("agent-lifecycle context check", text)
+            self.assertIn("agent-lifecycle start --adapter codex", text)
+            self.assertIn("--mode research", text)
+            self.assertIn("--mode implement", text)
+            self.assertIn("--resume <session-id>", text)
         self.assertIn("lifecycle-cookbook.md", quickstart)
         self.assertIn("lifecycle-cookbook.md", quickstart_ru)
         for command in (
@@ -336,11 +340,11 @@ def _assert_links_resolve(path: Path) -> None:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/resource calibration are required. Public contracts live in docs/reference/public-contracts.md. https://pypi.org/project/agent-lifecycle-kit/ supports Python 3.11-3.14. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/resource calibration are required. Public contracts live in docs/reference/public-contracts.md. https://pypi.org/project/agent-lifecycle-kit/ supports Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
     )
     _write_text(
         root / "docs/ru/README.md",
-        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. Список в Публичных контрактах: reference/public-contracts.md. https://pypi.org/project/agent-lifecycle-kit/ поддерживает Python 3.11-3.14. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. Список в Публичных контрактах: reference/public-contracts.md. https://pypi.org/project/agent-lifecycle-kit/ поддерживает Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
     )
     public_contracts = (
         "`completionCheck`.\n"
@@ -420,6 +424,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "docs/ru/lifecycle-cookbook.md.\n"
         "adapter session start/status/resume/promote.\n"
         "adapter run.\n"
+        "agent-lifecycle start --adapter <id>.\n"
+        "`agent-lifecycle-start-receipt.v1`.\n"
         "`WAITING_FOR_TASK`.\n"
         "`agent-adapter-session-receipt.v1`.\n"
         "https://pypi.org/project/agent-lifecycle-kit/.\n"
@@ -438,7 +444,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Проверка изменений кода.\n"
         "Аудит подтверждений реализации.\n"
         "Согласованная перепроверка.\n"
-        "agent-lifecycle adapter task start.\n"
+        "agent-lifecycle start.\n"
         "agent-lifecycle import plan.\n"
         "review-mesh recommend.\n"
         "review-mesh prepare.\n"
@@ -781,6 +787,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "adapter session start.\n"
         "adapter session resume.\n"
         "adapter run.\n"
+        "agent-lifecycle start.\n"
+        "`agent-lifecycle-start-receipt.v1`.\n"
         "`WRAPPER_ONLY`.\n"
         "shell: false.\n"
         "adapter-generic-launch-disabled.\n"
@@ -795,6 +803,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "adapter session start.\n"
         "adapter session resume.\n"
         "adapter run.\n"
+        "agent-lifecycle start.\n"
+        "`agent-lifecycle-start-receipt.v1`.\n"
         "`WRAPPER_ONLY`.\n"
         "shell: false.\n"
         "adapter-generic-launch-disabled.\n"

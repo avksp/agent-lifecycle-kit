@@ -3,6 +3,10 @@
 Managed adapter sessions give operators one ALK entrypoint for adapter-backed
 work without making ALK a second coding-agent runtime.
 
+The simplest entrypoint is `agent-lifecycle start`. It selects task intake,
+explicit frozen-run delegation or stored-session resume while preserving the
+same lower-level contracts.
+
 There are three operator-facing modes:
 
 - interactive session: `adapter session start --adapter <id>` records a
@@ -24,6 +28,11 @@ with the requested adapter, workflow state and task id. A mismatch returns
 ## Commands
 
 ```bash
+agent-lifecycle start --adapter codex --file task.md
+agent-lifecycle start --adapter codex --mode research --text "Inspect the current design"
+agent-lifecycle start --adapter codex --mode implement --file adapter-run-request.json
+agent-lifecycle start --adapter codex --resume <session-id>
+
 agent-lifecycle adapter session start --adapter codex
 agent-lifecycle adapter session start --adapter codex --launch
 agent-lifecycle adapter session status --session <session-id>
@@ -45,6 +54,13 @@ agent-lifecycle adapter run \
   --lock <plan.lock.json> \
   --task <task-id>
 ```
+
+`start` emits `agent-lifecycle-start-receipt.v1`. Its nested delegate summary
+contains only stable status, advisory and receipt-digest fields; it excludes
+raw task text and local absolute paths. `auto`, `research`, `plan` and `review`
+are non-executing. `implement` delegates only a complete structured frozen
+request. Resume accepts only a session stored by ALK, checks adapter and state
+lineage, and never attaches to a native host conversation.
 
 `adapter task start` emits `agent-adapter-task-start-receipt.v1`. For raw text
 or Markdown, the receipt stores only source label, digest and byte count, not
@@ -93,6 +109,7 @@ Managed adapter sessions are fail-closed and display-safe:
 The stable receipts are `agent-adapter-session-receipt.v1`,
 `agent-managed-adapter-launch-receipt.v1`,
 `agent-adapter-session-resume-receipt.v1`,
-`agent-adapter-task-start-receipt.v1` and
-`agent-adapter-task-run-request.v1`. Review Mesh recommendations use
+`agent-adapter-task-start-receipt.v1`,
+`agent-adapter-task-run-request.v1` and `agent-lifecycle-start-receipt.v1`.
+Review Mesh recommendations use
 `agent-review-mesh-recommendation.v1`.
