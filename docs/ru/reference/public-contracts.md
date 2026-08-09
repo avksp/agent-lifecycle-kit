@@ -17,6 +17,8 @@
   хоста без запуска модели.
 - `agent-managed-lifecycle-runner-receipt.v1`: подтверждение управляемого шага
   жизненного цикла.
+- `agent-lifecycle-start-receipt.v1`: результат единой команды запуска с
+  черновым или привязанным к плану действием.
 - `agent-adapter-session-receipt.v1`: подтверждение управляемой или
   интерактивной сессии адаптера.
 - `agent-managed-adapter-launch-receipt.v1`: подтверждение запуска адаптера по
@@ -72,6 +74,11 @@
   управляемых команд ALK.
 - `agent-progress-hook-receipt.v1`: подтверждение вывода прогресса после
   управляемой команды без изменения JSON stdout.
+- `agent-risk-execution-policy.v1`: локальные пределы числа обращений и времени
+  по уровню риска.
+- `agent-risk-execution-profile.v1`: привязанный к плану и задаче профиль
+  маршрута, лимитов и обязательных подтверждений расхода.
+- `agent-lifecycle-policy-proposal.v1`: предложение по настройке правил.
 - `agent-proof-finding.v1`: стабильная идентичность находки.
 - `agent-root-cause-evidence.v1`: подтверждение основной причины.
 - `agent-fix-impact-receipt.v1`: канонический артефакт влияния исправления.
@@ -152,7 +159,6 @@
   зелёный после.
 - `agent-bug-forensics-gate-receipt.v1`: артефакт проверки рабочего цикла.
 - `agent-bug-forensics-audit.v1`: резюме аудита для проверки bug-forensics.
-- `agent-lifecycle-policy-proposal.v1`: предложение по настройке правил.
 
 ## Правило совместимости
 

@@ -13,6 +13,8 @@ from agent_lifecycle.adapter_sessions.workflow_bridge import (
 from agent_lifecycle.adapter_sessions.session_store import create_session
 from agent_lifecycle.contracts import canonical_digest
 
+ROOT = Path(__file__).resolve().parents[2]
+
 
 class AdapterSessionWorkflowBridgeTests(unittest.TestCase):
     def test_managed_adapter_run_binds_frozen_workflow_state(self) -> None:
@@ -39,6 +41,34 @@ class AdapterSessionWorkflowBridgeTests(unittest.TestCase):
         self.assertTrue(receipt["lifecycleCoverageClaimed"])
         self.assertEqual(receipt["progressHookDefault"], "stderr")
         self.assertEqual(receipt["nextAction"]["type"], "launch-tasks")
+
+    def test_managed_adapter_run_projects_risk_profile_without_writing_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, state, descriptor = _write_bundle(root)
+            before = state.read_bytes()
+
+            receipt = managed_adapter_run(
+                adapter_id="codex",
+                descriptor_path=descriptor,
+                session_root=root / "sessions",
+                state_path=state,
+                manifest_path=manifest,
+                lock_path=manifest.with_name("plan.lock.json"),
+                task_id="WS-01",
+                operation_id="risk-op",
+                expected_revision=1,
+                source_revision="source",
+                requested_risk="auto",
+                risk_policy_path=ROOT / "profiles/risk-execution-policy.v1.json",
+                routing_profile_path=ROOT / "profiles/model-routing-profile.v1.json",
+                baseline_profile_path=ROOT / "profiles/lifecycle-baselines.v1.json",
+                host_model_profile_path=ROOT / "profiles/hosts/codex-live-profile.v1.json",
+            )
+
+            self.assertEqual(state.read_bytes(), before)
+            self.assertTrue(receipt["nextAction"]["riskProfileRequiredAtTaskStart"])
+            self.assertEqual(receipt["nextAction"]["riskExecutionProfile"]["resolvedRiskTier"], "S2")
 
     def test_promote_and_resume_require_matching_lineage(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -82,9 +112,17 @@ class AdapterSessionWorkflowBridgeTests(unittest.TestCase):
 
 def _write_bundle(root: Path) -> tuple[Path, Path, Path]:
     manifest_payload = {
+        "schemaVersion": "agent-plan-manifest.v1",
         "status": "FROZEN",
         "planRevision": 1,
         "package": {"id": "package", "planArtifactRoot": "plans/package"},
+        "specification": {
+            "tier": "S2",
+            "tierResolutionRequest": {
+                "riskFlags": {"architecture": True},
+                "capabilityHints": ["architecture"],
+            },
+        },
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],
@@ -123,6 +161,7 @@ def _write_bundle(root: Path) -> tuple[Path, Path, Path]:
         json.dumps(
             {
                 "adapterId": "codex",
+                "host": "codex",
                 "managedLaunch": {
                     "status": "WRAPPER_ONLY",
                     "reason": "wrapper required",

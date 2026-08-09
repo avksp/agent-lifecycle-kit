@@ -37,3 +37,13 @@ agent-lifecycle model usage-check \
 Для операций с моделью нужен `agent-lifecycle-model-usage-receipt.v1`, привязанный
 к тому же запуску, задаче, попытке, отпечатку плана, исходной ревизии и
 решению маршрутизации.
+
+Обычное подтверждение содержит `inputTokens`, `outputTokens`,
+`billableTokens`, `cumulativeContextBytes`, `toolCalls` и `wallSeconds`.
+Для попытки с учётом риска добавляется `usage.invocations`. Профиль проверяет
+`billableTokens`, `invocations` и `wallSeconds`; превышение любого ограничения
+отклоняет `workflow task-result`.
+
+Дополнительное поле обязательно только после разрешения попытки командой
+`workflow task-start --risk-profile <path>`. Полный сценарий приведён в разделе
+[Запуск с учётом риска](risk-aware-execution.md).

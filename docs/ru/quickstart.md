@@ -27,7 +27,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 устанавливайте точную семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.52.0
+python -m pip install agent-lifecycle-kit==1.53.0
 agent-lifecycle version
 ```
 
@@ -133,6 +133,14 @@ agent-lifecycle start \
   --mode implement \
   --file work/run/adapter-run-request.json
 ```
+
+Для зафиксированной задачи добавьте `--risk auto`, чтобы определить нейтральный
+класс модели и ограничения ресурсов. Шаг чтения сохраняет точный профиль через
+`--risk-profile-out`, после чего его нужно отдельно разрешить командой
+`workflow task-start --risk-profile`. Полная последовательность приведена в
+разделе [Запуск с учётом риска](reference/risk-aware-execution.md). Для обычного
+текста или Markdown параметр `--risk` остаётся рекомендацией и не разрешает
+реализацию.
 
 Чтобы возобновить сессию, ранее записанную ALK:
 

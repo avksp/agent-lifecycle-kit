@@ -28,7 +28,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.52.0
+python -m pip install agent-lifecycle-kit==1.53.0
 agent-lifecycle version
 ```
 
@@ -132,6 +132,13 @@ agent-lifecycle start \
   --mode implement \
   --file work/run/adapter-run-request.json
 ```
+
+For a frozen task, add `--risk auto` to derive a provider-neutral model route
+and resource caps. The read-only start step writes the exact profile with
+`--risk-profile-out`; authorize it separately with `workflow task-start
+--risk-profile`. See [Risk-aware execution](../reference/risk-aware-execution.md)
+for the complete sequence. On raw text or Markdown, `--risk` remains advisory
+and never authorizes implementation.
 
 To resume a session recorded by ALK:
 
