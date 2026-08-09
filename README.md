@@ -26,11 +26,11 @@ From a source checkout:
 python -m pip install -e .
 agent-lifecycle version
 agent-lifecycle diagnose --no-install-plans
-agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json
+agent-lifecycle start --adapter codex --text "Draft a reviewed implementation plan"
 ```
 
 The official [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14.
-Install the exact release with `python -m pip install agent-lifecycle-kit==1.51.0`.
+Install the exact release with `python -m pip install agent-lifecycle-kit==1.52.0`.
 
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). For structure and positioning, see [System architecture](docs/architecture/system-architecture.md) and [Project comparison](docs/reference/project-comparison.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
 
@@ -46,9 +46,9 @@ For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Li
 - Usage visibility: tokens, time, and resource counters are native; monetary
   cost is optional and only used when a metered host reports it.
 - Read-only progress and managed sessions: host UIs can show lifecycle state,
-  attested tokens and Git-style change counters; `adapter task start` accepts
-  task text, Markdown or frozen run requests while preserving review/freeze
-  boundaries.
+  attested tokens and Git-style change counters; `start` accepts task text,
+  Markdown, frozen run requests or stored ALK sessions while preserving
+  review/freeze boundaries.
 
 ## Feature areas
 

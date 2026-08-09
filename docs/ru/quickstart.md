@@ -27,7 +27,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 устанавливайте точную семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.51.0
+python -m pip install agent-lifecycle-kit==1.52.0
 agent-lifecycle version
 ```
 
@@ -104,19 +104,50 @@ agent-lifecycle import plan \
 реализацию и не заменяет зафиксированный план ALK, пока не пройдёт проверку и
 заморозку.
 
-## Приём задачи для адаптера
+## Единая команда запуска
 
 Для файла задачи или короткого текста:
 
 ```bash
-agent-lifecycle adapter task start --adapter codex --file task.md
-agent-lifecycle adapter task start --adapter codex --text "Исправь падающий тест"
+agent-lifecycle start --adapter codex --file task.md
+agent-lifecycle start --adapter codex --text "Исправь падающий тест"
 ```
 
-Обычный текст не запускает реализацию. Команда возвращает черновое
-подтверждение, которое должно пройти проверку. Управляемое выполнение требует
-зафиксированного запроса запуска или зафиксированного плана с привязкой к
-рабочему циклу.
+По умолчанию используется режим `auto`. Обычный текст не запускает реализацию:
+команда возвращает `agent-lifecycle-start-receipt.v1` с черновым результатом,
+который должен пройти проверку. Для узкой цели укажите неисполняющий режим:
+
+```bash
+agent-lifecycle start --adapter codex --mode research --file research.md
+agent-lifecycle start --adapter codex --mode plan --file feature.md
+agent-lifecycle start --adapter codex --mode review --file proposed-plan.md
+```
+
+Только явный режим `implement` может передать управление существующему
+управляемому шагу. Для него нужен структурированный зафиксированный запрос с
+полной привязкой состояния, манифеста, lock-файла, задачи, операции и ревизий:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode implement \
+  --file work/run/adapter-run-request.json
+```
+
+Чтобы возобновить сессию, ранее записанную ALK:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --resume <session-id> \
+  --session-root .alk/adapter-sessions
+```
+
+Команда проверяет сохранённый адаптер и происхождение состояния. Значение
+`--resume` не трактуется как идентификатор диалога Codex, Claude, OpenCode или
+другого внешнего инструмента. Эта версия не запускает внешний CLI. Для
+автоматизации остаются отдельные команды `adapter task start`, `adapter run` и
+`adapter session resume` из [справочника команд](reference/cli.md).
 
 ## Проверка изменений
 
@@ -131,13 +162,14 @@ git diff origin/main...HEAD > work/code-review/current/diff.patch
 Затем передайте задачу в ALK без запуска реализации:
 
 ```bash
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode review \
   --file work/code-review/current/review-task.md \
-  --out work/code-review/current/intake.json
+  --out work/code-review/current/start.json
 
 agent-lifecycle review-mesh recommend \
-  --intake work/code-review/current/intake.json \
+  --file work/code-review/current/review-task.md \
   --out work/code-review/current/recommendation.json
 ```
 
@@ -158,6 +190,11 @@ agent-lifecycle review-mesh recommend --file task.md
 Чтобы подготовить локальные пакеты проверяющих из артефакта приёма задачи:
 
 ```bash
+agent-lifecycle adapter task start \
+  --adapter codex \
+  --file work/code-review/current/review-task.md \
+  --out work/code-review/current/intake.json
+
 agent-lifecycle review-mesh prepare \
   --intake work/code-review/current/intake.json \
   --template leader-draft-review \

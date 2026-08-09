@@ -9,6 +9,7 @@ from agent_lifecycle.cli.followup import add_followup_parser
 from agent_lifecycle.cli.metrics_parser import add_metrics_parser
 from agent_lifecycle.cli.policy import add_policy_parser
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
+from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.cli.worktree import add_worktree_parser
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
 from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
@@ -18,6 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agent-lifecycle")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("version", help="print package version as compact JSON")
+    _add_start_parser(subparsers)
     _add_diagnose_parser(subparsers)
     _add_diagnostics_parser(subparsers)
     _add_schema_parser(subparsers)
@@ -45,6 +47,29 @@ def build_parser() -> argparse.ArgumentParser:
     add_adapter_parser(subparsers)
     subparsers.add_parser("conformance", help="conformance commands")
     return parser
+
+
+def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    start = subparsers.add_parser("start", help="start or resume an ALK lifecycle action")
+    start.add_argument("--adapter", required=True)
+    action = start.add_mutually_exclusive_group(required=True)
+    action.add_argument("--file", "--task-file", dest="task_file")
+    action.add_argument("--text", "--task-text", dest="task_text")
+    action.add_argument("--resume", dest="resume_session_id")
+    start.add_argument("--mode", choices=list(START_MODES), default="auto")
+    start.add_argument("--descriptor")
+    start.add_argument("--session-root")
+    start.add_argument("--state")
+    start.add_argument("--lock")
+    start.add_argument("--task")
+    start.add_argument("--operation-id")
+    start.add_argument("--expected-revision", type=int)
+    start.add_argument("--source-revision")
+    start.add_argument("--candidate-out")
+    start.add_argument("--package-id", default="unified-start")
+    start.add_argument("--max-input-bytes", type=int, default=32768)
+    start.add_argument("--target-tokens", type=int, default=4096)
+    start.add_argument("--out")
 
 
 def _add_diagnose_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
