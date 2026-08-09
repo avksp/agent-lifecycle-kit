@@ -483,6 +483,22 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/cli.md", cli)
     _write_text(root / "docs/ru/reference/cli.md", cli)
+    neutrality = (
+        "`tracked-release`.\n"
+        "git ls-files -z --stage --cached.\n"
+        "--include-local-artifacts.\n"
+        "`localArtifactRoots`.\n"
+        "`recoveredReadRaces`.\n"
+        "`deprecatedScope: true`.\n"
+        "without following.\n"
+        "без перехода к цели.\n"
+    )
+    _write_text(root / "docs/reference/neutrality.md", neutrality)
+    _write_text(root / "docs/ru/reference/neutrality.md", neutrality)
+    _write_text(
+        root / "docs/ru/guides/release-candidate.md",
+        "`tracked-release`. `--include-local-artifacts`. `localArtifactRoots`. не заменяет.\n",
+    )
     cookbook = (
         "Research and planning only.\n"
         "Review a Markdown plan folder.\n"

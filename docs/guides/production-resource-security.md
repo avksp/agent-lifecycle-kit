@@ -70,3 +70,8 @@ Release and production checks must keep these boundaries:
 Use `agent-lifecycle contract check` and release security tests before claiming
 a stable package. Use the support matrix for adapter maturity; model availability
 alone is not enough to mark an adapter `VERIFIED`.
+
+For a source release, scan `tracked-release` so the report is bound to the Git
+index and current revision. Do not add `--include-local-artifacts` to a general
+release job; reserve it for a dedicated evidence step whose roots are declared
+by `localArtifactRoots`. See [Neutrality scanning](../reference/neutrality.md).

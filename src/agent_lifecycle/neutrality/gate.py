@@ -21,7 +21,8 @@ from agent_lifecycle.neutrality.ed25519 import verify as verify_signature
 from agent_lifecycle.neutrality.errors import NeutralityError, write_neutrality_error
 from agent_lifecycle.neutrality.paths import resolve_repository_relative_root
 from agent_lifecycle.neutrality.policy import load_policy
-from agent_lifecycle.neutrality.scanner import scan_repository
+from agent_lifecycle.neutrality.receipt import require_zero_completeness_counters
+from agent_lifecycle.neutrality.scanner import NEUTRALITY_SCOPE_CHOICES, scan_repository
 
 POLICY_PATH = "policy/neutrality.policy.json"
 
@@ -46,7 +47,8 @@ def _parser() -> argparse.ArgumentParser:
     for command in ("produce", "verify"):
         gate = subparsers.add_parser(command)
         gate.add_argument("--profile", required=True)
-        gate.add_argument("--scope", required=True, choices=["current-tree-complete", "full-repository"])
+        gate.add_argument("--scope", required=True, choices=NEUTRALITY_SCOPE_CHOICES)
+        gate.add_argument("--include-local-artifacts", action="store_true")
         gate.add_argument("--gate-id", required=True)
         gate.add_argument("--run-id", required=True)
         gate.add_argument("--package-id", required=True)
@@ -183,6 +185,7 @@ def _scan(workspace_root: Path, args: argparse.Namespace, authority) -> dict[str
         deny_regexes=authority.deny_regexes,
         scope=args.scope,
         output_paths=[],
+        include_local_artifacts=args.include_local_artifacts,
     ).to_json(
         {
             "schemaVersion": "agent-neutrality-gate-operation.v1",
@@ -207,6 +210,7 @@ def _claims(
     authority_digest: str,
     generated_at: str,
 ) -> dict[str, Any]:
+    scope_binding = report["scopeBinding"]
     return {
         "schemaVersion": "agent-neutrality-controller-gate-claims.v1",
         "gateId": args.gate_id,
@@ -219,11 +223,13 @@ def _claims(
         "planDigest": args.plan_digest,
         "sourceRevision": args.source_revision,
         "scope": report["scope"],
-        "scopeDigest": sha256_hex(canonical_bytes({"scope": report["scope"]})),
+        "scopeBinding": scope_binding,
+        "scopeDigest": sha256_hex(canonical_bytes(scope_binding)),
+        "deprecatedScope": scope_binding["deprecatedScope"],
         "subjectDigest": report["digests"]["subjectDigest"],
         "workingTreeDigest": report["digests"]["workingTreeDigest"],
         "gitObjectSetDigest": report["digests"]["gitObjectSetDigest"],
-        "zeroCounters": report["counters"],
+        "zeroCounters": require_zero_completeness_counters(report),
         "authorityDigest": authority_digest,
         "receiptPath": args.receipt,
         "generatedAt": generated_at,
@@ -232,8 +238,7 @@ def _claims(
 
 
 def _require_zero(report: dict[str, Any]) -> None:
-    if any(int(value) != 0 for value in report["counters"].values()):
-        raise NeutralityError("neutrality gate counters are non-zero")
+    require_zero_completeness_counters(report)
 
 
 def _receipt_path(workspace_root: Path, args: argparse.Namespace) -> Path:

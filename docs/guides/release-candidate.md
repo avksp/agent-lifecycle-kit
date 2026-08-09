@@ -22,7 +22,7 @@ PYTHONPATH=src python tools/release/validate_deferred_promotion.py --profile pla
 PYTHONPATH=src python tools/release/assemble_release_candidate.py --manifest plans/standalone-v1/plan.manifest.json --inventory "$CANDIDATE_DIR"/inventory.json --evidence "$EVIDENCE_DIR"/release-assembly.json
 PYTHONPATH=src python tools/release/verify_release_candidate.py --inventory "$CANDIDATE_DIR"/inventory.json --evidence "$EVIDENCE_DIR"/release-verification.json
 python -c "from pathlib import Path; Path('$RELEASE_NEUTRALITY_REPORT').unlink(missing_ok=True)"
-PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --report "$RELEASE_NEUTRALITY_REPORT" --require-zero-findings
+PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --report "$RELEASE_NEUTRALITY_REPORT" --require-zero-findings
 PYTHONPATH=src python tests/package/run_packaging_smoke.py --dist-dir /tmp/agent-lifecycle-r03-dist --evidence work/release-0-3/evidence/packaging-smoke.json
 ```
 
@@ -52,3 +52,8 @@ A passing final-candidate proof requires a fresh current run package or an
 explicitly refreshed and locked standalone package. That proof is still only an
 offline source-release proof; do not label it production-ready until the
 production-promotion contract has external signed receipts.
+
+`tracked-release` scans only staged Git identities and their current working
+tree content. A dedicated evidence job may add `--include-local-artifacts`, but
+only the repository-relative roots in `localArtifactRoots` are eligible. See
+[Neutrality scanning](../reference/neutrality.md).

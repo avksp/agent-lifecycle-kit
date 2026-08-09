@@ -27,6 +27,12 @@ class ReleaseWorkflowTests(unittest.TestCase):
             self.assertIn("tests/package/run_packaging_smoke.py", workflow, relative_path)
             self.assertIn("--python python", workflow, relative_path)
 
+    def test_ci_and_release_use_tracked_release_neutrality_scope(self) -> None:
+        for relative_path in [".github/workflows/ci.yml", ".github/workflows/release.yml"]:
+            workflow = (ROOT / relative_path).read_text(encoding="utf-8")
+            self.assertIn("neutrality scan --scope tracked-release", workflow, relative_path)
+            self.assertNotIn("neutrality scan --scope current-tree-complete", workflow, relative_path)
+
 
 if __name__ == "__main__":
     unittest.main()

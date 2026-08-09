@@ -9,6 +9,7 @@ from typing import Any, Pattern
 
 from .canonical import load_json
 from .errors import NeutralityError
+from .paths import validate_repository_relative_path
 
 
 @dataclass(frozen=True)
@@ -17,8 +18,11 @@ class NeutralityPolicy:
     path_excludes: tuple[Pattern[str], ...]
     deny_literals: tuple[str, ...]
     deny_regexes: tuple[Pattern[str], ...]
+    local_artifact_roots: tuple[str, ...]
     max_file_bytes: int
     max_object_bytes: int
+    max_local_artifact_files: int
+    max_local_artifact_bytes: int
     max_archive_nesting_depth: int
     max_archives_per_subject: int
     max_archive_entries: int
@@ -36,13 +40,21 @@ def load_policy(path: Path) -> NeutralityPolicy:
         raise NeutralityError("unsupported neutrality policy schemaVersion")
     scan = _object(document, "scan")
     archives = _object(document, "archives")
+    local_artifact_roots = tuple(_string_list(document, "localArtifactRoots"))
+    if len({root.casefold() for root in local_artifact_roots}) != len(local_artifact_roots):
+        raise NeutralityError("localArtifactRoots must not contain duplicates")
+    for root in local_artifact_roots:
+        validate_repository_relative_path(root)
     return NeutralityPolicy(
         raw=document,
         path_excludes=tuple(re.compile(value) for value in _string_list(document, "pathExcludes")),
         deny_literals=tuple(_string_list(document, "denyLiterals")),
         deny_regexes=tuple(re.compile(value) for value in _string_list(document, "denyRegexes")),
+        local_artifact_roots=local_artifact_roots,
         max_file_bytes=_positive_int(scan, "maxFileBytes", 16_777_216),
         max_object_bytes=_positive_int(scan, "maxObjectBytes", 16_777_216),
+        max_local_artifact_files=_positive_int(scan, "maxLocalArtifactFiles", 10_000),
+        max_local_artifact_bytes=_positive_int(scan, "maxLocalArtifactBytes", 1_073_741_824),
         max_archive_nesting_depth=_positive_int(archives, "maxArchiveNestingDepth", 4),
         max_archives_per_subject=_positive_int(archives, "maxArchivesPerSubject", 1_000),
         max_archive_entries=_positive_int(archives, "maxEntriesPerArchive", 10_000),
