@@ -6,7 +6,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/avksp/agent-lifecycle-kit?label=release)](https://github.com/avksp/agent-lifecycle-kit/releases)
-![Python](https://img.shields.io/badge/python-3.11--3.13-blue.svg)
+![Python](https://img.shields.io/badge/python-3.11--3.14-blue.svg)
 
 **Agent Lifecycle Kit (ALK)** gives coding agents one delivery workflow from
 request to verified result. It turns a user task into a reviewed specification,
@@ -29,8 +29,8 @@ agent-lifecycle diagnose --no-install-plans
 agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json
 ```
 
-Package install, when available for the release:
-`python -m pip install agent-lifecycle-kit==1.50.2`.
+The official [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14.
+Install the exact release with `python -m pip install agent-lifecycle-kit==1.51.0`.
 
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). For structure and positioning, see [System architecture](docs/architecture/system-architecture.md) and [Project comparison](docs/reference/project-comparison.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
 
