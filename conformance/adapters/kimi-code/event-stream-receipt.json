@@ -1,6 +1,6 @@
 {
   "adapterId": "kimi-code",
-  "descriptorDigest": "bfda1d16e95e0baef346232e951958bfb5ecbe32f40c89350199486d6eabdb64",
+  "descriptorDigest": "bc34c5099ef0b02a6af5367270d587b784ed8ae41857d6e7e751647cff389246",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "3c84ff6836ea5436f873b557cbef735660d0134e1326791025e2b2253cc70f88",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "adb1def5da211b1e9111af8579bdd1b075e377e1664e0c2018c8e724356dd113",
+  "receiptDigest": "0ab2e1a7a63e6b63a9025841b33e1309adb04ae68087fc0df97a585a0c5fc09e",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",

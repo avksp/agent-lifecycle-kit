@@ -212,5 +212,22 @@
     },
     "writesNativeConfig": false,
     "promptInjectionDefault": false
+  },
+  "installation": {
+    "schemaVersion": "agent-adapter-installation-facts.v1",
+    "binaryAliases": ["goose"],
+    "files": [
+      {"path": "adapters/goose/adapter.descriptor.json", "action": "read", "required": true},
+      {"path": "adapters/goose/capabilities.manifest.json", "action": "read", "required": true},
+      {"path": "adapters/goose/README.md", "action": "read", "required": true}
+    ],
+    "commands": [
+      {"argv": ["python", "-m", "pip", "install", "-e", "<checkout>"], "purpose": "install the core CLI from a trusted checkout", "mutatesHost": true, "requiresOperator": true},
+      {"argv": ["goose", "--version"], "purpose": "confirm the host CLI is available before live proof", "mutatesHost": false, "requiresOperator": true}
+    ],
+    "operatorActions": [
+      "Configure host-local model and profile settings outside the portable core.",
+      "Keep the adapter EXPERIMENTAL until receipts are accepted."
+    ]
   }
 }

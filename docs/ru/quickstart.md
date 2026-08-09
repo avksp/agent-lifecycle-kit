@@ -26,7 +26,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.50.1
+python -m pip install agent-lifecycle-kit==1.50.2
 agent-lifecycle version
 ```
 
@@ -60,8 +60,9 @@ agent-lifecycle adapter install-plan \
   --descriptor adapters/opencode/adapter.descriptor.json
 ```
 
-Команда показывает, какие файлы, команды и действия оператора понадобятся. Она
-не меняет настройки локальной среды и не повышает зрелость адаптера.
+Команда показывает проверенные данные дескриптора: файлы, argv-массивы и
+действия оператора. Она не выполняет эти массивы, не меняет настройки локальной
+среды и не повышает зрелость адаптера.
 
 ## Проверка плана
 

@@ -1,0 +1,318 @@
+"""Workflow, audit, and managed-runner CLI dispatch handlers."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+from typing import Any
+
+from agent_lifecycle.audit import (
+    build_final_implementation_audit,
+    build_implementation_audit_report,
+    build_ownership_report,
+    require_review_verdict_pass,
+    validate_review_verdict,
+)
+from agent_lifecycle.audit.ownership import report_has_category
+from agent_lifecycle.changesets import changed_files
+from agent_lifecycle.cli.progress_hooks import maybe_emit_workflow_progress_hook, validate_workflow_progress_hook_request
+from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
+from agent_lifecycle.runner import (
+    build_runner_snapshot,
+    initialize_runner_state,
+    load_runner_policy,
+    load_runner_state,
+    request_runner_stop,
+    resume_runner,
+    transition_runner,
+    validate_runner_state,
+)
+from agent_lifecycle.runner.core import write_runner_state, write_runner_state_create
+from agent_lifecycle.workflow import (
+    accept_task,
+    adopt_plan,
+    apply_budget_decision,
+    block_run,
+    commit_task_result,
+    finalize_run,
+    next_action,
+    pause_for_budget_decision,
+    resolve_blocker,
+    run_managed_lifecycle_step,
+    start_execution,
+    start_task,
+    status,
+    validate_budget_exceeded_policy,
+)
+
+
+def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
+    """Dispatch workflow, audit, and runner command groups."""
+    if args.command == "workflow":
+        return _dispatch_workflow(args)
+    if args.command == "audit":
+        return _dispatch_audit(args)
+    if args.command == "runner":
+        return _dispatch_runner(args)
+    raise LifecycleError("command-not-implemented", "lifecycle command is not implemented")
+
+
+def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
+    if args.workflow_command == "budget-policy-check":
+        return validate_budget_exceeded_policy(read_json_object(Path(args.policy), label="budget policy"))
+    state_path = Path(args.state)
+    if args.workflow_command == "status":
+        return status(state_path, full=args.full)
+    if args.workflow_command == "next":
+        return next_action(status(state_path, full=True)["state"])
+    if args.workflow_command == "run":
+        validate_workflow_progress_hook_request(args, command="workflow run")
+        payload = run_managed_lifecycle_step(
+            state_path=state_path,
+            manifest_path=Path(args.manifest),
+            lock_path=Path(args.lock) if args.lock else None,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            reason=args.reason,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        maybe_emit_workflow_progress_hook(args, command="workflow run", state_path=state_path)
+        return payload
+    if args.workflow_command == "adopt-plan":
+        return adopt_plan(
+            state_path,
+            manifest_path=Path(args.manifest),
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            reset_tasks=args.reset_tasks,
+            preserve_accepted_compatible=args.preserve_accepted_compatible,
+            start_mode=args.start_mode,
+            authorized_by=args.authorized_by,
+        )
+    if args.workflow_command == "run-start":
+        return start_execution(
+            state_path,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            reason=args.reason,
+        )
+    if args.workflow_command == "finalize":
+        validate_workflow_progress_hook_request(args, command="workflow finalize")
+        payload = finalize_run(
+            state_path,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            final_audit_path=args.final_audit,
+            proof_path=args.proof,
+            proof_integrity_path=args.proof_integrity,
+            goal_record_path=args.goal_record,
+            follow_up_register_path=args.follow_up_register,
+            completion_gate_receipt_path=args.completion_gate_receipt,
+            final_implementation_audit_path=args.final_implementation_audit,
+            review_mesh_quorum_paths=args.review_mesh_quorum,
+            reason=args.reason,
+        )
+        maybe_emit_workflow_progress_hook(args, command="workflow finalize", state_path=state_path)
+        return payload
+    return _dispatch_workflow_task(args, state_path)
+
+
+def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
+    if args.workflow_command == "block":
+        return block_run(
+            state_path,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            blocker_code=args.blocker_code,
+            reason=args.reason,
+        )
+    if args.workflow_command == "resolve":
+        return resolve_blocker(
+            state_path,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            reason=args.reason,
+        )
+    if args.workflow_command == "task-start":
+        return start_task(
+            state_path,
+            task_id=args.task,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            reason=args.reason,
+        )
+    if args.workflow_command == "task-result":
+        validate_workflow_progress_hook_request(args, command="workflow task-result")
+        payload = commit_task_result(
+            state_path,
+            task_id=args.task,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            result_path=args.result,
+            model_usage_receipt_path=args.model_usage_receipt,
+            budget_targets_path=args.budget_targets,
+            reason=args.reason,
+        )
+        maybe_emit_workflow_progress_hook(args, command="workflow task-result", state_path=state_path)
+        return payload
+    if args.workflow_command == "budget-decision":
+        if args.action:
+            _require_args(args, ["decision_receipt", "receipt"], mode="budget-decision apply")
+            return apply_budget_decision(
+                state_path,
+                task_id=args.task,
+                operation_id=args.operation_id,
+                expected_revision=args.expected_revision,
+                source_revision=args.source_revision,
+                decision_receipt_path=args.decision_receipt,
+                action=args.action,
+                applied_receipt_path=args.receipt,
+                route_decision_path=args.route_decision,
+                split_packet_path=args.split_packet,
+                cap_deltas_path=args.cap_deltas,
+                operator_identity_hash=args.operator_identity_hash,
+                reason=args.reason,
+            )
+        _require_args(args, ["model_usage_receipt", "budget_policy", "receipt"], mode="budget-decision pause")
+        return pause_for_budget_decision(
+            state_path,
+            task_id=args.task,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            usage_receipt_path=args.model_usage_receipt,
+            budget_policy_path=args.budget_policy,
+            decision_receipt_path=args.receipt,
+            reason=args.reason,
+        )
+    if args.workflow_command == "task-accept":
+        validate_workflow_progress_hook_request(args, command="workflow task-accept")
+        payload = accept_task(
+            state_path,
+            task_id=args.task,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            review_path=args.review,
+            implementation_audit_path=args.implementation_audit,
+            reason=args.reason,
+        )
+        maybe_emit_workflow_progress_hook(args, command="workflow task-accept", state_path=state_path)
+        return payload
+    raise LifecycleError("command-not-implemented", "workflow command is not implemented")
+
+
+def _require_args(args: argparse.Namespace, names: list[str], *, mode: str) -> None:
+    missing = [name.replace("_", "-") for name in names if not getattr(args, name, None)]
+    if missing:
+        raise LifecycleError("missing-cli-argument", f"{mode} requires arguments", {"missing": missing})
+
+
+def _dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:
+    if args.audit_command == "review-check":
+        review = read_json_object(Path(args.review), label="task review")
+        verdict = review.get("reviewVerdict", review)
+        findings = review.get("findings", []) if isinstance(review.get("findings", []), list) else []
+        return require_review_verdict_pass(validate_review_verdict(verdict, findings=findings))
+    if args.audit_command == "implementation":
+        payload = build_implementation_audit_report(
+            manifest_path=Path(args.manifest),
+            state_path=Path(args.state),
+            task_id=args.task,
+            result_path=args.result,
+            review_path=args.review,
+            evidence_paths=args.evidence,
+            sandbox_receipt_paths=args.sandbox_receipt,
+            review_mesh_quorum_paths=args.review_mesh_quorum,
+            changed_paths=args.path or None,
+            expected_revision=args.expected_revision,
+            base=args.base,
+            auditor_id=args.auditor_id,
+            auditor_surface=args.auditor_surface,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.audit_command == "final-implementation":
+        payload = build_final_implementation_audit(
+            manifest_path=Path(args.manifest),
+            state_path=Path(args.state),
+            report_paths=args.report,
+            auditor_id=args.auditor_id,
+            auditor_surface=args.auditor_surface,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    paths = args.path or changed_files(Path.cwd(), base=args.base)
+    report = build_ownership_report(Path(args.manifest), paths, base=args.base)
+    if args.fail_on_forbidden and report_has_category(report, {"forbidden"}):
+        raise LifecycleError(
+            "forbidden-write-detected",
+            "ownership report contains forbidden writes",
+            report["summary"],
+        )
+    if args.fail_on_unowned and report_has_category(report, {"unowned"}):
+        raise LifecycleError(
+            "unowned-write-detected",
+            "ownership report contains unowned writes",
+            report["summary"],
+        )
+    return report
+
+
+def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
+    runner_path = Path(args.runner)
+    if args.runner_command == "start":
+        workflow_state = read_json_object(Path(args.state), label="workflow state")
+        policy = load_runner_policy(Path(args.policy) if args.policy else None)
+        runner_state = initialize_runner_state(
+            workflow_state,
+            policy=policy,
+            operation_id=args.operation_id,
+            reason=args.reason,
+        )
+        write_runner_state_create(runner_path, runner_state)
+        return validate_runner_state(runner_state, workflow_state=workflow_state)
+    runner_state = load_runner_state(runner_path)
+    if args.runner_command == "status":
+        workflow_state = read_json_object(Path(args.state), label="workflow state") if args.state else None
+        if args.profile:
+            if workflow_state is None:
+                raise LifecycleError("missing-cli-argument", "runner status with --profile requires --state")
+            profile = read_json_object(Path(args.profile), label="context profile")
+            return build_runner_snapshot(runner_state, workflow_state, profile=profile, window=args.target_window)
+        return validate_runner_state(runner_state, workflow_state=workflow_state)
+    workflow_state = read_json_object(Path(args.state), label="workflow state")
+    if args.runner_command == "transition":
+        request = read_json_object(Path(args.request), label="runner transition request")
+        payload = transition_runner(runner_state, workflow_state, request)
+        write_runner_state(runner_path, payload["state"])
+        return payload["result"]
+    if args.runner_command == "stop":
+        payload = request_runner_stop(
+            runner_state,
+            workflow_state,
+            operation_id=args.operation_id,
+            expected_runner_revision=args.expected_runner_revision,
+            reason=args.reason,
+        )
+        write_runner_state(runner_path, payload["state"])
+        return payload["result"]
+    if args.runner_command == "resume":
+        payload = resume_runner(
+            runner_state,
+            workflow_state,
+            operation_id=args.operation_id,
+            expected_runner_revision=args.expected_runner_revision,
+            reason=args.reason,
+        )
+        write_runner_state(runner_path, payload["state"])
+        return payload["result"]
+    raise LifecycleError("command-not-implemented", "runner command is not implemented")

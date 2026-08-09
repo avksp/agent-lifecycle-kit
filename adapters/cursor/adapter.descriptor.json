@@ -174,5 +174,20 @@
     },
     "writesNativeConfig": false,
     "promptInjectionDefault": false
+  },
+  "installation": {
+    "schemaVersion": "agent-adapter-installation-facts.v1",
+    "binaryAliases": ["cursor"],
+    "files": [
+      {"path": ".cursor-plugin/plugin.json", "action": "read", "required": true},
+      {"path": ".cursor-plugin/marketplace.json", "action": "read", "required": true}
+    ],
+    "commands": [
+      {"argv": ["ln", "-s", "<checkout>", "<cursor-local-plugin-directory>/agent-lifecycle-kit"], "purpose": "link a trusted checkout into the local plugin directory", "mutatesHost": true, "requiresOperator": true}
+    ],
+    "operatorActions": [
+      "Replace the local plugin directory placeholder before running the command.",
+      "Reload the host window and do not claim VERIFIED without accepted live receipts."
+    ]
   }
 }

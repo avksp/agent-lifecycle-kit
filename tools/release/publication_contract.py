@@ -106,6 +106,18 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
         "jsonPath": ["plugins", 0, "version"],
         "fieldForm": "version",
     },
+    {
+        "id": "quickstart-package-pin",
+        "path": "docs/guides/quickstart.md",
+        "kind": "text-package-pin",
+        "fieldForm": "package.pin",
+    },
+    {
+        "id": "quickstart-ru-package-pin",
+        "path": "docs/ru/quickstart.md",
+        "kind": "text-package-pin",
+        "fieldForm": "package.pin",
+    },
 )
 
 
@@ -121,7 +133,7 @@ LAST_CHANNEL_POLICY: dict[str, Any] = {
 def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[str, Any]:
     entries = []
     for entry in PUBLICATION_ENTRIES:
-        expected = target_ref if entry["fieldForm"] == "source.ref" else target_version
+        expected = _expected_value(entry=entry, target_version=target_version, target_ref=target_ref)
         entries.append(
             {
                 "id": entry["id"],
@@ -211,7 +223,21 @@ def _read_entry_value(*, path: Path, entry: dict[str, Any]) -> str | None:
     if kind == "python-version-assignment":
         match = re.search(r'^__version__\s*=\s*"([^"]+)"', path.read_text(encoding="utf-8"), re.MULTILINE)
         return match.group(1) if match else None
+    if kind == "text-package-pin":
+        match = re.search(
+            rf"{re.escape(PLUGIN_NAME)}==([0-9]+(?:\.[0-9]+){{2}})",
+            path.read_text(encoding="utf-8"),
+        )
+        return match.group(0) if match else None
     raise ValueError(f"unsupported publication entry kind: {kind}")
+
+
+def _expected_value(*, entry: dict[str, Any], target_version: str, target_ref: str) -> str:
+    if entry["fieldForm"] == "source.ref":
+        return target_ref
+    if entry["fieldForm"] == "package.pin":
+        return f"{PLUGIN_NAME}=={target_version}"
+    return target_version
 
 
 def _json_path(payload: Any, path: list[Any]) -> str | None:

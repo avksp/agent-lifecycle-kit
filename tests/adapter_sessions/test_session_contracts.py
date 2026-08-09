@@ -44,6 +44,27 @@ class AdapterSessionContractTests(unittest.TestCase):
         self.assertTrue(receipt["env"]["valuesRedacted"])
         self.assertFalse(receipt["modelCallsStarted"])
 
+    def test_launch_receipt_records_actual_output_redaction(self) -> None:
+        local_path = "/" + "Users/operator/private.log"
+        receipt = build_launch_receipt(
+            status="PASS",
+            adapter_id="codex",
+            session_id="session-1",
+            launch_mode="interactive",
+            argv=["codex"],
+            timeout_seconds=1.0,
+            env={"includedNames": [], "valuesRedacted": True, "secretValuesStored": False},
+            exit_code=0,
+            timed_out=False,
+            stdout_tail="safe output",
+            stderr_tail=f"Authorization: Bearer secret-value {local_path}",
+        )
+
+        self.assertFalse(receipt["stdout"]["redacted"])
+        self.assertTrue(receipt["stderr"]["redacted"])
+        self.assertNotIn("secret-value", receipt["stderr"]["tail"])
+        self.assertNotIn(local_path, receipt["stderr"]["tail"])
+
     def test_resume_receipt_blocks_lineage_mismatch(self) -> None:
         receipt = build_resume_receipt(
             session_id="session-1",

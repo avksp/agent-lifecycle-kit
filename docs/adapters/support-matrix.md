@@ -20,6 +20,9 @@ Managed session support is documented separately from maturity. Current bundled
 adapters declare `managedLaunch.status: WRAPPER_ONLY`: ALK can bind lifecycle
 proof through managed commands or wrappers, but it does not claim safe native
 argv launch. See [Managed adapter session support](managed-session-support.md).
+Every generic descriptor-driven launch request is blocked with
+`adapter-generic-launch-disabled` before a host process is created; a descriptor
+status cannot bypass that boundary.
 
 ## Runtime support
 

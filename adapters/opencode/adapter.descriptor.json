@@ -188,5 +188,21 @@
     },
     "writesNativeConfig": false,
     "promptInjectionDefault": false
+  },
+  "installation": {
+    "schemaVersion": "agent-adapter-installation-facts.v1",
+    "binaryAliases": ["opencode"],
+    "files": [
+      {"path": "skills", "action": "copy-preview", "required": true},
+      {"path": "adapters/opencode/opencode.json", "action": "read", "required": true},
+      {"path": "opencode.json", "action": "read", "required": true}
+    ],
+    "commands": [
+      {"argv": ["cp", "-R", "<checkout>/skills/", ".opencode/skills/"], "purpose": "copy shared skills into the target project", "mutatesHost": true, "requiresOperator": true}
+    ],
+    "operatorActions": [
+      "Choose project-level or user-level installation before copying files.",
+      "Keep plugin installation separate from managed lifecycle proof."
+    ]
   }
 }

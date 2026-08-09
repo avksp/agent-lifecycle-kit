@@ -190,5 +190,21 @@
     },
     "writesNativeConfig": false,
     "promptInjectionDefault": false
+  },
+  "installation": {
+    "schemaVersion": "agent-adapter-installation-facts.v1",
+    "binaryAliases": ["hermes"],
+    "files": [
+      {"path": "skills.sh.json", "action": "read", "required": true},
+      {"path": "adapters/hermes/hermes.registry.json", "action": "read", "required": true},
+      {"path": "adapters/hermes/slash-commands.json", "action": "read", "required": true}
+    ],
+    "commands": [
+      {"argv": ["hermes", "skills", "install", "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/vX.Y.Z/skills/agent-workflow-orchestrator/SKILL.md"], "purpose": "install a tagged lifecycle skill", "mutatesHost": true, "requiresOperator": true}
+    ],
+    "operatorActions": [
+      "Choose a release tag before installation.",
+      "Install every required lifecycle skill from that tag."
+    ]
   }
 }

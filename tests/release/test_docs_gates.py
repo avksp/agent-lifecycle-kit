@@ -139,6 +139,30 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         ):
             self.assertIn(command, install)
 
+    def test_security_docs_describe_blocked_launch_and_fail_closed_receipts(self) -> None:
+        managed_sessions = [
+            ROOT / "docs/reference/managed-adapter-sessions.md",
+            ROOT / "docs/ru/reference/managed-adapter-sessions.md",
+        ]
+        for path in managed_sessions:
+            with self.subTest(path=path):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("adapter-generic-launch-disabled", text)
+                self.assertIn("WRAPPER_ONLY", text)
+                self.assertIn("шаблоны" if "/docs/ru/" in path.as_posix() else "wildcard", text)
+
+        for path in (
+            ROOT / "docs/security/neutrality-contract.md",
+            ROOT / "docs/ru/security/neutrality-contract.md",
+        ):
+            with self.subTest(path=path):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("readRaces", text)
+                self.assertIn("pathAliasConflicts", text)
+
+        readiness = (ROOT / "docs/reference/readiness-diagnostics.md").read_text(encoding="utf-8")
+        self.assertIn("schema-validated installation facts", readiness)
+
     def test_russian_docs_link_to_russian_docs(self) -> None:
         for path in sorted((ROOT / "docs/ru").rglob("*.md")):
             text = path.read_text(encoding="utf-8")
@@ -737,6 +761,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "adapter run.\n"
         "`WRAPPER_ONLY`.\n"
         "shell: false.\n"
+        "adapter-generic-launch-disabled.\n"
+        "wildcard.\n"
         "plugin installation alone.\n",
     )
     _write_text(
@@ -749,7 +775,36 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "adapter run.\n"
         "`WRAPPER_ONLY`.\n"
         "shell: false.\n"
+        "adapter-generic-launch-disabled.\n"
+        "шаблоны.\n"
         "установка плагина.\n",
+    )
+    _write_text(
+        root / "docs/reference/readiness-diagnostics.md",
+        "`agent-adapter-install-plan.v1`.\n"
+        "schema-validated installation facts.\n"
+        "argv arrays.\n"
+        "Diagnostics never interpret the argv arrays as a shell command.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/readiness-diagnostics.md",
+        "`agent-adapter-install-plan.v1`.\n"
+        "argv-массивы.\n"
+        "Диагностика не трактует argv-массивы как строку shell.\n",
+    )
+    _write_text(
+        root / "docs/security/neutrality-contract.md",
+        "Completeness counters.\n"
+        "`readRaces`.\n"
+        "`pathAliasConflicts`.\n"
+        "fail closed.\n",
+    )
+    _write_text(
+        root / "docs/ru/security/neutrality-contract.md",
+        "Счётчики полноты.\n"
+        "`readRaces`.\n"
+        "`pathAliasConflicts`.\n"
+        "ненулевое значение приводит к отказу.\n",
     )
     _write_text(
         root / "docs/adapters/progress-bridge-matrix.md",

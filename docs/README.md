@@ -97,3 +97,4 @@ project.
 - [Production promotion contract](reference/production-promotion.md)
 - [Live cost calibration](reference/live-cost-calibration.md)
 - [Release security](security/release-security.md)
+- [Neutrality authority contract](security/neutrality-contract.md)
