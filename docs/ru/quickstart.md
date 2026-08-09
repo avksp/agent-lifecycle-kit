@@ -27,7 +27,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 устанавливайте точную семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.54.0
+python -m pip install agent-lifecycle-kit==1.55.0
 agent-lifecycle version
 ```
 
@@ -251,6 +251,22 @@ agent-lifecycle goal view \
 Команда только читает существующие артефакты. Её можно запускать во втором
 терминале, пока адаптер выполняет работу.
 
+## Проверка нейтральности выпуска
+
+Для переносимой проверки исходного дерева или выпуска используйте область,
+привязанную к индексу Git:
+
+```bash
+agent-lifecycle-neutrality scan \
+  --scope tracked-release \
+  --policy policy/neutrality.policy.json \
+  --require-zero-findings
+```
+
+Игнорируемые подтверждения из разрешённых политикой каталогов не читаются,
+пока отдельный шаг не добавит `--include-local-artifacts`. Перед включением
+прочитайте [справочник по проверке нейтральности](reference/neutrality.md).
+
 ## Что дальше
 
 - [Установка адаптеров](adapters/install.md)
@@ -258,3 +274,4 @@ agent-lifecycle goal view \
 - [Практические сценарии жизненного цикла](lifecycle-cookbook.md)
 - [Справочник команд](reference/cli.md)
 - [Диагностика готовности](reference/readiness-diagnostics.md)
+- [Проверка нейтральности](reference/neutrality.md)

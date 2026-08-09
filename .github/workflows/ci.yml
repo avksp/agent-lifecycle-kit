@@ -31,4 +31,4 @@ jobs:
       - name: Validate model routing profile
         run: python -m agent_lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
       - name: Run neutrality scan
-        run: python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
+        run: python -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --require-zero-findings

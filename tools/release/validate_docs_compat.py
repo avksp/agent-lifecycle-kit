@@ -947,6 +947,39 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/neutrality.md",
+        (
+            "`tracked-release`",
+            "git ls-files -z --stage --cached",
+            "--include-local-artifacts",
+            "`localArtifactRoots`",
+            "`recoveredReadRaces`",
+            "`deprecatedScope: true`",
+            "without following",
+        ),
+    ),
+    (
+        "docs/ru/reference/neutrality.md",
+        (
+            "`tracked-release`",
+            "git ls-files -z --stage --cached",
+            "--include-local-artifacts",
+            "`localArtifactRoots`",
+            "`recoveredReadRaces`",
+            "`deprecatedScope: true`",
+            "без перехода к цели",
+        ),
+    ),
+    (
+        "docs/ru/guides/release-candidate.md",
+        (
+            "`tracked-release`",
+            "`--include-local-artifacts`",
+            "`localArtifactRoots`",
+            "не заменяет",
+        ),
+    ),
+    (
         "release/notes/v0.19.0.md",
         (
             "Status: source release.",

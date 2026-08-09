@@ -218,7 +218,7 @@ flowchart LR
 | Отчёты | `reporting/*` | Статус, лента событий, прогресс, счётчик изменений и мост прогресса. |
 | Метрики и правила | `metrics/*`, `policy/*`, `model_routing/*` | Экспорт расхода, политика токенов/ресурсов, локальная статистика и классы моделей. |
 | Контекст и подтверждения | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Компактные пакеты, поиск по эпизодам, импорт внешнего контекста, представление цели и продолжения. |
-| Нейтральность | `neutrality/*` | Проверка переносимых артефактов, полномочий и подписанных подтверждений нейтральности. |
+| Нейтральность | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Привязанная к индексу Git проверка выпуска, явное включение локальных подтверждений из разрешённых корней, устойчивое чтение, проверка полномочий и подписанные квитанции. |
 | Контроллер выполнения | `runner/*` | Ограниченное состояние цикла выполнения поверх существующего рабочего цикла. |
 | Рабочее дерево | `worktree/*`, `cli/worktree.py` | Правила изоляции рабочего дерева и подтверждения попыток. |
 
@@ -465,6 +465,36 @@ flowchart LR
 хуками прогресса у управляемых команд рабочего цикла. Отчёты не меняют
 состояние, не запускают модель и не разбирают хостовую телеметрию в ядре.
 
+### Проверка нейтральности выпуска
+
+```mermaid
+sequenceDiagram
+  participant Operator as Оператор
+  participant CLI as neutrality/cli.py
+  participant Policy as neutrality/policy.py
+  participant Scanner as neutrality/scanner.py
+  participant Paths as neutrality/paths.py
+  participant Receipt as neutrality/receipt.py или gate.py
+
+  Operator->>CLI: scan/bootstrap --scope tracked-release
+  CLI->>Policy: загрузить localArtifactRoots и ограничения
+  CLI->>Scanner: scan_repository
+  Scanner->>Scanner: git ls-files --stage --cached и HEAD
+  Scanner->>Paths: устойчивое чтение с одной повторной попыткой
+  opt include-local-artifacts
+    Scanner->>Paths: проверить разрешённые относительные корни
+  end
+  Scanner-->>CLI: отчёт с scopeBinding и subjectDigest
+  opt подписанный маршрут
+    CLI->>Receipt: связать claims и обязательные счётчики
+  end
+```
+
+Релизные процессы используют `tracked-release` без локальных материалов.
+Отдельный шаг с подтверждениями может явно включить корни, объявленные в
+политике. Старые области сохраняют прежний обход, но получают подписанную
+отметку об устаревании.
+
 ## Варианты работы и маршрутизация вызовов
 
 | Вариант | Команда оператора | Основные модули | Результат |
@@ -525,6 +555,7 @@ flowchart LR
 - [Внешний контекст памяти](../reference/external-memory.md)
 - [Непрерывность цели](../reference/goal-continuity.md)
 - [Профиль расследования ошибок](../reference/bug-forensics.md)
+- [Проверка нейтральности](../reference/neutrality.md)
 
 Дополнительные англоязычные архитектурные документы: `docs/architecture/release-architecture.md`,
 `docs/architecture/runner-transition-contract.md` и
