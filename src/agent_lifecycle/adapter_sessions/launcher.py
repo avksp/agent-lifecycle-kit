@@ -18,7 +18,12 @@ from agent_lifecycle.adapter_sessions.local_launch_profile import (
     render_local_launch_argv,
 )
 from agent_lifecycle.adapter_sessions.process import run_process
-from agent_lifecycle.contracts import LifecycleError, read_json_object
+from agent_lifecycle.adapter_sessions.qualification import (
+    build_qualification_receipt,
+    require_qualification_receipt,
+    write_qualification_receipt,
+)
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.host_protocol.validation import validate_managed_launch_profile
 from agent_lifecycle.workflow.risk_execution_gate import validate_task_risk_profile
@@ -93,7 +98,8 @@ def inspect_local_launch_profile(
 ) -> dict[str, Any]:
     """Inspect a local profile without reaching the process boundary."""
 
-    relative, profile, validation = load_local_launch_profile(profile_path, project_root=project_root)
+    root = (project_root or Path.cwd()).absolute()
+    relative, profile, validation = load_local_launch_profile(profile_path, project_root=root)
     return build_local_launch_profile_receipt(
         status="PASS",
         operation="INSPECT",
@@ -123,7 +129,8 @@ def launch_from_local_profile(
 ) -> dict[str, Any]:
     """Run one bounded probe or one fully bound managed host process."""
 
-    relative, profile, validation = load_local_launch_profile(profile_path, project_root=project_root)
+    root = (project_root or Path.cwd()).absolute()
+    relative, profile, validation = load_local_launch_profile(profile_path, project_root=root)
     profile_digest = str(validation["profileDigest"])
     profile_adapter = str(profile["adapterId"])
     if adapter_id is not None and adapter_id != profile_adapter:
@@ -145,16 +152,27 @@ def launch_from_local_profile(
             env=env_receipt,
             result=result,
         )
-        return build_local_launch_profile_receipt(
-            status="PASS" if result["status"] == "PASS" else "FAIL",
+        qualification_receipt = None
+        blockers = list(result.get("blockers", []))
+        if isinstance(profile.get("qualification"), dict):
+            qualification_receipt = build_qualification_receipt(
+                profile=profile,
+                profile_digest=profile_digest,
+                probe_receipt=probe,
+            )
+            blockers.extend(qualification_receipt["blockers"])
+            write_qualification_receipt(root, profile, qualification_receipt)
+        payload = build_local_launch_profile_receipt(
+            status="PASS" if result["status"] == "PASS" and not blockers else "FAIL",
             operation="PREFLIGHT",
             profile_path=relative.as_posix(),
             profile_summary=local_profile_summary(profile),
             profile_digest=profile_digest,
             process_calls=1,
             probe_receipt=probe,
-            blockers=list(result.get("blockers", [])),
+            blockers=blockers,
         )
+        return _attach_qualification_receipt(payload, qualification_receipt)
     if operation != "managedTask":
         raise LifecycleError("local-launch-operation-invalid", "local launch operation is unsupported")
 
@@ -202,6 +220,11 @@ def launch_from_local_profile(
             operation_id=operation_id,
             source_revision=source_revision,
         )
+        qualification_receipt = require_qualification_receipt(
+            project_root=root,
+            profile=profile,
+            profile_digest=profile_digest,
+        )
     except LifecycleError as exc:
         return _blocked_local_launch(
             adapter_id=profile_adapter,
@@ -236,7 +259,7 @@ def launch_from_local_profile(
             risk_profile=risk_profile,
         )
     result = run_process(argv, env=env, timeout_seconds=timeout_seconds)
-    return build_launch_receipt(
+    payload = build_launch_receipt(
         status=str(result["status"]),
         adapter_id=profile_adapter,
         session_id=session_id,
@@ -256,6 +279,13 @@ def launch_from_local_profile(
         risk_profile_digest=str(risk_profile["profileDigest"]),
         receipt_argv=local_receipt_argv(profile),
     )
+    return _attach_qualification_receipt(payload, qualification_receipt)
+
+
+def _attach_qualification_receipt(payload: dict[str, Any], receipt: dict[str, Any] | None) -> dict[str, Any]:
+    body = {key: value for key, value in payload.items() if key != "receiptDigest"}
+    body["qualificationReceipt"] = receipt
+    return {**body, "receiptDigest": canonical_digest(body)}
 def _timeout_seconds(profile: dict[str, Any]) -> float:
     timeout = profile.get("timeoutSeconds")
     if isinstance(timeout, (int, float)) and not isinstance(timeout, bool) and timeout > 0:

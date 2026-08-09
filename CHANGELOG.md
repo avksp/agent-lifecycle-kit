@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.57.0 - 2026-08-10
+
+- Added exact-version local launch profiles and bounded preflight evidence for
+  Codex CLI 0.147.0, Claude Code 2.1.226 and OpenCode 1.18.15.
+- Added digest-bound qualification receipts that block managed launch after a
+  profile or host-version change while preserving every bundled descriptor at
+  `WRAPPER_ONLY`.
+- Added bounded host-local usage parsers with truthful `FIXTURE_ONLY` status,
+  safe Codex and Claude inspection profiles, validators and English/Russian
+  operator guidance.
+
 ## 1.56.0 - 2026-08-09
 
 - Added ignored, schema-validated local host launch profiles with closed argv

@@ -8,6 +8,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.redaction import redact_value
+from agent_lifecycle.adapter_sessions.qualification import validate_qualification_policy
 
 LOCAL_HOST_LAUNCH_PROFILE_SCHEMA = "agent-local-host-launch-profile.v1"
 LOCAL_HOST_LAUNCH_PROFILE_VALIDATION_SCHEMA = "agent-local-host-launch-profile-validation.v1"
@@ -154,6 +155,7 @@ def validate_local_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
     for field in required_false:
         if profile.get(field) is not False:
             blockers.append({"code": "local-launch-profile-safe-default", "field": field})
+    blockers.extend(validate_qualification_policy(profile))
 
     body = {
         "schemaVersion": LOCAL_HOST_LAUNCH_PROFILE_VALIDATION_SCHEMA,
@@ -211,6 +213,16 @@ def local_profile_summary(profile: dict[str, Any]) -> dict[str, Any]:
         "shell": False,
         "publicSupportClaimed": False,
     }
+    qualification = profile.get("qualification")
+    if isinstance(qualification, dict):
+        summary["qualification"] = {
+            "schemaVersion": qualification.get("schemaVersion"),
+            "expectedVersion": qualification.get("expectedVersion"),
+            "receiptFile": qualification.get("receiptFile"),
+            "requiredForManagedTask": qualification.get("requiredForManagedTask"),
+            "maxPreflightProcesses": qualification.get("maxPreflightProcesses"),
+            "modelCallsForPreflight": qualification.get("modelCallsForPreflight"),
+        }
     redacted, _changed = redact_value(summary)
     return redacted
 

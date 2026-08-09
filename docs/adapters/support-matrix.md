@@ -29,8 +29,14 @@ An operator may separately opt into the validated local profile route under
 a local receipt, but it does not change any row below. See [Local host
 launch](../reference/local-host-launch.md).
 
-Host-local token normalization is a separate claim. Gemini CLI, Kimi Code and
-Qwen Code declare `usageNormalization.status: FIXTURE_ONLY`; their bounded
+Exact-version local launch profiles are qualified for Codex `0.147.0`, Claude
+Code `2.1.226` and OpenCode `1.18.15`. They require a matching preflight
+receipt and preserve `WRAPPER_ONLY`; see [Qualified host
+launch](../reference/qualified-host-launch.md).
+
+Host-local token normalization is a separate claim. Claude Code, Codex, Gemini
+CLI, Kimi Code, OpenCode and Qwen Code declare
+`usageNormalization.status: FIXTURE_ONLY`; their bounded
 parsers are tested, but their sidecars do not satisfy S1/S2 usage gates. Other
 bundled descriptors have no declaration and are treated as `UNSUPPORTED` by
 this contract. Qwen Code's adapter maturity remains `VERIFIED`; that does not

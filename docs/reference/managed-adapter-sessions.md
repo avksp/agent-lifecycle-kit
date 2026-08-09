@@ -34,6 +34,7 @@ agent-lifecycle start --adapter codex --mode implement --file adapter-run-reques
 agent-lifecycle start --adapter codex --resume <session-id>
 agent-lifecycle host-launch inspect --profile .alk/host-launch/codex.json
 agent-lifecycle host-launch preflight --profile .alk/host-launch/codex.json
+agent-lifecycle adapter launch-profile --adapter codex --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/codex.json
 
 agent-lifecycle adapter session start --adapter codex
 agent-lifecycle adapter session start --adapter codex --launch
@@ -61,6 +62,10 @@ An operator-local launch adds `--launch --host-launch-profile
 .alk/host-launch/<adapter>.json` to the fully bound `start --mode implement`
 command. See [Local host launch](local-host-launch.md) for the profile and the
 complete command. No launch flag is accepted for raw task intake.
+
+For the exact Codex, Claude Code and OpenCode versions qualified by ALK, use
+the generated profile and mandatory version receipt from [Qualified host
+launch](qualified-host-launch.md).
 
 `start` emits `agent-lifecycle-start-receipt.v1`. Its nested delegate summary
 contains only stable status, advisory and receipt-digest fields; it excludes

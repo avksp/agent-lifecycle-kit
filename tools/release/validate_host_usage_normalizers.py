@@ -79,8 +79,15 @@ def _check_normalizer(
                 blockers.append({"code": "usage-normalizer-forbidden-call", "adapterId": adapter_id, "call": name, "line": node.lineno})
     if parse_entries != 1:
         blockers.append({"code": "usage-normalizer-entrypoint", "adapterId": adapter_id, "count": parse_entries})
-    if profile.get("status") != "FIXTURE_ONLY" or profile.get("acceptedForS1S2") is not False:
-        blockers.append({"code": "usage-normalizer-unqualified-reference", "adapterId": adapter_id})
+    status = profile.get("status")
+    accepted = profile.get("acceptedForS1S2")
+    if status not in {"FIXTURE_ONLY", "QUALIFIED"} or accepted is not (status == "QUALIFIED"):
+        blockers.append({"code": "usage-normalizer-qualification-inconsistent", "adapterId": adapter_id})
+    if status == "QUALIFIED":
+        evidence = profile.get("qualificationEvidence")
+        host_range = profile.get("qualifiedHostRange")
+        if not isinstance(evidence, list) or not evidence or not isinstance(host_range, dict):
+            blockers.append({"code": "usage-normalizer-qualified-evidence-missing", "adapterId": adapter_id})
     return {
         "adapterId": adapter_id,
         "status": "PASS" if not blockers else "FAIL",

@@ -55,3 +55,11 @@ agent-lifecycle adapter event-check \
 The bridge is intentionally host-neutral: Claude-specific session identifiers
 stay inside event `payload` or redacted host receipts, while lifecycle state,
 task identity, sequence, status and terminal semantics are validated by core.
+
+## Qualified local launch
+
+Claude Code `2.1.226` has a separate version-bound local launch profile.
+Generate and preflight it before a frozen `start --launch` call. The profile
+does not enable `--dangerously-skip-permissions`, change the `2.1.220` full
+adapter evidence range, or qualify token accounting for S1/S2. See [Qualified
+host launch](../reference/qualified-host-launch.md).

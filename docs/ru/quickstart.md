@@ -27,7 +27,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 устанавливайте точную семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.56.0
+python -m pip install agent-lifecycle-kit==1.57.0
 agent-lifecycle version
 ```
 
@@ -154,7 +154,19 @@ agent-lifecycle start \
 Команда проверяет сохранённый адаптер и происхождение состояния. Значение
 `--resume` не трактуется как идентификатор диалога Codex, Claude, OpenCode или
 другого внешнего инструмента. По умолчанию внешний процесс не запускается.
-Опытный пользователь может явно запустить одну локальную команду только из
+Опытный пользователь сначала может создать и проверить профиль с точной
+привязкой к версии Codex, Claude Code или OpenCode:
+
+```bash
+agent-lifecycle adapter launch-profile \
+  --adapter codex \
+  --repository-root /path/to/agent-lifecycle-kit \
+  --out .alk/host-launch/codex.json
+agent-lifecycle host-launch preflight \
+  --profile .alk/host-launch/codex.json
+```
+
+После этого одну локальную команду можно явно запустить только из
 зафиксированного режима `implement` с профилем риска:
 
 ```bash
@@ -173,6 +185,9 @@ agent-lifecycle start \
 внешней команды](reference/local-host-launch.md). Для автоматизации остаются
 отдельные команды `adapter task start`, `adapter run` и `adapter session resume`
 из [справочника команд](reference/cli.md).
+Точные версии и ограничения приёмки S1/S2 приведены в разделе
+[квалифицированный запуск внешнего
+инструмента](reference/qualified-host-launch.md).
 
 ## Проверка изменений
 
