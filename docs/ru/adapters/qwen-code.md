@@ -31,3 +31,10 @@ agent-lifecycle adapter inspect \
 `docs/adapters/evidence/qwen-code-0.11.0.md`.
 Прямой безопасный запуск CLI хоста из ядра не заявляется:
 `managedLaunch.status` остаётся `WRAPPER_ONLY`.
+
+Зрелость адаптера и состояние нового нормализатора токенов учитываются
+раздельно. Адаптер остаётся `VERIFIED`, а
+`usageNormalization.status: FIXTURE_ONLY` сохраняет новые подтверждения в
+состоянии `ESTIMATED` до отдельной проверки нормализатора на реальном диапазоне
+версий хоста. Подробнее:
+[локальный учёт токенов хоста](../reference/host-local-token-accounting.md).

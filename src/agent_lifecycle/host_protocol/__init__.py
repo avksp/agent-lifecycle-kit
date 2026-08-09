@@ -31,6 +31,14 @@ from agent_lifecycle.host_protocol.inspection import (
 )
 from agent_lifecycle.host_protocol.receipts import normalize_host_operation_receipt
 from agent_lifecycle.host_protocol.scaffold import scaffold_adapter
+from agent_lifecycle.host_protocol.usage_normalizers import (
+    NormalizedUsage,
+    build_conservative_usage_estimate,
+    build_model_usage_sidecar,
+    parse_bounded_jsonl_objects,
+    safe_session_identifier,
+    validate_usage_normalization_profile,
+)
 from agent_lifecycle.host_protocol.validation import (
     require_adapter_validation_pass,
     validate_adapter_descriptor,
@@ -40,14 +48,18 @@ __all__ = [
     "HostAdapterEvent",
     "HostOperationReceipt",
     "HostOperationRequest",
+    "NormalizedUsage",
     "adapter_declares_event_capture",
     "build_acp_capability",
     "build_acp_probe_receipt",
     "build_capability_manifest",
+    "build_conservative_usage_estimate",
+    "build_model_usage_sidecar",
     "build_adapter_event_stream",
     "build_event_stream_receipt",
     "event_capture_declaration",
     "normalize_host_operation_receipt",
+    "parse_bounded_jsonl_objects",
     "require_event_capture_pass",
     "require_adapter_event_stream_pass",
     "require_adapter_inspection_pass",
@@ -55,6 +67,7 @@ __all__ = [
     "require_host_capabilities_pass",
     "inspect_adapter_descriptor",
     "scaffold_adapter",
+    "safe_session_identifier",
     "validate_capability_manifest",
     "validate_event_capture_conformance",
     "validate_event_capture_receipt",
@@ -62,4 +75,5 @@ __all__ = [
     "validate_adapter_descriptor",
     "validate_host_capabilities",
     "validate_no_acp_evidence_for_hosts",
+    "validate_usage_normalization_profile",
 ]

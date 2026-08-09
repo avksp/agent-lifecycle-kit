@@ -7,6 +7,7 @@ from typing import Any
 from agent_lifecycle.contracts.errors import LifecycleError
 from agent_lifecycle.host_protocol.acp_capability import validate_host_capabilities
 from agent_lifecycle.host_protocol.contracts import HostOperationReceipt, HostOperationRequest
+from agent_lifecycle.host_protocol.usage_normalizers import validate_usage_normalization_profile
 
 REQUIRED_DESCRIPTOR_FIELDS = {
     "schemaVersion",
@@ -58,6 +59,11 @@ def validate_adapter_descriptor(
     receipt_contracts = [HostOperationReceipt.from_json(item) for item in receipts or []]
     _validate_request_receipt_pairs(request_contracts, receipt_contracts, blockers)
     status = "PASS" if not blockers else "FAIL"
+    usage_validation = validate_usage_normalization_profile(
+        descriptor.get("usageNormalization"),
+        adapter_id=descriptor.get("adapterId") if isinstance(descriptor.get("adapterId"), str) else None,
+        host=descriptor.get("host") if isinstance(descriptor.get("host"), str) else None,
+    )
     return {
         "schemaVersion": "agent-host-adapter-validation.v1",
         "status": status,
@@ -67,6 +73,7 @@ def validate_adapter_descriptor(
         "operationCount": len(descriptor.get("operations", [])) if isinstance(descriptor.get("operations"), list) else 0,
         "requestCount": len(request_contracts),
         "receiptCount": len(receipt_contracts),
+        "usageNormalizationStatus": usage_validation["declaredStatus"],
         "blockers": blockers,
         "hostProtocolContracts": [
             HostOperationRequest.schema_version,
@@ -93,6 +100,12 @@ def _validate_descriptor_shape(descriptor: dict[str, Any], blockers: list[dict[s
     if descriptor.get("coreSemantics") != "delegated-to-agent-lifecycle-core":
         blockers.append({"code": "adapter-core-semantics-overclaim", "message": "adapter must delegate lifecycle semantics to core"})
     _validate_managed_launch_profile(descriptor.get("managedLaunch"), blockers)
+    usage_validation = validate_usage_normalization_profile(
+        descriptor.get("usageNormalization"),
+        adapter_id=descriptor.get("adapterId") if isinstance(descriptor.get("adapterId"), str) else None,
+        host=descriptor.get("host") if isinstance(descriptor.get("host"), str) else None,
+    )
+    blockers.extend(usage_validation["blockers"])
     if "installation" in descriptor:
         _validate_installation_facts(descriptor.get("installation"), blockers)
     operations = descriptor.get("operations")

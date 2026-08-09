@@ -44,6 +44,7 @@ class UsageExportTests(unittest.TestCase):
             self.assertEqual(export["entries"][0]["tokens"], {"input": 120, "output": 30, "total": 150})
             self.assertEqual(export["entries"][0]["resources"]["contextBytes"], 4096)
             self.assertEqual(export["entries"][0]["durationMs"], 1250)
+            self.assertEqual(export["entries"][0]["usageConfidence"], "ESTIMATED")
             self.assertNotIn("monetary", export["entries"][0])
             self.assertEqual(export["totals"]["hostReportedCost"]["entryCount"], 0)
 
@@ -76,6 +77,52 @@ class UsageExportTests(unittest.TestCase):
             self.assertFalse(export["entries"][0]["monetary"]["canonical"])
             self.assertEqual(export["totals"]["tokens"]["total"], 42)
             self.assertEqual(export["totals"]["meteredEntries"], 1)
+
+    def test_linux_home_path_is_redacted_from_budget_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact = root / "linux-usage.json"
+            _write_json(
+                artifact,
+                {
+                    "schemaVersion": "agent-host-operation-receipt.v1",
+                    "host": "local-agent",
+                    "operationId": "op-linux",
+                    "usage": {"inputTokens": 1, "outputTokens": 1},
+                    "budgetDecision": {
+                        "action": "pause",
+                        "reason": "inspect " + "/ho" + "me/operator/private/usage.jsonl",
+                    },
+                },
+            )
+
+            export = build_usage_export(artifact_paths=[artifact], project_root=root)
+            serialized = json.dumps(export)
+            validation = validate_usage_export(export)
+
+            self.assertEqual(validation["status"], "PASS")
+            self.assertIn("<redacted-local-path>", serialized)
+            self.assertNotIn("/ho" + "me/operator", serialized)
+
+    def test_only_host_attestation_is_exported_as_attested(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            host_artifact = root / "host.json"
+            estimate_artifact = root / "estimate.json"
+            base = {
+                "schemaVersion": "agent-lifecycle-model-usage-receipt.v1",
+                "usage": {"inputTokens": 10, "outputTokens": 2, "billableTokens": 12},
+            }
+            _write_json(host_artifact, {**base, "operationId": "host-op", "attestation": {"source": "host", "status": "ATTESTED"}})
+            _write_json(
+                estimate_artifact,
+                {**base, "operationId": "estimate-op", "attestation": {"source": "core-estimate", "status": "ATTESTED"}},
+            )
+
+            export = build_usage_export(artifact_paths=[host_artifact, estimate_artifact], project_root=root)
+
+        confidence = {entry["operationId"]: entry["usageConfidence"] for entry in export["entries"]}
+        self.assertEqual(confidence, {"estimate-op": "INVALID", "host-op": "ATTESTED"})
 
     def test_validation_rejects_canonical_money_claim(self) -> None:
         export = {

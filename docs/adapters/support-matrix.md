@@ -24,6 +24,14 @@ Every generic descriptor-driven launch request is blocked with
 `adapter-generic-launch-disabled` before a host process is created; a descriptor
 status cannot bypass that boundary.
 
+Host-local token normalization is a separate claim. Gemini CLI, Kimi Code and
+Qwen Code declare `usageNormalization.status: FIXTURE_ONLY`; their bounded
+parsers are tested, but their sidecars do not satisfy S1/S2 usage gates. Other
+bundled descriptors have no declaration and are treated as `UNSUPPORTED` by
+this contract. Qwen Code's adapter maturity remains `VERIFIED`; that does not
+implicitly qualify the newly factored parser. See
+[Host-local token accounting](../reference/host-local-token-accounting.md).
+
 ## Runtime support
 
 | Host | Projection | Current maturity | Managed launch | Install/publication claim |

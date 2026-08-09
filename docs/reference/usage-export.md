@@ -12,6 +12,11 @@ The export records:
 - step counts, durations and resource units such as context bytes or tool calls;
 - optional budget decisions;
 - optional `cost_usd` only when a metered host reports it.
+- `usageConfidence`: `ATTESTED`, `ESTIMATED`, `MISSING` or `INVALID`.
+
+`ATTESTED` requires both `attestation.source: host` and
+`attestation.status: ATTESTED`. A core estimate or fixture receipt remains
+`ESTIMATED` even when it contains exact numeric counters for its own input.
 
 `cost_usd` is metadata, not canonical accounting. Token and resource totals are
 the portable common layer. The core has no built-in rate catalog and does not
@@ -34,3 +39,6 @@ agent-lifecycle metrics usage-export \
 
 Outputs are write-once. String fields copied from source artifacts are redacted
 for local absolute paths and common secret markers before validation.
+
+See [Host-local token accounting](host-local-token-accounting.md) for adapter
+normalizer status and S1/S2 acceptance rules.
