@@ -35,12 +35,12 @@ class ReleaseEvidencePortabilityValidatorTests(unittest.TestCase):
     def test_private_paths_credentials_and_raw_output_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            private_path = Path("/").joinpath("Users", "example", "secret.txt")
+            private_path = "/" + "Users/example/secret.txt"
             source = root / "source.json"
             source.write_text(
                 json.dumps(
                     {
-                        "path": str(private_path),
+                        "path": private_path,
                         "authorization": "Bearer " + "x" * 24,
                         "token": "opaque-value",
                         "stderrTail": "raw process failure",
