@@ -18,7 +18,10 @@ class HostUsageNormalizerValidatorTests(unittest.TestCase):
         payload = validate_host_usage_normalizers(ROOT / "adapters")
 
         self.assertEqual(payload["status"], "PASS", payload["blockers"])
-        self.assertEqual({check["adapterId"] for check in payload["checks"]}, {"gemini-cli", "kimi-code", "qwen-code"})
+        self.assertEqual(
+            {check["adapterId"] for check in payload["checks"]},
+            {"claude", "codex", "gemini-cli", "kimi-code", "opencode", "qwen-code"},
+        )
 
     def test_forbidden_process_import_and_call_fail(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -49,6 +52,34 @@ class HostUsageNormalizerValidatorTests(unittest.TestCase):
         codes = {item["code"] for item in payload["blockers"]}
         self.assertIn("usage-normalizer-forbidden-import", codes)
         self.assertIn("usage-normalizer-forbidden-call", codes)
+
+    def test_qualified_normalizer_requires_host_range_and_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            adapter = root / "adapters/qualified"
+            adapter.mkdir(parents=True)
+            (adapter / "usage_normalizer.py").write_text(
+                "def parse_usage(source, **kwargs):\n    return source\n",
+                encoding="utf-8",
+            )
+            (adapter / "adapter.descriptor.json").write_text(
+                json.dumps(
+                    {
+                        "adapterId": "qualified",
+                        "usageNormalization": {
+                            "status": "QUALIFIED",
+                            "acceptedForS1S2": True,
+                            "path": "adapters/qualified/usage_normalizer.py",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            payload = validate_host_usage_normalizers(root / "adapters")
+
+        self.assertEqual(payload["status"], "FAIL")
+        self.assertIn("usage-normalizer-qualified-evidence-missing", {item["code"] for item in payload["blockers"]})
 
 
 if __name__ == "__main__":

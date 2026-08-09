@@ -803,6 +803,19 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/qualified-host-launch.md",
+        (
+            "agent-host-launch-qualification-receipt.v1",
+            "adapter launch-profile",
+            "0.147.0",
+            "2.1.226",
+            "1.18.15",
+            "WRAPPER_ONLY",
+            "FIXTURE_ONLY",
+            "acceptedForS1S2: false",
+        ),
+    ),
+    (
         "docs/reference/readiness-diagnostics.md",
         (
             "`agent-adapter-install-plan.v1`",
@@ -872,6 +885,19 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "adapter session start --launch",
             "`WRAPPER_ONLY`",
             "Текст задачи",
+        ),
+    ),
+    (
+        "docs/ru/reference/qualified-host-launch.md",
+        (
+            "agent-host-launch-qualification-receipt.v1",
+            "adapter launch-profile",
+            "0.147.0",
+            "2.1.226",
+            "1.18.15",
+            "WRAPPER_ONLY",
+            "FIXTURE_ONLY",
+            "acceptedForS1S2: false",
         ),
     ),
     (

@@ -44,6 +44,7 @@ def _inspect_opencode(
         "permissionMode": {"status": "UNKNOWN"},
         "modelSelection": {"status": "UNKNOWN"},
         "resultExport": {"status": "UNKNOWN"},
+        "qualifiedLocalLaunch": {"status": "VERSION_BOUND", "implicitApproval": False},
         "authState": {"status": "NOT_PROBED", "reason": "credential-state-redacted"},
         "configuration": {},
     }
@@ -113,7 +114,12 @@ def _inspect_opencode(
     else:
         capabilities["headlessExecution"] = {"status": "SUPPORTED", "command": "run", "jsonFormat": "--format json", "workingDirectory": "--dir"}
         capabilities["eventStream"] = {"status": "DISCOVERED", "source": "run-json-output", "requiresReceiptValidation": True}
-        capabilities["permissionMode"] = {"status": "DISCOVERED", "autoApproveFlag": "--auto", "adapterPolicy": "fail-closed"}
+        capabilities["permissionMode"] = {
+            "status": "DISCOVERED",
+            "autoApproveFlag": "--auto",
+            "implicitApproval": False,
+            "adapterPolicy": "fail-closed",
+        }
         capabilities["modelSelection"] = {"status": "DISCOVERED", "selector": "--model"}
 
     export_help, _ = _run_command_check(

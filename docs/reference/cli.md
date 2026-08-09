@@ -10,7 +10,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.56.0
+python -m pip install agent-lifecycle-kit==1.57.0
 ```
 
 ## Foundation
@@ -159,6 +159,11 @@ atomic interface for scripts and advanced operators.
 - `agent-lifecycle adapter scaffold`: create an `EXPERIMENTAL` adapter
   skeleton.
 - `agent-lifecycle adapter install-plan`: preview host setup without writes.
+- `agent-lifecycle adapter launch-profile --adapter codex|claude|opencode
+  --repository-root <ALK checkout> --out .alk/host-launch/<adapter>.json`:
+  create a version-bound local profile without executing the host. Follow with
+  `host-launch preflight`; see [Qualified host
+  launch](qualified-host-launch.md).
 - `agent-lifecycle adapter event-check`: validate neutral adapter event
   streams.
 - `agent-lifecycle adapter event-capture-check`: validate declared

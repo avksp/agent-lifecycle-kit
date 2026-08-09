@@ -189,6 +189,22 @@
     "writesNativeConfig": false,
     "promptInjectionDefault": false
   },
+  "qualifiedLaunch": {
+    "status": "VERSION_BOUND_LOCAL",
+    "profilePath": "adapters/codex/launch_profile.py",
+    "expectedHostVersion": "0.147.0",
+    "managedLaunchStatusPreserved": "WRAPPER_ONLY",
+    "publicSupportClaimed": false,
+    "productionPromotionClaimed": false
+  },
+  "usageNormalization": {
+    "contract": "adapter-local-usage-normalizer.v1",
+    "status": "FIXTURE_ONLY",
+    "acceptedForS1S2": false,
+    "path": "adapters/codex/usage_normalizer.py",
+    "artifactFormat": "stream-jsonl",
+    "maxArtifactBytes": 8388608
+  },
   "installation": {
     "schemaVersion": "agent-adapter-installation-facts.v1",
     "binaryAliases": ["codex"],
