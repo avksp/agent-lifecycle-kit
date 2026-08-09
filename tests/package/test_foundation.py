@@ -18,8 +18,8 @@ class FoundationTests(unittest.TestCase):
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         project = pyproject["project"]
         self.assertEqual(project["name"], "agent-lifecycle-kit")
-        self.assertEqual(project["version"], "1.50.2")
-        self.assertEqual(project["requires-python"], ">=3.11,<3.14")
+        self.assertEqual(project["version"], "1.51.0")
+        self.assertEqual(project["requires-python"], ">=3.11,<3.15")
         self.assertEqual(project["license"]["text"], "Apache-2.0")
         self.assertEqual(project["dependencies"], [])
         self.assertIn("Development Status :: 5 - Production/Stable", project["classifiers"])
@@ -59,10 +59,10 @@ class FoundationTests(unittest.TestCase):
     def test_uv_lock_declares_runtime_graph(self) -> None:
         lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
         self.assertEqual(lock["version"], 1)
-        self.assertEqual(lock["requires-python"], ">=3.11,<3.14")
+        self.assertEqual(lock["requires-python"], ">=3.11, <3.15")
         packages = {package["name"]: package for package in lock["package"]}
         self.assertIn("agent-lifecycle-kit", packages)
-        self.assertEqual(packages["agent-lifecycle-kit"]["version"], "1.50.2")
+        self.assertEqual(packages["agent-lifecycle-kit"]["version"], "1.51.0")
 
     def test_foundation_ci_uses_stdlib_unittest(self) -> None:
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
