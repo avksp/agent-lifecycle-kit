@@ -10,6 +10,7 @@ from agent_lifecycle.contracts.redaction import redact_text
 ADAPTER_SESSION_RECEIPT_SCHEMA = "agent-adapter-session-receipt.v1"
 MANAGED_ADAPTER_LAUNCH_RECEIPT_SCHEMA = "agent-managed-adapter-launch-receipt.v1"
 ADAPTER_SESSION_RESUME_RECEIPT_SCHEMA = "agent-adapter-session-resume-receipt.v1"
+LIFECYCLE_START_RECEIPT_SCHEMA = "agent-lifecycle-start-receipt.v1"
 
 
 def build_adapter_session_receipt(
@@ -122,6 +123,44 @@ def build_resume_receipt(
         "managedWorkflow": not items and bool(actual_identity),
         "lifecycleCoverageClaimed": not items and bool(actual_identity),
         "blockers": items,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def build_lifecycle_start_receipt(
+    *,
+    status: str,
+    adapter_id: str,
+    requested_mode: str,
+    action: str,
+    input_summary: dict[str, Any],
+    delegate_summary: dict[str, Any] | None = None,
+    execution_started: bool = False,
+    lifecycle_coverage_claimed: bool = False,
+    requires_review: bool = False,
+    blockers: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Build the public, path-safe receipt for the unified start facade."""
+
+    body = {
+        "schemaVersion": LIFECYCLE_START_RECEIPT_SCHEMA,
+        "status": status,
+        "adapterId": adapter_id,
+        "requestedMode": requested_mode,
+        "action": action,
+        "input": input_summary,
+        "delegate": delegate_summary,
+        "executionStarted": execution_started,
+        "lifecycleCoverageClaimed": lifecycle_coverage_claimed,
+        "requiresReview": requires_review,
+        "modelCallsStarted": False,
+        "hostLaunchStarted": False,
+        "nativeSessionAttached": False,
+        "rawTaskTextStored": False,
+        "secretsWritten": False,
+        "nativeConfigWritten": False,
+        "blockers": blockers or [],
         "productionPromotionClaimed": False,
     }
     return {**body, "receiptDigest": canonical_digest(body)}

@@ -12,12 +12,15 @@ from agent_lifecycle.cli.dispatch_observability import dispatch_observability
 from agent_lifecycle.cli.dispatch_planning import dispatch_planning
 from agent_lifecycle.cli.followup import dispatch_followup
 from agent_lifecycle.cli.policy import dispatch_policy
+from agent_lifecycle.cli.start import dispatch_start
 from agent_lifecycle.cli.worktree import dispatch_worktree
 from agent_lifecycle.contracts import LifecycleError
 
 
 def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] | str | None:
     """Route a parsed command without owning domain behavior or CLI output."""
+    if args.command == "start":
+        return dispatch_start(args, remainder)
     del remainder
     if args.command in {"diagnose", "diagnostics", "adapter"}:
         return dispatch_adapters(args)

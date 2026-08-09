@@ -3,6 +3,10 @@
 Управляемые сессии адаптеров дают оператору одну точку входа ALK для работы
 через адаптеры, но не превращают ALK во вторую среду выполнения кодового агента.
 
+Самая простая точка входа - `agent-lifecycle start`. Она выбирает приём задачи,
+явную передачу зафиксированного запроса управляемому шагу или возобновление
+сохранённой сессии, сохраняя прежние низкоуровневые контракты.
+
 Есть три режима:
 
 - интерактивная сессия: `adapter session start --adapter <id>` записывает
@@ -27,6 +31,11 @@
 ## Команды
 
 ```bash
+agent-lifecycle start --adapter codex --file task.md
+agent-lifecycle start --adapter codex --mode research --text "Исследуй текущую архитектуру"
+agent-lifecycle start --adapter codex --mode implement --file adapter-run-request.json
+agent-lifecycle start --adapter codex --resume <session-id>
+
 agent-lifecycle adapter session start --adapter codex
 agent-lifecycle adapter session start --adapter codex --launch
 agent-lifecycle adapter session status --session <session-id>
@@ -48,6 +57,14 @@ agent-lifecycle adapter run \
   --lock <plan.lock.json> \
   --task <task-id>
 ```
+
+`start` возвращает `agent-lifecycle-start-receipt.v1`. Сводка вложенного
+результата содержит только устойчивые статусы, рекомендации и отпечатки
+подтверждений; исходный текст задачи и локальные абсолютные пути исключены.
+Режимы `auto`, `research`, `plan` и `review` ничего не выполняют. Режим
+`implement` передаёт только полный структурированный зафиксированный запрос.
+Возобновление принимает только сессию, записанную ALK, проверяет адаптер и
+происхождение состояния и не подключается к диалогу внешнего инструмента.
 
 `adapter task start` возвращает `agent-adapter-task-start-receipt.v1`. Для
 обычного текста и Markdown подтверждение хранит только метку источника, отпечаток и
@@ -100,6 +117,7 @@ start --launch` и прямой общий запуск через дескри�
 Стабильные подтверждения: `agent-adapter-session-receipt.v1`,
 `agent-managed-adapter-launch-receipt.v1`,
 `agent-adapter-session-resume-receipt.v1`,
-`agent-adapter-task-start-receipt.v1` и
-`agent-adapter-task-run-request.v1`. Рекомендации групповой проверки используют
+`agent-adapter-task-start-receipt.v1`,
+`agent-adapter-task-run-request.v1` и `agent-lifecycle-start-receipt.v1`.
+Рекомендации групповой проверки используют
 `agent-review-mesh-recommendation.v1`.

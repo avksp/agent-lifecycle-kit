@@ -9,7 +9,7 @@ JSON, чтобы результат можно было проверять ав�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.51.0
+python -m pip install agent-lifecycle-kit==1.52.0
 ```
 
 ## Основа
@@ -43,6 +43,17 @@ python -m pip install agent-lifecycle-kit==1.51.0
   проверка Markdown, проверка изменений и аудит реализации.
 
 ## Выполнение
+
+- `agent-lifecycle start --adapter <id> (--file task.md | --text "..." |
+  --resume <session-id>)`: единая команда над приёмом задачи, передачей
+  зафиксированного запроса управляемому шагу и возобновлением сохранённой сессии
+  ALK. Псевдонимы источников: `--task-file` и `--task-text`; требуется ровно
+  одно действие. Режим `--mode auto|research|plan|review|implement` по умолчанию
+  равен `auto`. Обычный ввод и все режимы, кроме явного `implement`, ничего не
+  выполняют. Для `implement` нужен структурированный зафиксированный запрос с
+  полной привязкой состояния, манифеста, lock-файла, задачи, операции и ревизий.
+  Команда возвращает `agent-lifecycle-start-receipt.v1`, не запускает внешний
+  CLI и не принимает `--resume` за идентификатор диалога внешнего инструмента.
 
 - `agent-lifecycle workflow run`: проверяет связь зафиксированного плана и
   сохранённого состояния, затем возвращает следующий шаг для хоста без записи
@@ -113,6 +124,10 @@ python -m pip install agent-lifecycle-kit==1.51.0
   кворума. Эти команды не вызывают модели и не запускают CLI хоста.
 
 ## Адаптеры
+
+Для обычного запуска используйте `agent-lifecycle start`. Следующие команды
+остаются отдельным интерфейсом для сценариев автоматизации и опытных
+пользователей.
 
 - `agent-lifecycle adapter validate`: проверка дескриптора.
 - `agent-lifecycle adapter inspect`: безопасный осмотр адаптера.

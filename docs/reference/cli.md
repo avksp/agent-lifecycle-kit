@@ -10,7 +10,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.51.0
+python -m pip install agent-lifecycle-kit==1.52.0
 ```
 
 ## Foundation
@@ -44,6 +44,17 @@ python -m pip install agent-lifecycle-kit==1.51.0
   `docs/guides/lifecycle-cookbook.md`.
 
 ## Execution
+
+- `agent-lifecycle start --adapter <id> (--file task.md | --text "..." |
+  --resume <session-id>)`: beginner-facing facade over task intake, frozen
+  managed-run delegation and stored ALK session resume. Task-source aliases are
+  `--task-file` and `--task-text`; exactly one action is required.
+  `--mode auto|research|plan|review|implement` defaults to `auto`. Raw input and
+  every mode except explicit `implement` remain non-executing. `implement`
+  requires a structured frozen request with complete state, manifest, lock,
+  task, operation and revision bindings. The command returns
+  `agent-lifecycle-start-receipt.v1`, does not launch a host CLI and never
+  treats `--resume` as a native host conversation identifier.
 
 - `agent-lifecycle workflow run`: verify the frozen plan/state binding and
   return the next host-owned action without mutating state or starting model
@@ -132,6 +143,9 @@ python -m pip install agent-lifecycle-kit==1.51.0
   attempt isolation.
 
 ## Adapters
+
+Use `agent-lifecycle start` for the simple path. The commands below remain the
+atomic interface for scripts and advanced operators.
 
 - `agent-lifecycle adapter validate`: check a descriptor against the baseline.
 - `agent-lifecycle adapter inspect`: inspect source projection and safe host
