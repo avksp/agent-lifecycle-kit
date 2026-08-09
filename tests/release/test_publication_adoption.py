@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -14,7 +15,7 @@ sys.path.insert(0, str(TOOLS_RELEASE))
 from validate_publication_adoption import validate_publication_adoption  # noqa: E402
 
 
-TARGET_VERSION = "1.50.1"
+TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 
 
 class PublicationAdoptionTests(unittest.TestCase):

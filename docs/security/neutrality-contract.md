@@ -27,3 +27,13 @@ The producer writes the primary report first with create-no-replace semantics
 and publishes a detached signed receipt last as the commit marker. A
 same-operation replay is read-only and byte-identical; occupied, substituted,
 partial, aliased, or raced outputs fail closed.
+
+## Completeness counters
+
+A report is eligible for signing, and an existing signed receipt is eligible
+for reuse, only when every required counter is present as the integer zero:
+`findings`, `skippedInputs`, `opaqueInputs`, `readRaces`, `incompleteScans`,
+`unsupportedArchives`, `archiveLimitBreaches`, `occupiedOutputConflicts`, and
+`pathAliasConflicts`. A missing, non-integer, or nonzero value makes the
+operation fail closed. The rule applies even when the caller did not request a
+separate zero-findings convenience flag.

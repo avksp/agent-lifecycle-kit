@@ -138,6 +138,11 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle adapter session start/status/resume/promote`: record and
   resume adapter sessions. Plain interactive sessions return
   `WAITING_FOR_TASK`; promoted sessions bind to workflow state and task lineage.
+- `agent-lifecycle adapter session start --launch`: validates the requested
+  launch profile, then returns `adapter-generic-launch-disabled` before process
+  creation. A descriptor alone never authorizes a generic native host launch.
+  Generic environment selection accepts exact allowlisted variable names only;
+  wildcard patterns are rejected.
 - `agent-lifecycle adapter task start --adapter <id> (--file task.md |
   --text "...")`: accept task input for a selected adapter. Raw text and
   Markdown produce `agent-adapter-task-start-receipt.v1` with
@@ -150,7 +155,8 @@ read-only unless their own help says otherwise.
 - `agent-lifecycle adapter run`: bind an adapter session to a frozen workflow
   state and return an ALK-managed next action. Progress is shown on stderr by
   default for this managed path, while JSON stdout stays
-  `agent-adapter-session-receipt.v1`.
+  `agent-adapter-session-receipt.v1`. It does not bypass the generic launch
+  block or start a native host process.
 
 ## Diagnostics and evidence
 

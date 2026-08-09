@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "1f55e2f940c1a6dacc06373430b9c83f1dc4eb7b78bf2532bb2522ae4a07a019",
+  "descriptorDigest": "1b7615d4b2a6e8d7362036ee6ff102c70306aeaf97784be97f25930aee751894",
   "eventCapture": {
     "categories": [
       "command",
@@ -169,12 +169,7 @@
     "usageReceiptRequired": true
   },
   "promotion": {
-    "productionPromotionClaimed": false,
-    "verifiedRequiresLiveTestedHostRange": true,
     "liveTestedHostRange": {
-      "host": "pi",
-      "minimumVersion": "0.83.0",
-      "maximumVersion": "0.83.0",
       "evidence": [
         "docs/adapters/evidence/pi-live-verified.md",
         "work/release-1-19/evidence/pi-install-probe.json",
@@ -188,11 +183,16 @@
         "work/release-1-19/evidence/host-env-hygiene-pi-all-scanned.json",
         "work/release-1-19/evidence/pi/full-lifecycle/final/final-proof.json"
       ],
-      "testedAt": "2026-08-01",
+      "host": "pi",
+      "maximumVersion": "0.83.0",
+      "minimumVersion": "0.83.0",
       "productionPromotionClaimed": false,
       "publicDirectoryApprovalClaimed": false,
-      "sourceRevision": "75317878358a3dffa4b503cdb8bd8fff40de770b"
-    }
+      "sourceRevision": "75317878358a3dffa4b503cdb8bd8fff40de770b",
+      "testedAt": "2026-08-01"
+    },
+    "productionPromotionClaimed": false,
+    "verifiedRequiresLiveTestedHostRange": true
   },
   "runtimeBoundary": {
     "hostSpecificCode": "adapter-owned",

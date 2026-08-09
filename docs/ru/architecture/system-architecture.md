@@ -205,7 +205,7 @@ flowchart LR
 
 | Компонент | Основные модули | Когда вызывается |
 | --- | --- | --- |
-| Маршрутизация CLI | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/adapter.py` | Любая команда `agent-lifecycle ...` начинается здесь. |
+| Маршрутизация CLI | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/dispatch_adapters.py`, `cli/dispatch_contracts.py`, `cli/dispatch_lifecycle.py`, `cli/dispatch_observability.py`, `cli/dispatch_planning.py`, `cli/adapter.py` | Любая команда `agent-lifecycle ...` начинается здесь; корневой диспетчер выбирает специализированный обработчик группы команд. |
 | Контракты | `contracts/*` | Все публичные подтверждения, схемы, отпечатки и проверочные конверты. |
 | Поиск изменений | `changesets/git.py` | Аудит владения и реализации по Git-изменениям. |
 | Компиляция заданий | `compiler/task_packets.py`, `compiler/small_model_packets.py` | Преобразование зафиксированного графа задач в рабочие и компактные пакеты. |
@@ -235,21 +235,27 @@ sequenceDiagram
   participant Main as cli/main.py
   participant Parser as cli/parsers.py
   participant Dispatch as cli/dispatch.py
+  participant Handler as cli/dispatch_*.py
   participant Service as Доменный сервис
   participant Contracts as contracts/*
 
   User->>Main: agent-lifecycle <command>
   Main->>Parser: build_parser()
   Main->>Dispatch: dispatch(args, remainder)
-  Dispatch->>Service: вызов выбранного сервиса
+  Dispatch->>Handler: выбор группы команд
+  Handler->>Service: вызов выбранного сервиса
   Service->>Contracts: проверка, отпечаток, чтение и запись JSON
-  Service-->>Dispatch: типизированное подтверждение или отчёт
+  Service-->>Handler: типизированное подтверждение или отчёт
+  Handler-->>Dispatch: JSON-совместимый объект
   Dispatch-->>Main: JSON-совместимый объект
   Main-->>User: стабильный JSON в stdout
 ```
 
-Паттерн: диспетчер команд и функциональное ядро. CLI-модули должны оставаться
-тонкими; поведение и тесты живут в доменных сервисах.
+Паттерн: диспетчер команд и функциональное ядро. `cli/dispatch.py` только
+выбирает один из пяти обработчиков групп команд: адаптеры и готовность,
+контракты и подтверждения, жизненный цикл, наблюдаемость или планирование.
+CLI-модули должны оставаться тонкими; поведение и тесты живут в доменных
+сервисах.
 
 ### Приём обычной задачи или Markdown
 
@@ -450,7 +456,7 @@ flowchart LR
 | --- | --- | --- |
 | Порты и адаптеры | `adapters/*`, `host_protocol/*`, `adapter_sessions/*` | Держать команды хоста, секреты и возможности вне ядра жизненного цикла. |
 | Контракты сначала | `contracts/*`, `schemas.py`, публичные `.v1` подтверждения | Делать каждое заявление жизненного цикла машинно проверяемым и переносимым. |
-| Диспетчер команд | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py` | Оставлять CLI тонким и направлять поведение в доменные сервисы. |
+| Диспетчер команд | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/dispatch_*.py` | Оставлять корневой CLI тонким и направлять каждую группу команд в её доменный обработчик. |
 | Функциональное ядро и императивная оболочка | Функции создания и проверки возвращают словари; CLI работает с путями и выводом. | Упростить тестирование и чтение небольшими моделями. |
 | Конечный автомат | `workflow/state.py`, `workflow/task_transitions.py`, `runner/core.py` | Сделать фазы жизненного цикла явными и отказывать при недопустимых переходах. |
 | Ядро операции | `workflow/operation_kernel.py` | Централизовать проверку ревизии, идемпотентность и запись состояния/событий. |

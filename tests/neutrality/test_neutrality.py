@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import sys
 import tempfile
@@ -24,6 +25,12 @@ from agent_lifecycle.neutrality.ed25519 import fingerprint, publickey_from_seed,
 from agent_lifecycle.neutrality.errors import NeutralityError  # noqa: E402
 from agent_lifecycle.neutrality.paths import validate_output_paths  # noqa: E402
 from agent_lifecycle.neutrality.policy import load_policy  # noqa: E402
+from agent_lifecycle.neutrality.receipt import (  # noqa: E402
+    REQUIRED_COMPLETENESS_COUNTERS,
+    build_claims,
+    require_zero_completeness_counters,
+    verify_existing_receipt,
+)
 from agent_lifecycle.neutrality.scanner import scan_repository  # noqa: E402
 
 
@@ -66,6 +73,56 @@ class NeutralityTests(unittest.TestCase):
                 output_paths=[Path("out/report.json"), Path("out/receipt.json")],
             )
             self.assertEqual(report.to_json({"operationId": "op"})["counters"]["findings"], 0)
+
+    def test_signed_claims_reject_each_nonzero_completeness_counter(self) -> None:
+        report = _clean_report()
+        for counter in REQUIRED_COMPLETENESS_COUNTERS:
+            with self.subTest(counter=counter):
+                candidate = json.loads(json.dumps(report))
+                candidate["counters"][counter] = 1
+                with self.assertRaises(NeutralityError) as raised:
+                    build_claims(
+                        operation={"operationId": "op"},
+                        report=candidate,
+                        authority_digest="0" * 64,
+                        primary_path="out/report.json",
+                        receipt_path="out/receipt.json",
+                        policy={"archives": {}},
+                        profile={},
+                    )
+                self.assertEqual(raised.exception.code, "neutrality-counters-nonzero")
+
+    def test_existing_receipt_rejects_mutated_nonzero_counter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = Path(tempfile.mkdtemp())
+            seed = b"n" * 32
+            paths = _write_authority(root, seed, datetime.now(UTC).replace(microsecond=0), authority_root=outside)
+            self.assertEqual(_run_cli(root, seed, env_paths=paths), 0)
+            original_report = json.loads((root / "out/report.json").read_text(encoding="utf-8"))
+            original_receipt = json.loads((root / "out/receipt.json").read_text(encoding="utf-8"))
+            for counter in REQUIRED_COMPLETENESS_COUNTERS:
+                with self.subTest(counter=counter):
+                    report = json.loads(json.dumps(original_report))
+                    receipt = json.loads(json.dumps(original_receipt))
+                    report["counters"][counter] = 1
+                    report_bytes = json.dumps(report, sort_keys=True).encode("utf-8")
+                    (root / "out/report.json").write_bytes(report_bytes)
+                    receipt["primaryArtifact"] = {"sha256": hashlib.sha256(report_bytes).hexdigest(), "bytes": len(report_bytes)}
+                    (root / "out/receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
+                    self.assertFalse(
+                        verify_existing_receipt(
+                            receipt_path=root / "out/receipt.json",
+                            primary_path=root / "out/report.json",
+                            expected_operation=None,
+                            trust_root_path=paths["trust"],
+                            expected_signer_fingerprint=fingerprint(publickey_from_seed(seed)),
+                        )
+                    )
+
+    def test_completeness_counter_helper_rejects_missing_counter(self) -> None:
+        with self.assertRaises(NeutralityError):
+            require_zero_completeness_counters({"counters": {"findings": 0}})
 
     def test_output_alias_conflict_fails_closed(self) -> None:
         with self.assertRaises(NeutralityError) as caught:
@@ -381,6 +438,18 @@ def _policy(
         encoding="utf-8",
     )
     return load_policy(path)
+
+
+def _clean_report() -> dict:
+    return {
+        "scope": "current-tree-complete",
+        "counters": {name: 0 for name in REQUIRED_COMPLETENESS_COUNTERS},
+        "digests": {
+            "workingTreeDigest": "0" * 64,
+            "gitObjectSetDigest": "1" * 64,
+            "subjectDigest": "2" * 64,
+        },
+    }
 
 
 def _scan_root(root: Path, policy: object) -> object:

@@ -49,8 +49,10 @@ must not launch model work or produce promotion claims.
 agent-lifecycle adapter install-plan --descriptor adapters/opencode/adapter.descriptor.json
 ```
 
-The output schema is `agent-adapter-install-plan.v1`. The plan records files,
-commands and operator actions, but it is always a dry run:
+The output schema is `agent-adapter-install-plan.v1`. The plan projects
+schema-validated installation facts from the adapter descriptor: binary aliases,
+files, argv arrays and operator actions. Diagnostics never interpret the argv
+arrays as a shell command or execute them. It is always a dry run:
 
 - `writesStarted: false`;
 - `liveCallsStarted: false`;

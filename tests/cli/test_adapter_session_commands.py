@@ -33,6 +33,50 @@ class AdapterSessionCommandTests(unittest.TestCase):
         self.assertEqual(status["status"], "BLOCKED")
         self.assertFalse(status["lifecycleCoverageClaimed"])
 
+    def test_session_start_blocks_custom_supported_descriptor_before_launch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sessions = root / "sessions"
+            descriptor = root / "adapter.descriptor.json"
+            descriptor.write_text(
+                json.dumps(
+                    {
+                        "adapterId": "codex",
+                        "managedLaunch": {
+                            "status": "SUPPORTED",
+                            "shell": False,
+                            "timeoutSeconds": 5.0,
+                            "env": {"allow": [], "allowPatterns": [], "projectPolicyAllowed": False},
+                            "writesNativeConfig": False,
+                            "promptInjectionDefault": False,
+                            "argvTemplates": {"interactive": ["codex"], "managedTask": ["codex"], "resume": ["codex"]},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            code, payload, stderr = _run_cli(
+                [
+                    "adapter",
+                    "session",
+                    "start",
+                    "--adapter",
+                    "codex",
+                    "--descriptor",
+                    str(descriptor),
+                    "--session-root",
+                    str(sessions),
+                    "--launch",
+                ]
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertEqual(payload["status"], "BLOCKED")
+        self.assertFalse(payload["hostLaunchStarted"])
+        self.assertIn("adapter-generic-launch-disabled", {item["code"] for item in payload["launchReceipt"]["blockers"]})
+
     def test_adapter_run_preserves_stdout_json_and_prints_progress_to_stderr(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
