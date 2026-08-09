@@ -158,6 +158,7 @@ flowchart LR
   metrics[metrics and policy]
   context[context and evidence]
   quality[quality profiles]
+  benchmarks[reference task evaluation]
   neutrality[neutrality]
   runner[runner]
   worktree[worktree]
@@ -171,6 +172,7 @@ flowchart LR
   cli --> reporting
   cli --> metrics
   cli --> context
+  cli --> benchmarks
   cli --> neutrality
   cli --> runner
   cli --> worktree
@@ -192,6 +194,8 @@ flowchart LR
   audit --> review_mesh
   reporting --> workflow
   metrics --> contracts
+  benchmarks --> contracts
+  metrics --> benchmarks
   context --> contracts
   neutrality --> contracts
   runner --> workflow
@@ -213,6 +217,7 @@ flowchart LR
 | Review coordination | `review_mesh/*` | Optional recommendation, operator templates, reviewer packet preparation, assignments, result import, synthesis and quorum. |
 | Reporting | `reporting/*` | Read-only status, event feed, progress, change summary and progress bridge. |
 | Metrics and policy | `metrics/*`, `policy/*`, `model_routing/*` | Usage export, token/resource policy, quality-cost signals and model class routing. |
+| Reference task evaluation | `benchmarks/*`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Read-only deterministic quality, false-acceptance, retry, elapsed-time and token-confidence comparison. |
 | Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, external context imports, goal views and continuation records. |
 | Neutrality | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Git-index-bound release scanning, optional policy-limited local evidence, stable reads, authority checks and signed neutrality receipts. |
 | Runner | `runner/*` | Bounded execution-loop state over existing workflow primitives. |
@@ -508,6 +513,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 | Bug repair | `adapter task start` plus frozen plan gates | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Defect-shaped recommendation, then plan-required receipts. |
 | External context | `context external-import` and episode retrieval | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Optional context hints with no proof authority. |
 | Goal status | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Read-only goal and lifecycle progress view. |
+| Reference comparison | `benchmark evaluate` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Deterministic evaluation receipt with no model or host call and no production claim. |
 | Progress display | `report progress`, `report progress-bridge`, progress hooks | `reporting/*`, `cli/progress_hooks.py` | Terminal or JSON progress without model calls. |
 | Release check | Release tools and tests | `tools/release/*`, `contracts/release_contract_schemas.py`, docs/tests | Source-release validation and evidence. |
 

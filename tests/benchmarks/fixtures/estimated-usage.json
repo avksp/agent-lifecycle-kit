@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "agent-reference-task-submission.v1",
+  "taskId": "rt01-planning",
+  "taskVersion": "1.0.0",
+  "accepted": true,
+  "evidence": {
+    "usageExport": {"schemaVersion": "agent-usage-export.v1", "entries": [{"usageConfidence": "ESTIMATED", "tokens": {"input": 12, "output": 8, "total": 20}, "durationMs": 50}]},
+    "outcomeIndex": {"schemaVersion": "agent-task-outcome-index.v1", "records": [{"taskId": "rt01-planning", "retries": 0}]}
+  },
+  "productionPromotionClaimed": false
+}

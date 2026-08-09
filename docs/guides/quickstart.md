@@ -28,7 +28,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.57.0
+python -m pip install agent-lifecycle-kit==1.58.0
 agent-lifecycle version
 ```
 
@@ -275,6 +275,23 @@ agent-lifecycle goal view \
 
 The command only reads existing artifacts. It is safe to run in a second
 terminal while another adapter is working.
+
+## Compare process changes locally
+
+Run the bundled deterministic suite without a model account or external CLI:
+
+```bash
+mkdir -p work
+cp tests/benchmarks/fixtures/accepted-pass.json work/benchmark-submission.json
+agent-lifecycle benchmark evaluate \
+  --suite benchmarks/reference-tasks/manifest.json \
+  --artifact work/benchmark-submission.json \
+  --out work/benchmark-evaluation.json
+```
+
+The receipt reports oracle results, false acceptances, retries, elapsed time,
+and confidence-labeled token buckets. See the [reference task evaluation
+guide](reference-task-evaluation.md) before comparing runs.
 
 ## Check release neutrality
 

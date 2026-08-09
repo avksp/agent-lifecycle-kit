@@ -10,7 +10,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.57.0
+python -m pip install agent-lifecycle-kit==1.58.0
 ```
 
 ## Foundation
@@ -91,6 +91,9 @@ python -m pip install agent-lifecycle-kit==1.57.0
 
 ## Review and quality
 
+- `agent-lifecycle benchmark evaluate`: compare an explicit submission with the
+  bundled deterministic reference-task suite and emit
+  `agent-reference-task-evaluation.v1` without model or host calls.
 - `agent-lifecycle audit review-check`: validate review verdicts.
 - `agent-lifecycle audit implementation`: emit
   `agent-implementation-audit-report.v1` for a task result and independent

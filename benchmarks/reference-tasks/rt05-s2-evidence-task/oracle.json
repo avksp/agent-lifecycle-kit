@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "agent-reference-task-oracle.v1",
+  "taskId": "rt05-s2-evidence-task",
+  "taskVersion": "1.0.0",
+  "oracleType": "s2-evidence-task",
+  "requiredEvidenceSchemas": ["agent-run-final-proof.v1", "agent-final-implementation-audit-validation.v1", "agent-proof-integrity-validation.v1"],
+  "productionPromotionClaimed": false
+}

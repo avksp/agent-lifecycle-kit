@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.58.0 - 2026-08-10
+
+- Added a versioned five-task reference suite with deterministic planning,
+  architecture-review, Bug Forensics, S1 and S2 evidence oracles.
+- Added read-only `benchmark evaluate` receipts for quality, false acceptance,
+  retries, elapsed time and confidence-labeled token measurements.
+- Added English and Russian operator guidance, architecture coverage, contract
+  tests and publication checks for the reference evaluation workflow.
+
 ## 1.57.0 - 2026-08-10
 
 - Added exact-version local launch profiles and bounded preflight evidence for

@@ -1038,6 +1038,52 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/reference-task-evaluation.md",
+        (
+            "agent-lifecycle benchmark evaluate",
+            "`agent-reference-task-evaluation.v1`",
+            "`agent-reference-task-submission.v1`",
+            "`ATTESTED`, `ESTIMATED`, and `MISSING`",
+            "falseAcceptanceCount",
+            "does not call a model",
+            "cannot satisfy production evidence",
+        ),
+    ),
+    (
+        "docs/ru/reference/reference-task-evaluation.md",
+        (
+            "agent-lifecycle benchmark evaluate",
+            "`agent-reference-task-evaluation.v1`",
+            "`agent-reference-task-submission.v1`",
+            "`ATTESTED`, `ESTIMATED` и `MISSING`",
+            "falseAcceptanceCount",
+            "не вызывает модель",
+            "не заменяет промышленные подтверждения",
+        ),
+    ),
+    (
+        "docs/guides/reference-task-evaluation.md",
+        (
+            "agent-lifecycle benchmark evaluate",
+            "benchmarks/reference-tasks/manifest.json",
+            "accepted-pass.json",
+            "accepted-false.json",
+            "falseAcceptanceCount",
+            "No model account or external CLI is required",
+        ),
+    ),
+    (
+        "docs/ru/guides/reference-task-evaluation.md",
+        (
+            "agent-lifecycle benchmark evaluate",
+            "benchmarks/reference-tasks/manifest.json",
+            "accepted-pass.json",
+            "accepted-false.json",
+            "falseAcceptanceCount",
+            "Учётная запись модели и внешний инструмент не требуются",
+        ),
+    ),
+    (
         "release/notes/v0.19.0.md",
         (
             "Status: source release.",

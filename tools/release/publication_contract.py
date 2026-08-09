@@ -118,6 +118,36 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
         "kind": "text-package-pin",
         "fieldForm": "package.pin",
     },
+    {
+        "id": "root-readme-package-pin",
+        "path": "README.md",
+        "kind": "text-package-pin",
+        "fieldForm": "package.pin",
+    },
+    {
+        "id": "docs-index-package-pin",
+        "path": "docs/README.md",
+        "kind": "text-package-pin",
+        "fieldForm": "package.pin",
+    },
+    {
+        "id": "docs-index-ru-package-pin",
+        "path": "docs/ru/README.md",
+        "kind": "text-package-pin",
+        "fieldForm": "package.pin",
+    },
+    {
+        "id": "cli-reference-package-pin",
+        "path": "docs/reference/cli.md",
+        "kind": "text-package-pin",
+        "fieldForm": "package.pin",
+    },
+    {
+        "id": "cli-reference-ru-package-pin",
+        "path": "docs/ru/reference/cli.md",
+        "kind": "text-package-pin",
+        "fieldForm": "package.pin",
+    },
 )
 
 

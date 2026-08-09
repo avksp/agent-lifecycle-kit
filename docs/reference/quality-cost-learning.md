@@ -36,3 +36,12 @@ calls. `agent-lifecycle-recommendation.v1` remains advisory with
 
 Low-confidence data keeps the current or floor mode. Any policy change must go
 through the explicit policy proposal/apply path.
+
+## Repeatable comparison
+
+Use `agent-lifecycle benchmark evaluate` when a process change needs a fixed
+quality baseline rather than historical aggregation. The bundled reference
+suite applies deterministic oracles and reports false acceptances, retries,
+elapsed time, and confidence-labeled token buckets. It remains read-only and
+does not turn synthetic results into production evidence. See [Reference task
+evaluation](reference-task-evaluation.md).

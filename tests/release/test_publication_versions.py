@@ -80,6 +80,26 @@ class PublicationVersionTests(unittest.TestCase):
             self.assertEqual(result["status"], "FAIL")
             self.assertIn("quickstart-package-pin", {item["entryId"] for item in result["blockers"]})
 
+    def test_publication_manifest_tracks_every_exact_package_pin(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        pin_paths = {
+            entry["path"]
+            for entry in manifest["entries"]
+            if entry["fieldForm"] == "package.pin"
+        }
+        self.assertEqual(
+            pin_paths,
+            {
+                "README.md",
+                "docs/README.md",
+                "docs/ru/README.md",
+                "docs/guides/quickstart.md",
+                "docs/ru/quickstart.md",
+                "docs/reference/cli.md",
+                "docs/ru/reference/cli.md",
+            },
+        )
+
     def test_cli_writes_fail_evidence_and_nonzero_exit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -166,7 +186,15 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
             "plugins": [{"name": "agent-lifecycle-kit", "source": ".", "version": version}],
         },
     )
-    for path in ("docs/guides/quickstart.md", "docs/ru/quickstart.md"):
+    for path in (
+        "README.md",
+        "docs/README.md",
+        "docs/ru/README.md",
+        "docs/guides/quickstart.md",
+        "docs/ru/quickstart.md",
+        "docs/reference/cli.md",
+        "docs/ru/reference/cli.md",
+    ):
         target = root / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(f"python -m pip install agent-lifecycle-kit=={version}\n", encoding="utf-8")

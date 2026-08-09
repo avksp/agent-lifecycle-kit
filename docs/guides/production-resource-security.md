@@ -29,6 +29,11 @@ If pipeline compliance exceeds the mode limits, record why the stricter path
 was needed. Do not treat an expensive lifecycle run as success by itself; the
 implementation and product validation still have to pass.
 
+The bundled reference-task suite is a synthetic, read-only comparison tool.
+Its deterministic receipt can expose false acceptance and measurement gaps,
+but cannot prove production readiness, adapter maturity, or release promotion.
+See [Reference task evaluation](../reference/reference-task-evaluation.md).
+
 ## Small local models
 
 Small models should receive compact snapshots and receipts first:

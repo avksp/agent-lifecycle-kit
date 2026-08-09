@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "agent-reference-task-suite.v1",
+  "suiteId": "alk-core-reference",
+  "suiteVersion": "1.0.0",
+  "tasks": [
+    {"id": "rt01-planning", "version": "1.0.0", "family": "planning", "tier": "S0", "taskPath": "rt01-planning/task.md", "oraclePath": "rt01-planning/oracle.json"},
+    {"id": "rt02-architecture-review", "version": "1.0.0", "family": "architecture-review", "tier": "S2", "taskPath": "rt02-architecture-review/task.md", "oraclePath": "rt02-architecture-review/oracle.json"},
+    {"id": "rt03-bug-forensics", "version": "1.0.0", "family": "bug-forensics", "tier": "S1", "taskPath": "rt03-bug-forensics/task.md", "oraclePath": "rt03-bug-forensics/oracle.json"},
+    {"id": "rt04-s1-managed-task", "version": "1.0.0", "family": "s1-managed-task", "tier": "S1", "taskPath": "rt04-s1-managed-task/task.md", "oraclePath": "rt04-s1-managed-task/oracle.json"},
+    {"id": "rt05-s2-evidence-task", "version": "1.0.0", "family": "s2-evidence-task", "tier": "S2", "taskPath": "rt05-s2-evidence-task/task.md", "oraclePath": "rt05-s2-evidence-task/oracle.json"}
+  ],
+  "productionPromotionClaimed": false
+}
