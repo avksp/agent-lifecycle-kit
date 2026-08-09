@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 import venv
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -79,16 +79,22 @@ def _portable_argv(argv: list[str]) -> list[str]:
 
 
 def _portable_path(value: str | Path, *, executable: bool = False) -> str:
-    path = Path(value)
-    if not path.is_absolute():
+    raw_value = str(value)
+    path = Path(raw_value)
+    if path.is_absolute():
+        try:
+            return path.resolve().relative_to(ROOT.resolve()).as_posix()
+        except ValueError:
+            name = path.name
+    elif PurePosixPath(raw_value).is_absolute():
+        name = PurePosixPath(raw_value).name
+    elif PureWindowsPath(raw_value).is_absolute():
+        name = PureWindowsPath(raw_value).name
+    else:
         return path.as_posix()
-    try:
-        return path.resolve().relative_to(ROOT.resolve()).as_posix()
-    except ValueError:
-        name = path.name
-        if executable and name.startswith("python"):
-            return "python"
-        return name or "external-path"
+    if executable and name.lower().startswith("python"):
+        return "python"
+    return name or "external-path"
 
 
 def _stream_identity(value: str) -> dict[str, Any]:
