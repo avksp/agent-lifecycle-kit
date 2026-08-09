@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "agent-reference-task-submission.v1",
+  "taskId": "rt01-planning",
+  "taskVersion": "1.0.0",
+  "accepted": true,
+  "evidence": {
+    "planValidation": {"schemaVersion": "agent-plan-validation.v1", "status": "FROZEN"},
+    "completenessValidation": {"schemaVersion": "agent-plan-completeness-validation.v1", "status": "PASS", "blockers": []},
+    "acceptanceValidation": {"schemaVersion": "agent-acceptance-checklist-validation.v1", "status": "PASS", "missingInMarkdown": [], "extraInMarkdown": [], "linkMismatches": []}
+  },
+  "productionPromotionClaimed": false
+}

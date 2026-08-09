@@ -30,6 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_import_parser(subparsers)
     _add_quality_parser(subparsers)
     _add_review_mesh_parser(subparsers)
+    _add_benchmark_parser(subparsers)
     _add_report_parser(subparsers)
     add_policy_parser(subparsers)
     _add_workflow_parser(subparsers)
@@ -48,6 +49,15 @@ def build_parser() -> argparse.ArgumentParser:
     add_adapter_parser(subparsers)
     subparsers.add_parser("conformance", help="conformance commands")
     return parser
+
+
+def _add_benchmark_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    benchmark = subparsers.add_parser("benchmark", help="deterministic reference-task evaluation")
+    benchmark_sub = benchmark.add_subparsers(dest="benchmark_command", required=True)
+    evaluate = benchmark_sub.add_parser("evaluate")
+    evaluate.add_argument("--suite", required=True)
+    evaluate.add_argument("--artifact", required=True)
+    evaluate.add_argument("--out")
 
 
 def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

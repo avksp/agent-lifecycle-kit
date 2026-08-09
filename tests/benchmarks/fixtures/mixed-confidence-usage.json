@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "agent-reference-task-submission.v1",
+  "taskId": "rt01-planning",
+  "taskVersion": "1.0.0",
+  "accepted": true,
+  "evidence": {
+    "usageExport": {"schemaVersion": "agent-usage-export.v1", "entries": [
+      {"usageConfidence": "ATTESTED", "tokens": {"input": 10, "output": 5, "total": 15}, "durationMs": 25},
+      {"usageConfidence": "ESTIMATED", "tokens": {"input": 8, "output": 2, "total": 10}, "durationMs": 20},
+      {"usageConfidence": "MISSING", "tokens": {"input": 999, "output": 999, "total": 1998}}
+    ]},
+    "outcomeIndex": {"schemaVersion": "agent-task-outcome-index.v1", "records": [{"taskId": "rt01-planning", "retries": 3}]}
+  },
+  "productionPromotionClaimed": false
+}
