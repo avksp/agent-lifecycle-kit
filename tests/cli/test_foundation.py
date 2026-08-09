@@ -4,6 +4,7 @@ import json
 import sys
 import tempfile
 import unittest
+from importlib import import_module
 from pathlib import Path
 
 try:
@@ -12,6 +13,17 @@ except ImportError:
     from helpers import *  # noqa: F401,F403,E402
 
 class CliFoundationTests(unittest.TestCase):
+    def test_root_dispatch_delegates_are_importable(self) -> None:
+        for module_name in (
+            "agent_lifecycle.cli.dispatch_adapters",
+            "agent_lifecycle.cli.dispatch_contracts",
+            "agent_lifecycle.cli.dispatch_lifecycle",
+            "agent_lifecycle.cli.dispatch_observability",
+            "agent_lifecycle.cli.dispatch_planning",
+        ):
+            with self.subTest(module=module_name):
+                self.assertIsNotNone(import_module(module_name))
+
     def test_version_outputs_compact_json(self) -> None:
         code, payload = _run_cli(["version"])
         self.assertEqual(code, 0)

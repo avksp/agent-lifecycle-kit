@@ -61,6 +61,30 @@ class AdapterLauncherSecurityValidatorTests(unittest.TestCase):
         self.assertEqual(payload["status"], "FAIL")
         self.assertIn("adapter-launcher-forbidden-snippet", {item["code"] for item in payload["blockers"]})
 
+    def test_validator_rejects_generic_launcher_process_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bad = root / "launcher.py"
+            evidence = root / "evidence.json"
+            bad.write_text("def launch_from_descriptor():\n    return run_process([])\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools/release/validate_adapter_launcher_security.py"),
+                    "--paths",
+                    str(bad),
+                    "--evidence",
+                    str(evidence),
+                ],
+                cwd=ROOT,
+                text=True,
+            )
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("adapter-generic-launch-process-route", {item["code"] for item in payload["blockers"]})
+
 
 if __name__ == "__main__":
     unittest.main()

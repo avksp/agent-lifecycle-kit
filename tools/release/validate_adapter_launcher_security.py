@@ -34,6 +34,7 @@ def main() -> int:
             for snippet in FORBIDDEN_SNIPPETS:
                 if snippet in text and not _allowed_write(file_path, snippet):
                     blockers.append({"code": "adapter-launcher-forbidden-snippet", "path": file_path.as_posix(), "snippet": snippet})
+            blockers.extend(_boundary_blockers(file_path, text))
     body = {
         "schemaVersion": "agent-adapter-launcher-security-validation.v1",
         "status": "PASS" if not blockers else "FAIL",
@@ -46,6 +47,8 @@ def main() -> int:
             "redactedReceipts": True,
             "nativeConfigWrites": False,
             "secretStorage": False,
+            "genericDescriptorLaunch": False,
+            "exactEnvironmentNames": True,
         },
         "productionPromotionClaimed": False,
     }
@@ -57,6 +60,21 @@ def _allowed_write(path: Path, snippet: str) -> bool:
     if path.as_posix().endswith("session_store.py") and snippet in {".write_text(", ".write_bytes("}:
         return True
     return False
+
+
+def _boundary_blockers(path: Path, text: str) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    if path.name == "launcher.py":
+        if "adapter-generic-launch-disabled" not in text:
+            blockers.append({"code": "adapter-generic-launch-blocker-missing", "path": path.as_posix()})
+        if "run_process(" in text or "subprocess.run(" in text:
+            blockers.append({"code": "adapter-generic-launch-process-route", "path": path.as_posix()})
+    if path.name == "env.py":
+        if "import fnmatch" in text or "fnmatch." in text:
+            blockers.append({"code": "adapter-env-wildcard-route", "path": path.as_posix()})
+        if "adapter-env-wildcard-disallowed" not in text:
+            blockers.append({"code": "adapter-env-wildcard-blocker-missing", "path": path.as_posix()})
+    return blockers
 
 
 if __name__ == "__main__":

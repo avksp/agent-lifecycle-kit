@@ -188,5 +188,21 @@
     },
     "writesNativeConfig": false,
     "promptInjectionDefault": false
+  },
+  "installation": {
+    "schemaVersion": "agent-adapter-installation-facts.v1",
+    "binaryAliases": ["claude", "claude-code"],
+    "files": [
+      {"path": ".claude-plugin/plugin.json", "action": "read", "required": true},
+      {"path": ".claude-plugin/marketplace.json", "action": "read", "required": true}
+    ],
+    "commands": [
+      {"argv": ["claude", "plugin", "marketplace", "add", "avksp/agent-lifecycle-kit"], "purpose": "add the repository marketplace", "mutatesHost": true, "requiresOperator": true},
+      {"argv": ["claude", "plugin", "install", "agent-lifecycle-kit@agent-lifecycle-kit"], "purpose": "install the plugin from the configured marketplace", "mutatesHost": true, "requiresOperator": true}
+    ],
+    "operatorActions": [
+      "Run the host reload command after installation.",
+      "Keep lifecycle proof separate from plugin installation."
+    ]
   }
 }

@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "4c388d8c2a5ec1b19743dc3cbd7b7811eaab72a84f167a78ed0ae23e6a14cf2a",
+  "descriptorDigest": "b99a5a1302fa2b91cbc5e6450feec80f092b6228cca208090403ef8043e0deac",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,6 +156,21 @@
     "usageReceiptRequired": true
   },
   "promotion": {
+    "liveTestedHostRange": {
+      "evidence": [
+        "docs/adapters/evidence/hermes-host-local-live-2026-07-29.md",
+        "work/release-0-8/evidence/hermes/live-host-conformance-hermes.json",
+        "work/release-0-8/evidence/hermes/live-calibration-verification-hermes.json",
+        "work/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "hermes",
+      "maximumVersion": "0.19.0",
+      "minimumVersion": "0.19.0",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "d71033a4",
+      "testedAt": "2026-07-29"
+    },
     "productionPromotionClaimed": false,
     "verifiedRequiresLiveTestedHostRange": true
   },

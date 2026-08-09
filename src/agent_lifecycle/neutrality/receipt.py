@@ -11,6 +11,18 @@ from .ed25519 import fingerprint, verify
 from .errors import NeutralityError
 from .paths import stable_read_bytes
 
+REQUIRED_COMPLETENESS_COUNTERS = (
+    "findings",
+    "skippedInputs",
+    "opaqueInputs",
+    "readRaces",
+    "incompleteScans",
+    "unsupportedArchives",
+    "archiveLimitBreaches",
+    "occupiedOutputConflicts",
+    "pathAliasConflicts",
+)
+
 
 def build_claims(
     *,
@@ -22,20 +34,7 @@ def build_claims(
     policy: dict[str, Any],
     profile: dict[str, Any],
 ) -> dict[str, Any]:
-    zero_counters = {
-        key: int(report["counters"].get(key, 0))
-        for key in [
-            "findings",
-            "skippedInputs",
-            "opaqueInputs",
-            "readRaces",
-            "incompleteScans",
-            "unsupportedArchives",
-            "archiveLimitBreaches",
-            "occupiedOutputConflicts",
-            "pathAliasConflicts",
-        ]
-    }
+    zero_counters = require_zero_completeness_counters(report)
     output_manifest = [
         {
             "publicationOrder": 1,
@@ -100,8 +99,12 @@ def verify_existing_receipt(
     trust_root_path: Path,
     expected_signer_fingerprint: str,
 ) -> bool:
-    receipt = load_json(stable_read_bytes(receipt_path))
-    primary = stable_read_bytes(primary_path)
+    try:
+        receipt = load_json(stable_read_bytes(receipt_path))
+        primary = stable_read_bytes(primary_path)
+        report = load_json(primary)
+    except (OSError, NeutralityError):
+        return False
     if receipt.get("schemaVersion") != "agent-neutrality-detached-receipt.v3":
         return False
     if expected_operation is not None and receipt.get("operation") != expected_operation:
@@ -119,7 +122,28 @@ def verify_existing_receipt(
     signature = receipt.get("signature")
     if not isinstance(claims_digest, str) or not isinstance(signature, str):
         return False
+    if report.get("claimsDigest") != claims_digest:
+        return False
+    try:
+        require_zero_completeness_counters(report)
+    except NeutralityError:
+        return False
     return verify(public_key, RECEIPT_DOMAIN + claims_digest.encode("ascii"), bytes.fromhex(signature))
+
+
+def require_zero_completeness_counters(report: dict[str, Any]) -> dict[str, int]:
+    """Return required counters only when every declared completeness value is zero."""
+
+    counters = report.get("counters")
+    if not isinstance(counters, dict):
+        raise NeutralityError("neutrality scan counters are non-zero")
+    zero_counters: dict[str, int] = {}
+    for key in REQUIRED_COMPLETENESS_COUNTERS:
+        value = counters.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value != 0:
+            raise NeutralityError("neutrality scan counters are non-zero")
+        zero_counters[key] = value
+    return zero_counters
 
 
 def _public_key_for_fingerprint(trust_root: dict[str, Any], expected_fingerprint: str) -> bytes:

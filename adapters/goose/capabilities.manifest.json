@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "398b61525c3e5615d65f0529a2864181cbc93f0aa984c370619334751baedc31",
+  "descriptorDigest": "d1268c61be190f3edf8ae3053ebf01978720ff8c67270b9808f059693157a9a3",
   "eventCapture": {
     "categories": [
       "command",
@@ -180,12 +180,7 @@
     "usageReceiptRequired": true
   },
   "promotion": {
-    "productionPromotionClaimed": false,
-    "verifiedRequiresLiveTestedHostRange": true,
     "liveTestedHostRange": {
-      "host": "goose",
-      "minimumVersion": "1.45.0",
-      "maximumVersion": "1.45.0",
       "evidence": [
         "docs/adapters/evidence/goose-live-verified.md",
         "work/release-1-16/evidence/preflight/goose-preflight-report.json",
@@ -196,11 +191,16 @@
         "work/release-1-16/evidence/live-calibration-verification-goose.json",
         "work/release-1-16/evidence/goose/full-lifecycle/final/final-proof-r5.json"
       ],
-      "testedAt": "2026-07-31",
+      "host": "goose",
+      "maximumVersion": "1.45.0",
+      "minimumVersion": "1.45.0",
       "productionPromotionClaimed": false,
       "publicDirectoryApprovalClaimed": false,
-      "sourceRevision": "87fb1ce58612efbd2121d8eb56f9d54de8fbbcfb"
-    }
+      "sourceRevision": "87fb1ce58612efbd2121d8eb56f9d54de8fbbcfb",
+      "testedAt": "2026-07-31"
+    },
+    "productionPromotionClaimed": false,
+    "verifiedRequiresLiveTestedHostRange": true
   },
   "runtimeBoundary": {
     "hostSpecificCode": "adapter-owned",

@@ -1,153 +1,150 @@
 {
-  "schemaVersion": "agent-adapter-capability-manifest.v1",
   "adapterId": "grok-build",
-  "host": "grok-build",
-  "maturity": "VERIFIED",
-  "descriptorDigest": "58eef00223913a841f1eb139561deb4cb4ee2072c5da46c965b8516e85851474",
-  "unsupportedOperationPolicy": "fail-closed",
-  "coreSemantics": "delegated-to-agent-lifecycle-core",
   "capabilities": [
     {
-      "name": "install",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
       "mapping": "grok-build-acp-probe-gated-install",
+      "name": "install",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "discover",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
       "mapping": "grok-build-acp-probe-gated-discover",
+      "name": "discover",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "validate-envelope",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
       "mapping": "core-schema-validation",
+      "name": "validate-envelope",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "launch",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
       "mapping": "grok-build-acp-probe-gated-launch",
+      "name": "launch",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "model-route-execution",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
       "mapping": "attemptModelRoute-to-host-model",
+      "name": "model-route-execution",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "wait",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
       "mapping": "grok-build-acp-probe-gated-wait",
+      "name": "wait",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "cancel",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
       "mapping": "grok-build-acp-probe-gated-cancel",
+      "name": "cancel",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "resume",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
       "mapping": "grok-build-acp-probe-gated-resume",
+      "name": "resume",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "tool-execution",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
       "mapping": "grok-build-acp-probe-gated-tool-execution",
+      "name": "tool-execution",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "adapter-event-stream",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
       "mapping": "agent-adapter-event.v1",
+      "name": "adapter-event-stream",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "result-collection",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
       "mapping": "task-result-artifact",
+      "name": "result-collection",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "usage-attestation",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
       "mapping": "grok-build-acp-probe-gated-usage-attestation",
+      "name": "usage-attestation",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "mapping": "audit-plan-implementation",
       "name": "task-audit",
-      "mapping": "audit-plan-implementation",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false
+      "unsupportedOperationPolicy": "fail-closed"
     },
     {
-      "name": "final-audit",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
       "mapping": "audit-plan-implementation",
+      "name": "final-audit",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed",
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false
+      "unsupportedOperationPolicy": "fail-closed"
     }
   ],
-  "modelRouting": {
-    "profileSupport": "host-local",
-    "attemptRoutePolicy": "must-execute-or-fail-closed",
-    "usageReceiptRequired": true,
-    "unsupportedClassPolicy": "fail-closed",
-    "providerModelNamesInCore": false,
-    "liveVerified": true
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
+  "descriptorDigest": "2adc7973ef6af38c23995c6fa7fdb911b7e65a5bebb1477fe1bbb65ce14e7639",
+  "eventCapture": {
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "portableEventSchema": "agent-adapter-event.v1",
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false,
+    "status": "DECLARED"
   },
-  "runtimeBoundary": {
-    "hostSpecificCode": "adapter-owned",
-    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-    "unsupportedOperations": "fail-closed",
-    "providerModelNamesInCore": false
-  },
+  "host": "grok-build",
   "hostCapabilities": [
     {
       "adapterId": "grok-build",
@@ -174,6 +171,45 @@
       "transport": "acp"
     }
   ],
+  "maturity": "VERIFIED",
+  "modelRouting": {
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "liveVerified": true,
+    "profileSupport": "host-local",
+    "providerModelNamesInCore": false,
+    "unsupportedClassPolicy": "fail-closed",
+    "usageReceiptRequired": true
+  },
+  "promotion": {
+    "liveTestedHostRange": {
+      "evidence": [
+        "docs/adapters/evidence/grok-build-live-verified.md",
+        "conformance/adapters/grok-build/grok-acp-probe-positive-fixture.json",
+        "work/release-1-17/evidence/preflight/grok-build-preflight-report.json",
+        "work/release-1-17/evidence/grok-build-containment-receipt.json",
+        "work/release-1-17/evidence/live-host-receipts/grok-build.json",
+        "work/release-1-17/evidence/live-host-conformance-grok-build.json",
+        "work/release-1-17/evidence/live-calibration-receipts/grok-build.json",
+        "work/release-1-17/evidence/live-calibration-verification-grok-build.json",
+        "work/release-1-17/evidence/grok-build/full-lifecycle/final/final-proof-r2.json"
+      ],
+      "host": "grok-build",
+      "maximumVersion": "0.2.117",
+      "minimumVersion": "0.2.117",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "fbee9cca9b68ace522089cc0de9c77df0d0c356b",
+      "testedAt": "2026-07-31"
+    },
+    "productionPromotionClaimed": false,
+    "verifiedRequiresLiveTestedHostRange": true
+  },
+  "runtimeBoundary": {
+    "hostSpecificCode": "adapter-owned",
+    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+    "providerModelNamesInCore": false,
+    "unsupportedOperations": "fail-closed"
+  },
   "sandboxCapabilities": {
     "boundaries": {
       "environment": {
@@ -218,42 +254,6 @@
       "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
     }
   },
-  "eventCapture": {
-    "status": "DECLARED",
-    "portableEventSchema": "agent-adapter-event.v1",
-    "categories": [
-      "command",
-      "file-change",
-      "lifecycle-transition",
-      "model-usage",
-      "user-decision",
-      "validation"
-    ],
-    "producerBoundary": "adapter-owned",
-    "promotionRequired": false
-  },
-  "promotion": {
-    "verifiedRequiresLiveTestedHostRange": true,
-    "productionPromotionClaimed": false,
-    "liveTestedHostRange": {
-      "host": "grok-build",
-      "minimumVersion": "0.2.117",
-      "maximumVersion": "0.2.117",
-      "evidence": [
-        "docs/adapters/evidence/grok-build-live-verified.md",
-        "conformance/adapters/grok-build/grok-acp-probe-positive-fixture.json",
-        "work/release-1-17/evidence/preflight/grok-build-preflight-report.json",
-        "work/release-1-17/evidence/grok-build-containment-receipt.json",
-        "work/release-1-17/evidence/live-host-receipts/grok-build.json",
-        "work/release-1-17/evidence/live-host-conformance-grok-build.json",
-        "work/release-1-17/evidence/live-calibration-receipts/grok-build.json",
-        "work/release-1-17/evidence/live-calibration-verification-grok-build.json",
-        "work/release-1-17/evidence/grok-build/full-lifecycle/final/final-proof-r2.json"
-      ],
-      "testedAt": "2026-07-31",
-      "productionPromotionClaimed": false,
-      "publicDirectoryApprovalClaimed": false,
-      "sourceRevision": "fbee9cca9b68ace522089cc0de9c77df0d0c356b"
-    }
-  }
+  "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "unsupportedOperationPolicy": "fail-closed"
 }

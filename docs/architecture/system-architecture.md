@@ -201,7 +201,7 @@ flowchart LR
 
 | Component | Main modules | Called when |
 | --- | --- | --- |
-| CLI routing | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/adapter.py` | Any `agent-lifecycle ...` command starts here. |
+| CLI routing | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/dispatch_adapters.py`, `cli/dispatch_contracts.py`, `cli/dispatch_lifecycle.py`, `cli/dispatch_observability.py`, `cli/dispatch_planning.py`, `cli/adapter.py` | Any `agent-lifecycle ...` command starts here; the root dispatcher selects a focused command-group handler. |
 | Contracts | `contracts/*` | Every public receipt, schema, digest and validation envelope. |
 | Change discovery | `changesets/git.py` | Ownership and implementation audit over Git diffs. |
 | Compilation | `compiler/task_packets.py`, `compiler/small_model_packets.py` | Frozen DAG to task packets and compact model packets. |
@@ -231,21 +231,26 @@ sequenceDiagram
   participant Main as cli/main.py
   participant Parser as cli/parsers.py
   participant Dispatch as cli/dispatch.py
+  participant Handler as cli/dispatch_*.py
   participant Service as Domain service
   participant Contracts as contracts/*
 
   User->>Main: agent-lifecycle <command>
   Main->>Parser: build_parser()
   Main->>Dispatch: dispatch(args, remainder)
-  Dispatch->>Service: call selected service
+  Dispatch->>Handler: route command group
+  Handler->>Service: call selected service
   Service->>Contracts: validate, digest, read/write JSON
-  Service-->>Dispatch: typed receipt or report
+  Service-->>Handler: typed receipt or report
+  Handler-->>Dispatch: JSON-compatible object
   Dispatch-->>Main: JSON-compatible object
   Main-->>User: stable JSON stdout
 ```
 
-Pattern: command dispatcher plus functional core. CLI modules should stay thin;
-domain services own behavior and tests.
+Pattern: command dispatcher plus functional core. `cli/dispatch.py` only selects
+one of five command-group handlers: adapters/readiness, contracts/evidence,
+lifecycle, observability or planning. CLI modules should stay thin; domain
+services own behavior and tests.
 
 ### Raw task or Markdown intake
 
@@ -440,7 +445,7 @@ does not parse host-specific telemetry in the core.
 | --- | --- | --- |
 | Ports and adapters | `adapters/*`, `host_protocol/*`, `adapter_sessions/*` | Keep host-specific commands, secrets and capabilities outside lifecycle core. |
 | Contract-first design | `contracts/*`, `schemas.py`, public `.v1` receipts | Make every lifecycle claim machine-checkable and portable. |
-| Command dispatcher | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py` | Keep CLI thin and route behavior to domain services. |
+| Command dispatcher | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/dispatch_*.py` | Keep the root CLI thin and route each command group to its domain handler. |
 | Functional core, imperative shell | Builders and validators return dictionaries; CLI handles paths and output. | Improve testability and small-model readability. |
 | State machine | `workflow/state.py`, `workflow/task_transitions.py`, `runner/core.py` | Make lifecycle phases explicit and fail closed on invalid transitions. |
 | Operation kernel | `workflow/operation_kernel.py` | Centralize expected revision checks, idempotency and state/event commits. |

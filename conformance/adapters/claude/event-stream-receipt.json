@@ -1,6 +1,6 @@
 {
   "adapterId": "claude",
-  "descriptorDigest": "bb8ace8186cb4505b2a98cf707fb7ec4e9f7756bddb2587a84fd9335087f0279",
+  "descriptorDigest": "779b39814c064e295fdba01ea6a81b5db70f123e361f23a18840379d3c5d85cd",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "48cd8b568dff5dcae91b27ed93cbdb37c4dd4409aa11294877b9e9d60362ec08",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "c440d9fb24d5f5d827fde7e465c833b3d7c4cd99cbdeee3e54f6e75c34e5c65f",
+  "receiptDigest": "0904f557eaefa4c6d7877aabcfe2d728229f017ef646f69b22dfb7e054d21a6d",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",

@@ -1,19 +1,9 @@
 {
-  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
-  "status": "PASS",
   "adapterId": "grok-build",
-  "host": "grok-build",
-  "runId": "offline-conformance",
-  "taskId": "adapter-event-capture",
-  "operationId": "offline-event-capture-grok-build",
-  "producer": {
-    "id": "grok-build-neutral-event-producer",
-    "boundary": "adapter-owned",
-    "portableEventSchema": "agent-adapter-event.v1"
-  },
-  "descriptorDigest": "58eef00223913a841f1eb139561deb4cb4ee2072c5da46c965b8516e85851474",
-  "eventStreamDigest": "1dd4889f819b335ddb3574cca11ec94ffb6a4714eb23f47f5eaf452f62182006",
+  "descriptorDigest": "2adc7973ef6af38c23995c6fa7fdb911b7e65a5bebb1477fe1bbb65ce14e7639",
+  "emittedAt": "2026-07-31T00:23:00Z",
   "eventCount": 6,
+  "eventStreamDigest": "1dd4889f819b335ddb3574cca11ec94ffb6a4714eb23f47f5eaf452f62182006",
   "eventTypes": [
     "session.started",
     "task.launched",
@@ -22,8 +12,18 @@
     "usage.reported",
     "task.completed"
   ],
-  "terminalEvent": "task.completed",
-  "emittedAt": "2026-07-31T00:23:00Z",
+  "host": "grok-build",
+  "operationId": "offline-event-capture-grok-build",
+  "producer": {
+    "boundary": "adapter-owned",
+    "id": "grok-build-neutral-event-producer",
+    "portableEventSchema": "agent-adapter-event.v1"
+  },
   "productionPromotionClaimed": false,
-  "receiptDigest": "bf574e2c601392b0aa0a6a5de3af5320a17a40928a2339f4cd6e4b1b5b14923d"
+  "receiptDigest": "8cc0555e99f6c9a9aa708629a96aa16837f7591a2964662ad43e6c9d6ea4a2cb",
+  "runId": "offline-conformance",
+  "schemaVersion": "agent-adapter-event-stream-receipt.v1",
+  "status": "PASS",
+  "taskId": "adapter-event-capture",
+  "terminalEvent": "task.completed"
 }

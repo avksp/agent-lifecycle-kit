@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -14,8 +15,8 @@ sys.path.insert(0, str(TOOLS_RELEASE))
 from publication_contract import build_publication_manifest, validate_publication_tree  # noqa: E402
 
 
-TARGET_VERSION = "1.50.1"
-TARGET_REF = "v1.50.1"
+TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
@@ -24,7 +25,7 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertEqual(manifest["schemaVersion"], "agent-publication-manifest.v1")
         self.assertFalse(manifest["productionPromotionClaimed"])
         field_forms = {entry["fieldForm"] for entry in manifest["entries"]}
-        self.assertEqual(field_forms, {"version", "source.ref"})
+        self.assertEqual(field_forms, {"version", "source.ref", "package.pin"})
         self.assertFalse(manifest["lastChannelPolicy"]["pluginVersionMayBeFloating"])
         self.assertEqual(manifest["lastChannelPolicy"]["allowedFloatingRef"], "source-ref-only")
 
@@ -66,6 +67,18 @@ class PublicationVersionTests(unittest.TestCase):
             result = validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)
             self.assertEqual(result["status"], "FAIL")
             self.assertIn("codex-marketplace-source-ref", {item["entryId"] for item in result["blockers"]})
+
+    def test_stale_quickstart_package_pin_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
+            (root / "docs/guides/quickstart.md").write_text(
+                "python -m pip install agent-lifecycle-kit==1.29.1\n",
+                encoding="utf-8",
+            )
+            result = validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)
+            self.assertEqual(result["status"], "FAIL")
+            self.assertIn("quickstart-package-pin", {item["entryId"] for item in result["blockers"]})
 
     def test_cli_writes_fail_evidence_and_nonzero_exit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -153,6 +166,10 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
             "plugins": [{"name": "agent-lifecycle-kit", "source": ".", "version": version}],
         },
     )
+    for path in ("docs/guides/quickstart.md", "docs/ru/quickstart.md"):
+        target = root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"python -m pip install agent-lifecycle-kit=={version}\n", encoding="utf-8")
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:

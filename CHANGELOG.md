@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.50.2 - 2026-08-09
+
+- Blocked generic descriptor-driven host launches and wildcard environment
+  forwarding until a separately qualified local-launch path exists.
+- Added shared receipt redaction, fail-closed neutrality completeness checks,
+  descriptor installation metadata, and dependency-boundary validation.
+- Split the CLI dispatcher into bounded routing modules without changing the
+  public command contract.
+- Updated package, plugin, marketplace, and quickstart publication metadata
+  to `1.50.2`.
+
 ## 1.50.1 - 2026-08-07
 
 - Added a PyPI Trusted Publisher workflow (`.github/workflows/publish.yml`)

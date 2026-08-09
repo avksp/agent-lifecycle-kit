@@ -17,7 +17,12 @@ from agent_lifecycle.neutrality.canonical import canonical_bytes, load_json, sha
 from agent_lifecycle.neutrality.errors import NeutralityError, write_neutrality_error
 from agent_lifecycle.neutrality.paths import resolve_repository_relative_root
 from agent_lifecycle.neutrality.policy import load_policy
-from agent_lifecycle.neutrality.receipt import build_claims, build_receipt, verify_existing_receipt
+from agent_lifecycle.neutrality.receipt import (
+    build_claims,
+    build_receipt,
+    require_zero_completeness_counters,
+    verify_existing_receipt,
+)
 from agent_lifecycle.neutrality.scanner import scan_repository
 
 
@@ -127,8 +132,7 @@ def _bootstrap(args: argparse.Namespace) -> int:
         output_paths=[primary_path.relative_to(workspace_root), receipt_path.relative_to(workspace_root)],
     ).to_json(operation)
 
-    if args.require_zero_findings and report["counters"]["findings"] != 0:
-        raise NeutralityError("neutrality findings are non-zero")
+    require_zero_completeness_counters(report)
 
     claims = build_claims(
         operation=operation,
