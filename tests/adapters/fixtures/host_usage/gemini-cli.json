@@ -1,0 +1,12 @@
+{
+  "adapterId": "gemini-cli",
+  "artifact": "{\"type\":\"system\",\"session_id\":\"gemini-fixture-1\"}\n{\"type\":\"result\",\"duration_ms\":250,\"usageMetadata\":{\"promptTokenCount\":30,\"candidatesTokenCount\":10,\"totalTokenCount\":40,\"cumulativeContextBytes\":2048}}\n",
+  "expected": {
+    "inputTokens": 30,
+    "outputTokens": 10,
+    "billableTokens": 40,
+    "cumulativeContextBytes": 2048,
+    "sessionId": "gemini-fixture-1",
+    "eventCount": 2
+  }
+}

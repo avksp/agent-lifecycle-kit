@@ -1,0 +1,12 @@
+{
+  "adapterId": "qwen-code",
+  "artifact": "{\"type\":\"system\",\"session_id\":\"qwen-fixture-1\"}\n{\"type\":\"result\",\"duration_ms\":400,\"usage\":{\"inputTokens\":55,\"outputTokens\":15,\"totalTokens\":70,\"contextBytes\":8192}}\n",
+  "expected": {
+    "inputTokens": 55,
+    "outputTokens": 15,
+    "billableTokens": 70,
+    "cumulativeContextBytes": 8192,
+    "sessionId": "qwen-fixture-1",
+    "eventCount": 2
+  }
+}

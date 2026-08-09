@@ -32,6 +32,12 @@ The live runner is `adapters/qwen-code/runner.py`. The release harness is
 guards, normalizes usage into portable host-operation receipts, and fails
 closed when qwen output is missing usage attestation.
 
+Qwen Code adapter maturity and the newly factored token parser have separate
+evidence. The adapter remains `VERIFIED`, while
+`usageNormalization.status: FIXTURE_ONLY` keeps new sidecars `ESTIMATED` until
+that parser is independently qualified for a live host range. See
+[Host-local token accounting](../reference/host-local-token-accounting.md).
+
 Evidence summaries:
 
 - Historical scaffold/smoke note:
