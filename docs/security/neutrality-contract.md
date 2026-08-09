@@ -37,3 +37,16 @@ for reuse, only when every required counter is present as the integer zero:
 `pathAliasConflicts`. A missing, non-integer, or nonzero value makes the
 operation fail closed. The rule applies even when the caller did not request a
 separate zero-findings convenience flag.
+
+`recoveredReadRaces` is a signed informational counter outside that required
+set. It records a file that changed on the first read but was stable on the one
+permitted reread. A second change is recorded in the required `readRaces` and
+`incompleteScans` counters and fails closed. Scope and local-artifact bindings
+are described in [Neutrality scanning](../reference/neutrality.md).
+
+The `agent-neutrality-report.v1` contract is additive: consumers must ignore
+unknown fields while continuing to require every documented completeness
+counter. Release scans assume a quiescent Git worktree and index, as provided
+by CI. Explicit local-artifact scans fail closed when a declared root is absent
+or when the policy limits `maxLocalArtifactFiles` or `maxLocalArtifactBytes`
+are exceeded.

@@ -35,6 +35,7 @@ def build_claims(
     profile: dict[str, Any],
 ) -> dict[str, Any]:
     zero_counters = require_zero_completeness_counters(report)
+    scope_binding = _scope_binding(report)
     output_manifest = [
         {
             "publicationOrder": 1,
@@ -58,7 +59,10 @@ def build_claims(
         "operation": operation,
         "projectionSchemaVersion": "agent-neutrality-subject-projection.v2",
         "profileDigest": sha256_hex(canonical_bytes(profile)),
-        "scopeProfileDigest": sha256_hex(canonical_bytes({"scope": report["scope"]})),
+        "scopeProfileDigest": sha256_hex(canonical_bytes(scope_binding)),
+        "scopeBinding": scope_binding,
+        "scopeBindingDigest": sha256_hex(canonical_bytes(scope_binding)),
+        "deprecatedScope": scope_binding["deprecatedScope"],
         "archivePolicyDigest": sha256_hex(canonical_bytes(policy.get("archives", {}))),
         "externalAuthorityContractDigest": sha256_hex(canonical_bytes({"contract": "AGENT_LIFECYCLE_NEUTRALITY_*"})),
         "operationOutputManifestDigest": sha256_hex(canonical_bytes(output_manifest)),
@@ -88,6 +92,7 @@ def build_receipt(
         "primaryArtifact": {"sha256": primary_sha256, "bytes": primary_bytes},
         "signer": {"algorithm": "Ed25519", "fingerprint": signer_fingerprint},
         "signature": signature,
+        "claims": claims,
     }
 
 
@@ -125,9 +130,28 @@ def verify_existing_receipt(
     if report.get("claimsDigest") != claims_digest:
         return False
     try:
-        require_zero_completeness_counters(report)
+        zero_counters = require_zero_completeness_counters(report)
     except NeutralityError:
         return False
+    claims = receipt.get("claims")
+    if claims is not None:
+        if not isinstance(claims, dict) or sha256_hex(canonical_bytes(claims)) != claims_digest:
+            return False
+        try:
+            actual_subject_digest = _report_subject_digest(report)
+            scope_binding = _scope_binding(report)
+        except NeutralityError:
+            return False
+        if (
+            report.get("digests", {}).get("subjectDigest") != actual_subject_digest
+            or claims.get("subjectDigest") != actual_subject_digest
+            or claims.get("scopeBinding") != scope_binding
+            or claims.get("scopeBindingDigest") != sha256_hex(canonical_bytes(scope_binding))
+            or claims.get("scopeProfileDigest") != sha256_hex(canonical_bytes(scope_binding))
+            or claims.get("deprecatedScope") != scope_binding["deprecatedScope"]
+            or claims.get("zeroCounters") != zero_counters
+        ):
+            return False
     return verify(public_key, RECEIPT_DOMAIN + claims_digest.encode("ascii"), bytes.fromhex(signature))
 
 
@@ -144,6 +168,75 @@ def require_zero_completeness_counters(report: dict[str, Any]) -> dict[str, int]
             raise NeutralityError("neutrality scan counters are non-zero")
         zero_counters[key] = value
     return zero_counters
+
+
+def _scope_binding(report: dict[str, Any]) -> dict[str, Any]:
+    binding = report.get("scopeBinding")
+    if isinstance(binding, dict):
+        required = {
+            "scope",
+            "sourceClass",
+            "sourceRevision",
+            "trackedEntryDigest",
+            "deprecatedScope",
+            "includeLocalArtifacts",
+            "localArtifactRoots",
+            "localArtifactRootsDigest",
+        }
+        if set(binding) != required or binding.get("scope") != report.get("scope"):
+            raise NeutralityError("neutrality scope binding is invalid")
+        return binding
+    scope = report.get("scope")
+    if scope not in ("current-tree-complete", "full-repository"):
+        raise NeutralityError("neutrality scope binding is missing")
+    return {
+        "scope": scope,
+        "sourceClass": "legacy-unspecified",
+        "sourceRevision": None,
+        "trackedEntryDigest": "0" * 64,
+        "deprecatedScope": True,
+        "includeLocalArtifacts": False,
+        "localArtifactRoots": [],
+        "localArtifactRootsDigest": "0" * 64,
+    }
+
+
+def _report_subject_digest(report: dict[str, Any]) -> str:
+    digests = report.get("digests")
+    counters = report.get("counters")
+    scanned = report.get("scanned")
+    findings = report.get("findings")
+    if not isinstance(digests, dict) or not isinstance(counters, dict) or not isinstance(scanned, dict):
+        raise NeutralityError("neutrality report subject projection is invalid")
+    if not isinstance(findings, list):
+        raise NeutralityError("neutrality report findings are invalid")
+    projection_digests = {key: value for key, value in digests.items() if key != "subjectDigest"}
+    finding_details: list[dict[str, str]] = []
+    for finding in findings:
+        if (
+            not isinstance(finding, dict)
+            or set(finding) != {"source", "ruleId", "category"}
+            or not all(isinstance(finding.get(key), str) for key in ("source", "ruleId", "category"))
+        ):
+            raise NeutralityError("neutrality report finding is invalid")
+        finding_details.append(
+            {
+                "source": finding["source"],
+                "ruleId": finding["ruleId"],
+                "category": finding["category"],
+            }
+        )
+    return sha256_hex(
+        canonical_bytes(
+            {
+                "scopeBinding": _scope_binding(report),
+                "counters": counters,
+                "scanned": scanned,
+                "digests": projection_digests,
+                "findings": finding_details,
+            }
+        )
+    )
 
 
 def _public_key_for_fingerprint(trust_root: dict[str, Any], expected_fingerprint: str) -> bytes:

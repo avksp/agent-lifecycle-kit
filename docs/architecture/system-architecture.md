@@ -214,7 +214,7 @@ flowchart LR
 | Reporting | `reporting/*` | Read-only status, event feed, progress, change summary and progress bridge. |
 | Metrics and policy | `metrics/*`, `policy/*`, `model_routing/*` | Usage export, token/resource policy, quality-cost signals and model class routing. |
 | Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, external context imports, goal views and continuation records. |
-| Neutrality | `neutrality/*` | Portable artifact scanning, authority checks and signed neutrality receipts. |
+| Neutrality | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Git-index-bound release scanning, optional policy-limited local evidence, stable reads, authority checks and signed neutrality receipts. |
 | Runner | `runner/*` | Bounded execution-loop state over existing workflow primitives. |
 | Worktree | `worktree/*`, `cli/worktree.py` | Worktree isolation policies and attempt receipts. |
 
@@ -453,6 +453,35 @@ Called by `report progress`, `report progress-bridge` and progress hooks on
 managed workflow commands. Reporting is read-only, starts no model calls and
 does not parse host-specific telemetry in the core.
 
+### Release neutrality scan
+
+```mermaid
+sequenceDiagram
+  participant Operator
+  participant CLI as neutrality/cli.py
+  participant Policy as neutrality/policy.py
+  participant Scanner as neutrality/scanner.py
+  participant Paths as neutrality/paths.py
+  participant Receipt as neutrality/receipt.py or gate.py
+
+  Operator->>CLI: scan/bootstrap --scope tracked-release
+  CLI->>Policy: load localArtifactRoots and limits
+  CLI->>Scanner: scan_repository
+  Scanner->>Scanner: git ls-files --stage --cached and HEAD
+  Scanner->>Paths: stable read with one race retry
+  opt include-local-artifacts
+    Scanner->>Paths: resolve approved repository-relative roots
+  end
+  Scanner-->>CLI: report with scopeBinding and subjectDigest
+  opt signed route
+    CLI->>Receipt: bind claims and required counters
+  end
+```
+
+Release workflows use `tracked-release` without local artifacts. A dedicated
+evidence step may opt in to roots declared by policy. Legacy scopes retain
+their old enumeration behavior but carry a signed deprecation marker.
+
 ## Work variants and call routing
 
 | Variant | Operator command | Primary modules | Output |
@@ -515,3 +544,4 @@ does not parse host-specific telemetry in the core.
 - [External memory](../reference/external-memory.md)
 - [Goal continuity](../reference/goal-continuity.md)
 - [Bug Forensics profile](../reference/bug-forensics.md)
+- [Neutrality scanning](../reference/neutrality.md)

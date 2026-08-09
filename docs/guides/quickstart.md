@@ -28,7 +28,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.54.0
+python -m pip install agent-lifecycle-kit==1.55.0
 agent-lifecycle version
 ```
 
@@ -245,3 +245,18 @@ agent-lifecycle goal view \
 
 The command only reads existing artifacts. It is safe to run in a second
 terminal while another adapter is working.
+
+## Check release neutrality
+
+Use the Git-index-bound scope for a portable source or release check:
+
+```bash
+agent-lifecycle-neutrality scan \
+  --scope tracked-release \
+  --policy policy/neutrality.policy.json \
+  --require-zero-findings
+```
+
+Ignored evidence under approved policy roots is not read unless a dedicated
+job adds `--include-local-artifacts`. See
+[Neutrality scanning](../reference/neutrality.md) before enabling it.

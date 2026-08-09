@@ -30,6 +30,7 @@ from agent_lifecycle.neutrality.receipt import (  # noqa: E402
     build_claims,
     require_zero_completeness_counters,
     verify_existing_receipt,
+    _report_subject_digest,
 )
 from agent_lifecycle.neutrality.scanner import scan_repository  # noqa: E402
 
@@ -59,6 +60,11 @@ class NeutralityTests(unittest.TestCase):
             serialized = canonical_bytes(report.to_json({"operationId": "op"})).decode("utf-8")
             self.assertEqual(report.findings[0].category, "deny-literal")
             self.assertNotIn("forbidden-origin-marker", serialized)
+
+            payload = report.to_json({"operationId": "op"})
+            mutated = json.loads(json.dumps(payload))
+            mutated["findings"][0]["source"] = "changed.txt"
+            self.assertNotEqual(payload["digests"]["subjectDigest"], _report_subject_digest(mutated))
 
     def test_clean_scan_has_zero_counters(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -109,6 +115,45 @@ class NeutralityTests(unittest.TestCase):
                     report_bytes = json.dumps(report, sort_keys=True).encode("utf-8")
                     (root / "out/report.json").write_bytes(report_bytes)
                     receipt["primaryArtifact"] = {"sha256": hashlib.sha256(report_bytes).hexdigest(), "bytes": len(report_bytes)}
+                    (root / "out/receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
+                    self.assertFalse(
+                        verify_existing_receipt(
+                            receipt_path=root / "out/receipt.json",
+                            primary_path=root / "out/report.json",
+                            expected_operation=None,
+                            trust_root_path=paths["trust"],
+                            expected_signer_fingerprint=fingerprint(publickey_from_seed(seed)),
+                        )
+                    )
+
+    def test_existing_receipt_rejects_mutated_scope_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = Path(tempfile.mkdtemp())
+            seed = b"o" * 32
+            paths = _write_authority(root, seed, datetime.now(UTC).replace(microsecond=0), authority_root=outside)
+            self.assertEqual(_run_cli(root, seed, env_paths=paths), 0)
+            original_report = json.loads((root / "out/report.json").read_text(encoding="utf-8"))
+            original_receipt = json.loads((root / "out/receipt.json").read_text(encoding="utf-8"))
+            mutations = {
+                "deprecatedScope": False,
+                "sourceRevision": "changed",
+                "trackedEntryDigest": "f" * 64,
+                "includeLocalArtifacts": True,
+                "localArtifactRoots": ["work"],
+                "localArtifactRootsDigest": "e" * 64,
+            }
+            for field, value in mutations.items():
+                with self.subTest(field=field):
+                    report = json.loads(json.dumps(original_report))
+                    receipt = json.loads(json.dumps(original_receipt))
+                    report["scopeBinding"][field] = value
+                    report_bytes = json.dumps(report, sort_keys=True).encode("utf-8")
+                    (root / "out/report.json").write_bytes(report_bytes)
+                    receipt["primaryArtifact"] = {
+                        "sha256": hashlib.sha256(report_bytes).hexdigest(),
+                        "bytes": len(report_bytes),
+                    }
                     (root / "out/receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
                     self.assertFalse(
                         verify_existing_receipt(
@@ -399,6 +444,13 @@ class NeutralityTests(unittest.TestCase):
                 self.assertEqual(main(["produce", *base_args]), 0)
                 del os.environ["AGENT_LIFECYCLE_NEUTRALITY_SIGNING_KEY"]
                 self.assertEqual(main(["verify", *base_args]), 0)
+                receipt = json.loads((root / "gates/receipt.json").read_text(encoding="utf-8"))
+                for field in ("claimsDigest", "subjectDigest", "scopeDigest"):
+                    with self.subTest(field=field):
+                        mutated = json.loads(json.dumps(receipt))
+                        mutated["attestation"][field] = "f" * 64
+                        (root / "gates/receipt.json").write_text(json.dumps(mutated), encoding="utf-8")
+                        self.assertNotEqual(main(["verify", *base_args]), 0)
             finally:
                 os.environ.clear()
                 os.environ.update(previous)

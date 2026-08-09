@@ -23,7 +23,7 @@ from agent_lifecycle.neutrality.receipt import (
     require_zero_completeness_counters,
     verify_existing_receipt,
 )
-from agent_lifecycle.neutrality.scanner import scan_repository
+from agent_lifecycle.neutrality.scanner import NEUTRALITY_SCOPE_CHOICES, scan_repository
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,7 +49,8 @@ def _build_parser() -> argparse.ArgumentParser:
     bootstrap = subparsers.add_parser("bootstrap", help="scan and publish a signed neutrality receipt")
     _add_common_lifecycle_args(bootstrap)
     bootstrap.add_argument("--profile", required=True)
-    bootstrap.add_argument("--scope", required=True, choices=["full-repository", "current-tree-complete"])
+    bootstrap.add_argument("--scope", required=True, choices=NEUTRALITY_SCOPE_CHOICES)
+    bootstrap.add_argument("--include-local-artifacts", action="store_true")
     bootstrap.add_argument("--policy", required=True)
     bootstrap.add_argument("--artifact-root", default="plans/standalone-v1")
     bootstrap.add_argument("--validation-operation-id", required=False)
@@ -65,7 +66,8 @@ def _build_parser() -> argparse.ArgumentParser:
     bootstrap.add_argument("--require-zero-findings", action="store_true")
 
     scan = subparsers.add_parser("scan", help="run a local unsigned neutrality scan")
-    scan.add_argument("--scope", required=True, choices=["full-repository", "current-tree-complete"])
+    scan.add_argument("--scope", required=True, choices=NEUTRALITY_SCOPE_CHOICES)
+    scan.add_argument("--include-local-artifacts", action="store_true")
     scan.add_argument("--policy", required=True)
     scan.add_argument("--report", required=False)
     scan.add_argument("--operation-request", required=False)
@@ -130,6 +132,7 @@ def _bootstrap(args: argparse.Namespace) -> int:
         deny_regexes=authority.deny_regexes,
         scope=args.scope,
         output_paths=[primary_path.relative_to(workspace_root), receipt_path.relative_to(workspace_root)],
+        include_local_artifacts=args.include_local_artifacts,
     ).to_json(operation)
 
     require_zero_completeness_counters(report)
@@ -171,10 +174,11 @@ def _scan(args: argparse.Namespace) -> int:
         deny_regexes=[],
         scope=args.scope,
         output_paths=relative_outputs,
+        include_local_artifacts=args.include_local_artifacts,
     ).to_json(operation)
 
-    if args.require_zero_findings and any(int(value) != 0 for value in report["counters"].values()):
-        raise NeutralityError("neutrality scan counters are non-zero")
+    if args.require_zero_findings:
+        require_zero_completeness_counters(report)
     if report_path is not None:
         _require_protocol_output(
             request_path=args.operation_request,

@@ -14,7 +14,7 @@ project.
 ## Quick start
 
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==1.54.0` from
+  `python -m pip install agent-lifecycle-kit==1.55.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter codex --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -92,6 +92,7 @@ project.
 - [Lifecycle cost accounting](reference/lifecycle-cost.md)
 - [Usage export](reference/usage-export.md)
 - [Host-local token accounting](reference/host-local-token-accounting.md)
+- [Neutrality scanning](reference/neutrality.md)
 - [Evidence integrity](reference/evidence-integrity.md)
 - [Import mappers](reference/import-mappers.md)
 - [Episode retrieval](reference/episode-retrieval.md)

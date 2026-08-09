@@ -10,7 +10,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.54.0
+python -m pip install agent-lifecycle-kit==1.55.0
 ```
 
 ## Foundation
@@ -197,5 +197,9 @@ atomic interface for scripts and advanced operators.
   indexes.
 - `agent-lifecycle model profile-check/route/usage-check`: validate routing and
   usage receipts.
+- `agent-lifecycle-neutrality scan --scope tracked-release --policy <file>`:
+  scan Git-index-bound release content. `--include-local-artifacts` explicitly
+  adds only policy-approved `localArtifactRoots`; legacy scopes remain accepted
+  but are signed as deprecated. See [Neutrality scanning](neutrality.md).
 
 Use `--help` on any command group for exact arguments.
