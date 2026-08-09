@@ -73,6 +73,10 @@ ignored `.alk/host-launch/`, inspect before preflight, allow exact environment
 names only, and use `start --launch` only with frozen identity and a derived
 risk profile. Never put task text, shell commands or credentials in
 `argvTemplate`. See [Local host launch](../reference/local-host-launch.md).
+For shipped Codex, Claude Code and OpenCode profiles, require the exact-version
+qualification receipt before managed launch. Version preflight is not a token
+usage attestation; see [Qualified host
+launch](../reference/qualified-host-launch.md).
 
 Use `agent-lifecycle contract check` and release security tests before claiming
 a stable package. Use the support matrix for adapter maturity; model availability

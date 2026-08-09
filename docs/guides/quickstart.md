@@ -28,7 +28,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.56.0
+python -m pip install agent-lifecycle-kit==1.57.0
 agent-lifecycle version
 ```
 
@@ -151,8 +151,20 @@ agent-lifecycle start \
 
 Resume verifies the stored adapter and workflow lineage. It does not interpret
 the value as a native Codex, Claude, OpenCode or other host conversation id.
-External execution remains off by default. Advanced operators can explicitly
-launch one local host command only from a frozen, risk-bound `implement` run:
+External execution remains off by default. Advanced operators can generate and
+qualify an exact-version profile for Codex, Claude Code or OpenCode first:
+
+```bash
+agent-lifecycle adapter launch-profile \
+  --adapter codex \
+  --repository-root /path/to/agent-lifecycle-kit \
+  --out .alk/host-launch/codex.json
+agent-lifecycle host-launch preflight \
+  --profile .alk/host-launch/codex.json
+```
+
+Then launch one local host command only from a frozen, risk-bound `implement`
+run:
 
 ```bash
 agent-lifecycle start \
@@ -170,6 +182,8 @@ guide](../reference/local-host-launch.md) describes the format, preflight and
 fail-closed boundaries. The lower-level `adapter task start`, `adapter run` and
 `adapter session resume` commands remain available in the [CLI
 reference](../reference/cli.md).
+The [qualified host launch guide](../reference/qualified-host-launch.md)
+lists the exact versions and the S1/S2 usage boundary.
 
 ## Review code changes
 

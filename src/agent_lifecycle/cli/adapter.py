@@ -20,6 +20,8 @@ from agent_lifecycle.adapter_sessions import (
     update_session,
 )
 from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, managed_launch_profile
+from agent_lifecycle.adapter_sessions.qualification import load_shipped_launch_profile, qualified_profile_output_path
+from agent_lifecycle.adapter_sessions.local_launch_profile import validate_local_launch_profile
 from agent_lifecycle.reporting.progress_hooks import build_progress_hook_receipt
 from agent_lifecycle.diagnostics import build_adapter_install_plan
 from agent_lifecycle.host_protocol import (
@@ -65,6 +67,11 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     adapter_scaffold.add_argument("--target", required=True)
     adapter_scaffold.add_argument("--maturity", default="EXPERIMENTAL")
     adapter_scaffold.add_argument("--dry-run", action="store_true")
+    adapter_launch_profile = adapter_sub.add_parser("launch-profile")
+    adapter_launch_profile.add_argument("--adapter", required=True, choices=["codex", "claude", "opencode"])
+    adapter_launch_profile.add_argument("--out", required=True)
+    adapter_launch_profile.add_argument("--executable")
+    adapter_launch_profile.add_argument("--repository-root", default=".")
     adapter_session = adapter_sub.add_parser("session")
     session_sub = adapter_session.add_subparsers(dest="adapter_session_command", required=True)
     session_start = session_sub.add_parser("start")
@@ -189,6 +196,24 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
             maturity=args.maturity,
             dry_run=args.dry_run,
         )
+    if args.adapter_command == "launch-profile":
+        profile = load_shipped_launch_profile(args.adapter, repository_root=Path(args.repository_root))
+        if args.executable:
+            profile = {**profile, "executable": args.executable}
+        validation = validate_local_launch_profile(profile)
+        if validation["status"] != "PASS":
+            raise LifecycleError("qualified-launch-profile-invalid", "shipped launch profile failed validation", validation)
+        out = qualified_profile_output_path(args.out)
+        write_json_create(out, profile)
+        return {
+            "schemaVersion": "agent-qualified-launch-profile-generation.v1",
+            "status": "PASS",
+            "adapterId": args.adapter,
+            "profilePath": out.as_posix(),
+            "profileDigest": validation["profileDigest"],
+            "publicSupportClaimed": False,
+            "productionPromotionClaimed": False,
+        }
     if args.adapter_command == "session":
         return _dispatch_adapter_session(args)
     if args.adapter_command == "task":
