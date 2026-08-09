@@ -1,0 +1,12 @@
+{
+  "adapterId": "kimi-code",
+  "artifact": "{\"type\":\"system\",\"sessionId\":\"kimi-fixture-1\"}\n{\"type\":\"result\",\"duration_ms\":300,\"usage\":{\"input_tokens\":42,\"output_tokens\":8,\"total_tokens\":50,\"context_bytes\":4096}}\n",
+  "expected": {
+    "inputTokens": 42,
+    "outputTokens": 8,
+    "billableTokens": 50,
+    "cumulativeContextBytes": 4096,
+    "sessionId": "kimi-fixture-1",
+    "eventCount": 2
+  }
+}

@@ -170,6 +170,14 @@
     "writesNativeConfig": false,
     "promptInjectionDefault": false
   },
+  "usageNormalization": {
+    "contract": "adapter-local-usage-normalizer.v1",
+    "status": "FIXTURE_ONLY",
+    "acceptedForS1S2": false,
+    "path": "adapters/kimi-code/usage_normalizer.py",
+    "artifactFormat": "stream-jsonl",
+    "maxArtifactBytes": 8388608
+  },
   "installation": {
     "schemaVersion": "agent-adapter-installation-facts.v1",
     "binaryAliases": ["kimi", "kimi-code"],

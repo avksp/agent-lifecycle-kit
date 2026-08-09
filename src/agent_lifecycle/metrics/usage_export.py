@@ -20,7 +20,7 @@ _SECRET_MARKERS = (
     "gh" + "p_",
     "xo" + "xb-",
 )
-_LOCAL_PATH_PREFIXES = ("/Vol" "umes/", "/Us" "ers/")
+_LOCAL_PATH_PREFIXES = ("/Vol" "umes/", "/Us" "ers/", "/ho" "me/")
 
 
 def build_usage_export(*, artifact_paths: list[Path], project_root: Path | None = None) -> dict[str, Any]:
@@ -162,6 +162,7 @@ def _entry_from_payload(index: int, source: dict[str, Any], payload: dict[str, A
         "taskId": _first_string(payload, ("taskId", "task")),
         "operationId": _string_or_none(payload.get("operationId")),
         "receiptDigests": _receipt_digests(payload),
+        "usageConfidence": _usage_confidence(payload),
         "tokens": _tokens(payload),
         "steps": _steps(payload),
         "resources": _resources(payload),
@@ -300,6 +301,8 @@ def _validate_entry(index: int, entry: Any, blockers: list[dict[str, Any]]) -> N
         blockers.append({"code": "usage-export-entry-steps", "index": index})
     if not isinstance(entry.get("durationMs"), int) or isinstance(entry.get("durationMs"), bool) or entry.get("durationMs") < 0:
         blockers.append({"code": "usage-export-entry-duration", "index": index})
+    if "usageConfidence" in entry and entry.get("usageConfidence") not in {"ATTESTED", "ESTIMATED", "MISSING", "INVALID"}:
+        blockers.append({"code": "usage-export-entry-confidence", "index": index})
     monetary = entry.get("monetary")
     if monetary is not None:
         _validate_monetary(index, monetary, blockers)
@@ -327,6 +330,22 @@ def _redaction_blockers(value: Any, index: int | str) -> list[dict[str, Any]]:
         if marker in text:
             blockers.append({"code": "usage-export-secret-marker-leak", "index": index})
     return blockers
+
+
+def _usage_confidence(payload: dict[str, Any]) -> str:
+    usage = payload.get("usage")
+    if not isinstance(usage, dict) or not any(_first_int(usage, (key,)) is not None for key in ("billableTokens", "totalTokens", "inputTokens", "outputTokens")):
+        return "MISSING"
+    attestation = payload.get("attestation")
+    if not isinstance(attestation, dict):
+        return "ESTIMATED"
+    source = attestation.get("source")
+    status = attestation.get("status")
+    if source == "host" and status == "ATTESTED":
+        return "ATTESTED"
+    if status in {"ESTIMATED", "MISSING"}:
+        return "ESTIMATED" if status == "ESTIMATED" else "MISSING"
+    return "INVALID"
 
 
 def _display_path(path: Path, root: Path) -> str:
@@ -383,7 +402,7 @@ def _safe_scalar(value: str | int | float | bool) -> str | int | float | bool:
 
 
 def _safe_string(value: str) -> str:
-    text = re.sub(r"/(?:Volumes|Users)/\S+", "<redacted-local-path>", value)
+    text = re.sub(r"/(?:Volumes|Users|home)/\S+", "<redacted-local-path>", value)
     for marker in _SECRET_MARKERS:
         if marker in text:
             text = text.replace(marker, "<redacted-secret>")

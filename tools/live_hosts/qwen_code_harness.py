@@ -5,7 +5,6 @@ import json
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -18,7 +17,8 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex  # noqa: E402
-from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
+from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest, NormalizedUsage  # noqa: E402
+from tools.live_hosts.adapter_module_loader import load_adapter_usage_normalizer  # noqa: E402
 from tools.live_hosts.common import (  # noqa: E402
     BudgetPolicy,
     BudgetTracker,
@@ -41,62 +41,8 @@ DEFAULT_PROFILE = Path("conformance/core/live-calibration-profile.v1.json")
 DEFAULT_BUDGET_TARGETS = Path("conformance/core/budget-targets.v1.json")
 
 
-@dataclass(frozen=True)
-class QwenCodeUsage:
-    input_tokens: int = 0
-    output_tokens: int = 0
-    billable_tokens: int = 0
-    cumulative_context_bytes: int | None = None
-    tool_calls: int = 0
-    wall_seconds: float = 0.0
-    cost_usd: float | None = None
-    session_id: str | None = None
-    event_count: int = 0
-    cumulative_context_bytes_source: str | None = None
-
-    @property
-    def has_usage_attestation(self) -> bool:
-        return bool(self.billable_tokens or self.input_tokens or self.output_tokens or self.cost_usd is not None)
-
-    @property
-    def has_calibration_attestation(self) -> bool:
-        return self.has_usage_attestation and self.cumulative_context_bytes is not None
-
-    def to_receipt_usage(self) -> dict[str, Any]:
-        usage: dict[str, Any] = {
-            "inputTokens": self.input_tokens,
-            "outputTokens": self.output_tokens,
-            "billableTokens": self.billable_tokens,
-            "toolCalls": self.tool_calls,
-            "wallSeconds": self.wall_seconds,
-        }
-        if self.cost_usd is not None:
-            usage["costUsd"] = self.cost_usd
-        if self.session_id:
-            usage["sessionId"] = self.session_id
-        return usage
-
-    def to_calibration_usage(self) -> dict[str, Any]:
-        usage = {
-            "billableTokens": self.billable_tokens,
-            "inputTokens": self.input_tokens,
-            "outputTokens": self.output_tokens,
-            "cumulativeContextBytes": self.cumulative_context_bytes if self.cumulative_context_bytes is not None else 0,
-            "toolCalls": self.tool_calls,
-            "wallSeconds": self.wall_seconds,
-        }
-        if self.cumulative_context_bytes_source:
-            usage["cumulativeContextBytesSource"] = self.cumulative_context_bytes_source
-        if self.session_id:
-            usage["sessionId"] = self.session_id
-        return usage
-
-    def with_context_byte_proxy(self, value: int) -> "QwenCodeUsage":
-        return replace(
-            self,
-            cumulative_context_bytes=value,
-            cumulative_context_bytes_source="harness-observed-prompt-and-jsonl-bytes",
-        )
+QwenCodeUsage = NormalizedUsage
+_USAGE_NORMALIZER = load_adapter_usage_normalizer(HOST)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -503,47 +449,7 @@ def build_live_operation_record(
 
 
 def parse_qwen_code_stream_json(text: str, *, wall_seconds: float = 0.0) -> QwenCodeUsage:
-    events = _json_objects(text)
-    result_usage: dict[str, Any] | None = None
-    fallback_usage: dict[str, Any] | None = None
-    costs: list[float] = []
-    session_id: str | None = None
-    tool_calls = 0
-    result_wall_seconds = 0.0
-    for event in events:
-        session_id = session_id or _find_string(event, {"session_id", "sessionId", "sessionID", "conversation_id", "conversationId"})
-        event_usage = event.get("usage")
-        if isinstance(event_usage, dict):
-            fallback_usage = event_usage
-            if event.get("type") == "result":
-                result_usage = event_usage
-                duration_ms = _number_from_any(event.get("duration_ms"))
-                if duration_ms > 0:
-                    result_wall_seconds = duration_ms / 1000
-        if fallback_usage is None:
-            nested_usage = _find_dicts(event, {"usage", "token_usage", "tokenUsage", "tokens"})
-            if nested_usage:
-                fallback_usage = nested_usage[-1]
-        costs.extend(_find_numbers(event, {"cost_usd", "costUsd", "costUSD", "cost"}))
-        tool_calls += _count_tool_calls(event)
-    usage = result_usage or fallback_usage or {}
-    input_tokens = _int_from_any(_first_present(usage, ("inputTokens", "input_tokens", "input", "prompt_tokens", "promptTokens")))
-    output_tokens = _int_from_any(_first_present(usage, ("outputTokens", "output_tokens", "output", "completion_tokens", "completionTokens")))
-    total_tokens = _int_from_any(_first_present(usage, ("billableTokens", "billable_tokens", "total", "total_tokens", "totalTokens")))
-    context_bytes = _int_from_any(_first_present(usage, ("cumulativeContextBytes", "cumulative_context_bytes", "contextBytes", "context_bytes")))
-    billable_tokens = total_tokens or input_tokens + output_tokens
-    return QwenCodeUsage(
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        billable_tokens=billable_tokens,
-        cumulative_context_bytes=context_bytes if context_bytes else None,
-        cumulative_context_bytes_source="host-jsonl" if context_bytes else None,
-        tool_calls=tool_calls,
-        wall_seconds=round(result_wall_seconds or wall_seconds, 3),
-        cost_usd=sum(costs) if costs else None,
-        session_id=session_id,
-        event_count=len(events),
-    )
+    return _USAGE_NORMALIZER.parse_usage(text, wall_seconds=wall_seconds, max_bytes=_USAGE_NORMALIZER.max_artifact_bytes)
 
 
 def check_clean_worktree(worktree: Path) -> dict[str, Any]:
@@ -802,21 +708,6 @@ def _context_byte_proxy(prompt: str, result: CommandResult) -> int:
     )
 
 
-def _json_objects(text: str) -> list[dict[str, Any]]:
-    events: list[dict[str, Any]] = []
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            value = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict):
-            events.append(value)
-    return events
-
-
 def _file_identity(path: Path) -> dict[str, Any]:
     data = path.read_bytes()
     return {"path": _display_path(path), "sha256": sha256_hex(data), "bytes": len(data)}
@@ -869,91 +760,6 @@ def _positive_int(value: Any) -> int | None:
     if isinstance(value, int) and not isinstance(value, bool) and value > 0:
         return value
     return None
-
-
-def _first_present(value: dict[str, Any], keys: tuple[str, ...]) -> Any:
-    for key in keys:
-        if key in value:
-            return value[key]
-    return None
-
-
-def _int_from_any(value: Any) -> int:
-    if isinstance(value, bool):
-        return 0
-    if isinstance(value, int):
-        return value
-    if isinstance(value, float):
-        return int(value)
-    return 0
-
-
-def _number_from_any(value: Any) -> float:
-    if isinstance(value, bool):
-        return 0.0
-    if isinstance(value, (int, float)):
-        return float(value)
-    return 0.0
-
-
-def _find_string(value: Any, keys: set[str]) -> str | None:
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key in keys and isinstance(item, str) and item:
-                return item
-            found = _find_string(item, keys)
-            if found:
-                return found
-    elif isinstance(value, list):
-        for item in value:
-            found = _find_string(item, keys)
-            if found:
-                return found
-    return None
-
-
-def _find_dicts(value: Any, keys: set[str]) -> list[dict[str, Any]]:
-    found: list[dict[str, Any]] = []
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key in keys and isinstance(item, dict):
-                found.append(item)
-            found.extend(_find_dicts(item, keys))
-    elif isinstance(value, list):
-        for item in value:
-            found.extend(_find_dicts(item, keys))
-    return found
-
-
-def _find_numbers(value: Any, keys: set[str]) -> list[float]:
-    found: list[float] = []
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key in keys and isinstance(item, (int, float)) and not isinstance(item, bool):
-                found.append(float(item))
-            found.extend(_find_numbers(item, keys))
-    elif isinstance(value, list):
-        for item in value:
-            found.extend(_find_numbers(item, keys))
-    return found
-
-
-def _count_tool_calls(value: Any) -> int:
-    if isinstance(value, dict):
-        total = 0
-        for key, item in value.items():
-            if key in {"tool_call", "toolCall", "tool_calls", "toolCalls"}:
-                if isinstance(item, list):
-                    total += len(item)
-                elif isinstance(item, dict):
-                    total += 1
-                elif isinstance(item, int):
-                    total += item
-            total += _count_tool_calls(item)
-        return total
-    if isinstance(value, list):
-        return sum(_count_tool_calls(item) for item in value)
-    return 0
 
 
 if __name__ == "__main__":

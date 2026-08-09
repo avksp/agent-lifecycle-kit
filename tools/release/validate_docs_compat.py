@@ -207,6 +207,36 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/host-local-token-accounting.md",
+        (
+            "adapter-local-usage-normalizer.v1",
+            "agent-lifecycle-model-usage-receipt.v1",
+            "UNSUPPORTED",
+            "FIXTURE_ONLY",
+            "QUALIFIED",
+            "source: host",
+            "status: ATTESTED",
+            "usage_normalizer.py",
+            "validate_host_usage_normalizers.py",
+            "one-token-per-source-byte",
+        ),
+    ),
+    (
+        "docs/ru/reference/host-local-token-accounting.md",
+        (
+            "adapter-local-usage-normalizer.v1",
+            "agent-lifecycle-model-usage-receipt.v1",
+            "UNSUPPORTED",
+            "FIXTURE_ONLY",
+            "QUALIFIED",
+            "source: host",
+            "status: ATTESTED",
+            "usage_normalizer.py",
+            "validate_host_usage_normalizers.py",
+            "один токен на каждый байт",
+        ),
+    ),
+    (
         "docs/reference/risk-aware-execution.md",
         (
             "agent-risk-execution-profile.v1",
@@ -364,6 +394,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "Pi",
             "`adapter-event-stream`",
             "`agent-adapter-event-stream-receipt.v1`",
+            "usageNormalization.status: FIXTURE_ONLY",
+            "Host-local token accounting",
         ),
     ),
     (
@@ -932,7 +964,9 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 OPTIONAL_DOC_RULE_PATHS = {
+    "docs/reference/host-local-token-accounting.md",
     "docs/reference/review-mesh.md",
+    "docs/ru/reference/host-local-token-accounting.md",
     "docs/ru/reference/review-mesh.md",
 }
 
@@ -993,12 +1027,19 @@ def main() -> int:
     verified_doc_hosts = LEGACY_VERIFIED_DOC_HOSTS | _verified_doc_hosts_from_evidence_index(root, blockers)
 
     review_mesh_docs_available = (root / "docs/reference/review-mesh.md").is_file()
+    host_local_token_docs_available = (root / "docs/reference/host-local-token-accounting.md").is_file()
     for relative, required in DOC_RULES:
         if relative in OPTIONAL_DOC_RULE_PATHS and not (root / relative).is_file():
             checks.append({"path": relative, "status": "SKIPPED", "required": list(required), "identity": None})
             continue
         if relative in {"docs/reference/public-contracts.md", "docs/ru/reference/public-contracts.md"} and not review_mesh_docs_available:
             required = tuple(item for item in required if "agent-review-mesh" not in item)
+        if relative == "docs/adapters/support-matrix.md" and not host_local_token_docs_available:
+            required = tuple(
+                item
+                for item in required
+                if item not in {"usageNormalization.status: FIXTURE_ONLY", "Host-local token accounting"}
+            )
         checks.append(_check_doc(root, relative, required, blockers, verified_doc_hosts))
     for relative in ADAPTER_DOCS:
         checks.append(_check_adapter_doc(root, relative, blockers, verified_doc_hosts))

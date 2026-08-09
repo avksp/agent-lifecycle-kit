@@ -25,6 +25,9 @@ The adapter remains `EXPERIMENTAL` until live Kimi Code conformance, usage
 calibration and lifecycle proof evidence are accepted in the support matrix.
 The bounded harness uses headless `--prompt` with post-invocation clean-worktree
 checks because Kimi Code does not allow `--prompt` and `--plan` together.
+Its adapter-local `stream-json` usage normalizer is `FIXTURE_ONLY`: runner and
+harness share the bounded parser, but its sidecar does not satisfy S1/S2. See
+[Host-local token accounting](../reference/host-local-token-accounting.md).
 Current blocker: `BLOCKED_HOST_MODEL_NOT_CONFIGURED`; the current local Kimi
 Code 0.30.0 setup has no configured providers/model aliases, so no
 usage-attested live host receipt, calibration receipt, or lifecycle final proof
