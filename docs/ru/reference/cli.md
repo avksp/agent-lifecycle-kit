@@ -9,7 +9,7 @@ JSON, чтобы результат можно было проверять ав�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.56.0
+python -m pip install agent-lifecycle-kit==1.57.0
 ```
 
 ## Основа
@@ -149,6 +149,12 @@ python -m pip install agent-lifecycle-kit==1.56.0
   возобновление сессий адаптеров. Обычная интерактивная сессия возвращает
   `WAITING_FOR_TASK`; повышенная сессия связывается с состоянием рабочего цикла
   и задачей.
+- `agent-lifecycle adapter launch-profile --adapter codex|claude|opencode
+  --repository-root <каталог ALK> --out .alk/host-launch/<adapter>.json`:
+  создаёт локальный профиль с точной привязкой к версии, не запуская внешний
+  инструмент. Затем выполните `host-launch preflight`; см.
+  [квалифицированный запуск внешнего
+  инструмента](qualified-host-launch.md).
 - `agent-lifecycle adapter session start --launch`: проверяет запрошенный
   профиль запуска и затем возвращает `adapter-generic-launch-disabled` до
   создания процесса. Один дескриптор не является полномочием на общий прямой

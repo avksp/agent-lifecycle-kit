@@ -34,3 +34,11 @@ summary is
 
 This does not claim npm publication, public directory approval, production
 promotion, or compatibility with untested OpenCode versions.
+
+## Qualified local launch
+
+OpenCode `1.18.15` has a separate version-bound local launch profile. Generate
+and preflight it before a frozen `start --launch` call. The profile does not
+use `--auto`, change the `1.18.9` full adapter evidence range, or qualify token
+accounting for S1/S2. See [Qualified host
+launch](../reference/qualified-host-launch.md).

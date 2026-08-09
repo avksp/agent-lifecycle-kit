@@ -81,6 +81,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/readiness-diagnostics.md",
             "docs/ru/reference/lifecycle-cost.md",
             "docs/ru/reference/local-host-launch.md",
+            "docs/ru/reference/qualified-host-launch.md",
             "docs/ru/reference/model-routing.md",
             "docs/ru/reference/risk-aware-execution.md",
             "docs/ru/security/release-security.md",
@@ -99,6 +100,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/risk-aware-execution.md",
             "docs/reference/small-model-packets.md",
             "docs/reference/local-host-launch.md",
+            "docs/reference/qualified-host-launch.md",
             "docs/reference/readiness-diagnostics.md",
         ):
             with self.subTest(path=relative):
@@ -927,6 +929,18 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/local-host-launch.md", local_launch)
     _write_text(root / "docs/ru/reference/local-host-launch.md", local_launch)
+    qualified_launch = (
+        "agent-host-launch-qualification-receipt.v1.\n"
+        "adapter launch-profile.\n"
+        "0.147.0.\n"
+        "2.1.226.\n"
+        "1.18.15.\n"
+        "WRAPPER_ONLY.\n"
+        "FIXTURE_ONLY.\n"
+        "acceptedForS1S2: false.\n"
+    )
+    _write_text(root / "docs/reference/qualified-host-launch.md", qualified_launch)
+    _write_text(root / "docs/ru/reference/qualified-host-launch.md", qualified_launch)
     _write_text(
         root / "docs/reference/readiness-diagnostics.md",
         "`agent-adapter-install-plan.v1`.\n"

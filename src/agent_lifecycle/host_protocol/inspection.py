@@ -13,6 +13,8 @@ from agent_lifecycle.host_protocol.inspection_common import (
     _display_binary,
     _relative_display_path,
 )
+from agent_lifecycle.host_protocol.inspection_claude import _inspect_claude
+from agent_lifecycle.host_protocol.inspection_codex import _inspect_codex
 from agent_lifecycle.host_protocol.inspection_cursor import _inspect_cursor
 from agent_lifecycle.host_protocol.inspection_gemini_cli import _inspect_gemini_cli
 from agent_lifecycle.host_protocol.inspection_hermes import _inspect_hermes
@@ -132,6 +134,22 @@ def _inspect_known_host(
     command_runner: CommandRunner,
 ) -> tuple[list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
     host = descriptor.get("host")
+    if host == "codex":
+        return _inspect_codex(
+            descriptor_path=descriptor_path,
+            host_bin=host_bin or "codex",
+            project_root=project_root,
+            timeout_seconds=timeout_seconds,
+            command_runner=command_runner,
+        )
+    if host == "claude":
+        return _inspect_claude(
+            descriptor_path=descriptor_path,
+            host_bin=host_bin or "claude",
+            project_root=project_root,
+            timeout_seconds=timeout_seconds,
+            command_runner=command_runner,
+        )
     if host == "opencode":
         return _inspect_opencode(
             descriptor_path=descriptor_path,

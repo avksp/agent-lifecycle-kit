@@ -37,6 +37,7 @@ agent-lifecycle start --adapter codex --mode implement --file adapter-run-reques
 agent-lifecycle start --adapter codex --resume <session-id>
 agent-lifecycle host-launch inspect --profile .alk/host-launch/codex.json
 agent-lifecycle host-launch preflight --profile .alk/host-launch/codex.json
+agent-lifecycle adapter launch-profile --adapter codex --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/codex.json
 
 agent-lifecycle adapter session start --adapter codex
 agent-lifecycle adapter session start --adapter codex --launch
@@ -65,6 +66,10 @@ agent-lifecycle adapter run \
 implement`. Структура профиля и полная команда приведены в разделе [локальный
 запуск внешней команды](local-host-launch.md). Для обычного текста задачи эти
 параметры недоступны.
+
+Для точно проверенных версий Codex, Claude Code и OpenCode используйте
+созданный профиль и обязательное подтверждение версии из раздела
+[квалифицированный запуск внешнего инструмента](qualified-host-launch.md).
 
 `start` возвращает `agent-lifecycle-start-receipt.v1`. Сводка вложенного
 результата содержит только устойчивые статусы, рекомендации и отпечатки

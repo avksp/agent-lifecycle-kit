@@ -19,3 +19,11 @@ The local live evidence covers live conformance, live host operation coverage,
 live calibration, and one ALK lifecycle proof. It does not claim public Plugins
 Directory approval, official marketplace review, production platform promotion,
 or universal adapter support. See `docs/adapters/evidence/codex-cli-0.6.0.md`.
+
+## Qualified local launch
+
+Codex CLI `0.147.0` has a separate version-bound local launch profile. Generate
+and preflight it before a frozen `start --launch` call. This qualification does
+not replace the `0.145.0` full adapter evidence range and does not promote
+usage accounting beyond `FIXTURE_ONLY`. See [Qualified host
+launch](../reference/qualified-host-launch.md).

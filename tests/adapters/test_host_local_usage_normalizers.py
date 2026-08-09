@@ -48,10 +48,27 @@ class HostLocalUsageNormalizerTests(unittest.TestCase):
         self.assertEqual(oversized.exception.code, "usage-artifact-too-large")
 
     def test_reference_normalizers_are_fixture_only(self) -> None:
-        for adapter_id in ("gemini-cli", "kimi-code", "qwen-code"):
+        for adapter_id in ("claude", "codex", "gemini-cli", "kimi-code", "opencode", "qwen-code"):
             with self.subTest(adapter=adapter_id):
                 normalizer = load_adapter_usage_normalizer(adapter_id, repository_root=ROOT)
                 self.assertEqual(normalizer.status, "FIXTURE_ONLY")
+
+    def test_new_host_normalizers_extract_allowlisted_counters(self) -> None:
+        fixtures = {
+            "codex": ('{"type":"turn.completed","thread_id":"thread-1","usage":{"input_tokens":12,"output_tokens":5,"total_tokens":17},"secret":"no"}\n', 12, 5, 17),
+            "claude": ('{"type":"result","session_id":"session-1","usage":{"input_tokens":10,"output_tokens":4,"cache_read_input_tokens":2}}\n', 10, 4, 16),
+            "opencode": ('{"type":"step_finish","sessionID":"session-1","part":{"tokens":{"input":9,"output":3,"total":12}},"path":"private/path"}\n', 9, 3, 12),
+        }
+        for adapter_id, (artifact, expected_input, expected_output, expected_total) in fixtures.items():
+            with self.subTest(adapter=adapter_id):
+                normalizer = load_adapter_usage_normalizer(adapter_id, repository_root=ROOT)
+                usage = normalizer.parse_usage(artifact, max_bytes=normalizer.max_artifact_bytes)
+                self.assertEqual(usage.input_tokens, expected_input)
+                self.assertEqual(usage.output_tokens, expected_output)
+                self.assertEqual(usage.billable_tokens, expected_total)
+                serialized = json.dumps(usage.to_receipt_usage()).lower()
+                self.assertNotIn("secret", serialized)
+                self.assertNotIn("/users/", serialized)
 
 
 if __name__ == "__main__":

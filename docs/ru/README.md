@@ -16,10 +16,10 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 
 Главная цель проекта - закрывать задачу полностью, с максимально возможным качеством для выбранной модели, без оверинжиринга и с контролем расхода токенов.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.56.0 · **Python:** 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.57.0 · **Python:** 3.11-3.14
 
 ## Быстрый старт
-Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.56.0`.
+Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.57.0`.
 Из исходного дерева:
 
 ```bash
@@ -29,7 +29,7 @@ agent-lifecycle diagnose --no-install-plans
 agent-lifecycle start --adapter codex --text "Составь проверяемый план реализации"
 ```
 
-Пошаговый пример: [Быстрый старт](quickstart.md). Устройство проекта описывает [архитектура системы](architecture/system-architecture.md), а отличие от похожих инструментов показывает [сравнение проекта](reference/project-comparison.md).
+Пошаговый пример: [Быстрый старт](quickstart.md). Точный локальный запуск Codex, Claude Code и OpenCode описан в разделе [квалифицированный запуск внешнего инструмента](reference/qualified-host-launch.md). Устройство проекта описывает [архитектура системы](architecture/system-architecture.md), а отличие от похожих инструментов показывает [сравнение проекта](reference/project-comparison.md).
 
 ## Что даёт ALK
 
