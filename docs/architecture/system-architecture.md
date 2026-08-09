@@ -207,7 +207,7 @@ flowchart LR
 | Compilation | `compiler/task_packets.py`, `compiler/small_model_packets.py` | Frozen DAG to task packets and compact model packets. |
 | Planning | `planning/*`, `specification/*`, `freeze/locks.py` | SDD tier, plan checks, completeness, acceptance and lock verification. |
 | Workflow | `workflow/*` | State mutation, task transitions, finalization and managed next actions. |
-| Adapter sessions | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`. |
+| Adapter sessions | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`, local profile validation and explicit frozen host launch. |
 | Host protocol | `host_protocol/*` | Adapter validation, inspection, event capture and capability checks. |
 | Audit | `audit/*` | Ownership checks, review verdicts, implementation audit, proof integrity. |
 | Review coordination | `review_mesh/*` | Optional recommendation, operator templates, reviewer packet preparation, assignments, result import, synthesis and quorum. |
@@ -262,8 +262,10 @@ sequenceDiagram
   participant Intake as adapter_sessions/task_intake.py
   participant Resume as adapter_sessions/workflow_bridge.py
   participant Store as adapter_sessions/session_store.py
+  participant LocalLaunch as adapter_sessions/launcher.py
+  participant Process as adapter_sessions/process.py
 
-  User->>StartCLI: start --adapter --file|--text|--resume
+  User->>StartCLI: start --adapter --file|--text|--resume [--launch]
   StartCLI->>Start: start_lifecycle()
   alt raw task in auto/research/plan/review
     Start->>Intake: start_adapter_task()
@@ -271,6 +273,11 @@ sequenceDiagram
   else frozen input with explicit implement
     Start->>Intake: existing frozen delegation
     Intake-->>Start: managed-run receipt
+    opt explicit local profile launch
+      Start->>LocalLaunch: launch_from_local_profile(frozen identity, risk profile)
+      LocalLaunch->>Process: run_process(argv, shell=false, bounded timeout)
+      Process-->>LocalLaunch: redacted process result
+    end
   else persisted ALK session
     Start->>Store: load_session()
     Start->>Resume: resume_adapter_session()
@@ -283,7 +290,10 @@ The facade selects an existing primitive; it does not own workflow transitions.
 Raw task modes cannot call managed-run or host-launch code. Frozen delegation
 requires explicit `implement` and complete bindings. Resume accepts only a
 stored ALK session, validates adapter and state lineage, and does not interpret
-native host conversation identifiers.
+native host conversation identifiers. A local process is reachable only with
+the additional `--launch --host-launch-profile` opt-in after lock, lineage and
+risk-profile validation; generic descriptor and interactive-session launch
+remain blocked.
 
 ### Raw task or Markdown intake
 

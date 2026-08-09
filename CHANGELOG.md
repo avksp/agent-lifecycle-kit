@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.56.0 - 2026-08-09
+
+- Added ignored, schema-validated local host launch profiles with closed argv
+  templates, exact environment allowlists, bounded timeouts and digest-bound
+  inspection receipts.
+- Added zero-process `host-launch inspect` and explicit one-probe `host-launch
+  preflight` commands with redacted output.
+- Added explicit `start --launch --host-launch-profile` execution only after a
+  frozen lock-bound managed run and derived risk profile pass validation.
+- Kept generic descriptor launch and `adapter session start --launch`
+  fail-closed, preserved every bundled adapter at `WRAPPER_ONLY`, and added
+  English and Russian operator and security guidance.
+
 ## 1.55.0 - 2026-08-09
 
 - Added the Git-index-bound `tracked-release` neutrality scope for CI and

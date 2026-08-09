@@ -35,6 +35,8 @@ agent-lifecycle start --adapter codex --file task.md
 agent-lifecycle start --adapter codex --mode research --text "Исследуй текущую архитектуру"
 agent-lifecycle start --adapter codex --mode implement --file adapter-run-request.json
 agent-lifecycle start --adapter codex --resume <session-id>
+agent-lifecycle host-launch inspect --profile .alk/host-launch/codex.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/codex.json
 
 agent-lifecycle adapter session start --adapter codex
 agent-lifecycle adapter session start --adapter codex --launch
@@ -57,6 +59,12 @@ agent-lifecycle adapter run \
   --lock <plan.lock.json> \
   --task <task-id>
 ```
+
+Для локального запуска добавьте `--launch --host-launch-profile
+.alk/host-launch/<adapter>.json` к полностью связанному вызову `start --mode
+implement`. Структура профиля и полная команда приведены в разделе [локальный
+запуск внешней команды](local-host-launch.md). Для обычного текста задачи эти
+параметры недоступны.
 
 `start` возвращает `agent-lifecycle-start-receipt.v1`. Сводка вложенного
 результата содержит только устойчивые статусы, рекомендации и отпечатки
@@ -108,7 +116,10 @@ task-start --risk-profile <path>` проверяет и записывает э�
 
 Текущие встроенные адаптеры объявляют `WRAPPER_ONLY`. Так ALK может давать
 доказательство управляемого жизненного цикла через свои команды, не заявляя
-неподтверждённые прямые hooks или командные строки хоста. `adapter session
+неподтверждённые прямые точки подключения или командные строки внешнего
+инструмента. Проверенный локальный профиль может явно запустить один процесс
+после проверки зафиксированных привязок и профиля риска, но этот локальный факт
+не меняет публичный статус поддержки. `adapter session
 start --launch` и прямой общий запуск через дескриптор всегда возвращают
 `adapter-generic-launch-disabled` до создания процесса, независимо от статуса
 профиля.
@@ -133,6 +144,7 @@ start --launch` и прямой общий запуск через дескри�
 `agent-managed-adapter-launch-receipt.v1`,
 `agent-adapter-session-resume-receipt.v1`,
 `agent-adapter-task-start-receipt.v1`,
-`agent-adapter-task-run-request.v1` и `agent-lifecycle-start-receipt.v1`.
+`agent-adapter-task-run-request.v1`, `agent-lifecycle-start-receipt.v1` и
+`agent-local-host-launch-profile-receipt.v1`.
 Рекомендации групповой проверки используют
 `agent-review-mesh-recommendation.v1`.

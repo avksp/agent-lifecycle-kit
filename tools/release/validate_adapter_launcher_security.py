@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 from pathlib import Path
 from typing import Any
 
@@ -67,8 +68,34 @@ def _boundary_blockers(path: Path, text: str) -> list[dict[str, Any]]:
     if path.name == "launcher.py":
         if "adapter-generic-launch-disabled" not in text:
             blockers.append({"code": "adapter-generic-launch-blocker-missing", "path": path.as_posix()})
-        if "run_process(" in text or "subprocess.run(" in text:
-            blockers.append({"code": "adapter-generic-launch-process-route", "path": path.as_posix()})
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            blockers.append({"code": "adapter-launcher-source-invalid", "path": path.as_posix()})
+        else:
+            for node in tree.body:
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                reaches_process = any(
+                    isinstance(child, ast.Call)
+                    and (
+                        isinstance(child.func, ast.Name)
+                        and child.func.id == "run_process"
+                        or isinstance(child.func, ast.Attribute)
+                        and isinstance(child.func.value, ast.Name)
+                        and child.func.value.id == "subprocess"
+                        and child.func.attr == "run"
+                    )
+                    for child in ast.walk(node)
+                )
+                if reaches_process and node.name != "launch_from_local_profile":
+                    blockers.append(
+                        {
+                            "code": "adapter-generic-launch-process-route",
+                            "path": path.as_posix(),
+                            "function": node.name,
+                        }
+                    )
     if path.name == "env.py":
         if "import fnmatch" in text or "fnmatch." in text:
             blockers.append({"code": "adapter-env-wildcard-route", "path": path.as_posix()})
