@@ -27,7 +27,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 устанавливайте точную семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.55.0
+python -m pip install agent-lifecycle-kit==1.56.0
 agent-lifecycle version
 ```
 
@@ -153,9 +153,26 @@ agent-lifecycle start \
 
 Команда проверяет сохранённый адаптер и происхождение состояния. Значение
 `--resume` не трактуется как идентификатор диалога Codex, Claude, OpenCode или
-другого внешнего инструмента. Эта версия не запускает внешний CLI. Для
-автоматизации остаются отдельные команды `adapter task start`, `adapter run` и
-`adapter session resume` из [справочника команд](reference/cli.md).
+другого внешнего инструмента. По умолчанию внешний процесс не запускается.
+Опытный пользователь может явно запустить одну локальную команду только из
+зафиксированного режима `implement` с профилем риска:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode implement \
+  --file work/run/adapter-run-request.json \
+  --risk auto \
+  --host-model-profile profiles/hosts/codex-live-profile.v1.json \
+  --launch \
+  --host-launch-profile .alk/host-launch/codex.json
+```
+
+Сначала создайте и проверьте исключённый из Git профиль. Его формат, проверка
+готовности и условия безопасного отказа описаны в разделе [локальный запуск
+внешней команды](reference/local-host-launch.md). Для автоматизации остаются
+отдельные команды `adapter task start`, `adapter run` и `adapter session resume`
+из [справочника команд](reference/cli.md).
 
 ## Проверка изменений
 

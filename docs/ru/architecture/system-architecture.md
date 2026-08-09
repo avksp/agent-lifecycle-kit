@@ -211,7 +211,7 @@ flowchart LR
 | Компиляция заданий | `compiler/task_packets.py`, `compiler/small_model_packets.py` | Преобразование зафиксированного графа задач в рабочие и компактные пакеты. |
 | Планирование | `planning/*`, `specification/*`, `freeze/locks.py` | SDD-уровень, проверка плана, полнота, приёмка и файл блокировки. |
 | Рабочий цикл | `workflow/*` | Изменение состояния, переходы задач, финализация и следующий управляемый шаг. |
-| Сессии адаптеров | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`. |
+| Сессии адаптеров | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`, проверка локального профиля и явный запуск внешнего процесса из зафиксированного состояния. |
 | Протокол хоста | `host_protocol/*` | Проверка адаптера, безопасный осмотр, захват событий и возможности. |
 | Аудит | `audit/*` | Владение файлами, вердикты проверки, аудит реализации, целостность доказательств. |
 | Групповая проверка | `review_mesh/*` | Рекомендация, шаблоны оператора, подготовка пакетов проверяющих, назначения, импорт результатов, объединение выводов и кворум. |
@@ -267,8 +267,10 @@ sequenceDiagram
   participant Intake as adapter_sessions/task_intake.py
   participant Resume as adapter_sessions/workflow_bridge.py
   participant Store as adapter_sessions/session_store.py
+  participant LocalLaunch as adapter_sessions/launcher.py
+  participant Process as adapter_sessions/process.py
 
-  User->>StartCLI: start --adapter --file|--text|--resume
+  User->>StartCLI: start --adapter --file|--text|--resume [--launch]
   StartCLI->>Start: start_lifecycle()
   alt обычная задача в auto/research/plan/review
     Start->>Intake: start_adapter_task()
@@ -276,6 +278,11 @@ sequenceDiagram
   else зафиксированный ввод и явный implement
     Start->>Intake: существующая передача управляемому шагу
     Intake-->>Start: подтверждение управляемого шага
+    opt явный запуск по локальному профилю
+      Start->>LocalLaunch: launch_from_local_profile(идентичность, профиль риска)
+      LocalLaunch->>Process: run_process(argv, shell=false, ограниченное время)
+      Process-->>LocalLaunch: очищенный результат процесса
+    end
   else сохранённая сессия ALK
     Start->>Store: load_session()
     Start->>Resume: resume_adapter_session()
@@ -289,7 +296,10 @@ sequenceDiagram
 внешнего инструмента. Передача зафиксированного входа требует явного режима
 `implement` и полной привязки. Возобновление принимает только сохранённую
 сессию ALK, проверяет адаптер и происхождение состояния и не трактует значение
-как идентификатор диалога внешнего инструмента.
+как идентификатор диалога внешнего инструмента. Локальный процесс доступен
+только при дополнительном явном указании `--launch --host-launch-profile` после
+проверки файла блокировки, происхождения и профиля риска. Общий запуск через
+дескриптор и запуск интерактивной сессии остаются заблокированными.
 
 ### Приём обычной задачи или Markdown
 

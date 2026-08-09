@@ -80,6 +80,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/quality-cost-learning.md",
             "docs/ru/reference/readiness-diagnostics.md",
             "docs/ru/reference/lifecycle-cost.md",
+            "docs/ru/reference/local-host-launch.md",
             "docs/ru/reference/model-routing.md",
             "docs/ru/reference/risk-aware-execution.md",
             "docs/ru/security/release-security.md",
@@ -97,6 +98,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/model-routing.md",
             "docs/reference/risk-aware-execution.md",
             "docs/reference/small-model-packets.md",
+            "docs/reference/local-host-launch.md",
             "docs/reference/readiness-diagnostics.md",
         ):
             with self.subTest(path=relative):
@@ -888,7 +890,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "wildcard.\n"
         "plugin installation alone.\n"
         "risk-aware-execution.md.\n"
-        "--risk-profile-out.\n",
+        "--risk-profile-out.\n"
+        "local-host-launch.md.\n",
     )
     _write_text(
         root / "docs/ru/reference/managed-adapter-sessions.md",
@@ -906,8 +909,24 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "шаблоны.\n"
         "установка плагина.\n"
         "risk-aware-execution.md.\n"
-        "--risk-profile-out.\n",
+        "--risk-profile-out.\n"
+        "local-host-launch.md.\n",
     )
+    local_launch = (
+        "`agent-local-host-launch-profile.v1`.\n"
+        ".alk/host-launch/.\n"
+        "host-launch inspect.\n"
+        "host-launch preflight.\n"
+        "--launch.\n"
+        "--host-launch-profile.\n"
+        "launch_from_local_profile.\n"
+        "adapter session start --launch.\n"
+        "`WRAPPER_ONLY`.\n"
+        "Raw task text.\n"
+        "Текст задачи.\n"
+    )
+    _write_text(root / "docs/reference/local-host-launch.md", local_launch)
+    _write_text(root / "docs/ru/reference/local-host-launch.md", local_launch)
     _write_text(
         root / "docs/reference/readiness-diagnostics.md",
         "`agent-adapter-install-plan.v1`.\n"

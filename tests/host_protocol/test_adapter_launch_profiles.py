@@ -5,7 +5,11 @@ import unittest
 from pathlib import Path
 
 from agent_lifecycle.host_protocol import validate_adapter_descriptor
-from agent_lifecycle.host_protocol.validation import validate_installation_facts, validate_managed_launch_profile
+from agent_lifecycle.host_protocol.validation import (
+    validate_installation_facts,
+    validate_local_host_launch_profile,
+    validate_managed_launch_profile,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -47,6 +51,16 @@ class AdapterLaunchProfileTests(unittest.TestCase):
 
         self.assertEqual(validation["status"], "FAIL")
         self.assertIn("adapter-managed-launch-argv", {item["code"] for item in validation["blockers"]})
+
+    def test_local_profile_validation_reuses_the_domain_validator(self) -> None:
+        profile = json.loads(
+            (ROOT / "tests/adapter_sessions/fixtures/local_launch_profiles/valid.json").read_text(encoding="utf-8")
+        )
+
+        validation = validate_local_host_launch_profile(profile)
+
+        self.assertEqual(validation["status"], "PASS", validation["blockers"])
+        self.assertFalse(validation["hostLaunchStarted"])
 
 
 if __name__ == "__main__":

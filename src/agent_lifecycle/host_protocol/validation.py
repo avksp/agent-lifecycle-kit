@@ -144,6 +144,14 @@ def validate_managed_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def validate_local_host_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
+    """Validate an operator-local profile through its single domain validator."""
+
+    from agent_lifecycle.adapter_sessions.local_launch_profile import validate_local_launch_profile
+
+    return validate_local_launch_profile(profile)
+
+
 def validate_installation_facts(facts: Any) -> dict[str, Any]:
     """Validate declarative adapter installation guidance without executing it."""
 
