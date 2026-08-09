@@ -42,6 +42,11 @@ from agent_lifecycle.workflow.sandbox_policy import (
     sandbox_evidence_required,
     validate_task_sandbox_evidence,
 )
+from agent_lifecycle.workflow.risk_execution_gate import (
+    clear_task_risk_profile,
+    validate_attempt_risk_usage,
+    validate_task_risk_profile,
+)
 
 __all__ = [
     "accept_task",
@@ -55,6 +60,7 @@ __all__ = [
     "check_lineage",
     "classify_lease_status",
     "commit_task_result",
+    "clear_task_risk_profile",
     "finalize_run",
     "next_action",
     "pause_for_budget_decision",
@@ -74,6 +80,8 @@ __all__ = [
     "validate_budget_exceeded_policy",
     "validate_bug_forensics_gate_receipt",
     "validate_final_proof_integrity",
+    "validate_attempt_risk_usage",
+    "validate_task_risk_profile",
     "validate_task_sandbox_evidence",
     "validate_worker_lease_receipt",
 ]

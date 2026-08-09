@@ -58,6 +58,11 @@ def start_adapter_task(
     max_input_bytes: int = 32768,
     target_tokens: int = 4096,
     package_id: str = "adapter-task-intake",
+    requested_risk: str | None = None,
+    risk_policy_path: Path | None = None,
+    routing_profile_path: Path | None = None,
+    baseline_profile_path: Path | None = None,
+    host_model_profile_path: Path | None = None,
 ) -> dict[str, Any]:
     """Classify adapter task input without turning raw text into authority."""
 
@@ -78,6 +83,11 @@ def start_adapter_task(
             source=_source_summary(source),
             descriptor_path=descriptor_path,
             session_root=session_root,
+            requested_risk=requested_risk,
+            risk_policy_path=risk_policy_path,
+            routing_profile_path=routing_profile_path,
+            baseline_profile_path=baseline_profile_path,
+            host_model_profile_path=host_model_profile_path,
         )
     if parsed is not None and parsed.get("schemaVersion") == "agent-plan-manifest.v1":
         if parsed.get("status") == "FROZEN":
@@ -101,6 +111,11 @@ def start_adapter_task(
                 operation_id=operation_id,
                 expected_revision=expected_revision,
                 source_revision=source_revision,
+                requested_risk=requested_risk,
+                risk_policy_path=risk_policy_path,
+                routing_profile_path=routing_profile_path,
+                baseline_profile_path=baseline_profile_path,
+                host_model_profile_path=host_model_profile_path,
             )
     return _planning_intake(
         adapter_id=adapter_id,
@@ -109,6 +124,7 @@ def start_adapter_task(
         max_input_bytes=max_input_bytes,
         target_tokens=target_tokens,
         package_id=package_id,
+        requested_risk=requested_risk,
     )
 
 
@@ -137,6 +153,7 @@ def _planning_intake(
     max_input_bytes: int,
     target_tokens: int,
     package_id: str,
+    requested_risk: str | None,
 ) -> dict[str, Any]:
     if source["kind"] == "TEXT":
         planning = import_planning_text(
@@ -178,6 +195,7 @@ def _planning_intake(
         requires_review=True,
         audit_required=True,
         freeze_blocked=True,
+        risk_advisory=_risk_advisory(requested_risk),
     )
 
 
@@ -188,6 +206,11 @@ def _from_run_request(
     source: dict[str, Any],
     descriptor_path: Path | None,
     session_root: Path | None,
+    requested_risk: str | None,
+    risk_policy_path: Path | None,
+    routing_profile_path: Path | None,
+    baseline_profile_path: Path | None,
+    host_model_profile_path: Path | None,
 ) -> dict[str, Any]:
     blockers = _run_request_blockers(adapter_id, request)
     if blockers:
@@ -204,6 +227,11 @@ def _from_run_request(
         operation_id=str(request["operationId"]),
         expected_revision=int(request["expectedRevision"]),
         source_revision=str(request["sourceRevision"]),
+        requested_risk=requested_risk,
+        risk_policy_path=risk_policy_path,
+        routing_profile_path=routing_profile_path,
+        baseline_profile_path=baseline_profile_path,
+        host_model_profile_path=host_model_profile_path,
     )
 
 
@@ -220,6 +248,11 @@ def _from_frozen_manifest(
     operation_id: str | None,
     expected_revision: int | None,
     source_revision: str | None,
+    requested_risk: str | None,
+    risk_policy_path: Path | None,
+    routing_profile_path: Path | None,
+    baseline_profile_path: Path | None,
+    host_model_profile_path: Path | None,
 ) -> dict[str, Any]:
     missing = [
         name
@@ -253,6 +286,11 @@ def _from_frozen_manifest(
         operation_id=str(operation_id),
         expected_revision=int(expected_revision or 0),
         source_revision=str(source_revision),
+        requested_risk=requested_risk,
+        risk_policy_path=risk_policy_path,
+        routing_profile_path=routing_profile_path,
+        baseline_profile_path=baseline_profile_path,
+        host_model_profile_path=host_model_profile_path,
     )
 
 
@@ -269,6 +307,11 @@ def _managed_run_receipt(
     operation_id: str,
     expected_revision: int,
     source_revision: str,
+    requested_risk: str | None,
+    risk_policy_path: Path | None,
+    routing_profile_path: Path | None,
+    baseline_profile_path: Path | None,
+    host_model_profile_path: Path | None,
 ) -> dict[str, Any]:
     try:
         session_receipt = managed_adapter_run(
@@ -282,6 +325,11 @@ def _managed_run_receipt(
             operation_id=operation_id,
             expected_revision=expected_revision,
             source_revision=source_revision,
+            requested_risk=requested_risk,
+            risk_policy_path=risk_policy_path,
+            routing_profile_path=routing_profile_path,
+            baseline_profile_path=baseline_profile_path,
+            host_model_profile_path=host_model_profile_path,
         )
     except LifecycleError as exc:
         return _receipt(
@@ -418,6 +466,7 @@ def _receipt(
     workflow_binding: dict[str, Any] | None = None,
     review_mesh_recommendation: dict[str, Any] | None = None,
     bug_forensics_advisory: dict[str, Any] | None = None,
+    risk_advisory: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     body = {
         "schemaVersion": ADAPTER_TASK_START_RECEIPT_SCHEMA,
@@ -440,6 +489,7 @@ def _receipt(
         "workflowBinding": workflow_binding,
         "reviewMeshRecommendation": review_mesh_recommendation,
         "bugForensicsAdvisory": bug_forensics_advisory,
+        "riskAdvisory": risk_advisory,
         "modelCallsStarted": False,
         "hostLaunchStarted": bool(adapter_session_receipt.get("hostLaunchStarted")) if isinstance(adapter_session_receipt, dict) else False,
         "secretsWritten": False,
@@ -448,3 +498,14 @@ def _receipt(
         "productionPromotionClaimed": False,
     }
     return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def _risk_advisory(requested_risk: str | None) -> dict[str, Any] | None:
+    if requested_risk is None:
+        return None
+    return {
+        "requestedRisk": requested_risk,
+        "status": "ADVISORY_ONLY",
+        "executionProfileCreated": False,
+        "activeUsageGateClaimed": False,
+    }

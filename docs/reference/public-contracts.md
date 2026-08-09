@@ -44,6 +44,7 @@ Stable schema ids:
 - `agent-runner-snapshot.v1`
 - `agent-managed-lifecycle-next-action.v1`
 - `agent-managed-lifecycle-runner-receipt.v1`
+- `agent-lifecycle-start-receipt.v1`
 - `agent-adapter-session-receipt.v1`
 - `agent-managed-adapter-launch-receipt.v1`
 - `agent-adapter-session-resume-receipt.v1`
@@ -82,7 +83,10 @@ Stable schema ids:
 - `agent-progress-bridge-receipt.v1`
 - `agent-progress-hook-policy.v1`
 - `agent-progress-hook-receipt.v1`
+- `agent-risk-execution-policy.v1`
+- `agent-risk-execution-profile.v1`
 - `agent-lifecycle-quality-floor-decision.v1`
+- `agent-lifecycle-policy-proposal.v1`
 - `agent-adaptive-lifecycle-policy-request.v1`
 - `agent-adaptive-lifecycle-policy-decision.v1`
 - `agent-adaptive-lifecycle-policy-decision-validation.v1`

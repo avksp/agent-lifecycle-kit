@@ -8,7 +8,8 @@ from typing import Any
 from agent_lifecycle.adapter_sessions.contracts import build_adapter_session_receipt, build_resume_receipt
 from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, managed_launch_profile
 from agent_lifecycle.adapter_sessions.session_store import create_session, load_session, update_session
-from agent_lifecycle.contracts import read_json_object
+from agent_lifecycle.contracts import canonical_digest, read_json_object
+from agent_lifecycle.policy.risk_execution import derive_risk_execution_profile
 from agent_lifecycle.workflow import run_managed_lifecycle_step
 
 
@@ -24,6 +25,11 @@ def managed_adapter_run(
     source_revision: str,
     descriptor_path: Path | None = None,
     session_root: Path | None = None,
+    requested_risk: str | None = None,
+    risk_policy_path: Path | None = None,
+    routing_profile_path: Path | None = None,
+    baseline_profile_path: Path | None = None,
+    host_model_profile_path: Path | None = None,
 ) -> dict[str, Any]:
     _descriptor_path, descriptor = load_adapter_descriptor(adapter_id, descriptor_path)
     profile = managed_launch_profile(descriptor)
@@ -36,6 +42,34 @@ def managed_adapter_run(
         source_revision=source_revision,
         reason=f"managed adapter run for {task_id}",
     )
+    next_action = runner_receipt.get("nextAction")
+    if runner_receipt["status"] == "PASS" and requested_risk is not None:
+        risk_profile = derive_risk_execution_profile(
+            manifest=read_json_object(manifest_path, label="frozen plan manifest"),
+            state=read_json_object(state_path, label="workflow state"),
+            task_id=task_id,
+            adapter_id=adapter_id,
+            adapter_host=str(descriptor.get("host", "")),
+            operation_id=operation_id,
+            source_revision=source_revision,
+            requested_risk=requested_risk,
+            risk_policy=read_json_object(
+                risk_policy_path or Path("profiles/risk-execution-policy.v1.json"),
+                label="risk execution policy",
+            ),
+            routing_profile=read_json_object(
+                routing_profile_path or Path("profiles/model-routing-profile.v1.json"),
+                label="model routing profile",
+            ),
+            baseline_profile=read_json_object(
+                baseline_profile_path or Path("profiles/lifecycle-baselines.v1.json"),
+                label="lifecycle baseline profile",
+            ),
+            host_profile=read_json_object(host_model_profile_path, label="host model profile")
+            if host_model_profile_path is not None
+            else None,
+        )
+        next_action = _risk_aware_next_action(next_action, risk_profile)
     state_identity = {**_state_identity(state_path), "taskId": task_id}
     proof = _managed_proof("adapter run", adapter_id=adapter_id, task_id=task_id, state_identity=state_identity)
     session = create_session(
@@ -58,7 +92,7 @@ def managed_adapter_run(
         progress_hook_default="stderr",
         host_launch_started=False,
         blockers=runner_receipt.get("blockers", []),
-        next_action=runner_receipt.get("nextAction"),
+        next_action=next_action,
     )
 
 
@@ -152,3 +186,17 @@ def _managed_proof(command: str, *, adapter_id: str, task_id: str, state_identit
         "taskId": task_id,
         "stateIdentity": state_identity,
     }
+
+
+def _risk_aware_next_action(next_action: Any, profile: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(next_action, dict):
+        next_action = {}
+    body = {
+        key: value
+        for key, value in next_action.items()
+        if key != "actionDigest"
+    }
+    body["riskExecutionProfile"] = profile
+    body["riskProfileRequiredAtTaskStart"] = True
+    body["stateMutationRequired"] = True
+    return {**body, "actionDigest": canonical_digest(body)}

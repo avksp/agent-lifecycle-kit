@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.53.0 - 2026-08-09
+
+- Added deterministic risk-aware execution profiles that derive a
+  provider-neutral model route and token, invocation, and wall-time caps from a
+  frozen S0/S1/S2 plan without model, network, or host calls.
+- Added a read-only `start --risk --risk-profile-out` projection followed by
+  explicit `workflow task-start --risk-profile` authorization with strict run,
+  plan, task, source, operation, adapter, route, and digest lineage.
+- Added fail-closed host usage checks for billable tokens, invocations, and wall
+  time, while preserving advisory-only risk recommendations for raw task input.
+- Added English and Russian operator guidance and updated package, plugin,
+  marketplace, and quickstart publication metadata to `1.53.0`.
+
 ## 1.52.0 - 2026-08-09
 
 - Added `agent-lifecycle start` as one beginner-facing command for task text,
