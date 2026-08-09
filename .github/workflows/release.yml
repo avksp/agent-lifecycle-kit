@@ -49,7 +49,7 @@ jobs:
       - name: Run release neutrality scan
         run: |
           python -c "from pathlib import Path; Path('$RELEASE_NEUTRALITY_REPORT').unlink(missing_ok=True)"
-          python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --report "$RELEASE_NEUTRALITY_REPORT" --require-zero-findings
+          python -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --report "$RELEASE_NEUTRALITY_REPORT" --require-zero-findings
       - name: Verify historical standalone lineage guard
         run: |
           set +e

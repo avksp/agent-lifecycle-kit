@@ -9,7 +9,7 @@ JSON, чтобы результат можно было проверять ав�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.54.0
+python -m pip install agent-lifecycle-kit==1.55.0
 ```
 
 ## Основа
@@ -184,3 +184,8 @@ python -m pip install agent-lifecycle-kit==1.54.0
 - `agent-lifecycle report progress-bridge`: создаёт
   `agent-progress-bridge-receipt.v1` для обёрток адаптеров, которым нужен
   стабильный JSON-артефакт и, при необходимости, текст для терминала.
+- `agent-lifecycle-neutrality scan --scope tracked-release --policy <файл>`:
+  проверяет содержимое выпуска, привязанное к индексу Git. Флаг
+  `--include-local-artifacts` явно добавляет только корни из
+  `localArtifactRoots`; старые области остаются допустимыми, но помечаются в
+  подписи как устаревшие. Подробнее: [проверка нейтральности](neutrality.md).

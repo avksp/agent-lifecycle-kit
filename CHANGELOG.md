@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.55.0 - 2026-08-09
+
+- Added the Git-index-bound `tracked-release` neutrality scope for CI and
+  release checks, including regular-file, symbolic-link and gitlink handling
+  without submodule traversal.
+- Added explicit policy-limited local artifact scanning with signed scope,
+  revision, staged-entry, approved-root and content bindings.
+- Added one bounded reread for identity races, keeping recovered races signed
+  but informational while repeated races fail required-clean scans.
+- Preserved legacy neutrality scopes with signed deprecation markers and added
+  English and Russian operational guidance, validators and workflow tests.
+
 ## 1.54.0 - 2026-08-09
 
 - Added bounded adapter-local usage normalizers for Gemini CLI, Kimi Code and

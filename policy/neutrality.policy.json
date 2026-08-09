@@ -6,7 +6,9 @@
     "includeWorktree": true,
     "includeGitObjects": true,
     "maxFileBytes": 16777216,
-    "maxObjectBytes": 16777216
+    "maxObjectBytes": 16777216,
+    "maxLocalArtifactFiles": 10000,
+    "maxLocalArtifactBytes": 1073741824
   },
   "archives": {
     "maxArchiveNestingDepth": 4,
@@ -26,6 +28,10 @@
     "\\.pyc$",
     "\\.pyo$",
     "(^|/)[^/]+\\.egg-info/"
+  ],
+  "localArtifactRoots": [
+    ".alk",
+    "work"
   ],
   "denyLiterals": [],
   "denyRegexes": []
