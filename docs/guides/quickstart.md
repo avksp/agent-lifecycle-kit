@@ -26,7 +26,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 When the package is available for the release, install the exact semver version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.50.1
+python -m pip install agent-lifecycle-kit==1.50.2
 agent-lifecycle version
 ```
 
@@ -60,8 +60,9 @@ agent-lifecycle adapter install-plan \
   --descriptor adapters/opencode/adapter.descriptor.json
 ```
 
-The output is a dry run. It lists files, commands, and operator actions, but it
-does not mutate the host and does not change adapter maturity.
+The output is a dry run. It projects validated installation facts from the
+adapter descriptor as files, argv arrays and operator actions. It does not
+execute the arrays, mutate the host or change adapter maturity.
 
 ## Run a plan gate
 

@@ -3,13 +3,14 @@ from __future__ import annotations
 import json
 import runpy
 import sys
+import tomllib
 import unittest
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "1.50.1"
+VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 PLUGIN_NAME = "agent-lifecycle-kit"
 TOOLS_RELEASE = ROOT / "tools" / "release"
 if str(TOOLS_RELEASE) not in sys.path:
@@ -168,6 +169,8 @@ class PublicationManifestTests(unittest.TestCase):
                 "adapters/claude/.claude-plugin/plugin.json",
                 "adapters/codex/.codex-plugin/plugin.json",
                 "adapters/cursor/.cursor-plugin/plugin.json",
+                "docs/guides/quickstart.md",
+                "docs/ru/quickstart.md",
             }.issubset(paths)
         )
 

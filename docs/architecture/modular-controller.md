@@ -46,18 +46,18 @@ This is the current source map for the standalone package:
 | Optional multi-review coordination, operator templates, prepared packets, assignments, result import, synthesis and quorum | `review_mesh/*`, `review_mesh/operator_templates.py` | Implemented |
 | Controlled runner, attempt snapshots and sandbox receipts | `runner/*` | Implemented |
 | Worktree isolation receipts | `worktree/*` | Implemented |
-| Root CLI dispatch | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py` | Implemented thin entrypoint with split parser and dispatcher modules; no lifecycle semantics should move here |
+| Root CLI dispatch | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/dispatch_adapters.py`, `cli/dispatch_contracts.py`, `cli/dispatch_lifecycle.py`, `cli/dispatch_observability.py`, `cli/dispatch_planning.py` | Implemented thin entrypoint and command-group handlers; no lifecycle semantics should move here |
 | Release checks and live adapter promotion evidence | `tools/release/*`, `tools/live_hosts/*`, metadata and docs | Implemented as release validators and host-local evidence tooling |
 
-Current size check: `cli/main.py` is a thin entrypoint at 41 lines after the
-parser/dispatcher split. Most production Python files are below the hard limits
-in this document. `cli/dispatch.py` is the active exception: recent command
-growth pushed it to about 1220 lines, above the 1200-line hard limit. Treat it
-as split debt, not as a pattern to extend. `workflow/plan_adoption.py`,
-`workflow/finalization.py` and `workflow/task_transitions.py` remain about
-420-440 lines. New lifecycle behavior should prefer a focused domain module
-and a small dispatch branch or dispatcher submodule instead of expanding
-`cli/dispatch.py` further.
+Current size check: `cli/main.py` and `cli/dispatch.py` are thin entrypoints at
+41 lines each. The root dispatcher selects a focused adapter/readiness,
+contract/evidence, lifecycle, observability or planning handler; policy,
+follow-up and worktree handlers remain dedicated command modules. Most
+production Python files are below the hard limits in this document.
+`workflow/plan_adoption.py`, `workflow/finalization.py` and
+`workflow/task_transitions.py` remain about 420-440 lines. New lifecycle
+behavior should prefer a focused domain module and a small dispatcher submodule
+instead of expanding `cli/dispatch.py`.
 
 ## Target shape
 

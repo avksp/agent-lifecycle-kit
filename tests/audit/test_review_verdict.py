@@ -12,12 +12,17 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.audit import compact_review_routing, validate_review_verdict  # noqa: E402
+from agent_lifecycle.audit.review_verdict import validate_review_verdict as facade_validate_review_verdict  # noqa: E402
 from agent_lifecycle.cli import main  # noqa: E402
 from agent_lifecycle.contracts import LifecycleError  # noqa: E402
+from agent_lifecycle.contracts.review_verdict import validate_review_verdict as contract_validate_review_verdict  # noqa: E402
 from agent_lifecycle.workflow.reviews import validate_task_review  # noqa: E402
 
 
 class ReviewVerdictTests(unittest.TestCase):
+    def test_audit_module_remains_a_contract_facade(self) -> None:
+        self.assertIs(facade_validate_review_verdict, contract_validate_review_verdict)
+
     def test_review_verdict_accepts_split_quality_dimensions(self) -> None:
         verdict = _accepted_verdict()
 

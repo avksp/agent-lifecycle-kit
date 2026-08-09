@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "918b93ca5281f38e8588d9168aca02e66301fcc82d03a14f61b3c341abc6785a",
+  "descriptorDigest": "6dabf2615a1d14678540a78952f3ca89674419b685908df310a8912d4f4638f9",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,6 +156,21 @@
     "usageReceiptRequired": true
   },
   "promotion": {
+    "liveTestedHostRange": {
+      "evidence": [
+        "docs/adapters/evidence/opencode-host-local-live-2026-07-29.md",
+        "work/release-0-7/evidence/opencode/live-host-conformance-opencode.json",
+        "work/release-0-7/evidence/opencode/live-calibration-verification-opencode.json",
+        "work/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "opencode",
+      "maximumVersion": "1.18.9",
+      "minimumVersion": "1.18.9",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "6c6b40210ee28de4b6a5993367af89e629fb99ff",
+      "testedAt": "2026-07-29"
+    },
     "productionPromotionClaimed": false,
     "verifiedRequiresLiveTestedHostRange": true
   },

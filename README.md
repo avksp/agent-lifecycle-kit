@@ -30,7 +30,7 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
 ```
 
 Package install, when available for the release:
-`python -m pip install agent-lifecycle-kit==1.50.1`.
+`python -m pip install agent-lifecycle-kit==1.50.2`.
 
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). For structure and positioning, see [System architecture](docs/architecture/system-architecture.md) and [Project comparison](docs/reference/project-comparison.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
 
@@ -89,7 +89,7 @@ For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Li
 ### Security and containment
 
 - Neutrality filters use host-supplied deny rules to keep local paths, secrets, trust roots, and signing keys out of portable artifacts.
-- Host env files require explicit `--host-env-allow`; receipts store redacted metadata, not secret values or private env-file paths.
+- Host env files require explicit `--host-env-allow`; receipts store redacted metadata, and generic descriptor-driven native launch is blocked before process creation.
 - Imports, diagnostics, and usage exports redact local paths and common secret markers before validation.
 - Sandbox receipts separate runtime filesystem, network, process, and environment containment from git write-scope.
 - Release security gates reject leaked local paths, credentials, and unsupported adapter or production claims.

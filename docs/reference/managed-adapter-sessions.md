@@ -60,26 +60,31 @@ to persist `agent-progress-hook-receipt.v1`.
 
 ## Launch profile
 
-Native launch is descriptor-driven. The adapter descriptor field
-`managedLaunch` declares one of:
+The adapter descriptor field `managedLaunch` declares one of the following
+profiles. It is descriptive data, not generic process-execution authority:
 
 | Status | Meaning |
 | --- | --- |
-| `SUPPORTED` | The descriptor supplies safe argv templates for managed launch. |
+| `SUPPORTED` | The descriptor may supply argv templates for a separately qualified local route. The generic library and CLI route do not execute them. |
 | `WRAPPER_ONLY` | A wrapper or operator flow can use ALK managed sessions, but native argv launch is not claimed. |
 | `UNSUPPORTED` | No managed launch route is declared. |
 
 Current bundled adapters declare `WRAPPER_ONLY`. That keeps lifecycle proof
 available through ALK-managed commands without claiming unsupported native host
-hooks or command lines.
+hooks or command lines. `adapter session start --launch` and direct generic
+descriptor launch both return `adapter-generic-launch-disabled` before process
+creation, regardless of the declared profile status.
 
 ## Security boundary
 
 Managed adapter sessions are fail-closed and display-safe:
 
 - launch uses argv arrays with `shell: false`;
+- generic environment selection accepts exact names only; wildcard patterns are
+  rejected;
 - provider secrets are selected only from descriptor/project allowlists;
-- secret values are redacted from receipts;
+- shared redaction removes tested secret and local-path forms from receipts and
+  records whether a stored value changed;
 - tracked native host config files are not written;
 - ALK does not inject prompts into host CLIs;
 - ALK does not parse host-specific telemetry in core;

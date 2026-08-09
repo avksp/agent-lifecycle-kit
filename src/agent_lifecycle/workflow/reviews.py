@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_lifecycle.audit import validate_review_verdict
 from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts.review_verdict import validate_review_verdict
 
 
 def validate_task_result(
