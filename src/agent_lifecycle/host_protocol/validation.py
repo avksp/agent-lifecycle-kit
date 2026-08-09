@@ -36,6 +36,9 @@ REQUIRED_OPERATION_NAMES = {
     "task-audit",
     "final-audit",
 }
+INSTALLATION_FACTS_SCHEMA_VERSION = "agent-adapter-installation-facts.v1"
+INSTALLATION_FILE_ACTIONS = {"read", "copy-preview"}
+SHELL_EXECUTABLES = {"bash", "cmd", "powershell", "pwsh", "sh", "zsh"}
 
 
 def validate_adapter_descriptor(
@@ -90,6 +93,8 @@ def _validate_descriptor_shape(descriptor: dict[str, Any], blockers: list[dict[s
     if descriptor.get("coreSemantics") != "delegated-to-agent-lifecycle-core":
         blockers.append({"code": "adapter-core-semantics-overclaim", "message": "adapter must delegate lifecycle semantics to core"})
     _validate_managed_launch_profile(descriptor.get("managedLaunch"), blockers)
+    if "installation" in descriptor:
+        _validate_installation_facts(descriptor.get("installation"), blockers)
     operations = descriptor.get("operations")
     if not isinstance(operations, list):
         blockers.append({"code": "invalid-adapter-operations", "message": "operations must be an array"})
@@ -120,6 +125,19 @@ def validate_managed_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
     _validate_managed_launch_profile(profile, blockers)
     return {
         "schemaVersion": "agent-managed-launch-profile-validation.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+
+
+def validate_installation_facts(facts: Any) -> dict[str, Any]:
+    """Validate declarative adapter installation guidance without executing it."""
+
+    blockers: list[dict[str, Any]] = []
+    _validate_installation_facts(facts, blockers)
+    return {
+        "schemaVersion": "agent-adapter-installation-facts-validation.v1",
         "status": "PASS" if not blockers else "FAIL",
         "blockers": blockers,
         "productionPromotionClaimed": False,
@@ -163,6 +181,66 @@ def _validate_managed_launch_profile(profile: Any, blockers: list[dict[str, Any]
                 blockers.append({"code": "adapter-managed-launch-argv-template", "mode": mode})
     elif not isinstance(profile.get("reason"), str) or not profile.get("reason"):
         blockers.append({"code": "adapter-managed-launch-reason", "message": "non-supported managedLaunch profiles need a reason"})
+
+
+def _validate_installation_facts(facts: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(facts, dict):
+        blockers.append({"code": "adapter-installation-facts-missing", "message": "installation must be an object"})
+        return
+    if facts.get("schemaVersion") != INSTALLATION_FACTS_SCHEMA_VERSION:
+        blockers.append(
+            {
+                "code": "adapter-installation-facts-schema",
+                "message": "installation schemaVersion is invalid",
+                "actual": facts.get("schemaVersion"),
+            }
+        )
+    aliases = facts.get("binaryAliases")
+    if not isinstance(aliases, list) or not aliases or not all(isinstance(item, str) and item.strip() == item for item in aliases):
+        blockers.append({"code": "adapter-installation-binary-aliases", "message": "binaryAliases must be a non-empty string array"})
+    elif len(set(aliases)) != len(aliases):
+        blockers.append({"code": "adapter-installation-binary-aliases-duplicate", "message": "binaryAliases must be unique"})
+
+    files = facts.get("files")
+    if not isinstance(files, list) or not files:
+        blockers.append({"code": "adapter-installation-files", "message": "installation files must be a non-empty array"})
+    else:
+        for index, item in enumerate(files):
+            if not isinstance(item, dict):
+                blockers.append({"code": "adapter-installation-file", "index": index, "message": "file record must be an object"})
+                continue
+            path = item.get("path")
+            if not isinstance(path, str) or not path or path.startswith(("/", "\\")) or "\x00" in path:
+                blockers.append({"code": "adapter-installation-file-path", "index": index})
+            if item.get("action") not in INSTALLATION_FILE_ACTIONS:
+                blockers.append({"code": "adapter-installation-file-action", "index": index})
+            if not isinstance(item.get("required"), bool):
+                blockers.append({"code": "adapter-installation-file-required", "index": index})
+
+    commands = facts.get("commands")
+    if not isinstance(commands, list) or not commands:
+        blockers.append({"code": "adapter-installation-commands", "message": "installation commands must be a non-empty array"})
+    else:
+        for index, item in enumerate(commands):
+            if not isinstance(item, dict):
+                blockers.append({"code": "adapter-installation-command", "index": index, "message": "command record must be an object"})
+                continue
+            if "command" in item or "shell" in item:
+                blockers.append({"code": "adapter-installation-command-shell", "index": index, "message": "commands must use argv arrays without shell fields"})
+            argv = item.get("argv")
+            if not isinstance(argv, list) or not argv or not all(isinstance(value, str) and value and "\n" not in value for value in argv):
+                blockers.append({"code": "adapter-installation-command-argv", "index": index})
+            elif argv[0].lower() in SHELL_EXECUTABLES:
+                blockers.append({"code": "adapter-installation-command-shell", "index": index, "message": "shell executables are not installation guidance"})
+            if not isinstance(item.get("purpose"), str) or not item["purpose"]:
+                blockers.append({"code": "adapter-installation-command-purpose", "index": index})
+            for field in ("mutatesHost", "requiresOperator"):
+                if not isinstance(item.get(field), bool):
+                    blockers.append({"code": "adapter-installation-command-flag", "index": index, "field": field})
+
+    actions = facts.get("operatorActions")
+    if not isinstance(actions, list) or not actions or not all(isinstance(item, str) and item for item in actions):
+        blockers.append({"code": "adapter-installation-operator-actions", "message": "operatorActions must be a non-empty string array"})
 
 
 def _validate_baseline(descriptor: dict[str, Any], baseline: dict[str, Any], blockers: list[dict[str, Any]]) -> None:

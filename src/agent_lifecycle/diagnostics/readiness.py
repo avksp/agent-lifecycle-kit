@@ -9,6 +9,7 @@ from typing import Any
 from agent_lifecycle import __version__
 from agent_lifecycle.context import load_context_profile
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.diagnostics.installation_catalog import load_installation_facts
 from agent_lifecycle.host_protocol import (
     inspect_adapter_descriptor,
     validate_adapter_descriptor,
@@ -114,7 +115,11 @@ def build_adapter_install_plan(*, project_root: Path, descriptor_path: Path) -> 
     host = _required_str(descriptor, "host", path)
     adapter_id = _required_str(descriptor, "adapterId", path)
     maturity = descriptor.get("maturity")
-    files, commands, operator_actions = _install_instructions(host, adapter_id=adapter_id)
+    installation = (
+        load_installation_facts(descriptor)
+        if "installation" in descriptor
+        else _undeclared_installation_facts()
+    )
     return {
         "schemaVersion": INSTALL_PLAN_SCHEMA_VERSION,
         "status": "DRY_RUN",
@@ -127,9 +132,11 @@ def build_adapter_install_plan(*, project_root: Path, descriptor_path: Path) -> 
         "liveCallsStarted": False,
         "productionPromotionClaimed": False,
         "maturityChangeClaimed": False,
-        "files": files,
-        "commands": commands,
-        "operatorActions": operator_actions,
+        "installationStatus": "DECLARED" if "installation" in descriptor else "NOT_DECLARED",
+        "binaryAliases": installation["binaryAliases"],
+        "files": installation["files"],
+        "commands": [*_diagnostic_commands(adapter_id), *installation["commands"]],
+        "operatorActions": installation["operatorActions"],
         "nextActions": [
             "review this plan",
             "run adapter validate before any host-local setup",
@@ -551,172 +558,52 @@ def _file_check(root: Path, relative: Path, *, name: str) -> dict[str, Any]:
     }
 
 
-def _install_instructions(host: str, *, adapter_id: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+def _diagnostic_commands(adapter_id: str) -> list[dict[str, Any]]:
     descriptor_arg = f"adapters/{adapter_id}/adapter.descriptor.json"
-    common_validate = {
-        "argv": [
-            "agent-lifecycle",
-            "adapter",
-            "validate",
-            "--descriptor",
-            descriptor_arg,
-            "--baseline",
-            "conformance/core/adapter-baseline.v1.json",
-        ],
-        "purpose": "validate adapter descriptor before setup",
-        "mutatesHost": False,
-        "requiresOperator": False,
-    }
-    common_inspect = {
-        "argv": [
-            "agent-lifecycle",
-            "adapter",
-            "inspect",
-            "--descriptor",
-            descriptor_arg,
-            "--skip-host-commands",
-        ],
-        "purpose": "inspect source projection without host commands",
-        "mutatesHost": False,
-        "requiresOperator": False,
-    }
-    table: dict[str, tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]] = {
-        "codex": (
-            [
-                {"path": ".codex-plugin/plugin.json", "action": "read", "required": True},
-                {"path": ".agents/plugins/marketplace.json", "action": "read", "required": True},
-            ],
-            [
-                common_validate,
-                common_inspect,
-                {
-                    "argv": ["codex", "plugin", "marketplace", "add", "avksp/agent-lifecycle-kit", "--ref", "vX.Y.Z"],
-                    "purpose": "add trusted tagged source marketplace",
-                    "mutatesHost": True,
-                    "requiresOperator": True,
-                },
-                {
-                    "argv": ["codex", "plugin", "add", "agent-lifecycle-kit@agent-lifecycle-kit"],
-                    "purpose": "install plugin from configured marketplace",
-                    "mutatesHost": True,
-                    "requiresOperator": True,
-                },
-            ],
-            ["choose the release tag", "restart the host session after installation"],
-        ),
-        "claude-code": (
-            [
-                {"path": ".claude-plugin/plugin.json", "action": "read", "required": True},
-                {"path": ".claude-plugin/marketplace.json", "action": "read", "required": True},
-            ],
-            [
-                common_validate,
-                common_inspect,
-                {
-                    "argv": ["claude", "plugin", "marketplace", "add", "avksp/agent-lifecycle-kit"],
-                    "purpose": "add repository marketplace",
-                    "mutatesHost": True,
-                    "requiresOperator": True,
-                },
-                {
-                    "argv": ["claude", "plugin", "install", "agent-lifecycle-kit@agent-lifecycle-kit"],
-                    "purpose": "install plugin from configured marketplace",
-                    "mutatesHost": True,
-                    "requiresOperator": True,
-                },
-            ],
-            ["run reload command in the host session after installation"],
-        ),
-        "cursor": (
-            [
-                {"path": ".cursor-plugin/plugin.json", "action": "read", "required": True},
-                {"path": ".cursor-plugin/marketplace.json", "action": "read", "required": True},
-            ],
-            [
-                common_validate,
-                common_inspect,
-                {
-                    "argv": ["ln", "-s", "<checkout>", "~/.cursor/plugins/local/agent-lifecycle-kit"],
-                    "purpose": "link trusted checkout into the local plugin directory",
-                    "mutatesHost": True,
-                    "requiresOperator": True,
-                },
-            ],
-            ["reload the host window", "do not claim VERIFIED until live receipts exist"],
-        ),
-        "opencode": (
-            [
-                {"path": "skills/*", "action": "copy-preview", "required": True},
-                {"path": "adapters/opencode/plugins/agent-lifecycle-kit.js", "action": "copy-preview", "required": True},
-                {"path": "opencode.json", "action": "read", "required": True},
-            ],
-            [
-                common_validate,
-                common_inspect,
-                {
-                    "argv": ["cp", "-R", "<checkout>/skills/*", ".opencode/skills/"],
-                    "purpose": "copy shared skills into target project",
-                    "mutatesHost": True,
-                    "requiresOperator": True,
-                },
-            ],
-            ["choose project-level or user-level installation"],
-        ),
-        "hermes": (
-            [
-                {"path": "skills.sh.json", "action": "read", "required": True},
-                {"path": "adapters/hermes/hermes.registry.json", "action": "read", "required": True},
-                {"path": "adapters/hermes/slash-commands.json", "action": "read", "required": True},
-            ],
-            [
-                common_validate,
-                common_inspect,
-                {
-                    "argv": ["hermes", "skills", "install", "https://raw.githubusercontent.com/avksp/agent-lifecycle-kit/vX.Y.Z/skills/agent-workflow-orchestrator/SKILL.md"],
-                    "purpose": "install a tagged lifecycle skill",
-                    "mutatesHost": True,
-                    "requiresOperator": True,
-                },
-            ],
-            ["install every required lifecycle skill from the chosen tag"],
-        ),
-    }
-    if host in table:
-        return table[host]
-    files = [
-        {"path": f"adapters/{adapter_id}/adapter.descriptor.json", "action": "read", "required": True},
-        {"path": f"adapters/{adapter_id}/runner.py", "action": "read", "required": True},
-        {"path": f"adapters/{adapter_id}/receipt_normalizer.py", "action": "read", "required": True},
-    ]
-    commands = [
-        common_validate,
-        common_inspect,
+    return [
         {
-            "argv": ["python", "-m", "pip", "install", "-e", "<checkout>"],
-            "purpose": "install the core CLI from a trusted checkout",
-            "mutatesHost": True,
-            "requiresOperator": True,
-        },
-        {
-            "argv": [_host_binary(host), "--version"],
-            "purpose": "confirm host CLI is available before live proof",
+            "argv": [
+                "agent-lifecycle",
+                "adapter",
+                "validate",
+                "--descriptor",
+                descriptor_arg,
+                "--baseline",
+                "conformance/core/adapter-baseline.v1.json",
+            ],
+            "purpose": "validate adapter descriptor before setup",
             "mutatesHost": False,
-            "requiresOperator": True,
+            "requiresOperator": False,
+        },
+        {
+            "argv": [
+                "agent-lifecycle",
+                "adapter",
+                "inspect",
+                "--descriptor",
+                descriptor_arg,
+                "--skip-host-commands",
+            ],
+            "purpose": "inspect source projection without host commands",
+            "mutatesHost": False,
+            "requiresOperator": False,
         },
     ]
-    return files, commands, ["configure host-local model/profile settings outside portable core", "keep adapter EXPERIMENTAL until receipts are accepted"]
+
+
+def _undeclared_installation_facts() -> dict[str, Any]:
+    """Keep scaffold diagnostics read-only until a descriptor adds installation facts."""
+
+    return {
+        "binaryAliases": [],
+        "files": [],
+        "commands": [],
+        "operatorActions": ["Add validated installation facts to the adapter descriptor before host-local setup."],
+    }
 
 
 def _resolve(root: Path, path: Path) -> Path:
     return path if path.is_absolute() else root / path
-
-
-def _host_binary(host: str) -> str:
-    return {
-        "gemini-cli": "gemini",
-        "qwen-code": "qwen",
-        "kimi-code": "kimi",
-    }.get(host, host)
 
 
 def _display_path(path: Path, root: Path) -> str:

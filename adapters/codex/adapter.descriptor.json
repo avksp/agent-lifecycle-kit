@@ -188,5 +188,21 @@
     },
     "writesNativeConfig": false,
     "promptInjectionDefault": false
+  },
+  "installation": {
+    "schemaVersion": "agent-adapter-installation-facts.v1",
+    "binaryAliases": ["codex"],
+    "files": [
+      {"path": ".codex-plugin/plugin.json", "action": "read", "required": true},
+      {"path": ".agents/plugins/marketplace.json", "action": "read", "required": true}
+    ],
+    "commands": [
+      {"argv": ["codex", "plugin", "marketplace", "add", "avksp/agent-lifecycle-kit", "--ref", "vX.Y.Z"], "purpose": "add a trusted tagged source marketplace", "mutatesHost": true, "requiresOperator": true},
+      {"argv": ["codex", "plugin", "add", "agent-lifecycle-kit@agent-lifecycle-kit"], "purpose": "install the plugin from the configured marketplace", "mutatesHost": true, "requiresOperator": true}
+    ],
+    "operatorActions": [
+      "Choose the release tag before installation.",
+      "Restart the host session after installation."
+    ]
   }
 }

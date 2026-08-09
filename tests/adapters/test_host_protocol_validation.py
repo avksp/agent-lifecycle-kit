@@ -33,6 +33,15 @@ class HostProtocolAdapterValidationTests(unittest.TestCase):
         self.assertEqual(result["requestCount"], 13)
         self.assertEqual(result["receiptCount"], 13)
 
+    def test_installation_facts_reject_shell_command_fields(self) -> None:
+        descriptor = _load_json(ROOT / "adapters/codex/adapter.descriptor.json")
+        descriptor["installation"]["commands"][0]["shell"] = True
+
+        result = validate_adapter_descriptor(descriptor)
+
+        self.assertEqual(result["status"], "FAIL")
+        self.assertIn("adapter-installation-command-shell", {item["code"] for item in result["blockers"]})
+
     def test_verified_adapter_without_live_evidence_fails(self) -> None:
         # NEG-R03-07 Runtime Adapter Overclaim
         descriptor = _load_json(ROOT / "adapters/codex/adapter.descriptor.json")

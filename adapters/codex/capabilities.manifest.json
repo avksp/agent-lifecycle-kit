@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "d00b0c9d573244db8e17d1f2d2c45c9d65ae5bb9d542dd37592233c62c4658fb",
+  "descriptorDigest": "5d09ad38b5535b6773118b6419a63d5baf34a6d071a4172080de54ca1f46cc20",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,6 +156,21 @@
     "usageReceiptRequired": true
   },
   "promotion": {
+    "liveTestedHostRange": {
+      "evidence": [
+        "docs/adapters/evidence/codex-cli-0.6.0.md",
+        "work/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json",
+        "work/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json",
+        "work/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "codex",
+      "maximumVersion": "0.145.0",
+      "minimumVersion": "0.145.0",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "b01a1793e42f52e20077a7aa26b8e4e25c3bd216",
+      "testedAt": "2026-07-29"
+    },
     "productionPromotionClaimed": false,
     "verifiedRequiresLiveTestedHostRange": true
   },

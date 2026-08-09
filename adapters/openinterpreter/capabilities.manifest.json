@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "f606b090e46b1a56b90378327c762d86ea01b27427a1ded850b2d74680394cfa",
+  "descriptorDigest": "89c27c047c0321a76f4cf9b109f07763feae09eb6bcf50ea0dfd096b96a38102",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,12 +156,7 @@
     "usageReceiptRequired": true
   },
   "promotion": {
-    "verifiedRequiresLiveTestedHostRange": true,
-    "productionPromotionClaimed": false,
     "liveTestedHostRange": {
-      "host": "openinterpreter",
-      "minimumVersion": "0.0.34",
-      "maximumVersion": "0.0.34",
       "evidence": [
         "docs/adapters/evidence/openinterpreter-live-verified.md",
         "work/release-1-18/evidence/preflight/openinterpreter-preflight-report-live-ready.json",
@@ -172,11 +167,16 @@
         "work/release-1-18/evidence/live-calibration-verification-openinterpreter.json",
         "work/release-1-18/evidence/openinterpreter/full-lifecycle/final/final-proof.json"
       ],
-      "testedAt": "2026-08-01",
+      "host": "openinterpreter",
+      "maximumVersion": "0.0.34",
+      "minimumVersion": "0.0.34",
       "productionPromotionClaimed": false,
       "publicDirectoryApprovalClaimed": false,
-      "sourceRevision": "52cfa2fd5a97823155c552cb9ae27b735fc85713"
-    }
+      "sourceRevision": "52cfa2fd5a97823155c552cb9ae27b735fc85713",
+      "testedAt": "2026-08-01"
+    },
+    "productionPromotionClaimed": false,
+    "verifiedRequiresLiveTestedHostRange": true
   },
   "runtimeBoundary": {
     "hostSpecificCode": "adapter-owned",
