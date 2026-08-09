@@ -23,16 +23,18 @@ PYTHONPATH=src python -m agent_lifecycle version
 
 ## Install from package
 
-When the package is available for the release, install the exact semver version:
+The official [PyPI project](https://pypi.org/project/agent-lifecycle-kit/)
+supports Python 3.11-3.14. When the package is available for the requested
+version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.50.2
+python -m pip install agent-lifecycle-kit==1.51.0
 agent-lifecycle version
 ```
 
-If the package is not available yet, use the source checkout path above. A Git
-tag alone is not enough for plugin installation; plugin manifests inside the
-tag must also carry the same version. See
+If a requested version has not been published to PyPI, use the source checkout
+path above. A Git tag alone is not enough for plugin installation; plugin
+manifests inside the tag must also carry the same version. See
 [Plugin publication](../reference/plugin-publication.md).
 
 ## Check readiness

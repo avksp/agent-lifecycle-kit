@@ -23,6 +23,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "usage/resource calibration",
             "Public contracts",
             "docs/reference/public-contracts.md",
+            "https://pypi.org/project/agent-lifecycle-kit/",
+            "Python 3.11-3.14",
         ),
     ),
     (
@@ -37,6 +39,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "калибровки расхода",
             "Публичных контрактах",
             "reference/public-contracts.md",
+            "https://pypi.org/project/agent-lifecycle-kit/",
+            "Python 3.11-3.14",
         ),
     ),
     (
@@ -558,6 +562,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "adapter run",
             "`WAITING_FOR_TASK`",
             "`agent-adapter-session-receipt.v1`",
+            "https://pypi.org/project/agent-lifecycle-kit/",
+            "python -m pip install agent-lifecycle-kit==",
         ),
     ),
     (
@@ -570,6 +576,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "adapter run",
             "`WAITING_FOR_TASK`",
             "`agent-adapter-session-receipt.v1`",
+            "https://pypi.org/project/agent-lifecycle-kit/",
+            "python -m pip install agent-lifecycle-kit==",
         ),
     ),
     (
