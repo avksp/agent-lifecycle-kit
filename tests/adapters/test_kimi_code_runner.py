@@ -48,6 +48,7 @@ class KimiCodeRunnerTests(unittest.TestCase):
                 inputs={},
                 outputs=[],
                 constraints={"model": "glm-5.2"},
+                model_route={"modelClass": "standard-code", "decisionDigest": "b" * 64},
             ).to_json()
 
             receipt = module.run_operation(request, cwd=tmp, timeout_seconds=30, command_runner=fake_runner)
@@ -58,6 +59,11 @@ class KimiCodeRunnerTests(unittest.TestCase):
         self.assertEqual(parsed.status, "PASS")
         self.assertEqual(parsed.usage["billableTokens"], 16)
         self.assertEqual(parsed.usage["sessionId"], "runner-session")
+        sidecar = parsed.outputs[0]["modelUsageReceipt"]
+        self.assertEqual(sidecar["schemaVersion"], "agent-lifecycle-model-usage-receipt.v1")
+        self.assertEqual(sidecar["attestation"], {"source": "fixture", "status": "ESTIMATED", "acceptedForS1S2": False})
+        self.assertEqual(sidecar["normalizer"]["status"], "FIXTURE_ONLY")
+        self.assertNotIn("path", sidecar["sourceArtifact"])
         self.assertEqual(calls[0][0][calls[0][0].index("--model") + 1], "glm-5.2")
         self.assertNotIn("--plan", calls[0][0])
         self.assertNotIn("--approval-mode", calls[0][0])

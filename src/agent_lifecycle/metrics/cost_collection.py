@@ -287,7 +287,7 @@ def _contains_pair(value: Any, key: str, expected: Any) -> bool:
 
 
 def _attested(value: Any) -> bool:
-    return isinstance(value, dict) and value.get("status") == "ATTESTED"
+    return isinstance(value, dict) and value.get("source") == "host" and value.get("status") == "ATTESTED"
 
 
 def _first_int(payload: dict[str, Any], keys: tuple[str, ...]) -> int | None:
