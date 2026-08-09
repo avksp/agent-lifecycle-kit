@@ -20,6 +20,7 @@ class CliFoundationTests(unittest.TestCase):
             "agent_lifecycle.cli.dispatch_lifecycle",
             "agent_lifecycle.cli.dispatch_observability",
             "agent_lifecycle.cli.dispatch_planning",
+            "agent_lifecycle.cli.start",
         ):
             with self.subTest(module=module_name):
                 self.assertIsNotNone(import_module(module_name))

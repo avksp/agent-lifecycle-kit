@@ -247,10 +247,43 @@ sequenceDiagram
   Main-->>User: stable JSON stdout
 ```
 
-Pattern: command dispatcher plus functional core. `cli/dispatch.py` only selects
-one of five command-group handlers: adapters/readiness, contracts/evidence,
-lifecycle, observability or planning. CLI modules should stay thin; domain
-services own behavior and tests.
+Pattern: command dispatcher plus functional core. `cli/dispatch.py` selects the
+unified start facade or one of five command-group handlers:
+adapters/readiness, contracts/evidence, lifecycle, observability or planning.
+CLI modules stay thin; domain services own behavior and tests.
+
+### Unified lifecycle start
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant StartCLI as cli/start.py
+  participant Start as adapter_sessions/unified_start.py
+  participant Intake as adapter_sessions/task_intake.py
+  participant Resume as adapter_sessions/workflow_bridge.py
+  participant Store as adapter_sessions/session_store.py
+
+  User->>StartCLI: start --adapter --file|--text|--resume
+  StartCLI->>Start: start_lifecycle()
+  alt raw task in auto/research/plan/review
+    Start->>Intake: start_adapter_task()
+    Intake-->>Start: reviewed draft receipt
+  else frozen input with explicit implement
+    Start->>Intake: existing frozen delegation
+    Intake-->>Start: managed-run receipt
+  else persisted ALK session
+    Start->>Store: load_session()
+    Start->>Resume: resume_adapter_session()
+    Resume-->>Start: lineage result
+  end
+  Start-->>User: agent-lifecycle-start-receipt.v1
+```
+
+The facade selects an existing primitive; it does not own workflow transitions.
+Raw task modes cannot call managed-run or host-launch code. Frozen delegation
+requires explicit `implement` and complete bindings. Resume accepts only a
+stored ALK session, validates adapter and state lineage, and does not interpret
+native host conversation identifiers.
 
 ### Raw task or Markdown intake
 

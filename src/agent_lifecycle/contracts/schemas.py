@@ -33,8 +33,56 @@ from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
 from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
+from agent_lifecycle.contracts.schema_builders import open_object_schema
 
 SCHEMA_INDEX_VERSION = "agent-lifecycle-schema-index.v1"
+
+LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-lifecycle-start-receipt.v1": open_object_schema(
+        "agent-lifecycle-start-receipt.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "adapterId",
+            "requestedMode",
+            "action",
+            "input",
+            "delegate",
+            "executionStarted",
+            "lifecycleCoverageClaimed",
+            "requiresReview",
+            "modelCallsStarted",
+            "hostLaunchStarted",
+            "nativeSessionAttached",
+            "rawTaskTextStored",
+            "secretsWritten",
+            "nativeConfigWritten",
+            "blockers",
+            "productionPromotionClaimed",
+            "receiptDigest",
+        ],
+        properties={
+            "status": {"enum": ["REVIEW_REQUIRED", "READY", "PASS", "UNMANAGED", "BLOCKED"]},
+            "adapterId": {"type": "string", "minLength": 1},
+            "requestedMode": {"enum": ["auto", "research", "plan", "review", "implement"]},
+            "action": {"enum": ["DRAFT_INTAKE", "DRAFT_PLAN_REVIEW", "MANAGED_RUN", "RESUME", "BLOCKED"]},
+            "input": {"type": "object"},
+            "delegate": {"type": ["object", "null"]},
+            "executionStarted": {"type": "boolean"},
+            "lifecycleCoverageClaimed": {"type": "boolean"},
+            "requiresReview": {"type": "boolean"},
+            "modelCallsStarted": {"const": False},
+            "hostLaunchStarted": {"const": False},
+            "nativeSessionAttached": {"const": False},
+            "rawTaskTextStored": {"const": False},
+            "secretsWritten": {"const": False},
+            "nativeConfigWritten": {"const": False},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "productionPromotionClaimed": {"const": False},
+            "receiptDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    )
+}
 
 _SCHEMA_GROUPS = (
     CORE_SCHEMAS,
@@ -65,6 +113,7 @@ _SCHEMA_GROUPS = (
     PLAN_CONTRACT_SCHEMAS,
     METRIC_SCHEMAS,
     POLICY_SCHEMAS,
+    LIFECYCLE_START_SCHEMAS,
 )
 
 _SCHEMAS: dict[str, dict[str, Any]] = {}
