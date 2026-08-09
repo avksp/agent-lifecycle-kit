@@ -74,6 +74,20 @@ ALK-managed paths. JSON stdout remains stable. Use `--progress-hook off` to
 suppress terminal output, or `--progress-hook receipt --progress-receipt <path>`
 to persist `agent-progress-hook-receipt.v1`.
 
+## Risk-aware managed execution
+
+For a frozen S1/S2 task, `start --risk auto` can derive a provider-neutral
+model route and token, invocation, and wall-time caps. This is a two-step
+authorization: `start --risk-profile-out <path>` only projects a read-only,
+digest-bound profile; `workflow task-start --risk-profile <path>` validates and
+stores that profile before the attempt begins. The later `workflow task-result`
+must provide host-attested usage, including `usage.invocations`.
+
+Raw text and Markdown remain draft-only: `--risk` is advisory there and cannot
+enable execution or a usage gate. See [Risk-aware
+execution](risk-aware-execution.md) for the full command sequence and failure
+rules.
+
 ## Launch profile
 
 The adapter descriptor field `managedLaunch` declares one of the following

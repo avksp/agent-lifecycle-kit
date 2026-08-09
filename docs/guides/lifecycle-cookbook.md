@@ -17,6 +17,7 @@ execution.
 | Find or fix a bug | [Bug Forensics repair](#bug-forensics-repair) | No, after a frozen plan authorizes repair |
 | Ask several reviewers | [Coordinate cross-review](#coordinate-cross-review) | Yes, unless a frozen plan requires quorum |
 | Inspect an active run | [View goal and progress](#view-goal-and-progress) | Yes |
+| Start a frozen task with bounded resources | [Run a risk-aware task](#run-a-risk-aware-task) | No, it authorizes one task attempt |
 
 ## Research and planning only
 
@@ -124,6 +125,45 @@ file. When it is not documented, ask the reviewer to recover module
 responsibilities first, then review the diff against that recovered map.
 
 Full examples are in [Code review workflows](code-review-workflows.md).
+
+## Run a risk-aware task
+
+Use this only after the plan is reviewed and frozen. First project the exact
+profile without mutating workflow state:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode implement \
+  --risk auto \
+  --file tasks/my-release/plan.manifest.json \
+  --state work/my-release/run.state.json \
+  --lock tasks/my-release/plan.lock.json \
+  --task WS-01 \
+  --operation-id start-WS-01-attempt-1 \
+  --expected-revision 3 \
+  --source-revision "$(git rev-parse HEAD)" \
+  --host-model-profile profiles/hosts/codex-live-profile.v1.json \
+  --risk-profile-out work/my-release/WS-01/risk-profile.json
+```
+
+Then authorize the attempt with the same operation id:
+
+```bash
+agent-lifecycle workflow task-start \
+  --state work/my-release/run.state.json \
+  --task WS-01 \
+  --operation-id start-WS-01-attempt-1 \
+  --expected-revision 3 \
+  --source-revision "$(git rev-parse HEAD)" \
+  --risk-profile work/my-release/WS-01/risk-profile.json \
+  --reason "start risk-aware attempt"
+```
+
+The host must later attest tokens, invocation count and wall time. Any missing,
+estimated, lineage-drifted or over-cap value blocks the result transition. See
+[Risk-aware execution](../reference/risk-aware-execution.md) for all inputs and
+failure rules.
 
 ## Audit implementation evidence
 

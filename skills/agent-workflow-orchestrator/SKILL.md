@@ -52,6 +52,14 @@ it must never guess a native host conversation id. Use `adapter task start`,
 `adapter session start` only to record an interactive `WAITING_FOR_TASK`
 session. Native host launching remains descriptor-driven and host-owned.
 
+When a frozen task requests risk-aware execution, keep the authorization split.
+Run `agent-lifecycle start --risk <auto|S0|S1|S2> --risk-profile-out <path>` to
+project the digest-bound route and caps without changing workflow state. Then
+pass that exact artifact to `workflow task-start --risk-profile <path>` with
+the same operation and lineage bindings. Do not claim a risk-aware attempt from
+raw intake or from `start` alone. Before accepting its result, require
+host-attested tokens, `usage.invocations`, and wall time within all bound caps.
+
 For common operator requests, route through the cookbook before dropping to
 atomic commands: `docs/guides/lifecycle-cookbook.md` covers research-only,
 planning-only, Markdown plan review, code review, implementation audit and

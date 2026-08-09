@@ -145,6 +145,7 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
             operation_id=args.operation_id,
             expected_revision=args.expected_revision,
             source_revision=args.source_revision,
+            risk_profile_path=args.risk_profile,
             reason=args.reason,
         )
     if args.workflow_command == "task-result":
