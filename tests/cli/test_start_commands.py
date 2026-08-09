@@ -211,6 +211,94 @@ class StartCommandTests(unittest.TestCase):
             self.assertEqual(json.loads(out.read_text(encoding="utf-8")), profile)
             self.assertEqual(payload["delegate"]["riskExecutionProfile"], profile)
 
+    def test_launch_flags_require_each_other_and_implement_mode(self) -> None:
+        cases = (
+            ["start", "--adapter", "codex", "--text", "task", "--launch"],
+            ["start", "--adapter", "codex", "--text", "task", "--host-launch-profile", ".alk/host-launch/codex.json"],
+            [
+                "start",
+                "--adapter",
+                "codex",
+                "--text",
+                "task",
+                "--launch",
+                "--host-launch-profile",
+                ".alk/host-launch/codex.json",
+            ],
+        )
+        expected = (
+            "start-launch-arguments-incomplete",
+            "start-launch-arguments-incomplete",
+            "start-launch-implement-mode-required",
+        )
+        for argv, code in zip(cases, expected):
+            with self.subTest(argv=argv):
+                exit_code, payload, _stderr = _run_cli(argv)
+                self.assertEqual(exit_code, 0)
+                self.assertEqual(payload["status"], "BLOCKED")
+                self.assertEqual(payload["blockers"][0]["code"], code)
+
+    def test_implement_launch_delegates_only_after_ready_managed_projection(self) -> None:
+        risk_profile = {"schemaVersion": "agent-risk-execution-profile.v1", "profileDigest": "b" * 64}
+        task_receipt = {
+            "schemaVersion": "agent-adapter-task-start-receipt.v1",
+            "status": "READY",
+            "action": "MANAGED_RUN",
+            "executionStarted": True,
+            "lifecycleCoverageClaimed": True,
+            "reviewBlockers": [],
+            "input": {"type": "FILE", "label": "request.json", "digest": "a" * 64, "byteCount": 10},
+            "workflowBinding": {
+                "state": "state.json",
+                "manifest": "plan.manifest.json",
+                "lock": "plan.lock.json",
+                "task": "WS-01",
+                "operationId": "start-run",
+                "sourceRevision": "source",
+            },
+            "adapterSessionReceipt": {
+                "sessionId": "session-1",
+                "nextAction": {"riskExecutionProfile": risk_profile},
+            },
+        }
+        launch_receipt = {
+            "schemaVersion": "agent-managed-adapter-launch-receipt.v1",
+            "status": "PASS",
+            "hostLaunchStarted": True,
+            "blockers": [],
+            "receiptDigest": "c" * 64,
+        }
+        with patch(
+            "agent_lifecycle.adapter_sessions.unified_start.start_adapter_task",
+            return_value=task_receipt,
+        ), patch(
+            "agent_lifecycle.adapter_sessions.unified_start.load_local_launch_profile",
+            return_value=(Path(".alk/host-launch/codex.json"), {"adapterId": "codex"}, {"status": "PASS"}),
+        ), patch(
+            "agent_lifecycle.adapter_sessions.unified_start.launch_from_local_profile",
+            return_value=launch_receipt,
+        ) as launch:
+            code, payload, stderr = _run_cli(
+                [
+                    "start",
+                    "--adapter",
+                    "codex",
+                    "--mode",
+                    "implement",
+                    "--text",
+                    json.dumps(_run_request()),
+                    "--launch",
+                    "--host-launch-profile",
+                    ".alk/host-launch/codex.json",
+                ]
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertTrue(payload["hostLaunchStarted"])
+        self.assertEqual(payload["launchReceipt"]["status"], "PASS")
+        launch.assert_called_once()
+
 
 def _run_cli(args: list[str]) -> tuple[int, dict, str]:
     stdout = StringIO()

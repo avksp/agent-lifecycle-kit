@@ -28,7 +28,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.55.0
+python -m pip install agent-lifecycle-kit==1.56.0
 agent-lifecycle version
 ```
 
@@ -151,9 +151,25 @@ agent-lifecycle start \
 
 Resume verifies the stored adapter and workflow lineage. It does not interpret
 the value as a native Codex, Claude, OpenCode or other host conversation id.
-This release does not launch an external host CLI. Advanced automation can use
-the lower-level `adapter task start`, `adapter run` and `adapter session resume`
-commands documented in the [CLI reference](../reference/cli.md).
+External execution remains off by default. Advanced operators can explicitly
+launch one local host command only from a frozen, risk-bound `implement` run:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode implement \
+  --file work/run/adapter-run-request.json \
+  --risk auto \
+  --host-model-profile profiles/hosts/codex-live-profile.v1.json \
+  --launch \
+  --host-launch-profile .alk/host-launch/codex.json
+```
+
+Create and inspect the ignored profile first. The [local host launch
+guide](../reference/local-host-launch.md) describes the format, preflight and
+fail-closed boundaries. The lower-level `adapter task start`, `adapter run` and
+`adapter session resume` commands remain available in the [CLI
+reference](../reference/cli.md).
 
 ## Review code changes
 

@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.adapter_sessions.contracts import build_lifecycle_start_receipt
+from agent_lifecycle.adapter_sessions.launcher import launch_from_local_profile
+from agent_lifecycle.adapter_sessions.local_launch_profile import load_local_launch_profile
 from agent_lifecycle.adapter_sessions.session_store import load_session
 from agent_lifecycle.adapter_sessions.task_intake import (
     ADAPTER_TASK_RUN_REQUEST_SCHEMA,
@@ -47,6 +49,8 @@ def start_lifecycle(
     routing_profile_path: Path | None = None,
     baseline_profile_path: Path | None = None,
     host_model_profile_path: Path | None = None,
+    launch: bool = False,
+    host_launch_profile_path: Path | None = None,
 ) -> dict[str, Any]:
     """Select one existing lifecycle action without creating new authority."""
 
@@ -56,10 +60,24 @@ def start_lifecycle(
         return _blocked(adapter_id=adapter_id, mode="auto", input_summary=_empty_input(), code="start-mode-invalid")
     if requested_risk not in RISK_REQUESTS:
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_empty_input(), code="start-risk-invalid")
+    if launch != (host_launch_profile_path is not None):
+        return _blocked(
+            adapter_id=adapter_id,
+            mode=mode,
+            input_summary=_empty_input(),
+            code="start-launch-arguments-incomplete",
+        )
+    if launch and mode != "implement":
+        return _blocked(
+            adapter_id=adapter_id,
+            mode=mode,
+            input_summary=_empty_input(),
+            code="start-launch-implement-mode-required",
+        )
 
     has_task_source = task_file is not None or task_text is not None
     if resume_session_id is not None:
-        if has_task_source:
+        if has_task_source or launch:
             return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_session_input(resume_session_id), code="start-action-conflict")
         if mode != "auto":
             return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_session_input(resume_session_id), code="start-resume-mode-invalid")
@@ -92,6 +110,19 @@ def start_lifecycle(
             )
     if mode in _NON_EXECUTING_MODES and structured_frozen:
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-mode-implement-required")
+    if launch:
+        try:
+            _relative, local_profile, _validation = load_local_launch_profile(host_launch_profile_path or Path(""))
+        except (LifecycleError, OSError) as exc:
+            code = exc.code if isinstance(exc, LifecycleError) else "local-launch-profile-read-failed"
+            return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code=code)
+        if local_profile.get("adapterId") != adapter_id:
+            return _blocked(
+                adapter_id=adapter_id,
+                mode=mode,
+                input_summary=input_summary,
+                code="local-launch-profile-adapter-mismatch",
+            )
 
     receipt = start_adapter_task(
         adapter_id=adapter_id,
@@ -117,7 +148,14 @@ def start_lifecycle(
     )
     if mode in _NON_EXECUTING_MODES and _claims_execution(receipt):
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-non-implement-execution-claim")
-    return _from_task_receipt(adapter_id=adapter_id, mode=mode, receipt=receipt)
+    if not launch:
+        return _from_task_receipt(adapter_id=adapter_id, mode=mode, receipt=receipt)
+    return _launch_managed_receipt(
+        adapter_id=adapter_id,
+        mode=mode,
+        receipt=receipt,
+        profile_path=host_launch_profile_path or Path(""),
+    )
 
 
 def _resume(*, adapter_id: str, session_id: str, session_root: Path | None) -> dict[str, Any]:
@@ -268,12 +306,23 @@ def _missing_frozen_bindings(
     return sorted(set(missing))
 
 
-def _from_task_receipt(*, adapter_id: str, mode: str, receipt: dict[str, Any]) -> dict[str, Any]:
+def _from_task_receipt(
+    *,
+    adapter_id: str,
+    mode: str,
+    receipt: dict[str, Any],
+    launch_receipt: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     status = str(receipt.get("status", "BLOCKED"))
     action = str(receipt.get("action", "BLOCKED"))
     if status not in {"REVIEW_REQUIRED", "READY", "BLOCKED"}:
         status = "BLOCKED"
         action = "BLOCKED"
+    blockers = _blocker_summaries(receipt.get("reviewBlockers"))
+    if launch_receipt is not None and launch_receipt.get("status") != "PASS":
+        status = "BLOCKED"
+        action = "BLOCKED"
+        blockers.extend(_blocker_summaries(launch_receipt.get("blockers")))
     return build_lifecycle_start_receipt(
         status=status,
         adapter_id=adapter_id,
@@ -284,8 +333,65 @@ def _from_task_receipt(*, adapter_id: str, mode: str, receipt: dict[str, Any]) -
         execution_started=mode == "implement" and bool(receipt.get("executionStarted")),
         lifecycle_coverage_claimed=mode == "implement" and bool(receipt.get("lifecycleCoverageClaimed")),
         requires_review=bool(receipt.get("requiresReview")),
-        blockers=_blocker_summaries(receipt.get("reviewBlockers")),
+        blockers=blockers,
+        host_launch_started=bool(launch_receipt and launch_receipt.get("hostLaunchStarted")),
+        launch_receipt=launch_receipt,
     )
+
+
+def _launch_managed_receipt(
+    *,
+    adapter_id: str,
+    mode: str,
+    receipt: dict[str, Any],
+    profile_path: Path,
+) -> dict[str, Any]:
+    if receipt.get("status") != "READY" or receipt.get("action") != "MANAGED_RUN":
+        return _from_task_receipt(adapter_id=adapter_id, mode=mode, receipt=receipt)
+    binding = receipt.get("workflowBinding") if isinstance(receipt.get("workflowBinding"), dict) else {}
+    session = receipt.get("adapterSessionReceipt") if isinstance(receipt.get("adapterSessionReceipt"), dict) else {}
+    next_action = session.get("nextAction") if isinstance(session.get("nextAction"), dict) else {}
+    risk_profile = next_action.get("riskExecutionProfile") if isinstance(next_action.get("riskExecutionProfile"), dict) else None
+    try:
+        launch_receipt = launch_from_local_profile(
+            profile_path=profile_path,
+            operation="managedTask",
+            adapter_id=adapter_id,
+            session_id=str(session.get("sessionId", "managed-start")),
+            explicit_launch=True,
+            state_path=_binding_path(binding, "state"),
+            manifest_path=_binding_path(binding, "manifest"),
+            lock_path=_binding_path(binding, "lock"),
+            task_id=_binding_string(binding, "task"),
+            operation_id=_binding_string(binding, "operationId"),
+            source_revision=_binding_string(binding, "sourceRevision"),
+            risk_profile=risk_profile,
+        )
+    except (LifecycleError, OSError) as exc:
+        code = exc.code if isinstance(exc, LifecycleError) else "local-launch-profile-read-failed"
+        message = exc.message if isinstance(exc, LifecycleError) else "local launch profile could not be read"
+        launch_receipt = {
+            "schemaVersion": "agent-managed-adapter-launch-receipt.v1",
+            "status": "BLOCKED",
+            "hostLaunchStarted": False,
+            "blockers": [{"code": code, "message": message}],
+        }
+    return _from_task_receipt(
+        adapter_id=adapter_id,
+        mode=mode,
+        receipt=receipt,
+        launch_receipt=launch_receipt,
+    )
+
+
+def _binding_path(binding: dict[str, Any], field: str) -> Path | None:
+    value = binding.get(field)
+    return Path(value) if isinstance(value, str) and value else None
+
+
+def _binding_string(binding: dict[str, Any], field: str) -> str | None:
+    value = binding.get(field)
+    return value if isinstance(value, str) and value else None
 
 
 def _task_summary(receipt: dict[str, Any]) -> dict[str, Any]:

@@ -237,7 +237,8 @@ class UnifiedStartContractTests(unittest.TestCase):
         policy = build_contract_policy()
 
         self.assertIn("agent-lifecycle-start-receipt.v1", ids)
-        self.assertEqual(schema["properties"]["hostLaunchStarted"], {"const": False})
+        self.assertEqual(schema["properties"]["hostLaunchStarted"], {"type": "boolean"})
+        self.assertEqual(schema["properties"]["launchReceipt"], {"type": ["object", "null"]})
         self.assertEqual(schema["properties"]["nativeSessionAttached"], {"const": False})
         self.assertEqual(validate_contract_policy(policy)["status"], "PASS")
         self.assertIn(

@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.cli import main
 from agent_lifecycle.contracts import canonical_digest
@@ -76,6 +77,18 @@ class AdapterSessionCommandTests(unittest.TestCase):
         self.assertEqual(payload["status"], "BLOCKED")
         self.assertFalse(payload["hostLaunchStarted"])
         self.assertIn("adapter-generic-launch-disabled", {item["code"] for item in payload["launchReceipt"]["blockers"]})
+
+    def test_legacy_session_launch_never_reaches_process_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "agent_lifecycle.adapter_sessions.launcher.run_process"
+        ) as run_process:
+            code, payload, _stderr = _run_cli(
+                ["adapter", "session", "start", "--adapter", "codex", "--session-root", tmp, "--launch"]
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["status"], "BLOCKED")
+        run_process.assert_not_called()
 
     def test_adapter_run_preserves_stdout_json_and_prints_progress_to_stderr(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

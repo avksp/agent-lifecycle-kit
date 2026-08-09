@@ -24,6 +24,11 @@ Every generic descriptor-driven launch request is blocked with
 `adapter-generic-launch-disabled` before a host process is created; a descriptor
 status cannot bypass that boundary.
 
+An operator may separately opt into the validated local profile route under
+`.alk/host-launch/`. That route requires frozen and risk bindings and produces
+a local receipt, but it does not change any row below. See [Local host
+launch](../reference/local-host-launch.md).
+
 Host-local token normalization is a separate claim. Gemini CLI, Kimi Code and
 Qwen Code declare `usageNormalization.status: FIXTURE_ONLY`; their bounded
 parsers are tested, but their sidecars do not satisfy S1/S2 usage gates. Other

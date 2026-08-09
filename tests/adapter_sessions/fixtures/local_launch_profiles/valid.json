@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "agent-local-host-launch-profile.v1",
+  "status": "LOCAL_OPT_IN",
+  "adapterId": "codex",
+  "executable": "codex",
+  "argvTemplate": [],
+  "versionProbeArgs": ["--version"],
+  "env": {
+    "allow": ["HOME", "PATH"],
+    "allowPatterns": [],
+    "projectPolicyAllowed": false
+  },
+  "timeoutSeconds": 30,
+  "shell": false,
+  "writesNativeConfig": false,
+  "promptInjectionDefault": false,
+  "publicSupportClaimed": false,
+  "productionPromotionClaimed": false
+}
