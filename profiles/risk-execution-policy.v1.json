@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "agent-risk-execution-policy.v1",
+  "tiers": {
+    "S0": {
+      "budgetClass": "tight",
+      "maxInvocations": 1,
+      "maxWallSeconds": 900
+    },
+    "S1": {
+      "budgetClass": "normal",
+      "maxInvocations": 8,
+      "maxWallSeconds": 1800
+    },
+    "S2": {
+      "budgetClass": "normal",
+      "maxInvocations": 33,
+      "maxWallSeconds": 3600
+    }
+  },
+  "productionPromotionClaimed": false
+}

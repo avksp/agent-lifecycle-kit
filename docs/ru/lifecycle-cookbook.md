@@ -17,6 +17,7 @@
 | Найти или исправить ошибку | [Расследование ошибок](#расследование-ошибок) | Нет, если зафиксированный план разрешил исправление |
 | Подключить нескольких проверяющих | [Согласованная перепроверка](#согласованная-перепроверка) | Да, если зафиксированный план не требует кворум |
 | Посмотреть активный запуск | [Цель и прогресс](#цель-и-прогресс) | Да |
+| Запустить зафиксированную задачу с ограничениями ресурсов | [Запуск с учётом риска](#запуск-с-учётом-риска) | Нет, разрешает одну попытку задачи |
 
 ## Исследование и планирование
 
@@ -125,6 +126,46 @@ agent-lifecycle start \
 модулей и только затем проверить файл изменений относительно этой картины.
 
 Подробные примеры: [Сценарии проверки кода](code-review-workflows.md).
+
+## Запуск с учётом риска
+
+Используйте этот сценарий только после проверки и фиксации плана. Сначала
+создайте точный профиль без изменения состояния рабочего цикла:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode implement \
+  --risk auto \
+  --file tasks/my-release/plan.manifest.json \
+  --state work/my-release/run.state.json \
+  --lock tasks/my-release/plan.lock.json \
+  --task WS-01 \
+  --operation-id start-WS-01-attempt-1 \
+  --expected-revision 3 \
+  --source-revision "$(git rev-parse HEAD)" \
+  --host-model-profile profiles/hosts/codex-live-profile.v1.json \
+  --risk-profile-out work/my-release/WS-01/risk-profile.json
+```
+
+Затем разрешите попытку с тем же идентификатором операции:
+
+```bash
+agent-lifecycle workflow task-start \
+  --state work/my-release/run.state.json \
+  --task WS-01 \
+  --operation-id start-WS-01-attempt-1 \
+  --expected-revision 3 \
+  --source-revision "$(git rev-parse HEAD)" \
+  --risk-profile work/my-release/WS-01/risk-profile.json \
+  --reason "запуск попытки с учётом риска"
+```
+
+Позже хост должен подтвердить расход токенов, число обращений и время.
+Отсутствующие, расчётные, не совпадающие по происхождению или превышающие
+ограничения данные блокируют переход результата. Все входные данные и причины
+блокировки описаны в разделе [Запуск с учётом
+риска](reference/risk-aware-execution.md).
 
 ## Аудит подтверждений реализации
 

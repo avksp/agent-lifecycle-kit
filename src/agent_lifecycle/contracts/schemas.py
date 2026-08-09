@@ -84,6 +84,69 @@ LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
     )
 }
 
+RISK_EXECUTION_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-risk-execution-policy.v1": open_object_schema(
+        "agent-risk-execution-policy.v1",
+        required=["schemaVersion", "tiers", "productionPromotionClaimed"],
+        properties={
+            "tiers": {"type": "object"},
+            "productionPromotionClaimed": {"const": False},
+        },
+    ),
+    "agent-risk-execution-profile.v1": open_object_schema(
+        "agent-risk-execution-profile.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "requestedRisk",
+            "planRiskTier",
+            "resolvedRiskTier",
+            "adapterId",
+            "operationId",
+            "runId",
+            "packageId",
+            "planRevision",
+            "planDigest",
+            "taskId",
+            "sourceRevision",
+            "qualityFloorDecision",
+            "modelRoute",
+            "resourceCaps",
+            "usageEvidence",
+            "policyDigest",
+            "blockers",
+            "modelCallsStarted",
+            "hostLaunchStarted",
+            "productionPromotionClaimed",
+            "profileDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "BLOCKED"]},
+            "requestedRisk": {"enum": ["auto", "S0", "S1", "S2"]},
+            "planRiskTier": {"enum": ["S0", "S1", "S2"]},
+            "resolvedRiskTier": {"enum": ["S0", "S1", "S2"]},
+            "adapterId": {"type": "string", "minLength": 1},
+            "operationId": {"type": "string", "minLength": 1},
+            "runId": {"type": "string", "minLength": 1},
+            "packageId": {"type": "string", "minLength": 1},
+            "planRevision": {"type": "integer", "minimum": 1},
+            "planDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "taskId": {"type": "string", "minLength": 1},
+            "sourceRevision": {"type": "string", "minLength": 1},
+            "qualityFloorDecision": {"type": "object"},
+            "modelRoute": {"type": "object"},
+            "resourceCaps": {"type": "object"},
+            "usageEvidence": {"type": "object"},
+            "policyDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "modelCallsStarted": {"const": False},
+            "hostLaunchStarted": {"const": False},
+            "productionPromotionClaimed": {"const": False},
+            "profileDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+}
+
 _SCHEMA_GROUPS = (
     CORE_SCHEMAS,
     AUDIT_SCHEMAS,
@@ -114,6 +177,7 @@ _SCHEMA_GROUPS = (
     METRIC_SCHEMAS,
     POLICY_SCHEMAS,
     LIFECYCLE_START_SCHEMAS,
+    RISK_EXECUTION_SCHEMAS,
 )
 
 _SCHEMAS: dict[str, dict[str, Any]] = {}
