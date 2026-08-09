@@ -3,6 +3,15 @@
 Основная команда называется `agent-lifecycle`. Она возвращает структурированный
 JSON, чтобы результат можно было проверять автоматически.
 
+## Установка
+
+Поддерживаются Python 3.11-3.14. Установите точную версию из официального
+[проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
+
+```bash
+python -m pip install agent-lifecycle-kit==1.51.0
+```
+
 ## Основа
 
 - `agent-lifecycle version`: версия пакета.

@@ -9,7 +9,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/avksp/agent-lifecycle-kit.git",
-        "ref": "v1.50.2"
+        "ref": "v1.51.0"
       },
       "policy": {
         "installation": "AVAILABLE",
