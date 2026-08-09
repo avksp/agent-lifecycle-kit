@@ -47,12 +47,13 @@ class AdapterCapabilityManifestTests(unittest.TestCase):
         self.assertIn("capability-manifest-operation-drift", codes)
 
     def test_receipt_normalizer_redacts_sensitive_nested_values(self) -> None:
+        local_path = "/" + "Users/operator/work/out.json"
         payload = {
             "schemaVersion": "agent-host-operation-receipt.v1",
             "operationId": "op-1",
             "capability": "launch",
             "status": "PASS",
-            "outputs": [{"path": "work/out.json", "apiKey": "secret-value"}],
+            "outputs": [{"path": local_path, "apiKey": "secret-value", "message": "Bearer abc.def"}],
             "usage": {"inputTokens": 10, "provider": {"session-token": "abc"}},
         }
 
@@ -61,6 +62,10 @@ class AdapterCapabilityManifestTests(unittest.TestCase):
         self.assertEqual(normalized["outputs"][0]["apiKey"], "<redacted>")
         self.assertEqual(normalized["usage"]["provider"]["session-token"], "<redacted>")
         self.assertEqual(normalized["usage"]["inputTokens"], 10)
+        self.assertEqual(normalized["outputs"][0]["path"], "<redacted>")
+        self.assertEqual(normalized["outputs"][0]["message"], "Bearer <redacted>")
+        self.assertTrue(normalized["usage"]["receiptRedaction"]["applied"])
+        self.assertFalse(normalized["usage"]["receiptRedaction"]["secretValuesStored"])
 
     def test_adapter_package_discovery_is_advisory_only(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "bb8ace8186cb4505b2a98cf707fb7ec4e9f7756bddb2587a84fd9335087f0279",
+  "descriptorDigest": "779b39814c064e295fdba01ea6a81b5db70f123e361f23a18840379d3c5d85cd",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,6 +156,21 @@
     "usageReceiptRequired": true
   },
   "promotion": {
+    "liveTestedHostRange": {
+      "evidence": [
+        "docs/adapters/evidence/claude-code-0.5.0.md",
+        "work/release-0-5/evidence/live-host-conformance-claude-code.json",
+        "work/release-0-5/evidence/live-calibration-verification-claude-code.json",
+        "work/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "claude-code",
+      "maximumVersion": "2.1.220",
+      "minimumVersion": "2.1.220",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "6bb3b58ee01d028fe21cef209c284efc79e55ceb",
+      "testedAt": "2026-07-29"
+    },
     "productionPromotionClaimed": false,
     "verifiedRequiresLiveTestedHostRange": true
   },

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from agent_lifecycle.host_protocol import validate_adapter_descriptor
-from agent_lifecycle.host_protocol.validation import validate_managed_launch_profile
+from agent_lifecycle.host_protocol.validation import validate_installation_facts, validate_managed_launch_profile
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -22,6 +22,16 @@ class AdapterLaunchProfileTests(unittest.TestCase):
                 self.assertFalse(descriptor["managedLaunch"]["shell"])
                 self.assertFalse(descriptor["managedLaunch"]["writesNativeConfig"])
                 self.assertFalse(descriptor["managedLaunch"]["promptInjectionDefault"])
+
+    def test_installation_facts_are_data_only(self) -> None:
+        descriptor = json.loads((ROOT / "adapters/codex/adapter.descriptor.json").read_text(encoding="utf-8"))
+        facts = descriptor["installation"]
+
+        validation = validate_installation_facts(facts)
+
+        self.assertEqual(validation["status"], "PASS", validation["blockers"])
+        self.assertEqual(facts["binaryAliases"], ["codex"])
+        self.assertTrue(all("command" not in item and "shell" not in item for item in facts["commands"]))
 
     def test_supported_launch_profile_requires_argv_templates(self) -> None:
         validation = validate_managed_launch_profile(

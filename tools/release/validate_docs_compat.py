@@ -681,7 +681,28 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "adapter run",
             "`WRAPPER_ONLY`",
             "shell: false",
+            "adapter-generic-launch-disabled",
+            "wildcard",
             "plugin installation alone",
+        ),
+    ),
+    (
+        "docs/reference/readiness-diagnostics.md",
+        (
+            "`agent-adapter-install-plan.v1`",
+            "schema-validated installation facts",
+            "argv arrays",
+            "Diagnostics never interpret the argv",
+            "arrays as a shell command",
+        ),
+    ),
+    (
+        "docs/security/neutrality-contract.md",
+        (
+            "Completeness counters",
+            "`readRaces`",
+            "`pathAliasConflicts`",
+            "fail closed",
         ),
     ),
     (
@@ -712,7 +733,26 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "adapter run",
             "`WRAPPER_ONLY`",
             "shell: false",
+            "adapter-generic-launch-disabled",
+            "шаблоны",
             "установка плагина",
+        ),
+    ),
+    (
+        "docs/ru/reference/readiness-diagnostics.md",
+        (
+            "`agent-adapter-install-plan.v1`",
+            "argv-массивы",
+            "не трактует argv-массивы как строку shell",
+        ),
+    ),
+    (
+        "docs/ru/security/neutrality-contract.md",
+        (
+            "Счётчики полноты",
+            "`readRaces`",
+            "`pathAliasConflicts`",
+            "приводит к отказу",
         ),
     ),
     (

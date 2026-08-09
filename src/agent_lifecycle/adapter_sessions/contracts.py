@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.contracts.redaction import redact_text
 
 ADAPTER_SESSION_RECEIPT_SCHEMA = "agent-adapter-session-receipt.v1"
 MANAGED_ADAPTER_LAUNCH_RECEIPT_SCHEMA = "agent-managed-adapter-launch-receipt.v1"
@@ -67,9 +68,13 @@ def build_launch_receipt(
     cancelled: bool = False,
     stdout_tail: str = "",
     stderr_tail: str = "",
+    stdout_redacted: bool = False,
+    stderr_redacted: bool = False,
     host_launch_started: bool = False,
     blockers: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    stdout_tail, stdout_changed = redact_text(stdout_tail[-2000:])
+    stderr_tail, stderr_changed = redact_text(stderr_tail[-2000:])
     body = {
         "schemaVersion": MANAGED_ADAPTER_LAUNCH_RECEIPT_SCHEMA,
         "status": status,
@@ -83,8 +88,8 @@ def build_launch_receipt(
         "exitCode": exit_code,
         "timedOut": timed_out,
         "cancelled": cancelled,
-        "stdout": {"tail": stdout_tail[-2000:], "redacted": True},
-        "stderr": {"tail": stderr_tail[-2000:], "redacted": True},
+        "stdout": {"tail": stdout_tail, "redacted": stdout_redacted or stdout_changed},
+        "stderr": {"tail": stderr_tail, "redacted": stderr_redacted or stderr_changed},
         "hostLaunchStarted": host_launch_started,
         "modelCallsStarted": False,
         "secretsWritten": False,

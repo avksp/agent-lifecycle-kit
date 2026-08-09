@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import subprocess
@@ -40,7 +41,7 @@ def main() -> int:
             _run_command([str(_venv_script(venv_dir, "agent-lifecycle")), "version"], commands, blockers)
             _run_command([str(_venv_script(venv_dir, "agent-lifecycle-neutrality")), "--help"], commands, blockers)
             marker = _probe_type_marker(python)
-            commands.append({"argv": [str(python), "-c", "py.typed probe"], "returncode": 0 if marker else 1})
+            commands.append({"argv": _portable_argv([str(python), "-c", "py.typed probe"]), "returncode": 0 if marker else 1})
             if not marker:
                 blockers.append({"code": "py-typed-missing", "message": "installed wheel does not include agent_lifecycle/py.typed"})
 
@@ -48,7 +49,7 @@ def main() -> int:
     evidence = {
         "schemaVersion": "agent-packaging-smoke-evidence.v1",
         "status": status,
-        "distDir": dist_dir.as_posix(),
+        "distDir": _portable_path(dist_dir),
         "commands": commands,
         "blockers": blockers,
         "productionPromotionClaimed": False,
@@ -60,16 +61,39 @@ def main() -> int:
 
 def _run_command(argv: list[str], commands: list[dict[str, Any]], blockers: list[dict[str, Any]]) -> None:
     result = subprocess.run(argv, cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    commands.append({"argv": argv, "returncode": result.returncode})
+    portable_argv = _portable_argv(argv)
+    commands.append({"argv": portable_argv, "returncode": result.returncode})
     if result.returncode != 0:
         blockers.append(
             {
                 "code": "packaging-command-failed",
-                "argv": argv,
-                "stdoutTail": result.stdout[-2000:],
-                "stderrTail": result.stderr[-2000:],
+                "argv": portable_argv,
+                "stdoutIdentity": _stream_identity(result.stdout),
+                "stderrIdentity": _stream_identity(result.stderr),
             }
         )
+
+
+def _portable_argv(argv: list[str]) -> list[str]:
+    return [_portable_path(item, executable=index == 0) for index, item in enumerate(argv)]
+
+
+def _portable_path(value: str | Path, *, executable: bool = False) -> str:
+    path = Path(value)
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        name = path.name
+        if executable and name.startswith("python"):
+            return "python"
+        return name or "external-path"
+
+
+def _stream_identity(value: str) -> dict[str, Any]:
+    encoded = value.encode("utf-8")
+    return {"bytes": len(encoded), "sha256": hashlib.sha256(encoded).hexdigest()}
 
 
 def _probe_type_marker(python: Path) -> bool:

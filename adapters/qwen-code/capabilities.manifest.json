@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "21389ddebb806504d4a1547573a8533ed961142b741bfbed8b4a018b358c6683",
+  "descriptorDigest": "d8fe2356bd240d53ea4cbae4d8fa855aa241c5d73ccea5d7b08a44f582e56fff",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,6 +156,21 @@
     "usageReceiptRequired": true
   },
   "promotion": {
+    "liveTestedHostRange": {
+      "evidence": [
+        "docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md",
+        "work/release-0-11/evidence/qwen-code/live-host-conformance-qwen-code.json",
+        "work/release-0-11/evidence/qwen-code/live-calibration-verification-qwen-code.json",
+        "work/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "qwen-code",
+      "maximumVersion": "0.21.0",
+      "minimumVersion": "0.21.0",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "6c6b40210ee28de4b6a5993367af89e629fb99ff",
+      "testedAt": "2026-07-29"
+    },
     "productionPromotionClaimed": false,
     "verifiedRequiresLiveTestedHostRange": true
   },

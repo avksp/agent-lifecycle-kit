@@ -33,6 +33,8 @@ class ReadinessDiagnosticsTests(unittest.TestCase):
         self.assertFalse(report["adapters"][0]["productionPromotionClaimed"])
         self.assertFalse(report["adapters"][0]["maturityChangeClaimed"])
         self.assertEqual(report["installPlans"][0]["status"], "DRY_RUN")
+        self.assertEqual(report["installPlans"][0]["binaryAliases"], ["codex"])
+        self.assertTrue(all(isinstance(item["argv"], list) for item in report["installPlans"][0]["commands"]))
         self.assertNotIn(str(ROOT), rendered)
 
     def test_tracked_evidence_summary_and_local_raw_receipts_are_classified_separately(self) -> None:

@@ -89,7 +89,7 @@
     {
       "bytes": 975,
       "path": "conformance/adapters/grok-build/event-stream-receipt.json",
-      "sha256": "06e0f90bfbe9eb3cb11c5ff6653b8393a7b2fa364b940e0da989d05ab14c8fbe"
+      "sha256": "9302e3fb544ab6d8342c7a473d5b63b250c14c3d352cdde225d4b9eaeb9e53a7"
     },
     {
       "bytes": 3144,
@@ -114,7 +114,7 @@
     {
       "bytes": 995,
       "path": "conformance/adapters/openinterpreter/event-stream-receipt.json",
-      "sha256": "cc9a07baa5fa140c0787d44729b5623e7e5a93384133ad21463ccceb3508d919"
+      "sha256": "edf033195f79d012fa4b167142b8cdbeaf6468340a00310c78f223c511c6c5eb"
     },
     {
       "bytes": 3274,
@@ -129,7 +129,7 @@
     {
       "bytes": 943,
       "path": "conformance/adapters/pi/event-stream-receipt.json",
-      "sha256": "f46f7b831eaf20a870dd94b6f7263e4e09d24119c61f63b6f27700206a93e353"
+      "sha256": "fa9542dcb23a20ae39ae4207898d72c7a1b6a94427a0c272649794aa58e9a9fb"
     },
     {
       "bytes": 2936,
