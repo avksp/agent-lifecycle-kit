@@ -16,17 +16,17 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 
 Главная цель проекта - закрывать задачу полностью, с максимально возможным качеством для выбранной модели, без оверинжиринга и с контролем расхода токенов.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.51.0 · **Python:** 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.52.0 · **Python:** 3.11-3.14
 
 ## Быстрый старт
-Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.51.0`.
+Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.52.0`.
 Из исходного дерева:
 
 ```bash
 python -m pip install -e .
 agent-lifecycle version
 agent-lifecycle diagnose --no-install-plans
-agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.json
+agent-lifecycle start --adapter codex --text "Составь проверяемый план реализации"
 ```
 
 Пошаговый пример: [Быстрый старт](quickstart.md). Устройство проекта описывает [архитектура системы](architecture/system-architecture.md), а отличие от похожих инструментов показывает [сравнение проекта](reference/project-comparison.md).
@@ -44,10 +44,9 @@ agent-lifecycle adapter validate --descriptor adapters/codex/adapter.descriptor.
   или уровень риска.
 - Учёт расхода показывает токены, время и ресурсы; денежная стоимость
   необязательна и используется только если её сообщает платный хост.
-- Прогресс и управляемые сессии работают без вызова модели: можно показать
-  состояние, токены и счётчик изменений, а `adapter run` связывает работу с
-  зафиксированным состоянием рабочего цикла без заявления прямого запуска
-  хоста.
+- Прогресс и управляемые сессии работают без вызова модели: команда `start`
+  принимает текст, файл задачи, зафиксированный запрос или сохранённую сессию,
+  не заявляя прямой запуск внешнего инструмента.
 
 ## Области возможностей
 

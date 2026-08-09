@@ -37,13 +37,14 @@ cat > work/tasks/research.md <<'EOF'
 - команды проверки, которые понадобятся позже.
 EOF
 
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode research \
   --file work/tasks/research.md \
-  --out work/tasks/research-intake.json
+  --out work/tasks/research-start.json
 
 agent-lifecycle review-mesh recommend \
-  --intake work/tasks/research-intake.json \
+  --file work/tasks/research.md \
   --out work/tasks/research-recommendation.json
 ```
 
@@ -55,13 +56,14 @@ agent-lifecycle review-mesh recommend \
 Подходит для задачи, предложения или плана в одном файле:
 
 ```bash
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter claude \
+  --mode review \
   --file tasks/proposal.md \
-  --out work/review/proposal-intake.json
+  --out work/review/proposal-start.json
 
 agent-lifecycle review-mesh recommend \
-  --intake work/review/proposal-intake.json \
+  --file tasks/proposal.md \
   --out work/review/proposal-recommendation.json
 ```
 
@@ -93,10 +95,11 @@ cat > work/review/plan-review-task.md <<'EOF'
 файлами, проверки безопасности и релизные заявления.
 EOF
 
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode review \
   --file work/review/plan-review-task.md \
-  --out work/review/plan-review-intake.json
+  --out work/review/plan-review-start.json
 ```
 
 ## Проверка изменений кода
@@ -110,10 +113,11 @@ git diff origin/main...HEAD > work/code-review/current/diff.patch
 ```
 
 ```bash
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode review \
   --file work/code-review/current/review-task.md \
-  --out work/code-review/current/intake.json
+  --out work/code-review/current/start.json
 ```
 
 Если архитектура описана, перечислите документы архитектуры в файле задачи.
@@ -164,10 +168,11 @@ agent-lifecycle goal view \
 начните с приёма задачи. ALK добавит только рекомендательные признаки профиля:
 
 ```bash
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode plan \
   --file work/bugs/checkout-regression.md \
-  --out work/bugs/checkout-intake.json
+  --out work/bugs/checkout-start.json
 ```
 
 Рекомендация не активирует проверку рабочего цикла. Проверенный
@@ -198,3 +203,8 @@ agent-lifecycle adapter task start \
   выполнен.
 - Обычный текст, Markdown и импортированные планы сами по себе не разрешают
   реализацию.
+
+Для обычной работы используйте `agent-lifecycle start`. В сценариях
+автоматизации можно применять отдельные команды `adapter task start`, `adapter
+run` и `adapter session resume`, когда нужен прямой контроль одного шага
+жизненного цикла.
