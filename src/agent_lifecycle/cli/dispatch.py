@@ -6,6 +6,7 @@ import argparse
 from typing import Any
 
 from agent_lifecycle.cli.dispatch_adapters import dispatch_adapters
+from agent_lifecycle.cli.benchmarks import dispatch_benchmark
 from agent_lifecycle.cli.dispatch_contracts import dispatch_contracts
 from agent_lifecycle.cli.dispatch_lifecycle import dispatch_lifecycle
 from agent_lifecycle.cli.dispatch_observability import dispatch_observability
@@ -41,6 +42,8 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         return dispatch_followup(args)
     if args.command == "worktree":
         return dispatch_worktree(args)
+    if args.command == "benchmark":
+        return dispatch_benchmark(args)
     raise LifecycleError(
         "command-not-implemented",
         f"{args.command} command group is reserved but not implemented in this build",

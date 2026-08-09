@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "agent-reference-task-oracle.v1",
+  "taskId": "rt04-s1-managed-task",
+  "taskVersion": "1.0.0",
+  "oracleType": "s1-managed-task",
+  "requiredEvidenceSchemas": ["agent-task-result.v2", "agent-implementation-audit-report-validation.v1"],
+  "productionPromotionClaimed": false
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "agent-reference-task-submission.v1",
+  "taskId": "rt01-planning",
+  "taskVersion": "1.0.0",
+  "accepted": true,
+  "evidence": {
+    "planValidation": {"schemaVersion": "agent-plan-validation.v1", "status": "FROZEN", "planDigest": "0000000000000000000000000000000000000000000000000000000000000000"},
+    "completenessValidation": {"schemaVersion": "agent-plan-completeness-validation.v1", "status": "PASS", "blockers": []},
+    "acceptanceValidation": {"schemaVersion": "agent-acceptance-checklist-validation.v1", "status": "PASS", "missingInMarkdown": [], "extraInMarkdown": [], "linkMismatches": []},
+    "usageExport": {"schemaVersion": "agent-usage-export.v1", "entries": [{"usageConfidence": "ATTESTED", "tokens": {"input": 120, "output": 80, "total": 200}, "durationMs": 1500}]},
+    "outcomeIndex": {"schemaVersion": "agent-task-outcome-index.v1", "records": [{"taskId": "rt01-planning", "retries": 1}]}
+  },
+  "productionPromotionClaimed": false
+}
