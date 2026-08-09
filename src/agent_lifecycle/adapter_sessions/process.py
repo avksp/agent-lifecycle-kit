@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 from typing import Any
 
-from agent_lifecycle.contracts.redaction import redact_text
+from agent_lifecycle.adapter_sessions.redaction import redact_process_text
 
 
 def run_process(argv: list[str], *, env: dict[str, str], timeout_seconds: float) -> dict[str, Any]:
@@ -20,8 +20,8 @@ def run_process(argv: list[str], *, env: dict[str, str], timeout_seconds: float)
             timeout=timeout_seconds,
             check=False,
         )
-        stdout_tail, stdout_redacted = redact_text(result.stdout[-2000:])
-        stderr_tail, stderr_redacted = redact_text(result.stderr[-2000:])
+        stdout_tail, stdout_redacted = redact_process_text(result.stdout[-2000:])
+        stderr_tail, stderr_redacted = redact_process_text(result.stderr[-2000:])
         return {
             "status": "PASS" if result.returncode == 0 else "FAIL",
             "exitCode": result.returncode,
@@ -33,8 +33,12 @@ def run_process(argv: list[str], *, env: dict[str, str], timeout_seconds: float)
             "blockers": [] if result.returncode == 0 else [{"code": "adapter-process-nonzero-exit", "exitCode": result.returncode}],
         }
     except subprocess.TimeoutExpired as exc:
-        stdout_tail, stdout_redacted = redact_text((exc.stdout or "")[-2000:] if isinstance(exc.stdout, str) else "")
-        stderr_tail, stderr_redacted = redact_text((exc.stderr or "")[-2000:] if isinstance(exc.stderr, str) else "")
+        stdout_tail, stdout_redacted = redact_process_text(
+            (exc.stdout or "")[-2000:] if isinstance(exc.stdout, str) else ""
+        )
+        stderr_tail, stderr_redacted = redact_process_text(
+            (exc.stderr or "")[-2000:] if isinstance(exc.stderr, str) else ""
+        )
         return {
             "status": "FAIL",
             "exitCode": None,
@@ -44,4 +48,15 @@ def run_process(argv: list[str], *, env: dict[str, str], timeout_seconds: float)
             "stderrTail": stderr_tail,
             "stderrRedacted": stderr_redacted,
             "blockers": [{"code": "adapter-process-timeout", "timeoutSeconds": timeout_seconds}],
+        }
+    except OSError as exc:
+        return {
+            "status": "FAIL",
+            "exitCode": None,
+            "timedOut": False,
+            "stdoutTail": "",
+            "stdoutRedacted": False,
+            "stderrTail": "",
+            "stderrRedacted": False,
+            "blockers": [{"code": "adapter-process-start-failed", "errorType": type(exc).__name__}],
         }

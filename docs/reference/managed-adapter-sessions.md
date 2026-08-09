@@ -32,6 +32,8 @@ agent-lifecycle start --adapter codex --file task.md
 agent-lifecycle start --adapter codex --mode research --text "Inspect the current design"
 agent-lifecycle start --adapter codex --mode implement --file adapter-run-request.json
 agent-lifecycle start --adapter codex --resume <session-id>
+agent-lifecycle host-launch inspect --profile .alk/host-launch/codex.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/codex.json
 
 agent-lifecycle adapter session start --adapter codex
 agent-lifecycle adapter session start --adapter codex --launch
@@ -54,6 +56,11 @@ agent-lifecycle adapter run \
   --lock <plan.lock.json> \
   --task <task-id>
 ```
+
+An operator-local launch adds `--launch --host-launch-profile
+.alk/host-launch/<adapter>.json` to the fully bound `start --mode implement`
+command. See [Local host launch](local-host-launch.md) for the profile and the
+complete command. No launch flag is accepted for raw task intake.
 
 `start` emits `agent-lifecycle-start-receipt.v1`. Its nested delegate summary
 contains only stable status, advisory and receipt-digest fields; it excludes
@@ -101,7 +108,9 @@ profiles. It is descriptive data, not generic process-execution authority:
 
 Current bundled adapters declare `WRAPPER_ONLY`. That keeps lifecycle proof
 available through ALK-managed commands without claiming unsupported native host
-hooks or command lines. `adapter session start --launch` and direct generic
+hooks or command lines. A validated operator-local profile can explicitly start
+one process after frozen and risk bindings pass, but that local fact does not
+change the public support claim. `adapter session start --launch` and direct generic
 descriptor launch both return `adapter-generic-launch-disabled` before process
 creation, regardless of the declared profile status.
 
@@ -124,6 +133,7 @@ The stable receipts are `agent-adapter-session-receipt.v1`,
 `agent-managed-adapter-launch-receipt.v1`,
 `agent-adapter-session-resume-receipt.v1`,
 `agent-adapter-task-start-receipt.v1`,
-`agent-adapter-task-run-request.v1` and `agent-lifecycle-start-receipt.v1`.
+`agent-adapter-task-run-request.v1`, `agent-lifecycle-start-receipt.v1` and
+`agent-local-host-launch-profile-receipt.v1`.
 Review Mesh recommendations use
 `agent-review-mesh-recommendation.v1`.

@@ -10,7 +10,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.55.0
+python -m pip install agent-lifecycle-kit==1.56.0
 ```
 
 ## Foundation
@@ -53,8 +53,14 @@ python -m pip install agent-lifecycle-kit==1.55.0
   every mode except explicit `implement` remain non-executing. `implement`
   requires a structured frozen request with complete state, manifest, lock,
   task, operation and revision bindings. The command returns
-  `agent-lifecycle-start-receipt.v1`, does not launch a host CLI and never
-  treats `--resume` as a native host conversation identifier.
+  `agent-lifecycle-start-receipt.v1` and never treats `--resume` as a native
+  host conversation identifier. External execution remains off unless a fully
+  bound `implement` call also supplies `--launch --host-launch-profile
+  .alk/host-launch/<adapter>.json`; see [Local host
+  launch](local-host-launch.md).
+- `agent-lifecycle host-launch inspect/preflight --profile <path>`: validate an
+  ignored operator-local profile with zero process calls, or explicitly make
+  one bounded version probe. These commands do not authorize task execution.
 
 - `agent-lifecycle workflow run`: verify the frozen plan/state binding and
   return the next host-owned action without mutating state or starting model
@@ -166,6 +172,10 @@ atomic interface for scripts and advanced operators.
   creation. A descriptor alone never authorizes a generic native host launch.
   Generic environment selection accepts exact allowlisted variable names only;
   wildcard patterns are rejected.
+- `agent-lifecycle start --mode implement --launch --host-launch-profile
+  <path>`: the only CLI route to operator-local native execution. It requires a
+  frozen lock-bound run and derived risk profile; it does not promote the
+  adapter beyond `WRAPPER_ONLY`.
 - `agent-lifecycle adapter task start --adapter <id> (--file task.md |
   --text "...")`: accept task input for a selected adapter. Raw text and
   Markdown produce `agent-adapter-task-start-receipt.v1` with

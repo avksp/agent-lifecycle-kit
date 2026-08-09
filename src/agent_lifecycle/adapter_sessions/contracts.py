@@ -5,12 +5,15 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import canonical_digest
-from agent_lifecycle.contracts.redaction import redact_text
+from agent_lifecycle.contracts.redaction import redact_value
+from agent_lifecycle.adapter_sessions.redaction import redact_process_text
 
 ADAPTER_SESSION_RECEIPT_SCHEMA = "agent-adapter-session-receipt.v1"
 MANAGED_ADAPTER_LAUNCH_RECEIPT_SCHEMA = "agent-managed-adapter-launch-receipt.v1"
 ADAPTER_SESSION_RESUME_RECEIPT_SCHEMA = "agent-adapter-session-resume-receipt.v1"
 LIFECYCLE_START_RECEIPT_SCHEMA = "agent-lifecycle-start-receipt.v1"
+LOCAL_HOST_LAUNCH_PROFILE_RECEIPT_SCHEMA = "agent-local-host-launch-profile-receipt.v1"
+LOCAL_HOST_LAUNCH_PROBE_RECEIPT_SCHEMA = "agent-local-host-launch-probe-receipt.v1"
 
 
 def build_adapter_session_receipt(
@@ -73,16 +76,20 @@ def build_launch_receipt(
     stderr_redacted: bool = False,
     host_launch_started: bool = False,
     blockers: list[dict[str, Any]] | None = None,
+    profile_digest: str | None = None,
+    risk_profile_digest: str | None = None,
+    receipt_argv: list[str] | None = None,
 ) -> dict[str, Any]:
-    stdout_tail, stdout_changed = redact_text(stdout_tail[-2000:])
-    stderr_tail, stderr_changed = redact_text(stderr_tail[-2000:])
+    stdout_tail, stdout_changed = redact_process_text(stdout_tail[-2000:])
+    stderr_tail, stderr_changed = redact_process_text(stderr_tail[-2000:])
+    safe_argv, argv_changed = redact_value(receipt_argv if receipt_argv is not None else argv)
     body = {
         "schemaVersion": MANAGED_ADAPTER_LAUNCH_RECEIPT_SCHEMA,
         "status": status,
         "adapterId": adapter_id,
         "sessionId": session_id,
         "launchMode": launch_mode,
-        "argv": argv,
+        "argv": safe_argv,
         "shell": False,
         "timeoutSeconds": timeout_seconds,
         "env": env,
@@ -91,11 +98,87 @@ def build_launch_receipt(
         "cancelled": cancelled,
         "stdout": {"tail": stdout_tail, "redacted": stdout_redacted or stdout_changed},
         "stderr": {"tail": stderr_tail, "redacted": stderr_redacted or stderr_changed},
+        "argvRedacted": argv_changed,
+        "profileDigest": profile_digest,
+        "riskProfileDigest": risk_profile_digest,
         "hostLaunchStarted": host_launch_started,
         "modelCallsStarted": False,
         "secretsWritten": False,
         "nativeConfigWritten": False,
         "blockers": blockers or [],
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def build_local_launch_profile_receipt(
+    *,
+    status: str,
+    operation: str,
+    profile_path: str,
+    profile_summary: dict[str, Any],
+    profile_digest: str | None,
+    process_calls: int,
+    probe_receipt: dict[str, Any] | None = None,
+    blockers: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Build a portable inspect or preflight receipt without local values."""
+
+    safe_summary, summary_changed = redact_value(profile_summary)
+    body = {
+        "schemaVersion": LOCAL_HOST_LAUNCH_PROFILE_RECEIPT_SCHEMA,
+        "status": status,
+        "operation": operation,
+        "profilePath": profile_path,
+        "profile": safe_summary,
+        "profileDigest": profile_digest,
+        "processCalls": process_calls,
+        "probeReceipt": probe_receipt,
+        "redactionApplied": summary_changed
+        or bool(probe_receipt and (probe_receipt.get("stdout", {}).get("redacted") or probe_receipt.get("stderr", {}).get("redacted"))),
+        "hostLaunchStarted": process_calls > 0,
+        "modelCallsStarted": False,
+        "secretsWritten": False,
+        "nativeConfigWritten": False,
+        "blockers": blockers or [],
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def build_local_launch_probe_receipt(
+    *,
+    argv: list[str],
+    timeout_seconds: float,
+    env: dict[str, Any],
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a redacted receipt for one bounded executable version probe."""
+
+    safe_argv, argv_changed = redact_value(argv)
+    stdout_tail, stdout_changed = redact_process_text(str(result.get("stdoutTail", ""))[-2000:])
+    stderr_tail, stderr_changed = redact_process_text(str(result.get("stderrTail", ""))[-2000:])
+    body = {
+        "schemaVersion": LOCAL_HOST_LAUNCH_PROBE_RECEIPT_SCHEMA,
+        "status": result.get("status", "FAIL"),
+        "argv": safe_argv,
+        "argvRedacted": argv_changed,
+        "shell": False,
+        "timeoutSeconds": timeout_seconds,
+        "env": env,
+        "exitCode": result.get("exitCode"),
+        "timedOut": bool(result.get("timedOut")),
+        "stdout": {
+            "tail": stdout_tail,
+            "redacted": bool(result.get("stdoutRedacted")) or stdout_changed,
+        },
+        "stderr": {
+            "tail": stderr_tail,
+            "redacted": bool(result.get("stderrRedacted")) or stderr_changed,
+        },
+        "hostLaunchStarted": True,
+        "modelCallsStarted": False,
+        "blockers": list(result.get("blockers", [])),
         "productionPromotionClaimed": False,
     }
     return {**body, "receiptDigest": canonical_digest(body)}
@@ -140,6 +223,8 @@ def build_lifecycle_start_receipt(
     lifecycle_coverage_claimed: bool = False,
     requires_review: bool = False,
     blockers: list[dict[str, Any]] | None = None,
+    host_launch_started: bool = False,
+    launch_receipt: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the public, path-safe receipt for the unified start facade."""
 
@@ -155,7 +240,8 @@ def build_lifecycle_start_receipt(
         "lifecycleCoverageClaimed": lifecycle_coverage_claimed,
         "requiresReview": requires_review,
         "modelCallsStarted": False,
-        "hostLaunchStarted": False,
+        "hostLaunchStarted": host_launch_started,
+        "launchReceipt": launch_receipt,
         "nativeSessionAttached": False,
         "rawTaskTextStored": False,
         "secretsWritten": False,

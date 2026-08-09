@@ -38,6 +38,8 @@ def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, 
         routing_profile_path=Path(args.routing_profile),
         baseline_profile_path=Path(args.baseline_profile),
         host_model_profile_path=Path(args.host_model_profile) if args.host_model_profile else None,
+        launch=args.launch,
+        host_launch_profile_path=Path(args.host_launch_profile) if args.host_launch_profile else None,
     )
     if args.risk_profile_out:
         profile = _risk_profile(payload)

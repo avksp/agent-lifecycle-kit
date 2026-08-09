@@ -30,7 +30,7 @@ agent-lifecycle start --adapter codex --text "Draft a reviewed implementation pl
 ```
 
 The official [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14.
-Install the exact release with `python -m pip install agent-lifecycle-kit==1.55.0`.
+Install the exact release with `python -m pip install agent-lifecycle-kit==1.56.0`.
 
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). For structure and positioning, see [System architecture](docs/architecture/system-architecture.md) and [Project comparison](docs/reference/project-comparison.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
 

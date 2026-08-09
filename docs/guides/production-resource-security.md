@@ -67,6 +67,13 @@ Release and production checks must keep these boundaries:
 - no public marketplace or directory approval claim without external evidence;
 - no host-specific semantics in shared core contracts.
 
+Operator-local host profiles are an explicit exception to the default
+no-process path, not a new source of lifecycle authority. Keep them under
+ignored `.alk/host-launch/`, inspect before preflight, allow exact environment
+names only, and use `start --launch` only with frozen identity and a derived
+risk profile. Never put task text, shell commands or credentials in
+`argvTemplate`. See [Local host launch](../reference/local-host-launch.md).
+
 Use `agent-lifecycle contract check` and release security tests before claiming
 a stable package. Use the support matrix for adapter maturity; model availability
 alone is not enough to mark an adapter `VERIFIED`.

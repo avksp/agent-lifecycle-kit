@@ -20,6 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("version", help="print package version as compact JSON")
     _add_start_parser(subparsers)
+    _add_host_launch_parser(subparsers)
     _add_diagnose_parser(subparsers)
     _add_diagnostics_parser(subparsers)
     _add_schema_parser(subparsers)
@@ -62,6 +63,8 @@ def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     start.add_argument("--routing-profile", default="profiles/model-routing-profile.v1.json")
     start.add_argument("--baseline-profile", default="profiles/lifecycle-baselines.v1.json")
     start.add_argument("--host-model-profile")
+    start.add_argument("--launch", action="store_true")
+    start.add_argument("--host-launch-profile")
     start.add_argument("--risk-profile-out")
     start.add_argument("--descriptor")
     start.add_argument("--session-root")
@@ -76,6 +79,15 @@ def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     start.add_argument("--max-input-bytes", type=int, default=32768)
     start.add_argument("--target-tokens", type=int, default=4096)
     start.add_argument("--out")
+
+
+def _add_host_launch_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    host_launch = subparsers.add_parser("host-launch", help="inspect or preflight an operator-local host profile")
+    host_launch_sub = host_launch.add_subparsers(dest="host_launch_command", required=True)
+    for command in ("inspect", "preflight"):
+        child = host_launch_sub.add_parser(command)
+        child.add_argument("--profile", required=True)
+        child.add_argument("--out")
 
 
 def _add_diagnose_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
