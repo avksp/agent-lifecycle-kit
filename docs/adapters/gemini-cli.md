@@ -24,6 +24,11 @@ ALK now includes a bounded Gemini CLI runner and live harness that use
 stream-json` and optional `--model` to turn host output into portable
 host-operation receipts.
 
+The adapter-local `stream-json` usage normalizer is `FIXTURE_ONLY`. Runner and
+harness use the same bounded parser, but its sidecar remains `ESTIMATED` and
+cannot satisfy S1/S2 until a live Gemini CLI range is qualified. See
+[Host-local token accounting](../reference/host-local-token-accounting.md).
+
 Current blocker: `BLOCKED_UNSUPPORTED_CLIENT_TIER`; the current local Gemini
 CLI 0.46.0 setup returns an unsupported Gemini Code Assist individual-client
 tier error before a live receipt can be captured. No accepted Gemini CLI live

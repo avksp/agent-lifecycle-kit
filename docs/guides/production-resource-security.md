@@ -20,6 +20,11 @@ runner caps. Higher modes add more evidence, but they should not hide the cost:
 agent-lifecycle metrics cost-check --receipt <lifecycle-cost-report.json>
 ```
 
+Exact token counters must come from a qualified host-local normalizer. Fixture
+counters and the conservative core fallback remain visibly estimated and do
+not satisfy S1/S2. See
+[Host-local token accounting](../reference/host-local-token-accounting.md).
+
 If pipeline compliance exceeds the mode limits, record why the stricter path
 was needed. Do not treat an expensive lifecycle run as success by itself; the
 implementation and product validation still have to pass.

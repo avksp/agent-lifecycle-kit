@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.54.0 - 2026-08-09
+
+- Added bounded adapter-local usage normalizers for Gemini CLI, Kimi Code and
+  Qwen Code, shared by each adapter runner and live harness through a contained
+  descriptor-driven loader.
+- Reused `agent-lifecycle-model-usage-receipt.v1` as a route- and
+  source-bound sidecar while preserving the closed host-operation receipt.
+- Distinguished host-attested, estimated, missing and invalid usage and kept
+  fixture-only normalizers ineligible for S1/S2 usage gates.
+- Added parser security validation, English and Russian operator guidance, and
+  updated package, plugin, marketplace and exact installation metadata to
+  `1.54.0`.
+
 ## 1.53.0 - 2026-08-09
 
 - Added deterministic risk-aware execution profiles that derive a

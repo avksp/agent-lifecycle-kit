@@ -160,6 +160,12 @@ Model-backed operations must produce
 ceilings. In workflow execution, missing, unattested or lineage-drifted usage
 blocks `workflow task-result` before a task can enter review.
 
+Host-local parsers may emit the same receipt as a bound sidecar without
+changing the host-operation schema. Core aggregation treats it as attested only
+when both `source: host` and `status: ATTESTED` are present and the declared
+normalizer is qualified. See
+[Host-local token accounting](host-local-token-accounting.md).
+
 Risk-aware attempts add `usage.invocations` to the same host-attested receipt.
 The bound risk profile checks `billableTokens`, `invocations`, and
 `wallSeconds`; exceeding any cap rejects `workflow task-result`. This additive

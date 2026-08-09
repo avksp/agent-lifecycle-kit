@@ -1,6 +1,6 @@
 {
   "adapterId": "qwen-code",
-  "descriptorDigest": "d8fe2356bd240d53ea4cbae4d8fa855aa241c5d73ccea5d7b08a44f582e56fff",
+  "descriptorDigest": "353ef32d4bccc21bae49a5b5d53725872198165699f29e66c1938243cdbabd9f",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "c23a411fab3dd994eb2898cb483eac3eb8fb19109812881844fa728dd464df0f",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "1b731dfb563e99d14921f71172ac0d239924cb82153698b4b1cde87c6ada0dfd",
+  "receiptDigest": "daac773daba69f5711e0076abebfe8b278a96da8178c80b38e78ccdf05921d55",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",
