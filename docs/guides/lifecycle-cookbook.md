@@ -36,13 +36,14 @@ Return:
 - validation commands that would be needed later.
 EOF
 
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode research \
   --file work/tasks/research.md \
-  --out work/tasks/research-intake.json
+  --out work/tasks/research-start.json
 
 agent-lifecycle review-mesh recommend \
-  --intake work/tasks/research-intake.json \
+  --file work/tasks/research.md \
   --out work/tasks/research-recommendation.json
 ```
 
@@ -54,13 +55,14 @@ into a normal ALK plan package and freeze it.
 Use this for a task, proposal or plan saved in one file:
 
 ```bash
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter claude \
+  --mode review \
   --file tasks/proposal.md \
-  --out work/review/proposal-intake.json
+  --out work/review/proposal-start.json
 
 agent-lifecycle review-mesh recommend \
-  --intake work/review/proposal-intake.json \
+  --file tasks/proposal.md \
   --out work/review/proposal-recommendation.json
 ```
 
@@ -92,10 +94,11 @@ Check requirements, acceptance criteria, evidence routes, write ownership,
 security gates and release claims.
 EOF
 
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode review \
   --file work/review/plan-review-task.md \
-  --out work/review/plan-review-intake.json
+  --out work/review/plan-review-start.json
 ```
 
 ## Review code changes
@@ -109,10 +112,11 @@ git diff origin/main...HEAD > work/code-review/current/diff.patch
 ```
 
 ```bash
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode review \
   --file work/code-review/current/review-task.md \
-  --out work/code-review/current/intake.json
+  --out work/code-review/current/start.json
 ```
 
 When architecture is documented, list the architecture documents in the task
@@ -161,10 +165,11 @@ For defects, regressions, flaky failures, incidents and security bugs, start
 with task intake and let ALK add advisory-only Bug Forensics markers:
 
 ```bash
-agent-lifecycle adapter task start \
+agent-lifecycle start \
   --adapter codex \
+  --mode plan \
   --file work/bugs/checkout-regression.md \
-  --out work/bugs/checkout-intake.json
+  --out work/bugs/checkout-start.json
 ```
 
 The advisory does not activate the workflow gate. A reviewed frozen plan must
@@ -192,3 +197,7 @@ OpenCode; any configured model can be used by changing the host command.
 - Plugin installation alone is not proof that the ALK lifecycle ran.
 - Raw text, Markdown and imported plans never authorize implementation by
   themselves.
+
+Use `agent-lifecycle start` for the common path. Advanced scripts may use the
+atomic `adapter task start`, `adapter run` and `adapter session resume`
+commands when they need direct control over one lifecycle primitive.

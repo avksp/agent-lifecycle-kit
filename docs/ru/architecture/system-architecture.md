@@ -251,11 +251,45 @@ sequenceDiagram
   Main-->>User: стабильный JSON в stdout
 ```
 
-Паттерн: диспетчер команд и функциональное ядро. `cli/dispatch.py` только
-выбирает один из пяти обработчиков групп команд: адаптеры и готовность,
-контракты и подтверждения, жизненный цикл, наблюдаемость или планирование.
-CLI-модули должны оставаться тонкими; поведение и тесты живут в доменных
-сервисах.
+Паттерн: диспетчер команд и функциональное ядро. `cli/dispatch.py` выбирает
+единую команду запуска или один из пяти обработчиков групп: адаптеры и
+готовность, контракты и подтверждения, жизненный цикл, наблюдаемость или
+планирование. Модули командной строки остаются тонкими; поведение и тесты живут
+в доменных сервисах.
+
+### Единая команда запуска жизненного цикла
+
+```mermaid
+sequenceDiagram
+  participant User as Пользователь
+  participant StartCLI as cli/start.py
+  participant Start as adapter_sessions/unified_start.py
+  participant Intake as adapter_sessions/task_intake.py
+  participant Resume as adapter_sessions/workflow_bridge.py
+  participant Store as adapter_sessions/session_store.py
+
+  User->>StartCLI: start --adapter --file|--text|--resume
+  StartCLI->>Start: start_lifecycle()
+  alt обычная задача в auto/research/plan/review
+    Start->>Intake: start_adapter_task()
+    Intake-->>Start: проверяемый черновик
+  else зафиксированный ввод и явный implement
+    Start->>Intake: существующая передача управляемому шагу
+    Intake-->>Start: подтверждение управляемого шага
+  else сохранённая сессия ALK
+    Start->>Store: load_session()
+    Start->>Resume: resume_adapter_session()
+    Resume-->>Start: результат проверки происхождения
+  end
+  Start-->>User: agent-lifecycle-start-receipt.v1
+```
+
+Фасад выбирает существующий примитив и не владеет переходами рабочего цикла.
+Обычные режимы задачи не могут вызвать управляемое выполнение или запуск
+внешнего инструмента. Передача зафиксированного входа требует явного режима
+`implement` и полной привязки. Возобновление принимает только сохранённую
+сессию ALK, проверяет адаптер и происхождение состояния и не трактует значение
+как идентификатор диалога внешнего инструмента.
 
 ### Приём обычной задачи или Markdown
 

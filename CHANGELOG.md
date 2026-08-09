@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.52.0 - 2026-08-09
+
+- Added `agent-lifecycle start` as one beginner-facing command for task text,
+  Markdown, explicit frozen-run delegation and stored ALK session resume.
+- Added `auto`, `research`, `plan`, `review` and explicit `implement` modes with
+  fail-closed execution boundaries and verified adapter/session lineage.
+- Added `agent-lifecycle-start-receipt.v1`, path-safe delegate summaries,
+  focused non-execution tests and English/Russian operator guidance.
+- Updated package, plugin, marketplace and quickstart publication metadata to
+  `1.52.0`.
+
 ## 1.51.0 - 2026-08-09
 
 - Added Python 3.14 to package metadata and the tested CI, release, publication
