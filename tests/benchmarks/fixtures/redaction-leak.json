@@ -1,0 +1,5 @@
+{
+  "message": "Bearer example-secret-value and C:\\Users\\example\\private\\project",
+  "api_key": "example-key-must-not-survive",
+  "nested": {"note": "file:///home/example/private.txt"}
+}

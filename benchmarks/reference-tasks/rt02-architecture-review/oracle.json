@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "agent-reference-task-oracle.v1",
+  "taskId": "rt02-architecture-review",
+  "taskVersion": "1.0.0",
+  "oracleType": "architecture-review",
+  "requiredEvidenceSchemas": ["agent-review-mesh-quorum-receipt.v1"],
+  "productionPromotionClaimed": false
+}

@@ -162,6 +162,7 @@ flowchart LR
   metrics[metrics и policy]
   context[context и evidence]
   quality[quality]
+  benchmarks[Оценка по эталонным задачам]
   neutrality[neutrality]
   runner[Контроллер выполнения]
   worktree[worktree]
@@ -175,6 +176,7 @@ flowchart LR
   cli --> reporting
   cli --> metrics
   cli --> context
+  cli --> benchmarks
   cli --> neutrality
   cli --> runner
   cli --> worktree
@@ -196,6 +198,8 @@ flowchart LR
   audit --> review_mesh
   reporting --> workflow
   metrics --> contracts
+  benchmarks --> contracts
+  metrics --> benchmarks
   context --> contracts
   neutrality --> contracts
   runner --> workflow
@@ -217,6 +221,7 @@ flowchart LR
 | Групповая проверка | `review_mesh/*` | Рекомендация, шаблоны оператора, подготовка пакетов проверяющих, назначения, импорт результатов, объединение выводов и кворум. |
 | Отчёты | `reporting/*` | Статус, лента событий, прогресс, счётчик изменений и мост прогресса. |
 | Метрики и правила | `metrics/*`, `policy/*`, `model_routing/*` | Экспорт расхода, политика токенов/ресурсов, локальная статистика и классы моделей. |
+| Оценка по эталонным задачам | `benchmarks/*`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Детерминированное сравнение качества, ложных приёмок, повторов, времени и достоверности токенов без записи. |
 | Контекст и подтверждения | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Компактные пакеты, поиск по эпизодам, импорт внешнего контекста, представление цели и продолжения. |
 | Нейтральность | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Привязанная к индексу Git проверка выпуска, явное включение локальных подтверждений из разрешённых корней, устойчивое чтение, проверка полномочий и подписанные квитанции. |
 | Контроллер выполнения | `runner/*` | Ограниченное состояние цикла выполнения поверх существующего рабочего цикла. |
@@ -521,6 +526,7 @@ sequenceDiagram
 | Исправление дефекта | `adapter task start` и контрольные точки зафиксированного плана | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Рекомендация профиля дефекта, затем обязательные подтверждения по плану. |
 | Внешний контекст | `context external-import` и поиск по эпизодам | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Необязательные подсказки контекста без права заменять доказательства. |
 | Статус цели | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Представление цели и прогресса без записи. |
+| Эталонное сравнение | `benchmark evaluate` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Детерминированный результат без вызова модели или внешнего инструмента и без заявления промышленной готовности. |
 | Отображение прогресса | `report progress`, `report progress-bridge`, хуки прогресса | `reporting/*`, `cli/progress_hooks.py` | Текстовый или JSON-прогресс без вызова модели. |
 | Проверка релиза | Релизные инструменты и тесты | `tools/release/*`, `contracts/release_contract_schemas.py`, docs/tests | Проверка исходного релиза и подтверждений. |
 

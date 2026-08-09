@@ -18,7 +18,7 @@ class FoundationTests(unittest.TestCase):
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         project = pyproject["project"]
         self.assertEqual(project["name"], "agent-lifecycle-kit")
-        self.assertEqual(project["version"], "1.57.0")
+        self.assertEqual(project["version"], "1.58.0")
         self.assertEqual(project["requires-python"], ">=3.11,<3.15")
         self.assertEqual(project["license"]["text"], "Apache-2.0")
         self.assertEqual(project["dependencies"], [])
@@ -50,6 +50,17 @@ class FoundationTests(unittest.TestCase):
         self.assertIn("py.typed", package_data["agent_lifecycle"])
         self.assertTrue((ROOT / "src/agent_lifecycle/py.typed").is_file())
 
+    def test_reference_suite_is_declared_as_distribution_data(self) -> None:
+        pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        data_files = pyproject["tool"]["setuptools"]["data-files"]
+        declared = {item for paths in data_files.values() for item in paths}
+        expected = {
+            path.relative_to(ROOT).as_posix()
+            for path in (ROOT / "benchmarks/reference-tasks").rglob("*")
+            if path.is_file()
+        }
+        self.assertEqual(declared, expected)
+
     def test_crlf_conversion_changes_content_addressed_fixture_identity(self) -> None:
         # NEG-R03-18 Windows CRLF Hash Drift
         lf = b'{"schemaVersion":"fixture.v1","status":"PASS"}\n'
@@ -62,7 +73,7 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(lock["requires-python"], ">=3.11, <3.15")
         packages = {package["name"]: package for package in lock["package"]}
         self.assertIn("agent-lifecycle-kit", packages)
-        self.assertEqual(packages["agent-lifecycle-kit"]["version"], "1.57.0")
+        self.assertEqual(packages["agent-lifecycle-kit"]["version"], "1.58.0")
 
     def test_foundation_ci_uses_stdlib_unittest(self) -> None:
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "agent-reference-task-oracle.v1",
+  "taskId": "rt03-bug-forensics",
+  "taskVersion": "1.0.0",
+  "oracleType": "bug-forensics",
+  "requiredEvidenceSchemas": ["agent-bug-reproduction-receipt.v1", "agent-regression-proof-receipt.v1", "agent-regression-proof-receipt-validation.v1"],
+  "productionPromotionClaimed": false
+}

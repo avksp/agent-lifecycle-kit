@@ -42,3 +42,8 @@ for local absolute paths and common secret markers before validation.
 
 See [Host-local token accounting](host-local-token-accounting.md) for adapter
 normalizer status and S1/S2 acceptance rules.
+
+Reference-task evaluation consumes this export without changing its authority.
+It keeps `ATTESTED`, `ESTIMATED`, and `MISSING` tokens in separate buckets; a
+mixed-confidence result has no unlabeled headline total. See [Reference task
+evaluation](reference-task-evaluation.md).

@@ -54,6 +54,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/guides/lifecycle-cookbook.md",
             "docs/guides/bug-forensics-workflows.md",
             "docs/guides/production-resource-security.md",
+            "docs/guides/reference-task-evaluation.md",
             "docs/guides/README.ru.md",
             "docs/guides/quickstart.md",
             "docs/guides/quickstart.ru.md",
@@ -64,6 +65,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/guides/bug-forensics-workflows.md",
             "docs/ru/quickstart.md",
             "docs/ru/guides/production-resource-security.md",
+            "docs/ru/guides/reference-task-evaluation.md",
             "docs/ru/adapters/install.md",
             "docs/ru/adapters/progress-bridge-matrix.md",
             "docs/ru/adapters/support-matrix.md",
@@ -79,6 +81,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/small-model-packets.md",
             "docs/ru/reference/quality-cost-learning.md",
             "docs/ru/reference/readiness-diagnostics.md",
+            "docs/ru/reference/reference-task-evaluation.md",
             "docs/ru/reference/lifecycle-cost.md",
             "docs/ru/reference/local-host-launch.md",
             "docs/ru/reference/qualified-host-launch.md",
@@ -102,6 +105,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/local-host-launch.md",
             "docs/reference/qualified-host-launch.md",
             "docs/reference/readiness-diagnostics.md",
+            "docs/reference/reference-task-evaluation.md",
         ):
             with self.subTest(path=relative):
                 _assert_links_resolve(ROOT / relative)
@@ -166,6 +170,27 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                 self.assertIn("--risk-profile", text)
                 self.assertIn("usage.invocations", text)
                 self.assertIn("agent-risk-execution-profile.v1", text)
+
+    def test_reference_task_docs_cover_command_metrics_and_boundaries(self) -> None:
+        for relative_path in (
+            "docs/reference/reference-task-evaluation.md",
+            "docs/ru/reference/reference-task-evaluation.md",
+            "docs/guides/reference-task-evaluation.md",
+            "docs/ru/guides/reference-task-evaluation.md",
+        ):
+            with self.subTest(path=relative_path):
+                text = (ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn("agent-lifecycle benchmark evaluate", text)
+                self.assertIn("falseAcceptanceCount", text)
+                self.assertIn("benchmarks/reference-tasks/manifest.json", text)
+
+        english = (ROOT / "docs/reference/reference-task-evaluation.md").read_text(encoding="utf-8")
+        self.assertIn("`ATTESTED`, `ESTIMATED`, and `MISSING`", english)
+        self.assertIn("does not call a model", english)
+
+        russian = (ROOT / "docs/ru/reference/reference-task-evaluation.md").read_text(encoding="utf-8")
+        self.assertIn("`ATTESTED`, `ESTIMATED` и `MISSING`", russian)
+        self.assertIn("не вызывает модель", russian)
 
     def test_python_package_guidance_is_synchronized(self) -> None:
         package_url = "https://pypi.org/project/agent-lifecycle-kit/"
@@ -647,6 +672,25 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`autoApply: false`.\n"
         "provider/model leaderboards.\n",
     )
+    reference_task = (
+        "agent-lifecycle benchmark evaluate.\n"
+        "`agent-reference-task-evaluation.v1`.\n"
+        "`agent-reference-task-submission.v1`.\n"
+        "`ATTESTED`, `ESTIMATED`, and `MISSING`.\n"
+        "`ATTESTED`, `ESTIMATED` и `MISSING`.\n"
+        "falseAcceptanceCount.\n"
+        "does not call a model. не вызывает модель.\n"
+        "cannot satisfy production evidence.\n"
+        "не заменяет промышленные подтверждения.\n"
+        "benchmarks/reference-tasks/manifest.json.\n"
+        "accepted-pass.json. accepted-false.json.\n"
+        "No model account or external CLI is required.\n"
+        "Учётная запись модели и внешний инструмент не требуются.\n"
+    )
+    _write_text(root / "docs/reference/reference-task-evaluation.md", reference_task)
+    _write_text(root / "docs/ru/reference/reference-task-evaluation.md", reference_task)
+    _write_text(root / "docs/guides/reference-task-evaluation.md", reference_task)
+    _write_text(root / "docs/ru/guides/reference-task-evaluation.md", reference_task)
     _write_text(
         root / "docs/reference/lifecycle-cost.md",
         "agent-lifecycle metrics outcome-index.\n"

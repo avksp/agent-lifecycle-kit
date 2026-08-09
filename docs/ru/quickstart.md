@@ -27,7 +27,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 устанавливайте точную семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.57.0
+python -m pip install agent-lifecycle-kit==1.58.0
 agent-lifecycle version
 ```
 
@@ -282,6 +282,24 @@ agent-lifecycle goal view \
 
 Команда только читает существующие артефакты. Её можно запускать во втором
 терминале, пока адаптер выполняет работу.
+
+## Локальное сравнение изменений процесса
+
+Встроенный детерминированный набор не требует учётной записи модели или
+внешнего инструмента:
+
+```bash
+mkdir -p work
+cp tests/benchmarks/fixtures/accepted-pass.json work/benchmark-submission.json
+agent-lifecycle benchmark evaluate \
+  --suite benchmarks/reference-tasks/manifest.json \
+  --artifact work/benchmark-submission.json \
+  --out work/benchmark-evaluation.json
+```
+
+Результат содержит итоги правил, ложные приёмки, повторы, время и группы
+токенов с обозначенной достоверностью. Перед сравнением запусков прочитайте
+[руководство по эталонным задачам](guides/reference-task-evaluation.md).
 
 ## Проверка нейтральности выпуска
 

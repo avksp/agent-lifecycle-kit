@@ -30,7 +30,7 @@ agent-lifecycle start --adapter codex --text "Draft a reviewed implementation pl
 ```
 
 The official [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14.
-Install the exact release with `python -m pip install agent-lifecycle-kit==1.57.0`.
+Install the exact release with `python -m pip install agent-lifecycle-kit==1.58.0`.
 
 For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). Exact-version local launch for Codex, Claude Code and OpenCode is covered by [Qualified host launch](docs/reference/qualified-host-launch.md). For structure and positioning, see [System architecture](docs/architecture/system-architecture.md) and [Project comparison](docs/reference/project-comparison.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
 
@@ -75,7 +75,7 @@ For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Li
 - Optional Review Mesh covers leader-draft review, parallel research synthesis
   and audit panels. The advisor can suggest a mode; `review-mesh prepare`
   creates local reviewer packets; opted-in plans can require
-  assignment/result/synthesis/quorum receipts, but ALK core does not start hosts.
+  assignment/result/synthesis/quorum receipts, but ALK core does not start hosts. The bundled reference-task suite measures deterministic quality, false acceptances, retries, elapsed time, and confidence-labeled token usage.
 
 ### Routing and resource control
 
@@ -173,7 +173,7 @@ The public lifecycle surface is schema-backed. Full stable schema ids, compatibi
 - Start: [English documentation](docs/README.md), [Русская документация](docs/ru/README.md), [Quickstart](docs/guides/quickstart.md), [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md), and [Code review workflows](docs/guides/code-review-workflows.md).
 - Planning and adapters: [Issue to specification drafts](docs/guides/issue-to-spec.md), [Adapter install](docs/adapters/install.md), and [Adapter support matrix](docs/adapters/support-matrix.md).
 - Reference: [System architecture](docs/architecture/system-architecture.md), [CLI reference](docs/reference/cli.md), [Source of truth](docs/reference/source-of-truth.md), [Managed lifecycle runner](docs/reference/managed-lifecycle-runner.md), [Managed adapter sessions](docs/reference/managed-adapter-sessions.md), [Implementation audit](docs/reference/implementation-audit.md), [Plan completeness](docs/reference/plan-completeness.md), [Public contracts](docs/reference/public-contracts.md), and [Readiness diagnostics](docs/reference/readiness-diagnostics.md).
-- Quality and resources: [Small-model packets](docs/reference/small-model-packets.md), [model routing](docs/reference/model-routing.md), [adaptive policy](docs/reference/adaptive-lifecycle-policy.md), [quality-cost learning](docs/reference/quality-cost-learning.md), [lifecycle cost accounting](docs/reference/lifecycle-cost.md), [host-local token accounting](docs/reference/host-local-token-accounting.md), [Usage export](docs/reference/usage-export.md), and [Evidence integrity](docs/reference/evidence-integrity.md).
+- Quality and resources: [Reference-task evaluation](docs/reference/reference-task-evaluation.md), [model routing](docs/reference/model-routing.md), [quality-cost learning](docs/reference/quality-cost-learning.md), [lifecycle cost accounting](docs/reference/lifecycle-cost.md), [host-local token accounting](docs/reference/host-local-token-accounting.md), [Usage export](docs/reference/usage-export.md), and [Evidence integrity](docs/reference/evidence-integrity.md).
 - Profiles and operations: [Read-only status views](docs/reference/read-only-status-view.md), [Adapter progress bridge](docs/reference/automatic-progress-bridge.md), [Sandbox boundaries](docs/reference/sandbox-boundaries.md), [Import mappers](docs/reference/import-mappers.md), [Episode retrieval](docs/reference/episode-retrieval.md), [Runner recovery](docs/reference/runner-recovery.md), [Cross-check profile](docs/reference/cross-check-profile.md), [Review Mesh](docs/reference/review-mesh.md), [Bug Forensics profile](docs/reference/bug-forensics.md), and [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md).
 - Release assets: [Task templates](templates/tasks/README.md), [Neutrality scanning](docs/reference/neutrality.md), and [Release security](docs/security/release-security.md).
 
