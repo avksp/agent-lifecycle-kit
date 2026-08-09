@@ -9,7 +9,7 @@ JSON, чтобы результат можно было проверять ав�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.52.0
+python -m pip install agent-lifecycle-kit==1.53.0
 ```
 
 ## Основа

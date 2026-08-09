@@ -13,6 +13,7 @@ from agent_lifecycle.adapter_sessions.task_intake import (
 )
 from agent_lifecycle.adapter_sessions.workflow_bridge import resume_adapter_session
 from agent_lifecycle.contracts import LifecycleError, load_json_object, sha256_hex
+from agent_lifecycle.policy.risk_execution import RISK_REQUESTS
 
 START_MODES = ("auto", "research", "plan", "review", "implement")
 _NON_EXECUTING_MODES = frozenset({"auto", "research", "plan", "review"})
@@ -41,6 +42,11 @@ def start_lifecycle(
     max_input_bytes: int = 32768,
     target_tokens: int = 4096,
     package_id: str = "unified-start",
+    requested_risk: str = "auto",
+    risk_policy_path: Path | None = None,
+    routing_profile_path: Path | None = None,
+    baseline_profile_path: Path | None = None,
+    host_model_profile_path: Path | None = None,
 ) -> dict[str, Any]:
     """Select one existing lifecycle action without creating new authority."""
 
@@ -48,6 +54,8 @@ def start_lifecycle(
         return _blocked(adapter_id="", mode=mode, input_summary=_empty_input(), code="start-adapter-required")
     if mode not in START_MODES:
         return _blocked(adapter_id=adapter_id, mode="auto", input_summary=_empty_input(), code="start-mode-invalid")
+    if requested_risk not in RISK_REQUESTS:
+        return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_empty_input(), code="start-risk-invalid")
 
     has_task_source = task_file is not None or task_text is not None
     if resume_session_id is not None:
@@ -101,6 +109,11 @@ def start_lifecycle(
         max_input_bytes=max_input_bytes,
         target_tokens=target_tokens,
         package_id=package_id,
+        requested_risk=requested_risk,
+        risk_policy_path=risk_policy_path,
+        routing_profile_path=routing_profile_path,
+        baseline_profile_path=baseline_profile_path,
+        host_model_profile_path=host_model_profile_path,
     )
     if mode in _NON_EXECUTING_MODES and _claims_execution(receipt):
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-non-implement-execution-claim")
@@ -278,6 +291,7 @@ def _from_task_receipt(*, adapter_id: str, mode: str, receipt: dict[str, Any]) -
 def _task_summary(receipt: dict[str, Any]) -> dict[str, Any]:
     planning = receipt.get("planningImport") if isinstance(receipt.get("planningImport"), dict) else {}
     session = receipt.get("adapterSessionReceipt") if isinstance(receipt.get("adapterSessionReceipt"), dict) else {}
+    next_action = session.get("nextAction") if isinstance(session.get("nextAction"), dict) else {}
     recommendation = (
         receipt.get("reviewMeshRecommendation")
         if isinstance(receipt.get("reviewMeshRecommendation"), dict)
@@ -291,6 +305,11 @@ def _task_summary(receipt: dict[str, Any]) -> dict[str, Any]:
         "recommendedQualityProfiles": list(receipt.get("recommendedQualityProfiles", [])),
         "planningImportDigest": planning.get("importDigest"),
         "sessionReceiptDigest": session.get("receiptDigest"),
+        "riskAdvisory": receipt.get("riskAdvisory") if isinstance(receipt.get("riskAdvisory"), dict) else None,
+        "riskExecutionProfile": next_action.get("riskExecutionProfile")
+        if isinstance(next_action.get("riskExecutionProfile"), dict)
+        else None,
+        "riskProfileRequiredAtTaskStart": bool(next_action.get("riskProfileRequiredAtTaskStart")),
         "reviewRecommendation": {
             "recommendedMode": recommendation.get("recommendedMode"),
             "phaseCoverage": list(recommendation.get("phaseCoverage", [])),

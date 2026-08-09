@@ -20,6 +20,75 @@ from agent_lifecycle.audit.proof_integrity import (  # noqa: E402
     build_root_cause_evidence,
 )
 
+
+def _cli_risk_profile(*, operation_id: str) -> dict:
+    route_body = {
+        "schemaVersion": "agent-lifecycle-model-route-decision.v1",
+        "operationId": operation_id,
+        "phase": "task-implementation",
+        "sddTier": "S2",
+        "routingPolicy": "balanced",
+        "modelClass": "strong-reasoning",
+        "allowedFallbackModelClasses": [],
+        "targetContextWindow": "8k",
+        "capabilityRequirements": [],
+        "criticalReview": False,
+        "requiresUsageReceipt": True,
+        "maxBillableTokens": 1000,
+        "reasonCodes": ["tier-s2"],
+        "requestDigest": "1" * 64,
+        "profileDigest": "2" * 64,
+        "host": "codex",
+        "hostProfileDigest": "4" * 64,
+    }
+    route = {**route_body, "decisionDigest": canonical_digest(route_body)}
+    floor_body = {
+        "schemaVersion": "agent-lifecycle-quality-floor-decision.v1",
+        "status": "PASS",
+        "taskShape": "architecture",
+        "sddTier": "S2",
+        "riskFlags": ["architecture"],
+        "requiredEvidence": [],
+        "minMode": "strict",
+        "qualityFloor": "strict",
+        "reasonCodes": ["risk-floor-S2-strict"],
+        "blockers": [],
+        "baselineProfileDigest": "5" * 64,
+        "productionPromotionClaimed": False,
+    }
+    body = {
+        "schemaVersion": "agent-risk-execution-profile.v1",
+        "status": "PASS",
+        "requestedRisk": "auto",
+        "planRiskTier": "S2",
+        "resolvedRiskTier": "S2",
+        "adapterId": "codex",
+        "operationId": operation_id,
+        "runId": "run",
+        "packageId": "package",
+        "planRevision": 1,
+        "planDigest": "0" * 64,
+        "taskId": "WS-01",
+        "sourceRevision": "source",
+        "qualityFloorDecision": {**floor_body, "floorDigest": canonical_digest(floor_body)},
+        "modelRoute": route,
+        "resourceCaps": {"maxBillableTokens": 1000, "maxInvocations": 2, "maxWallSeconds": 120},
+        "usageEvidence": {
+            "required": True,
+            "hostAttestationRequired": True,
+            "requiredMetrics": ["billableTokens", "invocations", "wallSeconds"],
+            "estimatesAccepted": False,
+        },
+        "policyDigest": "3" * 64,
+        "hostProfileDigest": "4" * 64,
+        "blockers": [],
+        "modelCallsStarted": False,
+        "hostLaunchStarted": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "profileDigest": canonical_digest(body)}
+
+
 class CliWorkflowCommandTests(unittest.TestCase):
     def test_workflow_status_outputs_next_action(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -102,6 +171,42 @@ class CliWorkflowCommandTests(unittest.TestCase):
             )
             self.assertEqual(code, 0)
             self.assertEqual(_task(payload)["status"], "ACCEPTED")
+
+    def test_workflow_task_start_cli_consumes_risk_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root)
+            profile_path = "work/WS-01/risk-profile.json"
+            profile = _cli_risk_profile(operation_id="start-op")
+            write_json_create(root / profile_path, profile)
+
+            code, payload = _run_cli(
+                [
+                    "workflow",
+                    "task-start",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "start-op",
+                    "--expected-revision",
+                    "1",
+                    "--source-revision",
+                    "source",
+                    "--risk-profile",
+                    profile_path,
+                    "--reason",
+                    "risk-aware launch",
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(_task(payload)["status"], "RUNNING")
+            task = json.loads(state_path.read_text(encoding="utf-8"))["tasks"][0]
+            self.assertEqual(task["riskExecutionProfile"]["profileDigest"], profile["profileDigest"])
+            self.assertEqual(task["attemptRiskExecutionProfile"]["attempt"], 1)
+            self.assertEqual(task["attemptModelRoute"]["decisionDigest"], profile["modelRoute"]["decisionDigest"])
 
     def test_workflow_task_result_cli_accepts_model_usage_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

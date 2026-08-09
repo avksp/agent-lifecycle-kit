@@ -26,6 +26,12 @@ from agent_lifecycle.workflow.model_usage import (
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.reviews import validate_task_result, validate_task_review
+from agent_lifecycle.workflow.risk_execution_gate import (
+    apply_task_risk_profile,
+    clear_task_risk_profile,
+    load_task_risk_profile,
+    validate_attempt_risk_usage,
+)
 from agent_lifecycle.workflow.selectors import find_task, ready_tasks, unlock_ready_tasks
 from agent_lifecycle.workflow.state import (
     deadline_after,
@@ -40,6 +46,7 @@ def start_task(
     operation_id: str,
     expected_revision: int,
     source_revision: str,
+    risk_profile_path: str | None = None,
     reason: str,
 ) -> dict[str, Any]:
     state = _mutable_state(state_path, operation_id, expected_revision)
@@ -51,6 +58,18 @@ def start_task(
         raise LifecycleError("invalid-task-status", f"task {task_id} is not launchable")
     _require_dependencies_accepted(state, task)
     _require_parallel_capacity(state)
+    if risk_profile_path is not None:
+        profile, profile_identity = load_task_risk_profile(
+            state_path,
+            state,
+            task,
+            risk_profile_path,
+            operation_id=operation_id,
+            source_revision=source_revision,
+        )
+        apply_task_risk_profile(task, profile, profile_identity)
+    else:
+        clear_task_risk_profile(task)
     attempt = next_available_attempt(state_path, state, task)
     gate_receipts = validate_controller_gates(
         state_path,
@@ -123,6 +142,7 @@ def commit_task_result(
             receipt,
             budget_targets=_read_budget_targets(root, budget_targets_path),
         )
+        risk_validation = validate_attempt_risk_usage(task, receipt)
         task["modelUsageReceipt"] = {
             **model_usage_identity,
             "operationId": receipt["operationId"],
@@ -134,6 +154,7 @@ def commit_task_result(
                 "receiptDigest": validation["receiptDigest"],
                 "routeDecisionDigest": validation.get("routeDecisionDigest"),
             },
+            "riskValidation": risk_validation,
         }
     elif model_usage_receipt_path is not None:
         raise LifecycleError(
@@ -285,6 +306,8 @@ def _mark_task_running(
     task.pop("result", None)
     task.pop("review", None)
     task.pop("modelUsageReceipt", None)
+    task.pop("attemptModelRoute", None)
+    task.pop("attemptRiskExecutionProfile", None)
     task["attemptStartedAt"] = now_iso()
     task["attemptBaseRevision"] = state.get("sourceRevision")
     task["attemptDeadlineAt"] = deadline_after(
@@ -298,6 +321,17 @@ def _mark_task_running(
             **task["modelRoute"],
             "attempt": attempt,
         }
+    if isinstance(task.get("riskExecutionProfile"), dict) and task["riskExecutionProfile"]:
+        task["attemptRiskExecutionProfile"] = {
+            **task["riskExecutionProfile"],
+            "attempt": attempt,
+        }
+        wall_cap = task["attemptRiskExecutionProfile"].get("resourceCaps", {}).get("maxWallSeconds")
+        if isinstance(wall_cap, int) and wall_cap > 0:
+            task["attemptDeadlineAt"] = deadline_after(
+                task["attemptStartedAt"],
+                min(wall_cap, int(state.get("budgets", {}).get("maxTaskWallSeconds", 3600))),
+            )
     state["phase"] = "RUNNING"
 
 
