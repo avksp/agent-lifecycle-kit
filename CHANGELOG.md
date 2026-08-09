@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.51.0 - 2026-08-09
+
+- Added Python 3.14 to package metadata and the tested CI, release, publication
+  and neutrality workflow matrices while keeping Python 3.15 outside the
+  supported range.
+- Extended packaging smoke validation to build wheel and source distribution,
+  install each in a separate clean environment and record both outcomes in one
+  portable receipt.
+- Documented the official versioned PyPI installation path and Python
+  3.11-3.14 support in English and Russian.
+- Updated package, plugin, marketplace and quickstart publication metadata to
+  `1.51.0`.
+
 ## 1.50.2 - 2026-08-09
 
 - Blocked generic descriptor-driven host launches and wildcard environment

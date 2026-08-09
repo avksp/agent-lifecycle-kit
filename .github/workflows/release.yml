@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.14"
       - name: Install package
         run: python -m pip install -e .
       - name: Prepare evidence directories
@@ -69,4 +69,4 @@ jobs:
       - name: Install build frontend
         run: python -m pip install build
       - name: Run packaging smoke
-        run: python tests/package/run_packaging_smoke.py --dist-dir /tmp/agent-lifecycle-r03-dist --evidence "$EVIDENCE_DIR"/packaging-smoke.json
+        run: python tests/package/run_packaging_smoke.py --dist-dir /tmp/agent-lifecycle-r03-dist --python python --evidence "$EVIDENCE_DIR"/packaging-smoke.json

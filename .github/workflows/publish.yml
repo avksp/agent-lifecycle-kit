@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.14"
       - name: Validate publication versions
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
@@ -33,6 +33,6 @@ jobs:
       - name: Install build frontend
         run: python -m pip install build
       - name: Build and smoke-test distribution
-        run: python tests/package/run_packaging_smoke.py --dist-dir dist --evidence /tmp/packaging-smoke.json
+        run: python tests/package/run_packaging_smoke.py --dist-dir dist --python python --evidence /tmp/packaging-smoke.json
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
