@@ -28,7 +28,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.60.0
+python -m pip install agent-lifecycle-kit==1.61.0
 agent-lifecycle version
 ```
 
@@ -156,6 +156,13 @@ and resource caps. The read-only start step writes the exact profile with
 --risk-profile`. See [Risk-aware execution](../reference/risk-aware-execution.md)
 for the complete sequence. On raw text or Markdown, `--risk` remains advisory
 and never authorizes implementation.
+
+The start receipt also contains a compact `executionStrategy`. Raw intake says
+`DEFERRED_UNTIL_FREEZE`; a completely bound frozen run reports the quality
+floor, neutral implementation class, packet mode, review mode and resource
+caps. Advanced users can write the full strategy with `strategy resolve` and
+pass it to `task compile --strategy`. See [Quality-preserving execution
+strategy](../reference/execution-strategy.md).
 
 To resume an ordinary managed session recorded by ALK:
 

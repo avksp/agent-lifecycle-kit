@@ -10,7 +10,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.60.0
+python -m pip install agent-lifecycle-kit==1.61.0
 ```
 
 ## Foundation
@@ -93,14 +93,25 @@ python -m pip install agent-lifecycle-kit==1.60.0
   plugin installation alone is not lifecycle proof.
 - `agent-lifecycle runner start/status/transition/stop/resume`: control
   bounded execution state.
+- `agent-lifecycle strategy resolve --manifest ... --lock ... --state ...
+  --task ... --operation-id ... --expected-revision ... --source-revision ...
+  --adapter ... --out ...`: write one provider-neutral, read-only execution
+  strategy. S1/S2 also require a matching `--host-model-profile`.
+- `agent-lifecycle task compile --manifest ... --strategy ...`: project a
+  validated strategy into the matching full task packet without changing plan
+  authority.
 - `agent-lifecycle task compile-small`: compile frozen task packets into
-  small-model packets with output contracts and compact context receipts.
+  small-model packets with output contracts and compact context receipts. Add
+  `--strategy` to require an eligible `COMPACT` strategy.
 
 ## Review and quality
 
 - `agent-lifecycle benchmark evaluate`: compare an explicit submission with the
   bundled deterministic reference-task suite and emit
   `agent-reference-task-evaluation.v1` without model or host calls.
+- `agent-lifecycle benchmark compare --baseline ... --candidate ...`: compare
+  two evaluation receipts quality-first and report confidence-aware token,
+  invocation, retry, remediation and elapsed-time deltas.
 - `agent-lifecycle audit review-check`: validate review verdicts.
 - `agent-lifecycle audit implementation`: emit
   `agent-implementation-audit-report.v1` for a task result and independent

@@ -5,6 +5,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.benchmarks import evaluate_reference_task
+from agent_lifecycle.contracts import canonical_digest
+
 try:
     from .helpers import _run_cli
 except ImportError:
@@ -93,6 +96,39 @@ class BenchmarkCliTests(unittest.TestCase):
 
         self.assertEqual(code, 0)
         self.assertEqual(payload["status"], "FAIL")
+
+    def test_compare_writes_quality_first_receipt(self) -> None:
+        baseline = evaluate_reference_task(suite_path=SUITE, artifact_path=FIXTURES / "accepted-pass.json")
+        candidate = json.loads(json.dumps(baseline))
+        candidate["measurements"]["tokens"]["headline"]["total"] = 150
+        candidate["evaluationDigest"] = canonical_digest(
+            {key: value for key, value in candidate.items() if key != "evaluationDigest"}
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            baseline_path = root / "baseline.json"
+            candidate_path = root / "candidate.json"
+            out = root / "comparison.json"
+            baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+            candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+            code, payload = _run_cli(
+                [
+                    "benchmark",
+                    "compare",
+                    "--baseline",
+                    str(baseline_path),
+                    "--candidate",
+                    str(candidate_path),
+                    "--out",
+                    str(out),
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["schemaVersion"], "agent-reference-task-comparison.v1")
+            self.assertTrue(payload["decision"]["qualityFirst"])
+            self.assertEqual(json.loads(out.read_text(encoding="utf-8")), payload)
 
 
 if __name__ == "__main__":

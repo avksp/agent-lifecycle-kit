@@ -162,6 +162,7 @@ flowchart LR
   metrics[metrics и policy]
   context[context и evidence]
   quality[quality]
+  strategy[Стратегия выполнения]
   benchmarks[Оценка по эталонным задачам]
   neutrality[neutrality]
   runner[Контроллер выполнения]
@@ -177,6 +178,7 @@ flowchart LR
   cli --> metrics
   cli --> context
   cli --> benchmarks
+  cli --> strategy
   cli --> neutrality
   cli --> runner
   cli --> worktree
@@ -191,6 +193,11 @@ flowchart LR
   adapter_sessions --> workflow
   adapter_sessions --> host_protocol
   adapter_sessions --> planning
+  adapter_sessions --> strategy
+  compiler --> strategy
+  strategy --> contracts
+  strategy --> metrics
+  strategy --> review_mesh
   review_mesh --> contracts
   review_mesh --> metrics
   audit --> workflow
@@ -221,6 +228,7 @@ flowchart LR
 | Групповая проверка | `review_mesh/*` | Рекомендация, шаблоны оператора, подготовка пакетов проверяющих, назначения, импорт результатов, объединение выводов и кворум. |
 | Отчёты | `reporting/*` | Статус, лента событий, прогресс, счётчик изменений и мост прогресса. |
 | Метрики и правила | `metrics/*`, `policy/*`, `model_routing/*` | Экспорт расхода, политика токенов/ресурсов, локальная статистика и классы моделей. |
+| Стратегия выполнения | `policy/execution_strategy.py`, `cli/strategy.py` | Объединение существующих решений по риску, качеству, классу модели, компактному пакету и проверке в один артефакт без записи. |
 | Оценка по эталонным задачам | `benchmarks/*`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Детерминированное сравнение качества, ложных приёмок, повторов, времени и достоверности токенов без записи. |
 | Контекст и подтверждения | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Компактные пакеты, поиск по эпизодам, импорт внешнего контекста, представление цели и продолжения. |
 | Нейтральность | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Привязанная к индексу Git проверка выпуска, явное включение локальных подтверждений из разрешённых корней, устойчивое чтение, проверка полномочий и подписанные квитанции. |
@@ -274,6 +282,7 @@ sequenceDiagram
   participant Store as adapter_sessions/session_store.py
   participant PlanningStore as adapter_sessions/planning_session.py
   participant LocalLaunch as adapter_sessions/launcher.py
+  participant Strategy as policy/execution_strategy.py
   participant Process as adapter_sessions/process.py
 
   User->>StartCLI: start --adapter --file|--text|--resume [--launch]
@@ -281,6 +290,7 @@ sequenceDiagram
   alt обычная задача в auto/research/plan/review
     Start->>Intake: start_adapter_task()
     Intake-->>Start: проверяемый черновик
+    Start->>Strategy: отложенное резюме без догадки о маршруте
     opt явный квалифицированный запуск планирования
       Start->>PlanningStore: создать состояние только с отпечатками
       Start->>LocalLaunch: launch_from_local_profile(planningOnly, stdin)
@@ -291,6 +301,8 @@ sequenceDiagram
   else зафиксированный ввод и явный implement
     Start->>Intake: существующая передача управляемому шагу
     Intake-->>Start: подтверждение управляемого шага
+    Start->>Strategy: стратегия точного плана и задачи
+    Strategy-->>Start: краткое рекомендательное резюме
     opt явный запуск по локальному профилю
       Start->>LocalLaunch: launch_from_local_profile(идентичность, профиль риска)
       LocalLaunch->>Process: run_process(argv, shell=false, ограниченное время)
@@ -318,6 +330,34 @@ sequenceDiagram
 только состояние ALK и не трактует его как идентификатор диалога внешнего
 инструмента. Общий запуск через дескриптор и запуск интерактивной сессии
 остаются заблокированными.
+
+### Стратегия выполнения и сравнение
+
+```mermaid
+sequenceDiagram
+  participant User as Пользователь
+  participant CLI as cli/strategy.py
+  participant Strategy as policy/execution_strategy.py
+  participant Policies as Действующие правила риска, качества, маршрута и проверки
+  participant Compiler as compiler/task_packets.py
+  participant Compare as benchmarks/comparison.py
+
+  User->>CLI: strategy resolve с зафиксированным происхождением
+  CLI->>Strategy: resolve_execution_strategy()
+  Strategy->>Policies: объединить существующие решения
+  Policies-->>Strategy: связанные отпечатки решений
+  Strategy-->>User: agent-execution-strategy.v1
+  User->>Compiler: task compile --strategy
+  Compiler-->>User: пакет с ограниченной проекцией
+  User->>Compare: benchmark compare исходный новый
+  Compare-->>User: сравнение с приоритетом качества
+```
+
+Оба пути детерминированы и не меняют состояние. Стратегия не может понизить
+нижнюю границу качества, а защищённая задача S2 не попадает в компактный пакет.
+Сравнение проверяет ложные приёмки и происхождение эталона до расхода;
+пригодность для автоматического принятия дополнительно требует подтверждённой
+экономии, отсутствия ухудшения ресурсов и полного набора измерений.
 
 ### Приём обычной задачи или Markdown
 
@@ -539,7 +579,8 @@ sequenceDiagram
 | Исправление дефекта | `adapter task start` и контрольные точки зафиксированного плана | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Рекомендация профиля дефекта, затем обязательные подтверждения по плану. |
 | Внешний контекст | `context external-import` и поиск по эпизодам | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Необязательные подсказки контекста без права заменять доказательства. |
 | Статус цели | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Представление цели и прогресса без записи. |
-| Эталонное сравнение | `benchmark evaluate` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Детерминированный результат без вызова модели или внешнего инструмента и без заявления промышленной готовности. |
+| Стратегия выполнения | `strategy resolve`, затем при необходимости `task compile --strategy` | `policy/execution_strategy.py`, `cli/strategy.py`, `compiler/*` | Полный артефакт без записи и ограниченная проекция в пакет задачи. |
+| Эталонное сравнение | `benchmark evaluate`, `benchmark compare` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Детерминированная оценка или сравнение с приоритетом качества без вызова модели или внешнего инструмента. |
 | Отображение прогресса | `report progress`, `report progress-bridge`, хуки прогресса | `reporting/*`, `cli/progress_hooks.py` | Текстовый или JSON-прогресс без вызова модели. |
 | Проверка релиза | Релизные инструменты и тесты | `tools/release/*`, `contracts/release_contract_schemas.py`, docs/tests | Проверка исходного релиза и подтверждений. |
 
@@ -554,7 +595,7 @@ sequenceDiagram
 | Конечный автомат | `workflow/state.py`, `workflow/task_transitions.py`, `runner/core.py` | Сделать фазы жизненного цикла явными и отказывать при недопустимых переходах. |
 | Ядро операции | `workflow/operation_kernel.py` | Централизовать проверку ревизии, идемпотентность и запись состояния/событий. |
 | Цепочка контрольных точек | `workflow/gates.py`, контрольные точки аудита, завершения и кворума | Не принимать работу и не финализировать запуск без обязательных подтверждений. |
-| Стратегия и политика | `policy/*`, `model_routing/*`, `metrics/recommendations.py` | Выбирать безопасный маршрут жизненного цикла и класс модели без привязки к провайдеру. |
+| Стратегия и политика | `policy/execution_strategy.py`, остальные `policy/*`, `model_routing/*`, `metrics/recommendations.py` | Объединять безопасные маршруты без дублирования нижележащих правил и без привязки к поставщику. |
 | Фасад | `audit/implementation.py`, `diagnostics/bundles.py`, `reporting/*` | Собрать несколько проверок в один типизированный отчёт без дублирования нижних уровней. |
 | Пара создания и проверки | Большинство контрактных модулей и релизных валидаторов | Детерминированно создать подтверждение и независимо его проверить. |
 | Отказ при сомнении | Импорт, запуск адаптера, импорт результата проверки, релизные контрольные точки | Отказывать при небезопасном или неподтверждённом пути вместо догадок. |
@@ -569,6 +610,8 @@ sequenceDiagram
 - Рекомендация не является контрольной точкой. Контрольная точка появляется
   только после явного включения в зафиксированном плане.
 - Представления без записи не меняют состояние и не запускают модель.
+- Стратегия выполнения носит рекомендательный характер, сохраняет нижнюю
+  границу качества и не выдаёт полномочий рабочего цикла или запуска хоста.
 - Расход и прогресс используют токены и ресурсы; денежная стоимость
   необязательна и принимается только если её сообщает тарифицируемый хост.
 - Публичные заявления релиза должны опираться на отслеживаемые резюме и, когда
@@ -584,6 +627,7 @@ sequenceDiagram
 - [Внешний контекст памяти](../reference/external-memory.md)
 - [Непрерывность цели](../reference/goal-continuity.md)
 - [Профиль расследования ошибок](../reference/bug-forensics.md)
+- [Стратегия выполнения без снижения качества](../reference/execution-strategy.md)
 - [Проверка нейтральности](../reference/neutrality.md)
 
 Дополнительные англоязычные архитектурные документы: `docs/architecture/release-architecture.md`,

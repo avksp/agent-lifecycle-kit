@@ -93,6 +93,8 @@ Stable schema ids:
 - `agent-progress-hook-receipt.v1`
 - `agent-risk-execution-policy.v1`
 - `agent-risk-execution-profile.v1`
+- `agent-execution-strategy.v1`
+- `agent-execution-strategy-validation.v1`
 - `agent-lifecycle-quality-floor-decision.v1`
 - `agent-lifecycle-policy-proposal.v1`
 - `agent-adaptive-lifecycle-policy-request.v1`
@@ -107,6 +109,8 @@ Stable schema ids:
 - `agent-task-outcome-index.v1`
 - `agent-quality-cost-signals.v1`
 - `agent-quality-cost-signals-summary.v1`
+- `agent-reference-task-comparison.v1`
+- `agent-reference-task-comparison-validation.v1`
 
 `completionCheck` binds observable completion evidence. The completion gate is
 a deterministic stop/continue/escalate/split/follow-up decision over current
@@ -118,6 +122,10 @@ package those projections for host wrappers without parsing host-specific
 telemetry in core or changing adapter maturity. Progress hook receipts bind the
 same projection to supported ALK-managed workflow commands while preserving
 JSON stdout and keeping plugin installation separate from lifecycle proof. The
+execution strategy composes existing policy decisions and may appear as an
+optional compact projection in the lifecycle start receipt and task packets;
+it adds no workflow authority. Reference-task comparison validates quality
+before confidence-aware resource deltas and never mutates policy. The
 managed lifecycle runner adds a
 typed read-only `workflow run` projection that checks frozen plan/state lineage
 and returns the next host-owned action. Implementation audit reports bind task
