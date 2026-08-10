@@ -14,7 +14,7 @@ project.
 ## Quick start
 
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==1.60.0` from
+  `python -m pip install agent-lifecycle-kit==1.61.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter codex --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -87,6 +87,7 @@ project.
 - [Read-only status views](reference/read-only-status-view.md)
 - [Adapter progress bridge](reference/automatic-progress-bridge.md)
 - [Small-model packets](reference/small-model-packets.md)
+- [Quality-preserving execution strategy](reference/execution-strategy.md)
 - [Controlled runner](reference/runner.md)
 - [Public contracts](reference/public-contracts.md)
 - [Model routing](reference/model-routing.md)

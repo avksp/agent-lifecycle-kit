@@ -16,6 +16,7 @@ from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMA
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.cross_check_schemas import CROSS_CHECK_SCHEMAS
 from agent_lifecycle.contracts.evidence_import_schemas import EVIDENCE_IMPORT_SCHEMAS
+from agent_lifecycle.contracts.execution_strategy_schemas import EXECUTION_STRATEGY_SCHEMAS
 from agent_lifecycle.contracts.host_capability_schemas import HOST_CAPABILITY_SCHEMAS
 from agent_lifecycle.contracts.import_dialect_schemas import IMPORT_DIALECT_SCHEMAS
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
@@ -70,6 +71,7 @@ LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
             "action": {"enum": ["DRAFT_INTAKE", "DRAFT_PLAN_REVIEW", "MANAGED_RUN", "RESUME", "BLOCKED"]},
             "input": {"type": "object"},
             "delegate": {"type": ["object", "null"]},
+            "executionStrategy": {"type": ["object", "null"]},
             "executionStarted": {"type": "boolean"},
             "lifecycleCoverageClaimed": {"type": "boolean"},
             "requiresReview": {"type": "boolean"},
@@ -375,6 +377,7 @@ _SCHEMA_GROUPS = (
     ADAPTER_EVENT_SCHEMAS,
     REVIEW_QUALITY_SCHEMAS,
     EVIDENCE_IMPORT_SCHEMAS,
+    EXECUTION_STRATEGY_SCHEMAS,
     IMPORT_DIALECT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,
     TASK_TEMPLATE_SCHEMAS,

@@ -71,6 +71,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/adapters/support-matrix.md",
             "docs/ru/reference/automatic-progress-bridge.md",
             "docs/ru/reference/cli.md",
+            "docs/ru/reference/execution-strategy.md",
             "docs/ru/reference/external-memory.md",
             "docs/ru/reference/import-mappers.md",
             "docs/ru/reference/episode-retrieval.md",
@@ -94,6 +95,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/architecture/system-architecture.md",
             "docs/reference/automatic-progress-bridge.md",
             "docs/reference/cli.md",
+            "docs/reference/execution-strategy.md",
             "docs/reference/external-memory.md",
             "docs/reference/import-mappers.md",
             "docs/reference/episode-retrieval.md",
@@ -193,6 +195,24 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         russian = (ROOT / "docs/ru/reference/reference-task-evaluation.md").read_text(encoding="utf-8")
         self.assertIn("`ATTESTED`, `ESTIMATED` и `MISSING`", russian)
         self.assertIn("не вызывает модель", russian)
+
+        for text in (english, russian):
+            self.assertIn("agent-lifecycle benchmark compare", text)
+            self.assertIn("agent-reference-task-comparison.v1", text)
+
+    def test_execution_strategy_docs_cover_simple_and_advanced_paths(self) -> None:
+        for relative_path in (
+            "docs/reference/execution-strategy.md",
+            "docs/ru/reference/execution-strategy.md",
+        ):
+            with self.subTest(path=relative_path):
+                text = (ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn("agent-lifecycle start --adapter codex", text)
+                self.assertIn("agent-lifecycle strategy resolve", text)
+                self.assertIn("agent-lifecycle task compile-small", text)
+                self.assertIn("agent-lifecycle benchmark compare", text)
+                self.assertIn("DEFERRED_UNTIL_FREEZE", text)
+                self.assertIn("agent-execution-strategy.v1", text)
 
     def test_python_package_guidance_is_synchronized(self) -> None:
         package_url = "https://pypi.org/project/agent-lifecycle-kit/"
@@ -468,6 +488,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-progress-hook-receipt.v1`.\n"
         "`agent-risk-execution-policy.v1`.\n"
         "`agent-risk-execution-profile.v1`.\n"
+        "`agent-execution-strategy.v1`.\n"
+        "`agent-execution-strategy-validation.v1`.\n"
         "`agent-lifecycle-quality-floor-decision.v1`.\n"
         "`agent-lifecycle-policy-proposal.v1`.\n"
         "`agent-adaptive-lifecycle-policy-request.v1`.\n"
@@ -480,6 +502,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-task-outcome-index.v1`.\n"
         "`agent-quality-cost-signals.v1`.\n"
         "`agent-quality-cost-signals-summary.v1`.\n"
+        "`agent-reference-task-comparison.v1`.\n"
+        "`agent-reference-task-comparison-validation.v1`.\n"
         "`agent-failure-classification-receipt.v1`.\n"
         "`agent-failure-classification-validation.v1`.\n"
         "`agent-external-context-import-receipt.v1`.\n"
@@ -655,6 +679,18 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/risk-aware-execution.md", risk_aware)
     _write_text(root / "docs/ru/reference/risk-aware-execution.md", risk_aware)
+    execution_strategy = (
+        "agent-lifecycle start --adapter codex.\n"
+        "agent-lifecycle strategy resolve.\n"
+        "`agent-execution-strategy.v1`.\n"
+        "DEFERRED_UNTIL_FREEZE.\n"
+        "agent-lifecycle task compile-small.\n"
+        "agent-lifecycle benchmark compare.\n"
+        "Automatic adoption eligibility requires no measurement gaps.\n"
+        "Пригодность для автоматического принятия требует отсутствия пробелов в измерениях.\n"
+    )
+    _write_text(root / "docs/reference/execution-strategy.md", execution_strategy)
+    _write_text(root / "docs/ru/reference/execution-strategy.md", execution_strategy)
     _write_text(
         root / "docs/reference/quality-cost-learning.md",
         "`agent-task-outcome-index.v1`.\n"
@@ -687,6 +723,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "does not call a model. не вызывает модель.\n"
         "cannot satisfy production evidence.\n"
         "не заменяет промышленные подтверждения.\n"
+        "agent-lifecycle benchmark compare.\n"
+        "`agent-reference-task-comparison.v1`.\n"
+        "remediation loops. циклов исправления.\n"
         "benchmarks/reference-tasks/manifest.json.\n"
         "accepted-pass.json. accepted-false.json.\n"
         "No model account or external CLI is required.\n"

@@ -41,6 +41,7 @@ def compile_small_model_packets(
     latest_user: str = "Execute this small-model task packet exactly.",
     adaptive_decision: dict[str, Any] | None = None,
     write: bool = False,
+    execution_strategy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compile frozen task packets into bounded small-model packets."""
 
@@ -48,13 +49,26 @@ def compile_small_model_packets(
     profile = read_json_object(context_profile_path, label="context profile")
     if target_window not in small_model_windows(profile):
         raise LifecycleError("small-model-window-unsupported", "target window is not allowed for small-model packets", {"targetWindow": target_window})
-    compiled = compile_task_packets(manifest_path, write=False)
+    compiled = compile_task_packets(
+        manifest_path,
+        write=False,
+        execution_strategy=execution_strategy,
+    )
     output_dir = out_dir or _default_output_dir(manifest)
     eligibility = small_model_packet_eligibility(adaptive_decision) if adaptive_decision is not None else _default_eligibility()
     blockers = list(eligibility.get("blockers", []))
     packets: list[dict[str, Any]] = []
     records: list[dict[str, Any]] = []
     for source_packet in compiled["packets"]:
+        strategy_projection = source_packet.get("executionStrategy")
+        if isinstance(strategy_projection, dict) and strategy_projection.get("packetMode") != "COMPACT":
+            blockers.append(
+                {
+                    "code": "execution-strategy-compact-blocked",
+                    "taskId": source_packet["task"]["id"],
+                    "packetMode": strategy_projection.get("packetMode"),
+                }
+            )
         summary = build_small_model_state_summary(source_packet)
         rendered = render_context(profile, source_packet, summary, latest_user=latest_user, window=target_window)
         if rendered["status"] != "PASS":
@@ -135,6 +149,9 @@ def build_small_model_packet(
             "overflowPolicy": context_receipt.get("overflowPolicy", {}),
         },
         "adaptivePolicy": adaptive_policy,
+        "executionStrategy": dict(source_packet.get("executionStrategy", {}))
+        if isinstance(source_packet.get("executionStrategy"), dict)
+        else None,
         "forbiddenActions": [
             "expand-write-scope",
             "change-contracts-without-review",
