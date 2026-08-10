@@ -10,7 +10,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.58.0
+python -m pip install agent-lifecycle-kit==1.59.0
 ```
 
 ## Foundation
@@ -58,6 +58,13 @@ python -m pip install agent-lifecycle-kit==1.58.0
   bound `implement` call also supplies `--launch --host-launch-profile
   .alk/host-launch/<adapter>.json`; see [Local host
   launch](local-host-launch.md).
+- `agent-lifecycle start --adapter <id> --mode plan --file task.md --launch`:
+  request one exact-version qualified planning-only host process. The outer
+  start receipt remains `DRAFT_PLAN_REVIEW`; the nested planning receipt records
+  host/model start and can only end at review or block. Current shipped
+  candidates are `PLANNING_ONLY_UNSUPPORTED`, so this route fails closed until
+  live qualification. See [Planning-only adapter
+  launch](planning-only-launch.md).
 - `agent-lifecycle host-launch inspect/preflight --profile <path>`: validate an
   ignored operator-local profile with zero process calls, or explicitly make
   one bounded version probe. These commands do not authorize task execution.
@@ -167,6 +174,8 @@ atomic interface for scripts and advanced operators.
   create a version-bound local profile without executing the host. Follow with
   `host-launch preflight`; see [Qualified host
   launch](qualified-host-launch.md).
+  The same file contains a planning candidate section, but version preflight
+  alone does not change `PLANNING_ONLY_UNSUPPORTED` to qualified.
 - `agent-lifecycle adapter event-check`: validate neutral adapter event
   streams.
 - `agent-lifecycle adapter event-capture-check`: validate declared

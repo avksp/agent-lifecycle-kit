@@ -124,6 +124,7 @@ def build_qualification_receipt(
         "probeReceiptDigest": probe_receipt.get("receiptDigest"),
         "processCalls": 1,
         "modelCallsStarted": False,
+        "planningSupportStatus": planning_support_status(profile),
         "blockers": blockers,
         "productionPromotionClaimed": False,
     }
@@ -186,4 +187,47 @@ def require_qualification_receipt(
         raise LifecycleError("qualified-launch-receipt-invalid", "qualification receipt does not bind this profile and version")
     if receipt.get("blockers") != []:
         raise LifecycleError("qualified-launch-receipt-invalid", "qualification receipt contains blockers")
+    return receipt
+
+
+def planning_support_status(profile: dict[str, Any]) -> str:
+    planning = profile.get("planningOnly")
+    if not isinstance(planning, dict):
+        return "PLANNING_ONLY_UNSUPPORTED"
+    value = planning.get("planningSupportStatus")
+    if value in {"PLANNING_ONLY_QUALIFIED", "PLANNING_ONLY_UNSUPPORTED"}:
+        return str(value)
+    return "PLANNING_ONLY_UNSUPPORTED"
+
+
+def require_planning_qualification_receipt(
+    *,
+    project_root: Path,
+    profile: dict[str, Any],
+    profile_digest: str,
+) -> dict[str, Any]:
+    """Require both release planning evidence and a bound local version probe."""
+
+    planning = profile.get("planningOnly")
+    if not isinstance(planning, dict) or planning.get("status") != "CANDIDATE":
+        raise LifecycleError(
+            "planning-launch-profile-unsupported",
+            "adapter does not declare a planning-only profile",
+        )
+    if planning_support_status(profile) != "PLANNING_ONLY_QUALIFIED":
+        raise LifecycleError(
+            "planning-launch-qualification-required",
+            "planning launch is unsupported until exact-version live qualification passes",
+            {"preparationCommand": f"agent-lifecycle adapter launch-profile --adapter {profile.get('adapterId')} --out .alk/host-launch/{profile.get('adapterId')}.json"},
+        )
+    receipt = require_qualification_receipt(
+        project_root=project_root,
+        profile=profile,
+        profile_digest=profile_digest,
+    )
+    if not isinstance(receipt, dict) or receipt.get("planningSupportStatus") != "PLANNING_ONLY_QUALIFIED":
+        raise LifecycleError(
+            "planning-launch-qualification-receipt-invalid",
+            "local version receipt is not bound to qualified planning support",
+        )
     return receipt

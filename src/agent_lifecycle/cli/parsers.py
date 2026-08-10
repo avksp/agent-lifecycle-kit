@@ -73,8 +73,15 @@ def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     start.add_argument("--routing-profile", default="profiles/model-routing-profile.v1.json")
     start.add_argument("--baseline-profile", default="profiles/lifecycle-baselines.v1.json")
     start.add_argument("--host-model-profile")
-    start.add_argument("--launch", action="store_true")
-    start.add_argument("--host-launch-profile")
+    start.add_argument(
+        "--launch",
+        action="store_true",
+        help="explicitly launch a qualified planning host or frozen managed task",
+    )
+    start.add_argument(
+        "--host-launch-profile",
+        help="operator-local profile; planning defaults to .alk/host-launch/<adapter>.json",
+    )
     start.add_argument("--risk-profile-out")
     start.add_argument("--descriptor")
     start.add_argument("--session-root")

@@ -42,3 +42,8 @@ and preflight it before a frozen `start --launch` call. The profile does not
 use `--auto`, change the `1.18.9` full adapter evidence range, or qualify token
 accounting for S1/S2. See [Qualified host
 launch](../reference/qualified-host-launch.md).
+
+The planning-only route is explicitly `PLANNING_ONLY_UNSUPPORTED` until a safe
+native planning profile and live containment evidence exist. Adapter maturity
+does not override that result. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).

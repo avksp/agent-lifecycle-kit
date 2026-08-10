@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 1.59.0 - 2026-08-10
+
+- Added explicit planning-only host launch for raw text or Markdown through
+  `agent-lifecycle start --mode plan --launch`, while raw implementation remains
+  blocked until independent review, freeze and a separate managed process.
+- Added bounded stdin task transport, redacted output normalization,
+  planning-session lineage, native containment evidence and unchanged-worktree
+  postconditions without adding a second workflow or provider runtime.
+- Added exact-version planning profile candidates for Codex, Claude Code and
+  OpenCode. They remain `PLANNING_ONLY_UNSUPPORTED` until each host passes its
+  own operator-approved live qualification.
+- Added English and Russian operator guidance, contract and security tests, and
+  publication checks for the planning-only bootstrap.
+
 ## 1.58.0 - 2026-08-10
 
 - Added a versioned five-task reference suite with deterministic planning,

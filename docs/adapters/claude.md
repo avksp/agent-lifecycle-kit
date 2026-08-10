@@ -63,3 +63,8 @@ Generate and preflight it before a frozen `start --launch` call. The profile
 does not enable `--dangerously-skip-permissions`, change the `2.1.220` full
 adapter evidence range, or qualify token accounting for S1/S2. See [Qualified
 host launch](../reference/qualified-host-launch.md).
+
+Its planning-only section is still a candidate with
+`PLANNING_ONLY_UNSUPPORTED`; version preflight does not prove native read-only
+containment. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).
