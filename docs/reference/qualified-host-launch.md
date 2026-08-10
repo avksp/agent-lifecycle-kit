@@ -1,8 +1,12 @@
-# Qualified host launch
+# Qualified frozen-task host launch
 
 ALK ships version-bound local launch profiles for three external CLIs. This is
 an opt-in bridge for a frozen ALK task, not a provider broker and not a blanket
 native-launch claim.
+
+This page covers implementation of an already reviewed frozen task. It does
+not qualify raw task planning. That separate fail-closed contract is described
+in [Planning-only adapter launch](planning-only-launch.md).
 
 | Adapter | Qualified CLI version | Generated executable |
 | --- | --- | --- |

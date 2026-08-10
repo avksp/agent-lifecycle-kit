@@ -84,6 +84,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/reference-task-evaluation.md",
             "docs/ru/reference/lifecycle-cost.md",
             "docs/ru/reference/local-host-launch.md",
+            "docs/ru/reference/planning-only-launch.md",
             "docs/ru/reference/qualified-host-launch.md",
             "docs/ru/reference/model-routing.md",
             "docs/ru/reference/risk-aware-execution.md",
@@ -103,6 +104,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/risk-aware-execution.md",
             "docs/reference/small-model-packets.md",
             "docs/reference/local-host-launch.md",
+            "docs/reference/planning-only-launch.md",
             "docs/reference/qualified-host-launch.md",
             "docs/reference/readiness-diagnostics.md",
             "docs/reference/reference-task-evaluation.md",
@@ -194,7 +196,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
 
     def test_python_package_guidance_is_synchronized(self) -> None:
         package_url = "https://pypi.org/project/agent-lifecycle-kit/"
-        install_command = f"python -m pip install agent-lifecycle-kit=={TARGET_VERSION}"
+        package_pins: list[str] = []
         for relative_path in (
             "README.md",
             "docs/README.md",
@@ -207,8 +209,11 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             with self.subTest(path=relative_path):
                 text = (ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertIn(package_url, text)
-                self.assertIn(install_command, text)
                 self.assertIn("Python 3.11-3.14", text)
+                match = re.search(r"python -m pip install agent-lifecycle-kit==([0-9]+\.[0-9]+\.[0-9]+)", text)
+                self.assertIsNotNone(match)
+                package_pins.append(match.group(1))
+        self.assertEqual(len(set(package_pins)), 1)
 
     def test_security_docs_describe_blocked_launch_and_fail_closed_receipts(self) -> None:
         managed_sessions = [
@@ -985,6 +990,21 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/qualified-host-launch.md", qualified_launch)
     _write_text(root / "docs/ru/reference/qualified-host-launch.md", qualified_launch)
+    planning_launch = (
+        "agent-lifecycle start.\n"
+        "--mode plan.\n"
+        "--launch.\n"
+        "PLANNING_ONLY_QUALIFIED.\n"
+        "PLANNING_ONLY_UNSUPPORTED.\n"
+        "agent-planning-session-state.v1.\n"
+        "agent-planning-launch-receipt.v1.\n"
+        "implementationAuthorized: false.\n"
+        ".alk/planning-sessions.\n"
+        "DRAFT_PLAN_REVIEW.\n"
+        "modelCallsStarted.\n"
+    )
+    _write_text(root / "docs/reference/planning-only-launch.md", planning_launch)
+    _write_text(root / "docs/ru/reference/planning-only-launch.md", planning_launch)
     _write_text(
         root / "docs/reference/readiness-diagnostics.md",
         "`agent-adapter-install-plan.v1`.\n"

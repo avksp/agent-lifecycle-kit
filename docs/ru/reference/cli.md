@@ -9,7 +9,7 @@ JSON, чтобы результат можно было проверять ав�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.58.0
+python -m pip install agent-lifecycle-kit==1.59.0
 ```
 
 ## Основа
@@ -58,6 +58,13 @@ python -m pip install agent-lifecycle-kit==1.58.0
   должен также содержать `--launch --host-launch-profile
   .alk/host-launch/<adapter>.json`; см. [локальный запуск внешней
   команды](local-host-launch.md).
+- `agent-lifecycle start --adapter <id> --mode plan --file task.md --launch`:
+  запрос одного внешнего процесса только для планирования с точной привязкой к
+  версии. Внешнее подтверждение сохраняет действие `DRAFT_PLAN_REVIEW`, а
+  вложенное подтверждение фиксирует запуск процесса и модели. Поставляемые
+  кандидаты пока имеют состояние `PLANNING_ONLY_UNSUPPORTED`, поэтому маршрут
+  завершается безопасным отказом до реальной квалификации. Подробнее: [запуск
+  адаптера только для планирования](planning-only-launch.md).
 - `agent-lifecycle host-launch inspect/preflight --profile <путь>`: проверяет
   локальный профиль пользователя без создания процесса либо явно выполняет
   одну ограниченную проверку версии. Эти команды не разрешают выполнение
@@ -158,6 +165,9 @@ python -m pip install agent-lifecycle-kit==1.58.0
   инструмент. Затем выполните `host-launch preflight`; см.
   [квалифицированный запуск внешнего
   инструмента](qualified-host-launch.md).
+  В том же файле есть раздел кандидата для планирования, но проверка версии
+  сама по себе не меняет `PLANNING_ONLY_UNSUPPORTED` на квалифицированный
+  статус.
 - `agent-lifecycle adapter session start --launch`: проверяет запрошенный
   профиль запуска и затем возвращает `adapter-generic-launch-disabled` до
   создания процесса. Один дескриптор не является полномочием на общий прямой

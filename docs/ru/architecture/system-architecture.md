@@ -272,6 +272,7 @@ sequenceDiagram
   participant Intake as adapter_sessions/task_intake.py
   participant Resume as adapter_sessions/workflow_bridge.py
   participant Store as adapter_sessions/session_store.py
+  participant PlanningStore as adapter_sessions/planning_session.py
   participant LocalLaunch as adapter_sessions/launcher.py
   participant Process as adapter_sessions/process.py
 
@@ -280,6 +281,13 @@ sequenceDiagram
   alt обычная задача в auto/research/plan/review
     Start->>Intake: start_adapter_task()
     Intake-->>Start: проверяемый черновик
+    opt явный квалифицированный запуск планирования
+      Start->>PlanningStore: создать состояние только с отпечатками
+      Start->>LocalLaunch: launch_from_local_profile(planningOnly, stdin)
+      LocalLaunch->>Process: один ограниченный процесс без записи
+      Process-->>LocalLaunch: ограниченный очищенный результат
+      Start->>PlanningStore: REVIEW_REQUIRED или BLOCKED
+    end
   else зафиксированный ввод и явный implement
     Start->>Intake: существующая передача управляемому шагу
     Intake-->>Start: подтверждение управляемого шага
@@ -289,22 +297,27 @@ sequenceDiagram
       Process-->>LocalLaunch: очищенный результат процесса
     end
   else сохранённая сессия ALK
-    Start->>Store: load_session()
-    Start->>Resume: resume_adapter_session()
-    Resume-->>Start: результат проверки происхождения
+    alt сессия планирования
+      Start->>PlanningStore: прочитать состояние с отпечатками
+      PlanningStore-->>Start: проверка или блокировка без подключения к диалогу
+    else управляемая сессия
+      Start->>Store: load_session()
+      Start->>Resume: resume_adapter_session()
+      Resume-->>Start: результат проверки происхождения
+    end
   end
   Start-->>User: agent-lifecycle-start-receipt.v1
 ```
 
-Фасад выбирает существующий примитив и не владеет переходами рабочего цикла.
-Обычные режимы задачи не могут вызвать управляемое выполнение или запуск
-внешнего инструмента. Передача зафиксированного входа требует явного режима
-`implement` и полной привязки. Возобновление принимает только сохранённую
-сессию ALK, проверяет адаптер и происхождение состояния и не трактует значение
-как идентификатор диалога внешнего инструмента. Локальный процесс доступен
-только при дополнительном явном указании `--launch --host-launch-profile` после
-проверки файла блокировки, происхождения и профиля риска. Общий запуск через
-дескриптор и запуск интерактивной сессии остаются заблокированными.
+Фасад выбирает существующие источники полномочий и не владеет переходами
+рабочего цикла. Обычные режимы задачи не могут вызвать управляемую реализацию.
+Они могут обратиться только к отдельно квалифицированному профилю
+`planningOnly` через явный `--launch`; такой процесс обязан завершиться на
+проверке или блокировке и не менять исходное дерево. Зафиксированный вход
+требует явного режима `implement` и полной привязки. Возобновление принимает
+только состояние ALK и не трактует его как идентификатор диалога внешнего
+инструмента. Общий запуск через дескриптор и запуск интерактивной сессии
+остаются заблокированными.
 
 ### Приём обычной задачи или Markdown
 

@@ -267,6 +267,7 @@ sequenceDiagram
   participant Intake as adapter_sessions/task_intake.py
   participant Resume as adapter_sessions/workflow_bridge.py
   participant Store as adapter_sessions/session_store.py
+  participant PlanningStore as adapter_sessions/planning_session.py
   participant LocalLaunch as adapter_sessions/launcher.py
   participant Process as adapter_sessions/process.py
 
@@ -275,6 +276,13 @@ sequenceDiagram
   alt raw task in auto/research/plan/review
     Start->>Intake: start_adapter_task()
     Intake-->>Start: reviewed draft receipt
+    opt explicit qualified planning launch
+      Start->>PlanningStore: create digest-only session
+      Start->>LocalLaunch: launch_from_local_profile(planningOnly, stdin)
+      LocalLaunch->>Process: one bounded read-only host process
+      Process-->>LocalLaunch: bounded redacted planning result
+      Start->>PlanningStore: REVIEW_REQUIRED or BLOCKED
+    end
   else frozen input with explicit implement
     Start->>Intake: existing frozen delegation
     Intake-->>Start: managed-run receipt
@@ -284,21 +292,25 @@ sequenceDiagram
       Process-->>LocalLaunch: redacted process result
     end
   else persisted ALK session
-    Start->>Store: load_session()
-    Start->>Resume: resume_adapter_session()
-    Resume-->>Start: lineage result
+    alt planning session
+      Start->>PlanningStore: load digest-only state
+      PlanningStore-->>Start: review or blocker, no native reattach
+    else managed session
+      Start->>Store: load_session()
+      Start->>Resume: resume_adapter_session()
+      Resume-->>Start: lineage result
+    end
   end
   Start-->>User: agent-lifecycle-start-receipt.v1
 ```
 
-The facade selects an existing primitive; it does not own workflow transitions.
-Raw task modes cannot call managed-run or host-launch code. Frozen delegation
-requires explicit `implement` and complete bindings. Resume accepts only a
-stored ALK session, validates adapter and state lineage, and does not interpret
-native host conversation identifiers. A local process is reachable only with
-the additional `--launch --host-launch-profile` opt-in after lock, lineage and
-risk-profile validation; generic descriptor and interactive-session launch
-remain blocked.
+The facade selects existing authorities; it does not own workflow transitions.
+Raw task modes cannot call managed implementation. They may reach only a
+separately qualified `planningOnly` profile through explicit `--launch`, and
+that process must end at review or block with unchanged repository identity.
+Frozen delegation requires explicit `implement` and complete bindings. Resume
+accepts only stored ALK state and never interprets a native host conversation
+identifier. Generic descriptor and interactive-session launch remain blocked.
 
 ### Raw task or Markdown intake
 

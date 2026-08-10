@@ -22,4 +22,19 @@ PROFILE = {
         "maxPreflightProcesses": 1,
         "modelCallsForPreflight": 0,
     },
+    "planningOnly": {
+        "schemaVersion": "agent-planning-only-launch-profile.v1",
+        "status": "CANDIDATE",
+        "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+        "argvTemplate": ["exec", "--sandbox", "read-only", "--ephemeral", "--ignore-user-config", "-"],
+        "inputTransport": "STDIN",
+        "resultFormat": "SINGLE_JSON_OBJECT",
+        "containment": {
+            "filesystem": "codex-read-only-sandbox",
+            "tools": "host-sandbox-policy",
+            "network": "host-owned-provider-rpc",
+            "writesAllowed": False,
+        },
+        "qualificationEvidence": [],
+    },
 }

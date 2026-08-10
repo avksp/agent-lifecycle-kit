@@ -28,7 +28,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.58.0
+python -m pip install agent-lifecycle-kit==1.59.0
 agent-lifecycle version
 ```
 
@@ -122,6 +122,23 @@ agent-lifecycle start --adapter codex --mode plan --file feature.md
 agent-lifecycle start --adapter codex --mode review --file proposed-plan.md
 ```
 
+To request one external CLI process for planning, add `--launch`:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode plan \
+  --file feature.md \
+  --launch
+```
+
+This works only for an exact-version profile whose planning status is
+`PLANNING_ONLY_QUALIFIED`. The shipped Codex, Claude Code and OpenCode profiles
+are currently fail-closed candidates, and the other bundled adapters do not
+yet declare this route. A blocked receipt returns preparation commands; it is
+not permission to bypass qualification. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).
+
 Only `--mode implement` can delegate to the existing managed-run path, and it
 requires a structured frozen run request with complete state, manifest, lock,
 task, operation and revision bindings:
@@ -140,7 +157,7 @@ and resource caps. The read-only start step writes the exact profile with
 for the complete sequence. On raw text or Markdown, `--risk` remains advisory
 and never authorizes implementation.
 
-To resume a session recorded by ALK:
+To resume an ordinary managed session recorded by ALK:
 
 ```bash
 agent-lifecycle start \
@@ -151,6 +168,14 @@ agent-lifecycle start \
 
 Resume verifies the stored adapter and workflow lineage. It does not interpret
 the value as a native Codex, Claude, OpenCode or other host conversation id.
+For a planning-session id returned by `start --launch`, omit `--session-root`:
+
+```bash
+agent-lifecycle start --adapter codex --resume <planning-session-id>
+```
+
+This reads digest-only `.alk/planning-sessions` state and does not relaunch or
+reattach the external CLI.
 External execution remains off by default. Advanced operators can generate and
 qualify an exact-version profile for Codex, Claude Code or OpenCode first:
 
@@ -183,7 +208,8 @@ fail-closed boundaries. The lower-level `adapter task start`, `adapter run` and
 `adapter session resume` commands remain available in the [CLI
 reference](../reference/cli.md).
 The [qualified host launch guide](../reference/qualified-host-launch.md)
-lists the exact versions and the S1/S2 usage boundary.
+describes the distinct frozen implementation route and its S1/S2 usage
+boundary. It must not be treated as planning-launch qualification.
 
 ## Review code changes
 

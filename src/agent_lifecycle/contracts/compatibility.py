@@ -72,6 +72,11 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "adapter launch-profile", "schemaVersion": "agent-qualified-launch-profile-generation.v1", "compatibility": "stable-json"},
     {"command": "start", "schemaVersion": "agent-lifecycle-start-receipt.v1", "compatibility": "stable-json"},
     {
+        "command": "start --launch (planning)",
+        "schemaVersion": "agent-lifecycle-start-receipt.v1",
+        "compatibility": "stable-json",
+    },
+    {
         "command": "host-launch inspect",
         "schemaVersion": "agent-local-host-launch-profile-receipt.v1",
         "compatibility": "stable-json",
