@@ -211,32 +211,20 @@ class StartCommandTests(unittest.TestCase):
             self.assertEqual(json.loads(out.read_text(encoding="utf-8")), profile)
             self.assertEqual(payload["delegate"]["riskExecutionProfile"], profile)
 
-    def test_launch_flags_require_each_other_and_implement_mode(self) -> None:
-        cases = (
-            ["start", "--adapter", "codex", "--text", "task", "--launch"],
-            ["start", "--adapter", "codex", "--text", "task", "--host-launch-profile", ".alk/host-launch/codex.json"],
-            [
-                "start",
-                "--adapter",
-                "codex",
-                "--text",
-                "task",
-                "--launch",
-                "--host-launch-profile",
-                ".alk/host-launch/codex.json",
-            ],
-        )
-        expected = (
-            "start-launch-arguments-incomplete",
-            "start-launch-arguments-incomplete",
-            "start-launch-implement-mode-required",
-        )
-        for argv, code in zip(cases, expected):
-            with self.subTest(argv=argv):
-                exit_code, payload, _stderr = _run_cli(argv)
-                self.assertEqual(exit_code, 0)
-                self.assertEqual(payload["status"], "BLOCKED")
-                self.assertEqual(payload["blockers"][0]["code"], code)
+    def test_launch_profile_requires_launch_and_raw_implement_stays_blocked(self) -> None:
+        profile_only = _run_cli(
+            ["start", "--adapter", "codex", "--text", "task", "--host-launch-profile", ".alk/host-launch/codex.json"]
+        )[1]
+        planning = _run_cli(["start", "--adapter", "codex", "--text", "task", "--launch"])[1]
+        implement = _run_cli(
+            ["start", "--adapter", "codex", "--mode", "implement", "--text", "task", "--launch"]
+        )[1]
+
+        self.assertEqual(profile_only["blockers"][0]["code"], "start-launch-arguments-incomplete")
+        self.assertEqual(planning["status"], "BLOCKED")
+        self.assertIn("profileCommand", planning["blockers"][0])
+        self.assertIn("preflightCommand", planning["blockers"][0])
+        self.assertEqual(implement["blockers"][0]["code"], "start-implement-frozen-input-required")
 
     def test_implement_launch_delegates_only_after_ready_managed_projection(self) -> None:
         risk_profile = {"schemaVersion": "agent-risk-execution-profile.v1", "profileDigest": "b" * 64}

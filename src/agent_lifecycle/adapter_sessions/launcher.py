@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -15,11 +18,15 @@ from agent_lifecycle.adapter_sessions.local_launch_profile import (
     load_local_launch_profile,
     local_receipt_argv,
     local_profile_summary,
+    planning_receipt_argv,
     render_local_launch_argv,
+    render_planning_launch_argv,
 )
+from agent_lifecycle.adapter_sessions.planning_launch import run_planning_launch
 from agent_lifecycle.adapter_sessions.process import run_process
 from agent_lifecycle.adapter_sessions.qualification import (
     build_qualification_receipt,
+    require_planning_qualification_receipt,
     require_qualification_receipt,
     write_qualification_receipt,
 )
@@ -126,6 +133,10 @@ def launch_from_local_profile(
     source_revision: str | None = None,
     risk_profile: dict[str, Any] | None = None,
     process_env: dict[str, str] | None = None,
+    requested_mode: str | None = None,
+    task_text: str | None = None,
+    input_source: str = "text",
+    advisory: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run one bounded probe or one fully bound managed host process."""
 
@@ -173,6 +184,79 @@ def launch_from_local_profile(
             blockers=blockers,
         )
         return _attach_qualification_receipt(payload, qualification_receipt)
+    if operation == "planningTask":
+        if not explicit_launch:
+            return _blocked_planning_launch(
+                adapter_id=profile_adapter,
+                session_id=session_id,
+                requested_mode=requested_mode,
+                task_text=task_text,
+                input_source=input_source,
+                blockers=[{"code": "planning-launch-explicit-flag-required"}],
+                profile_digest=profile_digest,
+            )
+        if requested_mode not in {"auto", "research", "plan", "review"} or not isinstance(task_text, str):
+            return _blocked_planning_launch(
+                adapter_id=profile_adapter,
+                session_id=session_id,
+                requested_mode=requested_mode,
+                task_text=task_text,
+                input_source=input_source,
+                blockers=[{"code": "planning-launch-input-invalid"}],
+                profile_digest=profile_digest,
+            )
+        try:
+            qualification_receipt = require_planning_qualification_receipt(
+                project_root=root,
+                profile=profile,
+                profile_digest=profile_digest,
+            )
+            argv = render_planning_launch_argv(profile)
+            before = capture_git_worktree_identity(root)
+            receipt = run_planning_launch(
+                adapter_id=profile_adapter,
+                session_id=session_id,
+                requested_mode=requested_mode,
+                task_text=task_text,
+                input_source=input_source,
+                argv=argv,
+                env=env,
+                advisory=advisory,
+                timeout_seconds=timeout_seconds,
+            )
+            after = capture_git_worktree_identity(root)
+        except LifecycleError as exc:
+            return _blocked_planning_launch(
+                adapter_id=profile_adapter,
+                session_id=session_id,
+                requested_mode=requested_mode,
+                task_text=task_text,
+                input_source=input_source,
+                blockers=[{"code": exc.code, "message": exc.message, "context": exc.details}],
+                profile_digest=profile_digest,
+            )
+        body = {key: value for key, value in receipt.items() if key != "receiptDigest"}
+        body["profileDigest"] = profile_digest
+        body["qualificationReceipt"] = qualification_receipt
+        body["receiptArgv"] = planning_receipt_argv(profile)
+        body["worktreeIdentity"] = {
+            "beforeDigest": before["identityDigest"],
+            "afterDigest": after["identityDigest"],
+            "unchanged": before["identityDigest"] == after["identityDigest"],
+            "before": before,
+            "after": after,
+        }
+        if before["identityDigest"] != after["identityDigest"]:
+            body["status"] = "BLOCKED"
+            body["result"] = None
+            body["blockers"] = [
+                *list(body.get("blockers", [])),
+                {
+                    "code": "planning-launch-worktree-drift",
+                    "message": "planning host changed authoritative repository state; ALK did not revert it",
+                },
+            ]
+        return {**body, "receiptDigest": canonical_digest(body)}
     if operation != "managedTask":
         raise LifecycleError("local-launch-operation-invalid", "local launch operation is unsupported")
 
@@ -282,10 +366,70 @@ def launch_from_local_profile(
     return _attach_qualification_receipt(payload, qualification_receipt)
 
 
+def run_planning_qualification_candidate(
+    *,
+    profile_path: Path,
+    project_root: Path,
+    approval_digest: str,
+    process_env: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Run one explicitly approved live candidate without promoting the profile."""
+
+    root = project_root.resolve()
+    if root != Path.cwd().resolve():
+        raise LifecycleError(
+            "planning-qualification-project-root",
+            "planning qualification must run with the disposable repository as cwd",
+        )
+    _relative, profile, validation = load_local_launch_profile(profile_path, project_root=root)
+    planning = profile.get("planningOnly")
+    if not isinstance(planning, dict) or planning.get("status") != "CANDIDATE":
+        return _planning_qualification_report(
+            profile=profile,
+            profile_digest=str(validation["profileDigest"]),
+            approval_digest=approval_digest,
+            receipt=None,
+            before=None,
+            after=None,
+            blockers=[{"code": "planning-qualification-candidate-unavailable"}],
+        )
+    env, _env_receipt = resolve_launch_env(profile, process_env=process_env)
+    argv = render_planning_launch_argv(profile)
+    before = capture_git_worktree_identity(root)
+    receipt = run_planning_launch(
+        adapter_id=str(profile["adapterId"]),
+        session_id=f"{profile['adapterId']}-planning-qualification",
+        requested_mode="plan",
+        task_text=(
+            "Inspect this disposable repository and return a minimal review-required plan. "
+            "Do not modify files or authorize implementation."
+        ),
+        input_source="qualification-fixture",
+        argv=argv,
+        env=env,
+        timeout_seconds=float(profile["timeoutSeconds"]),
+    )
+    after = capture_git_worktree_identity(root)
+    blockers = list(receipt.get("blockers", []))
+    if before["identityDigest"] != after["identityDigest"]:
+        blockers.append({"code": "planning-qualification-worktree-drift"})
+    return _planning_qualification_report(
+        profile=profile,
+        profile_digest=str(validation["profileDigest"]),
+        approval_digest=approval_digest,
+        receipt=receipt,
+        before=before,
+        after=after,
+        blockers=blockers,
+    )
+
+
 def _attach_qualification_receipt(payload: dict[str, Any], receipt: dict[str, Any] | None) -> dict[str, Any]:
     body = {key: value for key, value in payload.items() if key != "receiptDigest"}
     body["qualificationReceipt"] = receipt
     return {**body, "receiptDigest": canonical_digest(body)}
+
+
 def _timeout_seconds(profile: dict[str, Any]) -> float:
     timeout = profile.get("timeoutSeconds")
     if isinstance(timeout, (int, float)) and not isinstance(timeout, bool) and timeout > 0:
@@ -364,3 +508,182 @@ def _state_task(state: dict[str, Any], task_id: str) -> dict[str, Any]:
         if isinstance(task, dict) and task.get("id") == task_id:
             return task
     raise LifecycleError("local-launch-task-missing", "task is not present in workflow state", {"taskId": task_id})
+
+
+def capture_git_worktree_identity(project_root: Path) -> dict[str, Any]:
+    """Capture normalized authoritative Git content without requiring cleanliness."""
+
+    root = project_root.resolve()
+    head = _git_bytes(root, ["rev-parse", "HEAD"]).decode("ascii", errors="strict").strip()
+    staged = _git_bytes(root, ["diff", "--cached", "--binary", "--no-ext-diff"])
+    unstaged = _git_bytes(root, ["diff", "--binary", "--no-ext-diff"])
+    submodules = _git_bytes(root, ["submodule", "status", "--recursive"])
+    untracked_raw = _git_bytes(root, ["ls-files", "--others", "--exclude-standard", "-z"])
+    untracked_rows: list[dict[str, Any]] = []
+    total_bytes = 0
+    for raw_name in sorted(item for item in untracked_raw.split(b"\0") if item):
+        relative = os.fsdecode(raw_name)
+        path = root / relative
+        try:
+            before = path.lstat()
+            if path.is_symlink():
+                payload = os.fsencode(os.readlink(path))
+                kind = "symlink"
+            else:
+                payload = path.read_bytes()
+                kind = "file"
+            after = path.lstat()
+        except OSError as exc:
+            raise LifecycleError(
+                "planning-worktree-read-race",
+                "failed to capture an untracked worktree entry",
+                {"errorType": type(exc).__name__},
+            ) from exc
+        if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+            raise LifecycleError(
+                "planning-worktree-read-race",
+                "untracked worktree entry changed during identity capture",
+            )
+        total_bytes += len(payload)
+        untracked_rows.append(
+            {
+                "pathBytesSha256": hashlib.sha256(raw_name).hexdigest(),
+                "kind": kind,
+                "bytes": len(payload),
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }
+        )
+    body = {
+        "schemaVersion": "agent-planning-worktree-identity.v1",
+        "head": head,
+        "stagedDiffSha256": hashlib.sha256(staged).hexdigest(),
+        "unstagedDiffSha256": hashlib.sha256(unstaged).hexdigest(),
+        "submoduleStateSha256": hashlib.sha256(submodules).hexdigest(),
+        "untrackedTreeSha256": canonical_digest({"entries": untracked_rows}),
+        "untrackedCount": len(untracked_rows),
+        "untrackedBytes": total_bytes,
+        "ignoredLocalStateExcluded": True,
+    }
+    return {**body, "identityDigest": canonical_digest(body)}
+
+
+def _git_bytes(root: Path, args: list[str]) -> bytes:
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=root,
+            shell=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise LifecycleError(
+            "planning-worktree-identity-failed",
+            "Git identity capture failed closed",
+            {"errorType": type(exc).__name__},
+        ) from exc
+    if result.returncode != 0:
+        raise LifecycleError(
+            "planning-worktree-identity-failed",
+            "Git identity command failed closed",
+            {"command": args[0], "exitCode": result.returncode},
+        )
+    return result.stdout
+
+
+def _blocked_planning_launch(
+    *,
+    adapter_id: str,
+    session_id: str,
+    requested_mode: str | None,
+    task_text: str | None,
+    input_source: str,
+    blockers: list[dict[str, Any]],
+    profile_digest: str,
+) -> dict[str, Any]:
+    task_value = task_text if isinstance(task_text, str) else ""
+    body = {
+        "schemaVersion": "agent-planning-launch-receipt.v1",
+        "status": "BLOCKED",
+        "action": "PLANNING_LAUNCH",
+        "adapterId": adapter_id,
+        "sessionId": session_id,
+        "requestedMode": requested_mode if requested_mode in {"auto", "research", "plan", "review"} else "auto",
+        "input": {
+            "source": input_source,
+            "sha256": canonical_digest({"text": task_value}),
+            "byteCount": len(task_value.encode("utf-8")),
+            "rawTaskTextStored": False,
+        },
+        "process": {
+            "status": "NOT_STARTED",
+            "exitCode": None,
+            "timedOut": False,
+            "inputBytes": 0,
+            "outputBytes": 0,
+            "outputLimitExceeded": False,
+            "redactionApplied": False,
+            "rawOutputStored": False,
+        },
+        "result": None,
+        "usageEvidence": {
+            "confidence": "MISSING",
+            "inputTokens": None,
+            "outputTokens": None,
+            "moneyFieldsCanonical": False,
+        },
+        "processCalls": 0,
+        "implementationAuthorized": False,
+        "requiresReview": True,
+        "rawTaskTextStored": False,
+        "hostLaunchStarted": False,
+        "modelCallsStarted": False,
+        "secretsWritten": False,
+        "nativeConfigWritten": False,
+        "blockers": blockers,
+        "profileDigest": profile_digest,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def _planning_qualification_report(
+    *,
+    profile: dict[str, Any],
+    profile_digest: str,
+    approval_digest: str,
+    receipt: dict[str, Any] | None,
+    before: dict[str, Any] | None,
+    after: dict[str, Any] | None,
+    blockers: list[dict[str, Any]],
+) -> dict[str, Any]:
+    passed = (
+        receipt is not None
+        and receipt.get("status") == "REVIEW_REQUIRED"
+        and before is not None
+        and after is not None
+        and before.get("identityDigest") == after.get("identityDigest")
+        and not blockers
+    )
+    policy = profile.get("qualification") if isinstance(profile.get("qualification"), dict) else {}
+    body = {
+        "schemaVersion": "agent-planning-launch-qualification-evidence.v1",
+        "status": "PASS" if passed else "FAIL",
+        "adapterId": profile.get("adapterId"),
+        "expectedHostVersion": policy.get("expectedVersion"),
+        "profileDigest": profile_digest,
+        "approvalDigest": approval_digest,
+        "planningSupportStatus": "PLANNING_ONLY_QUALIFIED" if passed else "PLANNING_ONLY_UNSUPPORTED",
+        "processCalls": 1 if receipt and receipt.get("hostLaunchStarted") else 0,
+        "modelCallsStarted": bool(receipt and receipt.get("modelCallsStarted")),
+        "worktreeUnchanged": bool(
+            before and after and before.get("identityDigest") == after.get("identityDigest")
+        ),
+        "planningReceiptDigest": receipt.get("receiptDigest") if receipt else None,
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "evidenceDigest": canonical_digest(body)}

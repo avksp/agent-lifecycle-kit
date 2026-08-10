@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 from pathlib import Path
 from typing import Any
 
@@ -204,6 +203,7 @@ def _build_tasks(
             "capabilityHints": list(workstream.get("capabilityHints", [])),
             "requiredTools": list(workstream.get("requiredTools", [])),
             "contextRefs": list(workstream.get("contextRefs", [])),
+            "acceptanceIds": list(workstream.get("acceptanceIds", [])),
             "evidenceIds": list(workstream.get("evidenceIds", [])),
             "executionPolicy": workstream.get("executionPolicy", {}),
             "modelRoute": dict(workstream.get("modelRoute", {})) if isinstance(workstream.get("modelRoute"), dict) else None,
@@ -260,6 +260,7 @@ def _task_contract_compatible(
         "capabilityHints",
         "requiredTools",
         "contextRefs",
+        "acceptanceIds",
         "evidenceIds",
         "executionPolicy",
         "modelRoute",
@@ -267,7 +268,12 @@ def _task_contract_compatible(
         "artifactPaths",
         "required",
     )
-    return all(previous.get(key) == current.get(key) for key in keys)
+    return all(
+        previous.get(key, []) == current.get(key, [])
+        if key == "acceptanceIds"
+        else previous.get(key) == current.get(key)
+        for key in keys
+    )
 
 
 def _copy_accepted_runtime(
@@ -338,7 +344,13 @@ def _replace_plan_state(
     packet_set: dict[str, Any],
     tasks: list[dict[str, Any]],
 ) -> None:
-    state["manifestPath"] = os.path.relpath(manifest_path, state_path.parent)
+    try:
+        state["manifestPath"] = manifest_path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError as exc:
+        raise LifecycleError(
+            "manifest-path-outside-package-root",
+            "adopted manifest must be contained by the workflow package root",
+        ) from exc
     state["planRevision"] = revision
     state["planDigest"] = digest
     state["sourceRevision"] = source_revision

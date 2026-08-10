@@ -52,6 +52,16 @@ it must never guess a native host conversation id. Use `adapter task start`,
 `adapter session start` only to record an interactive `WAITING_FOR_TASK`
 session. Native host launching remains descriptor-driven and host-owned.
 
+When the operator adds `--launch` to raw `auto`, `research`, `plan` or `review`
+input, launch only an exact-version qualified planning-only profile. Resolve
+the default profile from `.alk/host-launch/<adapter>.json`, carry the task over
+bounded stdin, and end in `REVIEW_REQUIRED` or `BLOCKED`. A missing or stale
+profile must return preparation and preflight commands. Persist only digest
+lineage below `.alk/planning-sessions`; `--resume` may read that state but must
+not reattach or relaunch a native host conversation. Implementation remains a
+separate process using a reviewed frozen manifest, matching lock and complete
+workflow bindings.
+
 When a frozen task requests risk-aware execution, keep the authorization split.
 Run `agent-lifecycle start --risk <auto|S0|S1|S2> --risk-profile-out <path>` to
 project the digest-bound route and caps without changing workflow state. Then

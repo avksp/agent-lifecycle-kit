@@ -33,6 +33,7 @@
 ```bash
 agent-lifecycle start --adapter codex --file task.md
 agent-lifecycle start --adapter codex --mode research --text "Исследуй текущую архитектуру"
+agent-lifecycle start --adapter codex --mode plan --file task.md --launch
 agent-lifecycle start --adapter codex --mode implement --file adapter-run-request.json
 agent-lifecycle start --adapter codex --resume <session-id>
 agent-lifecycle host-launch inspect --profile .alk/host-launch/codex.json
@@ -61,11 +62,17 @@ agent-lifecycle adapter run \
   --task <task-id>
 ```
 
-Для локального запуска добавьте `--launch --host-launch-profile
+К обычному входу планирования можно добавить `--launch` только при состоянии
+точной версии `PLANNING_ONLY_QUALIFIED`. Такой запуск завершается на проверке и
+хранит только отпечатки. Поставляемые кандидаты пока не поддерживаются.
+Подробнее: [запуск адаптера только для
+планирования](planning-only-launch.md).
+
+Для локального запуска зафиксированной реализации добавьте `--launch --host-launch-profile
 .alk/host-launch/<adapter>.json` к полностью связанному вызову `start --mode
 implement`. Структура профиля и полная команда приведены в разделе [локальный
-запуск внешней команды](local-host-launch.md). Для обычного текста задачи эти
-параметры недоступны.
+запуск внешней команды](local-host-launch.md). Обычный текст не может попасть в
+этот маршрут реализации.
 
 Для точно проверенных версий Codex, Claude Code и OpenCode используйте
 созданный профиль и обязательное подтверждение версии из раздела

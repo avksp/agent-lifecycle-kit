@@ -8,13 +8,19 @@ from typing import Any
 from agent_lifecycle.adapter_sessions.contracts import build_lifecycle_start_receipt
 from agent_lifecycle.adapter_sessions.launcher import launch_from_local_profile
 from agent_lifecycle.adapter_sessions.local_launch_profile import load_local_launch_profile
+from agent_lifecycle.adapter_sessions.planning_session import (
+    create_planning_session,
+    load_planning_session,
+    planning_session_exists,
+    transition_planning_session,
+)
 from agent_lifecycle.adapter_sessions.session_store import load_session
 from agent_lifecycle.adapter_sessions.task_intake import (
     ADAPTER_TASK_RUN_REQUEST_SCHEMA,
     start_adapter_task,
 )
 from agent_lifecycle.adapter_sessions.workflow_bridge import resume_adapter_session
-from agent_lifecycle.contracts import LifecycleError, load_json_object, sha256_hex
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
 from agent_lifecycle.policy.risk_execution import RISK_REQUESTS
 
 START_MODES = ("auto", "research", "plan", "review", "implement")
@@ -60,32 +66,33 @@ def start_lifecycle(
         return _blocked(adapter_id=adapter_id, mode="auto", input_summary=_empty_input(), code="start-mode-invalid")
     if requested_risk not in RISK_REQUESTS:
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_empty_input(), code="start-risk-invalid")
-    if launch != (host_launch_profile_path is not None):
+    if host_launch_profile_path is not None and not launch:
         return _blocked(
             adapter_id=adapter_id,
             mode=mode,
             input_summary=_empty_input(),
             code="start-launch-arguments-incomplete",
         )
-    if launch and mode != "implement":
-        return _blocked(
-            adapter_id=adapter_id,
-            mode=mode,
-            input_summary=_empty_input(),
-            code="start-launch-implement-mode-required",
-        )
-
     has_task_source = task_file is not None or task_text is not None
     if resume_session_id is not None:
-        if has_task_source or launch:
+        if has_task_source or launch or host_launch_profile_path is not None:
             return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_session_input(resume_session_id), code="start-action-conflict")
         if mode != "auto":
             return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_session_input(resume_session_id), code="start-resume-mode-invalid")
+        try:
+            if planning_session_exists(resume_session_id, session_root=session_root):
+                return _resume_planning(
+                    adapter_id=adapter_id,
+                    session_id=resume_session_id,
+                    session_root=session_root,
+                )
+        except LifecycleError:
+            pass
         return _resume(adapter_id=adapter_id, session_id=resume_session_id, session_root=session_root)
     if not has_task_source or (task_file is not None and task_text is not None):
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_empty_input(), code="start-task-source-invalid")
 
-    input_summary, payload = _inspect_task_source(task_file=task_file, task_text=task_text)
+    input_summary, payload, input_bytes = _inspect_task_source(task_file=task_file, task_text=task_text)
     structured_frozen = _is_frozen_input(payload)
     if mode == "implement" and not structured_frozen:
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-implement-frozen-input-required")
@@ -110,24 +117,17 @@ def start_lifecycle(
             )
     if mode in _NON_EXECUTING_MODES and structured_frozen:
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-mode-implement-required")
-    if launch:
+    planning_launch = launch and mode in _NON_EXECUTING_MODES
+    intake_text: str | None = None
+    if planning_launch:
         try:
-            _relative, local_profile, _validation = load_local_launch_profile(host_launch_profile_path or Path(""))
-        except (LifecycleError, OSError) as exc:
-            code = exc.code if isinstance(exc, LifecycleError) else "local-launch-profile-read-failed"
-            return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code=code)
-        if local_profile.get("adapterId") != adapter_id:
-            return _blocked(
-                adapter_id=adapter_id,
-                mode=mode,
-                input_summary=input_summary,
-                code="local-launch-profile-adapter-mismatch",
-            )
-
+            intake_text = input_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-task-utf8-required")
     receipt = start_adapter_task(
         adapter_id=adapter_id,
-        task_file=task_file,
-        task_text=task_text,
+        task_file=None if planning_launch else task_file,
+        task_text=intake_text if planning_launch else task_text,
         candidate_out=candidate_out,
         descriptor_path=descriptor_path,
         session_root=session_root,
@@ -150,11 +150,22 @@ def start_lifecycle(
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-non-implement-execution-claim")
     if not launch:
         return _from_task_receipt(adapter_id=adapter_id, mode=mode, receipt=receipt)
+    profile_path = host_launch_profile_path or Path(".alk/host-launch") / f"{adapter_id}.json"
+    if planning_launch:
+        return _launch_planning_receipt(
+            adapter_id=adapter_id,
+            mode=mode,
+            receipt=receipt,
+            profile_path=profile_path,
+            task_text=intake_text or "",
+            input_summary=input_summary,
+            session_root=session_root,
+        )
     return _launch_managed_receipt(
         adapter_id=adapter_id,
         mode=mode,
         receipt=receipt,
-        profile_path=host_launch_profile_path or Path(""),
+        profile_path=profile_path,
     )
 
 
@@ -201,6 +212,42 @@ def _resume(*, adapter_id: str, session_id: str, session_root: Path | None) -> d
     )
 
 
+def _resume_planning(*, adapter_id: str, session_id: str, session_root: Path | None) -> dict[str, Any]:
+    input_summary = _session_input(session_id)
+    try:
+        session = load_planning_session(
+            session_id,
+            session_root=session_root,
+            expected_adapter_id=adapter_id,
+        )
+    except LifecycleError as exc:
+        return _blocked(adapter_id=adapter_id, mode="auto", input_summary=input_summary, code=exc.code)
+    state = str(session.get("state"))
+    blockers = _blocker_summaries(session.get("blockers"))
+    if state == "PLANNING_RUNNING":
+        blockers.append({"code": "planning-session-native-reattach-unsupported"})
+    status = "REVIEW_REQUIRED" if state in {"INTAKE_ACCEPTED", "REVIEW_REQUIRED"} else "BLOCKED"
+    return build_lifecycle_start_receipt(
+        status=status,
+        adapter_id=adapter_id,
+        requested_mode="auto",
+        action="RESUME" if status == "REVIEW_REQUIRED" else "BLOCKED",
+        input_summary=input_summary,
+        delegate_summary={
+            "schemaVersion": session.get("schemaVersion"),
+            "sessionId": session_id,
+            "requestedMode": session.get("requestedMode"),
+            "planningState": state,
+            "sessionRevision": session.get("sessionRevision"),
+            "planningReceiptDigest": session.get("planningReceiptDigest"),
+            "resultDigest": session.get("resultDigest"),
+            "implementationAuthorized": False,
+        },
+        requires_review=True,
+        blockers=blockers,
+    )
+
+
 def _session_blockers(session: dict[str, Any], *, session_id: str, adapter_id: str) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     if session.get("schemaVersion") != _SESSION_STATE_SCHEMA:
@@ -238,18 +285,22 @@ def _session_blockers(session: dict[str, Any], *, session_id: str, adapter_id: s
     return blockers
 
 
-def _inspect_task_source(*, task_file: Path | None, task_text: str | None) -> tuple[dict[str, Any], dict[str, Any] | None]:
+def _inspect_task_source(
+    *,
+    task_file: Path | None,
+    task_text: str | None,
+) -> tuple[dict[str, Any], dict[str, Any] | None, bytes]:
     if task_text is not None:
         data = task_text.encode("utf-8")
-        return _source_input("TEXT", "inline-task", data), _parse_payload(data)
+        return _source_input("TEXT", "inline-task", data), _parse_payload(data), data
     if task_file is None or not task_file.is_file():
         label = task_file.name if task_file is not None else None
-        return {**_empty_input(), "label": label}, None
+        return {**_empty_input(), "label": label}, None, b""
     try:
         data = task_file.read_bytes()
     except OSError:
-        return {**_empty_input(), "label": task_file.name}, None
-    return _source_input("FILE", task_file.name, data), _parse_payload(data)
+        return {**_empty_input(), "label": task_file.name}, None, b""
+    return _source_input("FILE", task_file.name, data), _parse_payload(data), data
 
 
 def _parse_payload(data: bytes) -> dict[str, Any] | None:
@@ -339,6 +390,120 @@ def _from_task_receipt(
     )
 
 
+def _launch_planning_receipt(
+    *,
+    adapter_id: str,
+    mode: str,
+    receipt: dict[str, Any],
+    profile_path: Path,
+    task_text: str,
+    input_summary: dict[str, Any],
+    session_root: Path | None,
+) -> dict[str, Any]:
+    if receipt.get("status") != "REVIEW_REQUIRED" or _claims_execution(receipt):
+        return _from_task_receipt(adapter_id=adapter_id, mode=mode, receipt=receipt)
+    try:
+        session = create_planning_session(
+            adapter_id=adapter_id,
+            requested_mode=mode,
+            input_summary=_planning_input(input_summary),
+            session_root=session_root,
+        )
+    except LifecycleError as exc:
+        return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code=exc.code)
+    session_id = str(session["sessionId"])
+    try:
+        _relative, local_profile, _validation = load_local_launch_profile(profile_path)
+        if local_profile.get("adapterId") != adapter_id:
+            raise LifecycleError(
+                "local-launch-profile-adapter-mismatch",
+                "local launch profile belongs to another adapter",
+            )
+        transition_planning_session(
+            session_id=session_id,
+            adapter_id=adapter_id,
+            expected_state="INTAKE_ACCEPTED",
+            new_state="PLANNING_RUNNING",
+            session_root=session_root,
+        )
+        launch_receipt = launch_from_local_profile(
+            profile_path=profile_path,
+            operation="planningTask",
+            adapter_id=adapter_id,
+            session_id=session_id,
+            explicit_launch=True,
+            requested_mode=mode,
+            task_text=task_text,
+            input_source=str(input_summary.get("type", "TEXT")).lower(),
+            advisory=_task_summary(receipt),
+        )
+    except (LifecycleError, OSError) as exc:
+        code = exc.code if isinstance(exc, LifecycleError) else "local-launch-profile-read-failed"
+        message = exc.message if isinstance(exc, LifecycleError) else "local launch profile could not be read"
+        launch_receipt = _planning_launch_blocked_receipt(
+            adapter_id=adapter_id,
+            session_id=session_id,
+            requested_mode=mode,
+            input_summary=input_summary,
+            code=code,
+            message=message,
+        )
+
+    launch_receipt = _portable_planning_receipt(launch_receipt, task_text=task_text)
+
+    current = load_planning_session(
+        session_id,
+        session_root=session_root,
+        expected_adapter_id=adapter_id,
+    )
+    if current["state"] == "INTAKE_ACCEPTED":
+        session = transition_planning_session(
+            session_id=session_id,
+            adapter_id=adapter_id,
+            expected_state="INTAKE_ACCEPTED",
+            new_state="BLOCKED",
+            session_root=session_root,
+            planning_receipt=launch_receipt,
+            blockers=_blocker_summaries(launch_receipt.get("blockers")),
+        )
+    else:
+        target = "REVIEW_REQUIRED" if launch_receipt.get("status") == "REVIEW_REQUIRED" else "BLOCKED"
+        session = transition_planning_session(
+            session_id=session_id,
+            adapter_id=adapter_id,
+            expected_state="PLANNING_RUNNING",
+            new_state=target,
+            session_root=session_root,
+            planning_receipt=launch_receipt,
+            blockers=_blocker_summaries(launch_receipt.get("blockers")),
+        )
+    accepted = session["state"] == "REVIEW_REQUIRED"
+    delegate = _task_summary(receipt)
+    delegate["planningSession"] = {
+        "sessionId": session_id,
+        "state": session["state"],
+        "sessionRevision": session["sessionRevision"],
+        "lineageDigest": session["lineageDigest"],
+        "planningReceiptDigest": session["planningReceiptDigest"],
+        "resultDigest": session["resultDigest"],
+        "implementationAuthorized": False,
+    }
+    return build_lifecycle_start_receipt(
+        status="REVIEW_REQUIRED" if accepted else "BLOCKED",
+        adapter_id=adapter_id,
+        requested_mode=mode,
+        action="DRAFT_PLAN_REVIEW" if accepted else "BLOCKED",
+        input_summary=input_summary,
+        delegate_summary=delegate,
+        execution_started=False,
+        lifecycle_coverage_claimed=False,
+        requires_review=True,
+        blockers=_blocker_summaries(launch_receipt.get("blockers")),
+        host_launch_started=bool(launch_receipt.get("hostLaunchStarted")),
+        launch_receipt=launch_receipt,
+    )
+
+
 def _launch_managed_receipt(
     *,
     adapter_id: str,
@@ -387,6 +552,56 @@ def _launch_managed_receipt(
 def _binding_path(binding: dict[str, Any], field: str) -> Path | None:
     value = binding.get(field)
     return Path(value) if isinstance(value, str) and value else None
+
+
+def _planning_launch_blocked_receipt(
+    *,
+    adapter_id: str,
+    session_id: str,
+    requested_mode: str,
+    input_summary: dict[str, Any],
+    code: str,
+    message: str,
+) -> dict[str, Any]:
+    preparation = _planning_preparation(adapter_id)
+    blocker = {"code": code, "message": message, **preparation}
+    body = {
+        "schemaVersion": "agent-planning-launch-receipt.v1",
+        "status": "BLOCKED",
+        "action": "PLANNING_LAUNCH",
+        "adapterId": adapter_id,
+        "sessionId": session_id,
+        "requestedMode": requested_mode,
+        "input": _planning_input(input_summary),
+        "process": {
+            "status": "NOT_STARTED",
+            "exitCode": None,
+            "timedOut": False,
+            "inputBytes": 0,
+            "outputBytes": 0,
+            "outputLimitExceeded": False,
+            "redactionApplied": False,
+            "rawOutputStored": False,
+        },
+        "result": None,
+        "usageEvidence": {
+            "confidence": "MISSING",
+            "inputTokens": None,
+            "outputTokens": None,
+            "moneyFieldsCanonical": False,
+        },
+        "processCalls": 0,
+        "implementationAuthorized": False,
+        "requiresReview": True,
+        "rawTaskTextStored": False,
+        "hostLaunchStarted": False,
+        "modelCallsStarted": False,
+        "secretsWritten": False,
+        "nativeConfigWritten": False,
+        "blockers": [blocker],
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
 
 
 def _binding_string(binding: dict[str, Any], field: str) -> str | None:
@@ -460,6 +675,47 @@ def _source_input(kind: str, label: str, data: bytes) -> dict[str, Any]:
     return {"type": kind, "label": label, "digest": sha256_hex(data), "byteCount": len(data), "rawTextStored": False}
 
 
+def _planning_input(input_summary: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source": str(input_summary.get("type", "NONE")),
+        "sha256": str(input_summary.get("digest", sha256_hex(b""))),
+        "byteCount": int(input_summary.get("byteCount", 0)),
+        "rawTaskTextStored": False,
+    }
+
+
+def _planning_preparation(adapter_id: str) -> dict[str, str]:
+    profile = f".alk/host-launch/{adapter_id}.json"
+    return {
+        "profileCommand": f"agent-lifecycle adapter launch-profile --adapter {adapter_id} --out {profile}",
+        "preflightCommand": f"agent-lifecycle host-launch preflight --profile {profile}",
+    }
+
+
+def _portable_planning_receipt(receipt: dict[str, Any], *, task_text: str) -> dict[str, Any]:
+    """Remove exact input echoes before a host receipt crosses the public facade."""
+
+    body = {
+        str(key): _redact_task_echo(value, task_text=task_text)
+        for key, value in receipt.items()
+        if key != "receiptDigest"
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def _redact_task_echo(value: Any, *, task_text: str) -> Any:
+    if isinstance(value, str):
+        return value.replace(task_text, "[REDACTED_TASK_INPUT]") if task_text else value
+    if isinstance(value, list):
+        return [_redact_task_echo(item, task_text=task_text) for item in value]
+    if isinstance(value, dict):
+        return {
+            str(key): _redact_task_echo(item, task_text=task_text)
+            for key, item in value.items()
+        }
+    return value
+
+
 def _session_input(session_id: str) -> dict[str, Any]:
     encoded = session_id.encode("utf-8")
     return {"type": "SESSION", "label": session_id, "digest": sha256_hex(encoded), "byteCount": len(encoded), "rawTextStored": False}
@@ -480,6 +736,16 @@ def _blocker_summaries(value: Any) -> list[dict[str, Any]]:
                 summary["field"] = item["field"]
             if isinstance(item.get("fields"), list):
                 summary["fields"] = [str(field) for field in item["fields"]]
+            if isinstance(item.get("message"), str):
+                summary["message"] = item["message"]
+            for field in ("profileCommand", "preflightCommand", "preparationCommand"):
+                if isinstance(item.get(field), str):
+                    summary[field] = item[field]
+            context = item.get("context")
+            if isinstance(context, dict):
+                for field in ("profileCommand", "preflightCommand", "preparationCommand"):
+                    if isinstance(context.get(field), str):
+                        summary[field] = context[field]
             summaries.append(summary)
     return summaries
 
