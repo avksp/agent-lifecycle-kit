@@ -25,3 +25,21 @@ OpenInterpreter может выполнять код, поэтому повыш�
 Ключи провайдера остаются локальными для хоста. ALK может передать разрешённые
 имена переменных конкретной обвязке, но не записывает значения секретов в
 подтверждения.
+
+## Запуск только для планирования
+
+Точная версия профиля: `0.0.34`. Состояние профиля: `UNSUPPORTED`.
+Поддержка запуска планирования: `PLANNING_ONLY_UNSUPPORTED`. Установленная команда не предоставляет надёжный встроенный профиль только для чтения.
+
+Создание и проверка локального профиля:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter openinterpreter --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/openinterpreter.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/openinterpreter.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/openinterpreter.json
+```
+
+Успешная проверка версии не разрешает запуск планирования.
+`managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
+состояние поддержки планирования. Подробнее: [запуск адаптера только для
+планирования](../reference/planning-only-launch.md).

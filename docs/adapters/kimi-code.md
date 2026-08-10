@@ -32,3 +32,21 @@ Current blocker: `BLOCKED_HOST_MODEL_NOT_CONFIGURED`; the current local Kimi
 Code 0.30.0 setup has no configured providers/model aliases, so no
 usage-attested live host receipt, calibration receipt, or lifecycle final proof
 can be captured yet.
+
+## Planning-only launch status
+
+Exact-version profile: `0.30.0`. Profile status: `UNSUPPORTED`. Planning
+support: `PLANNING_ONLY_UNSUPPORTED`. The CLI does not yet have a verified bounded stdin result transport for this contract.
+
+Generate and inspect the local profile with:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter kimi-code --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/kimi-code.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/kimi-code.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/kimi-code.json
+```
+
+A successful version preflight does not authorize planning launch.
+`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
+promote planning support. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).

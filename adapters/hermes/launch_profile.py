@@ -1,0 +1,36 @@
+"""Version-bound local profile for Hermes Agent 0.19.0."""
+
+PROFILE = {
+    "schemaVersion": "agent-local-host-launch-profile.v1",
+    "status": "LOCAL_OPT_IN",
+    "adapterId": "hermes",
+    "executable": "hermes",
+    "argvTemplate": ["chat", "--prompt", "Continue the frozen ALK task without bypassing lifecycle gates."],
+    "versionProbeArgs": ["--version"],
+    "env": {"allow": ["HOME", "PATH"], "allowPatterns": [], "projectPolicyAllowed": False},
+    "timeoutSeconds": 300,
+    "shell": False,
+    "writesNativeConfig": False,
+    "promptInjectionDefault": False,
+    "publicSupportClaimed": False,
+    "productionPromotionClaimed": False,
+    "qualification": {
+        "schemaVersion": "agent-host-launch-qualification-policy.v1",
+        "expectedVersion": "0.19.0",
+        "receiptFile": "hermes-0.19.0.qualification.json",
+        "requiredForManagedTask": True,
+        "maxPreflightProcesses": 1,
+        "modelCallsForPreflight": 0,
+    },
+    "planningOnly": {
+        "schemaVersion": "agent-planning-only-launch-profile.v1",
+        "status": "UNSUPPORTED",
+        "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+        "argvTemplate": [],
+        "inputTransport": "STDIN",
+        "resultFormat": "SINGLE_JSON_OBJECT",
+        "containment": {"filesystem": "unverified", "tools": "unverified", "network": "host-owned-provider-rpc", "writesAllowed": False},
+        "qualificationEvidence": [],
+        "reason": "Hermes Agent 0.19.0 exposes no verified one-shot tool-denial profile for this contract.",
+    },
+}

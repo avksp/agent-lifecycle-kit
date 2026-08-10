@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "5d7b27811f88afccb58552807aa48573fdff1665f8e0c55408cd2d5a1868f1eb",
+  "descriptorDigest": "2382098d863e1b4464a8e401e1bd2186f74db255b8098d4c323d965a5cbc4a01",
   "eventCapture": {
     "categories": [
       "command",
@@ -154,6 +154,13 @@
     "providerModelNamesInCore": false,
     "unsupportedClassPolicy": "fail-closed",
     "usageReceiptRequired": true
+  },
+  "planningLaunch": {
+    "profileStatus": "UNSUPPORTED",
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "expectedHostVersion": "2026.07.23",
+    "qualificationRequired": true,
+    "hostLaunchStarted": false
   },
   "promotion": {
     "productionPromotionClaimed": false,

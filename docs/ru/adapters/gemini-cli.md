@@ -36,3 +36,21 @@ Gemini CLI `0.46.0` прошёл безопасный локальный осм�
 результат остаётся `ESTIMATED` и не подходит для S1/S2 до отдельного
 подтверждения диапазона версий Gemini CLI. Подробнее:
 [локальный учёт токенов хоста](../reference/host-local-token-accounting.md).
+
+## Запуск только для планирования
+
+Точная версия профиля: `0.46.0`. Состояние профиля: `CANDIDATE`.
+Поддержка запуска планирования: `PLANNING_ONLY_UNSUPPORTED`. Режим согласования плана и передача через стандартный ввод образуют статический профиль-кандидат, но принятого подтверждения реального запуска пока нет.
+
+Создание и проверка локального профиля:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter gemini-cli --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/gemini-cli.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/gemini-cli.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/gemini-cli.json
+```
+
+Успешная проверка версии не разрешает запуск планирования.
+`managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
+состояние поддержки планирования. Подробнее: [запуск адаптера только для
+планирования](../reference/planning-only-launch.md).

@@ -1002,6 +1002,15 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         ".alk/planning-sessions.\n"
         "DRAFT_PLAN_REVIEW.\n"
         "modelCallsStarted.\n"
+        "2026.07.23.\n"
+        "0.46.0.\n"
+        "1.45.0.\n"
+        "0.2.118.\n"
+        "0.19.0.\n"
+        "0.30.0.\n"
+        "0.0.34.\n"
+        "0.83.0.\n"
+        "0.21.8.\n"
     )
     _write_text(root / "docs/reference/planning-only-launch.md", planning_launch)
     _write_text(root / "docs/ru/reference/planning-only-launch.md", planning_launch)

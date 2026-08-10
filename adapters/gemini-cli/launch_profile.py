@@ -1,0 +1,35 @@
+"""Version-bound local profile for Gemini CLI 0.46.0."""
+
+PROFILE = {
+    "schemaVersion": "agent-local-host-launch-profile.v1",
+    "status": "LOCAL_OPT_IN",
+    "adapterId": "gemini-cli",
+    "executable": "gemini",
+    "argvTemplate": ["--approval-mode", "plan", "--output-format", "json", "--prompt", "Continue the frozen ALK task without bypassing lifecycle gates."],
+    "versionProbeArgs": ["--version"],
+    "env": {"allow": ["HOME", "PATH"], "allowPatterns": [], "projectPolicyAllowed": False},
+    "timeoutSeconds": 300,
+    "shell": False,
+    "writesNativeConfig": False,
+    "promptInjectionDefault": False,
+    "publicSupportClaimed": False,
+    "productionPromotionClaimed": False,
+    "qualification": {
+        "schemaVersion": "agent-host-launch-qualification-policy.v1",
+        "expectedVersion": "0.46.0",
+        "receiptFile": "gemini-cli-0.46.0.qualification.json",
+        "requiredForManagedTask": True,
+        "maxPreflightProcesses": 1,
+        "modelCallsForPreflight": 0,
+    },
+    "planningOnly": {
+        "schemaVersion": "agent-planning-only-launch-profile.v1",
+        "status": "CANDIDATE",
+        "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+        "argvTemplate": ["--approval-mode", "plan", "--output-format", "json", "--prompt", "Follow the JSON request provided on stdin."],
+        "inputTransport": "STDIN",
+        "resultFormat": "SINGLE_JSON_OBJECT",
+        "containment": {"filesystem": "gemini-plan-approval-mode", "tools": "host-plan-policy", "network": "host-owned-provider-rpc", "writesAllowed": False},
+        "qualificationEvidence": [],
+    },
+}

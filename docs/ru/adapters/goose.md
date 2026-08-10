@@ -23,3 +23,21 @@ agent-lifecycle adapter inspect \
 Управляемые сессии поддерживаются как `WRAPPER_ONLY`: ALK связывает работу с
 рабочим циклом и прогрессом, но прямой безопасный запуск CLI хоста остаётся за
 обёрткой или оператором.
+
+## Запуск только для планирования
+
+Точная версия профиля: `1.45.0`. Состояние профиля: `CANDIDATE`.
+Поддержка запуска планирования: `PLANNING_ONLY_UNSUPPORTED`. Маршрут без профиля и сессии через стандартный ввод образует статический профиль-кандидат, но принятого подтверждения ограничений планирования пока нет.
+
+Создание и проверка локального профиля:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter goose --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/goose.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/goose.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/goose.json
+```
+
+Успешная проверка версии не разрешает запуск планирования.
+`managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
+состояние поддержки планирования. Подробнее: [запуск адаптера только для
+планирования](../reference/planning-only-launch.md).

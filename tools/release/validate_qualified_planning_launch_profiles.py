@@ -17,11 +17,17 @@ from agent_lifecycle.contracts import canonical_digest  # noqa: E402
 TARGETS = ("codex", "claude", "opencode")
 
 
-def validate_profiles(adapter_root: Path, *, repository_root: Path | None = None) -> dict[str, Any]:
+def validate_profiles(
+    adapter_root: Path,
+    *,
+    repository_root: Path | None = None,
+    targets: tuple[str, ...] | None = None,
+) -> dict[str, Any]:
     root = (repository_root or adapter_root.parent).resolve()
+    selected_targets = targets or TARGETS
     blockers: list[dict[str, Any]] = []
     rows: list[dict[str, Any]] = []
-    for adapter_id in TARGETS:
+    for adapter_id in selected_targets:
         try:
             profile = load_shipped_launch_profile(adapter_id, repository_root=root)
             descriptor = json.loads((adapter_root / adapter_id / "adapter.descriptor.json").read_text(encoding="utf-8"))
@@ -60,7 +66,7 @@ def validate_profiles(adapter_root: Path, *, repository_root: Path | None = None
         )
     body = {
         "schemaVersion": "agent-qualified-planning-launch-profile-validation.v1",
-        "status": "PASS" if not blockers and len(rows) == len(TARGETS) else "FAIL",
+        "status": "PASS" if not blockers and len(rows) == len(selected_targets) else "FAIL",
         "profiles": rows,
         "blockers": blockers,
         "modelCallsStarted": False,

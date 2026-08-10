@@ -41,6 +41,7 @@ class ContractCompatibilityTests(unittest.TestCase):
         self.assertIn("agent-review-mesh-quorum-receipt.v1", schema_ids)
         self.assertIn("agent-review-mesh-quorum-validation.v1", schema_ids)
         self.assertIn("agent-review-mesh-recommendation.v1", schema_ids)
+        self.assertIn("agent-task-plan-compatibility-receipt.v1", schema_ids)
         cli_outputs = {(item["command"], item["schemaVersion"]) for item in policy["cliOutputs"]}
         self.assertIn(("metrics cost-report", "agent-lifecycle-cost-generation.v1"), cli_outputs)
         self.assertIn(("metrics outcome-index", "agent-task-outcome-index.v1"), cli_outputs)
