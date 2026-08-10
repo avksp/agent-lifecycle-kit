@@ -178,17 +178,63 @@
     "artifactFormat": "stream-jsonl",
     "maxArtifactBytes": 8388608
   },
+  "qualifiedLaunch": {
+    "status": "VERSION_BOUND_LOCAL",
+    "profilePath": "adapters/gemini-cli/launch_profile.py",
+    "expectedHostVersion": "0.46.0",
+    "planningProfileStatus": "CANDIDATE",
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "planningQualificationRequired": true,
+    "managedLaunchStatusPreserved": "WRAPPER_ONLY",
+    "publicSupportClaimed": false,
+    "productionPromotionClaimed": false
+  },
   "installation": {
     "schemaVersion": "agent-adapter-installation-facts.v1",
-    "binaryAliases": ["gemini", "gemini-cli"],
+    "binaryAliases": [
+      "gemini",
+      "gemini-cli"
+    ],
     "files": [
-      {"path": "adapters/gemini-cli/adapter.descriptor.json", "action": "read", "required": true},
-      {"path": "adapters/gemini-cli/capabilities.manifest.json", "action": "read", "required": true},
-      {"path": "adapters/gemini-cli/README.md", "action": "read", "required": true}
+      {
+        "path": "adapters/gemini-cli/adapter.descriptor.json",
+        "action": "read",
+        "required": true
+      },
+      {
+        "path": "adapters/gemini-cli/capabilities.manifest.json",
+        "action": "read",
+        "required": true
+      },
+      {
+        "path": "adapters/gemini-cli/README.md",
+        "action": "read",
+        "required": true
+      }
     ],
     "commands": [
-      {"argv": ["python", "-m", "pip", "install", "-e", "<checkout>"], "purpose": "install the core CLI from a trusted checkout", "mutatesHost": true, "requiresOperator": true},
-      {"argv": ["gemini", "--version"], "purpose": "confirm the host CLI is available before live proof", "mutatesHost": false, "requiresOperator": true}
+      {
+        "argv": [
+          "python",
+          "-m",
+          "pip",
+          "install",
+          "-e",
+          "<checkout>"
+        ],
+        "purpose": "install the core CLI from a trusted checkout",
+        "mutatesHost": true,
+        "requiresOperator": true
+      },
+      {
+        "argv": [
+          "gemini",
+          "--version"
+        ],
+        "purpose": "confirm the host CLI is available before live proof",
+        "mutatesHost": false,
+        "requiresOperator": true
+      }
     ],
     "operatorActions": [
       "Configure host-local model and profile settings outside the portable core.",

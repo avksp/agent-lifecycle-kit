@@ -1,0 +1,36 @@
+"""Version-bound local profile for Kimi Code 0.30.0."""
+
+PROFILE = {
+    "schemaVersion": "agent-local-host-launch-profile.v1",
+    "status": "LOCAL_OPT_IN",
+    "adapterId": "kimi-code",
+    "executable": "kimi",
+    "argvTemplate": ["--plan", "--prompt", "Continue the frozen ALK task without bypassing lifecycle gates."],
+    "versionProbeArgs": ["--version"],
+    "env": {"allow": ["HOME", "PATH"], "allowPatterns": [], "projectPolicyAllowed": False},
+    "timeoutSeconds": 300,
+    "shell": False,
+    "writesNativeConfig": False,
+    "promptInjectionDefault": False,
+    "publicSupportClaimed": False,
+    "productionPromotionClaimed": False,
+    "qualification": {
+        "schemaVersion": "agent-host-launch-qualification-policy.v1",
+        "expectedVersion": "0.30.0",
+        "receiptFile": "kimi-code-0.30.0.qualification.json",
+        "requiredForManagedTask": True,
+        "maxPreflightProcesses": 1,
+        "modelCallsForPreflight": 0,
+    },
+    "planningOnly": {
+        "schemaVersion": "agent-planning-only-launch-profile.v1",
+        "status": "UNSUPPORTED",
+        "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+        "argvTemplate": [],
+        "inputTransport": "STDIN",
+        "resultFormat": "SINGLE_JSON_OBJECT",
+        "containment": {"filesystem": "unverified", "tools": "unverified", "network": "host-owned-provider-rpc", "writesAllowed": False},
+        "qualificationEvidence": [],
+        "reason": "Kimi Code 0.30.0 does not document a bounded stdin planning-result transport for this contract.",
+    },
+}

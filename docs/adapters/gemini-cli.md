@@ -33,3 +33,21 @@ Current blocker: `BLOCKED_UNSUPPORTED_CLIENT_TIER`; the current local Gemini
 CLI 0.46.0 setup returns an unsupported Gemini Code Assist individual-client
 tier error before a live receipt can be captured. No accepted Gemini CLI live
 host receipt, live calibration receipt or ALK lifecycle final proof exists.
+
+## Planning-only launch status
+
+Exact-version profile: `0.46.0`. Profile status: `CANDIDATE`. Planning
+support: `PLANNING_ONLY_UNSUPPORTED`. The plan approval mode and stdin route form a static candidate, but no accepted live containment evidence is shipped.
+
+Generate and inspect the local profile with:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter gemini-cli --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/gemini-cli.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/gemini-cli.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/gemini-cli.json
+```
+
+A successful version preflight does not authorize planning launch.
+`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
+promote planning support. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).

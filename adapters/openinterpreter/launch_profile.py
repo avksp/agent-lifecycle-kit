@@ -1,0 +1,36 @@
+"""Version-bound local profile for OpenInterpreter 0.0.34."""
+
+PROFILE = {
+    "schemaVersion": "agent-local-host-launch-profile.v1",
+    "status": "LOCAL_OPT_IN",
+    "adapterId": "openinterpreter",
+    "executable": "interpreter",
+    "argvTemplate": ["--version"],
+    "versionProbeArgs": ["--version"],
+    "env": {"allow": ["HOME", "PATH"], "allowPatterns": [], "projectPolicyAllowed": False},
+    "timeoutSeconds": 300,
+    "shell": False,
+    "writesNativeConfig": False,
+    "promptInjectionDefault": False,
+    "publicSupportClaimed": False,
+    "productionPromotionClaimed": False,
+    "qualification": {
+        "schemaVersion": "agent-host-launch-qualification-policy.v1",
+        "expectedVersion": "0.0.34",
+        "receiptFile": "openinterpreter-0.0.34.qualification.json",
+        "requiredForManagedTask": True,
+        "maxPreflightProcesses": 1,
+        "modelCallsForPreflight": 0,
+    },
+    "planningOnly": {
+        "schemaVersion": "agent-planning-only-launch-profile.v1",
+        "status": "UNSUPPORTED",
+        "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+        "argvTemplate": [],
+        "inputTransport": "STDIN",
+        "resultFormat": "SINGLE_JSON_OBJECT",
+        "containment": {"filesystem": "unverified", "tools": "unverified", "network": "host-owned-provider-rpc", "writesAllowed": False},
+        "qualificationEvidence": [],
+        "reason": "The installed OpenInterpreter 0.0.34 command surface does not expose a reliable native read-only planning profile.",
+    },
+}

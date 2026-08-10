@@ -1,6 +1,6 @@
 {
   "adapterId": "grok-build",
-  "descriptorDigest": "2adc7973ef6af38c23995c6fa7fdb911b7e65a5bebb1477fe1bbb65ce14e7639",
+  "descriptorDigest": "9c323523b6629c3ed58ded2d270d4a978b484ee5c0e273d51ba5a1601ef24040",
   "emittedAt": "2026-07-31T00:23:00Z",
   "eventCount": 6,
   "eventStreamDigest": "1dd4889f819b335ddb3574cca11ec94ffb6a4714eb23f47f5eaf452f62182006",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "8cc0555e99f6c9a9aa708629a96aa16837f7591a2964662ad43e6c9d6ea4a2cb",
+  "receiptDigest": "17aed840cd1819c1df4bd741593e6a19ac84cf49c26a805e9574195893c1927a",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",

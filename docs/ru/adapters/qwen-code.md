@@ -38,3 +38,21 @@ agent-lifecycle adapter inspect \
 состоянии `ESTIMATED` до отдельной проверки нормализатора на реальном диапазоне
 версий хоста. Подробнее:
 [локальный учёт токенов хоста](../reference/host-local-token-accounting.md).
+
+## Запуск только для планирования
+
+Точная версия профиля: `0.21.8`. Состояние профиля: `UNSUPPORTED`.
+Поддержка запуска планирования: `PLANNING_ONLY_UNSUPPORTED`. Для этого контракта не подтверждён встроенный режим только для чтения или запрета инструментов.
+
+Создание и проверка локального профиля:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter qwen-code --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/qwen-code.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/qwen-code.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/qwen-code.json
+```
+
+Успешная проверка версии не разрешает запуск планирования.
+`managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
+состояние поддержки планирования. Подробнее: [запуск адаптера только для
+планирования](../reference/planning-only-launch.md).

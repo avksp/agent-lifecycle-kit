@@ -1,0 +1,36 @@
+"""Version-bound local profile for Pi 0.83.0."""
+
+PROFILE = {
+    "schemaVersion": "agent-local-host-launch-profile.v1",
+    "status": "LOCAL_OPT_IN",
+    "adapterId": "pi",
+    "executable": "pi",
+    "argvTemplate": ["--print", "--tools", "read,grep,find,ls", "Continue the frozen ALK task without bypassing lifecycle gates."],
+    "versionProbeArgs": ["--version"],
+    "env": {"allow": ["HOME", "PATH"], "allowPatterns": [], "projectPolicyAllowed": False},
+    "timeoutSeconds": 300,
+    "shell": False,
+    "writesNativeConfig": False,
+    "promptInjectionDefault": False,
+    "publicSupportClaimed": False,
+    "productionPromotionClaimed": False,
+    "qualification": {
+        "schemaVersion": "agent-host-launch-qualification-policy.v1",
+        "expectedVersion": "0.83.0",
+        "receiptFile": "pi-0.83.0.qualification.json",
+        "requiredForManagedTask": True,
+        "maxPreflightProcesses": 1,
+        "modelCallsForPreflight": 0,
+    },
+    "planningOnly": {
+        "schemaVersion": "agent-planning-only-launch-profile.v1",
+        "status": "UNSUPPORTED",
+        "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+        "argvTemplate": [],
+        "inputTransport": "STDIN",
+        "resultFormat": "SINGLE_JSON_OBJECT",
+        "containment": {"filesystem": "unverified", "tools": "read,grep,find,ls", "network": "host-owned-provider-rpc", "writesAllowed": False},
+        "qualificationEvidence": [],
+        "reason": "Pi 0.83.0 has a read-only tool list but no verified bounded stdin planning-result transport for this contract.",
+    },
+}

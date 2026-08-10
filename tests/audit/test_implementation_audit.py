@@ -12,6 +12,9 @@ from agent_lifecycle.audit import (
     validate_implementation_audit_report,
 )
 from agent_lifecycle.contracts import canonical_digest, write_json_create
+from agent_lifecycle.planning.task_compatibility import (
+    build_task_plan_compatibility_receipt,
+)
 
 
 class ImplementationAuditTests(unittest.TestCase):
@@ -134,6 +137,78 @@ class ImplementationAuditTests(unittest.TestCase):
             self.assertEqual(final_audit["schemaVersion"], "agent-final-implementation-audit.v1")
             self.assertEqual(final_audit["status"], "PASS")
             self.assertEqual(validate_final_implementation_audit(final_audit)["status"], "PASS")
+
+    def test_final_audit_accepts_prior_report_with_controller_compatibility_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle = _write_bundle(root, phase="FINAL_AUDIT", task_status="ACCEPTED")
+            result_path, review_path = _write_result_review(root, bundle)
+            report = build_implementation_audit_report(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                task_id="WS-01",
+                result_path=result_path,
+                review_path=review_path,
+            )
+            report_path = root / "work/WS-01/attempt-1/implementation-audit.json"
+            write_json_create(report_path, report)
+
+            state = json.loads(Path(bundle["statePath"]).read_text(encoding="utf-8"))
+            previous_state = json.loads(json.dumps(state))
+            previous_task = previous_state["tasks"][0]
+            previous_task["implementationAuditReport"] = {
+                "path": "work/WS-01/attempt-1/implementation-audit.json",
+                "sha256": canonical_digest(report),
+                "bytes": len(report_path.read_bytes()),
+                "taskId": "WS-01",
+                "attempt": 1,
+                "verdict": "ACCEPTED",
+                "reportDigest": report["reportDigest"],
+            }
+
+            manifest = json.loads(Path(bundle["manifestPath"]).read_text(encoding="utf-8"))
+            manifest["planRevision"] = 2
+            current_digest = canonical_digest(manifest)
+            Path(bundle["manifestPath"]).write_text(json.dumps(manifest), encoding="utf-8")
+            state["planRevision"] = 2
+            state["planDigest"] = current_digest
+            state["sourceRevision"] = "source-2"
+            state["tasks"][0] = json.loads(json.dumps(previous_task))
+            receipt = build_task_plan_compatibility_receipt(
+                previous_state=previous_state,
+                current_plan={
+                    "runId": "run",
+                    "packageId": "package",
+                    "planRevision": 2,
+                    "planDigest": current_digest,
+                    "sourceRevision": "source-2",
+                },
+                previous_task=previous_task,
+                current_task=state["tasks"][0],
+            )
+            state["tasks"][0]["planCompatibilityReceipt"] = receipt
+            Path(bundle["statePath"]).write_text(json.dumps(state), encoding="utf-8")
+
+            final_audit = build_final_implementation_audit(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                report_paths=["work/WS-01/attempt-1/implementation-audit.json"],
+            )
+
+            self.assertEqual(final_audit["status"], "PASS")
+            self.assertEqual(
+                final_audit["reports"][0]["validation"]["planCompatibility"]["status"],
+                "PASS",
+            )
+
+            state["tasks"][0].pop("planCompatibilityReceipt")
+            Path(bundle["statePath"]).write_text(json.dumps(state), encoding="utf-8")
+            rejected = build_final_implementation_audit(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                report_paths=["work/WS-01/attempt-1/implementation-audit.json"],
+            )
+            self.assertEqual(rejected["status"], "FAIL")
 
     def test_final_implementation_audit_validation_rejects_forged_pass_with_blockers(self) -> None:
         audit = {

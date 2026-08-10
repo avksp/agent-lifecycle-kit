@@ -213,6 +213,8 @@ class ContractTests(unittest.TestCase):
             "agent-publication-version-validation.v1",
             "agent-adapter-scaffold-result.v1",
             "agent-workflow-lineage-check.v1",
+            "agent-task-plan-compatibility-receipt.v1",
+            "agent-task-plan-compatibility-receipt-validation.v1",
             "agent-implementation-audit-report.v1",
             "agent-implementation-audit-report-validation.v1",
             "agent-final-implementation-audit.v1",

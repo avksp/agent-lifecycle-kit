@@ -371,16 +371,13 @@ def run_planning_qualification_candidate(
     profile_path: Path,
     project_root: Path,
     approval_digest: str,
+    max_wall_seconds: float,
+    model_token_budget: int,
     process_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run one explicitly approved live candidate without promoting the profile."""
 
     root = project_root.resolve()
-    if root != Path.cwd().resolve():
-        raise LifecycleError(
-            "planning-qualification-project-root",
-            "planning qualification must run with the disposable repository as cwd",
-        )
     _relative, profile, validation = load_local_launch_profile(profile_path, project_root=root)
     planning = profile.get("planningOnly")
     if not isinstance(planning, dict) or planning.get("status") != "CANDIDATE":
@@ -392,6 +389,29 @@ def run_planning_qualification_candidate(
             before=None,
             after=None,
             blockers=[{"code": "planning-qualification-candidate-unavailable"}],
+            usage_evidence=None,
+            approved_model_token_budget=model_token_budget,
+            approved_wall_seconds=max_wall_seconds,
+        )
+    if (
+        not isinstance(max_wall_seconds, (int, float))
+        or isinstance(max_wall_seconds, bool)
+        or max_wall_seconds <= 0
+        or not isinstance(model_token_budget, int)
+        or isinstance(model_token_budget, bool)
+        or model_token_budget <= 0
+    ):
+        return _planning_qualification_report(
+            profile=profile,
+            profile_digest=str(validation["profileDigest"]),
+            approval_digest=approval_digest,
+            receipt=None,
+            before=None,
+            after=None,
+            blockers=[{"code": "planning-qualification-budget-invalid"}],
+            usage_evidence=None,
+            approved_model_token_budget=model_token_budget,
+            approved_wall_seconds=max_wall_seconds,
         )
     env, _env_receipt = resolve_launch_env(profile, process_env=process_env)
     argv = render_planning_launch_argv(profile)
@@ -407,10 +427,24 @@ def run_planning_qualification_candidate(
         input_source="qualification-fixture",
         argv=argv,
         env=env,
-        timeout_seconds=float(profile["timeoutSeconds"]),
+        timeout_seconds=min(float(profile["timeoutSeconds"]), float(max_wall_seconds)),
+        process_cwd=root,
     )
     after = capture_git_worktree_identity(root)
     blockers = list(receipt.get("blockers", []))
+    usage = receipt.get("usageEvidence") if isinstance(receipt.get("usageEvidence"), dict) else {}
+    input_tokens = usage.get("inputTokens")
+    output_tokens = usage.get("outputTokens")
+    if usage.get("confidence") != "ATTESTED" or not isinstance(input_tokens, int) or not isinstance(output_tokens, int):
+        blockers.append({"code": "planning-qualification-usage-unattested"})
+    elif input_tokens + output_tokens > model_token_budget:
+        blockers.append(
+            {
+                "code": "planning-qualification-token-budget-exceeded",
+                "approvedModelTokenBudget": model_token_budget,
+                "observedTokens": input_tokens + output_tokens,
+            }
+        )
     if before["identityDigest"] != after["identityDigest"]:
         blockers.append({"code": "planning-qualification-worktree-drift"})
     return _planning_qualification_report(
@@ -421,6 +455,9 @@ def run_planning_qualification_candidate(
         before=before,
         after=after,
         blockers=blockers,
+        usage_evidence=usage,
+        approved_model_token_budget=model_token_budget,
+        approved_wall_seconds=max_wall_seconds,
     )
 
 
@@ -659,6 +696,9 @@ def _planning_qualification_report(
     before: dict[str, Any] | None,
     after: dict[str, Any] | None,
     blockers: list[dict[str, Any]],
+    usage_evidence: dict[str, Any] | None,
+    approved_model_token_budget: int,
+    approved_wall_seconds: float,
 ) -> dict[str, Any]:
     passed = (
         receipt is not None
@@ -676,6 +716,16 @@ def _planning_qualification_report(
         "expectedHostVersion": policy.get("expectedVersion"),
         "profileDigest": profile_digest,
         "approvalDigest": approval_digest,
+        "approvedLimits": {
+            "maxWallSeconds": approved_wall_seconds,
+            "modelTokenBudget": approved_model_token_budget,
+        },
+        "usageEvidence": usage_evidence or {
+            "confidence": "MISSING",
+            "inputTokens": None,
+            "outputTokens": None,
+            "moneyFieldsCanonical": False,
+        },
         "planningSupportStatus": "PLANNING_ONLY_QUALIFIED" if passed else "PLANNING_ONLY_UNSUPPORTED",
         "processCalls": 1 if receipt and receipt.get("hostLaunchStarted") else 0,
         "modelCallsStarted": bool(receipt and receipt.get("modelCallsStarted")),

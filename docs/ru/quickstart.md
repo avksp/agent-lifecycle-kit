@@ -27,7 +27,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 устанавливайте точную семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.59.0
+python -m pip install agent-lifecycle-kit==1.60.0
 agent-lifecycle version
 ```
 

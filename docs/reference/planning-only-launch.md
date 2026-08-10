@@ -20,12 +20,20 @@ start a host process. Raw input in `--mode implement` is always rejected.
 Planning launch is a separate claim from adapter maturity and from qualified
 launch of a frozen implementation task.
 
-| Adapter | Exact candidate version | Planning launch status |
-| --- | --- | --- |
-| Codex | `0.147.0` | `PLANNING_ONLY_UNSUPPORTED` until live containment evidence passes |
-| Claude Code | `2.1.226` | `PLANNING_ONLY_UNSUPPORTED` until live containment evidence passes |
-| OpenCode | `1.18.15` | `PLANNING_ONLY_UNSUPPORTED` until a safe planning profile and live evidence pass |
-| Cursor, Gemini CLI, Goose, Grok Build, Hermes, Kimi Code, OpenInterpreter, Pi, Qwen Code | Not declared in this contract | Unsupported for planning launch |
+| Adapter | Exact profile version | Profile status | Planning launch status |
+| --- | --- | --- | --- |
+| Codex | `0.147.0` | `CANDIDATE` | `PLANNING_ONLY_UNSUPPORTED` until live containment evidence passes |
+| Claude Code | `2.1.226` | `CANDIDATE` | `PLANNING_ONLY_UNSUPPORTED` until live containment evidence passes |
+| OpenCode | `1.18.15` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: no verified native read-only profile |
+| Cursor Agent | `2026.07.23` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: bounded stdin result transport is not verified |
+| Gemini CLI | `0.46.0` | `CANDIDATE` | `PLANNING_ONLY_UNSUPPORTED` until live containment evidence passes |
+| Goose | `1.45.0` | `CANDIDATE` | `PLANNING_ONLY_UNSUPPORTED` until live containment evidence passes |
+| Grok Build | `0.2.118` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: bounded stdin result transport is not verified |
+| Hermes Agent | `0.19.0` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: one-shot tool denial is not verified |
+| Kimi Code | `0.30.0` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: bounded stdin result transport is not verified |
+| OpenInterpreter | `0.0.34` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: no reliable native read-only profile is exposed |
+| Pi | `0.83.0` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: bounded stdin result transport is not verified |
+| Qwen Code | `0.21.8` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: native read-only or tool denial is not verified |
 
 `VERIFIED` adapter maturity and `WRAPPER_ONLY` managed-session support do not
 promote this column. A structurally valid profile or successful version probe
@@ -35,7 +43,8 @@ claim support.
 
 ## Prepare and inspect a candidate
 
-Codex, Claude Code and OpenCode have candidate profile generators:
+All bundled adapters have exact-version profile generators. Generating and
+inspecting a profile does not qualify it:
 
 ```bash
 agent-lifecycle adapter launch-profile \
@@ -50,10 +59,13 @@ agent-lifecycle host-launch preflight \
   --profile .alk/host-launch/codex.json
 ```
 
-Replace `codex` with `claude` or `opencode` as needed. The profile and its
+Replace `codex` with any adapter id from the table. The profile and its
 preflight receipt stay below ignored `.alk/host-launch/`. Preflight verifies
 the executable version with no model call; it is necessary but not sufficient
-for planning qualification.
+for planning qualification. An `UNSUPPORTED` profile remains blocked even
+after a successful version probe. A `CANDIDATE` remains blocked until an
+operator-approved live harness proves the exact version and containment
+boundary and the shipped evidence is independently accepted.
 
 If the default profile is missing, `start --launch` returns the exact profile
 and preflight commands in its blockers. It does not create or trust a profile

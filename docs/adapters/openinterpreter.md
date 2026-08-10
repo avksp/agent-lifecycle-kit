@@ -41,3 +41,21 @@ proof. Redacted
 summary evidence is stored in
 `docs/adapters/evidence/openinterpreter-live-verified.md`; raw `work/`
 artifacts remain host-local and ignored.
+
+## Planning-only launch status
+
+Exact-version profile: `0.0.34`. Profile status: `UNSUPPORTED`. Planning
+support: `PLANNING_ONLY_UNSUPPORTED`. The installed command surface does not expose a reliable native read-only profile.
+
+Generate and inspect the local profile with:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter openinterpreter --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/openinterpreter.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/openinterpreter.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/openinterpreter.json
+```
+
+A successful version preflight does not authorize planning launch.
+`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
+promote planning support. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).

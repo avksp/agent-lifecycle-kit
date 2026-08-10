@@ -1,0 +1,35 @@
+"""Version-bound local profile for Goose 1.45.0."""
+
+PROFILE = {
+    "schemaVersion": "agent-local-host-launch-profile.v1",
+    "status": "LOCAL_OPT_IN",
+    "adapterId": "goose",
+    "executable": "goose",
+    "argvTemplate": ["run", "--instructions", "Continue the frozen ALK task without bypassing lifecycle gates.", "--no-profile", "--no-session", "--output-format", "json"],
+    "versionProbeArgs": ["--version"],
+    "env": {"allow": ["HOME", "PATH"], "allowPatterns": [], "projectPolicyAllowed": False},
+    "timeoutSeconds": 300,
+    "shell": False,
+    "writesNativeConfig": False,
+    "promptInjectionDefault": False,
+    "publicSupportClaimed": False,
+    "productionPromotionClaimed": False,
+    "qualification": {
+        "schemaVersion": "agent-host-launch-qualification-policy.v1",
+        "expectedVersion": "1.45.0",
+        "receiptFile": "goose-1.45.0.qualification.json",
+        "requiredForManagedTask": True,
+        "maxPreflightProcesses": 1,
+        "modelCallsForPreflight": 0,
+    },
+    "planningOnly": {
+        "schemaVersion": "agent-planning-only-launch-profile.v1",
+        "status": "CANDIDATE",
+        "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+        "argvTemplate": ["run", "--instructions", "-", "--no-profile", "--no-session", "--output-format", "json"],
+        "inputTransport": "STDIN",
+        "resultFormat": "SINGLE_JSON_OBJECT",
+        "containment": {"filesystem": "goose-no-profile-session", "tools": "host-owned-recipe-policy", "network": "host-owned-provider-rpc", "writesAllowed": False},
+        "qualificationEvidence": [],
+    },
+}
