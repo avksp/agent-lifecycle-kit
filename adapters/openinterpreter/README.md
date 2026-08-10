@@ -30,3 +30,10 @@ progress on stderr by default.
 
 The descriptor does not claim safe native argv launch for this host CLI. Provider
 credentials, native launch, waits, cancellation and telemetry remain host-owned.
+
+## Planning-only launch
+
+The shipped `0.0.34` profile is `UNSUPPORTED` and resolves to
+`PLANNING_ONLY_UNSUPPORTED`. The installed command surface does not expose a reliable native read-only profile. Static validation and version
+preflight start no model and cannot promote this status. Generic managed launch
+remains `WRAPPER_ONLY`.

@@ -26,3 +26,10 @@ by default.
 
 The descriptor does not claim safe native argv launch for this host CLI. Provider
 credentials, native launch, waits, cancellation and telemetry remain host-owned.
+
+## Planning-only launch
+
+The shipped `0.46.0` profile is `CANDIDATE` and resolves to
+`PLANNING_ONLY_UNSUPPORTED`. The plan approval mode and stdin route form a static candidate, but no accepted live containment evidence is shipped. Static validation and version
+preflight start no model and cannot promote this status. Generic managed launch
+remains `WRAPPER_ONLY`.

@@ -90,6 +90,15 @@ class WorkflowPlanAdoptionTests(unittest.TestCase):
             state["tasks"][0]["attempt"] = 1
             state["tasks"][0]["result"] = {"path": "work/WS-01/attempt-1/task-result.json", "sha256": "2" * 64, "bytes": 10}
             state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["implementationAuditReport"] = {
+                "path": "work/WS-01/attempt-1/implementation-audit.json",
+                "sha256": "4" * 64,
+                "bytes": 10,
+                "taskId": "WS-01",
+                "attempt": 1,
+                "verdict": "ACCEPTED",
+                "reportDigest": "5" * 64,
+            }
             state_path.write_text(json.dumps(state), encoding="utf-8")
             _write_plan_bundle(root)
 
@@ -110,6 +119,11 @@ class WorkflowPlanAdoptionTests(unittest.TestCase):
             stored = json.loads(state_path.read_text(encoding="utf-8"))
             stored_task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
             self.assertEqual(stored_task["adoptedFromPlanRevision"], 1)
+            receipt = stored_task["planCompatibilityReceipt"]
+            self.assertEqual(receipt["schemaVersion"], "agent-task-plan-compatibility-receipt.v1")
+            self.assertEqual(receipt["previousPlan"]["planRevision"], 1)
+            self.assertEqual(receipt["currentPlan"]["planRevision"], 2)
+            self.assertEqual(receipt["acceptedArtifacts"]["implementationAuditReport"]["sha256"], "4" * 64)
             self.assertEqual(payload["phase"], "READY")
 
     def test_adopt_plan_preserve_unlocks_new_dependents(self) -> None:

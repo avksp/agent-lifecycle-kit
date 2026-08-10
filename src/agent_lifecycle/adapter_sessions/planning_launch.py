@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.adapter_sessions.process import run_process
@@ -76,6 +77,7 @@ def run_planning_launch(
     env: dict[str, str],
     advisory: dict[str, Any] | None = None,
     timeout_seconds: float = MAX_PLANNING_WALL_SECONDS,
+    process_cwd: Path | None = None,
 ) -> dict[str, Any]:
     try:
         envelope = build_planning_envelope(
@@ -100,6 +102,7 @@ def run_planning_launch(
         argv,
         env=env,
         timeout_seconds=min(timeout_seconds, MAX_PLANNING_WALL_SECONDS),
+        cwd=process_cwd,
         stdin_text=json.dumps(envelope, sort_keys=True, separators=(",", ":")),
         max_input_bytes=MAX_ENVELOPE_BYTES,
         max_output_bytes=MAX_CAPTURED_OUTPUT_BYTES,

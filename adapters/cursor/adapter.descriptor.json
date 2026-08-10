@@ -175,15 +175,47 @@
     "writesNativeConfig": false,
     "promptInjectionDefault": false
   },
+  "qualifiedLaunch": {
+    "status": "VERSION_BOUND_LOCAL",
+    "profilePath": "adapters/cursor/launch_profile.py",
+    "expectedHostVersion": "2026.07.23",
+    "planningProfileStatus": "UNSUPPORTED",
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "planningQualificationRequired": true,
+    "managedLaunchStatusPreserved": "WRAPPER_ONLY",
+    "publicSupportClaimed": false,
+    "productionPromotionClaimed": false
+  },
   "installation": {
     "schemaVersion": "agent-adapter-installation-facts.v1",
-    "binaryAliases": ["cursor"],
+    "binaryAliases": [
+      "cursor",
+      "cursor-agent"
+    ],
     "files": [
-      {"path": ".cursor-plugin/plugin.json", "action": "read", "required": true},
-      {"path": ".cursor-plugin/marketplace.json", "action": "read", "required": true}
+      {
+        "path": ".cursor-plugin/plugin.json",
+        "action": "read",
+        "required": true
+      },
+      {
+        "path": ".cursor-plugin/marketplace.json",
+        "action": "read",
+        "required": true
+      }
     ],
     "commands": [
-      {"argv": ["ln", "-s", "<checkout>", "<cursor-local-plugin-directory>/agent-lifecycle-kit"], "purpose": "link a trusted checkout into the local plugin directory", "mutatesHost": true, "requiresOperator": true}
+      {
+        "argv": [
+          "ln",
+          "-s",
+          "<checkout>",
+          "<cursor-local-plugin-directory>/agent-lifecycle-kit"
+        ],
+        "purpose": "link a trusted checkout into the local plugin directory",
+        "mutatesHost": true,
+        "requiresOperator": true
+      }
     ],
     "operatorActions": [
       "Replace the local plugin directory placeholder before running the command.",

@@ -192,17 +192,63 @@
     "artifactFormat": "stream-jsonl",
     "maxArtifactBytes": 8388608
   },
+  "qualifiedLaunch": {
+    "status": "VERSION_BOUND_LOCAL",
+    "profilePath": "adapters/qwen-code/launch_profile.py",
+    "expectedHostVersion": "0.21.8",
+    "planningProfileStatus": "UNSUPPORTED",
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "planningQualificationRequired": true,
+    "managedLaunchStatusPreserved": "WRAPPER_ONLY",
+    "publicSupportClaimed": false,
+    "productionPromotionClaimed": false
+  },
   "installation": {
     "schemaVersion": "agent-adapter-installation-facts.v1",
-    "binaryAliases": ["qwen", "qwen-code"],
+    "binaryAliases": [
+      "qwen",
+      "qwen-code"
+    ],
     "files": [
-      {"path": "adapters/qwen-code/adapter.descriptor.json", "action": "read", "required": true},
-      {"path": "adapters/qwen-code/capabilities.manifest.json", "action": "read", "required": true},
-      {"path": "adapters/qwen-code/README.md", "action": "read", "required": true}
+      {
+        "path": "adapters/qwen-code/adapter.descriptor.json",
+        "action": "read",
+        "required": true
+      },
+      {
+        "path": "adapters/qwen-code/capabilities.manifest.json",
+        "action": "read",
+        "required": true
+      },
+      {
+        "path": "adapters/qwen-code/README.md",
+        "action": "read",
+        "required": true
+      }
     ],
     "commands": [
-      {"argv": ["python", "-m", "pip", "install", "-e", "<checkout>"], "purpose": "install the core CLI from a trusted checkout", "mutatesHost": true, "requiresOperator": true},
-      {"argv": ["qwen", "--version"], "purpose": "confirm the host CLI is available before live proof", "mutatesHost": false, "requiresOperator": true}
+      {
+        "argv": [
+          "python",
+          "-m",
+          "pip",
+          "install",
+          "-e",
+          "<checkout>"
+        ],
+        "purpose": "install the core CLI from a trusted checkout",
+        "mutatesHost": true,
+        "requiresOperator": true
+      },
+      {
+        "argv": [
+          "qwen",
+          "--version"
+        ],
+        "purpose": "confirm the host CLI is available before live proof",
+        "mutatesHost": false,
+        "requiresOperator": true
+      }
     ],
     "operatorActions": [
       "Configure host-local model and profile settings outside the portable core.",

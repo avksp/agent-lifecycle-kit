@@ -8,6 +8,9 @@ from typing import Any
 from agent_lifecycle.audit.ownership import build_ownership_report, report_has_category
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.planning.task_compatibility import (
+    validate_task_plan_compatibility_receipt,
+)
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.reviews import validate_task_result, validate_task_review
 from agent_lifecycle.workflow.sandbox_policy import validate_task_sandbox_evidence
@@ -162,8 +165,10 @@ def validate_implementation_audit_report(
     *,
     state: dict[str, Any] | None = None,
     task: dict[str, Any] | None = None,
+    report_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
+    compatibility_validation: dict[str, Any] | None = None
     if report.get("schemaVersion") != IMPLEMENTATION_AUDIT_SCHEMA:
         blockers.append({"code": "implementation-audit-schema", "message": "unsupported implementation audit schemaVersion"})
     body = {key: value for key, value in report.items() if key != "reportDigest"}
@@ -195,7 +200,22 @@ def validate_implementation_audit_report(
             "planDigest": state.get("planDigest"),
             "sourceRevision": state.get("sourceRevision"),
         }
-        _check_expected(report, expected, blockers, prefix="implementation-audit")
+        if any(report.get(key) != value for key, value in expected.items()):
+            compatibility_validation = validate_task_plan_compatibility_receipt(
+                task.get("planCompatibilityReceipt") if isinstance(task, dict) else None,
+                state=state,
+                task=task or {},
+                report=report,
+                report_identity=report_identity,
+            )
+            if compatibility_validation["status"] != "PASS":
+                blockers.append(
+                    {
+                        "code": "implementation-audit-lineage-mismatch",
+                        "message": "prior implementation audit is not covered by a valid task compatibility receipt",
+                        "compatibilityValidation": compatibility_validation,
+                    }
+                )
     if task is not None:
         _check_expected(
             report,
@@ -209,6 +229,7 @@ def validate_implementation_audit_report(
         "verdict": verdict,
         "blockers": blockers,
         "reportDigest": report.get("reportDigest"),
+        "planCompatibility": compatibility_validation,
     }
     return {**body, "validationDigest": canonical_digest(body)}
 
@@ -241,8 +262,13 @@ def build_final_implementation_audit(
         rel = normalize_repo_path(raw_path, label="implementation audit report")
         report = read_json_object(root / rel, label="implementation audit report")
         task = find_task(state, str(report.get("taskId"))) if isinstance(report.get("taskId"), str) else None
-        validation = validate_implementation_audit_report(report, state=state, task=task)
         identity = artifact_identity(root, rel, report)
+        validation = validate_implementation_audit_report(
+            report,
+            state=state,
+            task=task,
+            report_identity=identity,
+        )
         accepted = validation["status"] == "PASS" and report.get("status") == "PASS" and report.get("verdict") == "ACCEPTED"
         if not accepted:
             blockers.append({"code": "implementation-audit-report-not-accepted", "path": rel, "validation": validation})

@@ -57,9 +57,14 @@ def validate_task_implementation_audit_artifact(
         validate_implementation_audit_report,
     )
 
-    validation = validate_implementation_audit_report(report, state=state, task=task)
-    require_implementation_audit_accepted(validation, report)
     identity = artifact_identity(root, rel, report)
+    validation = validate_implementation_audit_report(
+        report,
+        state=state,
+        task=task,
+        report_identity=identity,
+    )
+    require_implementation_audit_accepted(validation, report)
     return {
         **identity,
         "taskId": report.get("taskId"),

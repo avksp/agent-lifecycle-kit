@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import threading
+from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.adapter_sessions.redaction import redact_process_text
@@ -14,6 +15,7 @@ def run_process(
     *,
     env: dict[str, str],
     timeout_seconds: float,
+    cwd: Path | None = None,
     stdin_text: str | None = None,
     max_input_bytes: int | None = None,
     max_output_bytes: int | None = None,
@@ -23,6 +25,7 @@ def run_process(
             argv,
             env=env,
             timeout_seconds=timeout_seconds,
+            cwd=cwd,
             stdin_text=stdin_text or "",
             max_input_bytes=max_input_bytes,
             max_output_bytes=max_output_bytes,
@@ -36,6 +39,7 @@ def run_process(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             timeout=timeout_seconds,
+            cwd=cwd,
             check=False,
         )
         stdout_tail, stdout_redacted = redact_process_text(result.stdout[-2000:])
@@ -85,6 +89,7 @@ def _run_bounded_process(
     *,
     env: dict[str, str],
     timeout_seconds: float,
+    cwd: Path | None,
     stdin_text: str,
     max_input_bytes: int | None,
     max_output_bytes: int | None,
@@ -115,6 +120,7 @@ def _run_bounded_process(
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            cwd=cwd,
         )
     except OSError as exc:
         return _bounded_failure(

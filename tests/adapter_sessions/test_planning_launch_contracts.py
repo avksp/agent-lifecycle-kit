@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
@@ -14,6 +16,8 @@ from agent_lifecycle.adapter_sessions.planning_launch import (  # noqa: E402
     parse_planning_result,
     run_planning_launch,
 )
+from agent_lifecycle.adapter_sessions.launcher import run_planning_qualification_candidate  # noqa: E402
+from agent_lifecycle.adapter_sessions.qualification import load_shipped_launch_profile  # noqa: E402
 from agent_lifecycle.contracts.schemas import get_schema  # noqa: E402
 
 
@@ -86,6 +90,123 @@ class PlanningLaunchContractTests(unittest.TestCase):
 
         self.assertIsNone(result)
         self.assertIn("planning-result-authority-claim", {item["code"] for item in blockers})
+
+    def test_launch_uses_explicit_child_cwd(self) -> None:
+        result = {
+            "schemaVersion": "agent-planning-result.v1",
+            "status": "REVIEW_REQUIRED",
+            "summary": "cwd supplied by the controller",
+            "requirements": [{"id": "R1"}],
+            "workstreams": [{"id": "WS1"}],
+            "evidenceRoutes": [{"id": "EV1"}],
+            "implementationAuthorized": False,
+            "productionPromotionClaimed": False,
+        }
+        script = "import json,sys; json.load(sys.stdin); print(json.dumps(" + repr(result) + "))"
+        with tempfile.TemporaryDirectory() as tmp:
+            receipt = run_planning_launch(
+                adapter_id="codex",
+                session_id="session-cwd",
+                requested_mode="plan",
+                task_text="inspect",
+                input_source="text",
+                argv=[sys.executable, "-c", script],
+                env=dict(os.environ),
+                process_cwd=Path(tmp),
+            )
+        self.assertEqual(receipt["status"], "REVIEW_REQUIRED")
+
+    def test_qualification_enforces_timeout_and_attested_token_budget(self) -> None:
+        profile = load_shipped_launch_profile("gemini-cli", repository_root=ROOT)
+        receipt = {
+            "status": "REVIEW_REQUIRED",
+            "blockers": [],
+            "hostLaunchStarted": True,
+            "modelCallsStarted": True,
+            "usageEvidence": {
+                "confidence": "ATTESTED",
+                "inputTokens": 80,
+                "outputTokens": 30,
+                "moneyFieldsCanonical": False,
+            },
+            "receiptDigest": "planning-receipt",
+        }
+        identity = {"identityDigest": "unchanged"}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            profile_path = root / ".alk/host-launch/gemini-cli.json"
+            profile_path.parent.mkdir(parents=True)
+            profile_path.write_text(json.dumps(profile), encoding="utf-8")
+            with (
+                mock.patch(
+                    "agent_lifecycle.adapter_sessions.launcher.capture_git_worktree_identity",
+                    side_effect=[identity, identity],
+                ),
+                mock.patch(
+                    "agent_lifecycle.adapter_sessions.launcher.run_planning_launch",
+                    return_value=receipt,
+                ) as launch,
+            ):
+                evidence = run_planning_qualification_candidate(
+                    profile_path=profile_path,
+                    project_root=root,
+                    approval_digest="approval",
+                    max_wall_seconds=25,
+                    model_token_budget=100,
+                    process_env={"HOME": tmp, "PATH": os.environ.get("PATH", "")},
+                )
+        self.assertEqual(evidence["status"], "FAIL")
+        self.assertIn(
+            "planning-qualification-token-budget-exceeded",
+            {item["code"] for item in evidence["blockers"]},
+        )
+        self.assertEqual(launch.call_args.kwargs["timeout_seconds"], 25)
+        self.assertEqual(launch.call_args.kwargs["process_cwd"], root)
+
+    def test_qualification_rejects_unattested_usage(self) -> None:
+        profile = load_shipped_launch_profile("gemini-cli", repository_root=ROOT)
+        receipt = {
+            "status": "REVIEW_REQUIRED",
+            "blockers": [],
+            "hostLaunchStarted": True,
+            "modelCallsStarted": True,
+            "usageEvidence": {
+                "confidence": "ESTIMATED",
+                "inputTokens": 10,
+                "outputTokens": 10,
+                "moneyFieldsCanonical": False,
+            },
+            "receiptDigest": "planning-receipt",
+        }
+        identity = {"identityDigest": "unchanged"}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            profile_path = root / ".alk/host-launch/gemini-cli.json"
+            profile_path.parent.mkdir(parents=True)
+            profile_path.write_text(json.dumps(profile), encoding="utf-8")
+            with (
+                mock.patch(
+                    "agent_lifecycle.adapter_sessions.launcher.capture_git_worktree_identity",
+                    side_effect=[identity, identity],
+                ),
+                mock.patch(
+                    "agent_lifecycle.adapter_sessions.launcher.run_planning_launch",
+                    return_value=receipt,
+                ),
+            ):
+                evidence = run_planning_qualification_candidate(
+                    profile_path=profile_path,
+                    project_root=root,
+                    approval_digest="approval",
+                    max_wall_seconds=25,
+                    model_token_budget=100,
+                    process_env={"HOME": tmp, "PATH": os.environ.get("PATH", "")},
+                )
+        self.assertEqual(evidence["status"], "FAIL")
+        self.assertIn(
+            "planning-qualification-usage-unattested",
+            {item["code"] for item in evidence["blockers"]},
+        )
 
 
 if __name__ == "__main__":

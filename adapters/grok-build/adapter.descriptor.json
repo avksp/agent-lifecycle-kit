@@ -215,17 +215,63 @@
     "writesNativeConfig": false,
     "promptInjectionDefault": false
   },
+  "qualifiedLaunch": {
+    "status": "VERSION_BOUND_LOCAL",
+    "profilePath": "adapters/grok-build/launch_profile.py",
+    "expectedHostVersion": "0.2.118",
+    "planningProfileStatus": "UNSUPPORTED",
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "planningQualificationRequired": true,
+    "managedLaunchStatusPreserved": "WRAPPER_ONLY",
+    "publicSupportClaimed": false,
+    "productionPromotionClaimed": false
+  },
   "installation": {
     "schemaVersion": "agent-adapter-installation-facts.v1",
-    "binaryAliases": ["grok-build"],
+    "binaryAliases": [
+      "grok-build",
+      "agent"
+    ],
     "files": [
-      {"path": "adapters/grok-build/adapter.descriptor.json", "action": "read", "required": true},
-      {"path": "adapters/grok-build/capabilities.manifest.json", "action": "read", "required": true},
-      {"path": "adapters/grok-build/README.md", "action": "read", "required": true}
+      {
+        "path": "adapters/grok-build/adapter.descriptor.json",
+        "action": "read",
+        "required": true
+      },
+      {
+        "path": "adapters/grok-build/capabilities.manifest.json",
+        "action": "read",
+        "required": true
+      },
+      {
+        "path": "adapters/grok-build/README.md",
+        "action": "read",
+        "required": true
+      }
     ],
     "commands": [
-      {"argv": ["python", "-m", "pip", "install", "-e", "<checkout>"], "purpose": "install the core CLI from a trusted checkout", "mutatesHost": true, "requiresOperator": true},
-      {"argv": ["grok-build", "--version"], "purpose": "confirm the host CLI is available before live proof", "mutatesHost": false, "requiresOperator": true}
+      {
+        "argv": [
+          "python",
+          "-m",
+          "pip",
+          "install",
+          "-e",
+          "<checkout>"
+        ],
+        "purpose": "install the core CLI from a trusted checkout",
+        "mutatesHost": true,
+        "requiresOperator": true
+      },
+      {
+        "argv": [
+          "grok-build",
+          "--version"
+        ],
+        "purpose": "confirm the host CLI is available before live proof",
+        "mutatesHost": false,
+        "requiresOperator": true
+      }
     ],
     "operatorActions": [
       "Configure host-local model and profile settings outside the portable core.",

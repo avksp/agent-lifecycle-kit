@@ -103,6 +103,7 @@ REQUIRED_CORE_SCHEMAS: tuple[str, ...] = (
     "agent-runner-state.v1",
     "agent-adapter-event.v1",
     "agent-review-verdict.v1",
+    "agent-task-plan-compatibility-receipt.v1",
 )
 
 

@@ -16,10 +16,10 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 
 Главная цель проекта - закрывать задачу полностью, с максимально возможным качеством для выбранной модели, без оверинжиринга и с контролем расхода токенов.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.58.0 · **Python:** 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.60.0 · **Python:** 3.11-3.14
 
 ## Быстрый старт
-Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.59.0`.
+Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.60.0`.
 Из исходного дерева:
 
 ```bash

@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.planning.task_compatibility import (
+    build_task_plan_compatibility_receipt,
+    task_contracts_compatible,
+)
 from agent_lifecycle.specification import validate_completion_check
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
@@ -18,6 +22,9 @@ from agent_lifecycle.workflow.state import (
     deadline_after,
     now_iso,
 )
+
+# Preserve the existing internal extension point while keeping one algorithm.
+_task_contract_compatible = task_contracts_compatible
 
 
 def adopt_plan(
@@ -47,7 +54,17 @@ def adopt_plan(
                 "reset-required",
                 "preserving accepted tasks requires resetTasks",
             )
-        tasks = _preserve_accepted_tasks(state, tasks)
+        tasks = _preserve_accepted_tasks(
+            state,
+            tasks,
+            current_plan={
+                "runId": state.get("runId"),
+                "packageId": state.get("packageId"),
+                "planRevision": revision,
+                "planDigest": digest,
+                "sourceRevision": source_revision,
+            },
+        )
     previous_phase = state["phase"]
     _archive_prior_snapshot(state)
     _replace_plan_state(
@@ -74,6 +91,14 @@ def adopt_plan(
             "planRevision": revision,
             "resetTasks": reset_tasks,
             "preserveAcceptedCompatible": preserve_accepted_compatible,
+            "taskCompatibilityReceipts": [
+                {
+                    "taskId": task.get("id"),
+                    "receiptDigest": task["planCompatibilityReceipt"]["receiptDigest"],
+                }
+                for task in tasks
+                if isinstance(task.get("planCompatibilityReceipt"), dict)
+            ],
         },
     )
     return status(state_path)
@@ -227,6 +252,8 @@ def _build_tasks(
 def _preserve_accepted_tasks(
     previous_state: dict[str, Any],
     new_tasks: list[dict[str, Any]],
+    *,
+    current_plan: dict[str, Any],
 ) -> list[dict[str, Any]]:
     previous = {
         task.get("id"): task
@@ -237,43 +264,19 @@ def _preserve_accepted_tasks(
     prior_revision = previous_state.get("planRevision")
     for task in new_tasks:
         accepted = previous.get(task.get("id"))
-        if not accepted or not _task_contract_compatible(accepted, task):
+        if not accepted or not task_contracts_compatible(accepted, task):
             continue
+        compatibility_receipt = build_task_plan_compatibility_receipt(
+            previous_state=previous_state,
+            current_plan=current_plan,
+            previous_task=accepted,
+            current_task=task,
+        )
         _copy_accepted_runtime(task, accepted)
         task["adoptedFromPlanDigest"] = prior_digest
         task["adoptedFromPlanRevision"] = prior_revision
+        task["planCompatibilityReceipt"] = compatibility_receipt
     return new_tasks
-
-
-def _task_contract_compatible(
-    previous: dict[str, Any],
-    current: dict[str, Any],
-) -> bool:
-    keys = (
-        "id",
-        "title",
-        "owner",
-        "dependsOn",
-        "writes",
-        "reviewer",
-        "launchGate",
-        "capabilityHints",
-        "requiredTools",
-        "contextRefs",
-        "acceptanceIds",
-        "evidenceIds",
-        "executionPolicy",
-        "modelRoute",
-        "reviewMesh",
-        "artifactPaths",
-        "required",
-    )
-    return all(
-        previous.get(key, []) == current.get(key, [])
-        if key == "acceptanceIds"
-        else previous.get(key) == current.get(key)
-        for key in keys
-    )
 
 
 def _copy_accepted_runtime(
@@ -291,6 +294,8 @@ def _copy_accepted_runtime(
         "validationRuns",
         "controllerGateReceipts",
         "remediationFindingIds",
+        "ownershipReceipt",
+        "implementationAuditReport",
         "lastReason",
     )
     for key in preserved_keys:
