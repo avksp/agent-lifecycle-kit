@@ -30,6 +30,7 @@ with the requested adapter, workflow state and task id. A mismatch returns
 ```bash
 agent-lifecycle start --adapter codex --file task.md
 agent-lifecycle start --adapter codex --mode research --text "Inspect the current design"
+agent-lifecycle start --adapter codex --mode plan --file task.md --launch
 agent-lifecycle start --adapter codex --mode implement --file adapter-run-request.json
 agent-lifecycle start --adapter codex --resume <session-id>
 agent-lifecycle host-launch inspect --profile .alk/host-launch/codex.json
@@ -58,10 +59,15 @@ agent-lifecycle adapter run \
   --task <task-id>
 ```
 
-An operator-local launch adds `--launch --host-launch-profile
+Raw planning input may add `--launch` only when the profile's exact-version
+planning status is `PLANNING_ONLY_QUALIFIED`; it ends at review and stores
+digest-only state. Current shipped candidates remain unsupported. See
+[Planning-only adapter launch](planning-only-launch.md).
+
+An operator-local frozen implementation launch adds `--launch --host-launch-profile
 .alk/host-launch/<adapter>.json` to the fully bound `start --mode implement`
 command. See [Local host launch](local-host-launch.md) for the profile and the
-complete command. No launch flag is accepted for raw task intake.
+complete command. Raw input never reaches this implementation route.
 
 For the exact Codex, Claude Code and OpenCode versions qualified by ALK, use
 the generated profile and mandatory version receipt from [Qualified host

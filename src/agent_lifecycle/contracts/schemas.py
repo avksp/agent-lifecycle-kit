@@ -20,6 +20,7 @@ from agent_lifecycle.contracts.host_capability_schemas import HOST_CAPABILITY_SC
 from agent_lifecycle.contracts.import_dialect_schemas import IMPORT_DIALECT_SCHEMAS
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
+from agent_lifecycle.contracts.planning_launch_schemas import PLANNING_LAUNCH_SCHEMAS
 from agent_lifecycle.contracts.policy_schemas import POLICY_SCHEMAS
 from agent_lifecycle.contracts.proof_integrity_schemas import PROOF_INTEGRITY_SCHEMAS
 from agent_lifecycle.contracts.progress_bridge_schemas import PROGRESS_BRIDGE_SCHEMAS
@@ -393,6 +394,7 @@ _SCHEMA_GROUPS = (
     CONTEXT_MODEL_SCHEMAS,
     RELEASE_CONTRACT_SCHEMAS,
     PLAN_CONTRACT_SCHEMAS,
+    PLANNING_LAUNCH_SCHEMAS,
     METRIC_SCHEMAS,
     POLICY_SCHEMAS,
     LIFECYCLE_START_SCHEMAS,

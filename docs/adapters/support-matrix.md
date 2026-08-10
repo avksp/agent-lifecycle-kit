@@ -34,6 +34,14 @@ Code `2.1.226` and OpenCode `1.18.15`. They require a matching preflight
 receipt and preserve `WRAPPER_ONLY`; see [Qualified host
 launch](../reference/qualified-host-launch.md).
 
+Planning-only launch has a stricter, independent status. Codex `0.147.0`,
+Claude Code `2.1.226` and OpenCode `1.18.15` ship candidate sections, but each
+currently resolves to `PLANNING_ONLY_UNSUPPORTED` because live containment
+evidence is absent. The other nine bundled adapters do not declare a planning
+profile and are unsupported for this route. `VERIFIED` maturity cannot promote
+this status. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).
+
 Host-local token normalization is a separate claim. Claude Code, Codex, Gemini
 CLI, Kimi Code, OpenCode and Qwen Code declare
 `usageNormalization.status: FIXTURE_ONLY`; their bounded

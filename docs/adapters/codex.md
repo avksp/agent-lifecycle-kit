@@ -27,3 +27,8 @@ and preflight it before a frozen `start --launch` call. This qualification does
 not replace the `0.145.0` full adapter evidence range and does not promote
 usage accounting beyond `FIXTURE_ONLY`. See [Qualified host
 launch](../reference/qualified-host-launch.md).
+
+The same exact version has a planning-only candidate, but its current status is
+`PLANNING_ONLY_UNSUPPORTED`: no live containment receipt promotes it yet.
+`start --mode plan --launch` therefore fails closed. See [Planning-only
+adapter launch](../reference/planning-only-launch.md).

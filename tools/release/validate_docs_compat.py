@@ -816,6 +816,22 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/planning-only-launch.md",
+        (
+            "agent-lifecycle start",
+            "--mode plan",
+            "--launch",
+            "PLANNING_ONLY_QUALIFIED",
+            "PLANNING_ONLY_UNSUPPORTED",
+            "agent-planning-session-state.v1",
+            "agent-planning-launch-receipt.v1",
+            "implementationAuthorized: false",
+            ".alk/planning-sessions",
+            "DRAFT_PLAN_REVIEW",
+            "modelCallsStarted",
+        ),
+    ),
+    (
         "docs/reference/readiness-diagnostics.md",
         (
             "`agent-adapter-install-plan.v1`",
@@ -898,6 +914,22 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "WRAPPER_ONLY",
             "FIXTURE_ONLY",
             "acceptedForS1S2: false",
+        ),
+    ),
+    (
+        "docs/ru/reference/planning-only-launch.md",
+        (
+            "agent-lifecycle start",
+            "--mode plan",
+            "--launch",
+            "PLANNING_ONLY_QUALIFIED",
+            "PLANNING_ONLY_UNSUPPORTED",
+            "agent-planning-session-state.v1",
+            "agent-planning-launch-receipt.v1",
+            "implementationAuthorized: false",
+            ".alk/planning-sessions",
+            "DRAFT_PLAN_REVIEW",
+            "modelCallsStarted",
         ),
     ),
     (

@@ -30,9 +30,9 @@ agent-lifecycle start --adapter codex --text "Draft a reviewed implementation pl
 ```
 
 The official [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14.
-Install the exact release with `python -m pip install agent-lifecycle-kit==1.58.0`.
+Install the exact release with `python -m pip install agent-lifecycle-kit==1.59.0`.
 
-For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). Exact-version local launch for Codex, Claude Code and OpenCode is covered by [Qualified host launch](docs/reference/qualified-host-launch.md). For structure and positioning, see [System architecture](docs/architecture/system-architecture.md) and [Project comparison](docs/reference/project-comparison.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
+For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). The separate [planning-only launch](docs/reference/planning-only-launch.md) and [qualified frozen-task launch](docs/reference/qualified-host-launch.md) guides state the exact support boundaries; shipped planning profiles remain fail-closed until live qualification. For structure and positioning, see [System architecture](docs/architecture/system-architecture.md) and [Project comparison](docs/reference/project-comparison.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
 
 ## What it gives you
 

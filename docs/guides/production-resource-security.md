@@ -83,6 +83,13 @@ qualification receipt before managed launch. Version preflight is not a token
 usage attestation; see [Qualified host
 launch](../reference/qualified-host-launch.md).
 
+Raw-task planning is a different profile operation. It may carry task data only
+over bounded stdin, must prove the host's native read-only or tool-denial
+controls and must end at `REVIEW_REQUIRED`. Treat
+`PLANNING_ONLY_UNSUPPORTED` as final until exact-version live containment
+evidence exists; adapter maturity and version preflight are insufficient. See
+[Planning-only adapter launch](../reference/planning-only-launch.md).
+
 Use `agent-lifecycle contract check` and release security tests before claiming
 a stable package. Use the support matrix for adapter maturity; model availability
 alone is not enough to mark an adapter `VERIFIED`.

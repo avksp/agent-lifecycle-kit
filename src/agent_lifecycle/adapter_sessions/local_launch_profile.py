@@ -12,12 +12,26 @@ from agent_lifecycle.adapter_sessions.qualification import validate_qualificatio
 
 LOCAL_HOST_LAUNCH_PROFILE_SCHEMA = "agent-local-host-launch-profile.v1"
 LOCAL_HOST_LAUNCH_PROFILE_VALIDATION_SCHEMA = "agent-local-host-launch-profile-validation.v1"
+PLANNING_ONLY_PROFILE_SCHEMA = "agent-planning-only-launch-profile.v1"
 LOCAL_PROFILE_ROOT = Path(".alk/host-launch")
 MAX_PROFILE_BYTES = 32768
 MAX_TIMEOUT_SECONDS = 300.0
 MAX_ARGV_ITEMS = 64
 MAX_ARG_BYTES = 4096
 SAFE_VERSION_PROBES = (("--version",), ("-V",), ("version",))
+PLANNING_SUPPORT_STATUSES = frozenset(
+    {"PLANNING_ONLY_QUALIFIED", "PLANNING_ONLY_UNSUPPORTED"}
+)
+_DANGEROUS_PLANNING_FLAGS = frozenset(
+    {
+        "--allow-dangerously-skip-permissions",
+        "--auto",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--dangerously-skip-permissions",
+        "--full-auto",
+        "--yolo",
+    }
+)
 
 ALLOWED_LAUNCH_PLACEHOLDERS = frozenset(
     {
@@ -127,6 +141,7 @@ def validate_local_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
     if isinstance(version_probe, list) and tuple(version_probe) not in SAFE_VERSION_PROBES:
         blockers.append({"code": "local-launch-profile-version-probe"})
     _validate_env(profile.get("env"), blockers)
+    _validate_planning_only(profile.get("planningOnly"), blockers)
     if isinstance(executable, str) and "/" not in executable and "\\" not in executable:
         if "PATH" not in _env_names(profile):
             blockers.append({"code": "local-launch-profile-path-env-required"})
@@ -198,6 +213,28 @@ def render_local_launch_argv(profile: dict[str, Any], bindings: dict[str, str]) 
     return argv
 
 
+def render_planning_launch_argv(profile: dict[str, Any]) -> list[str]:
+    """Render the fixed planning argv; raw task input is always stdin-only."""
+
+    validation = validate_local_launch_profile(profile)
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "local-launch-profile-invalid",
+            "cannot render an invalid local launch profile",
+            {"validation": validation},
+        )
+    planning = profile.get("planningOnly")
+    if not isinstance(planning, dict) or planning.get("status") != "CANDIDATE":
+        raise LifecycleError(
+            "planning-launch-profile-unsupported",
+            "adapter has no planning-only argv profile",
+        )
+    template = planning.get("argvTemplate")
+    if not isinstance(template, list):
+        raise LifecycleError("planning-launch-profile-invalid", "planning argv template is missing")
+    return [str(profile["executable"]), *[str(token) for token in template]]
+
+
 def local_profile_summary(profile: dict[str, Any]) -> dict[str, Any]:
     """Return a redacted profile view suitable for portable receipts."""
 
@@ -213,6 +250,18 @@ def local_profile_summary(profile: dict[str, Any]) -> dict[str, Any]:
         "shell": False,
         "publicSupportClaimed": False,
     }
+    planning = profile.get("planningOnly")
+    if isinstance(planning, dict):
+        summary["planningOnly"] = {
+            "schemaVersion": planning.get("schemaVersion"),
+            "status": planning.get("status"),
+            "planningSupportStatus": planning.get("planningSupportStatus"),
+            "argvTemplate": list(planning.get("argvTemplate", [])),
+            "inputTransport": planning.get("inputTransport"),
+            "resultFormat": planning.get("resultFormat"),
+            "containment": planning.get("containment"),
+            "qualificationEvidence": list(planning.get("qualificationEvidence", [])),
+        }
     qualification = profile.get("qualification")
     if isinstance(qualification, dict):
         summary["qualification"] = {
@@ -232,6 +281,15 @@ def local_receipt_argv(profile: dict[str, Any]) -> list[str]:
 
     executable = _executable_name(str(profile.get("executable", "")))
     template = profile.get("argvTemplate")
+    return [executable, *template] if isinstance(template, list) else [executable]
+
+
+def planning_receipt_argv(profile: dict[str, Any]) -> list[str]:
+    """Return planning argv without local values or task data."""
+
+    executable = _executable_name(str(profile.get("executable", "")))
+    planning = profile.get("planningOnly")
+    template = planning.get("argvTemplate") if isinstance(planning, dict) else []
     return [executable, *template] if isinstance(template, list) else [executable]
 
 
@@ -308,6 +366,51 @@ def _validate_env(value: Any, blockers: list[dict[str, Any]]) -> None:
         blockers.append({"code": "local-launch-profile-env-pattern"})
     if value.get("projectPolicyAllowed") is not False:
         blockers.append({"code": "local-launch-profile-env-project-policy"})
+
+
+def _validate_planning_only(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict) or value.get("schemaVersion") != PLANNING_ONLY_PROFILE_SCHEMA:
+        blockers.append({"code": "planning-launch-profile-schema"})
+        return
+    status = value.get("status")
+    support = value.get("planningSupportStatus")
+    if status not in {"CANDIDATE", "UNSUPPORTED"}:
+        blockers.append({"code": "planning-launch-profile-status"})
+    if support not in PLANNING_SUPPORT_STATUSES:
+        blockers.append({"code": "planning-launch-support-status"})
+    if status == "UNSUPPORTED":
+        if support != "PLANNING_ONLY_UNSUPPORTED":
+            blockers.append({"code": "planning-launch-unsupported-claim"})
+        if value.get("argvTemplate") not in (None, []):
+            blockers.append({"code": "planning-launch-unsupported-argv"})
+        return
+    _validate_argv_template(
+        value.get("argvTemplate"),
+        field="planningOnly.argvTemplate",
+        placeholders=False,
+        blockers=blockers,
+        require_non_empty=True,
+    )
+    argv = value.get("argvTemplate") if isinstance(value.get("argvTemplate"), list) else []
+    if any(token in _DANGEROUS_PLANNING_FLAGS for token in argv):
+        blockers.append({"code": "planning-launch-dangerous-flag"})
+    for index, token in enumerate(argv[:-1]):
+        if token == "--permission-mode" and argv[index + 1] == "bypassPermissions":
+            blockers.append({"code": "planning-launch-dangerous-permission-mode"})
+    if value.get("inputTransport") != "STDIN":
+        blockers.append({"code": "planning-launch-input-transport"})
+    if value.get("resultFormat") != "SINGLE_JSON_OBJECT":
+        blockers.append({"code": "planning-launch-result-format"})
+    containment = value.get("containment")
+    if not isinstance(containment, dict) or containment.get("writesAllowed") is not False:
+        blockers.append({"code": "planning-launch-containment"})
+    evidence = value.get("qualificationEvidence")
+    if not isinstance(evidence, list) or not all(isinstance(item, str) and item for item in evidence):
+        blockers.append({"code": "planning-launch-qualification-evidence"})
+    if support == "PLANNING_ONLY_QUALIFIED" and not evidence:
+        blockers.append({"code": "planning-launch-qualified-evidence-missing"})
 
 
 def _env_names(profile: dict[str, Any]) -> list[str]:

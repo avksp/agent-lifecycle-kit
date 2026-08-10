@@ -22,4 +22,28 @@ PROFILE = {
         "maxPreflightProcesses": 1,
         "modelCallsForPreflight": 0,
     },
+    "planningOnly": {
+        "schemaVersion": "agent-planning-only-launch-profile.v1",
+        "status": "CANDIDATE",
+        "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+        "argvTemplate": [
+            "-p",
+            "--output-format",
+            "text",
+            "--permission-mode",
+            "plan",
+            "--tools",
+            "Read,Glob,Grep",
+            "--safe-mode",
+        ],
+        "inputTransport": "STDIN",
+        "resultFormat": "SINGLE_JSON_OBJECT",
+        "containment": {
+            "filesystem": "claude-plan-permission-mode",
+            "tools": "Read,Glob,Grep",
+            "network": "host-owned-provider-rpc",
+            "writesAllowed": False,
+        },
+        "qualificationEvidence": [],
+    },
 }
