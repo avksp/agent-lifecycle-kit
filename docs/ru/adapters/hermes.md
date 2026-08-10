@@ -29,3 +29,21 @@ agent-lifecycle adapter inspect \
 Резюме локального осмотра: `docs/adapters/evidence/hermes-0.8.0.md`.
 Принятое резюме реального запуска: `docs/adapters/evidence/hermes-host-local-live-2026-07-29.md`.
 Прямой безопасный запуск CLI хоста из ядра не заявляется.
+
+## Запуск только для планирования
+
+Точная версия профиля: `0.19.0`. Состояние профиля: `UNSUPPORTED`.
+Поддержка запуска планирования: `PLANNING_ONLY_UNSUPPORTED`. Для этого контракта не подтверждён однократный запуск со встроенным запретом опасных инструментов.
+
+Создание и проверка локального профиля:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter hermes --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/hermes.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/hermes.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/hermes.json
+```
+
+Успешная проверка версии не разрешает запуск планирования.
+`managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
+состояние поддержки планирования. Подробнее: [запуск адаптера только для
+планирования](../reference/planning-only-launch.md).

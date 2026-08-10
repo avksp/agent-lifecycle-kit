@@ -1,6 +1,6 @@
 {
   "adapterId": "gemini-cli",
-  "descriptorDigest": "e9f82c373ef2ffd56f37bd7b912635985f72942b60c56f649f4794cf2c058252",
+  "descriptorDigest": "c0f337edaab3b89caceeb6114d232afcdb40dee932f40c27d5f8f831263461f9",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "eda59557bd6e6a5da397ec27a3bc7accf81ca9aa00e9454c5f0d3b6c9c295855",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "13904a26db05d13cba78082523081aa588454e46231293a06510c746c603d0a8",
+  "receiptDigest": "71230f43197af91caa59c3075ae3e01cfeae8d17a565d3144ede355c4bc9053e",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",

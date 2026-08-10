@@ -46,3 +46,21 @@ Evidence summaries:
   `docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md`;
 - support matrix entry:
   `docs/adapters/support-matrix.md`.
+
+## Planning-only launch status
+
+Exact-version profile: `0.21.8`. Profile status: `UNSUPPORTED`. Planning
+support: `PLANNING_ONLY_UNSUPPORTED`. A native read-only or tool-denial boundary has not been verified for this contract.
+
+Generate and inspect the local profile with:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter qwen-code --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/qwen-code.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/qwen-code.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/qwen-code.json
+```
+
+A successful version preflight does not authorize planning launch.
+`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
+promote planning support. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).

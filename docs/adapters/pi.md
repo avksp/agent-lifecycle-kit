@@ -41,3 +41,21 @@ python tools/live_hosts/pi_harness.py \
 Replace `<PROVIDER_API_KEY_NAME>` with the env-key name required by the
 selected provider. The value must stay outside tracked repository files and
 receipts.
+
+## Planning-only launch status
+
+Exact-version profile: `0.83.0`. Profile status: `UNSUPPORTED`. Planning
+support: `PLANNING_ONLY_UNSUPPORTED`. The read-only tool list exists, but bounded stdin result transport has not been verified.
+
+Generate and inspect the local profile with:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter pi --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/pi.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/pi.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/pi.json
+```
+
+A successful version preflight does not authorize planning launch.
+`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
+promote planning support. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).

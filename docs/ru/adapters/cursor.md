@@ -30,3 +30,21 @@ python tools/release/validate_adapter_conformance.py \
 Текущая причина блокировки: локальная Free-подписка не заменяет подтверждение
 расхода и финальное подтверждение. Прямой безопасный запуск CLI хоста из ядра не
 заявляется.
+
+## Запуск только для планирования
+
+Точная версия профиля: `2026.07.23`. Состояние профиля: `UNSUPPORTED`.
+Поддержка запуска планирования: `PLANNING_ONLY_UNSUPPORTED`. Внешний инструмент пока не имеет подтверждённой ограниченной передачи результата через стандартный ввод.
+
+Создание и проверка локального профиля:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter cursor --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/cursor.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/cursor.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/cursor.json
+```
+
+Успешная проверка версии не разрешает запуск планирования.
+`managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
+состояние поддержки планирования. Подробнее: [запуск адаптера только для
+планирования](../reference/planning-only-launch.md).

@@ -32,3 +32,21 @@ summary is
 
 This does not claim public directory approval, production promotion, or
 compatibility with untested Hermes versions.
+
+## Planning-only launch status
+
+Exact-version profile: `0.19.0`. Profile status: `UNSUPPORTED`. Planning
+support: `PLANNING_ONLY_UNSUPPORTED`. A one-shot native tool-denial boundary has not been verified for this contract.
+
+Generate and inspect the local profile with:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter hermes --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/hermes.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/hermes.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/hermes.json
+```
+
+A successful version preflight does not authorize planning launch.
+`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
+promote planning support. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).

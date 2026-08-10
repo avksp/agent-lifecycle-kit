@@ -23,3 +23,21 @@ agent-lifecycle adapter inspect \
 
 Управляемые сессии имеют профиль `WRAPPER_ONLY`; провайдер, модель, прямой
 запуск хоста и телеметрия остаются локальной ответственностью хоста.
+
+## Запуск только для планирования
+
+Точная версия профиля: `0.2.118`. Состояние профиля: `UNSUPPORTED`.
+Поддержка запуска планирования: `PLANNING_ONLY_UNSUPPORTED`. Внешний инструмент пока не имеет подтверждённой ограниченной передачи результата через стандартный ввод.
+
+Создание и проверка локального профиля:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter grok-build --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/grok-build.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/grok-build.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/grok-build.json
+```
+
+Успешная проверка версии не разрешает запуск планирования.
+`managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
+состояние поддержки планирования. Подробнее: [запуск адаптера только для
+планирования](../reference/planning-only-launch.md).

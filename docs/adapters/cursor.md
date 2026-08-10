@@ -33,3 +33,21 @@ calibration and lifecycle proof evidence are accepted in the support matrix.
 Current blocker: `BLOCKED_FREE_SUBSCRIPTION_PROMOTION_EVIDENCE`; bounded smoke
 on the local Free subscription cannot replace usage/resource attestation or final
 lifecycle proof.
+
+## Planning-only launch status
+
+Exact-version profile: `2026.07.23`. Profile status: `UNSUPPORTED`. Planning
+support: `PLANNING_ONLY_UNSUPPORTED`. The CLI does not yet have a verified bounded stdin result transport for this contract.
+
+Generate and inspect the local profile with:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter cursor --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/cursor.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/cursor.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/cursor.json
+```
+
+A successful version preflight does not authorize planning launch.
+`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
+promote planning support. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).

@@ -1,6 +1,6 @@
 {
   "adapterId": "pi",
-  "descriptorDigest": "1b7615d4b2a6e8d7362036ee6ff102c70306aeaf97784be97f25930aee751894",
+  "descriptorDigest": "e8158ebf68f0f0b877f657c8495673921eacb94f4b3ccdc2cfe162dec62bfc3e",
   "emittedAt": "2026-07-31T00:23:00Z",
   "eventCount": 6,
   "eventStreamDigest": "d810ba2ada1f51876732fa74dbcb472f25355438839a00899c7d924b2d216c36",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "f01fc22595ac0cdd29431a43fc4f82e39e3492fd2879fa9d2a42452a149521c4",
+  "receiptDigest": "50c88ecf0a4fecb375ddcf46aabcc9b1551e6865f7bdb758bf7c5aee810605d4",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",

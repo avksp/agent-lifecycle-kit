@@ -1,6 +1,6 @@
 {
   "adapterId": "goose",
-  "descriptorDigest": "d1268c61be190f3edf8ae3053ebf01978720ff8c67270b9808f059693157a9a3",
+  "descriptorDigest": "ac52841c3ffcc9cde575d3904539474b7cd088bb0b09c9dc86b26921ffc9c4fb",
   "emittedAt": "2026-07-31T00:17:01Z",
   "eventCount": 6,
   "eventStreamDigest": "ebb96d43e5b99aafd88a1d708a81b9924313b5a382f1060a8e5e397fee93cebf",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "55ad14af00589bcd023069c6e59f386bb71038e1240b33c21af595f7b07f0a4f",
+  "receiptDigest": "f8fcaa6dbe2d947e6f70a13c7798edeb2aa7afaf109347e6e00f53e958e623d0",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",

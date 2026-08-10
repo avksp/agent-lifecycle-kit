@@ -4,6 +4,21 @@
 
 - No changes yet.
 
+## 1.60.0 - 2026-08-10
+
+- Added a controller-produced task compatibility receipt so unchanged accepted
+  tasks can retain their original implementation audit after a reviewed plan
+  adoption without weakening exact lineage for other tasks.
+- Added exact-version local planning profiles for Cursor, Gemini CLI, Qwen
+  Code, Goose, Grok Build, Hermes, Kimi Code, OpenInterpreter and Pi, with one
+  shared bounded qualification harness and thin adapter bindings.
+- Classified Gemini CLI and Goose as static planning candidates and the other
+  seven new profiles as explicitly unsupported. No adapter is promoted to
+  `PLANNING_ONLY_QUALIFIED` without accepted live evidence.
+- Added all-adapter profile validation, synchronized descriptor and capability
+  facts, English and Russian support guidance, and publication metadata for
+  Python 3.11-3.14.
+
 ## 1.59.0 - 2026-08-10
 
 - Added explicit planning-only host launch for raw text or Markdown through

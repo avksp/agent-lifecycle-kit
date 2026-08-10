@@ -29,18 +29,19 @@ An operator may separately opt into the validated local profile route under
 a local receipt, but it does not change any row below. See [Local host
 launch](../reference/local-host-launch.md).
 
-Exact-version local launch profiles are qualified for Codex `0.147.0`, Claude
-Code `2.1.226` and OpenCode `1.18.15`. They require a matching preflight
-receipt and preserve `WRAPPER_ONLY`; see [Qualified host
-launch](../reference/qualified-host-launch.md).
+Exact-version local profile declarations exist for all twelve bundled
+adapters. They permit deterministic profile generation and version preflight;
+they do not make generic descriptor launch safe or public. Every profile still
+requires a matching local receipt and preserves `WRAPPER_ONLY`; see
+[Qualified host launch](../reference/qualified-host-launch.md).
 
-Planning-only launch has a stricter, independent status. Codex `0.147.0`,
-Claude Code `2.1.226` and OpenCode `1.18.15` ship candidate sections, but each
-currently resolves to `PLANNING_ONLY_UNSUPPORTED` because live containment
-evidence is absent. The other nine bundled adapters do not declare a planning
-profile and are unsupported for this route. `VERIFIED` maturity cannot promote
-this status. See [Planning-only adapter
-launch](../reference/planning-only-launch.md).
+Planning-only launch has a stricter, independent status. All twelve adapters
+declare an exact-version result. Codex `0.147.0`, Claude Code `2.1.226`, Gemini
+CLI `0.46.0` and Goose `1.45.0` are static `CANDIDATE` profiles; the other
+eight are explicit `UNSUPPORTED` profiles. Every adapter currently resolves to
+`PLANNING_ONLY_UNSUPPORTED` because no accepted exact-version planning
+containment evidence is shipped. `VERIFIED` maturity cannot promote this
+status. See [Planning-only adapter launch](../reference/planning-only-launch.md).
 
 Host-local token normalization is a separate claim. Claude Code, Codex, Gemini
 CLI, Kimi Code, OpenCode and Qwen Code declare

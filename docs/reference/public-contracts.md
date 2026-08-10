@@ -45,6 +45,14 @@ Stable schema ids:
 - `agent-managed-lifecycle-next-action.v1`
 - `agent-managed-lifecycle-runner-receipt.v1`
 - `agent-lifecycle-start-receipt.v1`
+- `agent-task-plan-compatibility-receipt.v1`
+- `agent-task-plan-compatibility-receipt-validation.v1`
+- `agent-local-host-launch-profile.v1`
+- `agent-host-launch-qualification-policy.v1`
+- `agent-host-launch-qualification-receipt.v1`
+- `agent-planning-launch-envelope.v1`
+- `agent-planning-launch-receipt.v1`
+- `agent-planning-session-state.v1`
 - `agent-adapter-session-receipt.v1`
 - `agent-managed-adapter-launch-receipt.v1`
 - `agent-adapter-session-resume-receipt.v1`
@@ -125,6 +133,15 @@ environment names and redacted output; current bundled adapters declare
 Plan completeness validation checks the selected SDD tier before audit, so
 small plans can stay compact while risky S2 work still has requirements,
 acceptance, evidence routes, ownership, budgets, context limits and final gates.
+
+Planning launch profiles are exact-version, local and fail closed. Profile
+generation or a version probe does not establish
+`PLANNING_ONLY_QUALIFIED`; that claim requires accepted live evidence for the
+same adapter, version, profile digest and unchanged worktree identity.
+`agent-task-plan-compatibility-receipt.v1` is produced only during plan
+adoption. It permits an accepted task audit from the previous plan lineage only
+when the canonical task contract and all accepted artifact identities are
+unchanged. It is not a general plan-lineage waiver.
 
 Adaptive lifecycle policy chooses the lightest safe mode from neutral
 task/risk/evidence/resource inputs. It is advisory by default; automatic

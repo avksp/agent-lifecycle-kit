@@ -22,3 +22,21 @@ invocations with disabled subagents, memory and web search, plan permission
 mode, an empty tools allowlist and clean-worktree checks after each host call.
 The adapter does not claim public directory approval, production platform
 promotion, universal ACP support or verified OS sandbox containment.
+
+## Planning-only launch status
+
+Exact-version profile: `0.2.118`. Profile status: `UNSUPPORTED`. Planning
+support: `PLANNING_ONLY_UNSUPPORTED`. The CLI does not yet have a verified bounded stdin result transport for this contract.
+
+Generate and inspect the local profile with:
+
+```bash
+agent-lifecycle adapter launch-profile --adapter grok-build --repository-root /path/to/agent-lifecycle-kit --out .alk/host-launch/grok-build.json
+agent-lifecycle host-launch inspect --profile .alk/host-launch/grok-build.json
+agent-lifecycle host-launch preflight --profile .alk/host-launch/grok-build.json
+```
+
+A successful version preflight does not authorize planning launch.
+`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
+promote planning support. See [Planning-only adapter
+launch](../reference/planning-only-launch.md).

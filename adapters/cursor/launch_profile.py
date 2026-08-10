@@ -1,0 +1,36 @@
+"""Version-bound local profile for Cursor Agent 2026.07.23."""
+
+PROFILE = {
+    "schemaVersion": "agent-local-host-launch-profile.v1",
+    "status": "LOCAL_OPT_IN",
+    "adapterId": "cursor",
+    "executable": "cursor-agent",
+    "argvTemplate": ["--print", "--mode", "plan", "--output-format", "json", "Continue the frozen ALK task without bypassing lifecycle gates."],
+    "versionProbeArgs": ["--version"],
+    "env": {"allow": ["HOME", "PATH"], "allowPatterns": [], "projectPolicyAllowed": False},
+    "timeoutSeconds": 300,
+    "shell": False,
+    "writesNativeConfig": False,
+    "promptInjectionDefault": False,
+    "publicSupportClaimed": False,
+    "productionPromotionClaimed": False,
+    "qualification": {
+        "schemaVersion": "agent-host-launch-qualification-policy.v1",
+        "expectedVersion": "2026.07.23",
+        "receiptFile": "cursor-2026.07.23.qualification.json",
+        "requiredForManagedTask": True,
+        "maxPreflightProcesses": 1,
+        "modelCallsForPreflight": 0,
+    },
+    "planningOnly": {
+        "schemaVersion": "agent-planning-only-launch-profile.v1",
+        "status": "UNSUPPORTED",
+        "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+        "argvTemplate": [],
+        "inputTransport": "STDIN",
+        "resultFormat": "SINGLE_JSON_OBJECT",
+        "containment": {"filesystem": "unverified", "tools": "unverified", "network": "host-owned-provider-rpc", "writesAllowed": False},
+        "qualificationEvidence": [],
+        "reason": "Cursor Agent 2026.07.23 does not document a bounded stdin planning-result transport for this contract.",
+    },
+}

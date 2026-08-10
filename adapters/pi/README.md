@@ -31,3 +31,10 @@ default.
 
 The descriptor does not claim safe native argv launch for this host CLI. Provider
 credentials, native launch, waits, cancellation and telemetry remain host-owned.
+
+## Planning-only launch
+
+The shipped `0.83.0` profile is `UNSUPPORTED` and resolves to
+`PLANNING_ONLY_UNSUPPORTED`. The read-only tool list exists, but bounded stdin result transport has not been verified. Static validation and version
+preflight start no model and cannot promote this status. Generic managed launch
+remains `WRAPPER_ONLY`.
