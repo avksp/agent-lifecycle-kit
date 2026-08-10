@@ -52,16 +52,24 @@ def build_measurements(submission: dict[str, Any], oracle_result: dict[str, Any]
         gaps.append("token-usage-missing")
     if not duration_entries:
         gaps.append("elapsed-time-missing")
-    retries = _retries(evidence.get("outcomeIndex"), submission.get("taskId"))
+    retries = _outcome_metric(evidence.get("outcomeIndex"), submission.get("taskId"), "retries")
     if retries is None:
         gaps.append("retry-count-missing")
+    remediations = _outcome_metric(evidence.get("outcomeIndex"), submission.get("taskId"), "remediationLoops")
+    if remediations is None:
+        gaps.append("remediation-count-missing")
     checks = oracle_result.get("checks") if isinstance(oracle_result.get("checks"), list) else []
     passed = sum(1 for item in checks if isinstance(item, dict) and item.get("passed") is True)
     measurements = {
         "quality": {"oraclePassed": oracle_result.get("status") == "PASS", "criteriaPassed": passed, "criteriaTotal": len(checks)},
         "tokens": {"byConfidence": buckets, "headline": headline},
+        "invocations": {"count": len(entries), "source": "agent-usage-export.v1" if entries else None},
         "elapsed": {"milliseconds": duration_ms if duration_entries else None, "source": "agent-usage-export.v1" if duration_entries else None},
         "retries": {"count": retries, "source": "agent-task-outcome-index.v1" if retries is not None else None},
+        "remediations": {
+            "count": remediations,
+            "source": "agent-task-outcome-index.v1" if remediations is not None else None,
+        },
         "measurementGaps": sorted(set(gaps)),
     }
     return measurements, blockers
@@ -78,13 +86,13 @@ def redact_evaluation_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], 
     }
 
 
-def _retries(outcome_index: Any, task_id: Any) -> int | None:
+def _outcome_metric(outcome_index: Any, task_id: Any, field: str) -> int | None:
     if not isinstance(outcome_index, dict) or outcome_index.get("schemaVersion") != "agent-task-outcome-index.v1":
         return None
     records = outcome_index.get("records")
     if not isinstance(records, list):
         return None
-    values = [item.get("retries") for item in records if isinstance(item, dict) and item.get("taskId") == task_id]
+    values = [item.get(field) for item in records if isinstance(item, dict) and item.get("taskId") == task_id]
     valid = [item for item in values if _is_non_negative_int(item)]
     return sum(valid) if valid else None
 

@@ -139,16 +139,27 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
 
 def _dispatch_task(args: argparse.Namespace) -> dict[str, Any]:
     if args.task_command == "compile":
+        execution_strategy = (
+            read_json_object(Path(args.strategy), label="execution strategy")
+            if args.strategy
+            else None
+        )
         result = compile_task_packets(
             Path(args.manifest),
             out_dir=Path(args.out_dir) if args.out_dir else None,
             write=args.write,
+            execution_strategy=execution_strategy,
         )
         return {"schemaVersion": "agent-task-packet-compile-result.v1", **result}
     if args.task_command == "compile-small":
         adaptive_decision = (
             read_json_object(Path(args.adaptive_decision), label="adaptive lifecycle decision")
             if args.adaptive_decision
+            else None
+        )
+        execution_strategy = (
+            read_json_object(Path(args.strategy), label="execution strategy")
+            if args.strategy
             else None
         )
         result = compile_small_model_packets(
@@ -158,6 +169,7 @@ def _dispatch_task(args: argparse.Namespace) -> dict[str, Any]:
             target_window=args.target_window,
             adaptive_decision=adaptive_decision,
             write=args.write,
+            execution_strategy=execution_strategy,
         )
         if result["status"] != "PASS":
             raise LifecycleError(

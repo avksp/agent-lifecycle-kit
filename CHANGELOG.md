@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 1.61.0 - 2026-08-10
+
+- Added one provider-neutral execution strategy that composes existing risk,
+  quality-floor, model-routing, compact-packet and review decisions without
+  adding workflow or host-launch authority.
+- Added quality-first comparison of reference-task evaluations, including
+  attested token savings, invocation, retry, remediation and elapsed-time
+  deltas; false acceptances and incomplete efficiency evidence remain blocked
+  from automatic adoption.
+- Added compact strategy summaries to unified start receipts and optional
+  strategy projections for full and small-model task packet compilation.
+- Added English and Russian operator guidance, architecture coverage, boundary
+  validation and publication checks for Python 3.11-3.14.
+
 ## 1.60.0 - 2026-08-10
 
 - Added a controller-produced task compatibility receipt so unchanged accepted

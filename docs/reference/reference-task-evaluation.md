@@ -38,7 +38,7 @@ The input uses `agent-reference-task-submission.v1`:
 
 Add an existing `agent-usage-export.v1` under `evidence.usageExport` to measure
 tokens and elapsed time. Add an existing `agent-task-outcome-index.v1` under
-`evidence.outcomeIndex` to measure retries. The evaluator consumes these
+`evidence.outcomeIndex` to measure retries and remediation loops. The evaluator consumes these
 receipts; it does not recreate their authority.
 
 Submission evidence is bounded to 64 nested container levels and 100,000
@@ -65,7 +65,7 @@ The receipt reports:
 - passed and total deterministic criteria;
 - token buckets for `ATTESTED`, `ESTIMATED`, and `MISSING` evidence;
 - elapsed milliseconds from usage-export entries;
-- retries from the task outcome index;
+- retries and remediation loops from the task outcome index;
 - explicit measurement gaps.
 
 When token confidence is mixed, `tokens.headline.total` is `null`. Consumers
@@ -94,3 +94,21 @@ raw evidence. A synthetic result cannot satisfy production evidence, adapter
 maturity, or promotion requirements.
 
 It does not call a model. It cannot satisfy production evidence.
+
+## Compare two process variants
+
+Compare receipts with identical suite, task and oracle lineage:
+
+```bash
+agent-lifecycle benchmark compare \
+  --baseline work/benchmark/baseline-evaluation.json \
+  --candidate work/benchmark/candidate-evaluation.json \
+  --out work/benchmark/comparison.json
+```
+
+`agent-reference-task-comparison.v1` checks quality before resources. New false
+acceptances, lost oracle checks and lineage mismatches block the candidate.
+The resource section reports token, invocation, retry, remediation and elapsed
+time deltas. Estimates remain advisory. Automatic adoption eligibility requires
+attested token savings, no observed resource regression and no measurement
+gaps; the comparison still does not mutate policy.

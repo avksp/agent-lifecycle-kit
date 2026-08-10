@@ -13,6 +13,12 @@ from agent_lifecycle.policy.proposals import (
     require_policy_proposal_pass,
 )
 from agent_lifecycle.policy.quality_floor import quality_floor_mode, resolve_quality_floor
+from agent_lifecycle.policy.execution_strategy import (
+    deferred_execution_strategy_summary,
+    execution_strategy_summary,
+    resolve_execution_strategy,
+    validate_execution_strategy,
+)
 from agent_lifecycle.policy.runtime_receipts import (
     build_runtime_policy_receipt,
     require_runtime_policy_receipt_pass,
@@ -25,12 +31,16 @@ __all__ = [
     "build_policy_summary",
     "build_runtime_policy_receipt",
     "build_tuned_policy",
+    "deferred_execution_strategy_summary",
+    "execution_strategy_summary",
     "quality_floor_mode",
     "require_adaptive_lifecycle_decision_pass",
     "require_policy_proposal_pass",
     "require_runtime_policy_receipt_pass",
     "resolve_quality_floor",
+    "resolve_execution_strategy",
     "small_model_packet_eligibility",
     "validate_adaptive_lifecycle_decision",
     "validate_runtime_policy_receipt",
+    "validate_execution_strategy",
 ]
