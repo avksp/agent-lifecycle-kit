@@ -9,7 +9,7 @@ JSON, чтобы результат можно было проверять ав�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.60.0
+python -m pip install agent-lifecycle-kit==1.61.0
 ```
 
 ## Основа
@@ -91,14 +91,24 @@ python -m pip install agent-lifecycle-kit==1.60.0
   `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка плагина
   сама по себе не доказывает полный жизненный цикл.
 - `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.
+- `agent-lifecycle strategy resolve --manifest ... --lock ... --state ...
+  --task ... --operation-id ... --expected-revision ... --source-revision ...
+  --adapter ... --out ...`: записывает одну нейтральную стратегию выполнения
+  без изменения состояния. Для S1/S2 нужен подходящий `--host-model-profile`.
+- `agent-lifecycle task compile --manifest ... --strategy ...`: передаёт
+  проверенную стратегию в связанный полный пакет, не меняя полномочия плана.
 - `agent-lifecycle task compile-small`: пакеты для маленьких моделей с
-  контрактом результата и компактным артефактом контекста.
+  контрактом результата и компактным артефактом контекста. Параметр
+  `--strategy` требует допустимый компактный маршрут.
 
 ## Проверка качества
 
 - `agent-lifecycle benchmark evaluate`: сравнивает переданный результат со
   встроенным набором детерминированных эталонных задач и создаёт
   `agent-reference-task-evaluation.v1` без вызова модели или внешнего инструмента.
+- `agent-lifecycle benchmark compare --baseline ... --candidate ...`:
+  сравнивает два артефакта, начиная с качества, и показывает разницу токенов,
+  обращений, повторов, циклов исправления и времени с учётом достоверности.
 - `agent-lifecycle audit`: проверка плана, реализации и вердиктов.
 - `agent-lifecycle audit implementation`: структурированный отчёт
   `agent-implementation-audit-report.v1` по результату задачи и независимой

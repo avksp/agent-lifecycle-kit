@@ -158,6 +158,7 @@ flowchart LR
   metrics[metrics and policy]
   context[context and evidence]
   quality[quality profiles]
+  strategy[execution strategy]
   benchmarks[reference task evaluation]
   neutrality[neutrality]
   runner[runner]
@@ -173,6 +174,7 @@ flowchart LR
   cli --> metrics
   cli --> context
   cli --> benchmarks
+  cli --> strategy
   cli --> neutrality
   cli --> runner
   cli --> worktree
@@ -187,6 +189,11 @@ flowchart LR
   adapter_sessions --> workflow
   adapter_sessions --> host_protocol
   adapter_sessions --> planning
+  adapter_sessions --> strategy
+  compiler --> strategy
+  strategy --> contracts
+  strategy --> metrics
+  strategy --> review_mesh
   review_mesh --> contracts
   review_mesh --> metrics
   audit --> workflow
@@ -217,6 +224,7 @@ flowchart LR
 | Review coordination | `review_mesh/*` | Optional recommendation, operator templates, reviewer packet preparation, assignments, result import, synthesis and quorum. |
 | Reporting | `reporting/*` | Read-only status, event feed, progress, change summary and progress bridge. |
 | Metrics and policy | `metrics/*`, `policy/*`, `model_routing/*` | Usage export, token/resource policy, quality-cost signals and model class routing. |
+| Execution strategy | `policy/execution_strategy.py`, `cli/strategy.py` | Compose existing risk, quality, routing, compact-packet and review decisions into one read-only receipt. |
 | Reference task evaluation | `benchmarks/*`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Read-only deterministic quality, false-acceptance, retry, elapsed-time and token-confidence comparison. |
 | Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, external context imports, goal views and continuation records. |
 | Neutrality | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Git-index-bound release scanning, optional policy-limited local evidence, stable reads, authority checks and signed neutrality receipts. |
@@ -269,6 +277,7 @@ sequenceDiagram
   participant Store as adapter_sessions/session_store.py
   participant PlanningStore as adapter_sessions/planning_session.py
   participant LocalLaunch as adapter_sessions/launcher.py
+  participant Strategy as policy/execution_strategy.py
   participant Process as adapter_sessions/process.py
 
   User->>StartCLI: start --adapter --file|--text|--resume [--launch]
@@ -276,6 +285,7 @@ sequenceDiagram
   alt raw task in auto/research/plan/review
     Start->>Intake: start_adapter_task()
     Intake-->>Start: reviewed draft receipt
+    Start->>Strategy: deferred summary, no route guessed
     opt explicit qualified planning launch
       Start->>PlanningStore: create digest-only session
       Start->>LocalLaunch: launch_from_local_profile(planningOnly, stdin)
@@ -286,6 +296,8 @@ sequenceDiagram
   else frozen input with explicit implement
     Start->>Intake: existing frozen delegation
     Intake-->>Start: managed-run receipt
+    Start->>Strategy: resolve exact plan and task strategy
+    Strategy-->>Start: compact advisory summary
     opt explicit local profile launch
       Start->>LocalLaunch: launch_from_local_profile(frozen identity, risk profile)
       LocalLaunch->>Process: run_process(argv, shell=false, bounded timeout)
@@ -311,6 +323,34 @@ that process must end at review or block with unchanged repository identity.
 Frozen delegation requires explicit `implement` and complete bindings. Resume
 accepts only stored ALK state and never interprets a native host conversation
 identifier. Generic descriptor and interactive-session launch remain blocked.
+
+### Execution strategy and comparison
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant CLI as cli/strategy.py
+  participant Strategy as policy/execution_strategy.py
+  participant Policies as Existing risk, quality, routing and review policies
+  participant Compiler as compiler/task_packets.py
+  participant Compare as benchmarks/comparison.py
+
+  User->>CLI: strategy resolve with frozen lineage
+  CLI->>Strategy: resolve_execution_strategy()
+  Strategy->>Policies: compose existing decisions
+  Policies-->>Strategy: bound decision digests
+  Strategy-->>User: agent-execution-strategy.v1
+  User->>Compiler: task compile --strategy
+  Compiler-->>User: task packet with bounded projection
+  User->>Compare: benchmark compare baseline candidate
+  Compare-->>User: quality-first comparison receipt
+```
+
+Both paths are deterministic and read-only. The strategy cannot lower the
+frozen quality floor, and protected S2 work cannot enter a compact packet.
+Comparison checks false acceptances and oracle lineage before resource deltas;
+automatic adoption eligibility additionally requires attested savings, no
+observed resource regression and complete measurements.
 
 ### Raw task or Markdown intake
 
@@ -525,7 +565,8 @@ their old enumeration behavior but carry a signed deprecation marker.
 | Bug repair | `adapter task start` plus frozen plan gates | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Defect-shaped recommendation, then plan-required receipts. |
 | External context | `context external-import` and episode retrieval | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Optional context hints with no proof authority. |
 | Goal status | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Read-only goal and lifecycle progress view. |
-| Reference comparison | `benchmark evaluate` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Deterministic evaluation receipt with no model or host call and no production claim. |
+| Execution strategy | `strategy resolve`, then optional `task compile --strategy` | `policy/execution_strategy.py`, `cli/strategy.py`, `compiler/*` | Read-only full strategy and bounded task-packet projection. |
+| Reference comparison | `benchmark evaluate`, `benchmark compare` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Deterministic evaluation or quality-first comparison with no model or host call and no production claim. |
 | Progress display | `report progress`, `report progress-bridge`, progress hooks | `reporting/*`, `cli/progress_hooks.py` | Terminal or JSON progress without model calls. |
 | Release check | Release tools and tests | `tools/release/*`, `contracts/release_contract_schemas.py`, docs/tests | Source-release validation and evidence. |
 
@@ -540,7 +581,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 | State machine | `workflow/state.py`, `workflow/task_transitions.py`, `runner/core.py` | Make lifecycle phases explicit and fail closed on invalid transitions. |
 | Operation kernel | `workflow/operation_kernel.py` | Centralize expected revision checks, idempotency and state/event commits. |
 | Gate pipeline | `workflow/gates.py`, audit gates, completion gates, review quorum gates | Prevent acceptance or finalization when required evidence is missing. |
-| Strategy and policy | `policy/*`, `model_routing/*`, `metrics/recommendations.py` | Select safe lifecycle/model routes without hardcoding providers. |
+| Strategy and policy | `policy/execution_strategy.py`, other `policy/*`, `model_routing/*`, `metrics/recommendations.py` | Compose safe lifecycle/model routes without duplicating lower-level authorities or hardcoding providers. |
 | Facade | `audit/implementation.py`, `diagnostics/bundles.py`, `reporting/*` | Package multiple checks into one typed receipt without duplicating lower-level logic. |
 | Builder and validator pair | Most contract modules and release validators | Produce deterministic receipts and verify them independently. |
 | Fail-closed boundary | Imports, adapter launch, review result import, release gates | Reject unsafe or under-evidenced paths instead of guessing. |
@@ -553,6 +594,8 @@ their old enumeration behavior but carry a signed deprecation marker.
 - Raw input is never execution authority.
 - A recommendation is not a gate. A gate exists only when a frozen plan opts in.
 - Read-only views do not mutate state and do not start model calls.
+- Execution strategy is advisory, preserves the frozen quality floor and never
+  grants workflow or host-launch authority.
 - Usage and progress use token/resource evidence; monetary cost is optional and
   only accepted when a metered host reports it.
 - Public release claims must be backed by tracked summaries and, when needed,
@@ -572,4 +615,5 @@ their old enumeration behavior but carry a signed deprecation marker.
 - [External memory](../reference/external-memory.md)
 - [Goal continuity](../reference/goal-continuity.md)
 - [Bug Forensics profile](../reference/bug-forensics.md)
+- [Quality-preserving execution strategy](../reference/execution-strategy.md)
 - [Neutrality scanning](../reference/neutrality.md)

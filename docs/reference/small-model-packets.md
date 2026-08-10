@@ -22,6 +22,7 @@ validation commands were omitted.
 ```bash
 agent-lifecycle task compile-small \
   --manifest <plan.manifest.json> \
+  --strategy <execution-strategy.json> \
   --context-profile profiles/small-context-profile.v1.json \
   --target-window 4k-strict \
   --write
@@ -30,6 +31,11 @@ agent-lifecycle task compile-small \
 The command emits `agent-small-model-packet-compile-result.v1`. Written packets
 use `agent-small-model-task-packet.v1`; their index uses
 `agent-small-model-task-packet-index.v1`.
+
+`--strategy` is optional for compatibility. When supplied, it must bind the
+same frozen plan and task. Only a strategy with `packetMode: COMPACT` can enter
+the small-model surface; `FULL`, strict, release and protected S2 routes fail
+closed.
 
 ## Output contract
 

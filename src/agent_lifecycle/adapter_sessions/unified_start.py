@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.adapter_sessions.contracts import build_lifecycle_start_receipt
-from agent_lifecycle.adapter_sessions.launcher import launch_from_local_profile
+from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, launch_from_local_profile
 from agent_lifecycle.adapter_sessions.local_launch_profile import load_local_launch_profile
 from agent_lifecycle.adapter_sessions.planning_session import (
     create_planning_session,
@@ -20,8 +20,13 @@ from agent_lifecycle.adapter_sessions.task_intake import (
     start_adapter_task,
 )
 from agent_lifecycle.adapter_sessions.workflow_bridge import resume_adapter_session
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, read_json_object, sha256_hex
 from agent_lifecycle.policy.risk_execution import RISK_REQUESTS
+from agent_lifecycle.policy.execution_strategy import (
+    deferred_execution_strategy_summary,
+    execution_strategy_summary,
+    resolve_execution_strategy,
+)
 
 START_MODES = ("auto", "research", "plan", "review", "implement")
 _NON_EXECUTING_MODES = frozenset({"auto", "research", "plan", "review"})
@@ -148,8 +153,23 @@ def start_lifecycle(
     )
     if mode in _NON_EXECUTING_MODES and _claims_execution(receipt):
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-non-implement-execution-claim")
+    strategy_summary = _strategy_summary_for_receipt(
+        receipt,
+        adapter_id=adapter_id,
+        descriptor_path=descriptor_path,
+        requested_risk=requested_risk,
+        risk_policy_path=risk_policy_path,
+        routing_profile_path=routing_profile_path,
+        baseline_profile_path=baseline_profile_path,
+        host_model_profile_path=host_model_profile_path,
+    )
     if not launch:
-        return _from_task_receipt(adapter_id=adapter_id, mode=mode, receipt=receipt)
+        return _from_task_receipt(
+            adapter_id=adapter_id,
+            mode=mode,
+            receipt=receipt,
+            execution_strategy=strategy_summary,
+        )
     profile_path = host_launch_profile_path or Path(".alk/host-launch") / f"{adapter_id}.json"
     if planning_launch:
         return _launch_planning_receipt(
@@ -166,6 +186,7 @@ def start_lifecycle(
         mode=mode,
         receipt=receipt,
         profile_path=profile_path,
+        execution_strategy=strategy_summary,
     )
 
 
@@ -363,6 +384,7 @@ def _from_task_receipt(
     mode: str,
     receipt: dict[str, Any],
     launch_receipt: dict[str, Any] | None = None,
+    execution_strategy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     status = str(receipt.get("status", "BLOCKED"))
     action = str(receipt.get("action", "BLOCKED"))
@@ -387,6 +409,7 @@ def _from_task_receipt(
         blockers=blockers,
         host_launch_started=bool(launch_receipt and launch_receipt.get("hostLaunchStarted")),
         launch_receipt=launch_receipt,
+        execution_strategy=execution_strategy or deferred_execution_strategy_summary(),
     )
 
 
@@ -501,6 +524,7 @@ def _launch_planning_receipt(
         blockers=_blocker_summaries(launch_receipt.get("blockers")),
         host_launch_started=bool(launch_receipt.get("hostLaunchStarted")),
         launch_receipt=launch_receipt,
+        execution_strategy=deferred_execution_strategy_summary(),
     )
 
 
@@ -510,9 +534,15 @@ def _launch_managed_receipt(
     mode: str,
     receipt: dict[str, Any],
     profile_path: Path,
+    execution_strategy: dict[str, Any],
 ) -> dict[str, Any]:
     if receipt.get("status") != "READY" or receipt.get("action") != "MANAGED_RUN":
-        return _from_task_receipt(adapter_id=adapter_id, mode=mode, receipt=receipt)
+        return _from_task_receipt(
+            adapter_id=adapter_id,
+            mode=mode,
+            receipt=receipt,
+            execution_strategy=execution_strategy,
+        )
     binding = receipt.get("workflowBinding") if isinstance(receipt.get("workflowBinding"), dict) else {}
     session = receipt.get("adapterSessionReceipt") if isinstance(receipt.get("adapterSessionReceipt"), dict) else {}
     next_action = session.get("nextAction") if isinstance(session.get("nextAction"), dict) else {}
@@ -546,7 +576,87 @@ def _launch_managed_receipt(
         mode=mode,
         receipt=receipt,
         launch_receipt=launch_receipt,
+        execution_strategy=execution_strategy,
     )
+
+
+def _strategy_summary_for_receipt(
+    receipt: dict[str, Any],
+    *,
+    adapter_id: str,
+    descriptor_path: Path | None,
+    requested_risk: str,
+    risk_policy_path: Path | None,
+    routing_profile_path: Path | None,
+    baseline_profile_path: Path | None,
+    host_model_profile_path: Path | None,
+) -> dict[str, Any]:
+    if receipt.get("status") != "READY" or receipt.get("action") != "MANAGED_RUN":
+        return deferred_execution_strategy_summary()
+    binding = receipt.get("workflowBinding") if isinstance(receipt.get("workflowBinding"), dict) else {}
+    try:
+        manifest_path = _required_binding_path(binding, "manifest")
+        lock_path = _required_binding_path(binding, "lock")
+        state_path = _required_binding_path(binding, "state")
+        _descriptor_file, descriptor = load_adapter_descriptor(adapter_id, descriptor_path)
+        strategy = resolve_execution_strategy(
+            manifest=read_json_object(manifest_path, label="frozen plan manifest"),
+            lock=read_json_object(lock_path, label="plan lock"),
+            state=read_json_object(state_path, label="workflow state"),
+            task_id=_required_binding_string(binding, "task"),
+            adapter_id=adapter_id,
+            adapter_host=str(descriptor.get("host", "")),
+            operation_id=_required_binding_string(binding, "operationId"),
+            expected_revision=_required_binding_revision(binding),
+            source_revision=_required_binding_string(binding, "sourceRevision"),
+            requested_risk=requested_risk,
+            risk_policy=read_json_object(
+                risk_policy_path or Path("profiles/risk-execution-policy.v1.json"),
+                label="risk execution policy",
+            ),
+            routing_profile=read_json_object(
+                routing_profile_path or Path("profiles/model-routing-profile.v1.json"),
+                label="model routing profile",
+            ),
+            baseline_profile=read_json_object(
+                baseline_profile_path or Path("profiles/lifecycle-baselines.v1.json"),
+                label="lifecycle baseline profile",
+            ),
+            host_profile=(
+                read_json_object(host_model_profile_path, label="host model profile")
+                if host_model_profile_path is not None
+                else None
+            ),
+        )
+        return execution_strategy_summary(strategy)
+    except (LifecycleError, OSError) as exc:
+        code = exc.code if isinstance(exc, LifecycleError) else "strategy-input-read-failed"
+        return {
+            **deferred_execution_strategy_summary(reason=code),
+            "status": "BLOCKED",
+        }
+
+
+def _required_binding_path(binding: dict[str, Any], field: str) -> Path:
+    value = _required_binding_string(binding, field)
+    return Path(value)
+
+
+def _required_binding_string(binding: dict[str, Any], field: str) -> str:
+    value = binding.get(field)
+    if not isinstance(value, str) or not value:
+        raise LifecycleError("strategy-binding-missing", "managed strategy binding is missing", {"field": field})
+    return value
+
+
+def _required_binding_revision(binding: dict[str, Any]) -> int:
+    value = binding.get("expectedRevision")
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise LifecycleError(
+            "strategy-binding-revision-invalid",
+            "managed strategy expected revision is invalid",
+        )
+    return value
 
 
 def _binding_path(binding: dict[str, Any], field: str) -> Path | None:

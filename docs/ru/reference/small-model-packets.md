@@ -14,6 +14,7 @@ completeness-check`. Компактный пакет должен быть ко�
 ```bash
 agent-lifecycle task compile-small \
   --manifest <plan.manifest.json> \
+  --strategy <execution-strategy.json> \
   --context-profile profiles/small-context-profile.v1.json \
   --target-window 4k-strict \
   --write
@@ -22,6 +23,11 @@ agent-lifecycle task compile-small \
 CLI возвращает `agent-small-model-packet-compile-result.v1`. Пакеты используют
 схему `agent-small-model-task-packet.v1`, индекс —
 `agent-small-model-task-packet-index.v1`.
+
+Параметр `--strategy` необязателен для совместимости. Если он указан,
+стратегия должна быть привязана к тому же зафиксированному плану и задаче.
+Компактный путь принимает только `packetMode: COMPACT`; значения `FULL`,
+строгий, релизный и защищённый S2-маршруты приводят к безопасному отказу.
 
 Каждый пакет содержит точные границы записи (`write scope`), компактный артефакт
 контекста и `agent-small-model-output-contract.v1`. Исполнитель должен вернуть

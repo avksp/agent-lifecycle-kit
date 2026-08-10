@@ -225,6 +225,7 @@ def build_lifecycle_start_receipt(
     blockers: list[dict[str, Any]] | None = None,
     host_launch_started: bool = False,
     launch_receipt: dict[str, Any] | None = None,
+    execution_strategy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the public, path-safe receipt for the unified start facade."""
 
@@ -236,6 +237,7 @@ def build_lifecycle_start_receipt(
         "action": action,
         "input": input_summary,
         "delegate": delegate_summary,
+        "executionStrategy": execution_strategy,
         "executionStarted": execution_started,
         "lifecycleCoverageClaimed": lifecycle_coverage_claimed,
         "requiresReview": requires_review,

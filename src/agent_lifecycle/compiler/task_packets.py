@@ -11,6 +11,7 @@ from agent_lifecycle.contracts import (
     canonical_digest,
     read_json_object,
 )
+from agent_lifecycle.policy.execution_strategy import validate_execution_strategy
 
 
 def compile_task_packets(
@@ -18,12 +19,17 @@ def compile_task_packets(
     *,
     out_dir: Path | None = None,
     write: bool = False,
+    execution_strategy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     root = Path.cwd()
     manifest = read_json_object(manifest_path, label="plan manifest")
     plan_digest = _verify_manifest(root, manifest)
+    _verify_execution_strategy(execution_strategy, plan_digest=plan_digest)
     output_dir = out_dir or _default_output_dir(root, manifest)
-    packets = [_packet(manifest, plan_digest, workstream) for workstream in _workstreams(manifest)]
+    packets = [
+        _packet(manifest, plan_digest, workstream, execution_strategy=execution_strategy)
+        for workstream in _workstreams(manifest)
+    ]
     packet_records = [_packet_record(output_dir, packet) for packet in packets]
     index = _index(manifest, plan_digest, output_dir, packet_records)
     if write:
@@ -63,6 +69,8 @@ def _packet(
     manifest: dict[str, Any],
     plan_digest: str,
     workstream: dict[str, Any],
+    *,
+    execution_strategy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     task = _task_projection(workstream)
     specification = _specification_projection(manifest, task)
@@ -79,7 +87,47 @@ def _packet(
     model_route = _model_route_projection(workstream)
     if model_route is not None:
         packet["modelRoute"] = model_route
+    strategy = _strategy_projection(execution_strategy, task_id=task["id"])
+    if strategy is not None:
+        packet["executionStrategy"] = strategy
     return packet
+
+
+def _verify_execution_strategy(strategy: dict[str, Any] | None, *, plan_digest: str) -> None:
+    if strategy is None:
+        return
+    validation = validate_execution_strategy(strategy)
+    if validation["status"] != "PASS":
+        raise LifecycleError("task-strategy-invalid", "execution strategy is invalid", {"validation": validation})
+    lineage = strategy.get("lineage") if isinstance(strategy.get("lineage"), dict) else {}
+    if lineage.get("planDigest") != plan_digest:
+        raise LifecycleError("task-strategy-plan-mismatch", "execution strategy plan digest mismatch")
+
+
+def _strategy_projection(strategy: dict[str, Any] | None, *, task_id: str) -> dict[str, Any] | None:
+    if strategy is None:
+        return None
+    lineage = strategy.get("lineage") if isinstance(strategy.get("lineage"), dict) else {}
+    if lineage.get("taskId") != task_id:
+        return None
+    implementation = next(
+        (item for item in strategy.get("phaseRoutes", []) if isinstance(item, dict) and item.get("phase") == "task-implementation"),
+        {},
+    )
+    packet = strategy.get("packet") if isinstance(strategy.get("packet"), dict) else {}
+    quality = strategy.get("quality") if isinstance(strategy.get("quality"), dict) else {}
+    return {
+        "schemaVersion": strategy.get("schemaVersion"),
+        "strategyDigest": strategy.get("strategyDigest"),
+        "operationId": lineage.get("operationId"),
+        "resolvedRiskTier": quality.get("resolvedRiskTier"),
+        "qualityFloor": quality.get("qualityFloor"),
+        "modelClass": implementation.get("modelClass"),
+        "packetMode": packet.get("mode"),
+        "sourceDecisionDigests": dict(strategy.get("sourceDecisionDigests", {})),
+        "authorityPreserved": packet.get("authorityPreserved") is True,
+        "advisoryOnly": True,
+    }
 
 
 def _task_projection(workstream: dict[str, Any]) -> dict[str, Any]:

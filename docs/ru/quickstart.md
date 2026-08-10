@@ -27,7 +27,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 устанавливайте точную семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.60.0
+python -m pip install agent-lifecycle-kit==1.61.0
 agent-lifecycle version
 ```
 
@@ -159,6 +159,14 @@ agent-lifecycle start \
 разделе [Запуск с учётом риска](reference/risk-aware-execution.md). Для обычного
 текста или Markdown параметр `--risk` остаётся рекомендацией и не разрешает
 реализацию.
+
+Артефакт запуска также содержит краткое поле `executionStrategy`. Для обычного
+входа оно имеет состояние `DEFERRED_UNTIL_FREEZE`; для полностью связанной
+зафиксированной задачи показывает нижнюю границу качества, нейтральный класс
+модели, вид пакета, режим проверки и ограничения ресурсов. Опытный пользователь
+может записать полный артефакт командой `strategy resolve` и передать его в
+`task compile --strategy`. Подробнее: [стратегия выполнения без снижения
+качества](reference/execution-strategy.md).
 
 Чтобы возобновить обычную управляемую сессию, ранее записанную ALK:
 
