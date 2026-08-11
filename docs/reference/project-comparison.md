@@ -42,6 +42,10 @@ ALK also includes these optional capabilities:
   reviewed draft input until an ALK plan is frozen;
 - optional Review Mesh creates reviewer assignments, imports redacted results,
   synthesizes findings and checks quorum only when a frozen plan opts in;
+- a provider-neutral execution strategy combines risk, quality floor, model
+  class, packet size, review depth and resource caps; reference-task comparison
+  blocks automatic adoption when false acceptances, quality regressions or
+  estimated and incomplete measurements remain;
 - adapter event capture, external memory context, read-only goal/progress views
   and Bug Forensics advisory receipts add evidence without making ALK a model
   broker or memory database.

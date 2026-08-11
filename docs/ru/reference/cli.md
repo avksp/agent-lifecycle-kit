@@ -18,6 +18,11 @@ python -m pip install agent-lifecycle-kit==1.61.0
 - `agent-lifecycle diagnose --no-install-plans`: безопасная проверка
   готовности текущего дерева.
 - `agent-lifecycle schema list`: список публичных схем.
+- `agent-lifecycle tier resolve --request <request.json>`: определяет уровень
+  SDD и повторяемый отпечаток структурированного запроса.
+- `agent-lifecycle conformance`: зарезервированный раздел совместимости. У него
+  нет исполняемого сценария проверки; используйте `agent-lifecycle adapter
+  validate`, осмотр адаптера и релизные средства проверки совместимости.
 
 ## Планирование
 
