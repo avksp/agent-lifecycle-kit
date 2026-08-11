@@ -1,10 +1,10 @@
 # Agent Lifecycle Kit documentation
 
-This documentation describes the standalone lifecycle kit. ALK gives coding
-agents one delivery workflow from request to verified result: specification,
-plan, bounded implementation, review, and final proof stay aligned until the
-task is actually complete. It is host-neutral and does not depend on a source
-project.
+This documentation describes the standalone lifecycle kit. ALK controls
+completion of coding-agent work by keeping the requested result, reviewed plan,
+bounded execution, evidence, review and final proof aligned. The external agent
+solves the product task; ALK preserves the authority needed to verify or block
+that result. It is host-neutral and does not depend on a source project.
 
 ## Locales
 
@@ -18,6 +18,7 @@ project.
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter codex --file task.md`.
 - [Quickstart](guides/quickstart.md)
+- [How ALK works for different tasks](guides/how-alk-works.md)
 - [Lifecycle cookbook](guides/lifecycle-cookbook.md)
 - [System architecture](architecture/system-architecture.md)
 - [Project comparison](reference/project-comparison.md)
@@ -45,6 +46,7 @@ project.
 - [Pi adapter](adapters/pi.md)
 - [Qwen Code adapter](adapters/qwen-code.md)
 - [Quickstart](guides/quickstart.md)
+- [How ALK works for different tasks](guides/how-alk-works.md)
 - [Lifecycle cookbook](guides/lifecycle-cookbook.md)
 - [Code review workflows](guides/code-review-workflows.md)
 - [Review Mesh workflow cookbook](guides/review-mesh-workflow.md)
