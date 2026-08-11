@@ -1,8 +1,14 @@
-# Review Mesh
+# Review Mesh: multi-model review
 
-Review Mesh is an optional contract layer for multi-reviewer work. It is useful
-when a plan wants more than one independent view on planning, research or
-implementation evidence, but it is not part of the default lifecycle.
+Review Mesh is an optional contract layer for checking the same bounded
+artifact with several independent AI models. Each reviewer can use a different adapter/model binding.
+It is useful when a plan wants more than one independent view on planning,
+research or implementation evidence, but it is not part of the default lifecycle.
+
+The adapters and models are unrestricted by product name: any available bindings may participate.
+The built-in operator templates require independence
+on both `host` and `model`. Multiple sessions of one model can be advisory, but
+cannot satisfy that model-independence requirement.
 
 The supported mode ids are:
 
@@ -152,3 +158,9 @@ Review Mesh does not bypass specification review, plan freeze, implementation
 audit or final proof. It can add evidence only when a task or plan asks for it.
 Host CLIs, provider credentials, model selection and reviewer execution remain
 adapter-owned or operator-owned.
+
+Review Mesh is never mandatory by installation or by task wording. It becomes
+mandatory only when a reviewed frozen plan explicitly requires blocking quorum
+for a named phase. Without other models, leave it off or use ordinary
+single-reviewer advice. If a frozen plan already requires independent quorum,
+the missing capacity is a blocker until the plan is revised and refrozen.

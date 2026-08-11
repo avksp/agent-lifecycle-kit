@@ -256,10 +256,11 @@ agent-lifecycle review-mesh recommend \
 GitHub, GitLab, архитектуры и аудита реализации:
 [сценарии проверки кода](code-review-workflows.md).
 
-## Дополнительная перепроверка
+## Дополнительная проверка несколькими моделями ИИ
 
-Для исследования, планирования или сложного аудита можно сначала получить
-локальную рекомендацию групповой проверки:
+Для исследования, планирования или сложного аудита один материал можно
+независимо проверить в разных связках CLI и моделей, например в Codex, Claude
+Code и OpenCode/GLM. Сначала получите локальную рекомендацию Review Mesh:
 
 ```bash
 agent-lifecycle review-mesh recommend --file task.md
@@ -278,16 +279,23 @@ agent-lifecycle review-mesh prepare \
   --template leader-draft-review \
   --reviewer codex-example:plan-reviewer:strong-reasoning \
   --reviewer claude-example:risk-reviewer:strong-reasoning \
+  --reviewer opencode-glm-example:independent-reviewer:local-strong-review \
   --out-dir work/code-review/current/review-mesh \
   --out work/code-review/current/review-mesh-prepare.json
 ```
 
-Если проверенный зафиксированный план явно включает этот режим, используйте
+ALK не выбирает и не запускает эти модели. Каждое подготовленное задание нужно
+передать выбранному CLI, после чего структурированный ответ импортируется
+обратно. Если проверенный зафиксированный план явно включает этот режим, используйте
 `review-mesh prepare` или атомарные команды `assign`, `import-result`,
 `synthesize` и `quorum`, чтобы координировать подтверждения проверяющих без
 запуска хостов из ядра ALK.
 Подробные примеры:
-[практические сценарии групповой проверки](review-mesh-workflow.md).
+[проверка несколькими моделями ИИ](review-mesh-workflow.md).
+Можно использовать любые доступные связки адаптеров и моделей. Review Mesh
+необязателен и по умолчанию выключен. Если доступна только одна модель,
+продолжайте обычную проверку одним рецензентом, если зафиксированный план явно
+не требует кворума.
 Сценарии, которые останавливаются на исследовании, плане, проверке Markdown или
 аудите реализации: [практические сценарии жизненного цикла](lifecycle-cookbook.md).
 
