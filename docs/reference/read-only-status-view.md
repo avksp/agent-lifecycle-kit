@@ -14,7 +14,8 @@ agent-lifecycle report status-view --artifact <evidence.json> --target-window 4k
 ```
 
 Malformed or failed source artifacts make the view fail closed. The command
-does not run host code, change adapter maturity or claim production promotion.
+does not run host code, change the adapter support level or claim production
+promotion.
 
 ## Workflow event feed
 

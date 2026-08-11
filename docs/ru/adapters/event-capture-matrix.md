@@ -3,28 +3,28 @@
 Захват событий адаптера — это объявленная офлайн-возможность. Она означает, что
 адаптер может перевести активность хоста в нейтральные события
 `agent-adapter-event.v1` и связать их с
-`agent-adapter-event-stream-receipt.v1`. Это не устанавливает hook, не
-разбирает сырую телеметрию хоста в ядре и не меняет зрелость адаптера.
+`agent-adapter-event-stream-receipt.v1`. Настройка hook принадлежит оператору
+или адаптеру, а ядро проверяет переносимые события и состояние жизненного цикла.
 
-Автоматическая установка: нет. Ядро ALK не меняет настройки хоста и не
-подписывается на внутренние события хоста. Если конкретный хост поддерживает
-hook, его настройка остаётся ответственностью оператора или адаптера.
+Владелец настройки: оператор или адаптер. Оператор или адаптер задаёт
+конфигурацию hook и подписку на события хоста, а ядро ALK проверяет
+переносимый поток и его связь с жизненным циклом.
 
-| Адаптер | Hook хоста | Маршрут через обёртку | Маршрут артефакта | Автоматическая установка | Граница |
+| Адаптер | Hook хоста | Маршрут через обёртку | Маршрут артефакта | Владелец настройки | Граница |
 | --- | --- | --- | --- | --- | --- |
-| claude | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/claude/event-stream-receipt.json` | Нет | `adapter-owned` |
-| codex | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/codex/event-stream-receipt.json` | Нет | `adapter-owned` |
-| cursor | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/cursor/event-stream-receipt.json` | Нет | `adapter-owned` |
-| gemini-cli | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/gemini-cli/event-stream-receipt.json` | Нет | `adapter-owned` |
-| goose | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/goose/event-stream-receipt.json` | Нет | `adapter-owned` |
-| grok-build | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/grok-build/event-stream-receipt.json` | Нет | `adapter-owned` |
-| hermes | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/hermes/event-stream-receipt.json` | Нет | `adapter-owned` |
-| kimi-code | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/kimi-code/event-stream-receipt.json` | Нет | `adapter-owned` |
-| opencode | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/opencode/event-stream-receipt.json` | Нет | `adapter-owned` |
-| openinterpreter | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/openinterpreter/event-stream-receipt.json` | Нет | `adapter-owned` |
-| pi | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/pi/event-stream-receipt.json` | Нет | `adapter-owned` |
-| qwen-code | ALK не устанавливает hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/qwen-code/event-stream-receipt.json` | Нет | `adapter-owned` |
+| claude | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/claude/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| codex | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/codex/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| cursor | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/cursor/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| gemini-cli | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/gemini-cli/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| goose | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/goose/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| grok-build | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/grok-build/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| hermes | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/hermes/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| kimi-code | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/kimi-code/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| opencode | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/opencode/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| openinterpreter | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/openinterpreter/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| pi | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/pi/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
+| qwen-code | Маршрут hook хоста | Обёртка записывает события ограниченной CLI-операции | `conformance/adapters/qwen-code/event-stream-receipt.json` | Оператор или адаптер | `adapter-owned` |
 
-Матрица описывает маршрут в исходном дереве, но не является подтверждением
-реального запуска. Для повышения зрелости по-прежнему нужны проверка реального
-хоста, калибровка расхода и финальное подтверждение жизненного цикла.
+Матрица описывает маршрут в исходном дереве. Для установления уровня поддержки
+нужны проверка реального хоста, калибровка расхода и финальное подтверждение
+жизненного цикла.

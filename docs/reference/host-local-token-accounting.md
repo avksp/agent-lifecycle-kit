@@ -19,7 +19,7 @@ This separation answers two different questions:
 | `FIXTURE_ONLY` | The parser is covered by bounded fixtures, but no live host range has qualified its output. | No |
 | `QUALIFIED` | A declared host range and independent qualification evidence cover the normalizer. | Yes, only for `source: host` and `status: ATTESTED` |
 
-Adapter maturity and token-normalizer status are separate. For example, Qwen
+The adapter support level and token-normalizer status are separate. For example, Qwen
 Code can remain a `VERIFIED` adapter while its newly factored usage normalizer
 is still `FIXTURE_ONLY`. Existing lifecycle evidence is not silently reused as
 qualification evidence for a new parser contract.

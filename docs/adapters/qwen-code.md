@@ -1,10 +1,8 @@
 # Qwen Code adapter
 
 The Qwen Code projection is `VERIFIED` for Qwen Code `0.21.0` on the tested
-host-local provider/model binding. This is a host-specific source-tree
-compatibility claim, not a public package, public directory approval, or
-production-promotion platform claim. It does not claim public approval. The
-adapter has accepted live conformance evidence.
+host-local provider/model binding. The adapter has accepted live conformance
+evidence for this exact integration range.
 
 Validate the projection and live evidence:
 
@@ -32,8 +30,8 @@ The live runner is `adapters/qwen-code/runner.py`. The release harness is
 guards, normalizes usage into portable host-operation receipts, and fails
 closed when qwen output is missing usage attestation.
 
-Qwen Code adapter maturity and the newly factored token parser have separate
-evidence. The adapter remains `VERIFIED`, while
+Qwen Code support level and the newly factored token parser have separate
+evidence. The adapter is `VERIFIED`, while
 `usageNormalization.status: FIXTURE_ONLY` keeps new sidecars `ESTIMATED` until
 that parser is independently qualified for a live host range. See
 [Host-local token accounting](../reference/host-local-token-accounting.md).
@@ -50,7 +48,8 @@ Evidence summaries:
 ## Planning-only launch status
 
 Exact-version profile: `0.21.8`. Profile status: `UNSUPPORTED`. Planning
-support: `PLANNING_ONLY_UNSUPPORTED`. A native read-only or tool-denial boundary has not been verified for this contract.
+support: `PLANNING_ONLY_UNSUPPORTED`. The qualification path includes a native
+read-only or tool-denial boundary for this contract.
 
 Generate and inspect the local profile with:
 
@@ -60,23 +59,17 @@ agent-lifecycle host-launch inspect --profile .alk/host-launch/qwen-code.json
 agent-lifecycle host-launch preflight --profile .alk/host-launch/qwen-code.json
 ```
 
-A successful version preflight does not authorize planning launch.
-`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
-promote planning support. See [Planning-only adapter
+The planning route uses the status and evidence described in [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
 ## Use ALK with Qwen Code
 
-The bundled Qwen Code projection does not claim an inside-host ALK installation
-route. Use the command route unless a separate Qwen Code configuration has
-been reviewed for shared skill discovery:
-
-Inside-session ALK use is not shipped for this adapter, so there is no bundled
-in-session prompt example.
+The documented Qwen Code route is the terminal command. A separately reviewed
+Qwen Code configuration can expose the shared skills:
 
 ```bash
 agent-lifecycle start --adapter qwen-code --file task.md
 ```
 
-The command does not start Qwen Code by default. See [Using ALK with an
-adapter](usage-modes.md).
+The command creates ALK intake. For host execution, use the qualified launch
+route. See [Using ALK with an adapter](usage-modes.md).

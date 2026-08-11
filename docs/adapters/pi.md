@@ -2,8 +2,8 @@
 
 The Pi projection is host-specific `VERIFIED` for Pi `0.83.0` on the tested
 host-local provider/model binding. It uses RPC/JSON plus AGENTS/agentskills
-metadata. Its descriptor records the alternate protocol surface as unsupported
-by default and keeps all lifecycle semantics delegated to ALK core.
+metadata. Its descriptor records the alternate protocol surface separately and
+keeps all lifecycle semantics delegated to ALK core.
 
 Tracked source artifacts:
 
@@ -13,9 +13,8 @@ Tracked source artifacts:
 - `tools/live_hosts/pi_harness.py`
 - `docs/adapters/evidence/pi-live-verified.md`
 
-The verified claim is limited to the tested Pi `0.83.0` host range and does not
-claim public package approval, does not claim public directory approval,
-production promotion or ACP support. Live promotion used bounded
+The verified scope covers the tested Pi `0.83.0` host range and the local
+provider/model binding. Live promotion used bounded
 no-session/no-tools/no-context invocations with explicit provider/model
 selection, redacted host-env handling, clean-worktree checks, live conformance,
 live calibration and accepted lifecycle proof.
@@ -45,7 +44,8 @@ receipts.
 ## Planning-only launch status
 
 Exact-version profile: `0.83.0`. Profile status: `UNSUPPORTED`. Planning
-support: `PLANNING_ONLY_UNSUPPORTED`. The read-only tool list exists, but bounded stdin result transport has not been verified.
+support: `PLANNING_ONLY_UNSUPPORTED`. The read-only tool list is available; the
+qualification path adds bounded stdin result transport evidence.
 
 Generate and inspect the local profile with:
 
@@ -55,16 +55,14 @@ agent-lifecycle host-launch inspect --profile .alk/host-launch/pi.json
 agent-lifecycle host-launch preflight --profile .alk/host-launch/pi.json
 ```
 
-A successful version preflight does not authorize planning launch.
-`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
-promote planning support. See [Planning-only adapter
+The planning route uses the status and evidence described in [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
 ## Use ALK with Pi
 
 Expose the tagged `agent-workflow-orchestrator` skill through Pi's native
-AGENTS/Agent Skills configuration and request it for the task. The bundled
-projection does not modify that host configuration automatically.
+AGENTS/Agent Skills configuration and request it for the task. The host
+configuration remains operator-managed.
 
 ```text
 Use the agent-workflow-orchestrator skill for this task.
@@ -81,5 +79,5 @@ The command route is always explicit:
 agent-lifecycle start --adapter pi --file task.md
 ```
 
-It creates ALK intake and does not start Pi by default. See [Using ALK with an
-adapter](usage-modes.md).
+It creates ALK intake. For host execution, use the qualified launch route. See
+[Using ALK with an adapter](usage-modes.md).

@@ -19,7 +19,7 @@ Core owns:
 - plan, task, audit and workflow state transitions;
 - model-route policy and budget enforcement;
 - acceptance and final-proof semantics;
-- maturity and support-matrix promotion gates.
+- support-level and support-matrix qualification gates.
 
 Unsupported operations must fail closed. A scaffolded adapter is always
 `EXPERIMENTAL`; promotion requires live host conformance, usage calibration,
@@ -53,8 +53,8 @@ agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adap
 ```
 
 `adapter install-plan` is a dry run. It previews files, commands and operator
-actions for the host projection, but it does not write host configuration,
-launch a model, promote maturity, or claim production support.
+actions for the host projection; host configuration, model launch, support
+qualification and production support use their dedicated routes.
 
 For a live host closure, replace `--skip-host-commands` with a bounded safe
 inspection profile only after the host binary is installed locally. Inspection
@@ -72,6 +72,6 @@ claim production promotion.
 - redacted evidence summary under `docs/adapters/evidence/`;
 - final lifecycle proof for the release scenario.
 
-If any required host capability is missing, record a non-promotion decision
-with blocker class and next action. Do not silently fallback to another host or
-upgrade maturity based on scaffold/offline evidence alone.
+If any required host capability is missing, record a qualification decision with
+the blocker class and next action. Keep the selected host and evidence scope
+explicit when extending a projection.

@@ -26,7 +26,7 @@ Hosts without probe evidence should be represented as `unsupported` or
 for `adapter.descriptor.json` and `capabilities.manifest.json`. The output is
 advisory only:
 
-- descriptors remain authoritative for maturity;
+- descriptors remain authoritative for the adapter support level;
 - capability manifests remain authoritative for supported operations;
 - discovery cannot promote adapters or override descriptor claims;
 - no host command or model call is started.

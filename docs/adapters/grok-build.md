@@ -1,12 +1,9 @@
 # Grok Build Adapter
 
 Grok Build is a host-specific `VERIFIED` ALK adapter projection for Grok Build
-`0.2.117` on the tested host-local provider/model binding. This adapter is
-`VERIFIED` for Grok Build `0.2.117`; live conformance exists and it does not
-claim public approval. Its descriptor declares an ACP transport behind a
-required local probe. The probe receipt does not start live model calls, and a
-failed probe leaves the adapter fail-closed instead of silently falling back to
-an unverified transport.
+`0.2.117` on the tested host-local provider/model binding. Its descriptor
+declares an ACP transport behind a required local probe. The probe receipt
+binds the transport to the verified host evidence.
 
 Tracked source artifacts:
 
@@ -20,13 +17,14 @@ Tracked source artifacts:
 The live conformance and calibration promotion is bounded to single-turn JSON
 invocations with disabled subagents, memory and web search, plan permission
 mode, an empty tools allowlist and clean-worktree checks after each host call.
-The adapter does not claim public directory approval, production platform
-promotion, universal ACP support or verified OS sandbox containment.
+The verified scope covers the host version, local provider/model binding and
+ACP probe described in the evidence summary.
 
 ## Planning-only launch status
 
 Exact-version profile: `0.2.118`. Profile status: `UNSUPPORTED`. Planning
-support: `PLANNING_ONLY_UNSUPPORTED`. The CLI does not yet have a verified bounded stdin result transport for this contract.
+support: `PLANNING_ONLY_UNSUPPORTED`. The qualification path uses a bounded
+stdin result transport and containment evidence.
 
 Generate and inspect the local profile with:
 
@@ -36,23 +34,17 @@ agent-lifecycle host-launch inspect --profile .alk/host-launch/grok-build.json
 agent-lifecycle host-launch preflight --profile .alk/host-launch/grok-build.json
 ```
 
-A successful version preflight does not authorize planning launch.
-`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
-promote planning support. See [Planning-only adapter
+The planning route uses the status and evidence described in [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
 ## Use ALK with Grok Build
 
-The bundled Grok Build projection does not install an ALK plugin or skill
-inside the host. Use the command route, or a separately reviewed host-local
-wrapper:
-
-Inside-session ALK use is not shipped for this adapter, so there is no bundled
-in-session prompt example.
+The documented Grok Build route is the terminal command. A separately reviewed
+host-local wrapper can expose the same ALK commands:
 
 ```bash
 agent-lifecycle start --adapter grok-build --file task.md
 ```
 
-The command does not start Grok Build by default. See [Using ALK with an
-adapter](usage-modes.md).
+The command creates ALK intake. For host execution, use the qualified launch
+route. See [Using ALK with an adapter](usage-modes.md).

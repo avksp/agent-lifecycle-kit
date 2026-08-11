@@ -16,22 +16,19 @@ codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 recorded in `adapters/codex/adapter.descriptor.json`.
 
 The local live evidence covers live conformance, live host operation coverage,
-live calibration, and one ALK lifecycle proof. It does not claim public Plugins
-Directory approval, official marketplace review, production platform promotion,
-or universal adapter support. See `docs/adapters/evidence/codex-cli-0.6.0.md`.
+live calibration and one ALK lifecycle proof for the tested host range. See
+`docs/adapters/evidence/codex-cli-0.6.0.md`.
 
 ## Qualified local launch
 
 Codex CLI `0.147.0` has a separate version-bound local launch profile. Generate
-and preflight it before a frozen `start --launch` call. This qualification does
-not replace the `0.145.0` full adapter evidence range and does not promote
-usage accounting beyond `FIXTURE_ONLY`. See [Qualified host
+and preflight it before a frozen `start --launch` call. The full adapter
+evidence range remains `0.145.0`, while usage accounting is `FIXTURE_ONLY`. See [Qualified host
 launch](../reference/qualified-host-launch.md).
 
-The same exact version has a planning-only candidate, but its current status is
-`PLANNING_ONLY_UNSUPPORTED`: no live containment receipt promotes it yet.
-`start --mode plan --launch` therefore fails closed. See [Planning-only
-adapter launch](../reference/planning-only-launch.md).
+The same exact version has a planning-only profile with status
+`PLANNING_ONLY_UNSUPPORTED`. Its qualification path is described in
+[Planning-only adapter launch](../reference/planning-only-launch.md).
 
 ## Use ALK with Codex
 
@@ -53,6 +50,7 @@ For a deterministic entrypoint outside the Codex session:
 agent-lifecycle start --adapter codex --file task.md
 ```
 
-This command creates ALK intake and does not start Codex by default. Plugin
-installation alone is not lifecycle proof. See [Using ALK with an
+This command creates ALK intake. For host execution, use the qualified launch
+route. Lifecycle proof is recorded by ALK state transitions and accepted
+receipts. See [Using ALK with an
 adapter](usage-modes.md).

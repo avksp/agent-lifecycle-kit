@@ -13,10 +13,9 @@ claude plugin install agent-lifecycle-kit@agent-lifecycle-kit
 ```
 
 Run `/reload-plugins` after installation in an interactive session. The
-verified claim is local and host-specific: it is backed by release-0-5 live conformance,
-live calibration, and full ALK lifecycle evidence in
-the support matrix. It does not claim official Claude directory approval,
-universal host support, or a broader production-promotion platform matrix pass.
+verified claim is local and host-specific: it is backed by release-0-5 live
+conformance, live calibration and full ALK lifecycle evidence in the support
+matrix. The evidence covers the tested Claude Code range and host binding.
 
 ## Live evidence
 
@@ -60,13 +59,13 @@ task identity, sequence, status and terminal semantics are validated by core.
 
 Claude Code `2.1.226` has a separate version-bound local launch profile.
 Generate and preflight it before a frozen `start --launch` call. The profile
-does not enable `--dangerously-skip-permissions`, change the `2.1.220` full
-adapter evidence range, or qualify token accounting for S1/S2. See [Qualified
+uses the approved process arguments; the full adapter evidence range remains
+`2.1.220`, and token accounting is `FIXTURE_ONLY`. See [Qualified
 host launch](../reference/qualified-host-launch.md).
 
-Its planning-only section is still a candidate with
-`PLANNING_ONLY_UNSUPPORTED`; version preflight does not prove native read-only
-containment. See [Planning-only adapter
+Its planning-only section is a candidate with
+`PLANNING_ONLY_UNSUPPORTED`; the qualification sequence is described in
+[Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
 ## Use ALK with Claude Code
@@ -88,5 +87,5 @@ For a deterministic entrypoint outside the Claude Code session:
 agent-lifecycle start --adapter claude --file task.md
 ```
 
-The command does not start Claude Code by default. See [Using ALK with an
-adapter](usage-modes.md).
+The command creates ALK intake. For host execution, use the qualified launch
+route. See [Using ALK with an adapter](usage-modes.md).

@@ -1,6 +1,10 @@
 # Adapter support matrix
 
-This matrix is the authoritative source-tree support claim. The source
+This matrix is the authoritative source-tree support claim. The support level
+describes the verified scope of the ALK integration for a specific host,
+including CLI version, command projection, environment boundary, live
+conformance, resource calibration and lifecycle evidence. It describes the
+integration range, not the quality of the host model or external product. The source
 distribution carries the support claims and evidence references below. The
 source tree includes host-local model selection, budget-mode controls,
 lifecycle gates, Claude Code live promotion evidence, Codex CLI live promotion
@@ -8,8 +12,13 @@ evidence, reusable promotion guidance, adapter capability manifests, safe
 adapter inspection, and ordered terminal outcomes for OpenCode, Hermes, Cursor,
 Gemini CLI, Goose, Qwen Code, Kimi Code, Grok Build, OpenInterpreter, and Pi.
 `EXPERIMENTAL` means the adapter has an offline projection and deterministic
-contract tests. `VERIFIED` is host-specific and requires bounded live host
+contract tests. `VERIFIED` is host-specific and adds bounded live host
 conformance, live calibration, and lifecycle proof evidence.
+
+Lifecycle proof is accepted from the reviewed plan and lock, state and task
+receipts, validation and evidence summaries, independent plan and implementation
+audits, and final proof. Host launch qualification also uses usage, resource and
+containment receipts for the exact adapter/version binding.
 
 For the operational difference between loading ALK inside a host and running
 the controller from the project terminal, see [Using ALK with an
@@ -17,61 +26,55 @@ adapter](usage-modes.md).
 
 Public contract compatibility is checked through
 `agent-public-contract-policy.v1`. That policy stabilizes schema ids, accepted
-deprecated inputs, CLI JSON envelopes and error codes. It does not promote an
-adapter by itself.
+deprecated inputs, CLI JSON envelopes and error codes. Adapter support level is
+established by the evidence listed in each row.
 
-Managed session support is documented separately from maturity. Current bundled
-adapters declare `managedLaunch.status: WRAPPER_ONLY`: ALK can bind lifecycle
-proof through managed commands or wrappers, but it does not claim safe native
-argv launch. See [Managed adapter session support](managed-session-support.md).
-Every generic descriptor-driven launch request is blocked with
-`adapter-generic-launch-disabled` before a host process is created; a descriptor
-status cannot bypass that boundary.
+Managed session support is documented separately from the support level. Current bundled
+adapters declare `managedLaunch.status: WRAPPER_ONLY`: lifecycle proof is bound
+through managed commands or wrappers. Qualified local profiles provide the
+managed launch route for accepted frozen-task evidence. See [Managed adapter
+session support](managed-session-support.md).
 
 An operator may separately opt into the validated local profile route under
-`.alk/host-launch/`. That route requires frozen and risk bindings and produces
-a local receipt, but it does not change any row below. See [Local host
-launch](../reference/local-host-launch.md).
+`.alk/host-launch/`. That route uses frozen and risk bindings and produces a
+local receipt. See [Local host launch](../reference/local-host-launch.md).
 
 Exact-version local profile declarations exist for all twelve bundled
-adapters. They permit deterministic profile generation and version preflight;
-they do not make generic descriptor launch safe or public. Every profile still
-requires a matching local receipt and preserves `WRAPPER_ONLY`; see
+adapters. They permit deterministic profile generation and version preflight.
+Every profile uses a matching local receipt and preserves `WRAPPER_ONLY`; see
 [Qualified host launch](../reference/qualified-host-launch.md).
 
-Planning-only launch has a stricter, independent status. All twelve adapters
-declare an exact-version result. Codex `0.147.0`, Claude Code `2.1.226`, Gemini
-CLI `0.46.0` and Goose `1.45.0` are static `CANDIDATE` profiles; the other
-eight are explicit `UNSUPPORTED` profiles. Every adapter currently resolves to
-`PLANNING_ONLY_UNSUPPORTED` because no accepted exact-version planning
-containment evidence is shipped. `VERIFIED` maturity cannot promote this
-status. See [Planning-only adapter launch](../reference/planning-only-launch.md).
+Planning-only launch has a separate status. All twelve adapters declare an
+exact-version result. Codex `0.147.0`, Claude Code `2.1.226`, Gemini CLI
+`0.46.0` and Goose `1.45.0` are static `CANDIDATE` profiles; the other eight
+are explicit `UNSUPPORTED` profiles. The planning matrix records the current
+qualification state and preparation route for each adapter. See
+[Planning-only adapter launch](../reference/planning-only-launch.md).
 
 Host-local token normalization is a separate claim. Claude Code, Codex, Gemini
 CLI, Kimi Code, OpenCode and Qwen Code declare
-`usageNormalization.status: FIXTURE_ONLY`; their bounded
-parsers are tested, but their sidecars do not satisfy S1/S2 usage gates. Other
-bundled descriptors have no declaration and are treated as `UNSUPPORTED` by
-this contract. Qwen Code's adapter maturity remains `VERIFIED`; that does not
-implicitly qualify the newly factored parser. See
+`usageNormalization.status: FIXTURE_ONLY`; their bounded parsers are tested and
+their S1/S2 qualification uses host-attested sidecars. Other bundled
+descriptors use the `UNSUPPORTED` status for this contract. Qwen Code keeps its
+`VERIFIED` support level while the parser follows its own declaration. See
 [Host-local token accounting](../reference/host-local-token-accounting.md).
 
 ## Runtime support
 
-| Host | Projection | Current maturity | Managed launch | Install/publication claim |
+| Host | Projection | Current support level | Managed launch | Verified scope |
 | --- | --- | --- | --- | --- |
-| [Codex](codex.md) | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | VERIFIED | `WRAPPER_ONLY` | Codex CLI 0.145.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; public Plugins Directory review not claimed |
-| [Claude Code](claude.md) | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | `WRAPPER_ONLY` | Claude Code 2.1.220 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory review not claimed |
-| [Cursor](cursor.md) | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | `WRAPPER_ONLY` | Cursor Agent 2026.07.23-e383d2b safe inspection passed on local Free tier; bounded smoke cannot promote without usage/resource calibration and lifecycle proof; marketplace approval not claimed |
-| [Gemini CLI](gemini-cli.md) | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | `WRAPPER_ONLY` | Gemini CLI 0.46.0 safe inspection and bounded harness shape passed; local live canary is blocked by unsupported Gemini Code Assist client tier; live receipts, usage calibration, lifecycle proof, and publication not claimed |
-| [Goose](goose.md) | ACP host-capability projection, bounded no-profile live harness, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Goose 1.45.0 live host conformance, live calibration, and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
-| [Grok Build](grok-build.md) | ACP probe-gated CLI projection, bounded plan-mode live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | Grok Build 0.2.117 live host conformance, live calibration, ACP probe and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
-| [Hermes](hermes.md) | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Hermes Agent v0.19.0 live host conformance, live calibration, and ALK lifecycle proof passed locally; official directory/publication review not claimed |
-| [Kimi Code](kimi-code.md) | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | `WRAPPER_ONLY` | Kimi Code 0.30.0 safe inspection and bounded harness shape passed; local live canary is blocked until a provider/model alias is configured; live receipts, usage calibration, lifecycle proof, and publication not claimed |
-| [OpenCode](opencode.md) | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | `WRAPPER_ONLY` | OpenCode CLI 1.18.9 live host conformance, live calibration, and ALK lifecycle proof passed locally; npm publication not claimed |
-| [OpenInterpreter](openinterpreter.md) | Host-local compatible CLI projection, bounded JSONL live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | `interpreter` 0.0.34 live host conformance, live calibration, containment and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
-| [Pi](pi.md) | RPC/JSON plus AGENTS/agentskills projection, bounded JSONL live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | Pi 0.83.0 live host conformance, live calibration, containment, host-env hygiene and ALK lifecycle proof passed locally on a host-local provider/model binding; public directory approval not claimed |
-| [Qwen Code](qwen-code.md) | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Qwen Code 0.21.0 live host conformance, live calibration, and ALK lifecycle proof passed on a host-local provider/model binding; public package approval not claimed |
+| [Codex](codex.md) | Root `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` plus shared skills | VERIFIED | `WRAPPER_ONLY` | Codex CLI 0.145.0: live conformance, calibration and ALK lifecycle proof passed locally |
+| [Claude Code](claude.md) | Root `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` plus shared skills | VERIFIED | `WRAPPER_ONLY` | Claude Code 2.1.220: live conformance, calibration and ALK lifecycle proof passed locally |
+| [Cursor](cursor.md) | Root `.cursor-plugin/plugin.json` and `.cursor-plugin/marketplace.json` plus shared skills and capability manifest | EXPERIMENTAL | `WRAPPER_ONLY` | Cursor Agent 2026.07.23-e383d2b: safe inspection passed on local Free tier; live qualification path is defined |
+| [Gemini CLI](gemini-cli.md) | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | `WRAPPER_ONLY` | Gemini CLI 0.46.0: safe inspection and bounded harness shape passed |
+| [Goose](goose.md) | ACP host-capability projection, bounded live harness, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Goose 1.45.0: live conformance, calibration and ALK lifecycle proof passed locally on a host-local provider/model binding |
+| [Grok Build](grok-build.md) | ACP probe-gated CLI projection, bounded plan-mode live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | Grok Build 0.2.117: live conformance, calibration, ACP probe and ALK lifecycle proof passed locally on a host-local provider/model binding |
+| [Hermes](hermes.md) | `skills.sh.json`, shared skills, Hermes registry/slash-command projection metadata, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Hermes Agent v0.19.0: live conformance, calibration and ALK lifecycle proof passed locally |
+| [Kimi Code](kimi-code.md) | Host-local projection, bounded runner, live harness and capability manifest | EXPERIMENTAL | `WRAPPER_ONLY` | Kimi Code 0.30.0: safe inspection and bounded harness shape passed; provider/model qualification path is defined |
+| [OpenCode](opencode.md) | Root `opencode.json`, shared skills, JS adapter projection metadata, and capability manifest | VERIFIED | `WRAPPER_ONLY` | OpenCode CLI 1.18.9: live conformance, calibration and ALK lifecycle proof passed locally |
+| [OpenInterpreter](openinterpreter.md) | Host-local compatible CLI projection, bounded JSONL live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | `interpreter` 0.0.34: live conformance, calibration, containment and ALK lifecycle proof passed locally on a host-local provider/model binding |
+| [Pi](pi.md) | RPC/JSON plus AGENTS/agentskills projection, bounded JSONL live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | Pi 0.83.0: live conformance, calibration, containment, host-env hygiene and ALK lifecycle proof passed locally on a host-local provider/model binding |
+| [Qwen Code](qwen-code.md) | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Qwen Code 0.21.0: live conformance, calibration and ALK lifecycle proof passed on a host-local provider/model binding |
 
 ## Event capture support
 
@@ -79,13 +82,13 @@ Current adapter descriptors and capability manifests declare
 `adapter-event-stream` with the portable `agent-adapter-event.v1` schema.
 Offline conformance checks require `agent-adapter-event-stream-receipt.v1`
 fixtures that bind event stream digests to descriptor digests. This is an
-evidence-quality contract and does not change adapter maturity or claim
-production promotion.
+evidence-quality contract; support-level and production claims continue to use
+the lifecycle evidence described above.
 
-No automatic hook installation: event capture is `adapter-owned`. ALK core does
-not install native host hooks, write host configuration or parse raw host
-telemetry. The per-adapter native hook, wrapper route, receipt route and
-automatic-hook claim status are documented in
+Hook ownership: event capture is `adapter-owned`. The operator or adapter
+configures the native hook or wrapper route, while ALK core validates portable
+receipts and lifecycle state. The per-adapter native hook, wrapper route,
+receipt route and hook ownership are documented in
 [Adapter event capture matrix](event-capture-matrix.md).
 
 ## Compact context support
@@ -113,14 +116,14 @@ by `tools/release/validate_live_calibration.py` against
 `conformance/core/live-calibration-profile.v1.json` and
 `conformance/core/budget-targets.v1.json`. A promoted host needs one passing
 live host conformance receipt and one passing live calibration receipt.
-Synthetic replay baselines remain offline regression fixtures only and cannot
-promote an adapter from `EXPERIMENTAL` to `VERIFIED`.
+Synthetic replay baselines provide offline regression coverage; `VERIFIED`
+support uses the live host conformance and calibration receipts listed above.
 
 Adapter capability bench evidence is a drift detector for the live conformance
 path. `generate_adapter_probe_plan.py` reads
 `agent-adapter-capability-manifest.v1` files and emits a bounded declarative
-plan with `liveCallsStarted: false`, `promotionDecision: NOT_EVALUATED` and no
-maturity change claim. `validate_adapter_probe_evidence.py` compares live host
+plan with `liveCallsStarted: false` and `promotionDecision: NOT_EVALUATED`.
+`validate_adapter_probe_evidence.py` compares live host
 receipts to that plan and fails on missing planned operations, synthetic replay
 for live-required operations or host-protocol envelope bypass. Passing bench
 evidence is useful for promotion review, but it never promotes an adapter
@@ -164,20 +167,19 @@ documented env-key name rather than an ALK hardcoded secret name.
 
 `agent-lifecycle adapter scaffold` creates descriptor, capability manifest,
 fail-closed runner, receipt-normalizer, conformance and documentation
-skeletons for new host projections. The scaffold is limited to `EXPERIMENTAL`
-metadata and cannot create `VERIFIED`, production-promotion, or concrete
-provider-model claims. `agent-lifecycle adapter inspect` records descriptor and
-safe host capability discovery; inspection evidence is not a live conformance
-receipt and does not promote support on its own.
+skeletons for new host projections. The scaffold starts at `EXPERIMENTAL`
+metadata. `agent-lifecycle adapter inspect` records descriptor and safe host
+capability discovery; live conformance evidence is added through the
+qualification route described above.
 `agent-lifecycle diagnose` composes these checks into one redacted readiness
 report, and `agent-lifecycle adapter install-plan` previews host-local setup
-without writing configuration or changing maturity labels.
+before the operator applies the selected configuration.
 
 The redacted evidence summary index is tracked at
 `docs/adapters/evidence/adapter-evidence-summary.v1.json`. It records which
-summary file supports each source-tree maturity claim. Raw live receipts remain
-host-local and ignored; their absence is a re-review concern, not the same
-condition as a missing tracked summary.
+summary file supports each source-tree support claim. Raw live receipts remain
+host-local and ignored; the tracked summary identifies the accepted evidence
+used by the matrix.
 
 Critical review phases must not silently downgrade to `budget` or
 `local-compact`. A local-only host can satisfy final/security/performance review
@@ -193,7 +195,8 @@ adapter to `VERIFIED` by itself.
 
 Provider-flexible adapters must keep provider credentials host-local. The host
 or selected provider determines the env-key name through its config or
-documentation; ALK does not hardcode provider secret names. Live harnesses can
+documentation; the host configuration remains the source of provider secret
+names. Live harnesses can
 scope an operator env file to one invocation through `--host-env-file` plus an
 explicit `--host-env-allow <NAME>`, and the related evidence must pass
 `validate_host_env_hygiene.py` before promotion evidence is accepted.
@@ -201,8 +204,8 @@ explicit `--host-env-allow <NAME>`, and the related evidence must pass
 Lifecycle cost reports add one more resource check: they separate
 implementation, product validation, pipeline compliance and coordination cost.
 This makes it visible when lifecycle checks are consuming more than the chosen
-task mode allows. Cost accounting is not adapter maturity evidence; it is a
-resource-control receipt for the run.
+task mode allows. Cost accounting is a resource-control receipt for the run and
+remains separate from adapter support-level evidence.
 
 ## Codex CLI 0.6.0 live evidence
 
@@ -225,8 +228,8 @@ Codex is verified only for the tested local host range:
 - ALK lifecycle final proof:
   `work/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json`.
 
-This evidence does not claim universal adapter support, public directory
-approval, or a broader production-promotion platform matrix pass.
+This evidence covers the tested local host range; public-directory and
+production-promotion scope are recorded separately in the matrix.
 
 ## Claude Code 0.5.0 live evidence
 
@@ -251,8 +254,8 @@ Claude Code is verified only for the tested local host range:
 - ALK lifecycle final proof:
   `work/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json`.
 
-This evidence does not claim universal adapter support, public directory
-approval, or a broader production-promotion platform matrix pass.
+This evidence covers the tested local host range; public-directory and
+production-promotion scope are recorded separately in the matrix.
 
 ## OpenCode Host-Local Live Evidence
 
@@ -275,8 +278,8 @@ OpenCode is verified only for the tested local host range:
 - ALK lifecycle final proof:
   `work/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json`.
 
-This evidence does not claim universal adapter support, npm publication, public
-directory approval, or a broader production-promotion platform matrix pass.
+This evidence covers the tested local host range; npm publication,
+public-directory and production-promotion scope are recorded separately.
 
 ## Hermes Host-Local Live Evidence
 
@@ -299,8 +302,8 @@ Hermes is verified only for the tested local host range:
 - ALK lifecycle final proof:
   `work/release-0-8/evidence/hermes/full-lifecycle/final/final-proof.json`.
 
-This evidence does not claim universal adapter support, public directory
-approval, or a broader production-promotion platform matrix pass.
+This evidence covers the tested local host range; public-directory and
+production-promotion scope are recorded separately in the matrix.
 
 ## Qwen Code Host-Local Live Evidence
 
@@ -323,8 +326,8 @@ Qwen Code is verified only for the tested local host range:
 - ALK lifecycle final proof:
   `work/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json`.
 
-This evidence does not claim universal adapter support, public package
-approval, or a broader production-promotion platform matrix pass.
+This evidence covers the tested local host range; public-package and
+production-promotion scope are recorded separately.
 
 ## Goose Host-Local Live Evidence
 
@@ -350,9 +353,9 @@ Goose is verified only for the tested local host range:
 - ALK lifecycle final proof:
   `work/release-1-16/evidence/goose/full-lifecycle/final/final-proof-r5.json`.
 
-This evidence does not claim universal adapter support, public directory
-approval, verified OS sandbox containment, or a broader production-promotion
-platform matrix pass.
+This evidence covers the tested local host range and bounded containment route;
+public-directory, OS-sandbox and production-promotion scope are recorded
+separately.
 
 ## Grok Build Host-Local Live Evidence
 
@@ -380,9 +383,9 @@ Grok Build is verified only for the tested local host range:
 - ALK lifecycle final proof:
   `work/release-1-17/evidence/grok-build/full-lifecycle/final/final-proof-r2.json`.
 
-This evidence does not claim universal adapter support, public directory
-approval, verified OS sandbox containment, or a broader production-promotion
-platform matrix pass.
+This evidence covers the tested local host range and bounded containment route;
+public-directory, OS-sandbox and production-promotion scope are recorded
+separately.
 
 ## OpenInterpreter Host-Local Live Evidence
 
@@ -408,10 +411,9 @@ OpenInterpreter is verified only for the tested local host range:
 - ALK lifecycle final proof:
   `work/release-1-18/evidence/openinterpreter/full-lifecycle/final/final-proof.json`.
 
-This evidence does not claim universal adapter support, public directory
-approval, verified OS sandbox containment, or a broader production-promotion
-platform matrix pass. The containment evidence is limited to the bounded
-ephemeral read-only harness invocation policy.
+This evidence covers the tested local host range and the bounded ephemeral
+read-only harness route; public-directory, OS-sandbox and production-promotion
+scope are recorded separately.
 
 ## Pi Live Evidence
 
@@ -443,11 +445,9 @@ Pi is verified only for the tested local host range:
 - ALK lifecycle final proof:
   `work/release-1-19/evidence/pi/full-lifecycle/final/final-proof.json`.
 
-This evidence does not claim universal adapter support, public directory
-approval, ACP support, verified OS sandbox containment, or a broader
-production-promotion platform matrix pass. The containment evidence is limited
-to the bounded no-tools/no-session/no project-context harness invocation
-policy.
+This evidence covers the tested local host range and bounded no-tools harness
+route; public-directory, ACP, OS-sandbox and production-promotion scope are
+recorded separately.
 
 ## Neutrality error contract
 
@@ -468,8 +468,8 @@ formats are counted as `unsupportedArchives`.
 ## Production-promotion platform matrix
 
 The production-promotion contract requires these external CI legs. The offline
-source release validates that the contract is present; it does not claim the
-legs were executed.
+source release validates that the contract is present. The CI matrix lists the
+legs used for execution and evidence collection.
 
 | Leg id | OS family | Architecture | Python |
 | --- | --- | --- | --- |

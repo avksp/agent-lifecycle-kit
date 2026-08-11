@@ -1,12 +1,9 @@
 # Claude Code event bridge
 
 This bridge describes how a Claude Code wrapper can turn bounded host activity
-into portable ALK events. It is documentation and conformance guidance, not
-native hook installation.
-
-No automatic hook installation: ALK core does not write Claude Code
-configuration or subscribe to Claude-native callbacks. The producer boundary is
-`adapter-owned`; the setup action is `operator-owned`.
+into portable ALK events. Hook ownership belongs to the operator or adapter,
+while ALK core validates the portable event and receipt contracts. The producer
+boundary is `adapter-owned`; the setup action is `operator-owned`.
 
 ## Receipt route
 

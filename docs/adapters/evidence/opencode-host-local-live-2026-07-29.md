@@ -8,7 +8,7 @@ Scope:
 - Provider/model binding: host-local, redacted in committed docs.
 - Tested at: `2026-07-29`.
 - Source revision: `6c6b40210ee28de4b6a5993367af89e629fb99ff`.
-- Maturity claim: `VERIFIED` for this host range only.
+- Support-level claim: `VERIFIED` for this host range only.
 - Production promotion: not claimed.
 - npm publication or public directory approval: not claimed.
 

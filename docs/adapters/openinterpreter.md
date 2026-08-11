@@ -13,8 +13,8 @@ Tracked source artifacts:
 - `tools/live_hosts/openinterpreter_harness.py`
 
 The source tree contains deterministic offline conformance, a bounded JSONL live
-harness and a redacted local live evidence summary. It does not claim public
-package or directory approval, and no production promotion claim is made.
+harness and a redacted local live evidence summary. The verified scope covers
+`interpreter` `0.0.34` on the tested host-local provider/model binding.
 
 The live harness uses the shared JSON CLI receipt loop for host conformance,
 calibration, budget checks, diagnostics and post-invocation worktree
@@ -45,7 +45,8 @@ artifacts remain host-local and ignored.
 ## Planning-only launch status
 
 Exact-version profile: `0.0.34`. Profile status: `UNSUPPORTED`. Planning
-support: `PLANNING_ONLY_UNSUPPORTED`. The installed command surface does not expose a reliable native read-only profile.
+support: `PLANNING_ONLY_UNSUPPORTED`. The qualification path uses a reliable
+native read-only profile and bounded result transport.
 
 Generate and inspect the local profile with:
 
@@ -55,23 +56,17 @@ agent-lifecycle host-launch inspect --profile .alk/host-launch/openinterpreter.j
 agent-lifecycle host-launch preflight --profile .alk/host-launch/openinterpreter.json
 ```
 
-A successful version preflight does not authorize planning launch.
-`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
-promote planning support. See [Planning-only adapter
+The planning route uses the status and evidence described in [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
 ## Use ALK with OpenInterpreter
 
-The bundled OpenInterpreter projection does not install an ALK plugin or skill
-inside the host. Use the command route, or a separately reviewed host-local
-wrapper:
-
-Inside-session ALK use is not shipped for this adapter, so there is no bundled
-in-session prompt example.
+The documented OpenInterpreter route is the terminal command. A separately
+reviewed host-local wrapper can expose the same ALK commands:
 
 ```bash
 agent-lifecycle start --adapter openinterpreter --file task.md
 ```
 
-The command does not start OpenInterpreter by default. See [Using ALK with an
-adapter](usage-modes.md).
+The command creates ALK intake. For host execution, use the qualified launch
+route. See [Using ALK with an adapter](usage-modes.md).

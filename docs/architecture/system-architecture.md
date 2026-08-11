@@ -139,7 +139,7 @@ flowchart TB
 | Domain packages | Planning, workflow, audit, context, metrics, quality, review coordination and reporting. | Start provider API calls directly. |
 | `src/agent_lifecycle/adapter_sessions` | Descriptor-driven session records, task intake and managed-run bridge. | Inject prompts or parse host telemetry in core. |
 | `adapters/*` | Host descriptors, operation projections, support manifests and evidence summaries. | Change lifecycle schemas. |
-| `tools/release` and tests | Release gates, validators, conformance and docs compatibility. | Claim live host maturity from synthetic data. |
+| `tools/release` and tests | Release gates, validators, conformance and docs compatibility. | Establish a live host support level from synthetic data alone. |
 
 ## C3: runtime component map
 

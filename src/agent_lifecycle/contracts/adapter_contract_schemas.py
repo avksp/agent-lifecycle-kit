@@ -100,6 +100,7 @@ ADAPTER_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
             "runtimeBoundary": {"type": "object"},
             "hostCapabilities": {"type": "array", "items": {"type": "object"}},
             "sandboxCapabilities": {"type": ["object", "null"]},
+            "planningLaunch": {"type": "object"},
             "promotion": {"type": "object"},
         },
     ),
