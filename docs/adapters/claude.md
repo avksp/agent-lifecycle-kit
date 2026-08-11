@@ -68,3 +68,25 @@ Its planning-only section is still a candidate with
 `PLANNING_ONLY_UNSUPPORTED`; version preflight does not prove native read-only
 containment. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
+
+## Use ALK with Claude Code
+
+After installing the plugin, run `/reload-plugins`, open the target project and
+ask: `Use the agent-workflow-orchestrator skill for this task: <task>`. Claude
+Code owns the model and tools; accepted ALK receipts establish lifecycle proof.
+
+```text
+Use the agent-workflow-orchestrator skill for this task.
+Follow the full ALK lifecycle through reviewed planning, plan freeze,
+implementation audits and accepted final proof.
+Task: <describe the task or name the Markdown file to read>
+```
+
+For a deterministic entrypoint outside the Claude Code session:
+
+```bash
+agent-lifecycle start --adapter claude --file task.md
+```
+
+The command does not start Claude Code by default. See [Using ALK with an
+adapter](usage-modes.md).

@@ -32,3 +32,27 @@ The same exact version has a planning-only candidate, but its current status is
 `PLANNING_ONLY_UNSUPPORTED`: no live containment receipt promotes it yet.
 `start --mode plan --launch` therefore fails closed. See [Planning-only
 adapter launch](../reference/planning-only-launch.md).
+
+## Use ALK with Codex
+
+After installing the plugin and restarting Codex, open the target project and
+ask: `Use the agent-workflow-orchestrator skill for this task: <task>`. Codex
+owns the model and tools; the skill guides it to call ALK and preserve the
+lifecycle artifacts.
+
+```text
+Use the agent-workflow-orchestrator skill for this task.
+Follow the full ALK lifecycle through reviewed planning, plan freeze,
+implementation audits and accepted final proof.
+Task: <describe the task or name the Markdown file to read>
+```
+
+For a deterministic entrypoint outside the Codex session:
+
+```bash
+agent-lifecycle start --adapter codex --file task.md
+```
+
+This command creates ALK intake and does not start Codex by default. Plugin
+installation alone is not lifecycle proof. See [Using ALK with an
+adapter](usage-modes.md).

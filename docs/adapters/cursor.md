@@ -51,3 +51,26 @@ A successful version preflight does not authorize planning launch.
 `managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
 promote planning support. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
+
+## Use ALK with Cursor
+
+Link the trusted checkout into Cursor's local plugin directory, reload Cursor,
+open the target project and ask: `Use the agent-workflow-orchestrator skill for
+this task: <task>`. This is host-guided use; it does not change Cursor's
+`EXPERIMENTAL` adapter status.
+
+```text
+Use the agent-workflow-orchestrator skill for this task.
+Follow the full ALK lifecycle through reviewed planning, plan freeze,
+implementation audits and accepted final proof.
+Task: <describe the task or name the Markdown file to read>
+```
+
+For the command route:
+
+```bash
+agent-lifecycle start --adapter cursor --file task.md
+```
+
+The command creates review-gated intake and does not start Cursor by default.
+See [Using ALK with an adapter](usage-modes.md).

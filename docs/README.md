@@ -32,6 +32,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Adapter event capture matrix](adapters/event-capture-matrix.md)
 - [Managed adapter session support](adapters/managed-session-support.md)
 - [Adapter install](adapters/install.md)
+- [Using ALK with an adapter](adapters/usage-modes.md)
 - [Adapter live-promotion runbook](adapters/live-promotion-runbook.md)
 - [Codex adapter](adapters/codex.md)
 - [Claude Code adapter](adapters/claude.md)

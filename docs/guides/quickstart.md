@@ -53,7 +53,7 @@ For one adapter:
 
 ```bash
 agent-lifecycle diagnose \
-  --adapter adapters/codex/adapter.descriptor.json \
+  --adapter adapters/<adapter-id>/adapter.descriptor.json \
   --no-install-plans
 ```
 
@@ -61,7 +61,7 @@ agent-lifecycle diagnose \
 
 ```bash
 agent-lifecycle adapter install-plan \
-  --descriptor adapters/opencode/adapter.descriptor.json
+  --descriptor adapters/<adapter-id>/adapter.descriptor.json
 ```
 
 The output is a dry run. It projects validated installation facts from the
@@ -105,13 +105,44 @@ The same command supports `--dialect bmad` and `--dialect spec-kitty`.
 Imported material remains a draft candidate. It cannot start implementation or
 replace a frozen ALK plan until it is reviewed and frozen.
 
+## Choose how to use an adapter
+
+Choose `<adapter-id>` from the [linked adapter
+table](../adapters/usage-modes.md). There are two normal entrypoints:
+
+- Inside a host whose adapter page documents a plugin or shared-skill route,
+  open the target project and send the request below. The host runs the model
+  and tools.
+- From the project terminal, run `agent-lifecycle start --adapter <adapter-id>`. ALK
+  reads the task and creates a receipt, but it does not start the external CLI
+  or a model by default.
+
+```text
+Use the agent-workflow-orchestrator skill for this task.
+Follow the full ALK lifecycle: clarify the request, create and independently
+review the plan, freeze it before implementation, audit implementation results,
+and finish only with accepted evidence and final proof.
+Task: <describe the task or name the Markdown file to read>
+```
+
+This wording tells the in-session agent to use the complete ALK process rather
+than treating the skill as background guidance. The adapter page explains how
+that host loads or invokes the skill. If it says that no inside-session route is
+shipped, use the terminal command instead.
+
+Installing a plugin or skill is guidance, not proof that the full lifecycle
+ran. Managed proof comes from ALK state transitions, reviews, audits and
+accepted receipts. Exact installation and invocation instructions for all
+twelve bundled adapters are in [Using ALK with an
+adapter](../adapters/usage-modes.md).
+
 ## Start with one command
 
 For a task file or short text:
 
 ```bash
-agent-lifecycle start --adapter codex --file task.md
-agent-lifecycle start --adapter codex --text "Fix the failing test"
+agent-lifecycle start --adapter <adapter-id> --file task.md
+agent-lifecycle start --adapter <adapter-id> --text "Fix the failing test"
 ```
 
 The default mode is `auto`. Raw input never starts implementation: it returns
@@ -119,25 +150,26 @@ The default mode is `auto`. Raw input never starts implementation: it returns
 explicit non-executing mode when the requested outcome is narrower:
 
 ```bash
-agent-lifecycle start --adapter codex --mode research --file research.md
-agent-lifecycle start --adapter codex --mode plan --file feature.md
-agent-lifecycle start --adapter codex --mode review --file proposed-plan.md
+agent-lifecycle start --adapter <adapter-id> --mode research --file research.md
+agent-lifecycle start --adapter <adapter-id> --mode plan --file feature.md
+agent-lifecycle start --adapter <adapter-id> --mode review --file proposed-plan.md
 ```
 
 To request one external CLI process for planning, add `--launch`:
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --mode plan \
   --file feature.md \
   --launch
 ```
 
 This works only for an exact-version profile whose planning status is
-`PLANNING_ONLY_QUALIFIED`. The shipped Codex, Claude Code and OpenCode profiles
-are currently fail-closed candidates, and the other bundled adapters do not
-yet declare this route. A blocked receipt returns preparation commands; it is
+`PLANNING_ONLY_QUALIFIED`. All twelve bundled adapters declare an exact-version
+planning result, but every one currently resolves to
+`PLANNING_ONLY_UNSUPPORTED`: four are static candidates and eight are explicit
+unsupported profiles. A blocked receipt returns preparation commands; it is
 not permission to bypass qualification. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
@@ -147,7 +179,7 @@ task, operation and revision bindings:
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --mode implement \
   --file work/run/adapter-run-request.json
 ```
@@ -170,7 +202,7 @@ To resume an ordinary managed session recorded by ALK:
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --resume <session-id> \
   --session-root .alk/adapter-sessions
 ```
@@ -180,21 +212,24 @@ the value as a native Codex, Claude, OpenCode or other host conversation id.
 For a planning-session id returned by `start --launch`, omit `--session-root`:
 
 ```bash
-agent-lifecycle start --adapter codex --resume <planning-session-id>
+agent-lifecycle start --adapter <adapter-id> --resume <planning-session-id>
 ```
 
 This reads digest-only `.alk/planning-sessions` state and does not relaunch or
 reattach the external CLI.
 External execution remains off by default. Advanced operators can generate and
-qualify an exact-version profile for Codex, Claude Code or OpenCode first:
+preflight an exact-version declaration for any bundled adapter, but only the
+documented frozen-task profiles may be treated as accepted launch evidence.
+For a qualified adapter, substitute the exact ids and paths from the
+[qualified host launch guide](../reference/qualified-host-launch.md):
 
 ```bash
 agent-lifecycle adapter launch-profile \
-  --adapter codex \
+  --adapter <qualified-adapter-id> \
   --repository-root /path/to/agent-lifecycle-kit \
-  --out .alk/host-launch/codex.json
+  --out .alk/host-launch/<qualified-adapter-id>.json
 agent-lifecycle host-launch preflight \
-  --profile .alk/host-launch/codex.json
+  --profile .alk/host-launch/<qualified-adapter-id>.json
 ```
 
 Then launch one local host command only from a frozen, risk-bound `implement`
@@ -202,13 +237,13 @@ run:
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <qualified-adapter-id> \
   --mode implement \
   --file work/run/adapter-run-request.json \
   --risk auto \
-  --host-model-profile profiles/hosts/codex-live-profile.v1.json \
+  --host-model-profile <host-model-profile.json> \
   --launch \
-  --host-launch-profile .alk/host-launch/codex.json
+  --host-launch-profile .alk/host-launch/<qualified-adapter-id>.json
 ```
 
 Create and inspect the ignored profile first. The [local host launch
@@ -234,7 +269,7 @@ Then pass the task to ALK without starting implementation:
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --mode review \
   --file work/code-review/current/review-task.md \
   --out work/code-review/current/start.json
@@ -263,16 +298,16 @@ To prepare local reviewer packets from a task intake receipt:
 
 ```bash
 agent-lifecycle adapter task start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --file work/code-review/current/review-task.md \
   --out work/code-review/current/intake.json
 
 agent-lifecycle review-mesh prepare \
   --intake work/code-review/current/intake.json \
   --template leader-draft-review \
-  --reviewer codex-example:plan-reviewer:strong-reasoning \
-  --reviewer claude-example:risk-reviewer:strong-reasoning \
-  --reviewer opencode-glm-example:independent-reviewer:local-strong-review \
+  --reviewer reviewer-a:plan-reviewer:strong-reasoning \
+  --reviewer reviewer-b:risk-reviewer:strong-reasoning \
+  --reviewer reviewer-c:independent-reviewer:local-strong-review \
   --out-dir work/code-review/current/review-mesh \
   --out work/code-review/current/review-mesh-prepare.json
 ```
@@ -350,3 +385,12 @@ agent-lifecycle-neutrality scan \
 Ignored evidence under approved policy roots is not read unless a dedicated
 job adds `--include-local-artifacts`. See
 [Neutrality scanning](../reference/neutrality.md) before enabling it.
+
+## What next
+
+- [Adapter installation](../adapters/install.md)
+- [Code review workflows](code-review-workflows.md)
+- [Lifecycle cookbook](lifecycle-cookbook.md)
+- [CLI reference](../reference/cli.md)
+- [Readiness diagnostics](../reference/readiness-diagnostics.md)
+- [Neutrality scanning](../reference/neutrality.md)

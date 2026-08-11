@@ -98,10 +98,15 @@ def _maturity_by_host(text: str) -> dict[str, str]:
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
         if len(cells) < 3:
             continue
-        host, current = cells[0], cells[2]
+        host, current = _markdown_link_label(cells[0]), cells[2]
         if host in maturity and current in {"EXPERIMENTAL", "VERIFIED"}:
             maturity[host] = current
     return maturity
+
+
+def _markdown_link_label(value: str) -> str:
+    match = re.fullmatch(r"\[([^]]+)\]\([^)]+\)", value)
+    return match.group(1) if match else value
 
 
 def _adapter_descriptors(root: Path) -> dict[str, dict[str, Any]]:

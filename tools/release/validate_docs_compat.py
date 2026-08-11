@@ -814,6 +814,20 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/adapters/usage-modes.md",
+        (
+            "Inside the host CLI",
+            "From the project terminal",
+            "agent-workflow-orchestrator",
+            "agent-lifecycle start --adapter <adapter-id> --file task.md",
+            "does not start the external CLI",
+            "Installing or mentioning a skill does not prove",
+            "`PLANNING_ONLY_QUALIFIED`",
+            "[Codex](codex.md)",
+            "[Qwen Code](qwen-code.md)",
+        ),
+    ),
+    (
         "docs/ru/adapters/install.md",
         (
             "`agent-lifecycle adapter session start/status/resume/promote`",
@@ -826,6 +840,20 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "claude plugin marketplace update agent-lifecycle-kit",
             "claude plugin update agent-lifecycle-kit@agent-lifecycle-kit",
             "перезапустите сессию хоста",
+        ),
+    ),
+    (
+        "docs/ru/adapters/usage-modes.md",
+        (
+            "Работа внутри внешнего инструмента",
+            "Запуск из терминала проекта",
+            "agent-workflow-orchestrator",
+            "agent-lifecycle start --adapter <adapter-id> --file task.md",
+            "не запускает внешний инструмент",
+            "сама по себе не доказывает",
+            "`PLANNING_ONLY_QUALIFIED`",
+            "[Codex](codex.md)",
+            "[Qwen Code](qwen-code.md)",
         ),
     ),
     (
@@ -922,6 +950,17 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "0.147.0",
             "2.1.226",
             "1.18.15",
+            "2026.07.23",
+            "0.46.0",
+            "1.45.0",
+            "0.2.118",
+            "0.19.0",
+            "0.30.0",
+            "0.0.34",
+            "0.83.0",
+            "0.21.8",
+            "All twelve bundled adapters",
+            "qualifiedLaunch.publicSupportClaimed",
             "WRAPPER_ONLY",
             "FIXTURE_ONLY",
             "acceptedForS1S2: false",
@@ -1046,6 +1085,17 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "0.147.0",
             "2.1.226",
             "1.18.15",
+            "2026.07.23",
+            "0.46.0",
+            "1.45.0",
+            "0.2.118",
+            "0.19.0",
+            "0.30.0",
+            "0.0.34",
+            "0.83.0",
+            "0.21.8",
+            "двенадцати встроенных адаптеров",
+            "qualifiedLaunch.publicSupportClaimed",
             "WRAPPER_ONLY",
             "FIXTURE_ONLY",
             "acceptedForS1S2: false",
@@ -1314,6 +1364,17 @@ ADAPTER_DOCS = (
     "docs/adapters/qwen-code.md",
 )
 
+INSIDE_SESSION_ADAPTERS = {
+    "claude",
+    "codex",
+    "cursor",
+    "gemini-cli",
+    "hermes",
+    "kimi-code",
+    "opencode",
+    "pi",
+}
+
 VERIFIED_ROW = re.compile(r"^\|[^|\n]+\|[^|\n]+\|\s*VERIFIED\s*\|", re.MULTILINE)
 PRODUCTION_READY_CLAIM = re.compile(r"\b(production[- ]ready|production ready)\b", re.IGNORECASE)
 VERSIONED_FEATURE_PROSE = re.compile(
@@ -1411,6 +1472,7 @@ def _check_doc(
 
 def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]], verified_doc_hosts: set[str]) -> dict[str, Any]:
     path = root / relative
+    adapter_id = path.stem
     if relative == "docs/adapters/claude.md":
         required = ("`VERIFIED`", "Claude Code 2.1.220", "live conformance", "does not claim official")
     elif relative == "docs/adapters/codex.md":
@@ -1433,6 +1495,15 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
         required = ("`VERIFIED`", "Pi `0.83.0`", "live conformance", "does not claim public")
     else:
         required = ("`EXPERIMENTAL`", "live", "conformance")
+    required = (
+        *required,
+        f"agent-lifecycle start --adapter {adapter_id} --file task.md",
+        "usage-modes.md",
+    )
+    if adapter_id in INSIDE_SESSION_ADAPTERS:
+        required = (*required, "agent-workflow-orchestrator", "full ALK lifecycle")
+    else:
+        required = (*required, "Inside-session ALK use is not shipped")
     check = _check_doc(root, relative, required, blockers, verified_doc_hosts)
     if path.is_file():
         text = path.read_text(encoding="utf-8")
@@ -1506,7 +1577,10 @@ def _check_versioned_feature_prose(root: Path, blockers: list[dict[str, Any]]) -
 
 def _verified_row_host(row: str) -> str:
     cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
-    return cells[0] if cells else ""
+    if not cells:
+        return ""
+    link = re.fullmatch(r"\[([^]]+)\]\([^)]+\)", cells[0])
+    return link.group(1) if link else cells[0]
 
 
 def _verified_doc_hosts_from_evidence_index(root: Path, blockers: list[dict[str, Any]]) -> set[str]:
