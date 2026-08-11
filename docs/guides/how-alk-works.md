@@ -11,6 +11,10 @@ This distinction matters when choosing a workflow. A raw task passed to
 authorized implementation merely because a plugin is installed or `--launch`
 is present.
 
+For a capability-by-capability explanation of multiple agents, plan-level
+workflow customization, host model settings, prompts, timeouts and retries, see
+[Workflow customization and execution controls](../reference/workflow-customization.md).
+
 ## The participants
 
 | Participant | Responsibility |
