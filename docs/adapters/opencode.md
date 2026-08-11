@@ -4,8 +4,8 @@ The OpenCode projection packages shared lifecycle skills, root `opencode.json`,
 an OpenCode JS adapter under `adapters/opencode/`, and a derived capability
 manifest at `adapters/opencode/capabilities.manifest.json`.
 
-OpenCode-specific code must not reimplement lifecycle planning, freeze,
-workflow, review or final-audit semantics.
+OpenCode-specific code projects lifecycle planning, freeze, workflow, review and
+final-audit commands while ALK core remains the source of their semantics.
 
 OpenCode loads plugins and skills separately. Copy `skills/*` into
 `.opencode/skills/` or `~/.config/opencode/skills/`, and copy
@@ -32,20 +32,20 @@ receipt, live calibration, and an ALK lifecycle final proof. The redacted live
 summary is
 `docs/adapters/evidence/opencode-host-local-live-2026-07-29.md`.
 
-This does not claim npm publication, public directory approval, production
-promotion, or compatibility with untested OpenCode versions.
+The verified scope covers OpenCode CLI `1.18.9`, the tested host-local model
+binding and the evidence summary above.
 
 ## Qualified local launch
 
 OpenCode `1.18.15` has a separate version-bound local launch profile. Generate
-and preflight it before a frozen `start --launch` call. The profile does not
-use `--auto`, change the `1.18.9` full adapter evidence range, or qualify token
-accounting for S1/S2. See [Qualified host
+and preflight it before a frozen `start --launch` call. The profile uses the
+approved process arguments; the full adapter evidence range remains `1.18.9`,
+and token accounting is `FIXTURE_ONLY`. See [Qualified host
 launch](../reference/qualified-host-launch.md).
 
-The planning-only route is explicitly `PLANNING_ONLY_UNSUPPORTED` until a safe
-native planning profile and live containment evidence exist. Adapter maturity
-does not override that result. See [Planning-only adapter
+The planning-only route has status `PLANNING_ONLY_UNSUPPORTED`; its
+qualification path uses a safe native planning profile and live containment
+evidence. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
 ## Use ALK with OpenCode
@@ -68,5 +68,5 @@ For the command route:
 agent-lifecycle start --adapter opencode --file task.md
 ```
 
-The command does not start OpenCode by default. See [Using ALK with an
-adapter](usage-modes.md).
+The command creates ALK intake. For host execution, use the qualified launch
+route. See [Using ALK with an adapter](usage-modes.md).

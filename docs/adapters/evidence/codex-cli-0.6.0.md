@@ -11,7 +11,7 @@ claim. Raw receipts and diagnostics remain local release evidence under
 - Tested host version: Codex CLI 0.145.0.
 - Source revision:
   `b01a1793e42f52e20077a7aa26b8e4e25c3bd216`.
-- Maturity claim: `VERIFIED` for this host range only.
+- Support-level claim: `VERIFIED` for this host range only.
 - Budget mode: `subscription` with invocation, token, and wall-clock caps.
 - Production promotion claimed: false.
 - Public directory approval claimed: false.

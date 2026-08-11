@@ -11,7 +11,7 @@ under `work/release-0-5/evidence/` because that tree is intentionally ignored.
 - Tested host version: Claude Code 2.1.220.
 - Source revision:
   `6bb3b58ee01d028fe21cef209c284efc79e55ceb`.
-- Maturity claim: `VERIFIED` for this host range only.
+- Support-level claim: `VERIFIED` for this host range only.
 - Production promotion claimed: false.
 - Public directory approval claimed: false.
 - Universal adapter support claimed: false.

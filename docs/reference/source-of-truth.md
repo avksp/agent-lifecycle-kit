@@ -12,7 +12,7 @@ instead of duplicating long rules.
 | CLI command behavior | `src/agent_lifecycle/cli/` and command tests |
 | Completion stop/continue decisions | `agent-completion-gate-receipt.v1` and `src/agent_lifecycle/specification/completion_gate.py` |
 | External issue intake | `skills/issue-to-spec/SKILL.md` and reviewed ALK plans |
-| Adapter maturity | `adapters/*/adapter.descriptor.json` |
+| Adapter support level | `adapters/*/adapter.descriptor.json` |
 | Adapter capabilities | `adapters/*/capabilities.manifest.json` |
 | Support summary | `docs/adapters/support-matrix.md` |
 | Tracked redacted adapter evidence | `docs/adapters/evidence/adapter-evidence-summary.v1.json` and linked summaries |

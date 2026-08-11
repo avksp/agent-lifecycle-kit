@@ -35,6 +35,6 @@ credentials, native launch, waits, cancellation and telemetry remain host-owned.
 
 Event capture is declared as `adapter-owned` and uses
 `agent-adapter-event.v1` plus `agent-adapter-event-stream-receipt.v1`. See
-[Codex event bridge](event-bridge.md). No automatic hook installation is
-claimed, and event capture guidance does not change the Codex `VERIFIED`
-maturity claim.
+[Codex event bridge](event-bridge.md). Hook configuration belongs to the
+operator or adapter; ALK validates the portable event receipt. The support
+level remains tied to the accepted Codex evidence.

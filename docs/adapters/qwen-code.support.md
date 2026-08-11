@@ -1,11 +1,10 @@
 # Qwen Code support summary
 
-Current maturity: `VERIFIED`.
+Current support level: `VERIFIED`.
 
-Qwen Code is verified only for Qwen Code `0.21.0` on the tested host-local
-provider/model binding. The claim is source-tree compatibility evidence, not a
-public package approval, public directory approval or production-promotion
-claim.
+Qwen Code support covers Qwen Code `0.21.0` on the tested host-local
+provider/model binding. The source-tree compatibility evidence and its
+publication scope are recorded in the linked artifacts.
 
 Authoritative details live in:
 
@@ -13,6 +12,6 @@ Authoritative details live in:
 - `docs/adapters/support-matrix.md`;
 - `docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md`.
 
-Do not broaden this claim to other Qwen Code versions, providers, model
-bindings or publication surfaces without new bounded live host conformance,
-usage calibration, redaction scan, support-matrix review and lifecycle proof.
+To extend support to another Qwen Code version, provider, model binding or
+publication surface, add bounded live host conformance, usage calibration,
+redaction scan, support-matrix review and lifecycle proof.

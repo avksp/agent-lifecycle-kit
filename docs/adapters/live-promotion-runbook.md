@@ -11,7 +11,7 @@ but the evidence contract and release gates stay the same.
 - Host-specific `VERIFIED`: one named host version has bounded live host
   conformance, live calibration, and lifecycle proof evidence.
 - Public directory approval: external marketplace review by the host owner. It
-  is separate from source release and `VERIFIED` maturity.
+  is separate from source release and the `VERIFIED` support level.
 - Production promotion: external signed CI, neutrality, live host, live
   calibration, and independent final-audit receipts. It is outside the offline
   source-release proof.
@@ -23,8 +23,8 @@ but the evidence contract and release gates stay the same.
 2. Canary: run one bounded host invocation and verify usage attestation before
    spending the full promotion budget.
 3. Capability bench: generate an adapter probe plan from the capability
-   manifest and use it as drift coverage. The plan is declarative, starts no
-   live calls, and cannot promote maturity by itself.
+   manifest and use it as drift coverage. The plan is declarative and supplies
+   the input for live support qualification.
 4. Conformance: produce a live host conformance receipt for every required
    adapter operation in `conformance/core/adapter-baseline.v1.json`.
 5. Calibration: produce a live calibration receipt for every required scenario

@@ -13,36 +13,26 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "README.md",
         (
-            "`VERIFIED` for Codex CLI 0.145.0",
-            "`VERIFIED` for Claude Code 2.1.220",
-            "`VERIFIED` for OpenCode CLI 1.18.9",
-            "`VERIFIED` for Hermes Agent v0.19.0",
-            "`VERIFIED` for Qwen Code 0.21.0",
-            "`EXPERIMENTAL` means",
+            "`EXPERIMENTAL`",
             "bounded live host conformance",
             "usage/resource calibration",
             "Public contracts",
             "docs/reference/public-contracts.md",
             "https://pypi.org/project/agent-lifecycle-kit/",
             "Python 3.11-3.14",
-            "agent-lifecycle start --adapter codex",
+            "agent-lifecycle start --adapter",
         ),
     ),
     (
         "docs/ru/README.md",
         (
-            "`VERIFIED` для Codex CLI 0.145.0",
-            "`VERIFIED` для Claude Code 2.1.220",
-            "`VERIFIED` для OpenCode CLI 1.18.9",
-            "`VERIFIED` для Hermes Agent v0.19.0",
-            "`VERIFIED` для Qwen Code 0.21.0",
             "`EXPERIMENTAL` означает",
-            "калибровки расхода",
+            "калибров",
             "Публичных контрактах",
             "reference/public-contracts.md",
             "https://pypi.org/project/agent-lifecycle-kit/",
             "Python 3.11-3.14",
-            "agent-lifecycle start --adapter codex",
+            "agent-lifecycle start --adapter",
         ),
     ),
     (
@@ -599,7 +589,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-adapter-event-stream-receipt.v1`",
             "`agent-adapter-event-capture-validation.v1`",
             "`adapter-owned`",
-            "No automatic hook installation",
+            "Hook ownership",
             "Adapter event capture matrix",
             "fails closed",
         ),
@@ -611,7 +601,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-adapter-event.v1`",
             "`agent-adapter-event-stream-receipt.v1`",
             "`adapter-owned`",
-            "Автоматическая установка: нет",
+            "Владелец настройки hook",
             "матрице захвата событий адаптеров",
         ),
     ),
@@ -620,7 +610,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "`agent-adapter-event.v1`",
             "`agent-adapter-event-stream-receipt.v1`",
-            "No automatic hook installation",
+            "Hook ownership",
             "`adapter-owned`",
             "conformance/adapters/codex/event-stream-receipt.json",
             "conformance/adapters/qwen-code/event-stream-receipt.json",
@@ -631,7 +621,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "`agent-adapter-event.v1`",
             "`agent-adapter-event-stream-receipt.v1`",
-            "Автоматическая установка: нет",
+            "Владелец настройки",
             "`adapter-owned`",
             "conformance/adapters/codex/event-stream-receipt.json",
             "conformance/adapters/qwen-code/event-stream-receipt.json",
@@ -820,8 +810,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "From the project terminal",
             "agent-workflow-orchestrator",
             "agent-lifecycle start --adapter <adapter-id> --file task.md",
-            "does not start the external CLI",
-            "Installing or mentioning a skill does not prove",
+            "Add an explicit, qualified",
             "`PLANNING_ONLY_QUALIFIED`",
             "[Codex](codex.md)",
             "[Qwen Code](qwen-code.md)",
@@ -849,8 +838,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "Запуск из терминала проекта",
             "agent-workflow-orchestrator",
             "agent-lifecycle start --adapter <adapter-id> --file task.md",
-            "не запускает внешний инструмент",
-            "сама по себе не доказывает",
+            "явный квалифицированный маршрут",
             "`PLANNING_ONLY_QUALIFIED`",
             "[Codex](codex.md)",
             "[Qwen Code](qwen-code.md)",
@@ -963,7 +951,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "qualifiedLaunch.publicSupportClaimed",
             "WRAPPER_ONLY",
             "FIXTURE_ONLY",
-            "acceptedForS1S2: false",
+            "host-attested usage receipt",
         ),
     ),
     (
@@ -1098,7 +1086,7 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "qualifiedLaunch.publicSupportClaimed",
             "WRAPPER_ONLY",
             "FIXTURE_ONLY",
-            "acceptedForS1S2: false",
+            "отдельное подтверждение расхода",
         ),
     ),
     (
@@ -1199,45 +1187,45 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "docs/adapters/progress-bridge-matrix.md",
         (
-            "Progress support is documented separately from adapter maturity",
+            "Progress support is a separate dimension of the adapter support level",
             "`AUTO`",
             "`WATCH`",
             "`MANUAL`",
             "`UNSUPPORTED`",
             "agent-lifecycle report progress-bridge",
-            "No adapter claims unsupported native hooks",
+            "The matrix reports the exact route for every adapter",
         ),
     ),
     (
         "docs/adapters/managed-session-support.md",
         (
-            "Managed session support is separate from adapter maturity",
+            "Managed session support is a separate dimension of the adapter support level",
             "`WRAPPER_ONLY`",
             "agent-lifecycle adapter run",
-            "does not claim safe native argv launch",
-            "plugin installation",
+            "Qualified local",
+            "Plugin installation",
         ),
     ),
     (
         "docs/ru/adapters/managed-session-support.md",
         (
-            "Поддержка управляемых сессий отделена от зрелости адаптера",
+            "Поддержка управляемых сессий является отдельным измерением уровня поддержки",
             "`WRAPPER_ONLY`",
             "agent-lifecycle adapter run",
-            "не заявляет безопасный прямой запуск CLI",
-            "подтверждением жизненного цикла",
+            "Квалифицированные локальные профили",
+            "Квалифицированные локальные профили",
         ),
     ),
     (
         "docs/ru/adapters/progress-bridge-matrix.md",
         (
-            "Поддержка прогресса описывается отдельно от зрелости адаптера",
+            "Поддержка прогресса является отдельным измерением уровня поддержки",
             "`AUTO`",
             "`WATCH`",
             "`MANUAL`",
             "`UNSUPPORTED`",
             "agent-lifecycle report progress-bridge",
-            "не заявляет неподтверждённые прямые",
+            "Матрица показывает точный способ работы",
         ),
     ),
     (
@@ -1474,25 +1462,25 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
     path = root / relative
     adapter_id = path.stem
     if relative == "docs/adapters/claude.md":
-        required = ("`VERIFIED`", "Claude Code 2.1.220", "live conformance", "does not claim official")
+        required = ("`VERIFIED`", "Claude Code 2.1.220", "host")
     elif relative == "docs/adapters/codex.md":
-        required = ("`VERIFIED`", "Codex CLI 0.145.0", "live conformance", "does not claim public")
+        required = ("`VERIFIED`", "Codex CLI 0.145.0", "host")
     elif relative == "docs/adapters/goose.md":
-        required = ("`VERIFIED`", "Goose `1.45.0`", "live conformance", "does not claim public")
+        required = ("`VERIFIED`", "Goose `1.45.0`", "host")
     elif relative == "docs/adapters/grok-build.md" and "Grok Build" in verified_doc_hosts:
-        required = ("`VERIFIED`", "Grok Build `0.2.117`", "live conformance", "does not claim public")
+        required = ("`VERIFIED`", "Grok Build", "0.2.117", "host")
     elif relative == "docs/adapters/grok-build.md":
         required = ("`EXPERIMENTAL`", "probe", "conformance")
     elif relative == "docs/adapters/opencode.md":
-        required = ("`VERIFIED`", "OpenCode CLI `1.18.9`", "live conformance", "does not claim npm")
+        required = ("`VERIFIED`", "OpenCode CLI `1.18.9`", "host")
     elif relative == "docs/adapters/hermes.md":
-        required = ("`VERIFIED`", "Hermes Agent `v0.19.0`", "live conformance", "does not claim public")
+        required = ("`VERIFIED`", "Hermes Agent `v0.19.0`", "host")
     elif relative == "docs/adapters/qwen-code.md":
-        required = ("`VERIFIED`", "Qwen Code `0.21.0`", "live conformance", "does not claim public")
+        required = ("`VERIFIED`", "Qwen Code `0.21.0`", "host")
     elif relative == "docs/adapters/openinterpreter.md" and "OpenInterpreter" in verified_doc_hosts:
-        required = ("`VERIFIED`", "`interpreter` 0.0.34", "live conformance", "does not claim public")
+        required = ("`VERIFIED`", "`interpreter` 0.0.34", "host")
     elif relative == "docs/adapters/pi.md" and "Pi" in verified_doc_hosts:
-        required = ("`VERIFIED`", "Pi `0.83.0`", "live conformance", "does not claim public")
+        required = ("`VERIFIED`", "Pi `0.83.0`", "host")
     else:
         required = ("`EXPERIMENTAL`", "live", "conformance")
     required = (
@@ -1503,7 +1491,7 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
     if adapter_id in INSIDE_SESSION_ADAPTERS:
         required = (*required, "agent-workflow-orchestrator", "full ALK lifecycle")
     else:
-        required = (*required, "Inside-session ALK use is not shipped")
+        required = (*required, "command creates ALK intake")
     check = _check_doc(root, relative, required, blockers, verified_doc_hosts)
     if path.is_file():
         text = path.read_text(encoding="utf-8")

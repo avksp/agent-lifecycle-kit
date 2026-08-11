@@ -239,15 +239,15 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                     self.assertIn("full ALK lifecycle", english_page)
                     self.assertIn("полный цикл ALK", russian_page)
                 else:
-                    self.assertIn("Inside-session ALK use is not shipped", english_page)
-                    self.assertIn("Использование ALK внутри сессии этого инструмента не поставляется", russian_page)
+                    self.assertIn("command creates ALK intake", english_page)
+                    self.assertIn("Команда создаёт входные артефакты ALK", russian_page)
                 version = descriptor["qualifiedLaunch"]["expectedHostVersion"]
                 self.assertIn(version, english_launch)
                 self.assertIn(version, russian_launch)
 
         self.assertEqual(len(descriptors), 12)
-        self.assertIn("Why this table has three adapters", (ROOT / "docs/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
-        self.assertIn("Почему в основной таблице три адаптера", (ROOT / "docs/ru/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
+        self.assertIn("## Qualified profiles", (ROOT / "docs/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
+        self.assertIn("## Квалифицированные профили", (ROOT / "docs/ru/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
 
     def test_task_flow_docs_define_completion_and_cost_boundaries(self) -> None:
         english = (ROOT / "docs/guides/how-alk-works.md").read_text(encoding="utf-8")
@@ -264,8 +264,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("задачу управления завершением", russian)
         self.assertIn("внешний кодовый агент", russian)
         self.assertIn("не доказывает", russian)
-        self.assertIn("controls completion of coding-agent work", root_readme)
-        self.assertIn("управляет завершением", russian_readme)
+        self.assertIn("coordinates coding-agent work", root_readme)
+        self.assertIn("координирует работу кодового агента", russian_readme)
         self.assertIn("## Соразмерность процесса задаче", russian_architecture)
         for text in (lifecycle_cost, lifecycle_cost_ru):
             self.assertIn("pipelineCompliance", text)
@@ -847,8 +847,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Запуск из терминала проекта.\n"
         "agent-workflow-orchestrator.\n"
         "agent-lifecycle start --adapter <adapter-id> --file task.md.\n"
-        "does not start the external CLI.\n"
-        "не запускает внешний инструмент.\n"
+        "Add an explicit, qualified `--launch` route.\n"
+        "Для одного связанного процесса хоста добавьте явный квалифицированный маршрут `--launch`.\n"
         "Installing or mentioning a skill does not prove.\n"
         "сама по себе не доказывает.\n"
         "`PLANNING_ONLY_QUALIFIED`.\n"
@@ -1114,7 +1114,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-adapter-event-stream-receipt.v1`.\n"
         "`agent-adapter-event-capture-validation.v1`.\n"
         "`adapter-owned`.\n"
-        "No automatic hook installation.\n"
+        "Hook ownership.\n"
         "Adapter event capture matrix.\n"
         "fails closed.\n",
     )
@@ -1124,13 +1124,13 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-adapter-event.v1`.\n"
         "`agent-adapter-event-stream-receipt.v1`.\n"
         "`adapter-owned`.\n"
-        "Автоматическая установка: нет.\n"
+        "Владелец настройки hook.\n"
         "матрице захвата событий адаптеров.\n",
     )
     event_matrix = (
         "`agent-adapter-event.v1`.\n"
         "`agent-adapter-event-stream-receipt.v1`.\n"
-        "No automatic hook installation.\n"
+        "Hook ownership.\n"
         "`adapter-owned`.\n"
         "conformance/adapters/codex/event-stream-receipt.json.\n"
         "conformance/adapters/qwen-code/event-stream-receipt.json.\n"
@@ -1138,7 +1138,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(root / "docs/adapters/event-capture-matrix.md", event_matrix)
     _write_text(
         root / "docs/ru/adapters/event-capture-matrix.md",
-        event_matrix.replace("No automatic hook installation", "Автоматическая установка: нет"),
+        event_matrix.replace("Hook ownership", "Владелец настройки"),
     )
     _write_text(
         root / "docs/reference/review-verdict.md",
@@ -1296,7 +1296,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "qualifiedLaunch.publicSupportClaimed.\n"
         "WRAPPER_ONLY.\n"
         "FIXTURE_ONLY.\n"
-        "acceptedForS1S2: false.\n"
+        "host-attested usage receipt.\n"
+        "отдельное подтверждение расхода.\n"
     )
     _write_text(root / "docs/reference/qualified-host-launch.md", qualified_launch)
     _write_text(root / "docs/ru/reference/qualified-host-launch.md", qualified_launch)
@@ -1353,32 +1354,32 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/adapters/progress-bridge-matrix.md",
-        "Progress support is documented separately from adapter maturity.\n"
+        "Progress support is a separate dimension of the adapter support level.\n"
         "`AUTO`. `WATCH`. `MANUAL`. `UNSUPPORTED`.\n"
         "agent-lifecycle report progress-bridge.\n"
-        "No adapter claims unsupported native hooks.\n",
+        "The matrix reports the exact route for every adapter.\n",
     )
     _write_text(
         root / "docs/ru/adapters/progress-bridge-matrix.md",
-        "Поддержка прогресса описывается отдельно от зрелости адаптера.\n"
+        "Поддержка прогресса является отдельным измерением уровня поддержки.\n"
         "`AUTO`. `WATCH`. `MANUAL`. `UNSUPPORTED`.\n"
         "agent-lifecycle report progress-bridge.\n"
-        "не заявляет неподтверждённые прямые hooks хоста.\n",
+        "Матрица показывает точный способ работы для каждого адаптера.\n",
     )
     _write_text(
         root / "docs/adapters/managed-session-support.md",
-        "Managed session support is separate from adapter maturity.\n"
+        "Managed session support is a separate dimension of the adapter support level.\n"
         "`WRAPPER_ONLY`.\n"
         "agent-lifecycle adapter run.\n"
-        "does not claim safe native argv launch.\n"
-        "plugin installation.\n",
+        "Qualified local profiles.\n"
+        "Plugin installation.\n",
     )
     _write_text(
         root / "docs/ru/adapters/managed-session-support.md",
-        "Поддержка управляемых сессий отделена от зрелости адаптера.\n"
+        "Поддержка управляемых сессий является отдельным измерением уровня поддержки.\n"
         "`WRAPPER_ONLY`.\n"
         "agent-lifecycle adapter run.\n"
-        "не заявляет безопасный прямой запуск CLI.\n"
+        "Квалифицированные локальные профили.\n"
         "подтверждением жизненного цикла.\n",
     )
     for host in (
@@ -1396,17 +1397,17 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "qwen-code",
     ):
         adapter_doc = (
-            "This adapter is `VERIFIED` for Codex CLI 0.145.0; live conformance exists and it does not claim public approval.\n"
+            "This adapter is `VERIFIED` for Codex CLI 0.145.0; live conformance exists for the tested host range.\n"
             if host == "codex"
-            else "This adapter is `VERIFIED` for Claude Code 2.1.220; live conformance exists and it does not claim official approval.\n"
+            else "This adapter is `VERIFIED` for Claude Code 2.1.220; live conformance exists for the tested host range.\n"
             if host == "claude"
-            else "This adapter is `VERIFIED` for Goose `1.45.0`; live conformance exists and it does not claim public approval.\n"
+            else "This adapter is `VERIFIED` for Goose `1.45.0`; live conformance exists for the tested host range.\n"
             if host == "goose"
-            else "This adapter is `VERIFIED` for OpenCode CLI `1.18.9`; live conformance exists and it does not claim npm publication.\n"
+            else "This adapter is `VERIFIED` for OpenCode CLI `1.18.9`; live conformance exists for the tested host range.\n"
             if host == "opencode"
-            else "This adapter is `VERIFIED` for Hermes Agent `v0.19.0`; live conformance exists and it does not claim public approval.\n"
+            else "This adapter is `VERIFIED` for Hermes Agent `v0.19.0`; live conformance exists for the tested host range.\n"
             if host == "hermes"
-            else "This adapter is `VERIFIED` for Qwen Code `0.21.0`; live conformance exists and it does not claim public approval.\n"
+            else "This adapter is `VERIFIED` for Qwen Code `0.21.0`; live conformance exists for the tested host range.\n"
             if host == "qwen-code"
             else "This adapter remains `EXPERIMENTAL`; probe and live conformance evidence are required before promotion.\n"
             if host == "grok-build"
@@ -1420,7 +1421,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
             + (
                 "agent-workflow-orchestrator. Follow the full ALK lifecycle.\n"
                 if host in {"claude", "codex", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "pi"}
-                else "Inside-session ALK use is not shipped.\n"
+                else "The command creates ALK intake for the task.\n"
             ),
         )
 
