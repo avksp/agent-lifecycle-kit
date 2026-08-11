@@ -186,6 +186,35 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("pipelineCompliance", text)
             self.assertIn("coordination", text)
 
+    def test_multi_model_review_is_explicit_and_host_started(self) -> None:
+        english_quickstart = (ROOT / "docs/guides/quickstart.md").read_text(encoding="utf-8")
+        russian_quickstart = (ROOT / "docs/ru/quickstart.md").read_text(encoding="utf-8")
+        english_guide = (ROOT / "docs/guides/how-alk-works.md").read_text(encoding="utf-8")
+        russian_guide = (ROOT / "docs/ru/guides/how-alk-works.md").read_text(encoding="utf-8")
+        english_workflow = (ROOT / "docs/guides/review-mesh-workflow.md").read_text(encoding="utf-8")
+        russian_workflow = (ROOT / "docs/ru/review-mesh-workflow.md").read_text(encoding="utf-8")
+        english_reference = (ROOT / "docs/reference/review-mesh.md").read_text(encoding="utf-8")
+        russian_reference = (ROOT / "docs/ru/reference/review-mesh.md").read_text(encoding="utf-8")
+
+        self.assertIn("## Optional review with several AI models", english_quickstart)
+        self.assertIn("## Дополнительная проверка несколькими моделями ИИ", russian_quickstart)
+        for text in (english_quickstart, russian_quickstart):
+            self.assertIn("codex-example", text)
+            self.assertIn("claude-example", text)
+            self.assertIn("opencode-glm-example", text)
+        self.assertIn("## Review with several AI models", english_guide)
+        self.assertIn("## Проверка несколькими моделями ИИ", russian_guide)
+        self.assertIn("Any available combination is valid", english_guide)
+        self.assertIn("Допустимы любые доступные сочетания", russian_guide)
+        self.assertIn("If no alternative model is available", english_guide)
+        self.assertIn("Если другой модели нет", russian_guide)
+        self.assertIn("ALK does not become a model broker", english_workflow)
+        self.assertIn("ALK не становится\nпосредником провайдера", russian_workflow)
+        self.assertIn("Review Mesh is optional and off by\ndefault", english_workflow)
+        self.assertIn("Review Mesh необязателен и по умолчанию\nвыключен", russian_workflow)
+        self.assertIn("never mandatory by installation", english_reference)
+        self.assertIn("не делают Review Mesh обязательным", russian_reference)
+
     def test_plugin_update_guidance_covers_pinned_codex_and_claude_flows(self) -> None:
         for relative_path in (
             "docs/adapters/install.md",
@@ -532,6 +561,13 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "agent-lifecycle plan completeness-check.\n"
         "agent-lifecycle review-mesh recommend.\n"
         "agent-lifecycle metrics cost-report.\n"
+        "Review with several AI models. OpenCode/GLM.\n"
+        "Any available combination is valid. If no alternative model is available.\n"
+        "mandatory only for phases.\n"
+        "does not act as a provider broker.\n"
+        "Проверка несколькими моделями ИИ. Допустимы любые доступные сочетания.\n"
+        "Если другой модели нет. становится обязательным только для этапов.\n"
+        "не запускает модели.\n"
         "`pipelineCompliance`. Соразмерность затрат процесса.\n"
         "does not by itself prove. не доказывает.\n"
     )

@@ -248,10 +248,12 @@ Use this for ordinary diff review, architecture review, security review and
 pre-merge risk review. Full GitHub, GitLab, architecture and implementation
 audit examples are in [Code review workflows](code-review-workflows.md).
 
-## Optional multi-review advice
+## Optional review with several AI models
 
-For research, planning or audit-heavy work, ask for a local Review Mesh
-recommendation before putting it into a plan:
+For research, planning or audit-heavy work, the same artifact can be checked by
+independent adapter/model bindings, for example Codex, Claude Code and
+OpenCode/GLM. Ask for a local Review Mesh recommendation before putting this
+requirement into a plan:
 
 ```bash
 agent-lifecycle review-mesh recommend --file task.md
@@ -270,14 +272,20 @@ agent-lifecycle review-mesh prepare \
   --template leader-draft-review \
   --reviewer codex-example:plan-reviewer:strong-reasoning \
   --reviewer claude-example:risk-reviewer:strong-reasoning \
+  --reviewer opencode-glm-example:independent-reviewer:local-strong-review \
   --out-dir work/code-review/current/review-mesh \
   --out work/code-review/current/review-mesh-prepare.json
 ```
 
-If a reviewed frozen plan opts in, use `review-mesh prepare` or the atomic
+ALK does not choose or start those models. Run each generated assignment with
+the selected CLI, then import its structured answer. If a reviewed frozen plan
+opts in, use `review-mesh prepare` or the atomic
 `assign`, `import-result`, `synthesize` and `quorum` commands to coordinate
 reviewer evidence without launching reviewer hosts from ALK core. See the
-[Review Mesh workflow cookbook](review-mesh-workflow.md) for common task cases.
+[multi-model review workflow](review-mesh-workflow.md) for common task cases.
+Any available adapter/model combination may be used. Review Mesh is optional
+and `off` by default. If only one model is available, continue with the normal
+single-reviewer lifecycle unless a frozen plan explicitly requires quorum.
 For cookbook recipes that stop at research, planning, Markdown review or
 implementation audit, see [Lifecycle cookbook](lifecycle-cookbook.md).
 
