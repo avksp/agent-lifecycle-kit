@@ -16,9 +16,10 @@ that result. It is host-neutral and does not depend on a source project.
 - Official PyPI package for Python 3.11-3.14:
   `python -m pip install agent-lifecycle-kit==1.61.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
-- One safe entrypoint: `agent-lifecycle start --adapter codex --file task.md`.
+- One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
 - [How ALK works for different tasks](guides/how-alk-works.md)
+- [Workflow customization and execution controls](reference/workflow-customization.md)
 - [Lifecycle cookbook](guides/lifecycle-cookbook.md)
 - [System architecture](architecture/system-architecture.md)
 - [Project comparison](reference/project-comparison.md)
@@ -57,6 +58,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Production resource and security guide](guides/production-resource-security.md)
 - [Reference task evaluation guide](guides/reference-task-evaluation.md)
 - [System architecture](architecture/system-architecture.md)
+- [Workflow customization and execution controls](reference/workflow-customization.md)
 - [Release architecture](architecture/release-architecture.md)
 - [Runner transition contract](architecture/runner-transition-contract.md)
 - [Runner extension map](architecture/runner-extension-map.md)
