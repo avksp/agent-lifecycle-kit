@@ -59,3 +59,19 @@ A successful version preflight does not authorize planning launch.
 `managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
 promote planning support. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
+
+## Use ALK with OpenInterpreter
+
+The bundled OpenInterpreter projection does not install an ALK plugin or skill
+inside the host. Use the command route, or a separately reviewed host-local
+wrapper:
+
+Inside-session ALK use is not shipped for this adapter, so there is no bundled
+in-session prompt example.
+
+```bash
+agent-lifecycle start --adapter openinterpreter --file task.md
+```
+
+The command does not start OpenInterpreter by default. See [Using ALK with an
+adapter](usage-modes.md).

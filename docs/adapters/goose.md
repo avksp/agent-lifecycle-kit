@@ -53,3 +53,19 @@ A successful version preflight does not authorize planning launch.
 `managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
 promote planning support. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
+
+## Use ALK with Goose
+
+The bundled Goose projection does not install an ALK plugin or skill inside
+Goose. Use the command route, or provide a separately reviewed host-local
+wrapper that calls the same ALK commands:
+
+Inside-session ALK use is not shipped for this adapter, so there is no bundled
+in-session prompt example.
+
+```bash
+agent-lifecycle start --adapter goose --file task.md
+```
+
+The command does not start Goose by default. See [Using ALK with an
+adapter](usage-modes.md).

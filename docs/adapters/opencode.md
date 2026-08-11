@@ -47,3 +47,26 @@ The planning-only route is explicitly `PLANNING_ONLY_UNSUPPORTED` until a safe
 native planning profile and live containment evidence exist. Adapter maturity
 does not override that result. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
+
+## Use ALK with OpenCode
+
+After copying the shared skills and JS projection into the configured OpenCode
+directories, restart the host and ask: `Use the agent-workflow-orchestrator
+skill for this task: <task>`. OpenCode owns the selected provider, model and
+tools.
+
+```text
+Use the agent-workflow-orchestrator skill for this task.
+Follow the full ALK lifecycle through reviewed planning, plan freeze,
+implementation audits and accepted final proof.
+Task: <describe the task or name the Markdown file to read>
+```
+
+For the command route:
+
+```bash
+agent-lifecycle start --adapter opencode --file task.md
+```
+
+The command does not start OpenCode by default. See [Using ALK with an
+adapter](usage-modes.md).

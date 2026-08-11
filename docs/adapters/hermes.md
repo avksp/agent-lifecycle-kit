@@ -50,3 +50,22 @@ A successful version preflight does not authorize planning launch.
 `managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
 promote planning support. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
+
+## Use ALK with Hermes
+
+After installing the tagged lifecycle skill, invoke the shipped command inside
+Hermes:
+
+```text
+/agent-lifecycle-kit:agent-workflow-orchestrator Follow the full ALK lifecycle through reviewed planning, plan freeze, implementation audits and accepted final proof. Task: <task or Markdown file>
+```
+
+For the command route outside Hermes:
+
+```bash
+agent-lifecycle start --adapter hermes --file task.md
+```
+
+The first route is host-guided; the second does not start Hermes by default.
+Neither skill installation nor a slash command alone is lifecycle proof. See
+[Using ALK with an adapter](usage-modes.md).
