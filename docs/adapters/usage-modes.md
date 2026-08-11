@@ -4,6 +4,10 @@ ALK can be used from inside a supported host CLI or as a separate command in
 the project terminal. These routes can be combined, but they do not provide the
 same guarantees.
 
+For the practical limits of several agents, custom plan stages, host model
+settings, prompts, timeouts and retries, see [Workflow customization and
+execution controls](../reference/workflow-customization.md).
+
 ## Inside the host CLI
 
 A host-integrated plugin or skill teaches the coding agent how to use the ALK

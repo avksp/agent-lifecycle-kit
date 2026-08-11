@@ -4,6 +4,11 @@ The CLI prints JSON for machine-readable commands. Commands that mutate state
 record receipts or require explicit input files; diagnostic commands stay
 read-only unless their own help says otherwise.
 
+For the choice between the simple `start` route and the atomic lifecycle
+commands, including multiple agents, host model settings, prompts, timeouts
+and retries, see [Workflow customization and execution
+controls](workflow-customization.md).
+
 ## Installation
 
 Python 3.11-3.14 is supported. Install the exact release from the official
