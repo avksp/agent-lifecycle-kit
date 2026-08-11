@@ -71,7 +71,7 @@ agent-lifecycle start --adapter codex --file task.md
 
 The default `auto` mode returns `agent-lifecycle-start-receipt.v1`. For raw
 text or Markdown its action remains draft review. ALK may recommend Bug
-Forensics or multi-review, but a recommendation does not activate a blocking
+Forensics or multi-model review, but a recommendation does not activate a blocking
 gate and does not start implementation.
 
 The host agent can use the `agent-workflow-orchestrator` skill to carry the
@@ -153,7 +153,7 @@ agent-lifecycle review-mesh recommend \
   --out work/review/recommendation.json
 ```
 
-Use one independent reviewer for ordinary work. Use optional multi-review when
+Use one independent reviewer for ordinary work. Use optional multi-model review when
 the task combines independent risk domains, contains disputed assumptions or
 needs a quorum. The reviewer output remains advisory until a frozen plan names
 it as required evidence.
@@ -240,16 +240,45 @@ or plain task text is not process-launch authority. See [Local host
 launch](../reference/local-host-launch.md) and [Qualified host
 launch](../reference/qualified-host-launch.md).
 
-## Coordinate several reviewers
+## Review with several AI models
+
+Review Mesh can send the same bounded artifact to independent adapter/model
+bindings. For example, Codex can review architecture, Claude Code can review
+risks, and OpenCode with GLM or another configured model can perform an
+independent cross-check. The concrete products and models are examples, not a
+required roster.
+
+Any available combination is valid: different commercial models, local models,
+or models reached through different adapters. Review Mesh is optional and off
+by default. If no alternative model is available, use the ordinary lifecycle
+with one reviewer. Separate sessions of the same model may still provide useful
+advice, but they do not satisfy model-independence evidence when the profile
+requires the `model` dimension.
+
+Choose the mode by the result you need:
+
+- `leader-draft-multi-review`: one model prepares a draft and other models
+  review it independently;
+- `parallel-research-synthesis`: several models research or plan independently
+  before ALK combines their findings;
+- `implementation-audit-panel`: several models audit completed implementation
+  evidence before acceptance.
 
 1. Ask for a recommendation with `review-mesh recommend`.
 2. Prepare reviewer packets with `review-mesh prepare`.
-3. Run each reviewer through its host outside ALK core.
+3. Run each packet with its selected CLI and model outside ALK core.
 4. Import redacted results with `review-mesh import-result`.
 5. Synthesize findings and build a quorum receipt.
 6. Treat quorum as blocking only for phases named by the frozen plan.
 
-The complete commands are in the [multi-review workflow](review-mesh-workflow.md).
+ALK coordinates evidence; it does not act as a provider broker and does not
+start the models. The complete commands and Codex, Claude Code and OpenCode/GLM
+examples are in the [multi-model review workflow](review-mesh-workflow.md).
+
+The mode becomes mandatory only for phases where a reviewed frozen plan opts
+into blocking Review Mesh. If that plan requires a quorum that the available
+models cannot satisfy, treat the run as blocked and revise and refreeze the plan;
+do not invent identities or silently bypass the gate.
 
 ## Resume work
 

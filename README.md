@@ -72,10 +72,10 @@ and [Документация на русском](docs/ru/README.md).
   root-cause digests, fix-impact receipts, and hash chains.
 - Cross-checks and runtime-policy receipts are opt-in controls; plans can
   require proof for an external system update before acceptance.
-- Optional Review Mesh covers leader-draft review, parallel research synthesis
-  and audit panels. The advisor can suggest a mode; `review-mesh prepare`
-  creates local reviewer packets; opted-in plans can require
-  assignment/result/synthesis/quorum receipts, but ALK core does not start hosts. The bundled reference-task suite measures deterministic quality, false acceptances, retries, elapsed time, and confidence-labeled token usage.
+- Optional multi-model review can use any available adapter/model bindings;
+  Codex, Claude Code and OpenCode/GLM are examples, not a required roster.
+  Review Mesh prepares packets, imports answers, synthesizes findings and checks
+  quorum, while the operator or host wrapper starts each model. The bundled reference-task suite measures deterministic quality, false acceptances, retries, elapsed time, and confidence-labeled token usage.
 
 ### Routing and resource control
 

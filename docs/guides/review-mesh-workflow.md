@@ -1,8 +1,17 @@
-# Review Mesh workflow cookbook
+# Multi-model review workflow
 
-This guide shows how to use Review Mesh without turning ALK into a model
-broker. ALK prepares assignments, imports reviewer output, synthesizes findings
-and checks quorum. The operator or host wrappers still run the reviewers.
+This guide shows how to check the same research, plan or implementation with
+several independent AI models through Review Mesh. Each reviewer can use a
+different adapter/model binding, for example Codex, Claude Code and
+OpenCode/GLM. ALK prepares assignments, imports reviewer output, synthesizes
+findings and checks quorum. The operator or host wrappers still run the models;
+ALK does not become a model broker.
+
+The examples are not a fixed roster. Use any adapters and models available in
+the environment, including local models. Review Mesh is optional and off by
+default. With only one model, ordinary single-reviewer planning and audit remain
+valid. Multiple sessions of that model are not proof of model independence when
+the selected profile requires both `host` and `model` dimensions.
 
 Use this guide when a task needs stronger planning or audit confidence:
 
@@ -466,6 +475,9 @@ agent-lifecycle workflow finalize \
 
 - Review Mesh is off by default.
 - Recommendations are advisory until a reviewed frozen plan opts in.
+- It is mandatory only for phases explicitly made blocking by that plan.
+- If required independence or quorum cannot be met, revise and refreeze the
+  plan instead of reusing identities or bypassing the gate.
 - ALK does not call provider APIs or launch reviewer CLIs.
 - Portable contracts use neutral reviewer ids and model classes, not concrete
   provider or model names.

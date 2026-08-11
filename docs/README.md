@@ -49,7 +49,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [How ALK works for different tasks](guides/how-alk-works.md)
 - [Lifecycle cookbook](guides/lifecycle-cookbook.md)
 - [Code review workflows](guides/code-review-workflows.md)
-- [Review Mesh workflow cookbook](guides/review-mesh-workflow.md)
+- [Multi-model review workflow](guides/review-mesh-workflow.md)
 - [Issue to specification drafts](guides/issue-to-spec.md)
 - [Offline source-release checks](guides/release-candidate.md)
 - [Verified-adapter release checklist](guides/verified-adapter-release-checklist.md)
