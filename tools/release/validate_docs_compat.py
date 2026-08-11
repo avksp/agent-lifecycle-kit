@@ -676,6 +676,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-adapter-session-receipt.v1`",
             "https://pypi.org/project/agent-lifecycle-kit/",
             "python -m pip install agent-lifecycle-kit==",
+            "agent-lifecycle tier resolve --request <request.json>",
+            "reserved compatibility selector",
         ),
     ),
     (
@@ -692,6 +694,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-adapter-session-receipt.v1`",
             "https://pypi.org/project/agent-lifecycle-kit/",
             "python -m pip install agent-lifecycle-kit==",
+            "agent-lifecycle tier resolve --request <request.json>",
+            "зарезервированный раздел совместимости",
         ),
     ),
     (
@@ -758,6 +762,11 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-adapter-session-receipt.v1`",
             "`managedLaunch.status: WRAPPER_ONLY`",
             "docs/adapters/managed-session-support.md",
+            "codex plugin marketplace remove agent-lifecycle-kit",
+            "--ref vX.Y.Z",
+            "claude plugin marketplace update agent-lifecycle-kit",
+            "claude plugin update agent-lifecycle-kit@agent-lifecycle-kit",
+            "Restart the host session",
         ),
     ),
     (
@@ -768,6 +777,33 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-adapter-session-receipt.v1`",
             "`managedLaunch.status: WRAPPER_ONLY`",
             "docs/ru/adapters/managed-session-support.md",
+            "codex plugin marketplace remove agent-lifecycle-kit",
+            "--ref vX.Y.Z",
+            "claude plugin marketplace update agent-lifecycle-kit",
+            "claude plugin update agent-lifecycle-kit@agent-lifecycle-kit",
+            "перезапустите сессию хоста",
+        ),
+    ),
+    (
+        "docs/reference/plugin-publication.md",
+        (
+            "agent-publication-manifest.v1",
+            "codex plugin marketplace remove agent-lifecycle-kit",
+            "codex plugin marketplace upgrade",
+            "claude plugin marketplace update agent-lifecycle-kit",
+            "claude plugin update agent-lifecycle-kit@agent-lifecycle-kit",
+            "Restart the host session",
+        ),
+    ),
+    (
+        "docs/ru/reference/plugin-publication.md",
+        (
+            "agent-publication-manifest.v1",
+            "codex plugin marketplace remove agent-lifecycle-kit",
+            "codex plugin marketplace upgrade",
+            "claude plugin marketplace update agent-lifecycle-kit",
+            "claude plugin update agent-lifecycle-kit@agent-lifecycle-kit",
+            "перезапустите сессию хоста",
         ),
     ),
     (
@@ -898,6 +934,8 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "not a runtime",
             "not a model broker",
             "Source of truth remains the frozen ALK plan",
+            "provider-neutral execution strategy",
+            "false acceptances",
         ),
     ),
     (
@@ -906,6 +944,18 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "не кодовый агент",
             "не платформа запуска моделей",
             "Источником правды остаётся зафиксированный план ALK",
+            "нейтральная к провайдеру стратегия выполнения",
+            "ложной приёмке",
+        ),
+    ),
+    (
+        "docs/architecture/modular-controller.md",
+        (
+            "policy/execution_strategy.py",
+            "benchmarks/*",
+            "contracts/benchmark_schemas.py",
+            "cli/benchmarks.py",
+            "41 and 53 lines respectively",
         ),
     ),
     (

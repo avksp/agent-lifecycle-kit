@@ -162,6 +162,48 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         ):
             self.assertIn(command, install)
 
+    def test_plugin_update_guidance_covers_pinned_codex_and_claude_flows(self) -> None:
+        for relative_path in (
+            "docs/adapters/install.md",
+            "docs/ru/adapters/install.md",
+            "docs/reference/plugin-publication.md",
+            "docs/ru/reference/plugin-publication.md",
+        ):
+            with self.subTest(path=relative_path):
+                text = (ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn("codex plugin marketplace remove agent-lifecycle-kit", text)
+                self.assertIn("--ref vX.Y.Z", text)
+                self.assertIn("codex plugin marketplace upgrade", text)
+                self.assertIn("claude plugin marketplace update agent-lifecycle-kit", text)
+                self.assertIn("claude plugin update agent-lifecycle-kit@agent-lifecycle-kit", text)
+
+    def test_architecture_comparison_and_cli_cover_current_strategy_surface(self) -> None:
+        architecture = (ROOT / "docs/architecture/modular-controller.md").read_text(encoding="utf-8")
+        for required in (
+            "policy/execution_strategy.py",
+            "benchmarks/*",
+            "contracts/benchmark_schemas.py",
+            "cli/benchmarks.py",
+            "41 and 53 lines respectively",
+        ):
+            self.assertIn(required, architecture)
+
+        comparisons = (
+            ("docs/reference/project-comparison.md", "provider-neutral execution strategy", "false acceptances"),
+            ("docs/ru/reference/project-comparison.md", "нейтральная к провайдеру стратегия выполнения", "ложной приёмке"),
+        )
+        for relative_path, strategy_text, quality_text in comparisons:
+            with self.subTest(path=relative_path):
+                text = (ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn(strategy_text, text)
+                self.assertIn(quality_text, text)
+
+        for relative_path in ("docs/reference/cli.md", "docs/ru/reference/cli.md"):
+            with self.subTest(path=relative_path):
+                text = (ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn("agent-lifecycle tier resolve --request <request.json>", text)
+                self.assertIn("agent-lifecycle conformance", text)
+
     def test_risk_aware_execution_docs_cover_profile_handoff_and_usage(self) -> None:
         for relative_path in (
             "docs/reference/risk-aware-execution.md",
@@ -518,11 +560,15 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/reference/project-comparison.md",
-        "lifecycle controller. not a runtime. not a model broker. Source of truth remains the frozen ALK plan.\n",
+        "lifecycle controller. not a runtime. not a model broker. "
+        "Source of truth remains the frozen ALK plan. provider-neutral execution strategy. "
+        "false acceptances.\n",
     )
     _write_text(
         root / "docs/ru/reference/project-comparison.md",
-        "не кодовый агент. не платформа запуска моделей. Источником правды остаётся зафиксированный план ALK.\n",
+        "не кодовый агент. не платформа запуска моделей. "
+        "Источником правды остаётся зафиксированный план ALK. "
+        "нейтральная к провайдеру стратегия выполнения. ложной приёмке.\n",
     )
     cli = (
         "import plan --source <file-or-folder>.\n"
@@ -538,6 +584,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-adapter-session-receipt.v1`.\n"
         "https://pypi.org/project/agent-lifecycle-kit/.\n"
         f"python -m pip install agent-lifecycle-kit=={TARGET_VERSION}.\n"
+        "agent-lifecycle tier resolve --request <request.json>.\n"
+        "reserved compatibility selector.\n"
+        "зарезервированный раздел совместимости.\n"
     )
     _write_text(root / "docs/reference/cli.md", cli)
     _write_text(root / "docs/ru/reference/cli.md", cli)
@@ -611,9 +660,32 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`managedLaunch.status: WRAPPER_ONLY`.\n"
         "docs/adapters/managed-session-support.md.\n"
         "docs/ru/adapters/managed-session-support.md.\n"
+        "codex plugin marketplace remove agent-lifecycle-kit.\n"
+        "codex plugin marketplace add source --ref vX.Y.Z.\n"
+        "codex plugin marketplace upgrade.\n"
+        "claude plugin marketplace update agent-lifecycle-kit.\n"
+        "claude plugin update agent-lifecycle-kit@agent-lifecycle-kit.\n"
+        "Restart the host session.\n"
+        "перезапустите сессию хоста.\n"
     )
     _write_text(root / "docs/adapters/install.md", install)
     _write_text(root / "docs/ru/adapters/install.md", install)
+    plugin_publication = (
+        "agent-publication-manifest.v1.\n"
+        "codex plugin marketplace remove agent-lifecycle-kit.\n"
+        "codex plugin marketplace upgrade.\n"
+        "claude plugin marketplace update agent-lifecycle-kit.\n"
+        "claude plugin update agent-lifecycle-kit@agent-lifecycle-kit.\n"
+        "Restart the host session.\n"
+        "перезапустите сессию хоста.\n"
+    )
+    _write_text(root / "docs/reference/plugin-publication.md", plugin_publication)
+    _write_text(root / "docs/ru/reference/plugin-publication.md", plugin_publication)
+    _write_text(
+        root / "docs/architecture/modular-controller.md",
+        "policy/execution_strategy.py. benchmarks/*. contracts/benchmark_schemas.py. "
+        "cli/benchmarks.py. 41 and 53 lines respectively.\n",
+    )
     implementation_audit = (
         "`agent-implementation-audit-report.v1`.\n"
         "`agent-final-implementation-audit.v1`.\n"

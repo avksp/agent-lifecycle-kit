@@ -36,6 +36,33 @@ python tools/release/validate_publication_versions.py \
 `agent-publication-version-validation.v1` и не заявляет промышленное
 продвижение или одобрение публичного каталога.
 
+## Обновление у пользователя
+
+Публикация тега не меняет уже закреплённую установку хоста. В Codex нужно
+заменить точную ссылку источника каталога и заново установить плагин:
+
+```bash
+codex plugin remove agent-lifecycle-kit@agent-lifecycle-kit
+codex plugin marketplace remove agent-lifecycle-kit
+codex plugin marketplace add https://github.com/avksp/agent-lifecycle-kit.git --ref vX.Y.Z
+codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
+codex plugin list
+```
+
+Команда `codex plugin marketplace upgrade` сохраняет настроенную ссылку и
+поэтому не заменяет старый тег семантической версии. В Claude Code используются
+собственные команды обновления, а `plugin marketplace add` не принимает
+`--ref`:
+
+```bash
+claude plugin marketplace update agent-lifecycle-kit
+claude plugin update agent-lifecycle-kit@agent-lifecycle-kit
+claude plugin list
+```
+
+После обновления перезапустите сессию хоста. Новые метаданные и навыки плагина
+загрузятся при следующем запуске.
+
 ## Плавающий канал
 
 Значение `last` нельзя записывать в `plugin.json.version`. Если хост

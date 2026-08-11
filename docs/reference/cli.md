@@ -19,6 +19,11 @@ python -m pip install agent-lifecycle-kit==1.61.0
 - `agent-lifecycle schema list`: list known public schemas.
 - `agent-lifecycle schema show <schema-id>`: print one schema.
 - `agent-lifecycle contract policy/check`: inspect public compatibility policy.
+- `agent-lifecycle tier resolve --request <request.json>`: resolve the SDD tier
+  and deterministic request digest from a structured tier request.
+- `agent-lifecycle conformance`: reserved compatibility selector. It has no
+  executable conformance workflow; use `agent-lifecycle adapter validate`,
+  adapter inspection and the release conformance validators instead.
 
 ## Planning
 
