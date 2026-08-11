@@ -40,7 +40,8 @@ This is the current source map for the standalone package:
 | Goal records, objective snapshots, read-only goal view and follow-up records | `goal/records.py`, `goal/view.py`, `followup/*` | Implemented |
 | Usage, phase resources, cost accounting and outcome signals | `metrics/*` | Implemented |
 | Model class routing and provider-neutral receipts | `model_routing/*` | Implemented |
-| Adaptive lifecycle policy and quality-floor decisions | `policy/*` | Implemented |
+| Adaptive lifecycle policy, quality-floor decisions and provider-neutral execution strategy | `policy/*`, including `policy/execution_strategy.py`, plus `cli/strategy.py` | Implemented |
+| Deterministic reference-task evaluation and quality-first strategy comparison | `benchmarks/*`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Implemented |
 | Optional quality profiles, cross-check, bug forensics and Bug Forensics advisory | `quality/*`, `quality/bug_forensics_advisor.py` | Implemented |
 | Read-only status, progress, event feed and change summaries | `reporting/*` | Implemented |
 | Optional multi-review coordination, operator templates, prepared packets, assignments, result import, synthesis and quorum | `review_mesh/*`, `review_mesh/operator_templates.py` | Implemented |
@@ -50,7 +51,7 @@ This is the current source map for the standalone package:
 | Release checks and live adapter promotion evidence | `tools/release/*`, `tools/live_hosts/*`, metadata and docs | Implemented as release validators and host-local evidence tooling |
 
 Current size check: `cli/main.py` and `cli/dispatch.py` are thin entrypoints at
-41 lines each. The root dispatcher selects a focused adapter/readiness,
+41 and 53 lines respectively. The root dispatcher selects a focused adapter/readiness,
 contract/evidence, lifecycle, observability or planning handler; policy,
 follow-up and worktree handlers remain dedicated command modules. Most
 production Python files are below the hard limits in this document.
@@ -103,6 +104,11 @@ when splitting prevents a file/context limit breach:
 - `metrics`: token/resource accounting, usage export, outcome indexes and
   quality-cost recommendations.
 - `model_routing`: provider-neutral model class decisions and receipts.
+- `execution_strategy`: provider-neutral composition of risk, quality floor,
+  model class, packet size, review depth and resource limits; currently
+  `policy/execution_strategy.py` with CLI and compiler projections.
+- `benchmarks`: deterministic reference-task evaluation and quality-first
+  comparison receipts; currently `benchmarks/*` and `cli/benchmarks.py`.
 - `worktree`: worktree isolation policies and attempt receipts.
 - `release`: release candidate, release inventory, and support matrix; currently
   docs, metadata and release validators.

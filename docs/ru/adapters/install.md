@@ -24,6 +24,34 @@ agent-lifecycle adapter install-plan --descriptor adapters/codex/adapter.descrip
 коммит. Он не должен становиться основным способом установки и не должен
 заменять semver внутри `plugin.json`.
 
+## Обновление установленного плагина
+
+В Codex ссылка на точный тег закрепляется в источнике каталога. Команда
+`codex plugin marketplace upgrade` обновляет данные того же источника, но не
+переводит плагин с одного тега семантической версии на другой. Для перехода на
+новый принятый выпуск замените закреплённый источник и установите плагин
+заново:
+
+```bash
+codex plugin remove agent-lifecycle-kit@agent-lifecycle-kit
+codex plugin marketplace remove agent-lifecycle-kit
+codex plugin marketplace add https://github.com/avksp/agent-lifecycle-kit.git --ref vX.Y.Z
+codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
+codex plugin list
+```
+
+Claude Code не принимает `--ref` в команде `plugin marketplace add`. Обновите
+каталог, затем сам установленный плагин штатными командами хоста:
+
+```bash
+claude plugin marketplace update agent-lifecycle-kit
+claude plugin update agent-lifecycle-kit@agent-lifecycle-kit
+claude plugin list
+```
+
+После обновления перезапустите сессию хоста, чтобы она загрузила новые навыки и
+метаданные плагина. Перед управляемой работой проверьте отображаемую версию.
+
 ## Локальные секреты хоста
 
 Адаптеры, которые вызывают реальную модель, должны получать ключи через

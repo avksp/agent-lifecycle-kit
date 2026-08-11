@@ -41,6 +41,34 @@ A floating `last` channel, when supported by a host, is opt-in only and may
 point to an accepted release commit as a source ref. It must not become the
 default install path and must not replace semver inside `plugin.json`.
 
+## Updating an installed plugin
+
+An exact Codex marketplace ref is pinned. `codex plugin marketplace upgrade`
+refreshes the configured source at that same ref; it does not move a plugin
+from one semver tag to another. To update Codex to a new accepted release,
+replace the pinned marketplace source and reinstall the plugin:
+
+```bash
+codex plugin remove agent-lifecycle-kit@agent-lifecycle-kit
+codex plugin marketplace remove agent-lifecycle-kit
+codex plugin marketplace add https://github.com/avksp/agent-lifecycle-kit.git --ref vX.Y.Z
+codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
+codex plugin list
+```
+
+Claude Code does not accept `--ref` on `plugin marketplace add`. Refresh its
+marketplace and then update the installed plugin through the host commands:
+
+```bash
+claude plugin marketplace update agent-lifecycle-kit
+claude plugin update agent-lifecycle-kit@agent-lifecycle-kit
+claude plugin list
+```
+
+Restart the host session after either update so it loads the new plugin skills
+and metadata. Verify the reported installed version before starting managed
+work.
+
 ## Host-local secrets
 
 Adapters that call a real model should receive credentials through the host's
