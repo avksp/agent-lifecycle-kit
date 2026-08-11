@@ -7,6 +7,8 @@ For the project structure, read
 [System architecture](../architecture/system-architecture.md). For how ALK
 differs from coding agents, runtimes, specification tools and memory systems,
 read [Project comparison](../reference/project-comparison.md).
+For the complete path through research, planning, review, implementation and
+resume, see [How ALK works for different tasks](how-alk-works.md).
 
 ## Install from source
 

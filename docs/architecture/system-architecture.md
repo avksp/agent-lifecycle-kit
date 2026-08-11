@@ -16,10 +16,12 @@ on how the pieces work together for common operator flows.
 
 ## C0: mission context
 
-ALK exists to move a task from request to verified completion without turning
-the lifecycle core into another coding-agent runtime. It provides contracts,
-state transitions, gates and evidence. Host CLIs still perform model work,
-editing and tool execution.
+ALK solves completion control for coding-agent work. It keeps user intent,
+reviewed authority, bounded execution, evidence and acceptance consistent until
+the external agent's result is verified or explicitly blocked. It provides
+contracts, state transitions, gates and evidence without becoming another
+coding-agent runtime. Host CLIs still perform model work, editing and tool
+execution.
 
 ```mermaid
 flowchart LR
