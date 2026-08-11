@@ -8,18 +8,16 @@
 [![Release](https://img.shields.io/github/v/release/avksp/agent-lifecycle-kit?label=release)](https://github.com/avksp/agent-lifecycle-kit/releases)
 ![Python](https://img.shields.io/badge/python-3.11--3.14-blue.svg)
 
-**Agent Lifecycle Kit (ALK)** gives coding agents one delivery workflow from
-request to verified result. It turns a user task into a reviewed specification,
-an approved plan, bounded implementation work, review, and final proof, so
-agents finish the job instead of stopping at a patch.
+**Agent Lifecycle Kit (ALK)** controls completion of coding-agent work. It keeps
+the requested outcome, reviewed plan, execution boundaries, evidence and acceptance
+decisions consistent until the external agent's result is verified or explicitly
+blocked. ALK does not write the solution; it prevents lost intent and unproven acceptance.
 
-The workflow is provider-neutral. Codex, Claude Code, Qwen Code, Goose,
-OpenInterpreter, Pi, Grok Build, or another CLI can follow the same lifecycle,
-while provider commands, model choice, and secret handling stay in adapters or
-host-local profiles.
+The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose,
+OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice,
+and secret handling stay in adapters or host-local profiles.
 
 ## Quick start
-
 From a source checkout:
 
 ```bash
@@ -32,10 +30,13 @@ agent-lifecycle start --adapter codex --text "Draft a reviewed implementation pl
 The official [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14.
 Install the exact release with `python -m pip install agent-lifecycle-kit==1.61.0`.
 
-For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). The separate [planning-only launch](docs/reference/planning-only-launch.md) and [qualified frozen-task launch](docs/reference/qualified-host-launch.md) guides state the exact support boundaries; shipped planning profiles remain fail-closed until live qualification. For structure and positioning, see [System architecture](docs/architecture/system-architecture.md) and [Project comparison](docs/reference/project-comparison.md). Russian documentation starts at [Документация на русском](docs/ru/README.md).
+Use [Quickstart](docs/guides/quickstart.md), [task workflows](docs/guides/how-alk-works.md),
+and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). The [planning-only](docs/reference/planning-only-launch.md)
+and [qualified frozen-task](docs/reference/qualified-host-launch.md) guides define launch boundaries.
+See [System architecture](docs/architecture/system-architecture.md), [Project comparison](docs/reference/project-comparison.md),
+and [Документация на русском](docs/ru/README.md).
 
 ## What it gives you
-
 - A finish-oriented lifecycle: plan, execute, review, and prove the result.
 - One process for different CLIs: adapter-specific commands stay outside the
   core, and new adapters can be added without changing lifecycle schemas.
@@ -51,7 +52,6 @@ For a short walkthrough, use [Quickstart](docs/guides/quickstart.md) and the [Li
   review/freeze boundaries.
 
 ## Feature areas
-
 ### Plan and execute
 
 - Reviewed specification and plan flow before implementation starts.

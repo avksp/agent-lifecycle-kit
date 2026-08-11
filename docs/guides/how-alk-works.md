@@ -1,0 +1,299 @@
+# How ALK works for different tasks
+
+Agent Lifecycle Kit (ALK) solves the completion-control problem around coding
+agents. It keeps the requested outcome, reviewed plan, execution boundaries,
+evidence and acceptance decisions consistent until work is either verified or
+explicitly blocked. The external coding agent still performs research, writes
+code and uses tools; ALK does not replace that agent or its model runtime.
+
+This distinction matters when choosing a workflow. A raw task passed to
+`agent-lifecycle start` becomes reviewed draft intake. It does not become an
+authorized implementation merely because a plugin is installed or `--launch`
+is present.
+
+## The participants
+
+| Participant | Responsibility |
+| --- | --- |
+| User or operator | Defines the expected result, approves consequential decisions and supplies external authority. |
+| ALK | Preserves lifecycle state, plan authority, write boundaries, checks, receipts and final proof. |
+| Host adapter | Translates portable ALK actions into host-local commands and keeps secrets and telemetry outside core. |
+| Coding agent | Researches, plans, edits files and runs tools within the approved task boundary. |
+| Independent reviewer | Evaluates the plan or implementation without inheriting the implementer's conclusion. |
+
+## The common lifecycle
+
+```mermaid
+flowchart LR
+  request[Task text, file, issue or review request]
+  intake[Draft intake]
+  plan[Reviewed plan]
+  freeze[Frozen authority]
+  execute[Host-owned work]
+  validate[Tests and evidence]
+  audit[Independent audit]
+  proof[Accepted result or explicit blocker]
+
+  request --> intake
+  intake --> plan
+  plan --> freeze
+  freeze --> execute
+  execute --> validate
+  validate --> audit
+  audit --> proof
+```
+
+The full path is required only when implementation authority and completion
+proof are needed. Research, planning and review can stop earlier with a
+reviewed artifact and no implementation claim.
+
+## Choose proportional depth
+
+ALK uses the smallest lifecycle tier that preserves the required quality:
+
+| Tier | Use it for | Required control |
+| --- | --- | --- |
+| S0 | One bounded mechanical task with one owner and no elevated risk | Exact write scope and at least one validation route. |
+| S1 | Normal product work owned by one execution stream | Requirements, acceptance criteria, evidence, validation and release impact. |
+| S2 | Architecture, security, performance, browser, external-environment or multi-owner work | Full ownership, dependency graph, budgets, context limits, security gates and final audit gates. |
+
+For a small one-off edit, ALK may be unnecessary. Do not promote routine work
+to S2 only to produce more process artifacts.
+
+## Start from text or one Markdown file
+
+Use the public facade to record and classify an input:
+
+```bash
+agent-lifecycle start --adapter codex --text "Investigate the failing checkout test"
+agent-lifecycle start --adapter codex --file task.md
+```
+
+The default `auto` mode returns `agent-lifecycle-start-receipt.v1`. For raw
+text or Markdown its action remains draft review. ALK may recommend Bug
+Forensics or multi-review, but a recommendation does not activate a blocking
+gate and does not start implementation.
+
+The host agent can use the `agent-workflow-orchestrator` skill to carry the
+request through the lifecycle. Installing the skill makes the procedure
+available; the receipts and state transitions prove whether it was actually
+followed.
+
+## Research or analysis only
+
+1. State the question and the required output in a Markdown file.
+2. Record the non-executing intake:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode research \
+  --file research.md \
+  --out work/research/start.json
+```
+
+3. Let the selected host agent perform the research. ALK core does not call the
+   model for this command.
+4. Review the resulting report and stop. Do not create implementation
+   authority or claim lifecycle completion for code that was not requested.
+
+The useful result is the reviewed research artifact, not a frozen
+implementation run.
+
+## Produce a plan without implementation
+
+For one task file:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode plan \
+  --file feature.md \
+  --out work/planning/start.json
+```
+
+For a directory of OpenSpec, Spec Kit, BMAD or Spec Kitty Markdown files:
+
+```bash
+agent-lifecycle import plan \
+  --source specs/checkout/ \
+  --dialect spec-kit \
+  --out work/planning/import.json
+```
+
+The host agent turns this draft input into the plan package. Before the plan can
+authorize work, validate its structure and acceptance crosswalk:
+
+```bash
+agent-lifecycle plan completeness-check --manifest tasks/my-plan/plan.manifest.json
+agent-lifecycle plan acceptance-check \
+  --manifest tasks/my-plan/plan.manifest.json \
+  --acceptance tasks/my-plan/acceptance-criteria.md
+agent-lifecycle plan refs-check --manifest tasks/my-plan/plan.manifest.json
+agent-lifecycle plan check \
+  --manifest tasks/my-plan/plan.manifest.json \
+  --lock tasks/my-plan/plan.lock.json \
+  --require-completeness
+```
+
+Structural `PASS` is not independent approval. A separate reviewer must audit
+an S2 plan before it is frozen.
+
+## Review a plan or architecture
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode review \
+  --file proposed-plan.md \
+  --out work/review/start.json
+
+agent-lifecycle review-mesh recommend \
+  --file proposed-plan.md \
+  --out work/review/recommendation.json
+```
+
+Use one independent reviewer for ordinary work. Use optional multi-review when
+the task combines independent risk domains, contains disputed assumptions or
+needs a quorum. The reviewer output remains advisory until a frozen plan names
+it as required evidence.
+
+## Review code changes
+
+1. Obtain the branch, GitHub pull request or GitLab merge request locally.
+2. Produce a stable diff outside ALK:
+
+```bash
+git diff origin/main...HEAD > work/code-review/diff.patch
+```
+
+3. Create `work/code-review/review-task.md` with the target branch, expected
+   architecture, risk areas and path to `diff.patch`.
+4. Run `start --mode review` and, when warranted, `review-mesh recommend`.
+5. The coding agent or reviewers inspect the repository and diff. ALK records
+   the review boundary and can validate imported reviewer results; it does not
+   fetch or merge the request by itself.
+
+See [Code review workflows](code-review-workflows.md) for local, GitHub,
+GitLab, architecture-known and architecture-unknown variants.
+
+## Fix a defect
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --text "Find and fix the intermittent payment callback failure" \
+  --out work/bug/start.json
+```
+
+Defect-shaped input can produce a Bug Forensics recommendation. For a frozen
+bug-fix plan, require reproduction before the patch, a stable failure
+fingerprint, a bounded hypothesis log, the smallest justified change and a
+same-fingerprint regression proof. Automatic detection remains advisory until
+the reviewed plan activates those gates.
+
+## Implement a frozen task
+
+Implementation is deliberately separate from raw intake:
+
+1. Review and freeze the plan and lock.
+2. Create or load workflow state bound to that plan.
+3. Resolve the risk-aware execution strategy for the exact task.
+4. Start the task with the same risk-profile digest.
+5. Let the host agent implement only the assigned packet.
+6. Submit the task result and evidence.
+7. Run independent implementation audit before task acceptance.
+8. Finalize only after all required tasks and final gates pass.
+
+The public facade can delegate an already bound request:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode implement \
+  --file work/run/adapter-run-request.json \
+  --risk auto \
+  --risk-profile-out work/run/risk-profile.json
+```
+
+Raw text is rejected in `implement` mode. `start` does not create a frozen plan
+or silently approve one.
+
+## Launch an external CLI
+
+ALK normally leaves process launch to the host adapter or wrapper. A local
+launch requires an ignored, exact-version profile, preflight, explicit
+`--launch`, frozen task identity and the risk binding:
+
+```bash
+agent-lifecycle adapter launch-profile \
+  --adapter codex \
+  --repository-root /path/to/agent-lifecycle-kit \
+  --out .alk/host-launch/codex.json
+
+agent-lifecycle host-launch preflight \
+  --profile .alk/host-launch/codex.json
+```
+
+Bundled descriptors remain `WRAPPER_ONLY`. A descriptor, plugin installation
+or plain task text is not process-launch authority. See [Local host
+launch](../reference/local-host-launch.md) and [Qualified host
+launch](../reference/qualified-host-launch.md).
+
+## Coordinate several reviewers
+
+1. Ask for a recommendation with `review-mesh recommend`.
+2. Prepare reviewer packets with `review-mesh prepare`.
+3. Run each reviewer through its host outside ALK core.
+4. Import redacted results with `review-mesh import-result`.
+5. Synthesize findings and build a quorum receipt.
+6. Treat quorum as blocking only for phases named by the frozen plan.
+
+The complete commands are in the [multi-review workflow](review-mesh-workflow.md).
+
+## Resume work
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --resume <session-id> \
+  --session-root .alk/adapter-sessions
+```
+
+The identifier names ALK state, not a native Codex, Claude Code or OpenCode
+conversation. Resume validates adapter and lineage and does not reconstruct
+authority from chat history.
+
+## Keep process cost proportional
+
+ALK separates direct implementation, product validation, pipeline compliance
+and coordination. Generate and check a cost report from existing receipts:
+
+```bash
+agent-lifecycle metrics cost-report \
+  --mode standard \
+  --artifact work/run/usage.json \
+  --artifact work/run/task-review.json \
+  --out work/run/lifecycle-cost.json
+
+agent-lifecycle metrics cost-check --receipt work/run/lifecycle-cost.json
+```
+
+Use `light` or S0 for bounded work, `standard` or S1 for ordinary product work,
+and strict controls only for demonstrated risk. Deterministic ALK commands do
+not consume model tokens, but reviewer and coordination work can. The current
+validator limits the `pipelineCompliance` category; it reports coordination
+separately and therefore does not by itself prove that total process overhead
+is below half of a real run. That conclusion requires complete host-attested
+phase data and inspection of both categories.
+
+If process work dominates a light or standard task, reduce unnecessary review,
+split the plan, remove duplicate evidence or do not use ALK for that task. Do
+not lower the quality floor merely to make the metrics look cheaper.
+
+## What completion means
+
+ALK has succeeded when the requested product result exists, required behavior
+passes validation, independent review accepts the evidence and final proof is
+reproducible. Producing many receipts without solving the requested task is not
+success.
