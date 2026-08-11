@@ -9,6 +9,9 @@ differs from coding agents, runtimes, specification tools and memory systems,
 read [Project comparison](../reference/project-comparison.md).
 For the complete path through research, planning, review, implementation and
 resume, see [How ALK works for different tasks](how-alk-works.md).
+For the boundaries of multi-agent work, workflow customization, model selection,
+timeouts and retries, see [Workflow customization and execution
+controls](../reference/workflow-customization.md).
 
 ## Install from source
 
@@ -109,7 +112,10 @@ the implementation plan.
 ## Choose how to use an adapter
 
 Choose `<adapter-id>` from the [linked adapter
-table](../adapters/usage-modes.md). There are two normal entrypoints:
+table](../adapters/usage-modes.md). The detailed limits for several agents,
+custom plan stages, host model settings, prompts, timeouts and retries are in
+[Workflow customization and execution controls](../reference/workflow-customization.md).
+There are two normal entrypoints:
 
 - Inside a host whose adapter page documents a plugin or shared-skill route,
   open the target project and send the request below. The host runs the model
