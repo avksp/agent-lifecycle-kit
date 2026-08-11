@@ -26,8 +26,8 @@ live conformance evidence summary at
 `--no-profile`, `--max-turns 1`, `--max-tool-repetitions 1`, explicit
 host-local provider/model selection and post-invocation clean-worktree checks.
 
-This does not claim public directory approval, production platform promotion,
-universal ACP support or verified OS sandbox containment.
+The verified scope covers Goose `1.45.0`, the tested host-local provider/model
+binding and the evidence listed above.
 
 ## Validation
 
@@ -39,7 +39,8 @@ PYTHONPATH=src python3 -m pytest tests/adapters/goose tests/live_hosts/test_goos
 ## Planning-only launch status
 
 Exact-version profile: `1.45.0`. Profile status: `CANDIDATE`. Planning
-support: `PLANNING_ONLY_UNSUPPORTED`. The no-profile/no-session stdin route forms a static candidate, but no accepted live planning containment evidence is shipped.
+support: `PLANNING_ONLY_UNSUPPORTED`. The no-profile/no-session stdin route forms
+a static candidate; its qualification path is recorded in the planning guide.
 
 Generate and inspect the local profile with:
 
@@ -49,23 +50,17 @@ agent-lifecycle host-launch inspect --profile .alk/host-launch/goose.json
 agent-lifecycle host-launch preflight --profile .alk/host-launch/goose.json
 ```
 
-A successful version preflight does not authorize planning launch.
-`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
-promote planning support. See [Planning-only adapter
+The planning route uses the status and evidence described in [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
 ## Use ALK with Goose
 
-The bundled Goose projection does not install an ALK plugin or skill inside
-Goose. Use the command route, or provide a separately reviewed host-local
-wrapper that calls the same ALK commands:
-
-Inside-session ALK use is not shipped for this adapter, so there is no bundled
-in-session prompt example.
+The documented Goose route is the terminal command. An operator-owned wrapper
+can expose the same ALK commands after review:
 
 ```bash
 agent-lifecycle start --adapter goose --file task.md
 ```
 
-The command does not start Goose by default. See [Using ALK with an
-adapter](usage-modes.md).
+The command creates ALK intake. For host execution, use the qualified launch
+route. See [Using ALK with an adapter](usage-modes.md).

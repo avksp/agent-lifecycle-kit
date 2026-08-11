@@ -2,7 +2,7 @@
 
 This projection uses RPC/JSON plus AGENTS/agentskills metadata. The alternate protocol capability is not claimed.
 
-Maturity is host-specific `VERIFIED` for Pi 0.83.0 on the tested host-local
+Support level is host-specific `VERIFIED` for Pi 0.83.0 on the tested host-local
 provider/model binding. Live host conformance, usage receipts, host-env hygiene
 and lifecycle proof are recorded in
 `docs/adapters/evidence/pi-live-verified.md`.

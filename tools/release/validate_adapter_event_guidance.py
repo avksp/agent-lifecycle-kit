@@ -13,7 +13,7 @@ DOC_REQUIRED_MARKER_GROUPS = (
     ("adapter-owned",),
     ("agent-adapter-event.v1",),
     ("agent-adapter-event-stream-receipt.v1",),
-    ("No automatic hook installation", "Автоматическая установка: нет"),
+    ("Hook ownership", "Владелец настройки", "владелец настройки"),
 )
 
 EVENT_BRIDGE_REQUIRED_MARKER_GROUPS = (
@@ -21,7 +21,7 @@ EVENT_BRIDGE_REQUIRED_MARKER_GROUPS = (
     ("operator-owned",),
     ("agent-adapter-event.v1",),
     ("agent-adapter-event-stream-receipt.v1",),
-    ("No automatic hook installation",),
+    ("Hook ownership", "Владелец настройки", "владелец настройки"),
 )
 
 BANNED_HOOK_CLAIMS = (

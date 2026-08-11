@@ -17,7 +17,7 @@ start a host process. Raw input in `--mode implement` is always rejected.
 
 ## Current support truth
 
-Planning launch is a separate claim from adapter maturity and from qualified
+Planning launch is a separate claim from the adapter support level and from qualified
 launch of a frozen implementation task.
 
 | Adapter | Exact profile version | Profile status | Planning launch status |
@@ -35,8 +35,8 @@ launch of a frozen implementation task.
 | Pi | `0.83.0` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: bounded stdin result transport is not verified |
 | Qwen Code | `0.21.8` | `UNSUPPORTED` | `PLANNING_ONLY_UNSUPPORTED`: native read-only or tool denial is not verified |
 
-`VERIFIED` adapter maturity and `WRAPPER_ONLY` managed-session support do not
-promote this column. A structurally valid profile or successful version probe
+The adapter support level `VERIFIED` and managed-session support `WRAPPER_ONLY`
+do not promote this column. A structurally valid profile or successful version probe
 also does not promote it. Until the profile carries exact-version
 `PLANNING_ONLY_QUALIFIED` evidence, `--launch` fails closed before planning can
 claim support.

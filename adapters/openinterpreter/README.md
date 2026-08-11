@@ -2,7 +2,7 @@
 
 OpenInterpreter is represented as a host-local compatible CLI surface with ALK envelopes at the boundary.
 
-Maturity is host-specific `VERIFIED` for `interpreter` 0.0.34 on the tested
+Support level is host-specific `VERIFIED` for `interpreter` 0.0.34 on the tested
 host-local provider/model binding. The bounded JSONL live harness uses
 `interpreter exec` with ephemeral read-only invocation, no approval prompts and
 post-invocation clean-worktree checks. The selected provider's key must come

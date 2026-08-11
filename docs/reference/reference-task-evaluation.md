@@ -90,8 +90,8 @@ Results store digests, byte counts, typed checks, measurements, and redacted
 summaries. Raw task/chat transcripts are not copied. Shared redaction removes
 common credentials and private local paths. `evaluationDigest` covers the
 redacted receipt body, including its redaction status, rather than the supplied
-raw evidence. A synthetic result cannot satisfy production evidence, adapter
-maturity, or promotion requirements.
+raw evidence. A synthetic result cannot satisfy production evidence,
+adapter-support qualification or promotion requirements.
 
 It does not call a model. It cannot satisfy production evidence.
 

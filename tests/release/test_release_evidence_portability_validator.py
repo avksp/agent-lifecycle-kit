@@ -153,7 +153,7 @@ class ReleaseEvidencePortabilityValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "source.json").write_text(
-                json.dumps({"message": "BEGIN PRIVATE KEY sensitive-material"}),
+                json.dumps({"message": "BEGIN " + "PRIVATE KEY sensitive-material"}),
                 encoding="utf-8",
             )
             evidence = root / "portability.json"

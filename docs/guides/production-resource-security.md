@@ -30,8 +30,9 @@ was needed. Do not treat an expensive lifecycle run as success by itself; the
 implementation and product validation still have to pass.
 
 The bundled reference-task suite is a synthetic, read-only comparison tool.
-Its deterministic receipt can expose false acceptance and measurement gaps,
-but cannot prove production readiness, adapter maturity, or release promotion.
+Its deterministic receipt exposes false acceptance and measurement gaps;
+production readiness, adapter support and release promotion use their dedicated
+evidence tracks.
 See [Reference task evaluation](../reference/reference-task-evaluation.md).
 
 ## Small local models
@@ -68,7 +69,7 @@ Release and production checks must keep these boundaries:
 
 - no private keys, tokens, cookies or local machine paths in tracked files;
 - no external memory as lifecycle proof or source of truth;
-- no adapter maturity promotion without host-bound evidence;
+- host-bound evidence for every adapter support-level promotion;
 - no public marketplace or directory approval claim without external evidence;
 - no host-specific semantics in shared core contracts.
 
@@ -87,12 +88,13 @@ Raw-task planning is a different profile operation. It may carry task data only
 over bounded stdin, must prove the host's native read-only or tool-denial
 controls and must end at `REVIEW_REQUIRED`. Treat
 `PLANNING_ONLY_UNSUPPORTED` as final until exact-version live containment
-evidence exists; adapter maturity and version preflight are insufficient. See
+evidence exists; support qualification combines version preflight with live
+host evidence. See
 [Planning-only adapter launch](../reference/planning-only-launch.md).
 
 Use `agent-lifecycle contract check` and release security tests before claiming
-a stable package. Use the support matrix for adapter maturity; model availability
-alone is not enough to mark an adapter `VERIFIED`.
+a stable package. Use the support matrix for the adapter support level; model
+availability is one input to the complete `VERIFIED` evidence set.
 
 For a source release, scan `tracked-release` so the report is bound to the Git
 index and current revision. Do not add `--include-local-artifacts` to a general

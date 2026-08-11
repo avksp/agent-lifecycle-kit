@@ -8,7 +8,7 @@ Scope:
 - Host source revision: `d71033a4`.
 - Provider/model binding: host-local, redacted in committed docs.
 - Tested at: `2026-07-29`.
-- Maturity claim: `VERIFIED` for this host range only.
+- Support-level claim: `VERIFIED` for this host range only.
 - Production promotion: not claimed.
 - Public directory approval or publication: not claimed.
 

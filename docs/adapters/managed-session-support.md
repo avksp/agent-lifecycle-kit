@@ -1,6 +1,7 @@
 # Managed adapter session support
 
-Managed session support is separate from adapter maturity and progress support.
+Managed session support is a separate dimension of the adapter support level and
+progress support.
 It describes whether ALK can create a managed session receipt and whether the
 adapter descriptor declares a safe native launch profile.
 The main [adapter support matrix](support-matrix.md) surfaces the current
@@ -10,12 +11,12 @@ The main [adapter support matrix](support-matrix.md) surfaces the current
 | --- | --- | --- | --- |
 | Codex | Supported | `WRAPPER_ONLY` | Use `adapter task start`, `adapter run` or a host wrapper for lifecycle proof. |
 | Claude Code | Supported | `WRAPPER_ONLY` | Native launch remains host-owned. |
-| Cursor | Supported | `WRAPPER_ONLY` | Does not change Cursor maturity. |
-| Gemini CLI | Supported | `WRAPPER_ONLY` | No native argv launch claim. |
+| Cursor | Supported | `WRAPPER_ONLY` | Lifecycle proof uses the managed ALK route. |
+| Gemini CLI | Supported | `WRAPPER_ONLY` | Use the qualified ALK route for a bound process. |
 | Goose | Supported | `WRAPPER_ONLY` | ACP remains separately probe-gated. |
 | Grok Build | Supported | `WRAPPER_ONLY` | Native provider/model handling stays host-local. |
-| Hermes | Supported | `WRAPPER_ONLY` | Skill install alone is not lifecycle proof. |
-| Kimi Code | Supported | `WRAPPER_ONLY` | Does not change Kimi maturity. |
+| Hermes | Supported | `WRAPPER_ONLY` | Use managed ALK commands for lifecycle proof. |
+| Kimi Code | Supported | `WRAPPER_ONLY` | Lifecycle proof uses the managed ALK route. |
 | OpenCode | Supported | `WRAPPER_ONLY` | Host telemetry stays outside core. |
 | OpenInterpreter | Supported | `WRAPPER_ONLY` | Provider credentials stay host-local. |
 | Pi | Supported | `WRAPPER_ONLY` | Provider credentials stay host-local. |
@@ -44,9 +45,7 @@ agent-lifecycle adapter run \
   --task <task-id>
 ```
 
-`WRAPPER_ONLY` means ALK can bind a session to workflow proof and render
-progress from ALK state, but it does not claim that core ALK can safely spawn
-the native host CLI for that adapter.
-
-This does not claim safe native argv launch, and plugin installation is not
-lifecycle proof.
+`WRAPPER_ONLY` means ALK binds a session to workflow proof and renders progress
+from ALK state through managed commands or a reviewed wrapper. Qualified local
+profiles describe the process route for adapters with accepted launch evidence.
+Plugin installation and lifecycle proof are separate records.

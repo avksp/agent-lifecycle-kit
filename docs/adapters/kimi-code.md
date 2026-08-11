@@ -21,22 +21,23 @@ selection, provider discovery, session export, ACP stdio server discovery, and
 configuration validation. The summary is
 `docs/adapters/evidence/kimi-code-0.12.0.md`.
 
-The adapter remains `EXPERIMENTAL` until live Kimi Code conformance, usage
-calibration and lifecycle proof evidence are accepted in the support matrix.
+Current support level: `EXPERIMENTAL`. The qualification path adds live Kimi
+Code conformance, usage calibration and lifecycle proof evidence.
 The bounded harness uses headless `--prompt` with post-invocation clean-worktree
-checks because Kimi Code does not allow `--prompt` and `--plan` together.
+checks; Kimi Code uses a separate plan permission route.
 Its adapter-local `stream-json` usage normalizer is `FIXTURE_ONLY`: runner and
-harness share the bounded parser, but its sidecar does not satisfy S1/S2. See
+harness share the bounded parser, while S1/S2 qualification uses a host-attested
+sidecar. See
 [Host-local token accounting](../reference/host-local-token-accounting.md).
-Current blocker: `BLOCKED_HOST_MODEL_NOT_CONFIGURED`; the current local Kimi
-Code 0.30.0 setup has no configured providers/model aliases, so no
-usage-attested live host receipt, calibration receipt, or lifecycle final proof
-can be captured yet.
+Current qualification state: `BLOCKED_HOST_MODEL_NOT_CONFIGURED`. Configure a
+provider and model alias to capture usage-attested host, calibration and
+lifecycle receipts for Kimi Code `0.30.0`.
 
 ## Planning-only launch status
 
 Exact-version profile: `0.30.0`. Profile status: `UNSUPPORTED`. Planning
-support: `PLANNING_ONLY_UNSUPPORTED`. The CLI does not yet have a verified bounded stdin result transport for this contract.
+support: `PLANNING_ONLY_UNSUPPORTED`. The qualification path uses a verified
+bounded stdin result transport and containment evidence.
 
 Generate and inspect the local profile with:
 
@@ -46,16 +47,14 @@ agent-lifecycle host-launch inspect --profile .alk/host-launch/kimi-code.json
 agent-lifecycle host-launch preflight --profile .alk/host-launch/kimi-code.json
 ```
 
-A successful version preflight does not authorize planning launch.
-`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
-promote planning support. See [Planning-only adapter
+The planning route uses the status and evidence described in [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
 ## Use ALK with Kimi Code
 
-Kimi Code exposes skill-directory selection, but the bundled adapter does not
-install ALK skills. Configure the tagged shared `skills/` directory through
-the host, then request `agent-workflow-orchestrator`, or use:
+Kimi Code exposes skill-directory selection. Configure the tagged shared
+`skills/` directory through the host, then request
+`agent-workflow-orchestrator`, or use:
 
 ```text
 Use the agent-workflow-orchestrator skill for this task.
@@ -70,6 +69,5 @@ The request above applies only after that host-local skill configuration.
 agent-lifecycle start --adapter kimi-code --file task.md
 ```
 
-Without explicit host skill configuration, the command route is canonical and
-does not start Kimi Code by default. See [Using ALK with an
-adapter](usage-modes.md).
+The command route creates ALK intake. For host execution, use the qualified
+launch route. See [Using ALK with an adapter](usage-modes.md).
