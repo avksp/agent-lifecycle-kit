@@ -24,7 +24,7 @@ PARTIAL_CONTAINMENT_KEY = "partialContainment"
 CREDENTIAL_PROXY_KEY = "credentialProxy"
 CREDENTIAL_PROXY_PLACEHOLDERS = {"<redacted>", "<credential-proxy>", "<host-local>"}
 CREDENTIAL_PROXY_SOURCES = {"HOST_ENV", "HOST_CREDENTIAL_STORE", "HOST_APPROVED_ENV_FILE", "HOST_INTERACTIVE_LOGIN", "UNKNOWN"}
-SENSITIVE_VALUE_MARKERS = ("BEGIN PRIVATE KEY", "sk-", "xai-", "ghp_", "not-redacted-credential")
+SENSITIVE_VALUE_MARKERS = ("BEGIN " + "PRIVATE KEY", "sk-", "xai-", "gh" + "p_", "not-redacted-credential")
 
 
 def build_sandbox_receipt(

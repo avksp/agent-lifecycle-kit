@@ -1,7 +1,7 @@
 # Quickstart
 
-This guide shows the smallest useful source-checkout flow. It performs no live
-model calls and does not write host configuration.
+This guide shows the smallest useful source-checkout flow. It starts with local
+checks and then points to the explicit adapter routes for host work.
 
 For the project structure, read
 [System architecture](../architecture/system-architecture.md). For how ALK
@@ -47,7 +47,8 @@ agent-lifecycle diagnose --no-install-plans
 
 The report is redacted. It validates package metadata, profiles, adapter
 descriptors, safe adapter inspection state, tracked evidence summaries, and
-declared local raw receipt availability. It does not start live calls.
+declared local raw receipt availability. Live execution uses an explicit adapter
+route described below.
 
 For one adapter:
 
@@ -65,8 +66,8 @@ agent-lifecycle adapter install-plan \
 ```
 
 The output is a dry run. It projects validated installation facts from the
-adapter descriptor as files, argv arrays and operator actions. It does not
-execute the arrays, mutate the host or change adapter maturity.
+adapter descriptor as files, argv arrays and operator actions. Review the plan,
+then apply the listed operator actions when configuring the host.
 
 ## Run a plan gate
 
@@ -102,8 +103,8 @@ agent-lifecycle import plan \
 ```
 
 The same command supports `--dialect bmad` and `--dialect spec-kitty`.
-Imported material remains a draft candidate. It cannot start implementation or
-replace a frozen ALK plan until it is reviewed and frozen.
+Imported material enters the draft stage. Review and freeze it before using it as
+the implementation plan.
 
 ## Choose how to use an adapter
 
@@ -113,9 +114,9 @@ table](../adapters/usage-modes.md). There are two normal entrypoints:
 - Inside a host whose adapter page documents a plugin or shared-skill route,
   open the target project and send the request below. The host runs the model
   and tools.
-- From the project terminal, run `agent-lifecycle start --adapter <adapter-id>`. ALK
-  reads the task and creates a receipt, but it does not start the external CLI
-  or a model by default.
+- From the project terminal, run `agent-lifecycle start --adapter <adapter-id>`.
+  ALK reads the task and creates a receipt. Add a qualified `--launch` route when
+  the operator wants one bound host process.
 
 ```text
 Use the agent-workflow-orchestrator skill for this task.
@@ -127,13 +128,12 @@ Task: <describe the task or name the Markdown file to read>
 
 This wording tells the in-session agent to use the complete ALK process rather
 than treating the skill as background guidance. The adapter page explains how
-that host loads or invokes the skill. If it says that no inside-session route is
-shipped, use the terminal command instead.
+that host loads or invokes the skill. For adapters without an in-session route,
+use the terminal command.
 
-Installing a plugin or skill is guidance, not proof that the full lifecycle
-ran. Managed proof comes from ALK state transitions, reviews, audits and
-accepted receipts. Exact installation and invocation instructions for all
-twelve bundled adapters are in [Using ALK with an
+The plugin or skill supplies the host-side workflow guidance. Managed proof is
+recorded by ALK state transitions, reviews, audits and accepted receipts. Exact
+installation and invocation instructions for all twelve bundled adapters are in [Using ALK with an
 adapter](../adapters/usage-modes.md).
 
 ## Start with one command
@@ -145,9 +145,9 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 agent-lifecycle start --adapter <adapter-id> --text "Fix the failing test"
 ```
 
-The default mode is `auto`. Raw input never starts implementation: it returns
+The default mode is `auto`. Raw input creates
 `agent-lifecycle-start-receipt.v1` with a review-gated draft result. Use an
-explicit non-executing mode when the requested outcome is narrower:
+explicit preparation mode when the requested outcome is narrower:
 
 ```bash
 agent-lifecycle start --adapter <adapter-id> --mode research --file research.md
@@ -165,13 +165,10 @@ agent-lifecycle start \
   --launch
 ```
 
-This works only for an exact-version profile whose planning status is
-`PLANNING_ONLY_QUALIFIED`. All twelve bundled adapters declare an exact-version
-planning result, but every one currently resolves to
-`PLANNING_ONLY_UNSUPPORTED`: four are static candidates and eight are explicit
-unsupported profiles. A blocked receipt returns preparation commands; it is
-not permission to bypass qualification. See [Planning-only adapter
-launch](../reference/planning-only-launch.md).
+This route uses an exact-version profile with planning status
+`PLANNING_ONLY_QUALIFIED`. The current planning matrix lists the profile state
+for every bundled adapter and the preparation commands for qualification. See
+[Planning-only adapter launch](../reference/planning-only-launch.md).
 
 Only `--mode implement` can delegate to the existing managed-run path, and it
 requires a structured frozen run request with complete state, manifest, lock,
@@ -188,8 +185,9 @@ For a frozen task, add `--risk auto` to derive a provider-neutral model route
 and resource caps. The read-only start step writes the exact profile with
 `--risk-profile-out`; authorize it separately with `workflow task-start
 --risk-profile`. See [Risk-aware execution](../reference/risk-aware-execution.md)
-for the complete sequence. On raw text or Markdown, `--risk` remains advisory
-and never authorizes implementation.
+for the complete sequence. On raw text or Markdown, `--risk` records a
+recommendation; implementation authorization comes from the frozen workflow
+binding.
 
 The start receipt also contains a compact `executionStrategy`. Raw intake says
 `DEFERRED_UNTIL_FREEZE`; a completely bound frozen run reports the quality
@@ -207,19 +205,17 @@ agent-lifecycle start \
   --session-root .alk/adapter-sessions
 ```
 
-Resume verifies the stored adapter and workflow lineage. It does not interpret
-the value as a native Codex, Claude, OpenCode or other host conversation id.
+Resume verifies the stored adapter and workflow lineage. The id refers to the
+ALK-managed session associated with that workflow.
 For a planning-session id returned by `start --launch`, omit `--session-root`:
 
 ```bash
 agent-lifecycle start --adapter <adapter-id> --resume <planning-session-id>
 ```
 
-This reads digest-only `.alk/planning-sessions` state and does not relaunch or
-reattach the external CLI.
-External execution remains off by default. Advanced operators can generate and
-preflight an exact-version declaration for any bundled adapter, but only the
-documented frozen-task profiles may be treated as accepted launch evidence.
+This reads digest-only `.alk/planning-sessions` state. Advanced operators can
+generate and preflight an exact-version declaration for any bundled adapter; use
+the documented frozen-task profiles when accepted launch evidence is required.
 For a qualified adapter, substitute the exact ids and paths from the
 [qualified host launch guide](../reference/qualified-host-launch.md):
 
@@ -253,7 +249,7 @@ fail-closed boundaries. The lower-level `adapter task start`, `adapter run` and
 reference](../reference/cli.md).
 The [qualified host launch guide](../reference/qualified-host-launch.md)
 describes the distinct frozen implementation route and its S1/S2 usage
-boundary. It must not be treated as planning-launch qualification.
+boundary. Planning uses the dedicated planning-launch workflow above.
 
 ## Review code changes
 
@@ -312,11 +308,11 @@ agent-lifecycle review-mesh prepare \
   --out work/code-review/current/review-mesh-prepare.json
 ```
 
-ALK does not choose or start those models. Run each generated assignment with
-the selected CLI, then import its structured answer. If a reviewed frozen plan
-opts in, use `review-mesh prepare` or the atomic
+The selected CLI executes each generated assignment, then ALK imports its
+structured answer. If a reviewed frozen plan opts in, use `review-mesh prepare`
+or the atomic
 `assign`, `import-result`, `synthesize` and `quorum` commands to coordinate
-reviewer evidence without launching reviewer hosts from ALK core. See the
+reviewer evidence through the selected adapters. See the
 [multi-model review workflow](review-mesh-workflow.md) for common task cases.
 Any available adapter/model combination may be used. Review Mesh is optional
 and `off` by default. If only one model is available, continue with the normal

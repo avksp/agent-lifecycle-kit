@@ -55,8 +55,9 @@ Adapters document one support level:
 | `MANUAL` | The operator can run a one-shot progress command. |
 | `UNSUPPORTED` | No supported hook or documented wrapper exists yet. |
 
-The level is not a maturity claim. A `VERIFIED` adapter can still be `MANUAL`
-for progress, and an `EXPERIMENTAL` adapter can document a safe manual command.
+Progress support is a separate capability. A `VERIFIED` adapter can still be
+`MANUAL` for progress, and an `EXPERIMENTAL` adapter can document a safe manual
+command.
 
 ## Commands
 

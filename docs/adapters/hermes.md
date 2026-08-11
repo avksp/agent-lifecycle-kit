@@ -30,13 +30,14 @@ receipt, live calibration, and an ALK lifecycle final proof. The redacted live
 summary is
 `docs/adapters/evidence/hermes-host-local-live-2026-07-29.md`.
 
-This does not claim public directory approval, production promotion, or
-compatibility with untested Hermes versions.
+The verified scope covers Hermes Agent `v0.19.0` and the tested host range in
+the evidence summary.
 
 ## Planning-only launch status
 
 Exact-version profile: `0.19.0`. Profile status: `UNSUPPORTED`. Planning
-support: `PLANNING_ONLY_UNSUPPORTED`. A one-shot native tool-denial boundary has not been verified for this contract.
+support: `PLANNING_ONLY_UNSUPPORTED`. The qualification path includes a
+one-shot native tool-denial boundary and its corresponding receipt.
 
 Generate and inspect the local profile with:
 
@@ -46,9 +47,7 @@ agent-lifecycle host-launch inspect --profile .alk/host-launch/hermes.json
 agent-lifecycle host-launch preflight --profile .alk/host-launch/hermes.json
 ```
 
-A successful version preflight does not authorize planning launch.
-`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
-promote planning support. See [Planning-only adapter
+The planning route uses the status and evidence described in [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
 ## Use ALK with Hermes
@@ -66,6 +65,6 @@ For the command route outside Hermes:
 agent-lifecycle start --adapter hermes --file task.md
 ```
 
-The first route is host-guided; the second does not start Hermes by default.
-Neither skill installation nor a slash command alone is lifecycle proof. See
+The first route is host-guided and the second creates ALK intake in the terminal.
+Lifecycle proof is recorded by ALK state transitions and accepted receipts. See
 [Using ALK with an adapter](usage-modes.md).

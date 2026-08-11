@@ -10,8 +10,9 @@ calibration and lifecycle proof are accepted for a concrete host range.
 ## Progress bridge
 
 Support level: `MANUAL`. Use `agent-lifecycle report progress --state <state>
---terminal` after ALK workflow transitions. This does not change adapter
-maturity and does not claim unsupported native Gemini CLI hooks.
+--terminal` after ALK workflow transitions. Progress support remains MANUAL;
+native hook ownership stays with the operator or adapter and is covered by the
+event bridge contract.
 
 ALK-managed workflow commands can also use `--progress-hook stderr` or
 `--progress-hook receipt --progress-receipt <path>`. This records managed

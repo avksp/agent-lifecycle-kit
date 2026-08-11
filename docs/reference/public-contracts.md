@@ -119,7 +119,7 @@ but they do not replace source-of-truth lifecycle artifacts. Event feeds and
 progress views are projections over existing state/receipts; they do not start
 model calls, spend tokens, or mutate state. Adapter progress bridge receipts
 package those projections for host wrappers without parsing host-specific
-telemetry in core or changing adapter maturity. Progress hook receipts bind the
+telemetry in core or changing the adapter support level. Progress hook receipts bind the
 same projection to supported ALK-managed workflow commands while preserving
 JSON stdout and keeping plugin installation separate from lifecycle proof. The
 execution strategy composes existing policy decisions and may appear as an
@@ -221,8 +221,8 @@ Partial containment and credential proxy boundaries remain details inside
 ## Adapter capability bench
 
 Adapter capability bench contracts are release-time drift detectors for live
-host conformance. They plan and validate coverage, but they do not start live
-calls or promote maturity.
+host conformance. They plan and validate coverage; support-level promotion uses
+the accepted live evidence route.
 
 Stable schema ids:
 
@@ -236,8 +236,8 @@ Stable schema ids:
 `productionPromotionClaimed: false`.
 
 `agent-adapter-package-discovery.v1` is advisory release inspection over
-source-tree descriptors and capability manifests. It cannot override descriptor
-maturity or claim production promotion.
+source-tree descriptors and capability manifests. It cannot override the
+descriptor support level or claim production promotion.
 
 ## Import interop and episode retrieval
 

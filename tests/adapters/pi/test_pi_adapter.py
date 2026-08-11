@@ -23,7 +23,7 @@ def test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
     assert validate_capability_manifest(manifest, descriptor=descriptor)["status"] == "PASS"
     assert manifest == build_capability_manifest(descriptor)
     assert descriptor["nativeProjection"] == "rpc-json-skills"
-    assert descriptor["maturity"] == "EXPERIMENTAL"
+    assert descriptor["maturity"] == "VERIFIED"
 
 
 def test_transport_capability_is_not_claimed_for_alternate_protocol() -> None:

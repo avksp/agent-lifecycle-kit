@@ -8,10 +8,10 @@
 [![Release](https://img.shields.io/github/v/release/avksp/agent-lifecycle-kit?label=release)](https://github.com/avksp/agent-lifecycle-kit/releases)
 ![Python](https://img.shields.io/badge/python-3.11--3.14-blue.svg)
 
-**Agent Lifecycle Kit (ALK)** controls completion of coding-agent work. It keeps
-the requested outcome, reviewed plan, execution boundaries, evidence and acceptance
-decisions consistent until the external agent's result is verified or explicitly
-blocked. ALK does not write the solution; it prevents lost intent and unproven acceptance.
+**Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable
+finish. It keeps the requested outcome, reviewed plan, execution boundaries,
+evidence and acceptance decisions connected while the external agent changes the
+project.
 
 The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose,
 OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice,
@@ -24,8 +24,10 @@ From a source checkout:
 python -m pip install -e .
 agent-lifecycle version
 agent-lifecycle diagnose --no-install-plans
-agent-lifecycle start --adapter codex --text "Draft a reviewed implementation plan"
+agent-lifecycle start --adapter <adapter-id> --text "Draft a reviewed implementation plan"
 ```
+
+Choose `<adapter-id>` from the [adapter support matrix](docs/adapters/support-matrix.md).
 
 The official [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14.
 Install the exact release with `python -m pip install agent-lifecycle-kit==1.61.0`.
@@ -88,11 +90,11 @@ and [Документация на русском](docs/ru/README.md).
 
 ### Security and containment
 
-- Release neutrality scans bind the Git index and current revision; ignored local evidence is read only through an explicit policy-limited flag. Host-supplied deny rules keep local paths, secrets, trust roots and signing keys out of portable artifacts.
-- Host env files require explicit `--host-env-allow`; receipts store redacted metadata, and generic descriptor-driven native launch is blocked before process creation.
+- Release neutrality scans bind the Git index and current revision; ignored local evidence is read through an explicit policy-limited flag. Host-supplied rules keep local paths, secrets, trust roots and signing keys out of portable artifacts.
+- Host environment access uses explicit `--host-env-allow`; receipts store redacted metadata, and qualified local profiles provide the managed launch route.
 - Imports, diagnostics, and usage exports redact local paths and common secret markers before validation.
 - Sandbox receipts separate runtime filesystem, network, process, and environment containment from git write-scope.
-- Release security gates reject leaked local paths, credentials, and unsupported adapter or production claims.
+- Release security gates validate portable paths, credentials, adapter scope and production claims.
 
 ### Adapters and interop
 
@@ -101,9 +103,9 @@ and [Документация на русском](docs/ru/README.md).
 - New CLI hosts start as adapters: descriptor, command projection, environment
   boundary, and verification evidence live outside the lifecycle core.
 - Adapter capability checks and progress bridge support compare live receipts
-  and display lifecycle state without automatic maturity changes.
-- Import mappers and issue-to-spec intake treat external workflows, agent
-  dialects, and tickets as untrusted draft inputs.
+  and display lifecycle state while support levels remain evidence-driven.
+- Import mappers and issue-to-spec intake normalize external workflows, agent
+  dialects, and tickets into reviewable draft context.
 - Lightweight episode retrieval over receipt/session summaries keeps digest
   provenance and explicit `chainVerified` or `chainUnchecked` state.
 
@@ -121,31 +123,28 @@ Spec -> frozen plan -> bounded work -> implementation audit -> final proof.
 Core commands cover specification, plan, workflow, audit, adapters, imports, metrics,
 policy, diagnostics, runner state, and adapter task intake. See [CLI reference](docs/reference/cli.md) and [Source of truth](docs/reference/source-of-truth.md).
 
-## Adapter maturity
+## Adapter support level
 
-`EXPERIMENTAL` means offline checks exist; bounded live host conformance and
-usage/resource calibration are still required before `VERIFIED`. The verified
-claim is host-specific and also requires accepted redacted evidence and
-lifecycle final proof for the tested host range. New hosts can be added as
-adapters first and promoted only for the exact CLI/version/provider binding that
-has evidence. Monetary accounting is required only for metered modes.
+The adapter support level describes how much of the ALK integration is verified
+for a specific host. It covers the declared CLI/version, command projection,
+environment boundary, live conformance, resource calibration and accepted ALK
+lifecycle evidence. It describes the checked integration range; it is not a
+rating of the host model or of the external product.
 
-| Host | Current claim |
-| --- | --- |
-| Codex | `VERIFIED` for Codex CLI 0.145.0. Public Plugins Directory approval is not claimed. |
-| Claude Code | `VERIFIED` for Claude Code 2.1.220. Official directory approval is not claimed. |
-| OpenCode | `VERIFIED` for OpenCode CLI 1.18.9. npm publication is not claimed. |
-| Hermes | `VERIFIED` for Hermes Agent v0.19.0. Public directory approval is not claimed. |
-| Qwen Code | `VERIFIED` for Qwen Code 0.21.0 on the tested host-local provider/model binding. Public package approval is not claimed. |
-| Cursor | `EXPERIMENTAL`; local safe inspection passed, but accepted live receipts are incomplete. |
-| Gemini CLI | `EXPERIMENTAL`; local live canary is blocked by the current Gemini Code Assist tier. |
-| Goose | `VERIFIED` for Goose 1.45.0 on the tested host-local provider/model binding. Public directory approval is not claimed. |
-| Kimi Code | `EXPERIMENTAL`; live proof requires a configured provider and model alias. |
-| Grok Build | `VERIFIED` for Grok Build 0.2.117 on the tested host-local provider/model binding. Public directory approval is not claimed. |
-| OpenInterpreter | `VERIFIED` for `interpreter` 0.0.34 on the tested host-local provider/model binding. Public directory approval is not claimed. |
-| Pi | `VERIFIED` for Pi 0.83.0 on the tested host-local provider/model binding. Public directory approval is not claimed. |
+Accepted lifecycle artifacts include the reviewed plan and lock, state and task
+receipts, validation and evidence summaries, independent plan and implementation
+audits, and final proof. Host launch routes add usage, resource and containment
+receipts for the exact adapter/version binding.
 
-Adapter installation and maturity details live in [Adapter install](docs/adapters/install.md) and [Adapter support matrix](docs/adapters/support-matrix.md).
+`EXPERIMENTAL` marks an adapter with offline checks and deterministic contract
+tests. `VERIFIED` adds bounded live host conformance, usage/resource calibration,
+accepted redacted evidence and lifecycle final proof for a defined host range.
+Each adapter page and the support matrix name the exact CLI, version and
+host-local binding covered by the evidence.
+The matrix covers Codex, Claude Code, Cursor, Gemini CLI, Goose, Grok Build,
+Hermes, Kimi Code, OpenCode, OpenInterpreter, Pi and Qwen Code.
+
+Adapter installation and support-level details live in [Adapter install](docs/adapters/install.md) and [Adapter support matrix](docs/adapters/support-matrix.md).
 
 ## Contract map
 
@@ -154,19 +153,19 @@ The public lifecycle surface is schema-backed. Full stable schema ids, compatibi
 ## Design boundaries
 
 - The core stays provider-neutral. Concrete host commands and model bindings
-  belong to adapters or host-local profiles.
+  live in adapters or host-local profiles.
 - New CLIs are integrated through adapters: descriptor, command projection,
   environment boundary, and verification evidence. The lifecycle schemas remain
   stable while host support grows.
 - Small models get compact packets, deterministic checks, and explicit
   next-action lists instead of long narrative state.
-- Larger models keep the same gates; better reasoning does not bypass evidence.
-- Public release claims are limited to tracked source files and redacted
-  evidence summaries.
-- External dialect imports and retrieved episodes are context aids only; they
-  do not replace reviewed ALK source-of-truth artifacts.
-- Optional cross-check, Review Mesh and runner recovery receipts add evidence
-  only when a task or plan requests them; they are not default multi-model execution.
+- All model sizes follow the same evidence gates; larger models receive the same
+  bounded workflow with richer reasoning capacity.
+- Public release claims use tracked source files and redacted evidence summaries.
+- External dialect imports and retrieved episodes enrich context, while reviewed
+  ALK artifacts remain the source of truth.
+- Cross-check, Review Mesh and runner recovery receipts add evidence when a task
+  or plan enables them; the operator chooses the review depth.
 
 ## Documentation
 

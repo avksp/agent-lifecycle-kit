@@ -1,8 +1,8 @@
 # Gemini CLI adapter
 
-The Gemini CLI projection is an `EXPERIMENTAL` host projection scaffold. It
-contains no lifecycle semantics, no concrete provider model names, and no
-`VERIFIED` or production-promotion claim.
+The Gemini CLI projection is an `EXPERIMENTAL` host integration with a
+descriptor, conformance commands, a bounded runner and lifecycle evidence
+routes. Provider and model selection stays in the host configuration.
 
 Validate the source projection before any live run:
 
@@ -17,22 +17,21 @@ headless `--prompt` mode, `stream-json` output, model selection, permission
 flags, skills, extensions, MCP and local Gemma routing command discovery. The
 summary is `docs/adapters/evidence/gemini-cli-0.10.0.md`.
 
-The adapter remains `EXPERIMENTAL` until live Gemini CLI conformance, usage
-calibration and lifecycle proof evidence are accepted in the support matrix.
-ALK now includes a bounded Gemini CLI runner and live harness that use
+The support level is `EXPERIMENTAL`. ALK includes a bounded Gemini CLI runner
+and live harness that use
 `--skip-trust`, `--approval-mode plan`, `--prompt`, `--output-format
 stream-json` and optional `--model` to turn host output into portable
 host-operation receipts.
 
 The adapter-local `stream-json` usage normalizer is `FIXTURE_ONLY`. Runner and
-harness use the same bounded parser, but its sidecar remains `ESTIMATED` and
-cannot satisfy S1/S2 until a live Gemini CLI range is qualified. See
+harness use the same bounded parser, while the sidecar is recorded as
+`ESTIMATED` until a live Gemini CLI range is qualified. See
 [Host-local token accounting](../reference/host-local-token-accounting.md).
 
-Current blocker: `BLOCKED_UNSUPPORTED_CLIENT_TIER`; the current local Gemini
-CLI 0.46.0 setup returns an unsupported Gemini Code Assist individual-client
-tier error before a live receipt can be captured. No accepted Gemini CLI live
-host receipt, live calibration receipt or ALK lifecycle final proof exists.
+The current local Gemini CLI 0.46.0 setup is recorded as
+`BLOCKED_UNSUPPORTED_CLIENT_TIER`. Qualification continues with a supported
+Gemini Code Assist client tier, followed by live host, calibration and
+lifecycle receipts.
 
 ## Planning-only launch status
 
@@ -47,17 +46,15 @@ agent-lifecycle host-launch inspect --profile .alk/host-launch/gemini-cli.json
 agent-lifecycle host-launch preflight --profile .alk/host-launch/gemini-cli.json
 ```
 
-A successful version preflight does not authorize planning launch.
-`managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
-promote planning support. See [Planning-only adapter
-launch](../reference/planning-only-launch.md).
+The profile status and support matrix determine planning launch eligibility.
+`managedLaunch.status` is `WRAPPER_ONLY`; the qualification sequence is in
+[Planning-only adapter launch](../reference/planning-only-launch.md).
 
 ## Use ALK with Gemini CLI
 
-Gemini CLI can discover skills, but the bundled adapter does not modify the
-host skill directory. Configure the tagged shared `skills/` directory through
-Gemini CLI's native settings and request `agent-workflow-orchestrator`, or use
-the supported command route:
+Configure the tagged shared `skills/` directory through Gemini CLI's native
+settings and request `agent-workflow-orchestrator`, or use the supported
+command route:
 
 ```text
 Use the agent-workflow-orchestrator skill for this task.
@@ -66,12 +63,13 @@ implementation audits and accepted final proof.
 Task: <describe the task or name the Markdown file to read>
 ```
 
-The request above applies only after that host-local skill configuration.
+After configuring the host-local skills, use the request above inside the
+session.
 
 ```bash
 agent-lifecycle start --adapter gemini-cli --file task.md
 ```
 
-Without explicit host skill configuration, the command route is canonical. It
-does not start Gemini CLI by default. See [Using ALK with an
+The command route is the canonical terminal entrypoint. Add a qualified launch
+profile when the task requires a host process. See [Using ALK with an
 adapter](usage-modes.md).

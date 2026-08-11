@@ -77,8 +77,8 @@ Plans that deliberately accept partial containment can override
 Adapter descriptors and capability manifests use
 `agent-sandbox-capability.v1`. Existing adapters currently declare
 `status: UNKNOWN` and `verified: false` for sandbox support unless a live
-sandbox receipt proves otherwise. This avoids treating adapter maturity as an
-OS sandbox claim.
+sandbox receipt proves otherwise. This keeps the adapter support level separate
+from the OS sandbox claim.
 
 An adapter may become more specific only with evidence for every runtime
 boundary and enforcement source. Capability manifests must match the descriptor

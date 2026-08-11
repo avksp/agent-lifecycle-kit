@@ -1,8 +1,9 @@
 # Local host launch
 
 Local host launch is an advanced, explicit way to start one external command
-after ALK has accepted a fully bound frozen run. It does not change adapter
-maturity, install host credentials, inject task text, or turn a
+after ALK has accepted a fully bound frozen run. It keeps the adapter support
+level and host credentials under their declared boundaries, and it does not
+inject task text or turn a
 `WRAPPER_ONLY` adapter into a publicly supported native launcher.
 
 The local profile is operator-owned and must be stored below

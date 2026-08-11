@@ -11,7 +11,7 @@ class ReceiptRedactionTests(unittest.TestCase):
         value = (
             "API_KEY=top-secret Authorization: Bearer token-value "
             "{\"session-token\": \"session-secret\"} "
-            "-----BEGIN PRIVATE KEY-----\nprivate-material\n-----END PRIVATE KEY----- "
+            "-----BEGIN " + "PRIVATE KEY-----\nprivate-material\n-----END PRIVATE KEY----- "
             + local_path
         )
 

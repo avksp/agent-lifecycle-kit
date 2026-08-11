@@ -26,7 +26,7 @@ def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
     live_range = descriptor.get("liveTestedHostRange")
     if isinstance(live_range, dict):
         promotion["liveTestedHostRange"] = live_range
-    return {
+    manifest = {
         "schemaVersion": CAPABILITY_MANIFEST_SCHEMA_VERSION,
         "adapterId": descriptor.get("adapterId"),
         "host": descriptor.get("host"),
@@ -54,6 +54,10 @@ def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
         "eventCapture": _event_capture_from_descriptor(descriptor),
         "promotion": promotion,
     }
+    planning_launch = _planning_launch_from_descriptor(descriptor)
+    if planning_launch is not None:
+        manifest["planningLaunch"] = planning_launch
+    return manifest
 
 
 def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[str, Any]) -> dict[str, Any]:
@@ -95,6 +99,7 @@ def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[s
     _validate_host_capability_drift(manifest, descriptor, blockers)
     _validate_sandbox_capability_drift(manifest, descriptor, blockers)
     _validate_event_capture(manifest, descriptor, blockers)
+    _validate_planning_launch(manifest, descriptor, blockers)
     status = "PASS" if not blockers else "FAIL"
     return {
         "schemaVersion": CAPABILITY_MANIFEST_VALIDATION_SCHEMA_VERSION,
@@ -144,6 +149,19 @@ def _sandbox_capabilities_from_descriptor(descriptor: dict[str, Any]) -> dict[st
     if not isinstance(capabilities, dict):
         return None
     return dict(capabilities)
+
+
+def _planning_launch_from_descriptor(descriptor: dict[str, Any]) -> dict[str, Any] | None:
+    qualified_launch = descriptor.get("qualifiedLaunch")
+    if not isinstance(qualified_launch, dict):
+        return None
+    return {
+        "profileStatus": qualified_launch.get("planningProfileStatus"),
+        "planningSupportStatus": qualified_launch.get("planningSupportStatus"),
+        "expectedHostVersion": qualified_launch.get("expectedHostVersion"),
+        "qualificationRequired": qualified_launch.get("planningQualificationRequired"),
+        "hostLaunchStarted": False,
+    }
 
 
 def _validate_manifest_capabilities(
@@ -266,3 +284,24 @@ def _validate_event_capture(
             blockers.append({"code": "capability-event-capture-boundary", "message": "event producer boundary must be adapter-owned"})
     if capture.get("promotionRequired") is not False:
         blockers.append({"code": "capability-event-capture-promotion-overclaim", "message": "event capture declaration must not imply promotion"})
+
+
+def _validate_planning_launch(
+    manifest: dict[str, Any],
+    descriptor: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> None:
+    expected = _planning_launch_from_descriptor(descriptor)
+    actual = manifest.get("planningLaunch")
+    if expected is None:
+        if actual is not None:
+            blockers.append({"code": "capability-planning-launch-unexpected"})
+        return
+    if actual != expected:
+        blockers.append(
+            {
+                "code": "capability-planning-launch-drift",
+                "expected": expected,
+                "actual": actual,
+            }
+        )
