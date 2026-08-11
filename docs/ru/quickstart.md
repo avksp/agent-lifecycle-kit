@@ -54,7 +54,7 @@ agent-lifecycle diagnose --no-install-plans
 
 ```bash
 agent-lifecycle diagnose \
-  --adapter adapters/codex/adapter.descriptor.json \
+  --adapter adapters/<adapter-id>/adapter.descriptor.json \
   --no-install-plans
 ```
 
@@ -62,7 +62,7 @@ agent-lifecycle diagnose \
 
 ```bash
 agent-lifecycle adapter install-plan \
-  --descriptor adapters/opencode/adapter.descriptor.json
+  --descriptor adapters/<adapter-id>/adapter.descriptor.json
 ```
 
 Команда показывает проверенные данные дескриптора: файлы, argv-массивы и
@@ -107,13 +107,44 @@ agent-lifecycle import plan \
 реализацию и не заменяет зафиксированный план ALK, пока не пройдёт проверку и
 заморозку.
 
+## Выбор способа работы с адаптером
+
+Выберите `<adapter-id>` в [таблице адаптеров со
+ссылками](adapters/usage-modes.md). Есть два обычных способа начать работу:
+
+- Во внешнем инструменте, для которого на странице адаптера описана установка
+  модуля или общего навыка, откройте целевой проект и отправьте приведённый ниже
+  запрос. Модель и инструменты запускает внешний инструмент.
+- В терминале проекта выполните `agent-lifecycle start --adapter
+  <adapter-id>`. ALK прочитает задачу и создаст подтверждение, но по
+  умолчанию не запустит внешний инструмент или модель.
+
+```text
+Используй навык agent-workflow-orchestrator для этой задачи.
+Проведи задачу через полный цикл ALK: уточни требования, составь и независимо
+проверь план, зафиксируй его до реализации, проверь результаты реализации и
+заверши работу только после принятия подтверждений и итогового доказательства.
+Задача: <опиши задачу или укажи Markdown-файл>
+```
+
+Такой запрос прямо требует полного процесса ALK, а не только общего следования
+навыку. На странице конкретного адаптера указано, как внешний инструмент
+загружает или вызывает навык. Если встроенный маршрут внутри сессии не
+поставляется, используйте команду в терминале.
+
+Установка подключаемого модуля или навыка задаёт порядок работы, но не
+доказывает прохождение полного цикла. Для доказательства нужны переходы
+состояния ALK, проверки, аудиты и принятые подтверждения. Способы установки и
+вызова для всех двенадцати встроенных адаптеров приведены в разделе
+[использование ALK с адаптером](adapters/usage-modes.md).
+
 ## Единая команда запуска
 
 Для файла задачи или короткого текста:
 
 ```bash
-agent-lifecycle start --adapter codex --file task.md
-agent-lifecycle start --adapter codex --text "Исправь падающий тест"
+agent-lifecycle start --adapter <adapter-id> --file task.md
+agent-lifecycle start --adapter <adapter-id> --text "Исправь падающий тест"
 ```
 
 По умолчанию используется режим `auto`. Обычный текст не запускает реализацию:
@@ -121,9 +152,9 @@ agent-lifecycle start --adapter codex --text "Исправь падающий т
 который должен пройти проверку. Для узкой цели укажите неисполняющий режим:
 
 ```bash
-agent-lifecycle start --adapter codex --mode research --file research.md
-agent-lifecycle start --adapter codex --mode plan --file feature.md
-agent-lifecycle start --adapter codex --mode review --file proposed-plan.md
+agent-lifecycle start --adapter <adapter-id> --mode research --file research.md
+agent-lifecycle start --adapter <adapter-id> --mode plan --file feature.md
+agent-lifecycle start --adapter <adapter-id> --mode review --file proposed-plan.md
 ```
 
 Чтобы запросить один внешний процесс только для планирования, добавьте
@@ -131,18 +162,19 @@ agent-lifecycle start --adapter codex --mode review --file proposed-plan.md
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --mode plan \
   --file feature.md \
   --launch
 ```
 
 Маршрут доступен только для точной версии с состоянием
-`PLANNING_ONLY_QUALIFIED`. Поставляемые профили Codex, Claude Code и OpenCode
-пока остаются кандидатами с безопасным отказом, а остальные встроенные
-адаптеры этот маршрут ещё не объявляют. Заблокированное подтверждение содержит
-команды подготовки, но не разрешает обходить квалификацию. Подробнее: [запуск
-адаптера только для планирования](reference/planning-only-launch.md).
+`PLANNING_ONLY_QUALIFIED`. Все двенадцать встроенных адаптеров объявляют
+результат для точной версии, но сейчас каждый имеет состояние
+`PLANNING_ONLY_UNSUPPORTED`: четыре профиля являются статическими кандидатами,
+а восемь явно не поддерживаются. Заблокированное подтверждение содержит команды
+подготовки, но не разрешает обходить квалификацию. Подробнее: [запуск адаптера
+только для планирования](reference/planning-only-launch.md).
 
 Только явный режим `implement` может передать управление существующему
 управляемому шагу. Для него нужен структурированный зафиксированный запрос с
@@ -150,7 +182,7 @@ agent-lifecycle start \
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --mode implement \
   --file work/run/adapter-run-request.json
 ```
@@ -175,7 +207,7 @@ agent-lifecycle start \
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --resume <session-id> \
   --session-root .alk/adapter-sessions
 ```
@@ -186,21 +218,24 @@ agent-lifecycle start \
 планирования, не указывайте `--session-root`:
 
 ```bash
-agent-lifecycle start --adapter codex --resume <planning-session-id>
+agent-lifecycle start --adapter <adapter-id> --resume <planning-session-id>
 ```
 
 Команда читает состояние с отпечатками из `.alk/planning-sessions` и не
 перезапускает внешний CLI. По умолчанию внешний процесс не запускается.
-Опытный пользователь сначала может создать и проверить профиль с точной
-привязкой к версии Codex, Claude Code или OpenCode:
+Опытный пользователь может создать и предварительно проверить описание точной
+версии для любого встроенного адаптера. Однако доказательством принятого
+запуска могут быть только профили, явно указанные для зафиксированной задачи.
+Для квалифицированного адаптера подставьте точные идентификаторы и пути из
+[руководства по квалифицированному запуску](reference/qualified-host-launch.md):
 
 ```bash
 agent-lifecycle adapter launch-profile \
-  --adapter codex \
+  --adapter <qualified-adapter-id> \
   --repository-root /path/to/agent-lifecycle-kit \
-  --out .alk/host-launch/codex.json
+  --out .alk/host-launch/<qualified-adapter-id>.json
 agent-lifecycle host-launch preflight \
-  --profile .alk/host-launch/codex.json
+  --profile .alk/host-launch/<qualified-adapter-id>.json
 ```
 
 После этого одну локальную команду можно явно запустить только из
@@ -208,13 +243,13 @@ agent-lifecycle host-launch preflight \
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <qualified-adapter-id> \
   --mode implement \
   --file work/run/adapter-run-request.json \
   --risk auto \
-  --host-model-profile profiles/hosts/codex-live-profile.v1.json \
+  --host-model-profile <host-model-profile.json> \
   --launch \
-  --host-launch-profile .alk/host-launch/codex.json
+  --host-launch-profile .alk/host-launch/<qualified-adapter-id>.json
 ```
 
 Сначала создайте и проверьте исключённый из Git профиль. Его формат, проверка
@@ -241,7 +276,7 @@ git diff origin/main...HEAD > work/code-review/current/diff.patch
 
 ```bash
 agent-lifecycle start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --mode review \
   --file work/code-review/current/review-task.md \
   --out work/code-review/current/start.json
@@ -270,16 +305,16 @@ agent-lifecycle review-mesh recommend --file task.md
 
 ```bash
 agent-lifecycle adapter task start \
-  --adapter codex \
+  --adapter <adapter-id> \
   --file work/code-review/current/review-task.md \
   --out work/code-review/current/intake.json
 
 agent-lifecycle review-mesh prepare \
   --intake work/code-review/current/intake.json \
   --template leader-draft-review \
-  --reviewer codex-example:plan-reviewer:strong-reasoning \
-  --reviewer claude-example:risk-reviewer:strong-reasoning \
-  --reviewer opencode-glm-example:independent-reviewer:local-strong-review \
+  --reviewer reviewer-a:plan-reviewer:strong-reasoning \
+  --reviewer reviewer-b:risk-reviewer:strong-reasoning \
+  --reviewer reviewer-c:independent-reviewer:local-strong-review \
   --out-dir work/code-review/current/review-mesh \
   --out work/code-review/current/review-mesh-prepare.json
 ```

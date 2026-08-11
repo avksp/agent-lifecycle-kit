@@ -56,3 +56,19 @@ agent-lifecycle host-launch preflight --profile .alk/host-launch/qwen-code.json
 `managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
 состояние поддержки планирования. Подробнее: [запуск адаптера только для
 планирования](../reference/planning-only-launch.md).
+
+## Использование ALK в Qwen Code
+
+Встроенная проекция Qwen Code не заявляет готовый способ установки ALK внутрь
+внешнего инструмента. Используйте команду, если отдельная настройка обнаружения
+общих навыков в Qwen Code не была проверена:
+
+Использование ALK внутри сессии этого инструмента не поставляется, поэтому
+готового примера запроса внутри сессии нет.
+
+```bash
+agent-lifecycle start --adapter qwen-code --file task.md
+```
+
+По умолчанию команда не запускает Qwen Code. Подробнее: [использование ALK с
+адаптером](usage-modes.md).

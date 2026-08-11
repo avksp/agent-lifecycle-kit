@@ -69,6 +69,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/guides/production-resource-security.md",
             "docs/ru/guides/reference-task-evaluation.md",
             "docs/ru/adapters/install.md",
+            "docs/ru/adapters/usage-modes.md",
             "docs/ru/adapters/progress-bridge-matrix.md",
             "docs/ru/adapters/support-matrix.md",
             "docs/ru/reference/automatic-progress-bridge.md",
@@ -93,6 +94,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/risk-aware-execution.md",
             "docs/ru/security/release-security.md",
             "docs/adapters/install.md",
+            "docs/adapters/usage-modes.md",
             "docs/adapters/progress-bridge-matrix.md",
             "docs/architecture/system-architecture.md",
             "docs/reference/automatic-progress-bridge.md",
@@ -143,7 +145,9 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("agent-lifecycle plan check", text)
             self.assertIn("agent-lifecycle import plan", text)
             self.assertIn("agent-lifecycle context check", text)
-            self.assertIn("agent-lifecycle start --adapter codex", text)
+            self.assertIn("agent-lifecycle start --adapter <adapter-id>", text)
+            self.assertNotIn("--adapter codex", text)
+            self.assertIn("agent-workflow-orchestrator", text)
             self.assertIn("--mode research", text)
             self.assertIn("--mode implement", text)
             self.assertIn("--resume <session-id>", text)
@@ -163,6 +167,87 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "kimi --version",
         ):
             self.assertIn(command, install)
+
+    def test_every_adapter_page_explains_inside_host_and_command_routes(self) -> None:
+        descriptors = {
+            payload["adapterId"]: payload
+            for path in sorted((ROOT / "adapters").glob("*/adapter.descriptor.json"))
+            for payload in (json.loads(path.read_text(encoding="utf-8")),)
+        }
+        english_modes = (ROOT / "docs/adapters/usage-modes.md").read_text(encoding="utf-8")
+        russian_modes = (ROOT / "docs/ru/adapters/usage-modes.md").read_text(encoding="utf-8")
+        english_matrix = (ROOT / "docs/adapters/support-matrix.md").read_text(encoding="utf-8")
+        russian_matrix = (ROOT / "docs/ru/adapters/support-matrix.md").read_text(encoding="utf-8")
+        english_launch = (ROOT / "docs/reference/qualified-host-launch.md").read_text(encoding="utf-8")
+        russian_launch = (ROOT / "docs/ru/reference/qualified-host-launch.md").read_text(encoding="utf-8")
+        english_quickstart = (ROOT / "docs/guides/quickstart.md").read_text(encoding="utf-8")
+        russian_quickstart = (ROOT / "docs/ru/quickstart.md").read_text(encoding="utf-8")
+        display_names = {
+            "claude": "Claude Code",
+            "codex": "Codex",
+            "cursor": "Cursor",
+            "gemini-cli": "Gemini CLI",
+            "goose": "Goose",
+            "grok-build": "Grok Build",
+            "hermes": "Hermes",
+            "kimi-code": "Kimi Code",
+            "opencode": "OpenCode",
+            "openinterpreter": "OpenInterpreter",
+            "pi": "Pi",
+            "qwen-code": "Qwen Code",
+        }
+        inside_session_adapters = {
+            "claude",
+            "codex",
+            "cursor",
+            "gemini-cli",
+            "hermes",
+            "kimi-code",
+            "opencode",
+            "pi",
+        }
+
+        self.assertIn("## Choose how to use an adapter", english_quickstart)
+        self.assertIn("../adapters/usage-modes.md", english_quickstart)
+        self.assertIn("## Выбор способа работы с адаптером", russian_quickstart)
+        self.assertIn("adapters/usage-modes.md", russian_quickstart)
+        for text in (english_modes, russian_modes):
+            self.assertIn("agent-workflow-orchestrator", text)
+            self.assertIn("PLANNING_ONLY_QUALIFIED", text)
+
+        for adapter_id, descriptor in descriptors.items():
+            with self.subTest(adapter=adapter_id):
+                command = f"agent-lifecycle start --adapter {adapter_id} --file task.md"
+                english_page = (ROOT / f"docs/adapters/{adapter_id}.md").read_text(encoding="utf-8")
+                russian_page = (ROOT / f"docs/ru/adapters/{adapter_id}.md").read_text(encoding="utf-8")
+                name = display_names[adapter_id]
+                self.assertIn(f"`{adapter_id}`", english_modes)
+                self.assertIn(f"`{adapter_id}`", russian_modes)
+                self.assertIn(f"[{name}]({adapter_id}.md)", english_modes)
+                self.assertIn(f"[{name}]({adapter_id}.md)", russian_modes)
+                self.assertIn(f"[{name}]({adapter_id}.md)", english_matrix)
+                self.assertIn(f"[{name}]({adapter_id}.md)", russian_matrix)
+                self.assertIn(f"[{name}](../adapters/{adapter_id}.md)", english_launch)
+                self.assertIn(f"[{name}](../adapters/{adapter_id}.md)", russian_launch)
+                self.assertIn(command, english_page)
+                self.assertIn(command, russian_page)
+                self.assertIn("usage-modes.md", english_page)
+                self.assertIn("usage-modes.md", russian_page)
+                if adapter_id in inside_session_adapters:
+                    self.assertIn("agent-workflow-orchestrator", english_page)
+                    self.assertIn("agent-workflow-orchestrator", russian_page)
+                    self.assertIn("full ALK lifecycle", english_page)
+                    self.assertIn("полный цикл ALK", russian_page)
+                else:
+                    self.assertIn("Inside-session ALK use is not shipped", english_page)
+                    self.assertIn("Использование ALK внутри сессии этого инструмента не поставляется", russian_page)
+                version = descriptor["qualifiedLaunch"]["expectedHostVersion"]
+                self.assertIn(version, english_launch)
+                self.assertIn(version, russian_launch)
+
+        self.assertEqual(len(descriptors), 12)
+        self.assertIn("Why this table has three adapters", (ROOT / "docs/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
+        self.assertIn("Почему в основной таблице три адаптера", (ROOT / "docs/ru/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
 
     def test_task_flow_docs_define_completion_and_cost_boundaries(self) -> None:
         english = (ROOT / "docs/guides/how-alk-works.md").read_text(encoding="utf-8")
@@ -199,9 +284,9 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("## Optional review with several AI models", english_quickstart)
         self.assertIn("## Дополнительная проверка несколькими моделями ИИ", russian_quickstart)
         for text in (english_quickstart, russian_quickstart):
-            self.assertIn("codex-example", text)
-            self.assertIn("claude-example", text)
-            self.assertIn("opencode-glm-example", text)
+            self.assertIn("reviewer-a", text)
+            self.assertIn("reviewer-b", text)
+            self.assertIn("reviewer-c", text)
         self.assertIn("## Review with several AI models", english_guide)
         self.assertIn("## Проверка несколькими моделями ИИ", russian_guide)
         self.assertIn("Any available combination is valid", english_guide)
@@ -755,6 +840,23 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/adapters/install.md", install)
     _write_text(root / "docs/ru/adapters/install.md", install)
+    usage_modes = (
+        "Inside the host CLI.\n"
+        "From the project terminal.\n"
+        "Работа внутри внешнего инструмента.\n"
+        "Запуск из терминала проекта.\n"
+        "agent-workflow-orchestrator.\n"
+        "agent-lifecycle start --adapter <adapter-id> --file task.md.\n"
+        "does not start the external CLI.\n"
+        "не запускает внешний инструмент.\n"
+        "Installing or mentioning a skill does not prove.\n"
+        "сама по себе не доказывает.\n"
+        "`PLANNING_ONLY_QUALIFIED`.\n"
+        "[Codex](codex.md).\n"
+        "[Qwen Code](qwen-code.md).\n"
+    )
+    _write_text(root / "docs/adapters/usage-modes.md", usage_modes)
+    _write_text(root / "docs/ru/adapters/usage-modes.md", usage_modes)
     plugin_publication = (
         "agent-publication-manifest.v1.\n"
         "codex plugin marketplace remove agent-lifecycle-kit.\n"
@@ -1180,6 +1282,18 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "0.147.0.\n"
         "2.1.226.\n"
         "1.18.15.\n"
+        "2026.07.23.\n"
+        "0.46.0.\n"
+        "1.45.0.\n"
+        "0.2.118.\n"
+        "0.19.0.\n"
+        "0.30.0.\n"
+        "0.0.34.\n"
+        "0.83.0.\n"
+        "0.21.8.\n"
+        "All twelve bundled adapters.\n"
+        "двенадцати встроенных адаптеров.\n"
+        "qualifiedLaunch.publicSupportClaimed.\n"
         "WRAPPER_ONLY.\n"
         "FIXTURE_ONLY.\n"
         "acceptedForS1S2: false.\n"
@@ -1281,24 +1395,32 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "pi",
         "qwen-code",
     ):
+        adapter_doc = (
+            "This adapter is `VERIFIED` for Codex CLI 0.145.0; live conformance exists and it does not claim public approval.\n"
+            if host == "codex"
+            else "This adapter is `VERIFIED` for Claude Code 2.1.220; live conformance exists and it does not claim official approval.\n"
+            if host == "claude"
+            else "This adapter is `VERIFIED` for Goose `1.45.0`; live conformance exists and it does not claim public approval.\n"
+            if host == "goose"
+            else "This adapter is `VERIFIED` for OpenCode CLI `1.18.9`; live conformance exists and it does not claim npm publication.\n"
+            if host == "opencode"
+            else "This adapter is `VERIFIED` for Hermes Agent `v0.19.0`; live conformance exists and it does not claim public approval.\n"
+            if host == "hermes"
+            else "This adapter is `VERIFIED` for Qwen Code `0.21.0`; live conformance exists and it does not claim public approval.\n"
+            if host == "qwen-code"
+            else "This adapter remains `EXPERIMENTAL`; probe and live conformance evidence are required before promotion.\n"
+            if host == "grok-build"
+            else "This adapter remains `EXPERIMENTAL` until live conformance evidence exists.\n"
+        )
         _write_text(
             root / f"docs/adapters/{host}.md",
-            (
-                "This adapter is `VERIFIED` for Codex CLI 0.145.0; live conformance exists and it does not claim public approval.\n"
-                if host == "codex"
-                else "This adapter is `VERIFIED` for Claude Code 2.1.220; live conformance exists and it does not claim official approval.\n"
-                if host == "claude"
-                else "This adapter is `VERIFIED` for Goose `1.45.0`; live conformance exists and it does not claim public approval.\n"
-                if host == "goose"
-                else "This adapter is `VERIFIED` for OpenCode CLI `1.18.9`; live conformance exists and it does not claim npm publication.\n"
-                if host == "opencode"
-                else "This adapter is `VERIFIED` for Hermes Agent `v0.19.0`; live conformance exists and it does not claim public approval.\n"
-                if host == "hermes"
-                else "This adapter is `VERIFIED` for Qwen Code `0.21.0`; live conformance exists and it does not claim public approval.\n"
-                if host == "qwen-code"
-                else "This adapter remains `EXPERIMENTAL`; probe and live conformance evidence are required before promotion.\n"
-                if host == "grok-build"
-                else "This adapter remains `EXPERIMENTAL` until live conformance evidence exists.\n"
+            adapter_doc
+            + f"agent-lifecycle start --adapter {host} --file task.md.\n"
+            + "usage-modes.md.\n"
+            + (
+                "agent-workflow-orchestrator. Follow the full ALK lifecycle.\n"
+                if host in {"claude", "codex", "cursor", "gemini-cli", "hermes", "kimi-code", "opencode", "pi"}
+                else "Inside-session ALK use is not shipped.\n"
             ),
         )
 

@@ -50,3 +50,26 @@ A successful version preflight does not authorize planning launch.
 `managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
 promote planning support. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
+
+## Use ALK with Kimi Code
+
+Kimi Code exposes skill-directory selection, but the bundled adapter does not
+install ALK skills. Configure the tagged shared `skills/` directory through
+the host, then request `agent-workflow-orchestrator`, or use:
+
+```text
+Use the agent-workflow-orchestrator skill for this task.
+Follow the full ALK lifecycle through reviewed planning, plan freeze,
+implementation audits and accepted final proof.
+Task: <describe the task or name the Markdown file to read>
+```
+
+The request above applies only after that host-local skill configuration.
+
+```bash
+agent-lifecycle start --adapter kimi-code --file task.md
+```
+
+Without explicit host skill configuration, the command route is canonical and
+does not start Kimi Code by default. See [Using ALK with an
+adapter](usage-modes.md).

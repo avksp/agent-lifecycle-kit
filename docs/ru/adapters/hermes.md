@@ -47,3 +47,22 @@ agent-lifecycle host-launch preflight --profile .alk/host-launch/hermes.json
 `managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
 состояние поддержки планирования. Подробнее: [запуск адаптера только для
 планирования](../reference/planning-only-launch.md).
+
+## Использование ALK в Hermes
+
+После установки навыка из отмеченной версии выполните внутри Hermes:
+
+```text
+/agent-lifecycle-kit:agent-workflow-orchestrator Проведи полный цикл ALK: проверенное планирование, фиксацию плана, аудит результатов реализации и принятое итоговое доказательство. Задача: <задача или Markdown-файл>
+```
+
+Для запуска вне Hermes:
+
+```bash
+agent-lifecycle start --adapter hermes --file task.md
+```
+
+Первый способ управляется внешним инструментом, а второй по умолчанию не
+запускает Hermes. Ни установка навыка, ни команда со слешем сами по себе не
+доказывают прохождение полного цикла. Подробнее: [использование ALK с
+адаптером](usage-modes.md).

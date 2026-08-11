@@ -5,6 +5,11 @@ Adapter setup is intentionally split into two steps:
 1. Validate and inspect source metadata.
 2. Apply host-local installation commands only after operator review.
 
+Installation is only one route. See [Using ALK with an
+adapter](usage-modes.md) for the difference between loading ALK skills inside a
+host, running `agent-lifecycle` from the project terminal and explicitly
+launching a qualified external process.
+
 Use the dry-run planner first:
 
 ```bash
