@@ -46,6 +46,38 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/guides/how-alk-works.md",
+        (
+            "completion-control problem",
+            "agent-lifecycle start",
+            "--mode research",
+            "--mode plan",
+            "--mode review",
+            "--mode implement",
+            "agent-lifecycle plan completeness-check",
+            "agent-lifecycle review-mesh recommend",
+            "agent-lifecycle metrics cost-report",
+            "`pipelineCompliance`",
+            "does not by itself prove",
+        ),
+    ),
+    (
+        "docs/ru/guides/how-alk-works.md",
+        (
+            "управления завершением",
+            "agent-lifecycle start",
+            "--mode research",
+            "--mode plan",
+            "--mode review",
+            "--mode implement",
+            "agent-lifecycle plan completeness-check",
+            "agent-lifecycle review-mesh recommend",
+            "agent-lifecycle metrics cost-report",
+            "Соразмерность затрат процесса",
+            "не доказывает",
+        ),
+    ),
+    (
         "docs/reference/public-contracts.md",
         (
             "`completionCheck`",

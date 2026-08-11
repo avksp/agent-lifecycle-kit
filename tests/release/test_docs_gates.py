@@ -56,11 +56,13 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/guides/production-resource-security.md",
             "docs/guides/reference-task-evaluation.md",
             "docs/guides/README.ru.md",
+            "docs/guides/how-alk-works.md",
             "docs/guides/quickstart.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
             "docs/ru/architecture/system-architecture.md",
             "docs/ru/code-review-workflows.md",
+            "docs/ru/guides/how-alk-works.md",
             "docs/ru/lifecycle-cookbook.md",
             "docs/ru/guides/bug-forensics-workflows.md",
             "docs/ru/quickstart.md",
@@ -161,6 +163,28 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "kimi --version",
         ):
             self.assertIn(command, install)
+
+    def test_task_flow_docs_define_completion_and_cost_boundaries(self) -> None:
+        english = (ROOT / "docs/guides/how-alk-works.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/guides/how-alk-works.md").read_text(encoding="utf-8")
+        root_readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        russian_readme = (ROOT / "docs/ru/README.md").read_text(encoding="utf-8")
+        russian_architecture = (ROOT / "docs/ru/architecture/system-architecture.md").read_text(encoding="utf-8")
+        lifecycle_cost = (ROOT / "docs/reference/lifecycle-cost.md").read_text(encoding="utf-8")
+        lifecycle_cost_ru = (ROOT / "docs/ru/reference/lifecycle-cost.md").read_text(encoding="utf-8")
+
+        self.assertIn("completion-control problem", english)
+        self.assertIn("external coding agent", english)
+        self.assertIn("does not by itself prove", english)
+        self.assertIn("задачу управления завершением", russian)
+        self.assertIn("внешний кодовый агент", russian)
+        self.assertIn("не доказывает", russian)
+        self.assertIn("controls completion of coding-agent work", root_readme)
+        self.assertIn("управляет завершением", russian_readme)
+        self.assertIn("## Соразмерность процесса задаче", russian_architecture)
+        for text in (lifecycle_cost, lifecycle_cost_ru):
+            self.assertIn("pipelineCompliance", text)
+            self.assertIn("coordination", text)
 
     def test_plugin_update_guidance_covers_pinned_codex_and_claude_flows(self) -> None:
         for relative_path in (
@@ -316,6 +340,19 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                     resolved.is_relative_to((ROOT / "docs/ru").resolve()),
                     f"{path.relative_to(ROOT)} links outside Russian locale: {target}",
                 )
+
+    def test_russian_docs_use_error_or_bug_terminology(self) -> None:
+        paths = list((ROOT / "docs/ru").rglob("*.md"))
+        paths.extend(
+            (
+                ROOT / "docs/guides/README.ru.md",
+                ROOT / "docs/guides/quickstart.ru.md",
+            )
+        )
+        for path in sorted(paths):
+            with self.subTest(path=path.relative_to(ROOT)):
+                text = path.read_text(encoding="utf-8").casefold()
+                self.assertNotRegex(text, r"деф+ект")
 
     def test_docs_compat_evidence_passes_current_docs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -488,6 +525,18 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         root / "docs/ru/README.md",
         "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. Список в Публичных контрактах: reference/public-contracts.md. https://pypi.org/project/agent-lifecycle-kit/ поддерживает Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
     )
+    task_flow = (
+        "completion-control problem. управления завершением.\n"
+        "agent-lifecycle start.\n"
+        "--mode research. --mode plan. --mode review. --mode implement.\n"
+        "agent-lifecycle plan completeness-check.\n"
+        "agent-lifecycle review-mesh recommend.\n"
+        "agent-lifecycle metrics cost-report.\n"
+        "`pipelineCompliance`. Соразмерность затрат процесса.\n"
+        "does not by itself prove. не доказывает.\n"
+    )
+    _write_text(root / "docs/guides/how-alk-works.md", task_flow)
+    _write_text(root / "docs/ru/guides/how-alk-works.md", task_flow)
     public_contracts = (
         "`completionCheck`.\n"
         "`agent-completion-check-receipt.v1`.\n"

@@ -125,6 +125,15 @@ limits for pipeline token share, pipeline step share, pipeline tokens and
 pipeline steps. If strict or release work intentionally exceeds the default
 pipeline limits, the report needs `overLimitReason`.
 
+The validator currently applies those ratios to `pipelineCompliance` only.
+`coordination` is reported as a separate category and is not included in the
+pipeline share. A passing receipt therefore proves compliance with the declared
+pipeline limits, but it does not by itself prove that all process overhead is
+less than half of a real run. That conclusion requires complete phase data from
+the host and inspection of both categories. For light and standard work, a
+dominant combined process share is a signal to remove duplicate checks, reduce
+optional review, split the task or avoid ALK for that task.
+
 Small local models can use the compact validation receipt to decide whether the
 process is still helping the task and which mode is reasonable next. Larger
 models can inspect the full generated report, source artifact digests,
