@@ -41,3 +41,18 @@ agent-lifecycle host-launch preflight --profile .alk/host-launch/grok-build.json
 `managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
 состояние поддержки планирования. Подробнее: [запуск адаптера только для
 планирования](../reference/planning-only-launch.md).
+
+## Использование ALK в Grok Build
+
+Встроенная проекция Grok Build не устанавливает модуль или навык ALK внутрь
+внешнего инструмента. Используйте команду либо отдельную проверенную обвязку:
+
+Использование ALK внутри сессии этого инструмента не поставляется, поэтому
+готового примера запроса внутри сессии нет.
+
+```bash
+agent-lifecycle start --adapter grok-build --file task.md
+```
+
+По умолчанию команда не запускает Grok Build. Подробнее: [использование ALK с
+адаптером](usage-modes.md).

@@ -64,3 +64,19 @@ A successful version preflight does not authorize planning launch.
 `managedLaunch.status` remains `WRAPPER_ONLY`, and adapter maturity cannot
 promote planning support. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
+
+## Use ALK with Qwen Code
+
+The bundled Qwen Code projection does not claim an inside-host ALK installation
+route. Use the command route unless a separate Qwen Code configuration has
+been reviewed for shared skill discovery:
+
+Inside-session ALK use is not shipped for this adapter, so there is no bundled
+in-session prompt example.
+
+```bash
+agent-lifecycle start --adapter qwen-code --file task.md
+```
+
+The command does not start Qwen Code by default. See [Using ALK with an
+adapter](usage-modes.md).

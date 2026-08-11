@@ -43,3 +43,19 @@ agent-lifecycle host-launch preflight --profile .alk/host-launch/openinterpreter
 `managedLaunch.status` остаётся `WRAPPER_ONLY`, а зрелость адаптера не повышает
 состояние поддержки планирования. Подробнее: [запуск адаптера только для
 планирования](../reference/planning-only-launch.md).
+
+## Использование ALK в OpenInterpreter
+
+Встроенная проекция OpenInterpreter не устанавливает модуль или навык ALK
+внутрь внешнего инструмента. Используйте команду либо отдельную проверенную
+обвязку:
+
+Использование ALK внутри сессии этого инструмента не поставляется, поэтому
+готового примера запроса внутри сессии нет.
+
+```bash
+agent-lifecycle start --adapter openinterpreter --file task.md
+```
+
+По умолчанию команда не запускает OpenInterpreter. Подробнее: [использование
+ALK с адаптером](usage-modes.md).
