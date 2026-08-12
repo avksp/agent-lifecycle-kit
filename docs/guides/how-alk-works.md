@@ -15,6 +15,10 @@ For a capability-by-capability explanation of multiple agents, plan-level
 workflow customization, host model settings, prompts, timeouts and retries, see
 [Workflow customization and execution controls](../reference/workflow-customization.md).
 
+To get started, begin with [Install ALK and make the first run](install-and-first-run.md)
+and [Commands by task](commands-by-task.md). This page explains the lifecycle
+behind those commands.
+
 For project-wide defaults, use a local [project workflow
 profile](../reference/project-workflow-profile.md). `project profile init`
 creates the file, and an active profile adds a bounded guided action projection

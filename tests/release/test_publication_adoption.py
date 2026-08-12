@@ -41,7 +41,7 @@ class PublicationAdoptionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _write_minimum_docs(root, target_version=TARGET_VERSION)
-            path = root / "docs/guides/quickstart.md"
+            path = root / "docs/guides/install-and-first-run.md"
             path.write_text(path.read_text(encoding="utf-8") + "\nPyPI publication is claimed.\n", encoding="utf-8")
 
             result = validate_publication_adoption(root=root, target_version=TARGET_VERSION)
@@ -81,23 +81,39 @@ class PublicationAdoptionTests(unittest.TestCase):
 def _write_minimum_docs(root: Path, *, target_version: str) -> None:
     _write_text(
         root / "README.md",
-        "docs/guides/quickstart.md\ndocs/reference/project-comparison.md\npython -m pip install -e .\n",
+        "docs/guides/quickstart.md\ndocs/guides/install-and-first-run.md\n"
+        "docs/guides/commands-by-task.md\ndocs/reference/project-comparison.md\n"
+        "python -m pip install -e .\n",
     )
     _write_text(
         root / "docs/README.md",
-        "Project comparison\nreference/project-comparison.md\nManaged adapter session support\n",
+        "Project comparison\nreference/project-comparison.md\nManaged adapter session support\n"
+        "guides/install-and-first-run.md\nguides/commands-by-task.md\n",
     )
     _write_text(
         root / "docs/ru/README.md",
-        "сравнение проекта\nreference/project-comparison.md\nуправляемые сессии адаптеров\n",
+        "сравнение проекта\nreference/project-comparison.md\nуправляемые сессии адаптеров\n"
+        "guides/install-and-first-run.md\nguides/commands-by-task.md\n",
     )
     _write_text(
         root / "docs/guides/quickstart.md",
-        f"Install from source\nInstall from package\nWhen the package is available\nagent-lifecycle-kit=={target_version}\n",
+        "Install ALK and make the first run\n",
     )
     _write_text(
         root / "docs/ru/quickstart.md",
-        f"Установка из исходников\nУстановка из пакета\nЕсли пакет опубликован\nagent-lifecycle-kit=={target_version}\n",
+        "Быстрый старт\n",
+    )
+    _write_text(
+        root / "docs/guides/install-and-first-run.md",
+        f"Install from a GitHub checkout\nInstall the published package\nagent-lifecycle-kit=={target_version}\nagent-lifecycle version\n",
+    )
+    _write_text(
+        root / "docs/ru/guides/install-and-first-run.md",
+        f"Установка из GitHub\nУстановка опубликованного пакета\nagent-lifecycle-kit=={target_version}\nagent-lifecycle version\n",
+    )
+    _write_text(
+        root / "docs/guides/commands-by-task.md",
+        "Commands by task\n",
     )
     _write_text(
         root / "docs/adapters/support-matrix.md",

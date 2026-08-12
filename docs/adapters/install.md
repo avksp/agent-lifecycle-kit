@@ -5,6 +5,9 @@ Adapter setup follows two steps:
 1. Validate and inspect source metadata.
 2. Apply host-local installation commands only after operator review.
 
+To get started, begin with [Install ALK and make the first run](../guides/install-and-first-run.md).
+This page is the adapter-specific reference.
+
 Choose the route that matches the host workflow. See [Using ALK with an
 adapter](usage-modes.md) for the difference between loading ALK skills inside a
 host, running `agent-lifecycle` from the project terminal and explicitly
