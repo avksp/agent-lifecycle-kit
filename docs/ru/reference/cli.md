@@ -14,7 +14,7 @@ JSON, чтобы результат можно было проверять ав�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.61.0
+python -m pip install agent-lifecycle-kit==1.62.0
 ```
 
 ## Основа
@@ -51,6 +51,26 @@ python -m pip install agent-lifecycle-kit==1.61.0
   черновых шаблонов задач.
 - Частые сценарии собраны в `docs/ru/lifecycle-cookbook.md`: исследование,
   проверка Markdown, проверка изменений и аудит реализации.
+
+## Профиль проекта
+
+- `agent-lifecycle project profile init --adapter <adapter-id> --out .alk/project-profile.json`:
+  создаёт минимальный локальный файл настроек и при необходимости записывает
+  адаптер по умолчанию. Без `--adapter` значение можно добавить в файл или
+  передавать в каждой команде.
+- `agent-lifecycle project profile check`: проверяет и разрешает найденный
+  `.alk/project-profile.json`.
+- `agent-lifecycle project profile check --manifest <plan> --lock <lock>`:
+  связывает профиль с полномочиями плана и возвращает эффективный профиль.
+  Для разового безопасного изменения можно добавить `--adapter`, `--mode` или
+  `--risk`.
+- `agent-lifecycle start --file <path>` или `--text <text>`: использует найденный
+  профиль, если в нём задан адаптер по умолчанию. Флаг `--project-profile <path>`
+  выбирает профиль явно, а `--no-project-profile` отключает автоматический поиск.
+
+Профиль является локальным слоем настроек проекта. Зафиксированный план и его
+lock-файл остаются источником полномочий для риска, качества, границ записи,
+гейтов и подтверждений. Подробнее: [Профиль рабочего процесса проекта](project-workflow-profile.md).
 
 ## Выполнение
 

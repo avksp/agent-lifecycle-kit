@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from agent_lifecycle.cli.adapter import add_adapter_parser
 from agent_lifecycle.cli.followup import add_followup_parser
@@ -16,7 +17,7 @@ from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="agent-lifecycle")
+    parser = _RootArgumentParser(prog="agent-lifecycle")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("version", help="print package version as compact JSON")
     _add_start_parser(subparsers)
@@ -48,8 +49,24 @@ def build_parser() -> argparse.ArgumentParser:
     _add_plan_parser(subparsers)
     _add_task_parser(subparsers)
     add_adapter_parser(subparsers)
+    _add_project_parser(subparsers)
     subparsers.add_parser("conformance", help="conformance commands")
     return parser
+
+
+class _RootArgumentParser(argparse.ArgumentParser):
+    """Keep the legacy adapter requirement unless a profile can supply it."""
+
+    def parse_known_args(self, args=None, namespace=None):  # type: ignore[no-untyped-def]
+        parsed, remainder = super().parse_known_args(args, namespace)
+        if getattr(parsed, "command", None) == "start" and not getattr(parsed, "adapter", None):
+            if getattr(parsed, "no_project_profile", False):
+                self.error("start requires --adapter when --no-project-profile is used")
+            explicit = getattr(parsed, "project_profile", None)
+            discovered = Path.cwd() / ".alk" / "project-profile.json"
+            if not explicit and not discovered.is_file():
+                self.error("start requires --adapter or a project profile")
+        return parsed, remainder
 
 
 def _add_benchmark_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -88,7 +105,7 @@ def _add_strategy_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
 
 def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     start = subparsers.add_parser("start", help="start or resume an ALK lifecycle action")
-    start.add_argument("--adapter", required=True)
+    start.add_argument("--adapter")
     action = start.add_mutually_exclusive_group(required=True)
     action.add_argument("--file", "--task-file", dest="task_file")
     action.add_argument("--text", "--task-text", dest="task_text")
@@ -122,6 +139,28 @@ def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     start.add_argument("--max-input-bytes", type=int, default=32768)
     start.add_argument("--target-tokens", type=int, default=4096)
     start.add_argument("--out")
+    start.add_argument("--project-profile")
+    start.add_argument("--no-project-profile", action="store_true")
+
+
+def _add_project_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    project = subparsers.add_parser("project", help="project-local ALK configuration")
+    project_sub = project.add_subparsers(dest="project_command", required=True)
+    profile = project_sub.add_parser("profile", help="project workflow profile commands")
+    profile_sub = profile.add_subparsers(dest="profile_command", required=True)
+    init = profile_sub.add_parser("init", help="create a minimal local project profile")
+    init.add_argument("--project-root", default=".")
+    init.add_argument("--out", default=".alk/project-profile.json")
+    init.add_argument("--adapter", help="set the default adapter in the new profile")
+    check = profile_sub.add_parser("check", help="validate and resolve a project profile")
+    check.add_argument("--project-root", default=".")
+    check.add_argument("--profile")
+    check.add_argument("--manifest")
+    check.add_argument("--lock")
+    check.add_argument("--adapter")
+    check.add_argument("--mode", choices=list(START_MODES))
+    check.add_argument("--risk", choices=["auto", "S0", "S1", "S2"])
+    check.add_argument("--out")
 
 
 def _add_host_launch_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

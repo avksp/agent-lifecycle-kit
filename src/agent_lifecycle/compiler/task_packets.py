@@ -116,7 +116,7 @@ def _strategy_projection(strategy: dict[str, Any] | None, *, task_id: str) -> di
     )
     packet = strategy.get("packet") if isinstance(strategy.get("packet"), dict) else {}
     quality = strategy.get("quality") if isinstance(strategy.get("quality"), dict) else {}
-    return {
+    projection = {
         "schemaVersion": strategy.get("schemaVersion"),
         "strategyDigest": strategy.get("strategyDigest"),
         "operationId": lineage.get("operationId"),
@@ -128,6 +128,9 @@ def _strategy_projection(strategy: dict[str, Any] | None, *, task_id: str) -> di
         "authorityPreserved": packet.get("authorityPreserved") is True,
         "advisoryOnly": True,
     }
+    if strategy.get("projectProfileDigest") is not None:
+        projection["projectProfileDigest"] = strategy["projectProfileDigest"]
+    return projection
 
 
 def _task_projection(workstream: dict[str, Any]) -> dict[str, Any]:

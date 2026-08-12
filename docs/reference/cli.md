@@ -15,7 +15,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.61.0
+  python -m pip install agent-lifecycle-kit==1.62.0
 ```
 
 ## Foundation
@@ -52,6 +52,24 @@ python -m pip install agent-lifecycle-kit==1.61.0
   draft-only task templates.
 - Cookbook entry points for common tasks are documented in
   `docs/guides/lifecycle-cookbook.md`.
+
+## Project profile
+
+- `agent-lifecycle project profile init --adapter <adapter-id> --out .alk/project-profile.json`:
+  create the minimal local defaults file and optionally set its default adapter.
+  Omit `--adapter` when the value will be edited in the file or supplied per run.
+- `agent-lifecycle project profile check`: validate and resolve the discovered
+  `.alk/project-profile.json`.
+- `agent-lifecycle project profile check --manifest <plan> --lock <lock>`:
+  bind the profile to plan authority and emit the effective profile. Add
+  `--adapter`, `--mode` or `--risk` for a safe one-command override.
+- `agent-lifecycle start --file <path>` or `--text <text>`: use the discovered
+  profile when it supplies a default adapter. `--project-profile <path>` selects
+  a contained profile explicitly; `--no-project-profile` disables discovery.
+
+The profile is a project-local defaults layer. A frozen plan and matching lock
+remain authoritative for risk, quality, write scope, gates and receipts. See
+[Project workflow profile](project-workflow-profile.md).
 
 ## Execution
 

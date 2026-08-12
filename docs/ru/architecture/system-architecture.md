@@ -177,10 +177,11 @@ flowchart LR
   compiler[compiler]
   planning[planning и specification]
   freeze[freeze]
-  workflow[Рабочий цикл]
-  audit[audit]
-  adapter_sessions[adapter_sessions]
-  host_protocol[host_protocol]
+    workflow[Рабочий цикл]
+    audit[audit]
+    adapter_sessions[adapter_sessions]
+    project_profile[профиль рабочего процесса проекта]
+    host_protocol[host_protocol]
   review_mesh[review_mesh]
   reporting[reporting]
   metrics[metrics и policy]
@@ -197,6 +198,7 @@ flowchart LR
   cli --> workflow
   cli --> audit
   cli --> adapter_sessions
+  cli --> project_profile
   cli --> review_mesh
   cli --> reporting
   cli --> metrics
@@ -218,6 +220,8 @@ flowchart LR
   adapter_sessions --> host_protocol
   adapter_sessions --> planning
   adapter_sessions --> strategy
+  project_profile --> contracts
+  project_profile --> strategy
   compiler --> strategy
   strategy --> contracts
   strategy --> metrics
@@ -247,6 +251,7 @@ flowchart LR
 | Планирование | `planning/*`, `specification/*`, `freeze/locks.py` | SDD-уровень, проверка плана, полнота, приёмка и файл блокировки. |
 | Рабочий цикл | `workflow/*` | Изменение состояния, переходы задач, финализация и следующий управляемый шаг. |
 | Сессии адаптеров | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`, проверка локального профиля и явный запуск внешнего процесса из зафиксированного состояния. |
+| Профиль рабочего процесса проекта | `project/profile.py`, `project/merge.py`, `project/guidance.py`, `cli/project.py` | `project profile init/check` и `start`, когда локальный профиль найден автоматически или выбран явно. |
 | Протокол хоста | `host_protocol/*` | Проверка адаптера, безопасный осмотр, захват событий и возможности. |
 | Аудит | `audit/*` | Владение файлами, вердикты проверки, аудит реализации, целостность доказательств. |
 | Групповая проверка | `review_mesh/*` | Рекомендация, шаблоны оператора, подготовка пакетов проверяющих, назначения, импорт результатов, объединение выводов и кворум. |
@@ -304,6 +309,7 @@ sequenceDiagram
   participant User as Пользователь
   participant StartCLI as cli/start.py
   participant Start as adapter_sessions/unified_start.py
+  participant Profile as project/profile.py + project/merge.py
   participant Intake as adapter_sessions/task_intake.py
   participant Resume as adapter_sessions/workflow_bridge.py
   participant Store as adapter_sessions/session_store.py
@@ -312,7 +318,11 @@ sequenceDiagram
   participant Strategy as policy/execution_strategy.py
   participant Process as adapter_sessions/process.py
 
-  User->>StartCLI: start --adapter --file|--text|--resume [--launch]
+  User->>StartCLI: start [--adapter] --file|--text|--resume [--launch]
+  opt найден или явно выбран профиль проекта
+    StartCLI->>Profile: загрузить и проверить локальный профиль
+    Profile-->>StartCLI: эффективные настройки и отпечаток профиля
+  end
   StartCLI->>Start: start_lifecycle()
   alt обычная задача в auto/research/plan/review
     Start->>Intake: start_adapter_task()
@@ -349,7 +359,14 @@ sequenceDiagram
 ```
 
 Команда `start` служит фасадом над существующими источниками полномочий и сама
-не владеет переходами рабочего цикла. Режимы `auto`, `research`, `plan` и
+не владеет переходами рабочего цикла. Если профиль проекта активен,
+`cli/project.py` загружает его из текущего корня проекта, а `project/merge.py`
+объединяет его настройки с зафиксированным планом и lock-файлом до вызова
+`unified_start.py`. Отпечаток профиля передаётся в проекцию стратегии, а
+исходное подтверждение запуска остаётся вложенным результатом. Внешний
+результат этого маршрута имеет схему `agent-guided-action-receipt.v1`.
+
+Режимы `auto`, `research`, `plan` и
 `review` принимают обычную задачу только как черновик и не могут начать
 реализацию. При явном `--launch` они могут обратиться лишь к отдельно
 квалифицированному профилю `planningOnly`; такой процесс обязан завершиться
@@ -610,6 +627,7 @@ Git, и по умолчанию не читает локальные матер�
 | Проверка готовности | `diagnose --no-install-plans` | `diagnostics/readiness.py`, `host_protocol/*`, `context/*` | Очищенный отчёт готовности. |
 | Проверка адаптера | `adapter validate/inspect/install-plan` | `cli/adapter.py`, `host_protocol/*`, `diagnostics/readiness.py` | Проверка, безопасный осмотр или пробный план установки. |
 | Приём обычной задачи | `adapter task start --file/--text` | `adapter_sessions/task_intake.py`, `imports/planning.py`, `review_mesh/recommendation.py`, `quality/bug_forensics_advisor.py` | Черновое подтверждение, требующее проверки. |
+| Запуск по профилю проекта | `project profile init/check`, `start --project-profile` или найденный `.alk/project-profile.json` | `cli/project.py`, `project/profile.py`, `project/merge.py`, `adapter_sessions/unified_start.py` | Эффективный профиль и подтверждение управляемого действия; полномочия плана и lock-файла сохраняются. |
 | Проверка плана | `plan check`, `plan completeness-check`, `plan acceptance-check` | `planning/*`, `freeze/locks.py` | PASS/FAIL подтверждение плана. |
 | Управляемый следующий шаг | `workflow run` или `adapter run` | `workflow/managed_runner.py`, `workflow/next_action.py`, `adapter_sessions/workflow_bridge.py` | Подтверждение следующего шага без запуска хоста. |
 | Изменение задачи | `workflow task-start/task-result/task-accept` | `workflow/task_transitions.py`, `workflow/operation_kernel.py`, `workflow/gates.py` | Обновлённое состояние и журнал событий. |
@@ -690,6 +708,7 @@ Git, и по умолчанию не читает локальные матер�
 - [Как ALK работает с разными задачами](../guides/how-alk-works.md)
 - [Источник правды](../reference/source-of-truth.md)
 - [Управляемые сессии адаптеров](../reference/managed-adapter-sessions.md)
+- [Профиль рабочего процесса проекта](../reference/project-workflow-profile.md)
 - [Аудит реализации](../reference/implementation-audit.md)
 - [Проверка несколькими моделями ИИ](../review-mesh-workflow.md)
 - [Сценарии проверки кода](../code-review-workflows.md)

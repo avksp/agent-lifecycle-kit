@@ -17,10 +17,10 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 соразмерным уровнем контроля. Служебные шаги занимают только необходимое место,
 а основное время остаётся на исследование, реализацию и проверку продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.61.0 · **Python:** 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.62.0 · **Python:** 3.11-3.14
 
 ## Быстрый старт
-Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.61.0`.
+Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.62.0`.
 Из исходного дерева:
 
 ```bash
@@ -44,7 +44,7 @@ agent-lifecycle start --adapter <adapter-id> --text "Составь провер
 инструментов показывает [сравнение проекта](reference/project-comparison.md).
 Границы нескольких агентов, настройка рабочих потоков, выбор модели, промпты,
 тайм-ауты и повторы собраны в разделе [Настройка рабочего процесса и управления
-выполнением](reference/workflow-customization.md).
+выполнением](reference/workflow-customization.md). Локальный профиль проекта создаётся командой `agent-lifecycle project profile init`; его описание приведено в разделе [Профиль рабочего процесса проекта](reference/project-workflow-profile.md).
 
 ## Что даёт ALK
 - Процесс ориентирован на результат: план, выполнение, проверка и подтверждение

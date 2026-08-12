@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-lifecycle-kit"
-version = "1.61.0"
+version = "1.62.0"
 description = "Provider-neutral lifecycle control layer that helps coding agents plan, execute, validate, and prove software tasks to completion."
 readme = "README.md"
 requires-python = ">=3.11,<3.15"

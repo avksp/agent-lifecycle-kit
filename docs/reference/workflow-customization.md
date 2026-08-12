@@ -94,6 +94,13 @@ investigation, or a multi-agent implementation. It is not a general-purpose
 workflow builder. Adding a new lifecycle state, transition rule or kind of
 authority belongs in the ALK code and contracts.
 
+For project-wide defaults, use a local [project workflow
+profile](project-workflow-profile.md). It can select a default adapter, an
+existing ALK mode, a neutral model class, a review mode and bounded stage
+limits. The profile is a consumer-side defaults layer: it does not create
+stages, replace a plan or change lifecycle authority. A frozen plan and lock
+always take precedence over it.
+
 ## Provider, model and reasoning selection
 
 ALK resolves a provider-neutral model class such as `budget`, `standard-code` or
