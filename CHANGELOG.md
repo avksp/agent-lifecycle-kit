@@ -4,6 +4,13 @@
 
 - No changes yet.
 
+## 1.63.1 - 2026-08-12
+
+- Fixed the OpenCode adapter plugin export so the legacy OpenCode loader can
+  load the plugin as a valid function.
+- Kept the OpenCode projection side-effect-free and delegated lifecycle
+  behavior to the shared Agent Lifecycle Kit core.
+
 ## 1.63.0 - 2026-08-12
 
 - Added a read-only `audit package` command that checks an ALK plan directory,
