@@ -169,8 +169,8 @@ class PublicationManifestTests(unittest.TestCase):
                 "adapters/claude/.claude-plugin/plugin.json",
                 "adapters/codex/.codex-plugin/plugin.json",
                 "adapters/cursor/.cursor-plugin/plugin.json",
-                "docs/guides/quickstart.md",
-                "docs/ru/quickstart.md",
+                "docs/guides/install-and-first-run.md",
+                "docs/ru/guides/install-and-first-run.md",
             }.issubset(paths)
         )
 

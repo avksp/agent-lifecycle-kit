@@ -78,7 +78,7 @@ Suspect graph remains optional. Flake signals and failure classification can be
 recorded now, but they do not replace reproduction, fingerprint, hypothesis
 ledger, regression proof or fix-impact evidence.
 
-## Cookbook
+## Scenario guide
 
 Practical defect search, regression repair, flaky failure and security-bug
 examples are in [Bug Forensics workflows](../guides/bug-forensics-workflows.md).

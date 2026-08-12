@@ -1,6 +1,6 @@
-# Lifecycle cookbook
+# Lifecycle task scenarios
 
-Use this cookbook when you know the kind of work you want, but do not want to
+Use these lifecycle task scenarios when you know the kind of work you want, but do not want to
 assemble the lower-level ALK commands from scratch. Every recipe keeps raw
 input draft-only until a reviewed plan or run request explicitly authorizes
 execution.
@@ -225,7 +225,7 @@ For higher-risk research, planning or audits, create reviewer assignments with
 `review-mesh assign`, run the reviewers outside ALK, import their JSON output,
 then synthesize and check quorum.
 
-See [Review Mesh workflow cookbook](review-mesh-workflow.md) for concrete
+See [Review Mesh workflow scenarios](review-mesh-workflow.md) for concrete
 Codex, Claude and OpenCode/GLM examples. GLM is only an example model behind
 OpenCode; any configured model can be used by changing the host command.
 
