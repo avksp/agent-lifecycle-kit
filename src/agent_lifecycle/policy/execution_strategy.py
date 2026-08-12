@@ -36,6 +36,7 @@ def resolve_execution_strategy(
     routing_profile: dict[str, Any],
     baseline_profile: dict[str, Any],
     host_profile: dict[str, Any] | None,
+    project_profile_digest: str | None = None,
 ) -> dict[str, Any]:
     """Resolve one read-only strategy from existing authorities."""
 
@@ -116,6 +117,7 @@ def resolve_execution_strategy(
             "compactEligibility": compact["eligibilityDigest"],
             "reviewMeshRecommendation": review["recommendationDigest"],
         },
+        "projectProfileDigest": project_profile_digest,
         "authority": {
             "advisoryOnly": True,
             "automaticAdoptionEligible": False,
@@ -147,7 +149,7 @@ def execution_strategy_summary(strategy: dict[str, Any]) -> dict[str, Any]:
         (item for item in strategy["phaseRoutes"] if item.get("phase") == "task-implementation"),
         {},
     )
-    return {
+    summary = {
         "status": strategy["status"],
         "resolvedRiskTier": strategy["quality"]["resolvedRiskTier"],
         "qualityFloor": strategy["quality"]["qualityFloor"],
@@ -158,6 +160,9 @@ def execution_strategy_summary(strategy: dict[str, Any]) -> dict[str, Any]:
         "advisoryOnly": True,
         "strategyDigest": strategy["strategyDigest"],
     }
+    if strategy.get("projectProfileDigest") is not None:
+        summary["projectProfileDigest"] = strategy["projectProfileDigest"]
+    return summary
 
 
 def deferred_execution_strategy_summary(*, reason: str = "frozen-plan-required") -> dict[str, Any]:

@@ -226,6 +226,7 @@ def build_lifecycle_start_receipt(
     host_launch_started: bool = False,
     launch_receipt: dict[str, Any] | None = None,
     execution_strategy: dict[str, Any] | None = None,
+    project_profile_digest: str | None = None,
 ) -> dict[str, Any]:
     """Build the public, path-safe receipt for the unified start facade."""
 
@@ -251,6 +252,8 @@ def build_lifecycle_start_receipt(
         "blockers": blockers or [],
         "productionPromotionClaimed": False,
     }
+    if project_profile_digest is not None:
+        body["projectProfileDigest"] = project_profile_digest
     return {**body, "receiptDigest": canonical_digest(body)}
 
 

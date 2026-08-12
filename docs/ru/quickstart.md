@@ -34,7 +34,7 @@ PYTHONPATH=src python -m agent_lifecycle version
 устанавливайте точную семантическую версию:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.61.0
+python -m pip install agent-lifecycle-kit==1.62.0
 agent-lifecycle version
 ```
 
@@ -110,6 +110,32 @@ agent-lifecycle import plan \
 Эта же команда поддерживает `--dialect bmad` и `--dialect spec-kitty`.
 Импортированный материал поступает на стадию черновика. Перед реализацией его
 нужно проверить и заморозить как план ALK.
+
+## Профиль рабочего процесса проекта
+
+Чтобы задать для проекта адаптер и ограниченные настройки этапов по умолчанию,
+создайте локальный профиль:
+
+```bash
+agent-lifecycle project profile init --adapter <adapter-id> --out .alk/project-profile.json
+agent-lifecycle project profile check
+```
+
+Необязательный параметр `--adapter` записывает адаптер по умолчанию в профиль.
+Если его не указывать, задайте `defaultAdapter` в локальном файле или передавайте
+`--adapter` в каждой команде. После выбора адаптера в простой команде его можно
+не указывать:
+
+```bash
+agent-lifecycle start --file task.md
+agent-lifecycle start --text "Исследовать ошибку в кэше"
+```
+
+Профиль проекта задаёт только локальные значения по умолчанию. Зафиксированный
+план и его lock-файл остаются источником полномочий для риска, качества,
+границ записи и обязательных подтверждений. Формат файла, явный выбор профиля
+и расширенный маршрут `--no-project-profile` описаны в разделе [Профиль рабочего
+процесса проекта](reference/project-workflow-profile.md).
 
 ## Выбор способа работы с адаптером
 

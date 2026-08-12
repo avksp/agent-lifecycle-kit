@@ -15,6 +15,13 @@ For a capability-by-capability explanation of multiple agents, plan-level
 workflow customization, host model settings, prompts, timeouts and retries, see
 [Workflow customization and execution controls](../reference/workflow-customization.md).
 
+For project-wide defaults, use a local [project workflow
+profile](../reference/project-workflow-profile.md). `project profile init`
+creates the file, and an active profile adds a bounded guided action projection
+to `start` as `agent-guided-action-receipt.v1`; a frozen plan and matching lock
+remain authoritative.
+The project workflow profile is a local defaults layer, not a second plan.
+
 ## The participants
 
 | Participant | Responsibility |

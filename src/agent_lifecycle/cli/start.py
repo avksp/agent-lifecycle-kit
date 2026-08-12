@@ -8,6 +8,7 @@ from typing import Any
 
 from agent_lifecycle.adapter_sessions import start_lifecycle
 from agent_lifecycle.contracts import LifecycleError, write_json_create
+from agent_lifecycle.cli.project import discover_project_profile
 
 
 def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any]:
@@ -15,6 +16,18 @@ def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, 
 
     if remainder:
         raise LifecycleError("start-argument-unknown", f"unknown start arguments: {' '.join(remainder)}")
+    project_root = Path.cwd()
+    project_profile, profile_path = discover_project_profile(
+        project_root=project_root,
+        explicit_path=args.project_profile,
+        disabled=args.no_project_profile,
+    )
+    if project_profile is None and not args.adapter:
+        raise LifecycleError(
+            "start-adapter-required",
+            "--adapter is required when no project profile supplies a default adapter",
+            {"initCommand": "agent-lifecycle project profile init --out .alk/project-profile.json"},
+        )
     payload = start_lifecycle(
         adapter_id=args.adapter,
         mode=args.mode,
@@ -40,6 +53,9 @@ def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, 
         host_model_profile_path=Path(args.host_model_profile) if args.host_model_profile else None,
         launch=args.launch,
         host_launch_profile_path=Path(args.host_launch_profile) if args.host_launch_profile else None,
+        project_profile=project_profile,
+        project_profile_path=profile_path,
+        project_root=project_root,
     )
     if args.risk_profile_out:
         profile = _risk_profile(payload)

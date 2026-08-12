@@ -30,9 +30,9 @@ agent-lifecycle start --adapter <adapter-id> --text "Draft a reviewed implementa
 Choose `<adapter-id>` from the [adapter support matrix](docs/adapters/support-matrix.md).
 
 The official [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14.
-Install the exact release with `python -m pip install agent-lifecycle-kit==1.61.0`.
+Install the exact release with `python -m pip install agent-lifecycle-kit==1.62.0`.
 
-Use [Quickstart](docs/guides/quickstart.md), [task workflows](docs/guides/how-alk-works.md),
+Use [Quickstart](docs/guides/quickstart.md), [project profile init](docs/reference/project-workflow-profile.md), [task workflows](docs/guides/how-alk-works.md),
 [workflow customization and execution controls](docs/reference/workflow-customization.md),
 and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). The [planning-only](docs/reference/planning-only-launch.md)
 and [qualified frozen-task](docs/reference/qualified-host-launch.md) guides define launch boundaries.
