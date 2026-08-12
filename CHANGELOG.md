@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.62.0 - 2026-08-12
+
+- Added project-local workflow profiles for a unified `start` command with
+  bounded stage defaults, explicit discovery controls and guided action
+  receipts.
+- Preserved frozen plan and lock authority through deterministic profile
+  composition, path containment, no-model-call boundaries and bilingual
+  operator documentation.
+
 ## 1.61.0 - 2026-08-10
 
 - Added one provider-neutral execution strategy that composes existing risk,

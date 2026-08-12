@@ -36,12 +36,14 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/adapters/install.md",
             "docs/reference/cli.md",
             "docs/reference/project-comparison.md",
+            "docs/reference/project-workflow-profile.md",
             "docs/reference/source-of-truth.md",
         ):
             self.assertIn(required, english)
         self.assertIn("quickstart.md", russian)
         self.assertIn("reference/project-comparison.md", russian)
         self.assertIn("reference/cli.md", russian)
+        self.assertIn("reference/project-workflow-profile.md", russian)
         for adapter in ("Goose", "Grok Build", "OpenInterpreter", "Pi"):
             self.assertIn(adapter, english)
             self.assertIn(adapter, russian)
@@ -58,6 +60,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/guides/README.ru.md",
             "docs/guides/how-alk-works.md",
             "docs/guides/quickstart.md",
+            "docs/reference/project-workflow-profile.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
             "docs/ru/architecture/system-architecture.md",
@@ -66,6 +69,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/lifecycle-cookbook.md",
             "docs/ru/guides/bug-forensics-workflows.md",
             "docs/ru/quickstart.md",
+            "docs/ru/reference/project-workflow-profile.md",
             "docs/ru/guides/production-resource-security.md",
             "docs/ru/guides/reference-task-evaluation.md",
             "docs/ru/adapters/install.md",
@@ -153,8 +157,11 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("--resume <session-id>", text)
             self.assertIn("--risk auto", text)
             self.assertIn("risk-aware-execution.md", text)
+            self.assertIn("project profile", text.lower())
+            self.assertIn("project-workflow-profile.md", text)
         self.assertIn("lifecycle-cookbook.md", quickstart)
         self.assertIn("lifecycle-cookbook.md", quickstart_ru)
+
         for command in (
             "agent-lifecycle adapter validate",
             "agent-lifecycle adapter inspect",
@@ -167,6 +174,20 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "kimi --version",
         ):
             self.assertIn(command, install)
+
+    def test_project_profile_docs_keep_the_defaults_boundary(self) -> None:
+        english = (ROOT / "docs/reference/project-workflow-profile.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/project-workflow-profile.md").read_text(encoding="utf-8")
+        for text in (english, russian):
+            self.assertIn("agent-project-workflow-profile.v1", text)
+            self.assertIn("agent-effective-project-workflow-profile.v1", text)
+            self.assertIn("agent-guided-action-receipt.v1", text)
+            self.assertIn("project profile init", text)
+            self.assertIn("project profile check", text)
+            self.assertIn("--project-profile", text)
+            self.assertIn("--no-project-profile", text)
+        self.assertIn("зафиксированный план", russian)
+        self.assertIn("frozen plan", english)
 
     def test_every_adapter_page_explains_inside_host_and_command_routes(self) -> None:
         descriptors = {
@@ -633,11 +654,11 @@ def _assert_links_resolve(path: Path) -> None:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/resource calibration are required. Public contracts live in docs/reference/public-contracts.md. https://pypi.org/project/agent-lifecycle-kit/ supports Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/resource calibration are required. Public contracts live in docs/reference/public-contracts.md. docs/reference/project-workflow-profile.md. project profile init. https://pypi.org/project/agent-lifecycle-kit/ supports Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
     )
     _write_text(
         root / "docs/ru/README.md",
-        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. Список в Публичных контрактах: reference/public-contracts.md. https://pypi.org/project/agent-lifecycle-kit/ поддерживает Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. Список в Публичных контрактах: reference/public-contracts.md. reference/project-workflow-profile.md. project profile init. https://pypi.org/project/agent-lifecycle-kit/ поддерживает Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
     )
     task_flow = (
         "completion-control problem. управления завершением.\n"
@@ -655,6 +676,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "не запускает модели.\n"
         "`pipelineCompliance`. Соразмерность затрат процесса.\n"
         "does not by itself prove. не доказывает.\n"
+        "project workflow profile. project profile init. agent-guided-action-receipt.v1.\n"
+        "профиль рабочего процесса проекта. project profile init. agent-guided-action-receipt.v1.\n"
     )
     _write_text(root / "docs/guides/how-alk-works.md", task_flow)
     _write_text(root / "docs/ru/guides/how-alk-works.md", task_flow)
@@ -740,6 +763,20 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Источником правды остаётся зафиксированный план ALK. "
         "нейтральная к провайдеру стратегия выполнения. ложной приёмке.\n",
     )
+    project_profile = (
+        "agent-project-workflow-profile.v1. agent-effective-project-workflow-profile.v1. "
+        "agent-guided-action-receipt.v1. project profile init. project profile check. "
+        "--project-profile. --no-project-profile. frozen plan and matching lock. "
+        "зафиксированный план и соответствующий lock-файл. provider, account, credential, secret. провайдере, аккаунте, учётных данных.\n"
+    )
+    _write_text(root / "docs/reference/project-workflow-profile.md", project_profile)
+    _write_text(root / "docs/ru/reference/project-workflow-profile.md", project_profile)
+    architecture = (
+        "project workflow profile. project/profile.py. agent-guided-action-receipt.v1. "
+        "Project workflow profile. профиль рабочего процесса проекта. Профиль рабочего процесса проекта.\n"
+    )
+    _write_text(root / "docs/architecture/system-architecture.md", architecture)
+    _write_text(root / "docs/ru/architecture/system-architecture.md", architecture)
     cli = (
         "import plan --source <file-or-folder>.\n"
         "openspec|spec-kit|bmad|spec-kitty.\n"

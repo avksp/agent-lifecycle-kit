@@ -102,6 +102,7 @@ flowchart TB
     contracts[Contracts and schemas]
     domain[Lifecycle domain services]
     adapters_runtime[Adapter session runtime]
+    project_profile[Project workflow profile]
     reporting[Read-only reporting]
   end
 
@@ -121,11 +122,13 @@ flowchart TB
   cli --> contracts
   cli --> domain
   cli --> adapters_runtime
+  cli --> project_profile
   cli --> reporting
   domain --> contracts
   adapters_runtime --> adapter_files
   adapters_runtime --> contracts
   reporting --> contracts
+  project_profile --> contracts
   source --> tests
   host_env --> host_cli
   host_cli --> raw_receipts
@@ -138,6 +141,7 @@ flowchart TB
 | `src/agent_lifecycle/contracts` | Public schemas, canonical JSON, digests, typed errors and compatibility policy. | Depend on host CLIs. |
 | Domain packages | Planning, workflow, audit, context, metrics, quality, review coordination and reporting. | Start provider API calls directly. |
 | `src/agent_lifecycle/adapter_sessions` | Descriptor-driven session records, task intake and managed-run bridge. | Inject prompts or parse host telemetry in core. |
+| `src/agent_lifecycle/project` | Project-local workflow defaults, bounded stage settings and deterministic effective-profile composition. | Replace a frozen plan, execute guidance or store provider authority. |
 | `adapters/*` | Host descriptors, operation projections, support manifests and evidence summaries. | Change lifecycle schemas. |
 | `tools/release` and tests | Release gates, validators, conformance and docs compatibility. | Establish a live host support level from synthetic data alone. |
 
@@ -154,6 +158,7 @@ flowchart LR
   workflow[workflow]
   audit[audit]
   adapter_sessions[adapter sessions]
+  project_profile[project workflow profile]
   host_protocol[host protocol]
   review_mesh[review mesh]
   reporting[reporting]
@@ -171,6 +176,7 @@ flowchart LR
   cli --> workflow
   cli --> audit
   cli --> adapter_sessions
+  cli --> project_profile
   cli --> review_mesh
   cli --> reporting
   cli --> metrics
@@ -192,6 +198,8 @@ flowchart LR
   adapter_sessions --> host_protocol
   adapter_sessions --> planning
   adapter_sessions --> strategy
+  project_profile --> contracts
+  project_profile --> strategy
   compiler --> strategy
   strategy --> contracts
   strategy --> metrics
@@ -221,6 +229,7 @@ flowchart LR
 | Planning | `planning/*`, `specification/*`, `freeze/locks.py` | SDD tier, plan checks, completeness, acceptance and lock verification. |
 | Workflow | `workflow/*` | State mutation, task transitions, finalization and managed next actions. |
 | Adapter sessions | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`, local profile validation and explicit frozen host launch. |
+| Project workflow profile | `project/profile.py`, `project/merge.py`, `project/guidance.py`, `cli/project.py` | `project profile init/check` and `start` when a local profile is discovered or selected explicitly. |
 | Host protocol | `host_protocol/*` | Adapter validation, inspection, event capture and capability checks. |
 | Audit | `audit/*` | Ownership checks, review verdicts, implementation audit, proof integrity. |
 | Review coordination | `review_mesh/*` | Optional recommendation, operator templates, reviewer packet preparation, assignments, result import, synthesis and quorum. |
@@ -274,6 +283,7 @@ sequenceDiagram
   participant User
   participant StartCLI as cli/start.py
   participant Start as adapter_sessions/unified_start.py
+  participant Profile as project/profile.py + project/merge.py
   participant Intake as adapter_sessions/task_intake.py
   participant Resume as adapter_sessions/workflow_bridge.py
   participant Store as adapter_sessions/session_store.py
@@ -282,7 +292,11 @@ sequenceDiagram
   participant Strategy as policy/execution_strategy.py
   participant Process as adapter_sessions/process.py
 
-  User->>StartCLI: start --adapter --file|--text|--resume [--launch]
+  User->>StartCLI: start [--adapter] --file|--text|--resume [--launch]
+  opt discovered or explicit project profile
+    StartCLI->>Profile: load and validate local profile
+    Profile-->>StartCLI: effective defaults and profile digest
+  end
   StartCLI->>Start: start_lifecycle()
   alt raw task in auto/research/plan/review
     Start->>Intake: start_adapter_task()
@@ -319,6 +333,11 @@ sequenceDiagram
 ```
 
 The facade selects existing authorities; it does not own workflow transitions.
+When a project profile is active, `cli/project.py` loads it from the current
+project root and `project/merge.py` composes its defaults with the frozen plan
+and lock before `unified_start.py` builds the guided receipt. The profile digest
+is carried into the strategy projection; the base start receipt remains the
+same nested lifecycle result, wrapped as `agent-guided-action-receipt.v1`.
 Raw task modes cannot call managed implementation. They may reach only a
 separately qualified `planningOnly` profile through explicit `--launch`, and
 that process must end at review or block with unchanged repository identity.
@@ -558,6 +577,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 | Readiness check | `diagnose --no-install-plans` | `diagnostics/readiness.py`, `host_protocol/*`, `context/*` | Redacted readiness report. |
 | Adapter validation | `adapter validate/inspect/install-plan` | `cli/adapter.py`, `host_protocol/*`, `diagnostics/readiness.py` | Validation, safe inspection or dry-run install plan. |
 | Raw task intake | `adapter task start --file/--text` | `adapter_sessions/task_intake.py`, `imports/planning.py`, `review_mesh/recommendation.py`, `quality/bug_forensics_advisor.py` | Review-gated intake receipt. |
+| Project-guided start | `project profile init/check`, `start --project-profile` or discovered `.alk/project-profile.json` | `cli/project.py`, `project/profile.py`, `project/merge.py`, `adapter_sessions/unified_start.py` | Effective profile and guided action receipt; plan and lock authority remain unchanged. |
 | Plan validation | `plan check`, `plan completeness-check`, `plan acceptance-check` | `planning/*`, `freeze/locks.py` | PASS/FAIL plan evidence. |
 | Managed next action | `workflow run` or `adapter run` | `workflow/managed_runner.py`, `workflow/next_action.py`, `adapter_sessions/workflow_bridge.py` | Next action receipt, no host launch. |
 | Task mutation | `workflow task-start/task-result/task-accept` | `workflow/task_transitions.py`, `workflow/operation_kernel.py`, `workflow/gates.py` | Updated workflow state and event log. |
@@ -611,6 +631,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 - [Release architecture](release-architecture.md)
 - [Source of truth](../reference/source-of-truth.md)
 - [Managed adapter sessions](../reference/managed-adapter-sessions.md)
+- [Project workflow profile](../reference/project-workflow-profile.md)
 - [Implementation audit](../reference/implementation-audit.md)
 - [Review Mesh workflow cookbook](../guides/review-mesh-workflow.md)
 - [Code review workflows](../guides/code-review-workflows.md)

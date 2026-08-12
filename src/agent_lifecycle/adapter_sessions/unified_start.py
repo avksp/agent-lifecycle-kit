@@ -27,6 +27,9 @@ from agent_lifecycle.policy.execution_strategy import (
     execution_strategy_summary,
     resolve_execution_strategy,
 )
+from agent_lifecycle.project.merge import build_effective_project_profile
+from agent_lifecycle.contracts.project_profile_schemas import GUIDED_ACTION_RECEIPT_SCHEMA
+from agent_lifecycle.project.guidance import build_stage_guidance_projection
 
 START_MODES = ("auto", "research", "plan", "review", "implement")
 _NON_EXECUTING_MODES = frozenset({"auto", "research", "plan", "review"})
@@ -36,7 +39,7 @@ _LINEAGE_STRING_FIELDS = ("runId", "packageId", "planDigest", "sourceRevision", 
 _LINEAGE_INTEGER_FIELDS = ("planRevision", "stateRevision")
 
 
-def start_lifecycle(
+def _start_lifecycle_core(
     *,
     adapter_id: str,
     mode: str = "auto",
@@ -62,6 +65,7 @@ def start_lifecycle(
     host_model_profile_path: Path | None = None,
     launch: bool = False,
     host_launch_profile_path: Path | None = None,
+    project_profile_digest: str | None = None,
 ) -> dict[str, Any]:
     """Select one existing lifecycle action without creating new authority."""
 
@@ -162,6 +166,7 @@ def start_lifecycle(
         routing_profile_path=routing_profile_path,
         baseline_profile_path=baseline_profile_path,
         host_model_profile_path=host_model_profile_path,
+        project_profile_digest=project_profile_digest,
     )
     if not launch:
         return _from_task_receipt(
@@ -580,6 +585,242 @@ def _launch_managed_receipt(
     )
 
 
+def start_lifecycle(
+    *,
+    adapter_id: str | None,
+    mode: str = "auto",
+    task_file: Path | None = None,
+    task_text: str | None = None,
+    resume_session_id: str | None = None,
+    candidate_out: Path | None = None,
+    descriptor_path: Path | None = None,
+    session_root: Path | None = None,
+    state_path: Path | None = None,
+    lock_path: Path | None = None,
+    task_id: str | None = None,
+    operation_id: str | None = None,
+    expected_revision: int | None = None,
+    source_revision: str | None = None,
+    max_input_bytes: int = 32768,
+    target_tokens: int = 4096,
+    package_id: str = "unified-start",
+    requested_risk: str = "auto",
+    risk_policy_path: Path | None = None,
+    routing_profile_path: Path | None = None,
+    baseline_profile_path: Path | None = None,
+    host_model_profile_path: Path | None = None,
+    launch: bool = False,
+    host_launch_profile_path: Path | None = None,
+    project_profile: dict[str, Any] | None = None,
+    project_profile_path: Path | None = None,
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    """Run the existing start path, optionally wrapped by a project profile."""
+
+    if project_profile is None:
+        return _start_lifecycle_core(
+            adapter_id=adapter_id or "",
+            mode=mode,
+            task_file=task_file,
+            task_text=task_text,
+            resume_session_id=resume_session_id,
+            candidate_out=candidate_out,
+            descriptor_path=descriptor_path,
+            session_root=session_root,
+            state_path=state_path,
+            lock_path=lock_path,
+            task_id=task_id,
+            operation_id=operation_id,
+            expected_revision=expected_revision,
+            source_revision=source_revision,
+            max_input_bytes=max_input_bytes,
+            target_tokens=target_tokens,
+            package_id=package_id,
+            requested_risk=requested_risk,
+            risk_policy_path=risk_policy_path,
+            routing_profile_path=routing_profile_path,
+            baseline_profile_path=baseline_profile_path,
+            host_model_profile_path=host_model_profile_path,
+            launch=launch,
+            host_launch_profile_path=host_launch_profile_path,
+        )
+
+    overrides: dict[str, Any] = {}
+    if adapter_id:
+        overrides["defaultAdapter"] = adapter_id
+    if mode != "auto":
+        overrides["defaultMode"] = mode
+    if requested_risk != "auto":
+        overrides["defaultRisk"] = requested_risk
+    plan_authority, profile_lock = _profile_plan_authority(
+        task_file=task_file,
+        task_text=task_text,
+        lock_path=lock_path,
+    )
+    effective = build_effective_project_profile(
+        project_profile,
+        plan=plan_authority,
+        lock=profile_lock,
+        cli_overrides=overrides,
+        project_root=project_root,
+    )
+    resolved_adapter = adapter_id or effective.get("defaultAdapter")
+    resolved_mode = mode if mode != "auto" else str(effective.get("defaultMode", "auto"))
+    resolved_risk = requested_risk if requested_risk != "auto" else str(effective.get("defaultRisk", "S0"))
+    base = _start_lifecycle_core(
+        adapter_id=str(resolved_adapter or ""),
+        mode=resolved_mode,
+        task_file=task_file,
+        task_text=task_text,
+        resume_session_id=resume_session_id,
+        candidate_out=candidate_out,
+        descriptor_path=descriptor_path,
+        session_root=session_root,
+        state_path=state_path,
+        lock_path=lock_path,
+        task_id=task_id,
+        operation_id=operation_id,
+        expected_revision=expected_revision,
+        source_revision=source_revision,
+        max_input_bytes=max_input_bytes,
+        target_tokens=target_tokens,
+        package_id=package_id,
+        requested_risk=resolved_risk,
+        risk_policy_path=risk_policy_path,
+        routing_profile_path=routing_profile_path,
+        baseline_profile_path=baseline_profile_path,
+        host_model_profile_path=host_model_profile_path,
+        launch=launch,
+        host_launch_profile_path=host_launch_profile_path,
+        project_profile_digest=effective["effectiveProfileDigest"],
+    )
+    return _build_guided_action_receipt(
+        base,
+        effective=effective,
+        profile_path=project_profile_path,
+        project_root=project_root,
+    )
+
+
+def _profile_plan_authority(
+    *,
+    task_file: Path | None,
+    task_text: str | None,
+    lock_path: Path | None,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Read plan authority only from a structured frozen file input.
+
+    Raw text and Markdown remain draft-only and do not cause ALK to inspect
+    arbitrary project files. Frozen manifests and adapter run requests already
+    carry explicit plan paths, so their profile merge can enforce the same
+    plan/lock precedence as the atomic commands.
+    """
+
+    if task_file is None or task_text is not None or not task_file.is_file():
+        return None, None
+    try:
+        payload = read_json_object(task_file, label="project-profile start input")
+    except (LifecycleError, OSError):
+        return None, None
+    schema = payload.get("schemaVersion")
+    if schema == "agent-adapter-task-run-request.v1":
+        manifest_value = payload.get("manifest")
+        request_lock = payload.get("lock")
+        if not isinstance(manifest_value, str) or not manifest_value:
+            return None, None
+        manifest_path = Path(manifest_value)
+        lock_value = request_lock if isinstance(request_lock, str) and request_lock else None
+        selected_lock = Path(lock_value) if lock_value else lock_path
+    elif schema == "agent-plan-manifest.v1":
+        manifest_path = task_file
+        selected_lock = lock_path
+    else:
+        return None, None
+    try:
+        plan = read_json_object(manifest_path, label="project-profile plan manifest")
+        lock = read_json_object(selected_lock, label="project-profile plan lock") if selected_lock is not None else None
+    except (LifecycleError, OSError):
+        return None, None
+    return plan, lock
+
+
+def _build_guided_action_receipt(
+    base: dict[str, Any],
+    *,
+    effective: dict[str, Any],
+    profile_path: Path | None,
+    project_root: Path | None,
+) -> dict[str, Any]:
+    del profile_path
+    base = _with_project_profile_digest(base, effective["effectiveProfileDigest"])
+    stage = _guided_stage(base)
+    stage_guidance = build_stage_guidance_projection(
+        effective,
+        stage=stage,
+        project_root=project_root,
+    )
+    body = {
+        "schemaVersion": GUIDED_ACTION_RECEIPT_SCHEMA,
+        "status": base.get("status", "BLOCKED"),
+        "startReceipt": base,
+        "effectiveProfile": _effective_profile_summary(effective),
+        "profileDigest": effective["effectiveProfileDigest"],
+        "stageGuidance": stage_guidance,
+        "nextAction": {
+            "stage": stage,
+            "type": base.get("action", "BLOCKED"),
+            "status": base.get("status", "BLOCKED"),
+            "requiresReview": bool(base.get("requiresReview")),
+            "executionStarted": bool(base.get("executionStarted")),
+            "lifecycleCoverageClaimed": bool(base.get("lifecycleCoverageClaimed")),
+        },
+        "blockers": _blocker_summaries(base.get("blockers")),
+        "modelCallsStarted": False,
+        "hostLaunchStarted": bool(base.get("hostLaunchStarted")),
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def _with_project_profile_digest(receipt: dict[str, Any], digest: str) -> dict[str, Any]:
+    """Attach the active profile identity without changing the legacy path."""
+
+    if receipt.get("projectProfileDigest") == digest:
+        return receipt
+    body = {key: value for key, value in receipt.items() if key != "receiptDigest"}
+    body["projectProfileDigest"] = digest
+    return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def _guided_stage(base: dict[str, Any]) -> str:
+    """Map the public start mode to the stable project-profile stage."""
+
+    mode = base.get("requestedMode")
+    return {
+        "research": "research",
+        "plan": "planning",
+        "review": "review",
+        "implement": "implementation",
+    }.get(mode, "intake")
+
+
+def _effective_profile_summary(effective: dict[str, Any]) -> dict[str, Any]:
+    """Keep the guided receipt bounded while retaining the resolved authority."""
+
+    return {
+        "schemaVersion": effective.get("schemaVersion"),
+        "status": effective.get("status"),
+        "profileId": effective.get("profileId"),
+        "sourceProfileDigest": effective.get("sourceProfileDigest"),
+        "defaultAdapter": effective.get("defaultAdapter"),
+        "defaultMode": effective.get("defaultMode"),
+        "defaultRisk": effective.get("defaultRisk"),
+        "stages": effective.get("stages", {}),
+        "authority": effective.get("authority", {}),
+        "effectiveProfileDigest": effective.get("effectiveProfileDigest"),
+    }
+
+
 def _strategy_summary_for_receipt(
     receipt: dict[str, Any],
     *,
@@ -590,6 +831,7 @@ def _strategy_summary_for_receipt(
     routing_profile_path: Path | None,
     baseline_profile_path: Path | None,
     host_model_profile_path: Path | None,
+    project_profile_digest: str | None = None,
 ) -> dict[str, Any]:
     if receipt.get("status") != "READY" or receipt.get("action") != "MANAGED_RUN":
         return deferred_execution_strategy_summary()
@@ -627,6 +869,7 @@ def _strategy_summary_for_receipt(
                 if host_model_profile_path is not None
                 else None
             ),
+            project_profile_digest=project_profile_digest,
         )
         return execution_strategy_summary(strategy)
     except (LifecycleError, OSError) as exc:

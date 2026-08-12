@@ -26,6 +26,7 @@ from agent_lifecycle.contracts.policy_schemas import POLICY_SCHEMAS
 from agent_lifecycle.contracts.proof_integrity_schemas import PROOF_INTEGRITY_SCHEMAS
 from agent_lifecycle.contracts.progress_bridge_schemas import PROGRESS_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.progress_hook_schemas import PROGRESS_HOOK_SCHEMAS
+from agent_lifecycle.contracts.project_profile_schemas import PROJECT_PROFILE_SCHEMAS
 from agent_lifecycle.contracts.release_contract_schemas import RELEASE_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_SCHEMAS
 from agent_lifecycle.contracts.review_mesh_recommendation_schemas import REVIEW_MESH_RECOMMENDATION_SCHEMAS
@@ -393,6 +394,7 @@ _SCHEMA_GROUPS = (
     PROOF_INTEGRITY_SCHEMAS,
     PROGRESS_BRIDGE_SCHEMAS,
     PROGRESS_HOOK_SCHEMAS,
+    PROJECT_PROFILE_SCHEMAS,
     ADAPTER_CONTRACT_SCHEMAS,
     CONTEXT_MODEL_SCHEMAS,
     RELEASE_CONTRACT_SCHEMAS,

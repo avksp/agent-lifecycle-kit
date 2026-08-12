@@ -52,6 +52,14 @@ it must never guess a native host conversation id. Use `adapter task start`,
 `adapter session start` only to record an interactive `WAITING_FOR_TASK`
 session. Native host launching remains descriptor-driven and host-owned.
 
+For a project-wide default adapter and bounded stage settings, initialize or
+check the consuming project's local profile with `agent-lifecycle project
+profile init/check`. When `.alk/project-profile.json` is present, `start` may
+omit `--adapter`; use `--project-profile <path>` for explicit selection and
+`--no-project-profile` for a run without local defaults. Treat the profile as a
+defaults layer only: the frozen plan and matching lock remain authoritative for
+risk, quality, write scope, gates and receipts.
+
 When the operator adds `--launch` to raw `auto`, `research`, `plan` or `review`
 input, launch only an exact-version qualified planning-only profile. Resolve
 the default profile from `.alk/host-launch/<adapter>.json`, carry the task over
