@@ -8,13 +8,17 @@ JSON, чтобы результат можно было проверять ав�
 тайм-ауты и повторы описаны в разделе [Настройка рабочего процесса и управления
 выполнением](workflow-customization.md).
 
+Для первой установки и короткого маршрута используйте руководство [Установка
+ALK и первый запуск](../guides/install-and-first-run.md). Указатель команд по
+задачам находится на странице [Команды по задачам](../guides/commands-by-task.md).
+
 ## Установка
 
 Поддерживаются Python 3.11-3.14. Установите точную версию из официального
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.63.1
+python -m pip install agent-lifecycle-kit==1.63.2
 ```
 
 ## Основа

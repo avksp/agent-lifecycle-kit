@@ -133,7 +133,7 @@ Quorum receipts can block freeze, implementation audit or final audit only when
 the frozen plan declares Review Mesh as required for that phase.
 
 For command-by-command examples for common tasks, see the
-[Review Mesh workflow cookbook](../guides/review-mesh-workflow.md).
+[Review Mesh workflow scenarios](../guides/review-mesh-workflow.md).
 
 ## Contract rules
 

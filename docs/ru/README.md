@@ -17,20 +17,30 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 соразмерным уровнем контроля. Служебные шаги занимают только необходимое место,
 а основное время остаётся на исследование, реализацию и проверку продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.63.1 · **Python:** 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.63.2 · Python 3.11-3.14
 
 ## Быстрый старт
-Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.63.1`.
-Из исходного дерева:
+- [Установка ALK и первый запуск](guides/install-and-first-run.md)
+- [Команды по задачам](guides/commands-by-task.md)
+Начните с подробного руководства [Установка ALK и первый запуск](guides/install-and-first-run.md): в нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==1.63.2` и разбор ошибок команды `agent-lifecycle version`.
+Короткий путь из исходного дерева:
 
 ```bash
+git clone https://github.com/avksp/agent-lifecycle-kit.git
+cd agent-lifecycle-kit
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -e .
 agent-lifecycle version
 agent-lifecycle diagnose --no-install-plans
-agent-lifecycle start --adapter <adapter-id> --text "Составь проверяемый план реализации"
 ```
 
-Выберите `<adapter-id>` в [матрице поддержки адаптеров](adapters/support-matrix.md).
+Выберите `<adapter-id>` в [матрице поддержки адаптеров](adapters/support-matrix.md)
+и передайте задачу из файла:
+
+```bash
+agent-lifecycle start --adapter <adapter-id> --file task.md
+```
 
 Начните с [быстрого старта](quickstart.md), затем выберите подходящий сценарий
 в руководстве [Как ALK работает с разными
@@ -126,12 +136,6 @@ agent-lifecycle start --adapter <adapter-id> --text "Составь провер
   активности.
 - Диагностика готовности, лента событий, управляемый шаг, наблюдение за прогрессом и счётчик изменений не меняют состояние и не запускают модель.
 
-## Обычный цикл
-Обычный путь: спецификация -> зафиксированный план -> работа в заданных
-границах -> проверка реализации -> подтверждение результата. Основные команды
-покрывают спецификацию, план, рабочий цикл, аудит, адаптеры, импорт, метрики, правила, диагностику и состояние запуска. Подробности:
-[Справочник команд](reference/cli.md) и [источник правды](reference/source-of-truth.md).
-
 ## Уровень поддержки адаптеров
 Уровень поддержки показывает, какая часть интеграции ALK проверена для
 конкретного внешнего инструмента. В него входят заявленная версия CLI,
@@ -156,12 +160,6 @@ OpenInterpreter, Pi и Qwen Code.
 
 Подробнее: [Установка адаптеров](adapters/install.md), [матрица уровня поддержки адаптеров](adapters/support-matrix.md) и [поддержка управляемых сессий](adapters/managed-session-support.md).
 
-## Карта контрактов
-Публичная поверхность жизненного цикла описана схемами. Полный список
-стабильных идентификаторов схем, правила совместимости, артефакты
-восстановления запуска, контракты перепроверки, расследования ошибок и детали
-экспорта использования находятся в [Публичных контрактах](reference/public-contracts.md).
-
 ## Границы проекта
 - Ядро не зависит от конкретного провайдера. Команды хоста и выбор модели
   живут в адаптерах или локальных профилях.
@@ -183,7 +181,7 @@ OpenInterpreter, Pi и Qwen Code.
   одновременного запуска нескольких моделей по умолчанию.
 
 ## Документы
-- Старт: [Быстрый старт](quickstart.md), [практические сценарии жизненного цикла](lifecycle-cookbook.md), [сценарии проверки кода](code-review-workflows.md), [проверка несколькими моделями ИИ](review-mesh-workflow.md) и [черновик спецификации из тикета](issue-to-spec.md).
+- Старт: [Быстрый старт](quickstart.md), [установка ALK и первый запуск](guides/install-and-first-run.md), [команды по задачам](guides/commands-by-task.md), [практические сценарии жизненного цикла](lifecycle-cookbook.md), [сценарии проверки кода](code-review-workflows.md), [проверка несколькими моделями ИИ](review-mesh-workflow.md) и [черновик спецификации из тикета](issue-to-spec.md).
 - Адаптеры: [установка](adapters/install.md), [способы использования](adapters/usage-modes.md), [поддержка](adapters/support-matrix.md), [управляемые сессии](adapters/managed-session-support.md), [прогресс](adapters/progress-bridge-matrix.md), [захват событий](adapters/event-capture-matrix.md), [создание адаптера](adapters/authoring.md), [порядок перевода в VERIFIED](adapters/live-promotion-runbook.md), [Codex](adapters/codex.md), [Claude Code](adapters/claude.md), [Cursor](adapters/cursor.md), [Gemini CLI](adapters/gemini-cli.md), [Goose](adapters/goose.md), [Grok Build](adapters/grok-build.md), [Hermes](adapters/hermes.md), [Kimi Code](adapters/kimi-code.md), [OpenCode](adapters/opencode.md), [OpenInterpreter](adapters/openinterpreter.md), [Pi](adapters/pi.md) и [Qwen Code](adapters/qwen-code.md).
-- Основной справочник: [архитектура системы](architecture/system-architecture.md), [настройка рабочего процесса и управления выполнением](reference/workflow-customization.md), [стратегия выполнения](reference/execution-strategy.md), [команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [сравнение проекта](reference/project-comparison.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [управляемые сессии адаптеров](reference/managed-adapter-sessions.md), [аудит реализации](reference/implementation-audit.md), [полнота плана](reference/plan-completeness.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md), [диагностика готовности](reference/readiness-diagnostics.md), [проверка нейтральности](reference/neutrality.md), [оценка по эталонным задачам](reference/reference-task-evaluation.md), [локальная статистика](reference/quality-cost-learning.md), [учёт расхода](reference/lifecycle-cost.md), [локальный учёт токенов хоста](reference/host-local-token-accounting.md), [экспорт использования](reference/usage-export.md), [целостность подтверждений](reference/evidence-integrity.md), [границы песочницы](reference/sandbox-boundaries.md), [безопасность релиза](security/release-security.md) и [контракт нейтральности](security/neutrality-contract.md).
+- Основной справочник: [архитектура системы](architecture/system-architecture.md), [настройка рабочего процесса и управления выполнением](reference/workflow-customization.md), [стратегия выполнения](reference/execution-strategy.md), [команды CLI](reference/cli.md), [источник правды](reference/source-of-truth.md), [сравнение проекта](reference/project-comparison.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [управляемые сессии адаптеров](reference/managed-adapter-sessions.md), [аудит реализации](reference/implementation-audit.md), [полнота плана](reference/plan-completeness.md), [публикация плагинов](reference/plugin-publication.md), [Публичных контрактах](reference/public-contracts.md), [диагностика готовности](reference/readiness-diagnostics.md), [проверка нейтральности](reference/neutrality.md), [оценка по эталонным задачам](reference/reference-task-evaluation.md), [локальная статистика](reference/quality-cost-learning.md), [учёт расхода](reference/lifecycle-cost.md), [локальный учёт токенов хоста](reference/host-local-token-accounting.md), [экспорт использования](reference/usage-export.md), [целостность подтверждений](reference/evidence-integrity.md), [границы песочницы](reference/sandbox-boundaries.md), [безопасность релиза](security/release-security.md) и [контракт нейтральности](security/neutrality-contract.md).
 - Дополнительный справочник: [статус без записи](reference/read-only-status-view.md), [прогресс](reference/automatic-progress-bridge.md), [индекс подтверждений и импорт](reference/evidence-imports.md), [импорт внешних форматов](reference/import-mappers.md), [эпизоды](reference/episode-retrieval.md), [восстановление](reference/runner-recovery.md), [перепроверка](reference/cross-check-profile.md), [проверка несколькими моделями ИИ](reference/review-mesh.md), [рекомендация режима](reference/review-mesh.md#рекомендация-режима), [подготовка заданий](reference/review-mesh.md#шаблоны-и-подготовка), [профиль расследования ошибок](reference/bug-forensics.md), [бюджет контекста для него](reference/bug-forensics-context-budget.md), [проверка завершения](reference/completion-check.md), [непрерывность цели](reference/goal-continuity.md), [реестр отложенной работы](reference/follow-up-register.md), [изоляция рабочего дерева](reference/worktree-isolation.md), [возможности хоста](reference/host-capabilities.md), [захват событий адаптера](reference/adapter-event-capture.md), [вердикт проверки](reference/review-verdict.md), [дополнительные пакеты качества](reference/optional-quality-packs.md), [маршрутизация моделей](reference/model-routing.md), [предложения правил](reference/policy.md), [промышленная готовность](reference/production-promotion.md), [калибровка реального расхода](reference/live-cost-calibration.md), [непрерывность плана](reference/plan-continuity.md), [диагностические пакеты](reference/diagnostic-bundles.md), [контролируемый запуск](reference/runner.md) и [шаблоны задач](reference/task-templates.md).

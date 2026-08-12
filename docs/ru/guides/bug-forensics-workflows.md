@@ -42,7 +42,7 @@ agent-lifecycle adapter task start \
 agent-lifecycle adapter task start \
   --adapter codex \
   --text "Исследуй падающую проверку расчёта заказа. Код не менять, пока падение не воспроизведено." \
-  --out work/bugs/defect-search-intake.json
+  --out work/bugs/bug-search-intake.json
 ```
 
 План должен требовать:
