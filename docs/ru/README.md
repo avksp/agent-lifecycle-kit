@@ -17,10 +17,10 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 соразмерным уровнем контроля. Служебные шаги занимают только необходимое место,
 а основное время остаётся на исследование, реализацию и проверку продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.63.0 · **Python:** 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.63.1 · **Python:** 3.11-3.14
 
 ## Быстрый старт
-Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.63.0`.
+Официальный [пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) для Python 3.11-3.14: `python -m pip install agent-lifecycle-kit==1.63.1`.
 Из исходного дерева:
 
 ```bash
