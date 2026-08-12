@@ -566,6 +566,28 @@ sequenceDiagram
 подтверждения и, если требуется, кворум нескольких рецензентов. Успешные тесты
 без соответствия плану не дают автоматического положительного вердикта.
 
+### Сводная проверка пакета
+
+```mermaid
+sequenceDiagram
+  participant CLI
+  participant Package as audit/package.py
+  participant Plan as planning/* и freeze/locks.py
+  participant Implementation as audit/implementation.py
+  participant Ownership as audit/ownership.py
+
+  CLI->>Package: audit package --plan-dir
+  Package->>Plan: проверка манифеста, полноты, критериев, ссылок и lock
+  Package->>Implementation: объединение принятых аудитов задач при наличии state
+  Package->>Ownership: классификация изменённых файлов по плану
+  Package-->>CLI: agent-plan-package-audit-report.v1
+```
+
+Этот маршрут используется при передаче плана и готовой реализации другому
+проверяющему. Он объединяет существующие проверки и возвращает `PASS`,
+`REVIEW_REQUIRED` или `FAIL`, не меняя состояние рабочего цикла и не запуская
+внешние инструменты.
+
 ### Прогресс и отчёты без записи
 
 ```mermaid
@@ -632,6 +654,7 @@ Git, и по умолчанию не читает локальные матер�
 | Управляемый следующий шаг | `workflow run` или `adapter run` | `workflow/managed_runner.py`, `workflow/next_action.py`, `adapter_sessions/workflow_bridge.py` | Подтверждение следующего шага без запуска хоста. |
 | Изменение задачи | `workflow task-start/task-result/task-accept` | `workflow/task_transitions.py`, `workflow/operation_kernel.py`, `workflow/gates.py` | Обновлённое состояние и журнал событий. |
 | Аудит реализации | `audit implementation` | `audit/implementation.py`, `audit/ownership.py`, `workflow/reviews.py` | Отчёт аудита реализации. |
+| Сводная проверка пакета | `audit package --plan-dir` | `audit/package.py`, `planning/*`, `freeze/locks.py`, `audit/implementation.py`, `audit/ownership.py` | Отчёт передачи плана и реализации. |
 | Групповая проверка | `review-mesh profile/recommend/prepare/assign/import-result/synthesize/quorum` | `review_mesh/*`, `model_routing/profiles.py`, `quality/cross_check.py` | Рекомендация, подготовленные пакеты проверяющих, назначения, результаты, объединение выводов и кворум. |
 | Проверка кода | Git/CLI хоста и `adapter task start` | Git вне ALK, затем `adapter_sessions/task_intake.py` и при необходимости `review_mesh/*` | Приём пакета проверки и необязательный кворум. |
 | Исправление ошибки | `adapter task start` и контрольные точки зафиксированного плана | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Рекомендация профиля расследования, затем обязательные подтверждения по плану. |

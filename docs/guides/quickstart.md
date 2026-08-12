@@ -33,7 +33,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.62.0
+python -m pip install agent-lifecycle-kit==1.63.0
 agent-lifecycle version
 ```
 

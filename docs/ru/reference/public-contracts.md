@@ -54,6 +54,9 @@
   финальным подтверждением запуска.
 - `agent-final-implementation-audit-validation.v1`: проверка итогового аудита
   реализации.
+- `agent-plan-package-audit-report.v1`: сводная проверка папки плана и
+  реализации.
+- `agent-plan-package-audit-validation.v1`: проверка сводного отчёта.
 - `agent-follow-up-register.v1`: реестр продолжений.
 - `agent-follow-up-summary.v1`: краткое состояние продолжений.
 - `agent-worktree-isolation-policy.v1`: политика изоляции рабочего дерева.

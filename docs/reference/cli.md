@@ -15,7 +15,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.62.0
+  python -m pip install agent-lifecycle-kit==1.63.0
 ```
 
 ## Foundation
@@ -147,6 +147,10 @@ remain authoritative for risk, quality, write scope, gates and receipts. See
   Review Mesh quorum for implementation audit.
 - `agent-lifecycle audit final-implementation`: aggregate accepted
   implementation audit reports before final workflow proof.
+- `agent-lifecycle audit package --plan-dir <dir>`: audit a plan directory and,
+  when `--state <path>` is supplied, aggregate its implementation audit. Add
+  `--require-frozen --require-implementation --strict` for a completed handoff
+  gate; repeat `--report <path>` to provide an explicit report list.
 - `agent-lifecycle quality pack-check`: validate optional quality packs.
 - `agent-lifecycle quality behavior-check`: run fixture-backed behavior checks.
 - `agent-lifecycle quality bug-recipe-list/bug-recipe-check`: inspect reusable

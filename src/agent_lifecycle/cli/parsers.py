@@ -562,6 +562,19 @@ def _add_audit_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     final_implementation.add_argument("--auditor-id", default="final-implementation-auditor")
     final_implementation.add_argument("--auditor-surface", default="cli")
     final_implementation.add_argument("--out")
+    package = audit_sub.add_parser("package")
+    package.add_argument("--plan-dir", required=True)
+    package.add_argument("--state")
+    package.add_argument("--report", action="append", default=[])
+    package.add_argument("--path", action="append", default=[])
+    package.add_argument("--base")
+    package.add_argument("--completeness-profile")
+    package.add_argument("--require-frozen", action="store_true")
+    package.add_argument("--require-implementation", action="store_true")
+    package.add_argument("--strict", action="store_true")
+    package.add_argument("--auditor-id", default="package-auditor")
+    package.add_argument("--auditor-surface", default="cli")
+    package.add_argument("--out")
 
 
 def _add_context_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
