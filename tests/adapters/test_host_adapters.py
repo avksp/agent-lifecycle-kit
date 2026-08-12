@@ -112,6 +112,8 @@ class HostAdapterTests(unittest.TestCase):
                     manifest = load_json(adapter_root / config["nativeManifest"])
                     self.assertEqual(manifest["plugin"], ["./plugins/agent-lifecycle-kit.js"])
                     launcher = (adapter_root / "plugins/agent-lifecycle-kit.js").read_text(encoding="utf-8")
+                    self.assertIn("export const AgentLifecycleKit = async", launcher)
+                    self.assertNotIn("export default {", launcher)
                     self.assertIn("agent-lifecycle-kit", launcher)
                     self.assertIn("fail-closed", launcher)
                 elif config.get("capabilityOnly"):
