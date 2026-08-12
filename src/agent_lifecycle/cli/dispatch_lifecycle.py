@@ -9,7 +9,9 @@ from typing import Any
 from agent_lifecycle.audit import (
     build_final_implementation_audit,
     build_implementation_audit_report,
+    build_package_audit,
     build_ownership_report,
+    require_package_audit_pass,
     require_review_verdict_pass,
     validate_review_verdict,
 )
@@ -250,6 +252,24 @@ def _dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:
         )
         if args.out:
             write_json_create(Path(args.out), payload)
+        return payload
+    if args.audit_command == "package":
+        payload = build_package_audit(
+            plan_dir=Path(args.plan_dir),
+            state_path=Path(args.state) if args.state else None,
+            report_paths=args.report,
+            changed_paths=args.path or None,
+            base=args.base,
+            require_frozen=args.require_frozen,
+            require_implementation=args.require_implementation,
+            completeness_profile_path=Path(args.completeness_profile) if args.completeness_profile else None,
+            auditor_id=args.auditor_id,
+            auditor_surface=args.auditor_surface,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        if args.strict:
+            require_package_audit_pass(payload)
         return payload
     paths = args.path or changed_files(Path.cwd(), base=args.base)
     report = build_ownership_report(Path(args.manifest), paths, base=args.base)

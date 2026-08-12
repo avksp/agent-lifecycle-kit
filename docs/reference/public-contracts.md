@@ -64,6 +64,8 @@ Stable schema ids:
 - `agent-implementation-audit-report-validation.v1`
 - `agent-final-implementation-audit.v1`
 - `agent-final-implementation-audit-validation.v1`
+- `agent-plan-package-audit-report.v1`
+- `agent-plan-package-audit-validation.v1`
 - `agent-follow-up-register.v1`
 - `agent-follow-up-summary.v1`
 - `agent-worktree-isolation-policy.v1`

@@ -519,6 +519,27 @@ Called after an implementation attempt has a task result and independent
 review. It verifies lineage, ownership, evidence, acceptance coverage,
 sandbox receipts and optional multi-review quorum.
 
+### Package audit
+
+```mermaid
+sequenceDiagram
+  participant CLI
+  participant Package as audit/package.py
+  participant Plan as planning/* and freeze/locks.py
+  participant Implementation as audit/implementation.py
+  participant Ownership as audit/ownership.py
+
+  CLI->>Package: audit package --plan-dir
+  Package->>Plan: validate manifest, completeness, checklist, references and lock
+  Package->>Implementation: aggregate accepted task audit reports when state is supplied
+  Package->>Ownership: classify changed files against the plan
+  Package-->>CLI: agent-plan-package-audit-report.v1
+```
+
+This is the handoff route for a plan and its completed implementation. It
+composes existing validators and reports `PASS`, `REVIEW_REQUIRED` or `FAIL`
+without changing workflow state or starting an external tool.
+
 ### Read-only progress and reporting
 
 ```mermaid
@@ -582,6 +603,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 | Managed next action | `workflow run` or `adapter run` | `workflow/managed_runner.py`, `workflow/next_action.py`, `adapter_sessions/workflow_bridge.py` | Next action receipt, no host launch. |
 | Task mutation | `workflow task-start/task-result/task-accept` | `workflow/task_transitions.py`, `workflow/operation_kernel.py`, `workflow/gates.py` | Updated workflow state and event log. |
 | Implementation audit | `audit implementation` | `audit/implementation.py`, `audit/ownership.py`, `workflow/reviews.py` | Implementation audit report. |
+| Package audit | `audit package --plan-dir` | `audit/package.py`, `planning/*`, `freeze/locks.py`, `audit/implementation.py`, `audit/ownership.py` | Plan and implementation handoff report. |
 | Group review | `review-mesh profile/recommend/prepare/assign/import-result/synthesize/quorum` | `review_mesh/*`, `model_routing/profiles.py`, `quality/cross_check.py` | Recommendation, prepared reviewer packets, assignment, result, synthesis and quorum receipts. |
 | Code review | Git/host CLI plus `adapter task start` | Git outside ALK, then `adapter_sessions/task_intake.py` and optional `review_mesh/*` | Review packet intake and optional quorum. |
 | Bug repair | `adapter task start` plus frozen plan gates | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Defect-shaped recommendation, then plan-required receipts. |

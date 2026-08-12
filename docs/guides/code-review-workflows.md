@@ -20,6 +20,7 @@ authorize implementation.
 | GitLab merge request | Fetch the MR branch, save a diff, review that packet. | `git fetch`, then `adapter task start` |
 | Plan package only | Review Markdown plan files without implementation. | `adapter task start`, `review-mesh recommend` |
 | Completed ALK task | Audit the result against the frozen plan and evidence. | `audit implementation` |
+| Plan package and completed implementation | Audit the plan folder, state lineage, task audits and changed-file ownership together. | `audit package` |
 | High-risk review | Coordinate more than one reviewer and require quorum only if the frozen plan opts in. | `review-mesh assign/import-result/synthesize/quorum` |
 
 ## Prepare a review packet
@@ -77,6 +78,28 @@ agent-lifecycle review-mesh recommend \
 
 The recommendation is advisory until a reviewed frozen plan explicitly requires
 it.
+
+## Review a handed-off ALK package
+
+When the implementation was completed by another person or agent, keep the
+plan directory and workflow artifacts together. The receiving reviewer can run:
+
+```bash
+agent-lifecycle audit package \
+  --plan-dir tasks/release-1-63 \
+  --state work/release-1-63/run.state.json \
+  --base main \
+  --require-frozen \
+  --require-implementation \
+  --strict \
+  --out work/release-1-63/evidence/package-audit.json
+```
+
+The receipt combines plan completeness, the acceptance checklist, lock and
+reference checks with accepted implementation audits and changed-file
+ownership. Use `--report <path>` for each report when automatic discovery is
+not desired. A `PASS` result is the package-level handoff result; findings in a
+`FAIL` or `REVIEW_REQUIRED` result explain what must be reviewed or completed.
 
 ## Review a GitHub pull request
 

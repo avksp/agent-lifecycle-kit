@@ -35,12 +35,18 @@ from agent_lifecycle.audit.implementation import (
     validate_final_implementation_audit,
     validate_implementation_audit_report,
 )
+from agent_lifecycle.audit.package import (
+    build_package_audit,
+    require_package_audit_pass,
+    validate_package_audit,
+)
 
 __all__ = [
     "build_bug_forensics_audit",
     "build_ownership_report",
     "build_final_implementation_audit",
     "build_implementation_audit_report",
+    "build_package_audit",
     "build_finding_identity",
     "build_fix_impact_receipt",
     "build_hash_chain_migration_policy",
@@ -53,6 +59,8 @@ __all__ = [
     "require_bug_forensics_audit_pass",
     "require_review_verdict_pass",
     "require_implementation_audit_accepted",
+    "require_package_audit_pass",
+    "validate_package_audit",
     "stable_finding_id",
     "validate_finding_identity",
     "validate_bug_forensics_audit",
