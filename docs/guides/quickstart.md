@@ -33,7 +33,7 @@ supports Python 3.11-3.14. When the package is available for the requested
 version, install the exact semantic version:
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.61.0
+python -m pip install agent-lifecycle-kit==1.62.0
 agent-lifecycle version
 ```
 
@@ -108,6 +108,30 @@ agent-lifecycle import plan \
 The same command supports `--dialect bmad` and `--dialect spec-kitty`.
 Imported material enters the draft stage. Review and freeze it before using it as
 the implementation plan.
+
+## Use a project workflow profile
+
+For a project-wide default adapter and bounded stage settings, create the local
+profile once:
+
+```bash
+agent-lifecycle project profile init --adapter <adapter-id> --out .alk/project-profile.json
+agent-lifecycle project profile check
+```
+
+The optional `--adapter` value becomes the project default. Without it, set
+`defaultAdapter` in the local file or keep passing `--adapter` for each run.
+After a default is set, the simple entrypoint can omit `--adapter`:
+
+```bash
+agent-lifecycle start --file task.md
+agent-lifecycle start --text "Investigate the cache failure"
+```
+
+The profile is a local defaults layer. A frozen plan and its lock remain the
+authority for risk, quality, write scope and required evidence. Use
+[Project workflow profile](../reference/project-workflow-profile.md) for the
+file format, explicit selection and the advanced `--no-project-profile` route.
 
 ## Choose how to use an adapter
 
