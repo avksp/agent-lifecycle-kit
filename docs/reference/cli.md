@@ -9,13 +9,17 @@ commands, including multiple agents, host model settings, prompts, timeouts
 and retries, see [Workflow customization and execution
 controls](workflow-customization.md).
 
+For a first installation and the shortest task route, use [Install ALK and make
+the first run](../guides/install-and-first-run.md). The task-oriented command
+map is in [Commands by task](../guides/commands-by-task.md).
+
 ## Installation
 
 Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.63.1
+  python -m pip install agent-lifecycle-kit==1.63.2
 ```
 
 ## Foundation
@@ -50,7 +54,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
   specification input.
 - `agent-lifecycle quality template-list/template-check`: inspect and validate
   draft-only task templates.
-- Cookbook entry points for common tasks are documented in
+- Task scenario entry points for common tasks are documented in
   `docs/guides/lifecycle-cookbook.md`.
 
 ## Project profile

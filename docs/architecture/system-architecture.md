@@ -52,6 +52,58 @@ The main architectural rule is separation of authority:
 - Hosts own model execution and provider credentials.
 - Reviewers own semantic judgement; ALK records and validates the evidence.
 
+## Responsibility model: ALK, host, model and repository
+
+The participants form one workflow with different authorities:
+
+| Participant | Contribution | Durable result |
+| --- | --- | --- |
+| ALK core | Classifies intake, validates contracts, advances state and applies gates. | Plans, locks, state transitions, receipts and final proof. |
+| Host CLI and adapter | Provides the user interface, command projection and host-local environment. | Adapter receipts, host-boundary evidence and selected model invocation. |
+| Model | Researches the task, explains options, proposes a plan and writes or reviews code through the host tools. | Research, plan content, implementation changes and review findings. |
+| Repository | Stores source code, tests, documentation, plan packages and release metadata. | The durable project history against which the task is checked. |
+| Operator or independent reviewer | Approves scope, resolves questions and evaluates semantic correctness. | Review decisions and authorization for the next lifecycle step. |
+
+The model supplies reasoning and content. ALK supplies the structure that makes
+that content reviewable: identity, scope, ownership, validation, evidence and a
+decision. The host is the execution surface; the repository is the durable
+project context; ALK connects both through typed artifacts.
+
+## How the guarantee chain is formed
+
+The lifecycle result is accepted through a sequence of linked artifacts:
+
+1. **Intake receipt** records the task text, file or imported context and its
+   digest.
+2. **Specification and plan** define the expected result, constraints,
+   acceptance criteria, workstreams, allowed files, budgets and evidence routes.
+3. **Independent plan review** checks completeness, references, ownership,
+   security and the selected lifecycle depth.
+4. **Frozen manifest and lock** bind the reviewed plan to one immutable
+   implementation identity.
+5. **Task and validation receipts** show the work performed, checks run,
+   changed files, resource usage and unresolved actions.
+6. **Implementation audit** compares the result with the frozen plan and its
+   acceptance evidence.
+7. **Final proof** combines the accepted evidence and exposes the resulting
+   status to the operator and release process.
+
+The visible states are actionable: `PASS` means the required evidence is
+accepted, `REVIEW_REQUIRED` identifies the missing decision or review, and
+`BLOCKED` records the reason that prevents the next transition. Accepted
+lifecycle artifacts include the reviewed plan and lock, state and task
+receipts, validation and evidence summaries, independent plan and
+implementation audits, and final proof. Review Mesh, Bug Forensics, progress
+and resource receipts add evidence when the selected task or plan requires it.
+
+The guarantee boundary is explicit:
+
+| Evidence class | What ALK can verify deterministically | What still depends on task evidence |
+| --- | --- | --- |
+| Contract and process | Schema shape, hashes, ownership, allowed paths, state transitions, required commands and receipt lineage. | Whether the selected requirements describe the right product outcome. |
+| Code and behavior | Test results, validation output, changed-file scope, resource limits and audit completeness. | Semantic correctness of research, design and implementation; the plan must require tests, review or domain evidence for it. |
+| Host and model | Adapter identity, declared capabilities, environment boundary and attested usage. | The quality of model reasoning and the behavior of tools supplied by the host. |
+
 ## C1: system context
 
 At system level ALK is a local CLI and Python package used inside a source
@@ -655,7 +707,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 - [Managed adapter sessions](../reference/managed-adapter-sessions.md)
 - [Project workflow profile](../reference/project-workflow-profile.md)
 - [Implementation audit](../reference/implementation-audit.md)
-- [Review Mesh workflow cookbook](../guides/review-mesh-workflow.md)
+- [Review Mesh workflow scenarios](../guides/review-mesh-workflow.md)
 - [Code review workflows](../guides/code-review-workflows.md)
 - [External memory](../reference/external-memory.md)
 - [Goal continuity](../reference/goal-continuity.md)

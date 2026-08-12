@@ -41,7 +41,7 @@ Use this when the defect is suspected but not localized.
 agent-lifecycle adapter task start \
   --adapter codex \
   --text "Investigate the failing checkout total test. Do not edit code until the failure is reproduced." \
-  --out work/bugs/defect-search-intake.json
+  --out work/bugs/bug-search-intake.json
 ```
 
 The plan should require:

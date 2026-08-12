@@ -12,6 +12,8 @@ ADOPTION_DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         "README.md",
         (
             "docs/guides/quickstart.md",
+            "docs/guides/install-and-first-run.md",
+            "docs/guides/commands-by-task.md",
             "docs/reference/project-comparison.md",
             "python -m pip install -e .",
         ),
@@ -30,24 +32,26 @@ ADOPTION_DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "сравнение проекта",
             "reference/project-comparison.md",
             "управляемые сессии адаптеров",
+            "guides/install-and-first-run.md",
+            "guides/commands-by-task.md",
         ),
     ),
     (
-        "docs/guides/quickstart.md",
+        "docs/guides/install-and-first-run.md",
         (
-            "Install from source",
-            "Install from package",
-            "When the package is available",
+            "Install from a GitHub checkout",
+            "Install the published package",
             "agent-lifecycle-kit=={target_version}",
+            "agent-lifecycle version",
         ),
     ),
     (
-        "docs/ru/quickstart.md",
+        "docs/ru/guides/install-and-first-run.md",
         (
-            "Установка из исходников",
-            "Установка из пакета",
-            "Если пакет опубликован",
+            "Установка из GitHub",
+            "Установка опубликованного пакета",
             "agent-lifecycle-kit=={target_version}",
+            "agent-lifecycle version",
         ),
     ),
     (

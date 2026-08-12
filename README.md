@@ -10,31 +10,41 @@
 
 **Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable
 finish. It keeps the requested outcome, reviewed plan, execution boundaries,
-evidence and acceptance decisions connected while the external agent changes the
-project.
+evidence and acceptance decisions connected while the external agent changes the project.
 
 The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose,
-OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice,
+OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice
 and secret handling stay in adapters or host-local profiles.
 
 ## Quick start
-From a source checkout:
+Follow [Install ALK and make the first run](docs/guides/install-and-first-run.md)
+for the platform-specific setup and common `agent-lifecycle version` errors.
+The shortest source-checkout route is:
 
 ```bash
+git clone https://github.com/avksp/agent-lifecycle-kit.git
+cd agent-lifecycle-kit
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -e .
 agent-lifecycle version
 agent-lifecycle diagnose --no-install-plans
-agent-lifecycle start --adapter <adapter-id> --text "Draft a reviewed implementation plan"
 ```
 
-Choose `<adapter-id>` from the [adapter support matrix](docs/adapters/support-matrix.md).
+Windows PowerShell and PyPI commands are in the installation guide. Choose
+`<adapter-id>` from the [adapter support matrix](docs/adapters/support-matrix.md)
+and start a task with:
 
-The official [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14.
-Install the exact release with `python -m pip install agent-lifecycle-kit==1.63.1`.
+```bash
+agent-lifecycle start --adapter <adapter-id> --file task.md
+```
 
-Use [Quickstart](docs/guides/quickstart.md), [project profile init](docs/reference/project-workflow-profile.md), [task workflows](docs/guides/how-alk-works.md),
-[workflow customization and execution controls](docs/reference/workflow-customization.md),
-and the [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md). The [planning-only](docs/reference/planning-only-launch.md)
+The published [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14; install it with `python -m pip install agent-lifecycle-kit==1.63.2`.
+Use [Quickstart](docs/guides/quickstart.md) for the first task and [Commands by task](docs/guides/commands-by-task.md) for detailed operations.
+Continue with [task workflows](docs/guides/how-alk-works.md) and
+[project profile init](docs/reference/project-workflow-profile.md),
+[workflow customization and execution controls](docs/reference/workflow-customization.md), and the
+[Lifecycle task scenarios](docs/guides/lifecycle-cookbook.md). The [planning-only](docs/reference/planning-only-launch.md)
 and [qualified frozen-task](docs/reference/qualified-host-launch.md) guides define launch boundaries.
 See [System architecture](docs/architecture/system-architecture.md), [Project comparison](docs/reference/project-comparison.md),
 and [Документация на русском](docs/ru/README.md).
@@ -118,12 +128,6 @@ and [Документация на русском](docs/ru/README.md).
   receipts, and change summaries inspect checkout and workflow state without
   model calls.
 
-## Daily flow
-
-Spec -> frozen plan -> bounded work -> implementation audit -> final proof.
-Core commands cover specification, plan, workflow, audit, adapters, imports, metrics,
-policy, diagnostics, runner state, and adapter task intake. See [CLI reference](docs/reference/cli.md) and [Source of truth](docs/reference/source-of-truth.md).
-
 ## Adapter support level
 
 The adapter support level describes how much of the ALK integration is verified
@@ -147,10 +151,6 @@ Hermes, Kimi Code, OpenCode, OpenInterpreter, Pi and Qwen Code.
 
 Adapter installation and support-level details live in [Adapter install](docs/adapters/install.md) and [Adapter support matrix](docs/adapters/support-matrix.md).
 
-## Contract map
-
-The public lifecycle surface is schema-backed. Full stable schema ids, compatibility rules, runner recovery, cross-check, Review Mesh, Bug Forensics and usage export details are listed in [Public contracts](docs/reference/public-contracts.md).
-
 ## Design boundaries
 
 - The core stays provider-neutral. Concrete host commands and model bindings
@@ -170,7 +170,7 @@ The public lifecycle surface is schema-backed. Full stable schema ids, compatibi
 
 ## Documentation
 
-- Start: [English documentation](docs/README.md), [Русская документация](docs/ru/README.md), [Quickstart](docs/guides/quickstart.md), [Lifecycle cookbook](docs/guides/lifecycle-cookbook.md), and [Code review workflows](docs/guides/code-review-workflows.md).
+- Start: [English documentation](docs/README.md), [Русская документация](docs/ru/README.md), [Install](docs/guides/install-and-first-run.md), [Quickstart](docs/guides/quickstart.md), [Commands by task](docs/guides/commands-by-task.md), [Lifecycle task scenarios](docs/guides/lifecycle-cookbook.md), and [Code review workflows](docs/guides/code-review-workflows.md).
 - Planning and adapters: [Issue to specification drafts](docs/guides/issue-to-spec.md), [Adapter install](docs/adapters/install.md), and [Adapter support matrix](docs/adapters/support-matrix.md).
 - Reference: [System architecture](docs/architecture/system-architecture.md), [workflow customization and execution controls](docs/reference/workflow-customization.md), [execution strategy](docs/reference/execution-strategy.md), [CLI reference](docs/reference/cli.md), [Source of truth](docs/reference/source-of-truth.md), [Managed lifecycle runner](docs/reference/managed-lifecycle-runner.md), [Managed adapter sessions](docs/reference/managed-adapter-sessions.md), [Implementation audit](docs/reference/implementation-audit.md), [Plan completeness](docs/reference/plan-completeness.md), [Public contracts](docs/reference/public-contracts.md), and [Readiness diagnostics](docs/reference/readiness-diagnostics.md).
 - Quality and resources: [Reference-task evaluation](docs/reference/reference-task-evaluation.md), [model routing](docs/reference/model-routing.md), [quality-cost learning](docs/reference/quality-cost-learning.md), [lifecycle cost accounting](docs/reference/lifecycle-cost.md), [host-local token accounting](docs/reference/host-local-token-accounting.md), [Usage export](docs/reference/usage-export.md), and [Evidence integrity](docs/reference/evidence-integrity.md).

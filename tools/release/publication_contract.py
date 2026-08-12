@@ -107,14 +107,14 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
         "fieldForm": "version",
     },
     {
-        "id": "quickstart-package-pin",
-        "path": "docs/guides/quickstart.md",
+        "id": "install-guide-package-pin",
+        "path": "docs/guides/install-and-first-run.md",
         "kind": "text-package-pin",
         "fieldForm": "package.pin",
     },
     {
-        "id": "quickstart-ru-package-pin",
-        "path": "docs/ru/quickstart.md",
+        "id": "install-guide-ru-package-pin",
+        "path": "docs/ru/guides/install-and-first-run.md",
         "kind": "text-package-pin",
         "fieldForm": "package.pin",
     },

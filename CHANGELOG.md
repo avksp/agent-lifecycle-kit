@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.63.2 - 2026-08-12
+
+- Added bilingual installation and first-run guides for GitHub checkouts and
+  PyPI on macOS, Linux and Windows PowerShell.
+- Added a task-oriented command map and simplified the quick start for terminal
+  and host-plugin workflows.
+- Expanded the architecture documentation with responsibility boundaries and
+  the guarantee chain between ALK, the host, the model and the repository.
+- Updated documentation compatibility and publication checks for the new
+  onboarding pages and exact package pins.
+
 ## 1.63.1 - 2026-08-12
 
 - Fixed the OpenCode adapter plugin export so the legacy OpenCode loader can

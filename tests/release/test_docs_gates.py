@@ -33,6 +33,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertLessEqual(len(russian.splitlines()), 190)
         for required in (
             "docs/guides/quickstart.md",
+            "docs/guides/install-and-first-run.md",
+            "docs/guides/commands-by-task.md",
             "docs/adapters/install.md",
             "docs/reference/cli.md",
             "docs/reference/project-comparison.md",
@@ -60,6 +62,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/guides/README.ru.md",
             "docs/guides/how-alk-works.md",
             "docs/guides/quickstart.md",
+            "docs/guides/install-and-first-run.md",
+            "docs/guides/commands-by-task.md",
             "docs/reference/project-workflow-profile.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
@@ -69,6 +73,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/lifecycle-cookbook.md",
             "docs/ru/guides/bug-forensics-workflows.md",
             "docs/ru/quickstart.md",
+            "docs/ru/guides/install-and-first-run.md",
+            "docs/ru/guides/commands-by-task.md",
             "docs/ru/reference/project-workflow-profile.md",
             "docs/ru/guides/production-resource-security.md",
             "docs/ru/guides/reference-task-evaluation.md",
@@ -140,27 +146,49 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
     def test_quickstart_and_adapter_docs_cover_bounded_commands(self) -> None:
         quickstart = (ROOT / "docs/guides/quickstart.md").read_text(encoding="utf-8")
         quickstart_ru = (ROOT / "docs/ru/quickstart.md").read_text(encoding="utf-8")
+        commands = (ROOT / "docs/guides/commands-by-task.md").read_text(encoding="utf-8")
+        commands_ru = (ROOT / "docs/ru/guides/commands-by-task.md").read_text(encoding="utf-8")
+        onboarding = (ROOT / "docs/guides/install-and-first-run.md").read_text(encoding="utf-8")
+        onboarding_ru = (ROOT / "docs/ru/guides/install-and-first-run.md").read_text(encoding="utf-8")
         install = (ROOT / "docs/adapters/install.md").read_text(encoding="utf-8")
 
         for text in (quickstart, quickstart_ru):
             self.assertIn("```bash", text)
             self.assertIn("agent-lifecycle diagnose --no-install-plans", text)
-            self.assertIn("agent-lifecycle adapter install-plan", text)
-            self.assertIn("agent-lifecycle plan check", text)
-            self.assertIn("agent-lifecycle import plan", text)
-            self.assertIn("agent-lifecycle context check", text)
             self.assertIn("agent-lifecycle start --adapter <adapter-id>", text)
             self.assertNotIn("--adapter codex", text)
             self.assertIn("agent-workflow-orchestrator", text)
             self.assertIn("--mode research", text)
-            self.assertIn("--mode implement", text)
-            self.assertIn("--resume <session-id>", text)
-            self.assertIn("--risk auto", text)
-            self.assertIn("risk-aware-execution.md", text)
-            self.assertIn("project profile", text.lower())
-            self.assertIn("project-workflow-profile.md", text)
+            self.assertIn("commands-by-task.md", text)
+            self.assertIn("install-and-first-run.md", text)
         self.assertIn("lifecycle-cookbook.md", quickstart)
         self.assertIn("lifecycle-cookbook.md", quickstart_ru)
+
+        for text in (commands, commands_ru):
+            for command in (
+                "agent-lifecycle adapter validate",
+                "agent-lifecycle adapter inspect",
+                "agent-lifecycle adapter install-plan",
+                "agent-lifecycle plan check",
+                "agent-lifecycle import plan",
+                "agent-lifecycle context check",
+                "agent-lifecycle start --adapter <adapter-id>",
+                "--mode implement",
+                "--resume <session-id>",
+                "--risk auto",
+                "project profile init",
+                "audit package",
+                "review-mesh recommend",
+            ):
+                self.assertIn(command, text)
+            self.assertNotIn("--adapter codex", text)
+
+        for text in (onboarding, onboarding_ru):
+            self.assertIn("git clone https://github.com/avksp/agent-lifecycle-kit.git", text)
+            self.assertIn("agent-lifecycle version", text)
+            self.assertIn("PYTHONPATH=src python -m agent_lifecycle version", text)
+            self.assertIn("agent-workflow-orchestrator", text)
+            self.assertIn("plugin", text.lower())
 
         for command in (
             "agent-lifecycle adapter validate",
@@ -228,9 +256,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "pi",
         }
 
-        self.assertIn("## Choose how to use an adapter", english_quickstart)
         self.assertIn("../adapters/usage-modes.md", english_quickstart)
-        self.assertIn("## Выбор способа работы с адаптером", russian_quickstart)
         self.assertIn("adapters/usage-modes.md", russian_quickstart)
         for text in (english_modes, russian_modes):
             self.assertIn("agent-workflow-orchestrator", text)
@@ -422,8 +448,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "README.md",
             "docs/README.md",
             "docs/ru/README.md",
-            "docs/guides/quickstart.md",
-            "docs/ru/quickstart.md",
+            "docs/guides/install-and-first-run.md",
+            "docs/ru/guides/install-and-first-run.md",
             "docs/reference/cli.md",
             "docs/ru/reference/cli.md",
         ):
@@ -660,6 +686,20 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         root / "docs/ru/README.md",
         "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. Список в Публичных контрактах: reference/public-contracts.md. reference/project-workflow-profile.md. project profile init. https://pypi.org/project/agent-lifecycle-kit/ поддерживает Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
     )
+    onboarding = (
+        "git clone https://github.com/avksp/agent-lifecycle-kit.git. python3 -m venv .venv. "
+        "python -m agent_lifecycle version. agent-lifecycle version. agent-lifecycle diagnose --no-install-plans. "
+        "agent-lifecycle start. codex plugin. claude plugin. agent-workflow-orchestrator. PASS. REVIEW_REQUIRED. BLOCKED.\n"
+    )
+    _write_text(root / "docs/guides/install-and-first-run.md", onboarding)
+    _write_text(root / "docs/ru/guides/install-and-first-run.md", onboarding)
+    commands = (
+        "agent-lifecycle start --adapter <adapter-id>. agent-lifecycle plan check. "
+        "agent-lifecycle audit package. agent-lifecycle review-mesh recommend. "
+        "agent-lifecycle-neutrality scan. validate_publication_versions.py. agent-lifecycle benchmark evaluate.\n"
+    )
+    _write_text(root / "docs/guides/commands-by-task.md", commands)
+    _write_text(root / "docs/ru/guides/commands-by-task.md", commands)
     task_flow = (
         "completion-control problem. управления завершением.\n"
         "agent-lifecycle start.\n"
