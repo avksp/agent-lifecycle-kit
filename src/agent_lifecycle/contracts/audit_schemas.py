@@ -8,6 +8,42 @@ from agent_lifecycle.contracts.schema_builders import open_object_schema as _ope
 
 
 AUDIT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-plan-package-audit-report.v1": _open_object_schema(
+        "agent-plan-package-audit-report.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "packageId",
+            "auditor",
+            "plan",
+            "implementation",
+            "findings",
+            "blockers",
+            "productionPromotionClaimed",
+            "auditDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL", "REVIEW_REQUIRED", "NOT_PROVIDED"]},
+            "packageId": {"type": "string", "minLength": 1},
+            "auditor": {"type": "object"},
+            "plan": {"type": "object"},
+            "implementation": {"type": "object"},
+            "findings": {"type": "array", "items": {"type": "object"}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "productionPromotionClaimed": {"const": False},
+            "auditDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-plan-package-audit-validation.v1": _open_object_schema(
+        "agent-plan-package-audit-validation.v1",
+        required=["schemaVersion", "status", "blockers", "auditDigest", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "auditDigest": {"type": ["string", "null"]},
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
     "agent-implementation-audit-report.v1": _open_object_schema(
         "agent-implementation-audit-report.v1",
         required=[

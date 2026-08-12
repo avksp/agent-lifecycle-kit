@@ -14,6 +14,8 @@ class AuditSchemaTests(unittest.TestCase):
     def test_implementation_audit_schemas_are_registered(self) -> None:
         ids = {item["id"] for item in list_schemas()["schemas"]}
         self.assertIn("agent-implementation-audit-report.v1", ids)
+        self.assertIn("agent-plan-package-audit-report.v1", ids)
+        self.assertIn("agent-plan-package-audit-validation.v1", ids)
         self.assertIn("agent-final-implementation-audit.v1", ids)
         self.assertIn("agent-implementation-audit-report-validation.v1", ids)
         self.assertIn("agent-final-implementation-audit-validation.v1", ids)
@@ -22,6 +24,12 @@ class AuditSchemaTests(unittest.TestCase):
         schema = get_schema("agent-implementation-audit-report.v1")
         self.assertIn("verdict", schema["required"])
         self.assertIn("reportDigest", schema["required"])
+
+    def test_package_audit_schema_requires_plan_and_implementation_sections(self) -> None:
+        schema = get_schema("agent-plan-package-audit-report.v1")
+        self.assertIn("plan", schema["required"])
+        self.assertIn("implementation", schema["required"])
+        self.assertIn("auditDigest", schema["required"])
 
 
 if __name__ == "__main__":
