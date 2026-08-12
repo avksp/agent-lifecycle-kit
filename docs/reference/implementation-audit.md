@@ -31,6 +31,34 @@ agent-lifecycle audit final-implementation \
 The task command emits `agent-implementation-audit-report.v1`. The final command
 emits `agent-final-implementation-audit.v1`.
 
+## Audit a plan package
+
+When one person hands a plan and its implementation to another, audit the
+package directory as one unit:
+
+```bash
+agent-lifecycle audit package \
+  --plan-dir tasks/release-1-63 \
+  --state work/release-1-63/run.state.json \
+  --base main \
+  --require-frozen \
+  --require-implementation \
+  --strict \
+  --out work/release-1-63/evidence/package-audit.json
+```
+
+`--plan-dir` discovers the canonical plan files. With `--state`, the command
+discovers canonical implementation-audit reports below the state artifact
+directory. Use repeatable `--report <path>` options when the reviewer wants an
+explicit report list. Use the command without `--state` for plan-only review.
+
+The command emits `agent-plan-package-audit-report.v1` with three useful
+statuses: `PASS` means that the requested plan and implementation checks pass;
+`REVIEW_REQUIRED` means that the package is inspectable but a stage is not
+complete, such as a draft plan or missing state; `FAIL` contains concrete
+blockers. `--strict` turns a non-PASS result into a CI or handoff error after
+the receipt is written.
+
 ## What is checked
 
 The task report is a deterministic facade over existing lifecycle contracts:

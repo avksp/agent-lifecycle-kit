@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.63.0 - 2026-08-12
+
+- Added a read-only `audit package` command that checks an ALK plan directory,
+  validates its frozen artifacts and can aggregate implementation audit reports
+  for a reviewer handoff.
+- Added typed package-audit report and validation contracts with bounded report
+  discovery, ownership checks and strict completion gating.
+- Added English and Russian documentation for reviewing a delivered plan and
+  its implementation as a single package.
+
 ## 1.62.0 - 2026-08-12
 
 - Added project-local workflow profiles for a unified `start` command with

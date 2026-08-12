@@ -25,7 +25,7 @@ This is the current source map for the standalone package:
 | --- | --- | --- |
 | Stable contracts, canonical JSON, digests, schemas, typed errors | `contracts/*` | Implemented |
 | Git diff discovery for ownership audit | `changesets/git.py` | Implemented |
-| Ownership, implementation, proof-integrity and review-verdict audit | `audit/*` | Implemented |
+| Ownership, implementation, package, proof-integrity and review-verdict audit | `audit/*` | Implemented |
 | SDD tier and plan manifest validation | `planning/*`, `specification/*`, `review/*` | Implemented validators |
 | Plan lock verification | `freeze/locks.py` | Implemented |
 | Frozen DAG to task-packet and small-model packet compilation | `compiler/task_packets.py`, `compiler/small_model_packets.py` | Implemented |
@@ -90,9 +90,9 @@ when splitting prevents a file/context limit breach:
 - `validation`: controller gates, command receipts, release validators and
   validation indexes; currently `workflow/gates.py`, `neutrality/gate.py` and
   `tools/release/*`.
-- `audit`: ownership, implementation audit, proof integrity, review verdicts
-  and final audit validators; currently `audit/*`, `workflow/reviews.py` and
-  `workflow/finalization.py`.
+- `audit`: ownership, task and package implementation audits, proof integrity,
+  review verdicts and final audit validators; currently `audit/*`,
+  `workflow/reviews.py` and `workflow/finalization.py`.
 - `quality`: bug-forensics, cross-check, failure classification and optional
   quality packs.
 - `review_mesh`: optional multi-review recommendation, assignments, imported

@@ -14,7 +14,7 @@ JSON, чтобы результат можно было проверять ав�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.62.0
+python -m pip install agent-lifecycle-kit==1.63.0
 ```
 
 ## Основа
@@ -147,6 +147,11 @@ lock-файл остаются источником полномочий для 
 - `agent-lifecycle audit final-implementation`: итоговый отчёт
   `agent-final-implementation-audit.v1` перед финальным подтверждением
   рабочего цикла.
+- `agent-lifecycle audit package --plan-dir <папка>`: проверка папки плана и,
+  при указании `--state <путь>`, объединение аудитов реализации. Для строгой
+  проверки готовой передачи используйте `--require-frozen
+  --require-implementation --strict`; список отчётов можно задать несколькими
+  параметрами `--report <путь>`.
 - `agent-lifecycle quality`: дополнительные проверочные наборы.
 - `agent-lifecycle quality bug-recipe-list/bug-recipe-check`: просмотр
   переиспользуемых рецептов профиля расследования ошибок, которые используют
