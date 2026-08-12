@@ -5,9 +5,11 @@ unified ALK start command. It helps a team use the same stage names, default
 adapter, risk level, review mode and bounded resource limits without putting
 project preferences into the ALK plan.
 
-The profile belongs to the consuming project. It is normally kept in the
-ignored `.alk/project-profile.json` path and is not a replacement for a
-specification, frozen plan or plan lock.
+The profile belongs to the consuming project. The standard
+`.alk/project-profile.json` path is ignored by Git and is intended for local
+use. It may remain between runs, but it must not be committed or treated as
+project source of truth. It is not a replacement for a specification, frozen
+plan or plan lock.
 
 ## Create and check a profile
 
