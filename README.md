@@ -49,6 +49,8 @@ and [Документация на русском](docs/ru/README.md).
   composes risk, model class, packet size, review and resource limits.
 - Usage visibility: tokens, time, and resource counters are native; monetary
   cost is optional and only used when a metered host reports it.
+- Project-specific workflow settings: ALK can discover and validate uncommitted
+  local defaults for a repository while the frozen plan remains authoritative.
 - Read-only progress and managed sessions: host UIs can show lifecycle state,
   attested tokens and Git-style change counters; `start` accepts task text,
   Markdown, frozen run requests or stored ALK sessions while preserving
