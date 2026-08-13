@@ -19,7 +19,6 @@ and secret handling stay in adapters or host-local profiles.
 ## Quick start
 Follow [Install ALK and make the first run](docs/guides/install-and-first-run.md)
 for the platform-specific setup and common `agent-lifecycle version` errors.
-
 For a quick start, run:
 
 ```bash
@@ -40,9 +39,7 @@ and start a task with:
 agent-lifecycle start --adapter <adapter-id> --file task.md
 ```
 
-The published [PyPI package](https://pypi.org/project/agent-lifecycle-kit/)
-supports Python 3.11-3.14; install it with
-`python -m pip install agent-lifecycle-kit==1.65.0`.
+The published [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14; install it with `python -m pip install agent-lifecycle-kit==1.65.0`.
 Use [Quickstart](docs/guides/quickstart.md) for the first task and [Commands by task](docs/guides/commands-by-task.md) for detailed operations.
 Continue with [task workflows](docs/guides/how-alk-works.md) and
 [project profile init](docs/reference/project-workflow-profile.md),
