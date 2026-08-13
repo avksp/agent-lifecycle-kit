@@ -224,7 +224,7 @@ def _resume(*, adapter_id: str, session_id: str, session_root: Path | None) -> d
             requested_mode="auto",
             action="BLOCKED",
             input_summary=input_summary,
-            delegate_summary=_resume_summary(receipt),
+            delegate_summary=_resume_summary(receipt, session=session),
             blockers=_blocker_summaries(receipt.get("blockers")),
         )
     return build_lifecycle_start_receipt(
@@ -233,7 +233,7 @@ def _resume(*, adapter_id: str, session_id: str, session_root: Path | None) -> d
         requested_mode="auto",
         action="RESUME",
         input_summary=input_summary,
-        delegate_summary=_resume_summary(receipt),
+        delegate_summary=_resume_summary(receipt, session=session),
         lifecycle_coverage_claimed=status == "PASS" and bool(receipt.get("lifecycleCoverageClaimed")),
     )
 
@@ -997,8 +997,8 @@ def _task_summary(receipt: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _resume_summary(receipt: dict[str, Any]) -> dict[str, Any]:
-    return {
+def _resume_summary(receipt: dict[str, Any], *, session: dict[str, Any] | None = None) -> dict[str, Any]:
+    summary = {
         "schemaVersion": receipt.get("schemaVersion"),
         "status": receipt.get("status"),
         "lineageStatus": receipt.get("lineageStatus"),
@@ -1006,6 +1006,9 @@ def _resume_summary(receipt: dict[str, Any]) -> dict[str, Any]:
         "lifecycleCoverageClaimed": bool(receipt.get("lifecycleCoverageClaimed")),
         "receiptDigest": receipt.get("receiptDigest"),
     }
+    if session and isinstance(session.get("contextCheckpointPolicy"), dict):
+        summary["contextCheckpointPolicy"] = session["contextCheckpointPolicy"]
+    return summary
 
 
 def _claims_execution(receipt: dict[str, Any]) -> bool:

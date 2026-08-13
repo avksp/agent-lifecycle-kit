@@ -610,6 +610,25 @@ def _add_context_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     episode_retrieve.add_argument("--max-external-context-hints", type=int, default=4)
     episode_retrieve.add_argument("--target-tokens", type=int, default=2048)
     episode_retrieve.add_argument("--out")
+    checkpoint = context_sub.add_parser("checkpoint", help="write a bounded context checkpoint")
+    checkpoint.add_argument("--session", required=True)
+    checkpoint.add_argument("--state", required=True)
+    checkpoint.add_argument("--plan", required=True)
+    checkpoint.add_argument("--input", required=True)
+    checkpoint.add_argument("--reason", required=True)
+    checkpoint.add_argument(
+        "--capture-mode",
+        choices=["NATIVE_HOOK", "MILESTONE", "AGENT_REQUESTED", "UNAVAILABLE"],
+        default=None,
+    )
+    checkpoint.add_argument("--adapter")
+    checkpoint.add_argument("--out")
+    restore = context_sub.add_parser("restore", help="restore a bounded context continuation")
+    restore.add_argument("--checkpoint", required=True)
+    restore.add_argument("--state", required=True)
+    restore.add_argument("--session")
+    restore.add_argument("--target-tokens", type=int, default=2048)
+    restore.add_argument("--out")
 
 
 def _add_goal_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

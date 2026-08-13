@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.63.2
+  python -m pip install agent-lifecycle-kit==1.64.0
 ```
 
 ## Foundation
@@ -198,6 +198,12 @@ remain authoritative for risk, quality, write scope, gates and receipts. See
   model or provider calls.
 - `agent-lifecycle context episode-retrieve`: build `agent-episode-retrieval.v1`
   from explicit artifacts and optional `--external-context` receipts.
+- `agent-lifecycle context checkpoint`: write a bounded
+  `agent-context-checkpoint.v1` from explicit session, state, plan and summary
+  inputs.
+- `agent-lifecycle context restore`: validate lineage and return an
+  `agent-context-continuation.v1` packet after compaction; stale or tampered
+  checkpoints are blocked and never grant implementation authority.
 - `agent-lifecycle goal check/summarize/view/update`: keep user intent
   traceable. `goal view` combines the goal record with lifecycle progress,
   optional usage receipts and optional change summaries without mutating state.

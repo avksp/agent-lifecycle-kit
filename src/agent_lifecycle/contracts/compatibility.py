@@ -56,6 +56,9 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "report progress --watch", "schemaVersion": "agent-lifecycle-progress-watch.v1", "compatibility": "stable-json"},
     {"command": "report progress-bridge", "schemaVersion": "agent-progress-bridge-receipt.v1", "compatibility": "stable-json"},
     {"command": "report change-summary", "schemaVersion": "agent-change-summary-receipt.v1", "compatibility": "stable-json"},
+    {"command": "context checkpoint", "schemaVersion": "agent-context-checkpoint.v1", "compatibility": "stable-json"},
+    {"command": "context restore", "schemaVersion": "agent-context-continuation.v1", "compatibility": "stable-json"},
+    {"command": "context continuation", "schemaVersion": "agent-context-continuation.v1", "compatibility": "stable-json"},
     {
         "command": "workflow run",
         "schemaVersion": "agent-managed-lifecycle-runner-receipt.v1",

@@ -38,6 +38,36 @@ class ReceiptRedactionTests(unittest.TestCase):
         self.assertEqual(redacted["nested"]["refresh_token"], REDACTED_VALUE)
         self.assertEqual(redacted["path"], REDACTED_VALUE)
 
+    def test_redact_value_redacts_common_posix_roots(self) -> None:
+        paths = [
+            "/Volumes/Work/repo/private.txt",
+            "/root/.ssh/id_rsa",
+            "/opt/data/private.txt",
+            "/etc/passwd",
+            "/var/log/private.log",
+        ]
+
+        redacted, applied = redact_value({"paths": paths})
+
+        self.assertTrue(applied)
+        self.assertEqual(redacted["paths"], [REDACTED_VALUE] * len(paths))
+
+    def test_redact_value_redacts_windows_unc_paths(self) -> None:
+        paths = [
+            r"\\corp-filesvr\eng\secret\roadmap.md",
+            r"\\filesvr/share/secret",
+            r"\\?\C:\Users\operator\secret.txt",
+            r"C:\Users/operator\secret.txt",
+            r"C:\foo/bar\baz",
+            r"\Windows\System32\drivers",
+            r"file:///etc/passwd",
+        ]
+
+        redacted, applied = redact_value({"paths": paths})
+
+        self.assertTrue(applied)
+        self.assertEqual(redacted["paths"], [REDACTED_VALUE] * len(paths))
+
 
 if __name__ == "__main__":
     unittest.main()
