@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.65.0
+  python -m pip install agent-lifecycle-kit==1.66.0
 ```
 
 ## Foundation
@@ -234,6 +234,13 @@ atomic interface for scripts and advanced operators.
 - `agent-lifecycle adapter event-capture-check`: validate declared
   adapter-owned event capture with descriptor, optional capability manifest,
   stream and `agent-adapter-event-stream-receipt.v1`.
+- `agent-lifecycle adapter thread-capability --descriptor <path> --manifest
+  <path> [--receipt <path>]`: inspect one adapter's declared thread operations
+  and project their effective status without contacting a host.
+- `agent-lifecycle adapter thread-qualify --descriptor <path> --receipt
+  <path> [--manifest <path>]`: validate an adapter-owned thread qualification
+  receipt against descriptor and capability-manifest identities. The command
+  returns a non-zero status when a declaration, receipt or binding is invalid.
 - `agent-lifecycle adapter session start/status/resume/promote`: record and
   resume adapter sessions. Plain interactive sessions return
   `WAITING_FOR_TASK`; promoted sessions bind to workflow state and task lineage.

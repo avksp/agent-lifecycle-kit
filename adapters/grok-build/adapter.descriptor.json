@@ -277,5 +277,75 @@
       "Configure host-local model and profile settings outside the portable core.",
       "Keep the adapter EXPERIMENTAL until receipts are accepted."
     ]
+  },
+  "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
+    "adapterId": "grok-build",
+    "host": "grok-build",
+    "descriptorDigest": null,
+    "capabilityManifestDigest": null,
+    "hostRange": {
+      "host": "grok-build",
+      "minimumVersion": "0.2.117",
+      "maximumVersion": "0.2.117",
+      "evidence": [
+        "docs/adapters/evidence/grok-build-live-verified.md",
+        "conformance/adapters/grok-build/grok-acp-probe-positive-fixture.json",
+        "work/release-1-17/evidence/preflight/grok-build-preflight-report.json",
+        "work/release-1-17/evidence/grok-build-containment-receipt.json",
+        "work/release-1-17/evidence/live-host-receipts/grok-build.json",
+        "work/release-1-17/evidence/live-host-conformance-grok-build.json",
+        "work/release-1-17/evidence/live-calibration-receipts/grok-build.json",
+        "work/release-1-17/evidence/live-calibration-verification-grok-build.json",
+        "work/release-1-17/evidence/grok-build/full-lifecycle/final/final-proof-r2.json"
+      ],
+      "testedAt": "2026-07-31",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "fbee9cca9b68ace522089cc0de9c77df0d0c356b"
+    },
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "operations": [
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "send",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "create",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      }
+    ],
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
+    "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
+    "qualificationRequired": true,
+    "productionPromotionClaimed": false,
+    "profileDigest": "d8048183dde808a90438a7b08f0ae407782d0e2cb6d5580ccc6b5c0bf07f6b5c"
   }
 }

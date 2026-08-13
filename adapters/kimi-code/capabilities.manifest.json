@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "2fa73fead24bda188a271374364ca708dddc5442c071c7e05e2fa29e495357cc",
+  "descriptorDigest": "c328fdfe846ccf0a0335f36f0f66aff907e36717d3f1494ad9f0cc0deefa6b77",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,11 +156,11 @@
     "usageReceiptRequired": true
   },
   "planningLaunch": {
-    "profileStatus": "UNSUPPORTED",
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
     "expectedHostVersion": "0.30.0",
-    "qualificationRequired": true,
-    "hostLaunchStarted": false
+    "hostLaunchStarted": false,
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "profileStatus": "UNSUPPORTED",
+    "qualificationRequired": true
   },
   "promotion": {
     "productionPromotionClaimed": false,
@@ -217,5 +217,56 @@
     }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "threadBridge": {
+    "adapterId": "kimi-code",
+    "capabilityManifestDigest": "c669111092fefefc460405bd914a7bf0dc360fe407b2450f1a93f74536c13cc3",
+    "descriptorDigest": "c328fdfe846ccf0a0335f36f0f66aff907e36717d3f1494ad9f0cc0deefa6b77",
+    "evidencePolicy": "not-claimed",
+    "host": "kimi-code",
+    "hostExecutionOwned": true,
+    "hostRange": {},
+    "operations": [
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "create",
+        "qualificationRequired": true,
+        "readOnly": false
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "list",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "read",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "send",
+        "qualificationRequired": true,
+        "readOnly": false
+      }
+    ],
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "productionPromotionClaimed": false,
+    "profileDigest": "45c0337978a74dccf10359b961dfac6fda982a9a8baa8820f69d58b30e0f3e23",
+    "profileId": "thread-bridge",
+    "providerIdentityUsed": false,
+    "qualificationRequired": true,
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "transport": "adapter-owned"
+  },
   "unsupportedOperationPolicy": "fail-closed"
 }

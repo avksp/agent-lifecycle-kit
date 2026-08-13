@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "9c323523b6629c3ed58ded2d270d4a978b484ee5c0e273d51ba5a1601ef24040",
+  "descriptorDigest": "7ac901cc713f9fc34ae502365cded464b21fb324bd39aa41d2007c808d922c48",
   "eventCapture": {
     "categories": [
       "command",
@@ -181,11 +181,11 @@
     "usageReceiptRequired": true
   },
   "planningLaunch": {
-    "profileStatus": "UNSUPPORTED",
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
     "expectedHostVersion": "0.2.118",
-    "qualificationRequired": true,
-    "hostLaunchStarted": false
+    "hostLaunchStarted": false,
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "profileStatus": "UNSUPPORTED",
+    "qualificationRequired": true
   },
   "promotion": {
     "liveTestedHostRange": {
@@ -262,5 +262,75 @@
     }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "threadBridge": {
+    "adapterId": "grok-build",
+    "capabilityManifestDigest": "df25d0dc2365dc8ef4166af238c86ec43e3e732c50f42df3606cb5fd74dce774",
+    "descriptorDigest": "7ac901cc713f9fc34ae502365cded464b21fb324bd39aa41d2007c808d922c48",
+    "evidencePolicy": "not-claimed",
+    "host": "grok-build",
+    "hostExecutionOwned": true,
+    "hostRange": {
+      "evidence": [
+        "docs/adapters/evidence/grok-build-live-verified.md",
+        "conformance/adapters/grok-build/grok-acp-probe-positive-fixture.json",
+        "work/release-1-17/evidence/preflight/grok-build-preflight-report.json",
+        "work/release-1-17/evidence/grok-build-containment-receipt.json",
+        "work/release-1-17/evidence/live-host-receipts/grok-build.json",
+        "work/release-1-17/evidence/live-host-conformance-grok-build.json",
+        "work/release-1-17/evidence/live-calibration-receipts/grok-build.json",
+        "work/release-1-17/evidence/live-calibration-verification-grok-build.json",
+        "work/release-1-17/evidence/grok-build/full-lifecycle/final/final-proof-r2.json"
+      ],
+      "host": "grok-build",
+      "maximumVersion": "0.2.117",
+      "minimumVersion": "0.2.117",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "fbee9cca9b68ace522089cc0de9c77df0d0c356b",
+      "testedAt": "2026-07-31"
+    },
+    "operations": [
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "create",
+        "qualificationRequired": true,
+        "readOnly": false
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "list",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "read",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "send",
+        "qualificationRequired": true,
+        "readOnly": false
+      }
+    ],
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "productionPromotionClaimed": false,
+    "profileDigest": "6e9cc92155df91755e8ac03a66e214edab76d31cf8ac4e73f61e9b892677f87a",
+    "profileId": "thread-bridge",
+    "providerIdentityUsed": false,
+    "qualificationRequired": true,
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "transport": "adapter-owned"
+  },
   "unsupportedOperationPolicy": "fail-closed"
 }

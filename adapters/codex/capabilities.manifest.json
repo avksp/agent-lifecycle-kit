@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "ed810ab6155efa5a55ac61c0470c72b274eaac85cab9e0f3d3220df611e9dd72",
+  "descriptorDigest": "737cab7c6c97d9350669d81a02b0197c4a31a2e60411c5e5fd43b8c042582e36",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,11 +156,11 @@
     "usageReceiptRequired": true
   },
   "planningLaunch": {
-    "profileStatus": "CANDIDATE",
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
     "expectedHostVersion": "0.147.0",
-    "qualificationRequired": true,
-    "hostLaunchStarted": false
+    "hostLaunchStarted": false,
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "profileStatus": "CANDIDATE",
+    "qualificationRequired": true
   },
   "promotion": {
     "liveTestedHostRange": {
@@ -232,5 +232,70 @@
     }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "threadBridge": {
+    "adapterId": "codex",
+    "capabilityManifestDigest": "6d6c8d2bc231cd53cfdb79d6d03ed2e2a1030bc81bd928fb5ef1062e6eca86ab",
+    "descriptorDigest": "737cab7c6c97d9350669d81a02b0197c4a31a2e60411c5e5fd43b8c042582e36",
+    "evidencePolicy": "not-claimed",
+    "host": "codex",
+    "hostExecutionOwned": true,
+    "hostRange": {
+      "evidence": [
+        "docs/adapters/evidence/codex-cli-0.6.0.md",
+        "work/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json",
+        "work/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json",
+        "work/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "codex",
+      "maximumVersion": "0.145.0",
+      "minimumVersion": "0.145.0",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "b01a1793e42f52e20077a7aa26b8e4e25c3bd216",
+      "testedAt": "2026-07-29"
+    },
+    "operations": [
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "create",
+        "qualificationRequired": true,
+        "readOnly": false
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "list",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "read",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "send",
+        "qualificationRequired": true,
+        "readOnly": false
+      }
+    ],
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "productionPromotionClaimed": false,
+    "profileDigest": "86db5a603f42d325c5af278844afd38568039536cf2218c426c652ce04243f22",
+    "profileId": "thread-bridge",
+    "providerIdentityUsed": false,
+    "qualificationRequired": true,
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "transport": "adapter-owned"
+  },
   "unsupportedOperationPolicy": "fail-closed"
 }

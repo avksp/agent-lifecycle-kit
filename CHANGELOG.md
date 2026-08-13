@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.66.0 - 2026-08-13
+
+- Added descriptor-driven thread-bridge capability profiles with explicit
+  `UNSUPPORTED`, `WRAPPER_ONLY` and receipt-qualified `SUPPORTED` states.
+- Added local `adapter thread-capability` and `adapter thread-qualify` checks;
+  qualification validates adapter, host-range, policy and evidence lineage
+  without making model or network calls in the core.
+- Added conservative thread-bridge declarations to all bundled adapters,
+  release validation, and contract tests that reject unsupported positive
+  claims.
+- Added English and Russian documentation for capability inspection,
+  qualification receipts and adapter support boundaries.
+
 ## 1.65.0 - 2026-08-13
 
 - Added an optional, provider-neutral thread bridge with typed capability,

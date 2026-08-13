@@ -359,6 +359,18 @@ redacts artifacts; the adapter owns the native thread operation. Imported
 content remains external context and cannot become plan authority, acceptance
 evidence or final proof.
 
+### Adapter capability qualification
+
+Release 1.66 adds `contracts/thread_bridge_schemas.py` profiles and
+qualification receipts. `host_protocol/capabilities.py` projects each
+operation into the existing `capability_support` values. The descriptor
+status (`UNSUPPORTED`, `WRAPPER_ONLY` or `SUPPORTED`) is separate from the
+project policy mode. `SUPPORTED` is projected only after a receipt matches the
+descriptor digest, the capability-manifest identity, host range, operation set
+and policy version. `cli/adapter.py` exposes
+`adapter thread-capability` and `adapter thread-qualify`; both are local
+inspection commands and do not launch a host.
+
 ### Unified lifecycle start
 
 ```mermaid
@@ -692,6 +704,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 | Bug repair | `adapter task start` plus frozen plan gates | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Defect-shaped recommendation, then plan-required receipts. |
 | External context | `context external-import` and episode retrieval | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Optional context hints with no proof authority. |
 | Thread context | `thread request` and `thread import` | `host_protocol/thread_bridge.py`, `policy/thread_bridge.py`, `context/thread_bridge_context.py`, optional `review_mesh/*` | Bounded thread request, adapter receipt and optional context import. |
+| Thread capability qualification | `adapter thread-capability`, `adapter thread-qualify` | `contracts/thread_bridge_schemas.py`, `host_protocol/capabilities.py`, `host_protocol/validation.py`, `adapters/*` | Descriptor-bound declaration and qualification result; no host call from the core. |
 | Goal status | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Read-only goal and lifecycle progress view. |
 | Execution strategy | `strategy resolve`, then optional `task compile --strategy` | `policy/execution_strategy.py`, `cli/strategy.py`, `compiler/*` | Read-only full strategy and bounded task-packet projection. |
 | Reference comparison | `benchmark evaluate`, `benchmark compare` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Deterministic evaluation or quality-first comparison with no model or host call and no production claim. |

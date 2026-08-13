@@ -76,6 +76,21 @@ descriptors use the `UNSUPPORTED` status for this contract. Qwen Code keeps its
 | [Pi](pi.md) | RPC/JSON plus AGENTS/agentskills projection, bounded JSONL live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | Pi 0.83.0: live conformance, calibration, containment, host-env hygiene and ALK lifecycle proof passed locally on a host-local provider/model binding |
 | [Qwen Code](qwen-code.md) | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Qwen Code 0.21.0: live conformance, calibration and ALK lifecycle proof passed on a host-local provider/model binding |
 
+## Optional thread bridge support
+
+Thread operations use a separate adapter-owned qualification contract. The
+bundled descriptors explicitly declare `UNSUPPORTED` for `read`, `list`,
+`send` and `create` for all twelve adapters. This is a capability status, not a
+restriction on ordinary ALK lifecycle work. An adapter-specific integration
+may provide a `WRAPPER_ONLY` or `SUPPORTED` operation after an exact receipt
+is reviewed.
+
+The declaration and receipt can be inspected with
+`agent-lifecycle adapter thread-capability` and
+`agent-lifecycle adapter thread-qualify`. A declaration alone never changes
+the project `threadBridge` policy or enables an operation. See [Optional thread
+bridge](../reference/optional-thread-bridge.md) for the complete flow.
+
 ## Event capture support
 
 Current adapter descriptors and capability manifests declare

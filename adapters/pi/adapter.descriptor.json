@@ -266,5 +266,77 @@
       "Configure host-local model and profile settings outside the portable core.",
       "Keep the adapter EXPERIMENTAL until receipts are accepted."
     ]
+  },
+  "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
+    "adapterId": "pi",
+    "host": "pi",
+    "descriptorDigest": null,
+    "capabilityManifestDigest": null,
+    "hostRange": {
+      "host": "pi",
+      "minimumVersion": "0.83.0",
+      "maximumVersion": "0.83.0",
+      "evidence": [
+        "docs/adapters/evidence/pi-live-verified.md",
+        "work/release-1-19/evidence/pi-install-probe.json",
+        "work/release-1-19/evidence/preflight/pi-preflight-report-live-ready.json",
+        "work/release-1-19/evidence/pi-containment-receipt-live-ready.json",
+        "work/release-1-19/evidence/live-host-receipts/pi.json",
+        "work/release-1-19/evidence/live-host-conformance-pi.json",
+        "work/release-1-19/evidence/live-calibration-receipts/pi.json",
+        "work/release-1-19/evidence/live-calibration-verification-pi.json",
+        "work/release-1-19/evidence/host-env-hygiene-pi-harness-reports.json",
+        "work/release-1-19/evidence/host-env-hygiene-pi-all-scanned.json",
+        "work/release-1-19/evidence/pi/full-lifecycle/final/final-proof.json"
+      ],
+      "testedAt": "2026-08-01",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "75317878358a3dffa4b503cdb8bd8fff40de770b"
+    },
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "operations": [
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "send",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "create",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      }
+    ],
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
+    "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
+    "qualificationRequired": true,
+    "productionPromotionClaimed": false,
+    "profileDigest": "1ff4f293a777eb2e0096171439003c790e500d11f0e8bee657fa285898576c36"
   }
 }
