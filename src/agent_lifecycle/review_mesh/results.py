@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.thread_bridge_schemas import validate_thread_context_import
 from agent_lifecycle.review_mesh.contracts import (
     build_review_mesh_result,
     require_review_mesh_result_pass,
@@ -58,6 +59,32 @@ def import_review_mesh_result(
     normalized = {**body, "resultDigest": canonical_digest(body)}
     require_review_mesh_result_pass(validate_review_mesh_result(normalized, profile=profile))
     return normalized
+
+
+def build_thread_context_review_input(imported_context: dict[str, Any]) -> dict[str, Any]:
+    """Project thread context into a Review Mesh input without elevating authority."""
+
+    validation = validate_thread_context_import(imported_context)
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "review-mesh-thread-context-invalid",
+            "thread context cannot be used for review",
+            {"validation": validation},
+        )
+    source = imported_context.get("source") if isinstance(imported_context.get("source"), dict) else {}
+    body = {
+        "schemaVersion": "agent-review-mesh-thread-context-input.v1",
+        "sourceRole": "optional-thread-context",
+        "sourceId": source.get("sourceId", "redacted"),
+        "importDigest": imported_context["importDigest"],
+        "content": imported_context.get("content", {}),
+        "sourceOfTruth": False,
+        "proof": False,
+        "promptAuthorityGranted": False,
+        "toolApprovalGranted": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "inputDigest": canonical_digest(body)}
 
 
 def _sanitize_payload(value: Any, *, allow_local_evidence_refs: bool) -> tuple[Any, dict[str, Any]]:

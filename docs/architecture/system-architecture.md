@@ -283,6 +283,7 @@ flowchart LR
 | Adapter sessions | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`, local profile validation and explicit frozen host launch. |
 | Project workflow profile | `project/profile.py`, `project/merge.py`, `project/guidance.py`, `cli/project.py` | `project profile init/check` and `start` when a local profile is discovered or selected explicitly. |
 | Host protocol | `host_protocol/*` | Adapter validation, inspection, event capture and capability checks. |
+| Optional thread bridge | `host_protocol/thread_bridge.py`, `policy/thread_bridge.py`, `context/thread_bridge_context.py` | Prepare and validate host-thread requests, import bounded context and expose it to retrieval or Review Mesh. Native thread calls remain adapter-owned. |
 | Audit | `audit/*` | Ownership checks, review verdicts, implementation audit, proof integrity. |
 | Review coordination | `review_mesh/*` | Optional recommendation, operator templates, reviewer packet preparation, assignments, result import, synthesis and quorum. |
 | Reporting | `reporting/*` | Read-only status, event feed, progress, change summary and progress bridge. |
@@ -327,6 +328,36 @@ Pattern: command dispatcher plus functional core. `cli/dispatch.py` selects the
 unified start facade or one of five command-group handlers:
 adapters/readiness, contracts/evidence, lifecycle, observability or planning.
 CLI modules stay thin; domain services own behavior and tests.
+
+### Optional thread bridge
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant CLI as cli/parsers.py + cli/dispatch.py
+  participant Handler as cli/dispatch_observability.py
+  participant Bridge as host_protocol/thread_bridge.py
+  participant Adapter as Host adapter
+  participant Context as context/thread_bridge_context.py
+  participant Review as review_mesh/*
+
+  User->>CLI: thread request --operation read|list|send|create
+  CLI->>Handler: route the thread command
+  Handler->>Bridge: prepare_thread_request()
+  Bridge-->>User: agent-thread-operation-request.v1
+  User->>Adapter: pass the request to the qualified host integration
+  Adapter-->>User: agent-thread-operation-receipt.v1
+  User->>CLI: thread import --request --receipt
+  CLI->>Bridge: validate request and receipt lineage
+  Bridge->>Context: import bounded redacted context
+  Context-->>Review: optional-thread-context source role
+  Context-->>User: agent-thread-context-import.v1
+```
+
+The bridge is an explicit transport path. The core prepares, validates and
+redacts artifacts; the adapter owns the native thread operation. Imported
+content remains external context and cannot become plan authority, acceptance
+evidence or final proof.
 
 ### Unified lifecycle start
 
@@ -660,6 +691,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 | Code review | Git/host CLI plus `adapter task start` | Git outside ALK, then `adapter_sessions/task_intake.py` and optional `review_mesh/*` | Review packet intake and optional quorum. |
 | Bug repair | `adapter task start` plus frozen plan gates | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Defect-shaped recommendation, then plan-required receipts. |
 | External context | `context external-import` and episode retrieval | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Optional context hints with no proof authority. |
+| Thread context | `thread request` and `thread import` | `host_protocol/thread_bridge.py`, `policy/thread_bridge.py`, `context/thread_bridge_context.py`, optional `review_mesh/*` | Bounded thread request, adapter receipt and optional context import. |
 | Goal status | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Read-only goal and lifecycle progress view. |
 | Execution strategy | `strategy resolve`, then optional `task compile --strategy` | `policy/execution_strategy.py`, `cli/strategy.py`, `compiler/*` | Read-only full strategy and bounded task-packet projection. |
 | Reference comparison | `benchmark evaluate`, `benchmark compare` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Deterministic evaluation or quality-first comparison with no model or host call and no production claim. |

@@ -27,6 +27,8 @@ __all__ = [
     "validate_context_checkpoint",
     "validate_context_profile",
     "write_context_checkpoint",
+    "import_thread_context",
+    "build_thread_episode_context",
 ]
 
 
@@ -35,4 +37,11 @@ def __getattr__(name: str):
         from agent_lifecycle.context.episode_retrieval import build_episode_context
 
         return build_episode_context
+    if name in {"import_thread_context", "build_thread_episode_context"}:
+        from agent_lifecycle.context.thread_bridge_context import build_thread_episode_context, import_thread_context
+
+        return {
+            "import_thread_context": import_thread_context,
+            "build_thread_episode_context": build_thread_episode_context,
+        }[name]
     raise AttributeError(name)

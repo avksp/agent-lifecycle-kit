@@ -11,6 +11,11 @@ from agent_lifecycle.context.checkpoint_store import restore_context_checkpoint,
 from agent_lifecycle.context.checkpoints import build_context_checkpoint
 from agent_lifecycle.context.external_memory import build_episode_retrieval_with_external_context, import_external_memory_context
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
+from agent_lifecycle.host_protocol.thread_bridge import (
+    prepare_thread_context_import,
+    prepare_thread_request,
+    validate_thread_exchange,
+)
 from agent_lifecycle.goal import build_goal_progress_view, build_objective_snapshot, update_goal_record, validate_goal_record
 from agent_lifecycle.metrics import (
     build_lifecycle_cost_summary,
@@ -60,7 +65,58 @@ def dispatch_observability(args: argparse.Namespace) -> dict[str, Any] | str:
         return _dispatch_model(args)
     if args.command == "metrics":
         return _dispatch_metrics(args)
+    if args.command == "thread":
+        return _dispatch_thread(args)
     raise LifecycleError("command-not-implemented", "observability command is not implemented")
+
+
+def _dispatch_thread(args: argparse.Namespace) -> dict[str, Any]:
+    if args.thread_command == "request":
+        operation_id = args.operation_id or f"thread-{args.operation}"
+        scope = args.scope or ("project" if args.operation in {"list", "create"} else "explicit-target")
+        target: dict[str, Any] = {"scope": scope}
+        if args.target_hash:
+            target["targetHash"] = args.target_hash
+        payload = {"text": args.text} if args.text is not None else {}
+        request = prepare_thread_request(
+            operation=args.operation,
+            operation_id=operation_id,
+            target=target,
+            payload=payload,
+            idempotency_key=args.idempotency_key,
+            limits={"maxImportedBytes": args.max_bytes, "maxImportedTokens": args.max_tokens},
+            phase=args.phase,
+        )
+        write_json_create(Path(args.out), request)
+        return request
+    if args.thread_command == "import":
+        request = read_json_object(Path(args.request), label="thread operation request")
+        receipt = read_json_object(Path(args.receipt), label="thread operation receipt")
+        validation = validate_thread_exchange(request, receipt)
+        if validation["status"] != "PASS":
+            raise LifecycleError(
+                "thread-exchange-invalid",
+                "thread request and receipt lineage validation failed",
+                {"validation": validation},
+            )
+        limits = request.get("limits") if isinstance(request.get("limits"), dict) else {}
+        imported = prepare_thread_context_import(
+            operation_id=request["operationId"],
+            source_receipt_digest=receipt["receiptDigest"],
+            content=receipt.get("result", {}),
+            source={
+                "kind": "host-thread",
+                "sourceId": args.source_id or "redacted",
+                "citation": args.citation or "operator-provided",
+                "operation": request["operation"],
+                "status": receipt["status"],
+            },
+            max_imported_bytes=int(limits.get("maxImportedBytes", 32768)),
+            max_imported_tokens=int(limits.get("maxImportedTokens", 2048)),
+        )
+        write_json_create(Path(args.out), imported)
+        return imported
+    raise LifecycleError("command-not-implemented", "thread command is not implemented")
 
 
 def _dispatch_report(args: argparse.Namespace) -> dict[str, Any] | str:

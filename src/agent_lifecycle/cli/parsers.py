@@ -38,6 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_workflow_parser(subparsers)
     _add_audit_parser(subparsers)
     _add_context_parser(subparsers)
+    _add_thread_parser(subparsers)
     _add_goal_parser(subparsers)
     add_followup_parser(subparsers)
     add_worktree_parser(subparsers)
@@ -629,6 +630,28 @@ def _add_context_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     restore.add_argument("--session")
     restore.add_argument("--target-tokens", type=int, default=2048)
     restore.add_argument("--out")
+
+
+def _add_thread_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    thread = subparsers.add_parser("thread", help="prepare optional host-thread bridge artifacts")
+    thread_sub = thread.add_subparsers(dest="thread_command", required=True)
+    request = thread_sub.add_parser("request", help="prepare a bounded thread operation request")
+    request.add_argument("--operation", choices=["read", "list", "send", "create"], required=True)
+    request.add_argument("--operation-id")
+    request.add_argument("--scope", choices=["explicit-target", "project", "workflow"])
+    request.add_argument("--target-hash")
+    request.add_argument("--text")
+    request.add_argument("--idempotency-key")
+    request.add_argument("--phase")
+    request.add_argument("--max-bytes", type=int, default=32768)
+    request.add_argument("--max-tokens", type=int, default=2048)
+    request.add_argument("--out", required=True)
+    import_result = thread_sub.add_parser("import", help="validate a host receipt and import bounded context")
+    import_result.add_argument("--request", required=True)
+    import_result.add_argument("--receipt", required=True)
+    import_result.add_argument("--source-id")
+    import_result.add_argument("--citation")
+    import_result.add_argument("--out", required=True)
 
 
 def _add_goal_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

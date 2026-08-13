@@ -75,6 +75,8 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "adapter session resume", "schemaVersion": "agent-adapter-session-resume-receipt.v1", "compatibility": "stable-json"},
     {"command": "adapter run", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
     {"command": "adapter task start", "schemaVersion": "agent-adapter-task-start-receipt.v1", "compatibility": "stable-json"},
+    {"command": "thread request", "schemaVersion": "agent-thread-operation-request.v1", "compatibility": "stable-json"},
+    {"command": "thread import", "schemaVersion": "agent-thread-context-import.v1", "compatibility": "stable-json"},
     {"command": "project profile check", "schemaVersion": "agent-effective-project-workflow-profile.v1", "compatibility": "stable-json"},
     {"command": "start --project-profile", "schemaVersion": "agent-guided-action-receipt.v1", "compatibility": "stable-json"},
     {"command": "adapter launch-profile", "schemaVersion": "agent-qualified-launch-profile-generation.v1", "compatibility": "stable-json"},
@@ -112,6 +114,11 @@ REQUIRED_CORE_SCHEMAS: tuple[str, ...] = (
     "agent-adapter-event.v1",
     "agent-review-verdict.v1",
     "agent-task-plan-compatibility-receipt.v1",
+    "agent-thread-capability.v1",
+    "agent-thread-operation-request.v1",
+    "agent-thread-operation-receipt.v1",
+    "agent-thread-context-import.v1",
+    "agent-thread-operation-validation.v1",
 )
 
 

@@ -37,6 +37,7 @@ from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SC
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
 from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
+from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 
@@ -383,6 +384,7 @@ _SCHEMA_GROUPS = (
     IMPORT_DIALECT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,
     TASK_TEMPLATE_SCHEMAS,
+    THREAD_BRIDGE_SCHEMAS,
     RUNNER_SCHEMAS,
     RUNNER_WORKTREE_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,

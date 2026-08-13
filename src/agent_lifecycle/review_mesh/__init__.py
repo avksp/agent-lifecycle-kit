@@ -22,6 +22,7 @@ from agent_lifecycle.review_mesh.assignments import (
     source_from_handoff,
     source_from_intake,
     source_from_manifest,
+    source_from_thread_context,
 )
 from agent_lifecycle.review_mesh.quorum import build_quorum_from_synthesis
 from agent_lifecycle.review_mesh.recommendation import (
@@ -41,7 +42,7 @@ from agent_lifecycle.review_mesh.operator_templates import (
     require_review_mesh_operator_template_pass,
     validate_review_mesh_operator_template,
 )
-from agent_lifecycle.review_mesh.results import import_review_mesh_result
+from agent_lifecycle.review_mesh.results import build_thread_context_review_input, import_review_mesh_result
 from agent_lifecycle.review_mesh.synthesis import synthesize_review_mesh_results
 
 __all__ = [
@@ -57,6 +58,7 @@ __all__ = [
     "build_review_mesh_recommendation",
     "get_review_mesh_operator_template",
     "import_review_mesh_result",
+    "build_thread_context_review_input",
     "list_review_mesh_operator_templates",
     "parse_reviewer_spec",
     "prepare_review_mesh_operator_packets",
@@ -72,6 +74,7 @@ __all__ = [
     "source_from_handoff",
     "source_from_intake",
     "source_from_manifest",
+    "source_from_thread_context",
     "synthesize_review_mesh_results",
     "validate_review_mesh_assignment",
     "validate_review_mesh_profile",
