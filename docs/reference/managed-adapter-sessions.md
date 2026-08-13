@@ -69,9 +69,9 @@ An operator-local frozen implementation launch adds `--launch --host-launch-prof
 command. See [Local host launch](local-host-launch.md) for the profile and the
 complete command. Raw input never reaches this implementation route.
 
-For the exact Codex, Claude Code and OpenCode versions qualified by ALK, use
-the generated profile and mandatory version receipt from [Qualified host
-launch](qualified-host-launch.md).
+For the exact Codex, Claude Code and OpenCode versions verified by ALK, use
+the generated profile and mandatory version receipt from [Frozen-task launch
+through a verified profile](qualified-host-launch.md).
 
 `start` emits `agent-lifecycle-start-receipt.v1`. Its nested delegate summary
 contains only stable status, advisory and receipt-digest fields; it excludes
@@ -113,7 +113,7 @@ profiles. It is descriptive data, not generic process-execution authority:
 
 | Status | Meaning |
 | --- | --- |
-| `SUPPORTED` | The descriptor may supply argv templates for a separately qualified local route. The generic library and CLI route do not execute them. |
+| `SUPPORTED` | The descriptor may supply argv templates for a separately verified local route. The generic library and CLI route do not execute them. |
 | `WRAPPER_ONLY` | A wrapper or operator flow can use ALK managed sessions, but native argv launch is not claimed. |
 | `UNSUPPORTED` | No managed launch route is declared. |
 

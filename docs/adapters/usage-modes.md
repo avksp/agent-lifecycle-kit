@@ -34,8 +34,8 @@ agent-lifecycle start --adapter <adapter-id> --text "Review the cache design"
 ```
 
 Replace `<adapter-id>` with an id from the linked table below. Raw text or
-Markdown creates a review-required draft receipt. Add an explicit, qualified
-`--launch` route when the operator wants one bound host process.
+Markdown creates a review-required draft receipt. Add an explicit `--launch`
+route through a verified profile when the operator wants one bound host process.
 
 This route is preferable for scripts, reproducible evidence, CI preparation
 and hosts without a shipped plugin. An integrated host may call the same
@@ -67,7 +67,7 @@ plan is a preview: it does not execute installation commands.
 
 | Property | Inside the host CLI | `agent-lifecycle` command |
 | --- | --- | --- |
-| Starts a model | The host does so under its own configuration. | A qualified `--launch` route starts one bound host process. |
+| Starts a model | The host does so under its own configuration. | A `--launch` route through a verified profile starts one bound host process. |
 | Selects a model/provider | The host or operator. | ALK records the neutral route and accepted host evidence. |
 | Reads the task | The host reads the prompt or referenced file. | ALK reads `--text` or `--file` and creates a bounded receipt. |
 | Proves the lifecycle | The host session records accepted ALK artifacts. | Required state transitions, reviews, audits and receipts form the proof. |
@@ -80,9 +80,9 @@ plan is a preview: it does not execute installation commands.
 request, risk bindings, an exact-version local profile and a matching preflight
 receipt.
 
-Use the support stated in [Qualified frozen-task host
-launch](../reference/qualified-host-launch.md) when accepted launch evidence is
-required. The guide describes the profile, preflight and receipt sequence.
+Use the support stated in [Frozen-task launch through a verified
+profile](../reference/qualified-host-launch.md) when accepted launch evidence
+is required. The guide describes the profile, preflight and receipt sequence.
 
 See also [Adapter installation](install.md), [Adapter support
 matrix](support-matrix.md) and [Planning-only adapter

@@ -1,7 +1,7 @@
 # Planning-only adapter launch
 
 ALK can accept task text or Markdown through one public command and, when an
-exact-version adapter profile is qualified, start one external CLI in a
+exact-version adapter profile is verified, start one external CLI in a
 planning-only process:
 
 ```bash
@@ -17,8 +17,8 @@ start a host process. Raw input in `--mode implement` is always rejected.
 
 ## Current support truth
 
-Planning launch is a separate claim from the adapter support level and from qualified
-launch of a frozen implementation task.
+Planning launch is a separate claim from the adapter support level and from
+frozen-task launch through a verified profile.
 
 | Adapter | Exact profile version | Profile status | Planning launch status |
 | --- | --- | --- | --- |
@@ -73,7 +73,7 @@ implicitly.
 
 ## Security and lifecycle boundary
 
-The qualified planning route:
+The verified planning route:
 
 - passes bounded task data through standard input, never argv;
 - uses an exact environment allowlist and `shell=False`;
@@ -105,6 +105,6 @@ agent-lifecycle start --adapter codex --resume <planning-session-id>
 
 A successful planning result stops at review. Implementation requires a
 separately reviewed `FROZEN` manifest, matching lock, compiled task identity,
-risk profile and a new qualified `managedTask` process. See [Qualified host
-launch](qualified-host-launch.md) for that distinct route and [Managed adapter
+risk profile and a new verified `managedTask` process. See [Frozen-task launch
+through a verified profile](qualified-host-launch.md) for that distinct route and [Managed adapter
 sessions](managed-adapter-sessions.md) for the lower-level session commands.

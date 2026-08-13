@@ -10,8 +10,8 @@ This page is the adapter-specific reference.
 
 Choose the route that matches the host workflow. See [Using ALK with an
 adapter](usage-modes.md) for the difference between loading ALK skills inside a
-host, running `agent-lifecycle` from the project terminal and explicitly
-launching a qualified external process.
+  host, running `agent-lifecycle` from the project terminal and explicitly
+  launching through a verified profile.
 
 Use the dry-run planner first:
 

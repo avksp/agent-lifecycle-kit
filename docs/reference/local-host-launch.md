@@ -13,8 +13,8 @@ Its public schema id is `agent-local-host-launch-profile.v1`.
 ## Create a local profile
 
 For Codex `0.147.0`, Claude Code `2.1.226` and OpenCode `1.18.15`, prefer the
-shipped version-bound builder described in [Qualified host
-launch](qualified-host-launch.md). The manual format below remains available
+shipped version-bound builder described in [Frozen-task launch through a verified
+profile](qualified-host-launch.md). The manual format below remains available
 for an operator-owned wrapper and does not carry a host qualification claim.
 
 Create `.alk/host-launch/codex.json`:
@@ -81,7 +81,7 @@ The receipt records `processCalls: 1`, the profile digest, exit status and
 redacted output. Missing executables, non-zero exits and timeouts return a
 structured failure.
 
-For a shipped qualified profile, preflight also writes
+For a shipped verified profile, preflight also writes
 `agent-host-launch-qualification-receipt.v1`. A later managed launch requires
 that receipt to match the exact profile digest and CLI version.
 

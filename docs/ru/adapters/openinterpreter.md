@@ -52,6 +52,6 @@ agent-lifecycle host-launch preflight --profile .alk/host-launch/openinterpreter
 agent-lifecycle start --adapter openinterpreter --file task.md
 ```
 
-Команда создаёт входные артефакты ALK. Для работы хоста используйте
-квалифицированный маршрут запуска. Подробнее: [использование ALK с
+Команда создаёт входные артефакты ALK. Для работы хоста используйте маршрут
+запуска через проверенный профиль. Подробнее: [использование ALK с
 адаптером](usage-modes.md).

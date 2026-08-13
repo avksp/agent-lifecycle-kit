@@ -264,8 +264,8 @@ agent-lifecycle host-launch preflight \
 Встроенные дескрипторы сохраняют состояние `WRAPPER_ONLY`. Дескриптор,
 установленный плагин или обычный текст задачи не дают полномочий на создание
 процесса. Подробнее: [локальный запуск внешней
-команды](../reference/local-host-launch.md) и [квалифицированный
-запуск](../reference/qualified-host-launch.md).
+команды](../reference/local-host-launch.md) и [запуск зафиксированной задачи
+через проверенный профиль](../reference/qualified-host-launch.md).
 
 ## Проверка несколькими моделями ИИ
 

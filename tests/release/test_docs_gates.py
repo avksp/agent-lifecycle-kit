@@ -293,8 +293,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                 self.assertIn(version, russian_launch)
 
         self.assertEqual(len(descriptors), 12)
-        self.assertIn("## Qualified profiles", (ROOT / "docs/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
-        self.assertIn("## Квалифицированные профили", (ROOT / "docs/ru/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
+        self.assertIn("## Verified profiles", (ROOT / "docs/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
+        self.assertIn("## Проверенные профили", (ROOT / "docs/ru/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
 
     def test_task_flow_docs_define_completion_and_cost_boundaries(self) -> None:
         english = (ROOT / "docs/guides/how-alk-works.md").read_text(encoding="utf-8")
@@ -924,8 +924,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Запуск из терминала проекта.\n"
         "agent-workflow-orchestrator.\n"
         "agent-lifecycle start --adapter <adapter-id> --file task.md.\n"
-        "Add an explicit, qualified `--launch` route.\n"
-        "Для одного связанного процесса хоста добавьте явный квалифицированный маршрут `--launch`.\n"
+        "Add an explicit `--launch` route through a verified profile.\n"
+        "Для одного связанного процесса хоста добавьте явный маршрут `--launch` через проверенный профиль.\n"
         "Installing or mentioning a skill does not prove.\n"
         "сама по себе не доказывает.\n"
         "`PLANNING_ONLY_QUALIFIED`.\n"
@@ -1448,7 +1448,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Managed session support is a separate dimension of the adapter support level.\n"
         "`WRAPPER_ONLY`.\n"
         "agent-lifecycle adapter run.\n"
-        "Qualified local profiles.\n"
+        "Verified local profiles.\n"
         "Plugin installation.\n",
     )
     _write_text(
@@ -1456,7 +1456,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Поддержка управляемых сессий является отдельным измерением уровня поддержки.\n"
         "`WRAPPER_ONLY`.\n"
         "agent-lifecycle adapter run.\n"
-        "Квалифицированные локальные профили.\n"
+        "Проверенные локальные профили.\n"
         "подтверждением жизненного цикла.\n",
     )
     for host in (
