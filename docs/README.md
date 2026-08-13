@@ -28,7 +28,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [System architecture](architecture/system-architecture.md)
 - [Project comparison](reference/project-comparison.md)
 - [Planning-only adapter launch](reference/planning-only-launch.md)
-- [Qualified host launch](reference/qualified-host-launch.md)
+- [Frozen-task launch through a verified profile](reference/qualified-host-launch.md)
 
 ## English documentation
 

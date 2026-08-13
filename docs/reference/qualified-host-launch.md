@@ -1,27 +1,32 @@
-# Qualified frozen-task host launch
+# Frozen-task launch through a verified profile
 
-ALK provides an opt-in launch bridge for a frozen task. Provider and model
-selection stay in the host configuration, while ALK supplies the exact profile,
-task binding and lifecycle evidence.
+ALK provides an opt-in route for launching a frozen task through a verified
+external-tool profile. The profile binds the exact command version, process
+parameters, profile digest and preflight receipt to the task and lifecycle
+evidence. Provider and model selection stay in the host configuration.
+
+In technical schemas and receipts, this state is called `qualified`. For
+operators, it means that the profile has been verified; it is not a separate
+provider or model selection.
 
 This page covers implementation of an already reviewed frozen task. Planning
 uses the separate [Planning-only adapter launch](planning-only-launch.md)
 workflow.
 
-| Adapter | Qualified CLI version | Generated executable |
+| Adapter | Verified CLI version | Generated executable |
 | --- | --- | --- |
 | [Codex](../adapters/codex.md) | `0.147.0` | `codex` |
 | [Claude Code](../adapters/claude.md) | `2.1.226` | `claude` |
 | [OpenCode](../adapters/opencode.md) | `1.18.15` | `opencode` |
 
 The adapter descriptors remain `managedLaunch.status: WRAPPER_ONLY`. The
-qualification applies only to the exact local profile and installed version.
+verification applies only to the exact local profile and installed version.
 
-## Qualified profiles
+## Verified profiles
 
 All twelve bundled adapters have an exact-version local profile declaration,
 so `adapter launch-profile`, profile inspection and bounded version preflight
-can be exercised for each one. That declaration is broader than qualified
+can be exercised for each one. That declaration is broader than verified
 frozen-task execution.
 
 The three adapters above have dedicated frozen-task continuation profiles,
@@ -43,7 +48,7 @@ profiles are listed below with their current planning status:
 For every row, `qualifiedLaunch.publicSupportClaimed` and
 `productionPromotionClaimed` are recorded as `false`. A successful `--version`
 preflight confirms profile and version identity; accepted implementation
-evidence uses the complete qualification sequence for the selected adapter.
+evidence uses the complete verification sequence for the selected adapter.
 
 ## Create the local profile
 
@@ -89,7 +94,7 @@ creation.
 
 ## Start the frozen task
 
-Use the qualified profile only with the complete frozen `implement` request:
+Use the verified profile only with the complete frozen `implement` request:
 
 ```bash
 agent-lifecycle start \

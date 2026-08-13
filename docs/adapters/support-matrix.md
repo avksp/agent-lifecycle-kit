@@ -31,7 +31,7 @@ established by the evidence listed in each row.
 
 Managed session support is documented separately from the support level. Current bundled
 adapters declare `managedLaunch.status: WRAPPER_ONLY`: lifecycle proof is bound
-through managed commands or wrappers. Qualified local profiles provide the
+through managed commands or wrappers. Verified local profiles provide the
 managed launch route for accepted frozen-task evidence. See [Managed adapter
 session support](managed-session-support.md).
 
@@ -42,7 +42,7 @@ local receipt. See [Local host launch](../reference/local-host-launch.md).
 Exact-version local profile declarations exist for all twelve bundled
 adapters. They permit deterministic profile generation and version preflight.
 Every profile uses a matching local receipt and preserves `WRAPPER_ONLY`; see
-[Qualified host launch](../reference/qualified-host-launch.md).
+[Frozen-task launch through a verified profile](../reference/qualified-host-launch.md).
 
 Planning-only launch has a separate status. All twelve adapters declare an
 exact-version result. Codex `0.147.0`, Claude Code `2.1.226`, Gemini CLI

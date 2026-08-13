@@ -71,5 +71,5 @@ Qwen Code configuration can expose the shared skills:
 agent-lifecycle start --adapter qwen-code --file task.md
 ```
 
-The command creates ALK intake. For host execution, use the qualified launch
-route. See [Using ALK with an adapter](usage-modes.md).
+The command creates ALK intake. For host execution, use the launch route through
+a verified profile. See [Using ALK with an adapter](usage-modes.md).

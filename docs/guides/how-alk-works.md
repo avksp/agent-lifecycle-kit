@@ -252,8 +252,8 @@ agent-lifecycle host-launch preflight \
 
 Bundled descriptors remain `WRAPPER_ONLY`. A descriptor, plugin installation
 or plain task text is not process-launch authority. See [Local host
-launch](../reference/local-host-launch.md) and [Qualified host
-launch](../reference/qualified-host-launch.md).
+launch](../reference/local-host-launch.md) and [Frozen-task launch through a
+verified profile](../reference/qualified-host-launch.md).
 
 ## Review with several AI models
 

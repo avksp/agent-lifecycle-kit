@@ -72,6 +72,6 @@ For the command route:
 agent-lifecycle start --adapter cursor --file task.md
 ```
 
-The command creates review-gated intake. Add the qualified launch profile when
+The command creates review-gated intake. Add the verified launch profile when
 the task requires a host process.
 See [Using ALK with an adapter](usage-modes.md).

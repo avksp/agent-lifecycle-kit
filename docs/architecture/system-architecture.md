@@ -345,7 +345,7 @@ sequenceDiagram
   CLI->>Handler: route the thread command
   Handler->>Bridge: prepare_thread_request()
   Bridge-->>User: agent-thread-operation-request.v1
-  User->>Adapter: pass the request to the qualified host integration
+  User->>Adapter: pass the request to the verified host profile
   Adapter-->>User: agent-thread-operation-receipt.v1
   User->>CLI: thread import --request --receipt
   CLI->>Bridge: validate request and receipt lineage
@@ -385,7 +385,7 @@ sequenceDiagram
     Start->>Intake: start_adapter_task()
     Intake-->>Start: reviewed draft receipt
     Start->>Strategy: deferred summary, no route guessed
-    opt explicit qualified planning launch
+    opt explicit planning launch through a verified profile
       Start->>PlanningStore: create digest-only session
       Start->>LocalLaunch: launch_from_local_profile(planningOnly, stdin)
       LocalLaunch->>Process: one bounded read-only host process
@@ -422,7 +422,7 @@ and lock before `unified_start.py` builds the guided receipt. The profile digest
 is carried into the strategy projection; the base start receipt remains the
 same nested lifecycle result, wrapped as `agent-guided-action-receipt.v1`.
 Raw task modes cannot call managed implementation. They may reach only a
-separately qualified `planningOnly` profile through explicit `--launch`, and
+separately verified `planningOnly` profile through explicit `--launch`, and
 that process must end at review or block with unchanged repository identity.
 Frozen delegation requires explicit `implement` and complete bindings. Resume
 accepts only stored ALK state and never interprets a native host conversation

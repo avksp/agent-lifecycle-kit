@@ -75,5 +75,5 @@ agent-lifecycle start --adapter gemini-cli --file task.md
 ```
 
 Команда создаёт входные артефакты ALK. Для запуска Gemini CLI добавьте
-квалифицированный профиль и `--launch`. Подробнее: [использование ALK с
+проверенный профиль и `--launch`. Подробнее: [использование ALK с
 адаптером](usage-modes.md).

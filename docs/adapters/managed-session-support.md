@@ -12,7 +12,7 @@ The main [adapter support matrix](support-matrix.md) surfaces the current
 | Codex | Supported | `WRAPPER_ONLY` | Use `adapter task start`, `adapter run` or a host wrapper for lifecycle proof. |
 | Claude Code | Supported | `WRAPPER_ONLY` | Native launch remains host-owned. |
 | Cursor | Supported | `WRAPPER_ONLY` | Lifecycle proof uses the managed ALK route. |
-| Gemini CLI | Supported | `WRAPPER_ONLY` | Use the qualified ALK route for a bound process. |
+| Gemini CLI | Supported | `WRAPPER_ONLY` | Use the verified ALK route for a bound process. |
 | Goose | Supported | `WRAPPER_ONLY` | ACP remains separately probe-gated. |
 | Grok Build | Supported | `WRAPPER_ONLY` | Native provider/model handling stays host-local. |
 | Hermes | Supported | `WRAPPER_ONLY` | Use managed ALK commands for lifecycle proof. |
@@ -46,6 +46,6 @@ agent-lifecycle adapter run \
 ```
 
 `WRAPPER_ONLY` means ALK binds a session to workflow proof and renders progress
-from ALK state through managed commands or a reviewed wrapper. Qualified local
+from ALK state through managed commands or a reviewed wrapper. Verified local
 profiles describe the process route for adapters with accepted launch evidence.
 Plugin installation and lifecycle proof are separate records.

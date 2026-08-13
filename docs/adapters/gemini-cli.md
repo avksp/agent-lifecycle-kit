@@ -70,6 +70,6 @@ session.
 agent-lifecycle start --adapter gemini-cli --file task.md
 ```
 
-The command route is the canonical terminal entrypoint. Add a qualified launch
+The command route is the canonical terminal entrypoint. Add a verified launch
 profile when the task requires a host process. See [Using ALK with an
 adapter](usage-modes.md).
