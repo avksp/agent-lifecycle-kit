@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.66.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.67.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -66,7 +66,6 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 
 ## Feature areas
 ### Plan and execute
-
 - Reviewed specification and plan flow before implementation starts.
 - Deterministic task packets for splitting work across agents.
 - Execution records capture completion checks, blockers, retries, and final
@@ -75,7 +74,6 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
   merge-conflict repair, and release-readiness work.
 
 ### Quality and proof
-
 - Implementation audits compare results with the frozen plan and acceptance
   evidence.
 - For explicit bug and regression repair, the optional Bug Forensics profile
@@ -91,7 +89,6 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
   quorum, while the operator or host wrapper starts each model. The bundled reference-task suite measures deterministic quality, false acceptances, retries, elapsed time, and confidence-labeled token usage.
 
 ### Routing and resource control
-
 - Compact context profiles, small-model packets, objective snapshots, and
   local quality-cost learning help choose the lightest safe mode.
 - Phase resource measurements reuse the usage export envelope for tokens,
@@ -117,6 +114,9 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
   and display lifecycle state while support levels remain evidence-driven.
 - Import mappers and issue-to-spec intake normalize external workflows, agent
   dialects, and tickets into reviewable draft context.
+- The portable Agent Plugins package exposes the maintained ALK skills tree to
+  compatible clients; its package format and lifecycle boundary are described
+  in [portable Agent Plugins](docs/reference/agent-plugins.md).
 - Lightweight episode retrieval over receipt/session summaries keeps digest
   provenance and explicit `chainVerified` or `chainUnchecked` state.
 
@@ -172,7 +172,7 @@ Adapter installation and support-level details live in [Adapter install](docs/ad
 
 - Start: [English documentation](docs/README.md), [Русская документация](docs/ru/README.md), [Install](docs/guides/install-and-first-run.md), [Quickstart](docs/guides/quickstart.md), [Commands by task](docs/guides/commands-by-task.md), [Lifecycle task scenarios](docs/guides/lifecycle-cookbook.md), and [Code review workflows](docs/guides/code-review-workflows.md).
 - Planning and adapters: [Issue to specification drafts](docs/guides/issue-to-spec.md), [Adapter install](docs/adapters/install.md), and [Adapter support matrix](docs/adapters/support-matrix.md).
-- Reference: [System architecture](docs/architecture/system-architecture.md), [workflow customization and execution controls](docs/reference/workflow-customization.md), [execution strategy](docs/reference/execution-strategy.md), [CLI reference](docs/reference/cli.md), [Source of truth](docs/reference/source-of-truth.md), [Managed lifecycle runner](docs/reference/managed-lifecycle-runner.md), [Managed adapter sessions](docs/reference/managed-adapter-sessions.md), [Implementation audit](docs/reference/implementation-audit.md), [Plan completeness](docs/reference/plan-completeness.md), [Public contracts](docs/reference/public-contracts.md), and [Readiness diagnostics](docs/reference/readiness-diagnostics.md).
+- Reference: [System architecture](docs/architecture/system-architecture.md), [workflow customization and execution controls](docs/reference/workflow-customization.md), [execution strategy](docs/reference/execution-strategy.md), [CLI reference](docs/reference/cli.md), [Source of truth](docs/reference/source-of-truth.md), [Managed lifecycle runner](docs/reference/managed-lifecycle-runner.md), [Managed adapter sessions](docs/reference/managed-adapter-sessions.md), [Portable Agent Plugins](docs/reference/agent-plugins.md), [Plugin publication](docs/reference/plugin-publication.md), [Implementation audit](docs/reference/implementation-audit.md), [Plan completeness](docs/reference/plan-completeness.md), [Public contracts](docs/reference/public-contracts.md), and [Readiness diagnostics](docs/reference/readiness-diagnostics.md).
 - Quality and resources: [Reference-task evaluation](docs/reference/reference-task-evaluation.md), [model routing](docs/reference/model-routing.md), [quality-cost learning](docs/reference/quality-cost-learning.md), [lifecycle cost accounting](docs/reference/lifecycle-cost.md), [host-local token accounting](docs/reference/host-local-token-accounting.md), [Usage export](docs/reference/usage-export.md), and [Evidence integrity](docs/reference/evidence-integrity.md).
 - Profiles and operations: [Read-only status views](docs/reference/read-only-status-view.md), [Adapter progress bridge](docs/reference/automatic-progress-bridge.md), [Sandbox boundaries](docs/reference/sandbox-boundaries.md), [Import mappers](docs/reference/import-mappers.md), [Episode retrieval](docs/reference/episode-retrieval.md), [Runner recovery](docs/reference/runner-recovery.md), [Cross-check profile](docs/reference/cross-check-profile.md), [Review Mesh](docs/reference/review-mesh.md), [Bug Forensics profile](docs/reference/bug-forensics.md), and [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md).
 - Release assets: [Task templates](templates/tasks/README.md), [Neutrality scanning](docs/reference/neutrality.md), and [Release security](docs/security/release-security.md).

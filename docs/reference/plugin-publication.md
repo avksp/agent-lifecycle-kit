@@ -19,6 +19,14 @@ Plugin manifests use `version: X.Y.Z`. Marketplace entries that install from a
 repository tag use `source.ref: vX.Y.Z`. Marketplace files may also carry a
 display `version`, but that value must remain the same semver.
 
+The same release also publishes a separate portable Agent Plugins archive. It
+contains `plugin.json` and the canonical `skills/` tree, and is validated
+against the locally pinned Agent Plugins 1.0.0 schema. This archive is a
+separate projection: it does not replace the client-specific manifests above
+and does not add an MCP server or lifecycle runtime. See [Portable Agent
+Plugins package](agent-plugins.md) for its contents and client-owned install
+flow.
+
 ## Validation
 
 Before a release tag is accepted, run:
@@ -33,6 +41,11 @@ python tools/release/validate_publication_versions.py \
 The validator fails when any tracked publication surface is stale or uses the
 wrong field form. It emits `agent-publication-version-validation.v1` and does
 not claim production promotion or public marketplace approval.
+
+The release workflow also builds and validates the version-bound portable
+archive. The published workflow derives the archive name from the immutable
+release tag and uploads it as a GitHub Release asset with a job-scoped
+permission.
 
 ## Operator update flow
 
