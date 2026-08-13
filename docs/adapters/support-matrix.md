@@ -20,6 +20,16 @@ receipts, validation and evidence summaries, independent plan and implementation
 audits, and final proof. Host launch qualification also uses usage, resource and
 containment receipts for the exact adapter/version binding.
 
+## Portable Agent Plugins package
+
+The project also publishes a portable skills package for clients that implement
+the [Agent Plugins specification](https://agent-plugins.org/specification).
+It contains `plugin.json` and the canonical ALK `skills/` tree. The package
+format is separate from each host projection in this matrix: loading the
+package makes skills available, while lifecycle proof still comes from the
+reviewed plan, state, evidence, audits and final proof. See [Portable Agent
+Plugins package](../reference/agent-plugins.md) and [Plugin publication](../reference/plugin-publication.md).
+
 For the operational difference between loading ALK inside a host and running
 the controller from the project terminal, see [Using ALK with an
 adapter](usage-modes.md).

@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.67.0 - 2026-08-13
+
+- Added a portable Agent Plugins 1.0.0 package containing the canonical ALK
+  skills tree and a pinned local manifest schema.
+- Added deterministic offline package build and validation with archive,
+  containment, symlink and component-boundary checks.
+- Added version-bound GitHub Release archive publication while preserving
+  client-specific plugin and marketplace projections.
+- Added English and Russian documentation for portable package loading and
+  the distinction between skill availability and ALK lifecycle proof.
+
 ## 1.66.0 - 2026-08-13
 
 - Added descriptor-driven thread-bridge capability profiles with explicit

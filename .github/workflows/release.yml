@@ -32,6 +32,26 @@ jobs:
           for path in root.glob("*.json"):
               path.unlink()
           PY
+      - name: Build and validate portable Agent Plugins candidate
+        run: |
+          VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          print(tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])
+          PY
+          )"
+          python tools/release/build_agent_plugin.py \
+            --root . \
+            --version "$VERSION" \
+            --out release/candidate/agent-plugin \
+            --archive "release/candidate/agent-lifecycle-kit-agent-plugin-v${VERSION}.zip"
+          python tools/release/validate_agent_plugin.py \
+            --root . \
+            --package release/candidate/agent-plugin \
+            --archive "release/candidate/agent-lifecycle-kit-agent-plugin-v${VERSION}.zip" \
+            --version "$VERSION" \
+            --evidence "$EVIDENCE_DIR"/agent-plugin.json
       - name: Run tests
         run: python -m unittest discover -s tests -v
       - name: Validate model profile
