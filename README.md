@@ -16,9 +16,11 @@ The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose,
 OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice
 and secret handling stay in adapters or host-local profiles.
 
+ALK provides a verifiable finish for external-agent work with proportionate control. It adds only the checks and evidence needed for the task; most of the time remains for research, implementation and product verification.
+
 ## Quick start
-Follow [Install ALK and make the first run](docs/guides/install-and-first-run.md)
-for the platform-specific setup and common `agent-lifecycle version` errors.
+Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.65.0`, and common `agent-lifecycle version` errors.
 For a quick start, run:
 
 ```bash
@@ -31,23 +33,21 @@ agent-lifecycle version
 agent-lifecycle diagnose --no-install-plans
 ```
 
-Windows PowerShell and PyPI commands are in the installation guide. Choose
-`<adapter-id>` from the [adapter support matrix](docs/adapters/support-matrix.md)
-and start a task with:
+Choose `<adapter-id>` from the [adapter support matrix](docs/adapters/support-matrix.md)
+and pass a task from a file:
 
 ```bash
 agent-lifecycle start --adapter <adapter-id> --file task.md
 ```
 
-The published [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14; install it with `python -m pip install agent-lifecycle-kit==1.65.0`.
-Use [Quickstart](docs/guides/quickstart.md) for the first task and [Commands by task](docs/guides/commands-by-task.md) for detailed operations.
-Continue with [task workflows](docs/guides/how-alk-works.md) and
-[project profile init](docs/reference/project-workflow-profile.md),
-[workflow customization and execution controls](docs/reference/workflow-customization.md), and the
-[Lifecycle task scenarios](docs/guides/lifecycle-cookbook.md). The [planning-only](docs/reference/planning-only-launch.md)
-and [qualified frozen-task](docs/reference/qualified-host-launch.md) guides define launch boundaries.
-See [System architecture](docs/architecture/system-architecture.md), [Project comparison](docs/reference/project-comparison.md),
-[context checkpoints](docs/reference/context-checkpoints.md), and [Документация на русском](docs/ru/README.md).
+- Start with [quickstart](docs/guides/quickstart.md).
+- Then choose a suitable scenario in [how ALK works for different tasks](docs/guides/how-alk-works.md).
+- The boundaries of [planning-only launch](docs/reference/planning-only-launch.md) and [qualified launch of a frozen task](docs/reference/qualified-host-launch.md) are documented in the reference. Shipped planning profiles remain candidates with safe failure until real qualification.
+- The [system architecture](docs/architecture/system-architecture.md) page explains how the project is organized, and [project comparison](docs/reference/project-comparison.md) shows how it differs from similar tools.
+- Multiple-agent boundaries, workflow configuration, model choice, prompts, timeouts and retries are described in [workflow customization and execution controls](docs/reference/workflow-customization.md).
+- Create a local project profile with `agent-lifecycle project profile init`; see [project workflow profile](docs/reference/project-workflow-profile.md).
+- For long sessions, use [context checkpoints and compaction recovery](docs/reference/context-checkpoints.md). They preserve a bounded local continuation package without changing plan authority.
+- For the full documentation index, see [English documentation](docs/README.md) and [русскую документацию](docs/ru/README.md).
 
 ## What it gives you
 - A finish-oriented lifecycle: plan, execute, review, and prove the result.
