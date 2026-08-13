@@ -148,3 +148,8 @@ The stable receipts are `agent-adapter-session-receipt.v1`,
 `agent-local-host-launch-profile-receipt.v1`.
 Review Mesh recommendations use
 `agent-review-mesh-recommendation.v1`.
+
+For long managed sessions, [context checkpoints](context-checkpoints.md) can
+preserve a bounded continuity view. Session lineage and checkpoint lineage are
+separate: restoring context never reattaches to a native host conversation and
+never grants implementation authority.

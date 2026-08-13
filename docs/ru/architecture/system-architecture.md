@@ -795,6 +795,7 @@ Git, и по умолчанию не читает локальные матер�
 - [Профиль расследования ошибок](../reference/bug-forensics.md)
 - [Стратегия выполнения без снижения качества](../reference/execution-strategy.md)
 - [Проверка нейтральности](../reference/neutrality.md)
+- [Снимки контекста и восстановление после сжатия](../reference/context-checkpoints.md)
 
 Дополнительные англоязычные архитектурные документы: `docs/architecture/release-architecture.md`,
 `docs/architecture/runner-transition-contract.md` и

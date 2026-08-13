@@ -64,3 +64,8 @@ context = build_episode_context(
 - It does not return raw artifact bodies.
 - External context hints are optional and non-proof.
 - It fails closed when the result exceeds the target context budget.
+
+For continuity across a long host session, use [context checkpoints and
+compaction recovery](context-checkpoints.md). Episode retrieval supplies
+rebuildable evidence hints; a checkpoint additionally binds a bounded summary
+to the current workflow lineage.

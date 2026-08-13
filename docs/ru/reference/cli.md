@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.63.2
+python -m pip install agent-lifecycle-kit==1.64.0
 ```
 
 ## Основа
@@ -251,6 +251,12 @@ lock-файл остаются источником полномочий для 
 - `agent-lifecycle context episode-retrieve`: создание
   `agent-episode-retrieval.v1` по явно переданным артефактам и необязательным
   `--external-context` артефактам.
+- `agent-lifecycle context checkpoint`: создание ограниченного
+  `agent-context-checkpoint.v1` по явно переданным сессии, состоянию, плану и
+  сводке.
+- `agent-lifecycle context restore`: проверка происхождения и создание
+  `agent-context-continuation.v1` после сжатия контекста. Устаревший или
+  изменённый снимок блокируется и не даёт полномочий на реализацию.
 - `agent-lifecycle goal`: проверка, краткий снимок, объединённое представление
   цели и прогресса, обновление записи цели. `goal view` читает запись цели,
   состояние рабочего цикла, необязательные подтверждения расхода и счётчик

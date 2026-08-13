@@ -227,6 +227,27 @@ agent-lifecycle goal summarize --state work/state.json
 
 These commands are read-only projections. They do not call a model.
 
+For a long session, save and restore a bounded continuity packet explicitly:
+
+```
+agent-lifecycle context checkpoint \
+  --session session-123 \
+  --state work/run.state.json \
+  --plan tasks/current/plan.manifest.json \
+  --input work/context/decisions.json \
+  --reason agent-requested \
+  --out .alk/context/checkpoints/session-123.json
+
+agent-lifecycle context restore \
+  --checkpoint .alk/context/checkpoints/session-123.json \
+  --state work/run.state.json \
+  --session session-123 \
+  --out work/context/continuation.json
+```
+
+Restore returns a bounded continuation receipt after lineage and redaction
+checks. It does not replace the frozen plan or authorize implementation.
+
 ## Validate release and security evidence
 
 ```

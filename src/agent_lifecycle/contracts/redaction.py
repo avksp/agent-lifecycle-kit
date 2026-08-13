@@ -46,7 +46,14 @@ _KEY_VALUE = re.compile(
     re.IGNORECASE,
 )
 _LOCAL_PATH = re.compile(
-    r"(?<![A-Za-z0-9_.-])(?:file://[^\s\"'<>]+|/(?:Users|home)/[^\s\"'<>]+|[A-Za-z]:\\Users\\[^\s\"'<>]+)"
+    r"(?<![A-Za-z0-9_.-])(?:"
+    r"[A-Za-z]:[\\/](?:[A-Za-z0-9._~@+ -]+[\\/])*[A-Za-z0-9._~@+ -]+|"
+    r"\\\\[^\s\"'<>]+|"
+    r"\\(?:[A-Za-z0-9._~@+ -]+[\\/])+[A-Za-z0-9._~@+ -]+|"
+    r"file:/+[^\s\"'<>]+|"
+    r"/(?:[A-Za-z0-9._~@+-]+/)*[A-Za-z0-9._~@+-]+"
+    r")",
+    re.IGNORECASE,
 )
 
 
@@ -58,6 +65,12 @@ def redact_text(value: str) -> tuple[str, bool]:
     redacted = _KEY_VALUE.sub(_replace_sensitive_assignment, redacted)
     redacted = _LOCAL_PATH.sub(REDACTED_VALUE, redacted)
     return redacted, redacted != value
+
+
+def contains_local_absolute_path(value: str) -> bool:
+    """Return whether text contains a local absolute path or file URI."""
+
+    return bool(_LOCAL_PATH.search(value))
 
 
 def redact_value(value: Any) -> tuple[Any, bool]:
