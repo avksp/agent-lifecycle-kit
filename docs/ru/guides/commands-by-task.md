@@ -234,6 +234,29 @@ agent-lifecycle goal summarize --state work/state.json
 Эти команды только читают состояние и строят его представление. Модель они не
 вызывают.
 
+Для длинной сессии можно явно сохранить и восстановить ограниченный пакет
+продолжения:
+
+```
+agent-lifecycle context checkpoint \
+  --session session-123 \
+  --state work/run.state.json \
+  --plan tasks/current/plan.manifest.json \
+  --input work/context/decisions.json \
+  --reason agent-requested \
+  --out .alk/context/checkpoints/session-123.json
+
+agent-lifecycle context restore \
+  --checkpoint .alk/context/checkpoints/session-123.json \
+  --state work/run.state.json \
+  --session session-123 \
+  --out work/context/continuation.json
+```
+
+Восстановление возвращает ограниченную квитанцию продолжения после проверки
+происхождения и очистки данных. Она не заменяет зафиксированный план и не
+разрешает реализацию.
+
 ## Проверка релиза и безопасности
 
 ```

@@ -17,12 +17,12 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 соразмерным уровнем контроля. Служебные шаги занимают только необходимое место,
 а основное время остаётся на исследование, реализацию и проверку продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.63.2 · Python 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.64.0 · Python 3.11-3.14
 
 ## Быстрый старт
 - [Установка ALK и первый запуск](guides/install-and-first-run.md)
 - [Команды по задачам](guides/commands-by-task.md)
-Начните с подробного руководства [Установка ALK и первый запуск](guides/install-and-first-run.md): в нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==1.63.2` и разбор ошибок команды `agent-lifecycle version`.
+Начните с подробного руководства [Установка ALK и первый запуск](guides/install-and-first-run.md): в нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==1.64.0` и разбор ошибок команды `agent-lifecycle version`.
 Короткий путь из исходного дерева:
 
 ```bash
@@ -55,6 +55,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 Границы нескольких агентов, настройка рабочих потоков, выбор модели, промпты,
 тайм-ауты и повторы собраны в разделе [Настройка рабочего процесса и управления
 выполнением](reference/workflow-customization.md). Локальный профиль проекта создаётся командой `agent-lifecycle project profile init`; его описание приведено в разделе [Профиль рабочего процесса проекта](reference/project-workflow-profile.md).
+Для длинных сессий используйте [снимки контекста и восстановление после сжатия](reference/context-checkpoints.md): они сохраняют ограниченный локальный пакет продолжения, не меняя полномочия плана.
 
 ## Что даёт ALK
 - Процесс ориентирован на результат: план, выполнение, проверка и подтверждение

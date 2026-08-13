@@ -13,6 +13,7 @@ from agent_lifecycle.contracts.audit_schemas import AUDIT_SCHEMAS
 from agent_lifecycle.contracts.benchmark_schemas import BENCHMARK_SCHEMAS
 from agent_lifecycle.contracts.bug_forensics_schemas import BUG_FORENSICS_SCHEMAS
 from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
+from agent_lifecycle.contracts.context_checkpoint_schemas import CONTEXT_CHECKPOINT_SCHEMAS
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.cross_check_schemas import CROSS_CHECK_SCHEMAS
 from agent_lifecycle.contracts.evidence_import_schemas import EVIDENCE_IMPORT_SCHEMAS
@@ -397,6 +398,7 @@ _SCHEMA_GROUPS = (
     PROJECT_PROFILE_SCHEMAS,
     ADAPTER_CONTRACT_SCHEMAS,
     CONTEXT_MODEL_SCHEMAS,
+    CONTEXT_CHECKPOINT_SCHEMAS,
     RELEASE_CONTRACT_SCHEMAS,
     PLAN_CONTRACT_SCHEMAS,
     PLANNING_LAUNCH_SCHEMAS,

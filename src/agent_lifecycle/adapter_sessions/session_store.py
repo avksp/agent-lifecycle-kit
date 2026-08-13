@@ -32,6 +32,7 @@ def create_session(
     session_root: Path | None = None,
     state_identity: dict[str, Any] | None = None,
     managed_workflow_proof: dict[str, Any] | None = None,
+    context_checkpoint_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     session_id = uuid.uuid4().hex
     session = {
@@ -46,6 +47,7 @@ def create_session(
         },
         "stateIdentity": state_identity,
         "managedWorkflowProof": managed_workflow_proof,
+        "contextCheckpointPolicy": context_checkpoint_policy,
         "secretValuesStored": False,
         "nativeConfigWritten": False,
     }

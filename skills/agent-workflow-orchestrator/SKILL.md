@@ -123,3 +123,18 @@ Return the next typed action, current run phase, locked tasks, active blockers,
 accepted evidence, remaining budget, and concrete next command or host action.
 When progress hooks are enabled, keep stdout JSON unchanged and treat stderr or
 the hook receipt as display evidence only.
+
+## Context continuity
+
+When a host session is long or a compaction boundary is expected, use the
+context checkpoint contract instead of relying on memory in the chat. Prefer an
+ALK milestone checkpoint when the frozen plan opts into one. Use an explicit
+`agent-lifecycle context checkpoint` request when the operator needs to record
+decisions immediately. Treat `NATIVE_HOOK` as valid only when the adapter has
+supplied accepted event evidence; otherwise keep the support level explicit as
+`MILESTONE`, `AGENT_REQUESTED` or `UNAVAILABLE`.
+
+After compaction, restore one bounded continuation packet and re-check its
+lineage against the current state. The packet is advisory context only: the
+frozen plan, workflow state, ownership rules and accepted evidence remain the
+authority for execution and acceptance.

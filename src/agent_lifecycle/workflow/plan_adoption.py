@@ -14,6 +14,7 @@ from agent_lifecycle.planning.task_compatibility import (
 from agent_lifecycle.specification import validate_completion_check
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
+from agent_lifecycle.workflow.checkpoint_gate import normalize_context_checkpoint_policy
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.review_mesh_gate import require_review_mesh_quorum_gate_pass, validate_review_mesh_quorum_path
 from agent_lifecycle.workflow.selectors import unlock_ready_tasks
@@ -361,6 +362,7 @@ def _replace_plan_state(
     state["sourceRevision"] = source_revision
     state["startMode"] = start_mode
     state["budgets"] = dict(manifest.get("orchestration", {}))
+    state["contextCheckpointPolicy"] = normalize_context_checkpoint_policy(manifest.get("contextCheckpointPolicy"))
     state["writePolicy"] = {
         "readOnly": list(manifest.get("readOnly", [])),
         "forbiddenWrites": list(manifest.get("forbiddenWrites", [])),
