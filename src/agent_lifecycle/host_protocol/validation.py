@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.contracts.thread_bridge_schemas import validate_thread_bridge_profile
 from agent_lifecycle.host_protocol.acp_capability import validate_host_capabilities
 from agent_lifecycle.host_protocol.contracts import HostOperationReceipt, HostOperationRequest
 from agent_lifecycle.host_protocol.usage_normalizers import validate_usage_normalization_profile
@@ -100,6 +101,16 @@ def _validate_descriptor_shape(descriptor: dict[str, Any], blockers: list[dict[s
     if descriptor.get("coreSemantics") != "delegated-to-agent-lifecycle-core":
         blockers.append({"code": "adapter-core-semantics-overclaim", "message": "adapter must delegate lifecycle semantics to core"})
     _validate_managed_launch_profile(descriptor.get("managedLaunch"), blockers)
+    if "threadBridge" in descriptor:
+        thread_validation = validate_thread_bridge_profile(descriptor.get("threadBridge"))
+        if thread_validation["status"] == "FAIL":
+            blockers.append(
+                {
+                    "code": "adapter-thread-bridge-profile-invalid",
+                    "message": "threadBridge profile failed validation",
+                    "blockers": thread_validation["blockers"],
+                }
+            )
     usage_validation = validate_usage_normalization_profile(
         descriptor.get("usageNormalization"),
         adapter_id=descriptor.get("adapterId") if isinstance(descriptor.get("adapterId"), str) else None,

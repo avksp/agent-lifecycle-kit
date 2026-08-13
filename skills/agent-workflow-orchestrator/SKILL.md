@@ -5,10 +5,9 @@ description: Run or resume the full lifecycle from request clarification through
 
 # Agent workflow orchestrator
 
-Use `agent-workflow-orchestrator` to drive the complete lifecycle. The
-controller is host-neutral: skills define semantics, while each host adapter
-owns native questions, approvals, tool calls, agent launch, waiting,
-cancellation, and telemetry.
+Drive the complete lifecycle with this skill. The controller is host-neutral:
+skills define semantics; adapters own native
+questions, approvals, tools, launch, waiting, cancellation and telemetry.
 
 ## Lifecycle
 
@@ -33,10 +32,10 @@ cancellation, and telemetry.
 12. After all required tasks are accepted, run final implementation audit and
     publish completion only from a reproducible proof.
 
-Managed workflow commands may show progress with `--progress-hook stderr` or
-write `agent-progress-hook-receipt.v1` with `--progress-hook receipt
---progress-receipt <path>`. Use this only as a display/proof-of-managed-command
-layer; installing a plugin or skill is not proof that the lifecycle ran.
+Managed commands may show progress with `--progress-hook stderr` or write
+`agent-progress-hook-receipt.v1` with `--progress-hook receipt
+--progress-receipt <path>`. This is display/proof only; plugin or skill
+installation is not lifecycle proof.
 
 For adapter-backed work, prefer `agent-lifecycle start --adapter <id>` as the
 operator-facing entrypoint. It requires exactly one task source or `--resume
@@ -52,12 +51,18 @@ it must never guess a native host conversation id. Use `adapter task start`,
 `adapter session start` only to record an interactive `WAITING_FOR_TASK`
 session. Native host launching remains descriptor-driven and host-owned.
 
-For optional host-thread coordination, use `agent-lifecycle thread request` to
-prepare a bounded `read`, `list`, `send` or `create` request, then import the
-adapter-owned receipt with `agent-lifecycle thread import`. The bridge is off
-by default. `send` and `create` require operator approval and an idempotency
-key; imported thread content is advisory context and cannot replace a frozen
-plan, acceptance evidence or Review Mesh quorum.
+For optional host-thread coordination, prepare bounded `read`, `list`, `send`
+or `create` requests with `agent-lifecycle thread request`, then import the
+adapter-owned receipt with `agent-lifecycle thread import`. The bridge is off by
+default; `send` and `create` require approval and an idempotency key. Imported
+content is advisory and cannot replace a frozen plan, acceptance evidence or
+Review Mesh quorum.
+
+Inspect a declaration with `agent-lifecycle adapter thread-capability` and
+validate its receipt with `agent-lifecycle adapter thread-qualify`. Only a
+matching receipt projects `capability_support="supported"`. These commands are
+inspection-only; core
+does not launch or contact a host.
 
 For a project-wide default adapter and bounded stage settings, initialize or
 check the consuming project's local profile with `agent-lifecycle project
@@ -85,11 +90,9 @@ the same operation and lineage bindings. Do not claim a risk-aware attempt from
 raw intake or from `start` alone. Before accepting its result, require
 host-attested tokens, `usage.invocations`, and wall time within all bound caps.
 
-For common operator requests, route through the cookbook before dropping to
-atomic commands: `docs/guides/lifecycle-cookbook.md` covers research-only,
-planning-only, Markdown plan review, code review, implementation audit and
-cross-review flows. Beginner paths should start from those recipes; advanced
-users can continue with the atomic commands listed in the CLI reference.
+For common requests, use `docs/guides/lifecycle-cookbook.md` for research-only,
+planning, Markdown plan review, code review, implementation audit and
+cross-review. Beginners start there; advanced users can use atomic commands.
 
 If a frozen plan opts into Review Mesh, prefer
 `agent-lifecycle review-mesh prepare` for common operator flows: it builds a

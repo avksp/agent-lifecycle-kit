@@ -72,6 +72,43 @@ agent-lifecycle thread request \
 The command prepares JSON only. The adapter reads the request, performs the
 host-owned action and writes the receipt in its own integration boundary.
 
+## Inspect adapter capability
+
+Release 1.66 adds read-only commands for inspecting the adapter declaration and
+validating an adapter-owned qualification receipt. They do not discover a host
+API, launch a process or contact a provider:
+
+```bash
+agent-lifecycle adapter thread-capability \
+  --descriptor adapters/opencode/adapter.descriptor.json \
+  --manifest adapters/opencode/capabilities.manifest.json \
+  --out work/thread/opencode-capability.json
+```
+
+The result contains one row for each operation and shows `declaredStatus`,
+`qualificationStatus`, `effectiveStatus` and the projected
+`capabilitySupport` value. The uppercase adapter status values are capability
+metadata; `THREAD_BRIDGE_MODES` and the project-profile `threadBridge` policy
+still decide whether an operation is enabled.
+
+To validate a receipt supplied by the adapter owner, run:
+
+```bash
+agent-lifecycle adapter thread-qualify \
+  --descriptor adapters/opencode/adapter.descriptor.json \
+  --manifest adapters/opencode/capabilities.manifest.json \
+  --receipt work/thread/opencode-qualification-receipt.json \
+  --out work/thread/opencode-qualification-result.json
+```
+
+The command succeeds only when the receipt matches the adapter, descriptor
+digest, capability-manifest identity, host range, operation set and policy
+version. A declaration alone maps to `unsupported` or `unknown`; only a
+receipt-qualified operation maps to the existing
+`capability_support="supported"` value. The bundled profiles currently make
+no positive thread-support claim; an adapter-specific integration can be
+qualified independently.
+
 ## Import a receipt
 
 Import a validated adapter response as optional context:

@@ -274,5 +274,74 @@
       "Configure host-local model and profile settings outside the portable core.",
       "Keep the adapter EXPERIMENTAL until receipts are accepted."
     ]
+  },
+  "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
+    "adapterId": "goose",
+    "host": "goose",
+    "descriptorDigest": null,
+    "capabilityManifestDigest": null,
+    "hostRange": {
+      "host": "goose",
+      "minimumVersion": "1.45.0",
+      "maximumVersion": "1.45.0",
+      "evidence": [
+        "docs/adapters/evidence/goose-live-verified.md",
+        "work/release-1-16/evidence/preflight/goose-preflight-report.json",
+        "work/release-1-16/evidence/goose-containment-receipt.json",
+        "work/release-1-16/evidence/live-host-receipts/goose.json",
+        "work/release-1-16/evidence/live-host-conformance-goose.json",
+        "work/release-1-16/evidence/live-calibration-receipts/goose.json",
+        "work/release-1-16/evidence/live-calibration-verification-goose.json",
+        "work/release-1-16/evidence/goose/full-lifecycle/final/final-proof-r5.json"
+      ],
+      "testedAt": "2026-07-31",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "87fb1ce58612efbd2121d8eb56f9d54de8fbbcfb"
+    },
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "operations": [
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "send",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "create",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      }
+    ],
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
+    "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
+    "qualificationRequired": true,
+    "productionPromotionClaimed": false,
+    "profileDigest": "c5a7eef5589f523a0650090fbba9c837f66076fa3042705c279652ab1dc69505"
   }
 }

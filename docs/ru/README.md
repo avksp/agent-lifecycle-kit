@@ -18,7 +18,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 подтверждения, а основное время остаётся на исследование, реализацию и проверку
 продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.65.0 · Python 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.66.0 · Python 3.11-3.14
 
 Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
 
@@ -26,7 +26,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 
 Начните с подробного руководства [установка ALK и первый запуск](guides/install-and-first-run.md).
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==1.65.0` и разбор ошибок команды `agent-lifecycle version`.
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==1.66.0` и разбор ошибок команды `agent-lifecycle version`.
 
 Для быстрого старта выполните:
 

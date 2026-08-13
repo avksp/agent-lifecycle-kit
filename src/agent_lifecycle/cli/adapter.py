@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, read_json_object
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts import write_json_create
 from agent_lifecycle.adapter_sessions import (
     build_adapter_session_receipt,
@@ -34,6 +34,17 @@ from agent_lifecycle.host_protocol import (
     validate_adapter_descriptor,
     validate_adapter_event_stream,
     validate_event_capture_conformance,
+    validate_capability_manifest,
+)
+from agent_lifecycle.host_protocol.capabilities import (
+    build_thread_bridge_capability_projection,
+    build_thread_bridge_profile_from_descriptor,
+    capability_manifest_identity,
+)
+from agent_lifecycle.contracts.thread_bridge_schemas import (
+    resolve_thread_operation_status,
+    validate_thread_bridge_profile,
+    validate_thread_bridge_qualification_receipt,
 )
 
 
@@ -137,6 +148,16 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     adapter_run.add_argument("--progress-hook", choices=["stderr", "receipt", "off"], default="stderr")
     adapter_run.add_argument("--progress-receipt")
     adapter_run.add_argument("--out")
+    adapter_thread_capability = adapter_sub.add_parser("thread-capability")
+    adapter_thread_capability.add_argument("--descriptor", required=True)
+    adapter_thread_capability.add_argument("--manifest", required=True)
+    adapter_thread_capability.add_argument("--receipt")
+    adapter_thread_capability.add_argument("--out")
+    adapter_thread_qualify = adapter_sub.add_parser("thread-qualify")
+    adapter_thread_qualify.add_argument("--descriptor", required=True)
+    adapter_thread_qualify.add_argument("--receipt", required=True)
+    adapter_thread_qualify.add_argument("--manifest")
+    adapter_thread_qualify.add_argument("--out")
 
 
 def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
@@ -236,7 +257,93 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
+    if args.adapter_command == "thread-capability":
+        payload = _build_thread_capability_payload(args)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.adapter_command == "thread-qualify":
+        payload = _build_thread_qualification_payload(args)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        if payload.get("status") != "PASS":
+            raise LifecycleError("thread-qualification-failed", "thread qualification validation failed", payload)
+        return payload
     raise LifecycleError("command-not-implemented", "adapter command is not implemented")
+
+
+def _build_thread_capability_payload(args: argparse.Namespace) -> dict[str, Any]:
+    descriptor_path = Path(args.descriptor)
+    descriptor = read_json_object(descriptor_path, label="adapter descriptor")
+    manifest = read_json_object(Path(args.manifest), label="adapter capability manifest")
+    manifest_validation = validate_capability_manifest(manifest, descriptor=descriptor)
+    if manifest_validation["status"] != "PASS":
+        raise LifecycleError("thread-capability-manifest-invalid", "adapter capability manifest failed validation", manifest_validation)
+    manifest_digest = capability_manifest_identity(manifest)
+    profile = build_thread_bridge_profile_from_descriptor(
+        descriptor,
+        capability_manifest_digest=manifest_digest,
+    )
+    profile_validation = validate_thread_bridge_profile(profile)
+    if profile_validation["status"] != "PASS":
+        raise LifecycleError("thread-capability-profile-invalid", "adapter thread profile failed validation", profile_validation)
+    receipt = read_json_object(Path(args.receipt), label="thread qualification receipt") if args.receipt else None
+    return build_thread_bridge_capability_projection(profile, qualification_receipt=receipt)
+
+
+def _build_thread_qualification_payload(args: argparse.Namespace) -> dict[str, Any]:
+    descriptor_path = Path(args.descriptor)
+    descriptor = read_json_object(descriptor_path, label="adapter descriptor")
+    manifest_path = Path(args.manifest) if args.manifest else _manifest_path_from_descriptor(descriptor_path, descriptor)
+    manifest = read_json_object(manifest_path, label="adapter capability manifest")
+    manifest_validation = validate_capability_manifest(manifest, descriptor=descriptor)
+    receipt = read_json_object(Path(args.receipt), label="thread qualification receipt")
+    receipt_validation = validate_thread_bridge_qualification_receipt(receipt)
+    profile = build_thread_bridge_profile_from_descriptor(
+        descriptor,
+        capability_manifest_digest=capability_manifest_identity(manifest),
+    )
+    profile_validation = validate_thread_bridge_profile(profile)
+    blockers = list(receipt_validation.get("blockers", []))
+    blockers.extend(profile_validation.get("blockers", []))
+    blockers.extend(manifest_validation.get("blockers", []))
+    operation_results = []
+    for operation in receipt.get("operationSet", []) if isinstance(receipt.get("operationSet"), list) else []:
+        decision = resolve_thread_operation_status(profile, operation, qualification_receipt=receipt)
+        operation_results.append(decision)
+        if decision.get("qualificationStatus") != "QUALIFIED":
+            blockers.extend(decision.get("blockers", []))
+    body = {
+        "schemaVersion": "agent-thread-bridge-profile-validation.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "adapterId": descriptor.get("adapterId"),
+        "host": descriptor.get("host"),
+        "profileDigest": profile.get("profileDigest"),
+        "receiptDigest": receipt.get("receiptDigest"),
+        "checks": [
+            {"name": "descriptor", "status": "PASS" if manifest_validation["status"] == "PASS" else "FAIL"},
+            {"name": "profile", "status": profile_validation["status"]},
+            {"name": "qualification", "status": receipt_validation["status"]},
+            {"name": "operation-bindings", "status": "PASS" if operation_results and all(item["qualificationStatus"] == "QUALIFIED" for item in operation_results) else "FAIL"},
+        ],
+        "operations": operation_results,
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
+
+
+def _manifest_path_from_descriptor(descriptor_path: Path, descriptor: dict[str, Any]) -> Path:
+    configured = descriptor.get("capabilityManifest")
+    if not isinstance(configured, str) or not configured:
+        raise LifecycleError("thread-capability-manifest-missing", "descriptor does not name a capability manifest")
+    configured_path = Path(configured)
+    if configured_path.exists():
+        return configured_path
+    relative_path = descriptor_path.parent / configured_path.name
+    if relative_path.exists():
+        return relative_path
+    raise LifecycleError("thread-capability-manifest-missing", "capability manifest path does not exist", {"path": configured})
 
 
 def _dispatch_adapter_task(args: argparse.Namespace) -> dict[str, Any]:

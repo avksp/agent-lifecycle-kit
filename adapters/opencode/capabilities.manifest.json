@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "c5e67a6d2bc999515e28b5d8a611c2f3ec9dca3e99a4388868b26942853af6fc",
+  "descriptorDigest": "20a6186a19821d6cd37516ea30d0b3aeb95a6256b8431c4656781d3a94b2d750",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,11 +156,11 @@
     "usageReceiptRequired": true
   },
   "planningLaunch": {
-    "profileStatus": "UNSUPPORTED",
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
     "expectedHostVersion": "1.18.15",
-    "qualificationRequired": true,
-    "hostLaunchStarted": false
+    "hostLaunchStarted": false,
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "profileStatus": "UNSUPPORTED",
+    "qualificationRequired": true
   },
   "promotion": {
     "liveTestedHostRange": {
@@ -232,5 +232,70 @@
     }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "threadBridge": {
+    "adapterId": "opencode",
+    "capabilityManifestDigest": "a681da1fb5c038bf5af58d9244a5e10a7927d993cb82d12f269e584071f94265",
+    "descriptorDigest": "20a6186a19821d6cd37516ea30d0b3aeb95a6256b8431c4656781d3a94b2d750",
+    "evidencePolicy": "not-claimed",
+    "host": "opencode",
+    "hostExecutionOwned": true,
+    "hostRange": {
+      "evidence": [
+        "docs/adapters/evidence/opencode-host-local-live-2026-07-29.md",
+        "work/release-0-7/evidence/opencode/live-host-conformance-opencode.json",
+        "work/release-0-7/evidence/opencode/live-calibration-verification-opencode.json",
+        "work/release-0-7/evidence/opencode/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "opencode",
+      "maximumVersion": "1.18.9",
+      "minimumVersion": "1.18.9",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "6c6b40210ee28de4b6a5993367af89e629fb99ff",
+      "testedAt": "2026-07-29"
+    },
+    "operations": [
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "create",
+        "qualificationRequired": true,
+        "readOnly": false
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "list",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "read",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "send",
+        "qualificationRequired": true,
+        "readOnly": false
+      }
+    ],
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "productionPromotionClaimed": false,
+    "profileDigest": "e1b532aa504cf0cc741f040e5998b857efd662664bab0c6e7db339ea05e28804",
+    "profileId": "thread-bridge",
+    "providerIdentityUsed": false,
+    "qualificationRequired": true,
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "transport": "adapter-owned"
+  },
   "unsupportedOperationPolicy": "fail-closed"
 }

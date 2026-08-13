@@ -84,6 +84,15 @@ Use the support stated in [Frozen-task launch through a verified
 profile](../reference/qualified-host-launch.md) when accepted launch evidence
 is required. The guide describes the profile, preflight and receipt sequence.
 
+## Optional thread bridge
+
+Thread coordination is a separate, opt-in adapter capability. Inspect its
+declaration with `adapter thread-capability`, then validate an adapter-owned
+qualification receipt with `adapter thread-qualify`. These commands only read
+local descriptors, manifests and receipts; the adapter remains responsible for
+the native host operation. See [Optional thread bridge](../reference/optional-thread-bridge.md)
+for the request, receipt, policy and qualification flow.
+
 See also [Adapter installation](install.md), [Adapter support
 matrix](support-matrix.md) and [Planning-only adapter
 launch](../reference/planning-only-launch.md).

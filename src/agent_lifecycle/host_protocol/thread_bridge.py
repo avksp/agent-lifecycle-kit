@@ -9,11 +9,15 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts.thread_bridge_schemas import (
+    build_thread_bridge_profile,
+    build_thread_bridge_qualification_receipt,
     build_thread_context_import,
     build_thread_operation_receipt,
     build_thread_operation_request,
     build_thread_operation_validation,
     validate_thread_context_import,
+    validate_thread_bridge_profile,
+    validate_thread_bridge_qualification_receipt,
     validate_thread_operation_receipt,
     validate_thread_operation_request,
 )
@@ -43,6 +47,14 @@ def validate_thread_context(imported: dict[str, Any]) -> dict[str, Any]:
     return validate_thread_context_import(imported)
 
 
+def validate_thread_profile(profile: dict[str, Any]) -> dict[str, Any]:
+    return validate_thread_bridge_profile(profile)
+
+
+def validate_thread_qualification_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
+    return validate_thread_bridge_qualification_receipt(receipt)
+
+
 def validate_thread_exchange(request: dict[str, Any], receipt: dict[str, Any]) -> dict[str, Any]:
     """Validate request/receipt lineage without invoking a host."""
 
@@ -51,9 +63,13 @@ def validate_thread_exchange(request: dict[str, Any], receipt: dict[str, Any]) -
 
 __all__ = [
     "build_thread_operation_receipt",
+    "build_thread_bridge_profile",
+    "build_thread_bridge_qualification_receipt",
     "prepare_thread_context_import",
     "prepare_thread_request",
     "validate_thread_context",
+    "validate_thread_profile",
+    "validate_thread_qualification_receipt",
     "validate_thread_exchange",
     "validate_thread_receipt",
     "validate_thread_request",

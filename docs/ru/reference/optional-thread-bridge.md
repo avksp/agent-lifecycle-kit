@@ -74,6 +74,43 @@ agent-lifecycle thread request \
 Команда только подготавливает JSON. Адаптер читает запрос, выполняет действие
 на стороне хоста и создаёт квитанцию в своей границе интеграции.
 
+## Проверка возможности адаптера
+
+В версии 1.66 появились команды только для чтения объявления адаптера и
+проверки квалификационной квитанции, которую передаёт владелец адаптера. Эти
+команды не ищут API хоста, не запускают процесс и не обращаются к провайдеру:
+
+```bash
+agent-lifecycle adapter thread-capability \
+  --descriptor adapters/opencode/adapter.descriptor.json \
+  --manifest adapters/opencode/capabilities.manifest.json \
+  --out work/thread/opencode-capability.json
+```
+
+Результат содержит отдельную строку для каждой операции и показывает
+`declaredStatus`, `qualificationStatus`, `effectiveStatus` и значение
+`capabilitySupport`, совместимое с существующим контрактом. Статусы адаптера в верхнем
+регистре описывают возможность адаптера; режимы `THREAD_BRIDGE_MODES` и
+политика проекта `threadBridge` по-прежнему определяют, разрешена ли операция.
+
+Чтобы проверить квитанцию, переданную владельцем адаптера, выполните:
+
+```bash
+agent-lifecycle adapter thread-qualify \
+  --descriptor adapters/opencode/adapter.descriptor.json \
+  --manifest adapters/opencode/capabilities.manifest.json \
+  --receipt work/thread/opencode-qualification-receipt.json \
+  --out work/thread/opencode-qualification-result.json
+```
+
+Команда завершается успешно только при совпадении адаптера, отпечатка
+дескриптора, идентификатора capability-manifest, диапазона версий хоста,
+набора операций и версии политики. Одно объявление даёт только значения
+`unsupported` или `unknown`; существующее значение
+`capability_support="supported"` появляется лишь после проверки подходящей
+квалификационной квитанции. Поставляемые профили пока не заявляют поддержку
+тредов; отдельную интеграцию адаптера можно квалифицировать независимо.
+
 ## Импорт квитанции
 
 Импортируйте ответ адаптера как дополнительный контекст:

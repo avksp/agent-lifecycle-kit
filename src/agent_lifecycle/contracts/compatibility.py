@@ -119,6 +119,9 @@ REQUIRED_CORE_SCHEMAS: tuple[str, ...] = (
     "agent-thread-operation-receipt.v1",
     "agent-thread-context-import.v1",
     "agent-thread-operation-validation.v1",
+    "agent-thread-bridge-profile.v1",
+    "agent-thread-bridge-qualification-receipt.v1",
+    "agent-thread-bridge-profile-validation.v1",
 )
 
 
