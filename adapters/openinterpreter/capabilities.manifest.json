@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "2c7606b675467a6838fece3b9c9479151efedd8408a9a0246276ff39dfd9ca2d",
+  "descriptorDigest": "797bd58530cfdf5a17ee3cd65498958080579b64b834e69e8d232ba665c2fd67",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,11 +156,11 @@
     "usageReceiptRequired": true
   },
   "planningLaunch": {
-    "profileStatus": "UNSUPPORTED",
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
     "expectedHostVersion": "0.0.34",
-    "qualificationRequired": true,
-    "hostLaunchStarted": false
+    "hostLaunchStarted": false,
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "profileStatus": "UNSUPPORTED",
+    "qualificationRequired": true
   },
   "promotion": {
     "liveTestedHostRange": {
@@ -236,5 +236,74 @@
     }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "threadBridge": {
+    "adapterId": "openinterpreter",
+    "capabilityManifestDigest": "a8be1bba691c5d214aa5b15588980bdae60562907c1ac38845278d1ba50d3412",
+    "descriptorDigest": "797bd58530cfdf5a17ee3cd65498958080579b64b834e69e8d232ba665c2fd67",
+    "evidencePolicy": "not-claimed",
+    "host": "openinterpreter",
+    "hostExecutionOwned": true,
+    "hostRange": {
+      "evidence": [
+        "docs/adapters/evidence/openinterpreter-live-verified.md",
+        "work/release-1-18/evidence/preflight/openinterpreter-preflight-report-live-ready.json",
+        "work/release-1-18/evidence/openinterpreter-containment-receipt-live-ready.json",
+        "work/release-1-18/evidence/live-host-receipts/openinterpreter.json",
+        "work/release-1-18/evidence/live-host-conformance-openinterpreter.json",
+        "work/release-1-18/evidence/live-calibration-receipts/openinterpreter.json",
+        "work/release-1-18/evidence/live-calibration-verification-openinterpreter.json",
+        "work/release-1-18/evidence/openinterpreter/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "openinterpreter",
+      "maximumVersion": "0.0.34",
+      "minimumVersion": "0.0.34",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "52cfa2fd5a97823155c552cb9ae27b735fc85713",
+      "testedAt": "2026-08-01"
+    },
+    "operations": [
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "create",
+        "qualificationRequired": true,
+        "readOnly": false
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "list",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "read",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "send",
+        "qualificationRequired": true,
+        "readOnly": false
+      }
+    ],
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "productionPromotionClaimed": false,
+    "profileDigest": "9399117e547e85216ec8ab2563fcbbd9cdbbdfc83f383fea50758b1bce505043",
+    "profileId": "thread-bridge",
+    "providerIdentityUsed": false,
+    "qualificationRequired": true,
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "transport": "adapter-owned"
+  },
   "unsupportedOperationPolicy": "fail-closed"
 }

@@ -16,15 +16,22 @@ THREAD_OPERATION_REQUEST_SCHEMA = "agent-thread-operation-request.v1"
 THREAD_OPERATION_RECEIPT_SCHEMA = "agent-thread-operation-receipt.v1"
 THREAD_CONTEXT_IMPORT_SCHEMA = "agent-thread-context-import.v1"
 THREAD_OPERATION_VALIDATION_SCHEMA = "agent-thread-operation-validation.v1"
+THREAD_BRIDGE_PROFILE_SCHEMA = "agent-thread-bridge-profile.v1"
+THREAD_BRIDGE_QUALIFICATION_RECEIPT_SCHEMA = "agent-thread-bridge-qualification-receipt.v1"
+THREAD_BRIDGE_PROFILE_VALIDATION_SCHEMA = "agent-thread-bridge-profile-validation.v1"
 
 THREAD_OPERATIONS = ("read", "list", "send", "create")
 THREAD_READ_OPERATIONS = {"read", "list"}
 THREAD_MUTATING_OPERATIONS = {"send", "create"}
 THREAD_SUPPORT_VALUES = ("supported", "unsupported", "unknown")
+THREAD_ADAPTER_STATUS_VALUES = ("UNSUPPORTED", "WRAPPER_ONLY", "SUPPORTED")
+THREAD_EFFECTIVE_STATUS_VALUES = THREAD_ADAPTER_STATUS_VALUES
+THREAD_QUALIFICATION_STATUS_VALUES = ("UNQUALIFIED", "QUALIFIED", "STALE", "INVALID")
 THREAD_OPERATION_STATUSES = ("PASS", "FAIL", "BLOCKED", "UNAVAILABLE")
 THREAD_SCOPES = ("explicit-target", "project", "workflow")
 THREAD_APPROVALS = ("none", "operator")
 THREAD_BRIDGE_MODES = ("off", "advisory", "read-only", "controlled")
+THREAD_BRIDGE_POLICY_VERSION = "agent-thread-bridge-policy.v1"
 
 _AUTHORITY_KEYS = {
     "approveTools",
@@ -52,6 +59,99 @@ _BLOCKERS = {"type": "array", "items": {"type": "object"}}
 
 
 THREAD_BRIDGE_SCHEMAS: dict[str, dict[str, Any]] = {
+    THREAD_BRIDGE_PROFILE_SCHEMA: open_object_schema(
+        THREAD_BRIDGE_PROFILE_SCHEMA,
+        required=[
+            "schemaVersion",
+            "profileId",
+            "adapterId",
+            "host",
+            "policyVersion",
+            "operations",
+            "transport",
+            "evidencePolicy",
+            "providerIdentityUsed",
+            "hostExecutionOwned",
+            "productionPromotionClaimed",
+            "profileDigest",
+        ],
+        properties={
+            "profileId": {"const": "thread-bridge"},
+            "adapterId": {"type": "string", "minLength": 1},
+            "host": {"type": "string", "minLength": 1},
+            "descriptorDigest": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
+            "capabilityManifestDigest": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
+            "hostRange": {"type": "object"},
+            "policyVersion": {"const": THREAD_BRIDGE_POLICY_VERSION},
+            "operations": {"type": "array", "items": {"type": "object"}, "minItems": 1, "maxItems": 4},
+            "transport": {"const": "adapter-owned"},
+            "evidencePolicy": {"enum": ["qualification-required", "not-claimed"]},
+            "providerIdentityUsed": {"const": False},
+            "hostExecutionOwned": {"const": True},
+            "qualificationRequired": {"const": True},
+            "productionPromotionClaimed": {"const": False},
+            "profileDigest": _DIGEST,
+        },
+    ),
+    THREAD_BRIDGE_QUALIFICATION_RECEIPT_SCHEMA: open_object_schema(
+        THREAD_BRIDGE_QUALIFICATION_RECEIPT_SCHEMA,
+        required=[
+            "schemaVersion",
+            "receiptId",
+            "adapterId",
+            "host",
+            "descriptorDigest",
+            "capabilityManifestDigest",
+            "hostRange",
+            "policyVersion",
+            "operationSet",
+            "route",
+            "qualificationStatus",
+            "evidenceRefs",
+            "hostExecutionStarted",
+            "modelCallsStarted",
+            "networkCallsStarted",
+            "rawContentStored",
+            "sourceOfTruth",
+            "proof",
+            "productionPromotionClaimed",
+            "receiptDigest",
+        ],
+        properties={
+            "receiptId": {"type": "string", "minLength": 1, "maxLength": 160},
+            "adapterId": {"type": "string", "minLength": 1},
+            "host": {"type": "string", "minLength": 1},
+            "descriptorDigest": _DIGEST,
+            "capabilityManifestDigest": _DIGEST,
+            "hostRange": {"type": "object"},
+            "policyVersion": {"const": THREAD_BRIDGE_POLICY_VERSION},
+            "operationSet": {"type": "array", "items": {"enum": list(THREAD_OPERATIONS)}, "minItems": 1, "maxItems": 4},
+            "route": {"enum": ["native", "wrapper"]},
+            "qualificationStatus": {"const": "QUALIFIED"},
+            "evidenceRefs": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+            "expiresAt": {"type": ["string", "null"]},
+            "hostExecutionStarted": {"const": True},
+            "modelCallsStarted": {"const": False},
+            "networkCallsStarted": {"const": False},
+            "rawContentStored": {"const": False},
+            "sourceOfTruth": {"const": False},
+            "proof": {"const": False},
+            "productionPromotionClaimed": {"const": False},
+            "receiptDigest": _DIGEST,
+        },
+    ),
+    THREAD_BRIDGE_PROFILE_VALIDATION_SCHEMA: open_object_schema(
+        THREAD_BRIDGE_PROFILE_VALIDATION_SCHEMA,
+        required=["schemaVersion", "status", "adapterId", "checks", "blockers", "productionPromotionClaimed", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "adapterId": {"type": ["string", "null"]},
+            "checks": {"type": "array", "items": {"type": "object"}},
+            "blockers": _BLOCKERS,
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
+        },
+    ),
     THREAD_CAPABILITY_SCHEMA: open_object_schema(
         THREAD_CAPABILITY_SCHEMA,
         required=[
@@ -237,8 +337,14 @@ def build_thread_capability(
     for item in selected:
         if isinstance(item, str):
             name, item_support = item, support
+            metadata: dict[str, Any] = {}
         elif isinstance(item, dict):
             name, item_support = item.get("name"), item.get("support", support)
+            metadata = {
+                key: item[key]
+                for key in ("declaredStatus", "qualificationStatus", "effectiveStatus", "capabilitySupport")
+                if key in item
+            }
         else:
             raise LifecycleError("thread-capability-operation-invalid", "thread capability operation must be a string or object")
         if name not in THREAD_OPERATIONS or name in seen:
@@ -253,6 +359,7 @@ def build_thread_capability(
                 "readOnly": name in THREAD_READ_OPERATIONS,
                 "approval": "none" if name in THREAD_READ_OPERATIONS else "operator",
                 "execution": "adapter-owned",
+                **metadata,
             }
         )
     body = {
@@ -270,6 +377,107 @@ def build_thread_capability(
         "productionPromotionClaimed": False,
     }
     return {**body, "capabilityDigest": canonical_digest(body)}
+
+
+def build_thread_bridge_profile(
+    *,
+    adapter_id: str,
+    host: str,
+    operations: list[dict[str, Any]],
+    descriptor_digest: str | None = None,
+    capability_manifest_digest: str | None = None,
+    host_range: dict[str, Any] | None = None,
+    policy_version: str = THREAD_BRIDGE_POLICY_VERSION,
+) -> dict[str, Any]:
+    """Build an adapter-owned thread profile without contacting a host."""
+
+    _required_text(adapter_id, "adapterId")
+    _required_text(host, "host")
+    if policy_version != THREAD_BRIDGE_POLICY_VERSION:
+        raise LifecycleError("thread-profile-policy-invalid", "unsupported thread bridge policy version")
+    normalized_operations = _normalize_adapter_operations(operations)
+    for digest, label in (
+        (descriptor_digest, "descriptorDigest"),
+        (capability_manifest_digest, "capabilityManifestDigest"),
+    ):
+        if digest is not None:
+            _require_digest(digest, label)
+    body = {
+        "schemaVersion": THREAD_BRIDGE_PROFILE_SCHEMA,
+        "profileId": "thread-bridge",
+        "adapterId": adapter_id,
+        "host": host,
+        "descriptorDigest": descriptor_digest,
+        "capabilityManifestDigest": capability_manifest_digest,
+        "hostRange": deepcopy(host_range) if isinstance(host_range, dict) else {},
+        "policyVersion": policy_version,
+        "operations": normalized_operations,
+        "transport": "adapter-owned",
+        "evidencePolicy": "qualification-required"
+        if any(item["declaredStatus"] != "UNSUPPORTED" for item in normalized_operations)
+        else "not-claimed",
+        "providerIdentityUsed": False,
+        "hostExecutionOwned": True,
+        "qualificationRequired": True,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "profileDigest": canonical_digest(body)}
+
+
+def build_thread_bridge_qualification_receipt(
+    *,
+    receipt_id: str,
+    adapter_id: str,
+    host: str,
+    descriptor_digest: str,
+    capability_manifest_digest: str,
+    host_range: dict[str, Any],
+    operation_set: list[str],
+    route: str = "wrapper",
+    evidence_refs: list[str] | None = None,
+    expires_at: str | None = None,
+    policy_version: str = THREAD_BRIDGE_POLICY_VERSION,
+) -> dict[str, Any]:
+    """Build a qualification receipt supplied by an adapter owner."""
+
+    _required_text(receipt_id, "receiptId")
+    _required_text(adapter_id, "adapterId")
+    _required_text(host, "host")
+    _require_digest(descriptor_digest, "descriptorDigest")
+    _require_digest(capability_manifest_digest, "capabilityManifestDigest")
+    if not isinstance(host_range, dict):
+        raise LifecycleError("thread-qualification-host-range-invalid", "hostRange must be an object")
+    if route not in {"native", "wrapper"}:
+        raise LifecycleError("thread-qualification-route-invalid", "qualification route must be native or wrapper")
+    if policy_version != THREAD_BRIDGE_POLICY_VERSION:
+        raise LifecycleError("thread-qualification-policy-invalid", "unsupported thread bridge policy version")
+    normalized_operations = _normalize_operation_set(operation_set)
+    refs = [item for item in (evidence_refs or []) if isinstance(item, str) and item]
+    if not refs:
+        raise LifecycleError("thread-qualification-evidence-missing", "qualification requires evidence references")
+    body = {
+        "schemaVersion": THREAD_BRIDGE_QUALIFICATION_RECEIPT_SCHEMA,
+        "receiptId": receipt_id,
+        "adapterId": adapter_id,
+        "host": host,
+        "descriptorDigest": descriptor_digest,
+        "capabilityManifestDigest": capability_manifest_digest,
+        "hostRange": deepcopy(host_range),
+        "policyVersion": policy_version,
+        "operationSet": normalized_operations,
+        "route": route,
+        "qualificationStatus": "QUALIFIED",
+        "evidenceRefs": refs,
+        "expiresAt": expires_at,
+        "hostExecutionStarted": True,
+        "modelCallsStarted": False,
+        "networkCallsStarted": False,
+        "rawContentStored": False,
+        "sourceOfTruth": False,
+        "proof": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
 
 
 def build_thread_operation_request(
@@ -491,6 +699,130 @@ def validate_thread_capability(capability: dict[str, Any]) -> dict[str, Any]:
     return _validation(THREAD_CAPABILITY_SCHEMA, blockers, capability.get("capabilityDigest"), "capability")
 
 
+def validate_thread_bridge_profile(profile: dict[str, Any]) -> dict[str, Any]:
+    """Validate an adapter declaration without treating it as live evidence."""
+
+    blockers: list[dict[str, Any]] = []
+    if profile.get("schemaVersion") != THREAD_BRIDGE_PROFILE_SCHEMA:
+        blockers.append({"code": "thread-profile-schema-invalid"})
+    if profile.get("profileId") != "thread-bridge":
+        blockers.append({"code": "thread-profile-id-invalid"})
+    for key in ("adapterId", "host"):
+        if not isinstance(profile.get(key), str) or not profile[key]:
+            blockers.append({"code": "thread-profile-field-invalid", "field": key})
+    if profile.get("policyVersion") != THREAD_BRIDGE_POLICY_VERSION:
+        blockers.append({"code": "thread-profile-policy-invalid"})
+    if profile.get("transport") != "adapter-owned":
+        blockers.append({"code": "thread-profile-transport-invalid"})
+    if profile.get("providerIdentityUsed") is not False:
+        blockers.append({"code": "thread-profile-provider-identity"})
+    if profile.get("hostExecutionOwned") is not True:
+        blockers.append({"code": "thread-profile-execution-boundary"})
+    if profile.get("qualificationRequired") is not True:
+        blockers.append({"code": "thread-profile-qualification-required"})
+    if profile.get("productionPromotionClaimed") is not False:
+        blockers.append({"code": "thread-profile-production-claim"})
+    for field in ("descriptorDigest", "capabilityManifestDigest"):
+        value = profile.get(field)
+        if value is not None and (not isinstance(value, str) or len(value) != 64):
+            blockers.append({"code": "thread-profile-digest-invalid", "field": field})
+    if not isinstance(profile.get("hostRange"), dict):
+        blockers.append({"code": "thread-profile-host-range-invalid"})
+    _validate_adapter_profile_operations(profile.get("operations"), blockers)
+    _check_digest(profile, "profileDigest", blockers)
+    return _profile_validation(profile, blockers)
+
+
+def validate_thread_bridge_qualification_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
+    """Validate an adapter-owned qualification receipt without executing it."""
+
+    blockers: list[dict[str, Any]] = []
+    if receipt.get("schemaVersion") != THREAD_BRIDGE_QUALIFICATION_RECEIPT_SCHEMA:
+        blockers.append({"code": "thread-qualification-schema-invalid"})
+    for key in ("receiptId", "adapterId", "host"):
+        if not isinstance(receipt.get(key), str) or not receipt[key]:
+            blockers.append({"code": "thread-qualification-field-invalid", "field": key})
+    for field in ("descriptorDigest", "capabilityManifestDigest"):
+        _require_digest_field(receipt, field, blockers)
+    if receipt.get("policyVersion") != THREAD_BRIDGE_POLICY_VERSION:
+        blockers.append({"code": "thread-qualification-policy-invalid"})
+    if not isinstance(receipt.get("hostRange"), dict):
+        blockers.append({"code": "thread-qualification-host-range-invalid"})
+    if receipt.get("route") not in {"native", "wrapper"}:
+        blockers.append({"code": "thread-qualification-route-invalid"})
+    if receipt.get("qualificationStatus") != "QUALIFIED":
+        blockers.append({"code": "thread-qualification-status-invalid"})
+    _validate_operation_set(receipt.get("operationSet"), blockers)
+    refs = receipt.get("evidenceRefs")
+    if not isinstance(refs, list) or not refs or not all(isinstance(item, str) and item for item in refs):
+        blockers.append({"code": "thread-qualification-evidence-invalid"})
+    for field in ("hostExecutionStarted", "modelCallsStarted", "networkCallsStarted", "rawContentStored", "sourceOfTruth", "proof", "productionPromotionClaimed"):
+        expected = field == "hostExecutionStarted"
+        if receipt.get(field) is not expected:
+            blockers.append({"code": "thread-qualification-boundary-claim", "field": field})
+    _check_digest(receipt, "receiptDigest", blockers)
+    return _profile_validation(receipt, blockers, receipt_schema=THREAD_BRIDGE_QUALIFICATION_RECEIPT_SCHEMA)
+
+
+def resolve_thread_operation_status(
+    profile: dict[str, Any],
+    operation: str,
+    *,
+    qualification_receipt: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Project adapter status into the existing capability-support enum."""
+
+    profile_validation = validate_thread_bridge_profile(profile)
+    blockers = list(profile_validation.get("blockers", []))
+    operation_entry = next(
+        (item for item in profile.get("operations", []) if isinstance(item, dict) and item.get("name") == operation),
+        None,
+    )
+    if operation_entry is None:
+        return {
+            "status": "FAIL",
+            "operation": operation,
+            "declaredStatus": "UNSUPPORTED",
+            "qualificationStatus": "INVALID",
+            "effectiveStatus": "UNSUPPORTED",
+            "capabilitySupport": "unsupported",
+            "blockers": blockers + [{"code": "thread-profile-operation-missing", "operation": operation}],
+        }
+    declared = operation_entry["declaredStatus"]
+    effective = declared
+    qualification_status = "UNQUALIFIED"
+    capability_support = "unsupported" if declared == "UNSUPPORTED" else "unknown"
+    if declared == "SUPPORTED":
+        effective = "WRAPPER_ONLY"
+    if qualification_receipt is not None:
+        receipt_validation = validate_thread_bridge_qualification_receipt(qualification_receipt)
+        if receipt_validation["status"] != "PASS":
+            qualification_status = "INVALID"
+            blockers.extend(receipt_validation.get("blockers", []))
+        elif declared == "UNSUPPORTED":
+            qualification_status = "INVALID"
+            blockers.append({"code": "thread-qualification-unsupported-declaration", "operation": operation})
+        elif not _qualification_matches(profile, qualification_receipt, operation):
+            qualification_status = "STALE"
+            blockers.append({"code": "thread-qualification-binding-mismatch", "operation": operation})
+        elif operation not in qualification_receipt.get("operationSet", []):
+            qualification_status = "STALE"
+            blockers.append({"code": "thread-qualification-operation-missing", "operation": operation})
+        else:
+            qualification_status = "QUALIFIED"
+            effective = "SUPPORTED"
+            capability_support = "supported"
+    return {
+        "status": "FAIL" if blockers else "PASS",
+        "operation": operation,
+        "declaredStatus": declared,
+        "qualificationStatus": qualification_status,
+        "effectiveStatus": effective,
+        "capabilitySupport": capability_support,
+        "blockers": blockers,
+    }
+
+
 def validate_thread_operation_request(request: dict[str, Any]) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     if request.get("schemaVersion") != THREAD_OPERATION_REQUEST_SCHEMA:
@@ -672,6 +1004,99 @@ def _validate_capability_operations(value: Any, blockers: list[dict[str, Any]]) 
         expected_approval = "none" if name in THREAD_READ_OPERATIONS else "operator"
         if item.get("approval") != expected_approval:
             blockers.append({"code": "thread-capability-approval-mismatch", "operation": name})
+        if "declaredStatus" in item and item.get("declaredStatus") not in THREAD_ADAPTER_STATUS_VALUES:
+            blockers.append({"code": "thread-capability-declared-status-invalid", "operation": name})
+        if "qualificationStatus" in item and item.get("qualificationStatus") not in THREAD_QUALIFICATION_STATUS_VALUES:
+            blockers.append({"code": "thread-capability-qualification-status-invalid", "operation": name})
+        if "effectiveStatus" in item and item.get("effectiveStatus") not in THREAD_EFFECTIVE_STATUS_VALUES:
+            blockers.append({"code": "thread-capability-effective-status-invalid", "operation": name})
+        if "capabilitySupport" in item and item.get("capabilitySupport") != item.get("support"):
+            blockers.append({"code": "thread-capability-support-projection-mismatch", "operation": name})
+
+
+def _normalize_adapter_operations(operations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not isinstance(operations, list) or not operations:
+        raise LifecycleError("thread-profile-operations-invalid", "thread profile operations must be a non-empty list")
+    entries: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in operations:
+        if not isinstance(item, dict):
+            raise LifecycleError("thread-profile-operation-invalid", "thread profile operation must be an object")
+        name = item.get("name")
+        status = item.get("declaredStatus", item.get("status"))
+        if name not in THREAD_OPERATIONS or name in seen:
+            raise LifecycleError("thread-profile-operation-invalid", "thread profile operation is unsupported", {"operation": name})
+        if status not in THREAD_ADAPTER_STATUS_VALUES:
+            raise LifecycleError("thread-profile-status-invalid", "thread profile status is unsupported", {"operation": name})
+        seen.add(name)
+        entries.append(
+            {
+                "name": name,
+                "declaredStatus": status,
+                "readOnly": name in THREAD_READ_OPERATIONS,
+                "approval": "none" if name in THREAD_READ_OPERATIONS else "operator",
+                "execution": "adapter-owned",
+                "qualificationRequired": True,
+            }
+        )
+    return sorted(entries, key=lambda item: item["name"])
+
+
+def _normalize_operation_set(operation_set: list[str]) -> list[str]:
+    if not isinstance(operation_set, list) or not operation_set:
+        raise LifecycleError("thread-qualification-operations-invalid", "qualification operationSet must be a non-empty list")
+    if any(item not in THREAD_OPERATIONS for item in operation_set) or len(set(operation_set)) != len(operation_set):
+        raise LifecycleError("thread-qualification-operations-invalid", "qualification operationSet contains an unsupported or duplicate operation")
+    return sorted(operation_set)
+
+
+def _validate_adapter_profile_operations(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(value, list) or not value or len(value) > len(THREAD_OPERATIONS):
+        blockers.append({"code": "thread-profile-operations-invalid"})
+        return
+    seen: set[str] = set()
+    for item in value:
+        if not isinstance(item, dict):
+            blockers.append({"code": "thread-profile-operation-invalid"})
+            continue
+        name = item.get("name")
+        if name not in THREAD_OPERATIONS or name in seen:
+            blockers.append({"code": "thread-profile-operation-invalid", "operation": name})
+            continue
+        seen.add(name)
+        if item.get("declaredStatus") not in THREAD_ADAPTER_STATUS_VALUES:
+            blockers.append({"code": "thread-profile-status-invalid", "operation": name})
+        if item.get("readOnly") is not (name in THREAD_READ_OPERATIONS):
+            blockers.append({"code": "thread-profile-read-only-mismatch", "operation": name})
+        expected_approval = "none" if name in THREAD_READ_OPERATIONS else "operator"
+        if item.get("approval") != expected_approval:
+            blockers.append({"code": "thread-profile-approval-mismatch", "operation": name})
+        if item.get("execution") != "adapter-owned":
+            blockers.append({"code": "thread-profile-execution-invalid", "operation": name})
+        if item.get("qualificationRequired") is not True:
+            blockers.append({"code": "thread-profile-qualification-invalid", "operation": name})
+
+
+def _validate_operation_set(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(value, list) or not value or len(value) > len(THREAD_OPERATIONS):
+        blockers.append({"code": "thread-qualification-operations-invalid"})
+        return
+    if any(item not in THREAD_OPERATIONS for item in value):
+        blockers.append({"code": "thread-qualification-operation-unsupported"})
+    if len(set(value)) != len(value):
+        blockers.append({"code": "thread-qualification-operation-duplicate"})
+
+
+def _qualification_matches(profile: dict[str, Any], receipt: dict[str, Any], operation: str) -> bool:
+    return (
+        receipt.get("adapterId") == profile.get("adapterId")
+        and receipt.get("host") == profile.get("host")
+        and receipt.get("descriptorDigest") == profile.get("descriptorDigest")
+        and receipt.get("capabilityManifestDigest") == profile.get("capabilityManifestDigest")
+        and receipt.get("hostRange") == profile.get("hostRange")
+        and receipt.get("policyVersion") == profile.get("policyVersion")
+        and operation in receipt.get("operationSet", [])
+    )
 
 
 def _contains_authority(value: Any) -> bool:
@@ -719,6 +1144,27 @@ def _require_digest_field(payload: dict[str, Any], field: str, blockers: list[di
     value = payload.get(field)
     if not isinstance(value, str) or len(value) != 64:
         blockers.append({"code": "thread-digest-invalid", "field": field})
+
+
+def _profile_validation(
+    payload: dict[str, Any],
+    blockers: list[dict[str, Any]],
+    *,
+    receipt_schema: str = THREAD_BRIDGE_PROFILE_SCHEMA,
+) -> dict[str, Any]:
+    body = {
+        "schemaVersion": THREAD_BRIDGE_PROFILE_VALIDATION_SCHEMA,
+        "status": "PASS" if not blockers else "FAIL",
+        "adapterId": payload.get("adapterId"),
+        "checkedSchema": receipt_schema,
+        "checks": [
+            {"name": "shape", "status": "PASS" if not blockers else "FAIL"},
+            {"name": "digest", "status": "PASS" if not any(item.get("code") == "thread-digest-mismatch" for item in blockers) else "FAIL"},
+        ],
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
 
 
 def _validation(schema: str, blockers: list[dict[str, Any]], digest: Any, label: str) -> dict[str, Any]:

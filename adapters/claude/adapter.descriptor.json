@@ -210,18 +210,115 @@
   },
   "installation": {
     "schemaVersion": "agent-adapter-installation-facts.v1",
-    "binaryAliases": ["claude", "claude-code"],
+    "binaryAliases": [
+      "claude",
+      "claude-code"
+    ],
     "files": [
-      {"path": ".claude-plugin/plugin.json", "action": "read", "required": true},
-      {"path": ".claude-plugin/marketplace.json", "action": "read", "required": true}
+      {
+        "path": ".claude-plugin/plugin.json",
+        "action": "read",
+        "required": true
+      },
+      {
+        "path": ".claude-plugin/marketplace.json",
+        "action": "read",
+        "required": true
+      }
     ],
     "commands": [
-      {"argv": ["claude", "plugin", "marketplace", "add", "avksp/agent-lifecycle-kit"], "purpose": "add the repository marketplace", "mutatesHost": true, "requiresOperator": true},
-      {"argv": ["claude", "plugin", "install", "agent-lifecycle-kit@agent-lifecycle-kit"], "purpose": "install the plugin from the configured marketplace", "mutatesHost": true, "requiresOperator": true}
+      {
+        "argv": [
+          "claude",
+          "plugin",
+          "marketplace",
+          "add",
+          "avksp/agent-lifecycle-kit"
+        ],
+        "purpose": "add the repository marketplace",
+        "mutatesHost": true,
+        "requiresOperator": true
+      },
+      {
+        "argv": [
+          "claude",
+          "plugin",
+          "install",
+          "agent-lifecycle-kit@agent-lifecycle-kit"
+        ],
+        "purpose": "install the plugin from the configured marketplace",
+        "mutatesHost": true,
+        "requiresOperator": true
+      }
     ],
     "operatorActions": [
       "Run the host reload command after installation.",
       "Keep lifecycle proof separate from plugin installation."
     ]
+  },
+  "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
+    "adapterId": "claude",
+    "host": "claude-code",
+    "descriptorDigest": null,
+    "capabilityManifestDigest": null,
+    "hostRange": {
+      "host": "claude-code",
+      "minimumVersion": "2.1.220",
+      "maximumVersion": "2.1.220",
+      "sourceRevision": "6bb3b58ee01d028fe21cef209c284efc79e55ceb",
+      "testedAt": "2026-07-29",
+      "evidence": [
+        "docs/adapters/evidence/claude-code-0.5.0.md",
+        "work/release-0-5/evidence/live-host-conformance-claude-code.json",
+        "work/release-0-5/evidence/live-calibration-verification-claude-code.json",
+        "work/release-0-5/evidence/0.5.1-claude-live-promotion/full-lifecycle/final/final-proof.json"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "operations": [
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "send",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "create",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      }
+    ],
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
+    "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
+    "qualificationRequired": true,
+    "productionPromotionClaimed": false,
+    "profileDigest": "c75165192551138631732d5eafa01e87da8ebc70a61262e203149c389d3170bc"
   }
 }

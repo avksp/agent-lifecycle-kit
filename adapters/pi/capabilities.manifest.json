@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "e8158ebf68f0f0b877f657c8495673921eacb94f4b3ccdc2cfe162dec62bfc3e",
+  "descriptorDigest": "e7199741f5b5226126d4997f0d530d549de60308653d2e24b669c4a12d86323e",
   "eventCapture": {
     "categories": [
       "command",
@@ -169,11 +169,11 @@
     "usageReceiptRequired": true
   },
   "planningLaunch": {
-    "profileStatus": "UNSUPPORTED",
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
     "expectedHostVersion": "0.83.0",
-    "qualificationRequired": true,
-    "hostLaunchStarted": false
+    "hostLaunchStarted": false,
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "profileStatus": "UNSUPPORTED",
+    "qualificationRequired": true
   },
   "promotion": {
     "liveTestedHostRange": {
@@ -252,5 +252,77 @@
     }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "threadBridge": {
+    "adapterId": "pi",
+    "capabilityManifestDigest": "86d3e4e82da2cbc141e22376ec9e38830ece3c5d0a3349c5ba6268ec0c019398",
+    "descriptorDigest": "e7199741f5b5226126d4997f0d530d549de60308653d2e24b669c4a12d86323e",
+    "evidencePolicy": "not-claimed",
+    "host": "pi",
+    "hostExecutionOwned": true,
+    "hostRange": {
+      "evidence": [
+        "docs/adapters/evidence/pi-live-verified.md",
+        "work/release-1-19/evidence/pi-install-probe.json",
+        "work/release-1-19/evidence/preflight/pi-preflight-report-live-ready.json",
+        "work/release-1-19/evidence/pi-containment-receipt-live-ready.json",
+        "work/release-1-19/evidence/live-host-receipts/pi.json",
+        "work/release-1-19/evidence/live-host-conformance-pi.json",
+        "work/release-1-19/evidence/live-calibration-receipts/pi.json",
+        "work/release-1-19/evidence/live-calibration-verification-pi.json",
+        "work/release-1-19/evidence/host-env-hygiene-pi-harness-reports.json",
+        "work/release-1-19/evidence/host-env-hygiene-pi-all-scanned.json",
+        "work/release-1-19/evidence/pi/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "pi",
+      "maximumVersion": "0.83.0",
+      "minimumVersion": "0.83.0",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "75317878358a3dffa4b503cdb8bd8fff40de770b",
+      "testedAt": "2026-08-01"
+    },
+    "operations": [
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "create",
+        "qualificationRequired": true,
+        "readOnly": false
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "list",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "read",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "send",
+        "qualificationRequired": true,
+        "readOnly": false
+      }
+    ],
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "productionPromotionClaimed": false,
+    "profileDigest": "95900d0d913db0ae2c4c5baeebd9356eef846c752e6b03a45fc5bfcfcff51383",
+    "profileId": "thread-bridge",
+    "providerIdentityUsed": false,
+    "qualificationRequired": true,
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "transport": "adapter-owned"
+  },
   "unsupportedOperationPolicy": "fail-closed"
 }

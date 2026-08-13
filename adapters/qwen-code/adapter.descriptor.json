@@ -254,5 +254,70 @@
       "Configure host-local model and profile settings outside the portable core.",
       "Keep the adapter EXPERIMENTAL until receipts are accepted."
     ]
+  },
+  "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
+    "adapterId": "qwen-code",
+    "host": "qwen-code",
+    "descriptorDigest": null,
+    "capabilityManifestDigest": null,
+    "hostRange": {
+      "host": "qwen-code",
+      "minimumVersion": "0.21.0",
+      "maximumVersion": "0.21.0",
+      "evidence": [
+        "docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md",
+        "work/release-0-11/evidence/qwen-code/live-host-conformance-qwen-code.json",
+        "work/release-0-11/evidence/qwen-code/live-calibration-verification-qwen-code.json",
+        "work/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json"
+      ],
+      "testedAt": "2026-07-29",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "6c6b40210ee28de4b6a5993367af89e629fb99ff"
+    },
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "operations": [
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "send",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "create",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      }
+    ],
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
+    "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
+    "qualificationRequired": true,
+    "productionPromotionClaimed": false,
+    "profileDigest": "b31a0b14b4fceb72da54d144dbe146165613c2af7cf3e85bbec8ed78e89da4be"
   }
 }
