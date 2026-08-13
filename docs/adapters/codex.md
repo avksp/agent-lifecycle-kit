@@ -19,12 +19,12 @@ The local live evidence covers live conformance, live host operation coverage,
 live calibration and one ALK lifecycle proof for the tested host range. See
 `docs/adapters/evidence/codex-cli-0.6.0.md`.
 
-## Qualified local launch
+## Launch through a verified local profile
 
 Codex CLI `0.147.0` has a separate version-bound local launch profile. Generate
 and preflight it before a frozen `start --launch` call. The full adapter
-evidence range remains `0.145.0`, while usage accounting is `FIXTURE_ONLY`. See [Qualified host
-launch](../reference/qualified-host-launch.md).
+evidence range remains `0.145.0`, while usage accounting is `FIXTURE_ONLY`. See
+[Frozen-task launch through a verified profile](../reference/qualified-host-launch.md).
 
 The same exact version has a planning-only profile with status
 `PLANNING_ONLY_UNSUPPORTED`. Its qualification path is described in
@@ -50,7 +50,7 @@ For a deterministic entrypoint outside the Codex session:
 agent-lifecycle start --adapter codex --file task.md
 ```
 
-This command creates ALK intake. For host execution, use the qualified launch
-route. Lifecycle proof is recorded by ALK state transitions and accepted
-receipts. See [Using ALK with an
+This command creates ALK intake. For host execution, use the launch route
+through a verified profile. Lifecycle proof is recorded by ALK state transitions
+and accepted receipts. See [Using ALK with an
 adapter](usage-modes.md).

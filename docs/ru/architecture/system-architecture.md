@@ -374,7 +374,7 @@ sequenceDiagram
   CLI->>Handler: маршрут команды тредов
   Handler->>Bridge: prepare_thread_request()
   Bridge-->>User: agent-thread-operation-request.v1
-  User->>Adapter: передать запрос квалифицированной интеграции хоста
+  User->>Adapter: передать запрос интеграции хоста через проверенный профиль
   Adapter-->>User: agent-thread-operation-receipt.v1
   User->>CLI: thread import --request --receipt
   CLI->>Bridge: проверить связь запроса и ответа
@@ -414,7 +414,7 @@ sequenceDiagram
     Start->>Intake: start_adapter_task()
     Intake-->>Start: проверяемый черновик
     Start->>Strategy: отложенное резюме без догадки о маршруте
-    opt явный квалифицированный запуск планирования
+    opt явный запуск планирования через проверенный профиль
       Start->>PlanningStore: создать состояние только с отпечатками
       Start->>LocalLaunch: launch_from_local_profile(planningOnly, stdin)
       LocalLaunch->>Process: один ограниченный процесс без записи
@@ -455,7 +455,7 @@ sequenceDiagram
 Режимы `auto`, `research`, `plan` и
 `review` принимают обычную задачу только как черновик и не могут начать
 реализацию. При явном `--launch` они могут обратиться лишь к отдельно
-квалифицированному профилю `planningOnly`; такой процесс обязан завершиться
+проверенному профилю `planningOnly`; такой процесс обязан завершиться
 проверкой или блокировкой и не имеет права менять исходное дерево.
 
 Режим `implement` принимает только зафиксированный вход с полной привязкой к

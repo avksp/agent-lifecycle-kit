@@ -20,7 +20,9 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
+
 It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.65.0`, and common `agent-lifecycle version` errors.
+
 For a quick start, run:
 
 ```bash
@@ -42,13 +44,11 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 
 - Start with [quickstart](docs/guides/quickstart.md).
 - Then choose a suitable scenario in [how ALK works for different tasks](docs/guides/how-alk-works.md).
-- The boundaries of [planning-only launch](docs/reference/planning-only-launch.md) and [qualified launch of a frozen task](docs/reference/qualified-host-launch.md) are documented in the reference. Shipped planning profiles remain candidates with safe failure until real qualification.
+- The boundaries of [planning-only launch](docs/reference/planning-only-launch.md) and [frozen-task launch through a verified profile](docs/reference/qualified-host-launch.md) are documented in the reference. Shipped planning profiles remain candidates with safe failure until the corresponding profile is verified.
 - The [system architecture](docs/architecture/system-architecture.md) page explains how the project is organized, and [project comparison](docs/reference/project-comparison.md) shows how it differs from similar tools.
 - Multiple-agent boundaries, workflow configuration, model choice, prompts, timeouts and retries are described in [workflow customization and execution controls](docs/reference/workflow-customization.md).
 - Create a local project profile with `agent-lifecycle project profile init`; see [project workflow profile](docs/reference/project-workflow-profile.md).
 - For long sessions, use [context checkpoints and compaction recovery](docs/reference/context-checkpoints.md). They preserve a bounded local continuation package without changing plan authority.
-- For the full documentation index, see [English documentation](docs/README.md) and [русскую документацию](docs/ru/README.md).
-
 ## What it gives you
 - A finish-oriented lifecycle: plan, execute, review, and prove the result.
 - One process for different CLIs: adapter-specific commands stay outside the
@@ -102,7 +102,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 ### Security and containment
 
 - Release neutrality scans bind the Git index and current revision; ignored local evidence is read through an explicit policy-limited flag. Host-supplied rules keep local paths, secrets, trust roots and signing keys out of portable artifacts.
-- Host environment access uses explicit `--host-env-allow`; receipts store redacted metadata, and qualified local profiles provide the managed launch route.
+- Host environment access uses explicit `--host-env-allow`; receipts store redacted metadata, and verified local profiles provide the managed launch route.
 - Imports, diagnostics, and usage exports redact local paths and common secret markers before validation.
 - Sandbox receipts separate runtime filesystem, network, process, and environment containment from git write-scope.
 - Release security gates validate portable paths, credentials, adapter scope and production claims.

@@ -225,8 +225,8 @@ atomic interface for scripts and advanced operators.
 - `agent-lifecycle adapter launch-profile --adapter codex|claude|opencode
   --repository-root <ALK checkout> --out .alk/host-launch/<adapter>.json`:
   create a version-bound local profile without executing the host. Follow with
-  `host-launch preflight`; see [Qualified host
-  launch](qualified-host-launch.md).
+  `host-launch preflight`; see [Frozen-task launch through a verified
+  profile](qualified-host-launch.md).
   The same file contains a planning candidate section, but version preflight
   alone does not change `PLANNING_ONLY_UNSUPPORTED` to qualified.
 - `agent-lifecycle adapter event-check`: validate neutral adapter event

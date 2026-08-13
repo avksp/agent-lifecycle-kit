@@ -20,9 +20,9 @@ runner caps. Higher modes add more evidence, but they should not hide the cost:
 agent-lifecycle metrics cost-check --receipt <lifecycle-cost-report.json>
 ```
 
-Exact token counters must come from a qualified host-local normalizer. Fixture
-counters and the conservative core fallback remain visibly estimated and do
-not satisfy S1/S2. See
+Exact token counters must come from a host-local normalizer with accepted
+evidence for the exact host range. Fixture counters and the conservative core
+fallback remain visibly estimated and do not satisfy S1/S2. See
 [Host-local token accounting](../reference/host-local-token-accounting.md).
 
 If pipeline compliance exceeds the mode limits, record why the stricter path
@@ -81,8 +81,8 @@ risk profile. Never put task text, shell commands or credentials in
 `argvTemplate`. See [Local host launch](../reference/local-host-launch.md).
 For shipped Codex, Claude Code and OpenCode profiles, require the exact-version
 qualification receipt before managed launch. Version preflight is not a token
-usage attestation; see [Qualified host
-launch](../reference/qualified-host-launch.md).
+usage attestation; see [Frozen-task launch through a verified
+profile](../reference/qualified-host-launch.md).
 
 Raw-task planning is a different profile operation. It may carry task data only
 over bounded stdin, must prove the host's native read-only or tool-denial
