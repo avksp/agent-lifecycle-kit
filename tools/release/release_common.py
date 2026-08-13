@@ -40,6 +40,7 @@ PAYLOAD_ROOTS = (
     "docs",
     "policy",
     "profiles",
+    "schemas/agent-plugins",
     "skills",
     "src",
     "templates",

@@ -19,6 +19,8 @@ jobs:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
@@ -30,9 +32,59 @@ jobs:
             --target-version "${RELEASE_TAG#v}" \
             --target-ref "${RELEASE_TAG}" \
             --evidence /tmp/publication-versions.json
+      - name: Validate publication adoption
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python tools/release/validate_publication_adoption.py \
+            --target-version "${RELEASE_TAG#v}" \
+            --evidence /tmp/publication-adoption.json
       - name: Install build frontend
         run: python -m pip install build
       - name: Build and smoke-test distribution
         run: python tests/package/run_packaging_smoke.py --dist-dir dist --python python --evidence /tmp/packaging-smoke.json
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  agent-plugin:
+    name: Build and publish Agent Plugins archive
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Build, validate and upload portable archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="$(python - <<'PY'
+          import os
+          import re
+
+          tag = os.environ["RELEASE_TAG"]
+          if re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag) is None:
+              raise SystemExit(f"release tag is not an immutable semver tag: {tag!r}")
+          print(tag[1:])
+          PY
+          )"
+          ARCHIVE="/tmp/agent-lifecycle-kit-agent-plugin-${RELEASE_TAG}.zip"
+          python tools/release/build_agent_plugin.py \
+            --root . \
+            --version "$VERSION" \
+            --out /tmp/agent-lifecycle-kit-agent-plugin \
+            --archive "$ARCHIVE"
+          python tools/release/validate_agent_plugin.py \
+            --root . \
+            --package /tmp/agent-lifecycle-kit-agent-plugin \
+            --archive "$ARCHIVE" \
+            --version "$VERSION" \
+            --evidence /tmp/agent-plugin-validation.json
+          gh release upload "$RELEASE_TAG" "$ARCHIVE"
