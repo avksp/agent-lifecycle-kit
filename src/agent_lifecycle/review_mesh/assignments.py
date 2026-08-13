@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.model_routing.profiles import ALLOWED_MODEL_CLASSES
+from agent_lifecycle.contracts.thread_bridge_schemas import validate_thread_context_import
 from agent_lifecycle.review_mesh.contracts import (
     build_review_mesh_assignment,
     build_review_mesh_profile,
@@ -106,6 +107,29 @@ def source_from_handoff(handoff: dict[str, Any]) -> dict[str, Any]:
         "label": str(handoff.get("packageId") or handoff.get("taskId") or "plan-handoff"),
         "digest": canonical_digest(handoff),
         "status": handoff.get("status"),
+    }
+
+
+def source_from_thread_context(imported_context: dict[str, Any]) -> dict[str, Any]:
+    """Declare imported thread context as an optional, non-proof review source."""
+
+    validation = validate_thread_context_import(imported_context)
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "review-mesh-source-thread-context-invalid",
+            "thread context is not a valid import",
+            {"validation": validation},
+        )
+    source = imported_context.get("source") if isinstance(imported_context.get("source"), dict) else {}
+    return {
+        "kind": "THREAD_CONTEXT_IMPORT",
+        "label": source.get("sourceId") or "thread-context",
+        "digest": imported_context["importDigest"],
+        "status": imported_context["status"],
+        "sourceOfTruth": False,
+        "proof": False,
+        "reviewMeshRequired": False,
+        "contextRole": "optional-thread-context",
     }
 
 

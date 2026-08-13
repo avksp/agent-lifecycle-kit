@@ -44,6 +44,7 @@ class ProjectProfileTests(unittest.TestCase):
         self.assertIsNot(normalized, profile)
         self.assertNotIn("productionPromotionClaimed", profile)
         self.assertFalse(normalized["productionPromotionClaimed"])
+        self.assertEqual(normalized["threadBridge"]["mode"], "off")
 
     def test_unknown_stage_and_alias_are_rejected(self) -> None:
         with self.assertRaisesRegex(LifecycleError, "canonical"):

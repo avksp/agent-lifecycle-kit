@@ -129,6 +129,33 @@ Example:
 }
 ```
 
+### Optional thread bridge
+
+The optional `threadBridge` field enables bounded access to host-owned threads
+for selected phases. It is `off` by default and supports `read`, `list`, `send`
+and `create`. Read/list rules use no operator approval; send/create rules use
+operator approval and an idempotency key.
+
+```json
+{
+  "threadBridge": {
+    "mode": "read-only",
+    "operations": {
+      "read": {"enabled": true, "scope": "explicit-target", "approval": "none", "blocking": "required"},
+      "list": {"enabled": true, "scope": "project", "approval": "none", "blocking": "non-blocking"},
+      "send": {"enabled": false, "scope": "explicit-target", "approval": "operator", "blocking": "required"},
+      "create": {"enabled": false, "scope": "project", "approval": "operator", "blocking": "required"}
+    },
+    "phaseRules": {"research": {"read": {"enabled": true, "scope": "explicit-target"}}},
+    "limits": {"maxImportedBytes": 32768, "maxImportedTokens": 2048}
+  }
+}
+```
+
+The bridge policy controls permission and resource bounds; the adapter owns the
+native thread API. Imported thread content is additional context with no plan,
+acceptance or proof authority. See [Optional thread bridge](optional-thread-bridge.md).
+
 References stay inside the project root. The `.alk/` exception is reserved for
 operator-local host model and launch profiles. The profile loader checks path
 components and rejects traversal, absolute paths, URLs and symlink escapes.

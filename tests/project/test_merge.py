@@ -15,6 +15,7 @@ class ProjectProfileMergeTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(first["defaultRisk"], "S0")
         self.assertEqual(first["authority"]["planBound"], False)
+        self.assertEqual(first["threadBridge"]["mode"], "off")
         self.assertFalse(first["productionPromotionClaimed"])
 
     def test_frozen_plan_is_the_risk_floor(self) -> None:
@@ -63,6 +64,31 @@ class ProjectProfileMergeTests(unittest.TestCase):
         require_profile_digest(effective, effective["effectiveProfileDigest"])
         with self.assertRaisesRegex(LifecycleError, "digest"):
             require_profile_digest(effective, "f" * 64)
+
+    def test_frozen_plan_can_require_read_only_thread_operation(self) -> None:
+        plan = {
+            "status": "FROZEN",
+            "tierResolution": {"tier": "S1"},
+            "threadBridge": {
+                "mode": "read-only",
+                "operations": {
+                    "read": {"enabled": True, "scope": "explicit-target", "approval": "none", "blocking": "required"},
+                    "list": {"enabled": False, "scope": "project", "approval": "none", "blocking": "non-blocking"},
+                    "send": {"enabled": False, "scope": "explicit-target", "approval": "operator", "blocking": "required"},
+                    "create": {"enabled": False, "scope": "project", "approval": "operator", "blocking": "required"},
+                },
+                "phaseRules": {},
+                "limits": {"maxImportedBytes": 4096, "maxImportedTokens": 512},
+            },
+        }
+        lock = {"manifestHash": canonical_digest(plan)}
+
+        effective = build_effective_project_profile(_profile(), plan=plan, lock=lock)
+
+        self.assertEqual(effective["threadBridge"]["mode"], "read-only")
+        self.assertTrue(effective["threadBridge"]["operations"]["read"]["enabled"])
+        self.assertFalse(effective["threadBridge"]["operations"]["send"]["enabled"])
+        self.assertEqual(effective["threadBridge"]["limits"]["maxImportedTokens"], 512)
 
 
 if __name__ == "__main__":

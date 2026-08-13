@@ -39,7 +39,7 @@ and start a task with:
 agent-lifecycle start --adapter <adapter-id> --file task.md
 ```
 
-The published [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14; install it with `python -m pip install agent-lifecycle-kit==1.64.0`.
+The published [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14; install it with `python -m pip install agent-lifecycle-kit==1.65.0`. The optional [thread bridge](docs/reference/optional-thread-bridge.md) imports adapter-owned thread results as non-authoritative context.
 Use [Quickstart](docs/guides/quickstart.md) for the first task and [Commands by task](docs/guides/commands-by-task.md) for detailed operations.
 Continue with [task workflows](docs/guides/how-alk-works.md) and
 [project profile init](docs/reference/project-workflow-profile.md),

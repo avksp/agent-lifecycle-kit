@@ -11,6 +11,7 @@ from agent_lifecycle.contracts.project_profile_schemas import (
     PROJECT_PROFILE_STAGES,
 )
 from agent_lifecycle.policy.risk_execution import RISK_TIERS, resolve_risk_tier
+from agent_lifecycle.policy.thread_bridge import merge_thread_bridge_policy
 from agent_lifecycle.project.profile import (
     normalize_project_profile,
     project_profile_digest,
@@ -41,6 +42,7 @@ def build_effective_project_profile(
     }
     defaults.update({key: value for key, value in overrides.items() if key != "stages"})
     defaults["defaultRisk"] = _resolve_risk(defaults["defaultRisk"], authority)
+    thread_bridge = merge_thread_bridge_policy(normalized.get("threadBridge"), authority.get("threadBridgePolicy"))
 
     stages = copy.deepcopy(normalized.get("stages", {}))
     for stage, settings in overrides.get("stages", {}).items():
@@ -62,6 +64,7 @@ def build_effective_project_profile(
         **defaults,
         "policies": copy.deepcopy(normalized.get("policies", {})),
         "stages": stages,
+        "threadBridge": thread_bridge,
         "authority": authority,
         "blockers": [],
         "productionPromotionClaimed": False,
@@ -114,6 +117,7 @@ def _plan_authority(plan: dict[str, Any] | None, lock: dict[str, Any] | None) ->
             "requiredGates": [],
             "reviewMeshRequired": False,
             "mandatoryStages": list(PROJECT_PROFILE_STAGES),
+            "threadBridgePolicy": None,
         }
     if not isinstance(plan, dict):
         raise LifecycleError("project-profile-plan-invalid", "plan authority must be an object")
@@ -157,6 +161,7 @@ def _plan_authority(plan: dict[str, Any] | None, lock: dict[str, Any] | None) ->
         "requiredGates": _string_list(plan.get("requiredGates", [])),
         "reviewMeshRequired": review_required,
         "mandatoryStages": list(PROJECT_PROFILE_STAGES),
+        "threadBridgePolicy": _thread_bridge_policy(plan),
     }
 
 
@@ -202,6 +207,16 @@ def _write_scope(plan: dict[str, Any]) -> list[str]:
             if isinstance(workstream, dict) and isinstance(workstream.get("writes"), list):
                 scope.update(item for item in workstream["writes"] if isinstance(item, str) and item)
     return sorted(scope)
+
+
+def _thread_bridge_policy(plan: dict[str, Any]) -> dict[str, Any] | None:
+    candidate = plan.get("threadBridgePolicy")
+    if not isinstance(candidate, dict):
+        candidate = plan.get("threadBridge")
+    if not isinstance(candidate, dict):
+        specification = plan.get("specification")
+        candidate = specification.get("threadBridge") if isinstance(specification, dict) else None
+    return copy.deepcopy(candidate) if isinstance(candidate, dict) else None
 
 
 def _string_list(value: Any) -> list[str]:

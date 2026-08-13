@@ -18,6 +18,11 @@ from agent_lifecycle.contracts.project_profile_schemas import (
     STAGE_SETTING_KEYS,
 )
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
+from agent_lifecycle.policy.thread_bridge import (
+    build_default_thread_bridge_policy,
+    normalize_thread_bridge_policy,
+    validate_thread_bridge_policy,
+)
 
 MAX_PROFILE_BYTES = 65536
 MAX_GUIDANCE_BYTES = 16384
@@ -34,6 +39,7 @@ _PROFILE_KEYS = {
     "defaultRisk",
     "policies",
     "stages",
+    "threadBridge",
     "productionPromotionClaimed",
 }
 _FORBIDDEN_KEYS = {
@@ -97,6 +103,7 @@ def build_default_project_profile() -> dict[str, Any]:
         "defaultRisk": "auto",
         "policies": {},
         "stages": {},
+        "threadBridge": build_default_thread_bridge_policy(),
         "productionPromotionClaimed": False,
     }
 
@@ -113,6 +120,7 @@ def normalize_project_profile(
     normalized = copy.deepcopy(profile)
     normalized.setdefault("policies", {})
     normalized.setdefault("stages", {})
+    normalized["threadBridge"] = normalize_thread_bridge_policy(normalized.get("threadBridge"))
     normalized.setdefault("productionPromotionClaimed", False)
     return normalized
 
@@ -170,6 +178,9 @@ def validate_project_profile(
         raise LifecycleError("project-profile-stage-limit", "too many stage settings")
     for stage, settings in stages.items():
         _validate_stage_settings(stage, settings, project_root=project_root)
+    thread_bridge = profile.get("threadBridge")
+    if thread_bridge is not None:
+        validate_thread_bridge_policy(thread_bridge)
     return {
         "status": "PASS",
         "schemaVersion": PROJECT_PROFILE_SCHEMA,

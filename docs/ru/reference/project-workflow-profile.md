@@ -129,6 +129,34 @@ agent-lifecycle start \
 }
 ```
 
+### Необязательный мост тредов
+
+Поле `threadBridge` включает ограниченный доступ к принадлежащим хосту тредам
+для выбранных этапов. По умолчанию оно выключено и поддерживает `read`, `list`,
+`send` и `create`. Для чтения и списка подтверждение оператора не требуется;
+отправка и создание требуют подтверждение оператора и ключ идемпотентности.
+
+```json
+{
+  "threadBridge": {
+    "mode": "read-only",
+    "operations": {
+      "read": {"enabled": true, "scope": "explicit-target", "approval": "none", "blocking": "required"},
+      "list": {"enabled": true, "scope": "project", "approval": "none", "blocking": "non-blocking"},
+      "send": {"enabled": false, "scope": "explicit-target", "approval": "operator", "blocking": "required"},
+      "create": {"enabled": false, "scope": "project", "approval": "operator", "blocking": "required"}
+    },
+    "phaseRules": {"research": {"read": {"enabled": true, "scope": "explicit-target"}}},
+    "limits": {"maxImportedBytes": 32768, "maxImportedTokens": 2048}
+  }
+}
+```
+
+Политика моста задаёт разрешения и ограничения ресурсов, а нативный API тредов
+остаётся в адаптере. Импортированный контекст не имеет полномочий менять план,
+подтверждать приёмку или заменять доказательства. См. [страницу моста
+тредов](optional-thread-bridge.md).
+
 Ссылки остаются внутри корня проекта. Исключение `.alk/` предназначено для
 локальных профилей модели и запуска внешнего инструмента. Загрузчик проверяет
 компоненты пути и отклоняет обход корня, абсолютные пути, URL и выход через
