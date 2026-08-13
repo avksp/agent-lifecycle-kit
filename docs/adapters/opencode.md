@@ -35,13 +35,13 @@ summary is
 The verified scope covers OpenCode CLI `1.18.9`, the tested host-local model
 binding and the evidence summary above.
 
-## Qualified local launch
+## Launch through a verified local profile
 
 OpenCode `1.18.15` has a separate version-bound local launch profile. Generate
 and preflight it before a frozen `start --launch` call. The profile uses the
 approved process arguments; the full adapter evidence range remains `1.18.9`,
-and token accounting is `FIXTURE_ONLY`. See [Qualified host
-launch](../reference/qualified-host-launch.md).
+and token accounting is `FIXTURE_ONLY`. See [Frozen-task launch through a verified
+profile](../reference/qualified-host-launch.md).
 
 The planning-only route has status `PLANNING_ONLY_UNSUPPORTED`; its
 qualification path uses a safe native planning profile and live containment
@@ -68,5 +68,5 @@ For the command route:
 agent-lifecycle start --adapter opencode --file task.md
 ```
 
-The command creates ALK intake. For host execution, use the qualified launch
-route. See [Using ALK with an adapter](usage-modes.md).
+The command creates ALK intake. For host execution, use the launch route through
+a verified profile. See [Using ALK with an adapter](usage-modes.md).

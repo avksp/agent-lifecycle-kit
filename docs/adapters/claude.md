@@ -55,13 +55,13 @@ The bridge is intentionally host-neutral: Claude-specific session identifiers
 stay inside event `payload` or redacted host receipts, while lifecycle state,
 task identity, sequence, status and terminal semantics are validated by core.
 
-## Qualified local launch
+## Launch through a verified local profile
 
 Claude Code `2.1.226` has a separate version-bound local launch profile.
 Generate and preflight it before a frozen `start --launch` call. The profile
 uses the approved process arguments; the full adapter evidence range remains
-`2.1.220`, and token accounting is `FIXTURE_ONLY`. See [Qualified
-host launch](../reference/qualified-host-launch.md).
+`2.1.220`, and token accounting is `FIXTURE_ONLY`. See [Frozen-task launch
+through a verified profile](../reference/qualified-host-launch.md).
 
 Its planning-only section is a candidate with
 `PLANNING_ONLY_UNSUPPORTED`; the qualification sequence is described in
@@ -87,5 +87,5 @@ For a deterministic entrypoint outside the Claude Code session:
 agent-lifecycle start --adapter claude --file task.md
 ```
 
-The command creates ALK intake. For host execution, use the qualified launch
-route. See [Using ALK with an adapter](usage-modes.md).
+The command creates ALK intake. For host execution, use the launch route through
+a verified profile. See [Using ALK with an adapter](usage-modes.md).

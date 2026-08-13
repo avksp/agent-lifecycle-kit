@@ -28,8 +28,8 @@ agent-lifecycle adapter inspect \
 Резюме: `docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md`.
 Историческая заметка о каркасе и дымовой проверке:
 `docs/adapters/evidence/qwen-code-0.11.0.md`.
-`managedLaunch.status` имеет значение `WRAPPER_ONLY`; квалифицированный
-локальный профиль задаёт маршрут принятого запуска зафиксированной задачи.
+`managedLaunch.status` имеет значение `WRAPPER_ONLY`; проверенный локальный
+профиль задаёт маршрут принятого запуска зафиксированной задачи.
 
 Уровень поддержки адаптера и состояние нового нормализатора токенов учитываются
 раздельно. Адаптер имеет статус `VERIFIED`, а
@@ -65,6 +65,6 @@ agent-lifecycle host-launch preflight --profile .alk/host-launch/qwen-code.json
 agent-lifecycle start --adapter qwen-code --file task.md
 ```
 
-Команда создаёт входные артефакты ALK. Для работы хоста используйте
-квалифицированный маршрут запуска. Подробнее: [использование ALK с
+Команда создаёт входные артефакты ALK. Для работы хоста используйте маршрут
+запуска через проверенный профиль. Подробнее: [использование ALK с
 адаптером](usage-modes.md).

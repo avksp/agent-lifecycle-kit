@@ -71,6 +71,6 @@ agent-workflow-orchestrator для этой задачи: <задача>`. Эт�
 agent-lifecycle start --adapter cursor --file task.md
 ```
 
-Команда создаёт входные артефакты ALK. Для запуска Cursor добавьте
-квалифицированный профиль и `--launch`.
+Команда создаёт входные артефакты ALK. Для запуска Cursor добавьте проверенный
+профиль и `--launch`.
 Подробнее: [использование ALK с адаптером](usage-modes.md).
