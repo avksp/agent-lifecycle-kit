@@ -52,6 +52,13 @@ it must never guess a native host conversation id. Use `adapter task start`,
 `adapter session start` only to record an interactive `WAITING_FOR_TASK`
 session. Native host launching remains descriptor-driven and host-owned.
 
+For optional host-thread coordination, use `agent-lifecycle thread request` to
+prepare a bounded `read`, `list`, `send` or `create` request, then import the
+adapter-owned receipt with `agent-lifecycle thread import`. The bridge is off
+by default. `send` and `create` require operator approval and an idempotency
+key; imported thread content is advisory context and cannot replace a frozen
+plan, acceptance evidence or Review Mesh quorum.
+
 For a project-wide default adapter and bounded stage settings, initialize or
 check the consuming project's local profile with `agent-lifecycle project
 profile init/check`. When `.alk/project-profile.json` is present, `start` may

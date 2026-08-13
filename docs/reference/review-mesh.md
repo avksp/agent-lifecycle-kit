@@ -135,6 +135,27 @@ the frozen plan declares Review Mesh as required for that phase.
 For command-by-command examples for common tasks, see the
 [Review Mesh workflow scenarios](../guides/review-mesh-workflow.md).
 
+## Thread context as a review source
+
+The optional [thread bridge](optional-thread-bridge.md) can import a selected
+host-thread result as the `optional-thread-context` source role. This is useful
+when a reviewer needs decisions or research from another host thread:
+
+```bash
+agent-lifecycle thread request \
+  --operation read \
+  --target-hash <thread-reference-hash> \
+  --out work/thread/read-request.json
+agent-lifecycle thread import \
+  --request work/thread/read-request.json \
+  --receipt work/thread/read-receipt.json \
+  --out work/thread/context.json
+```
+
+The imported content can inform a reviewer packet or episode retrieval. Its
+role remains optional context, with `sourceOfTruth: false` and `proof: false`;
+it cannot replace a plan, acceptance evidence or quorum result.
+
 ## Contract rules
 
 Review Mesh is fail-closed and provider-neutral:

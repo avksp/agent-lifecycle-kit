@@ -38,7 +38,7 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
         return dispatch_contracts(args)
     if args.command in {"workflow", "audit", "runner"}:
         return dispatch_lifecycle(args)
-    if args.command in {"report", "context", "goal", "model", "metrics"}:
+    if args.command in {"report", "context", "goal", "model", "metrics", "thread"}:
         return dispatch_observability(args)
     if args.command in {"tier", "specification", "plan", "task"}:
         return dispatch_planning(args)

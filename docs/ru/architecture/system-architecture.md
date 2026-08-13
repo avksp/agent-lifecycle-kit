@@ -308,6 +308,7 @@ flowchart LR
 | Сессии адаптеров | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`, проверка локального профиля и явный запуск внешнего процесса из зафиксированного состояния. |
 | Профиль рабочего процесса проекта | `project/profile.py`, `project/merge.py`, `project/guidance.py`, `cli/project.py` | `project profile init/check` и `start`, когда локальный профиль найден автоматически или выбран явно. |
 | Протокол хоста | `host_protocol/*` | Проверка адаптера, безопасный осмотр, захват событий и возможности. |
+| Необязательный мост тредов | `host_protocol/thread_bridge.py`, `policy/thread_bridge.py`, `context/thread_bridge_context.py` | Подготовка и проверка запросов к тредам хоста, импорт ограниченного контекста и передача его в поиск или Review Mesh. Нативные операции остаются в адаптере. |
 | Аудит | `audit/*` | Владение файлами, вердикты проверки, аудит реализации, целостность доказательств. |
 | Групповая проверка | `review_mesh/*` | Рекомендация, шаблоны оператора, подготовка пакетов проверяющих, назначения, импорт результатов, объединение выводов и кворум. |
 | Отчёты | `reporting/*` | Статус, лента событий, прогресс, счётчик изменений и мост прогресса. |
@@ -356,6 +357,36 @@ sequenceDiagram
 наблюдаемость либо планирование. Модули командной строки отвечают только за
 аргументы, маршрутизацию и вывод. Правила предметной области и их тесты
 находятся в доменных сервисах.
+
+### Необязательный мост тредов
+
+```mermaid
+sequenceDiagram
+  participant User as Пользователь
+  participant CLI as cli/parsers.py + cli/dispatch.py
+  participant Handler as cli/dispatch_observability.py
+  participant Bridge as host_protocol/thread_bridge.py
+  participant Adapter as Адаптер хоста
+  participant Context as context/thread_bridge_context.py
+  participant Review as review_mesh/*
+
+  User->>CLI: thread request --operation read|list|send|create
+  CLI->>Handler: маршрут команды тредов
+  Handler->>Bridge: prepare_thread_request()
+  Bridge-->>User: agent-thread-operation-request.v1
+  User->>Adapter: передать запрос квалифицированной интеграции хоста
+  Adapter-->>User: agent-thread-operation-receipt.v1
+  User->>CLI: thread import --request --receipt
+  CLI->>Bridge: проверить связь запроса и ответа
+  Bridge->>Context: импортировать ограниченный очищенный контекст
+  Context-->>Review: роль optional-thread-context
+  Context-->>User: agent-thread-context-import.v1
+```
+
+Мост является явным маршрутом обмена. Ядро подготавливает, проверяет и очищает
+артефакты, а адаптер выполняет нативную операцию треда. Импортированное
+содержимое остаётся внешним контекстом и не становится полномочием плана,
+подтверждением приёмки или финальным доказательством.
 
 ### Единая команда запуска жизненного цикла
 
@@ -714,6 +745,7 @@ Git, и по умолчанию не читает локальные матер�
 | Проверка кода | Git/CLI хоста и `adapter task start` | Git вне ALK, затем `adapter_sessions/task_intake.py` и при необходимости `review_mesh/*` | Приём пакета проверки и необязательный кворум. |
 | Исправление ошибки | `adapter task start` и контрольные точки зафиксированного плана | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Рекомендация профиля расследования, затем обязательные подтверждения по плану. |
 | Внешний контекст | `context external-import` и поиск по эпизодам | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Необязательные подсказки контекста без права заменять доказательства. |
+| Тредовый контекст | `thread request` и `thread import` | `host_protocol/thread_bridge.py`, `policy/thread_bridge.py`, `context/thread_bridge_context.py`, при необходимости `review_mesh/*` | Ограниченный запрос, квитанция адаптера и дополнительный импорт контекста. |
 | Статус цели | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Представление цели и прогресса без записи. |
 | Стратегия выполнения | `strategy resolve`, затем при необходимости `task compile --strategy` | `policy/execution_strategy.py`, `cli/strategy.py`, `compiler/*` | Полный артефакт без записи и ограниченная проекция в пакет задачи. |
 | Эталонное сравнение | `benchmark evaluate`, `benchmark compare` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Детерминированная оценка или сравнение с приоритетом качества без вызова модели или внешнего инструмента. |

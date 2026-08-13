@@ -100,3 +100,10 @@ responsibility of the specification, plan and acceptance evidence.
 Related pages: [episode retrieval](episode-retrieval.md),
 [managed adapter sessions](managed-adapter-sessions.md) and [system
 architecture](../architecture/system-architecture.md).
+
+## Optional thread context
+
+An adapter may import a selected thread result through the [optional thread
+bridge](optional-thread-bridge.md). The imported result can be included in a
+checkpoint summary or episode-retrieval hint. The checkpoint still carries the
+ALK run and plan lineage, while the thread content remains external context.

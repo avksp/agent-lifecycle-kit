@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.65.0 - 2026-08-13
+
+- Added an optional, provider-neutral thread bridge with typed capability,
+  request, receipt, context-import and validation contracts.
+- Added bounded `thread request` and `thread import` commands; native thread
+  operations remain adapter-owned and mutating operations require approval and
+  idempotency keys.
+- Added project-profile `threadBridge` policy composition with frozen-plan
+  limits, redacted non-authoritative context import and Review Mesh source
+  projection.
+- Added bilingual documentation and architecture call paths for thread
+  context, continuity recovery and optional multi-model review.
+
 ## 1.64.0 - 2026-08-13
 
 - Added typed context checkpoints with milestone, agent-requested,
