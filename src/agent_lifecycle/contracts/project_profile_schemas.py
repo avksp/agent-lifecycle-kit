@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
+from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_MODES, THREAD_OPERATIONS, THREAD_SCOPES
 
 PROJECT_PROFILE_SCHEMA = "agent-project-workflow-profile.v1"
 EFFECTIVE_PROJECT_PROFILE_SCHEMA = "agent-effective-project-workflow-profile.v1"
@@ -71,6 +72,37 @@ _STAGE_SETTINGS = {
     },
     "additionalProperties": False,
 }
+_THREAD_OPERATION_SETTINGS = {
+    "type": "object",
+    "properties": {
+        "enabled": {"type": "boolean"},
+        "scope": {"enum": list(THREAD_SCOPES)},
+        "approval": {"enum": ["none", "operator"]},
+        "blocking": {"enum": ["non-blocking", "required"]},
+    },
+    "additionalProperties": False,
+}
+_THREAD_BRIDGE_POLICY = {
+    "type": "object",
+    "properties": {
+        "mode": {"enum": list(THREAD_BRIDGE_MODES)},
+        "operations": {
+            "type": "object",
+            "propertyNames": {"enum": list(THREAD_OPERATIONS)},
+            "additionalProperties": _THREAD_OPERATION_SETTINGS,
+        },
+        "phaseRules": {"type": "object"},
+        "limits": {
+            "type": "object",
+            "properties": {
+                "maxImportedBytes": {"type": "integer", "minimum": 1, "maximum": 32768},
+                "maxImportedTokens": {"type": "integer", "minimum": 1, "maximum": 4096},
+            },
+            "additionalProperties": False,
+        },
+    },
+    "additionalProperties": False,
+}
 
 
 PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
@@ -100,6 +132,7 @@ PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
                 "propertyNames": {"enum": list(PROJECT_PROFILE_STAGES)},
                 "additionalProperties": _STAGE_SETTINGS,
             },
+            "threadBridge": _THREAD_BRIDGE_POLICY,
             "productionPromotionClaimed": {"const": False},
         },
     ),
@@ -115,6 +148,7 @@ PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
             "defaultRisk",
             "policies",
             "stages",
+            "threadBridge",
             "authority",
             "blockers",
             "productionPromotionClaimed",
@@ -129,6 +163,7 @@ PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
             "defaultRisk": {"enum": ["S0", "S1", "S2"]},
             "policies": {"type": "object"},
             "stages": {"type": "object"},
+            "threadBridge": _THREAD_BRIDGE_POLICY,
             "authority": {"type": "object"},
             "blockers": _BLOCKERS,
             "productionPromotionClaimed": {"const": False},

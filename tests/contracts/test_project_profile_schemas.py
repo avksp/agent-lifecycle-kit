@@ -26,6 +26,11 @@ class ProjectProfileSchemaTests(unittest.TestCase):
             {"intake", "research", "planning", "review", "implementation", "audit", "finalization"},
         )
         self.assertIn("modelClass", schema["properties"]["stages"]["additionalProperties"]["properties"])
+        self.assertIn("threadBridge", schema["properties"])
+        self.assertEqual(
+            set(schema["properties"]["threadBridge"]["properties"]["mode"]["enum"]),
+            {"off", "advisory", "read-only", "controlled"},
+        )
         self.assertEqual(
             schema["properties"]["productionPromotionClaimed"],
             {"const": False},

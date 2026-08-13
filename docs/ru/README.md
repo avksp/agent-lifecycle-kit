@@ -17,12 +17,13 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 соразмерным уровнем контроля. Служебные шаги занимают только необходимое место,
 а основное время остаётся на исследование, реализацию и проверку продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.64.0 · Python 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.65.0 · Python 3.11-3.14
 
 ## Быстрый старт
 - [Установка ALK и первый запуск](guides/install-and-first-run.md)
 - [Команды по задачам](guides/commands-by-task.md)
-Начните с подробного руководства [Установка ALK и первый запуск](guides/install-and-first-run.md): в нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==1.64.0` и разбор ошибок команды `agent-lifecycle version`.
+- [Необязательный мост управления тредами](reference/optional-thread-bridge.md)
+Начните с подробного руководства [Установка ALK и первый запуск](guides/install-and-first-run.md): в нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==1.65.0` и разбор ошибок команды `agent-lifecycle version`.
 Короткий путь из исходного дерева:
 
 ```bash

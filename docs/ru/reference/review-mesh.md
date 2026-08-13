@@ -140,6 +140,27 @@ agent-lifecycle review-mesh quorum --profile rm-profile.json \
 Пошаговые примеры для частых задач:
 [практические сценарии групповой проверки](../review-mesh-workflow.md).
 
+## Тредовый контекст в пакете проверки
+
+Необязательный [мост управления тредами](optional-thread-bridge.md) может
+импортировать выбранный результат хоста с ролью `optional-thread-context`. Это
+удобно, когда проверяющему нужны решения или исследование из другой сессии:
+
+```bash
+agent-lifecycle thread request \
+  --operation read \
+  --target-hash <хеш-ссылки-на-тред> \
+  --out work/thread/read-request.json
+agent-lifecycle thread import \
+  --request work/thread/read-request.json \
+  --receipt work/thread/read-receipt.json \
+  --out work/thread/context.json
+```
+
+Импортированный контекст можно передать в пакет проверяющего или поиск по
+эпизодам. Его роль остаётся дополнительной: `sourceOfTruth: false` и `proof:
+false`. Он не заменяет план, подтверждения приёмки или результат кворума.
+
 ## Правила контракта
 
 Групповая проверка падает закрыто и не зависит от провайдера:

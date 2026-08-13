@@ -13,12 +13,6 @@ from agent_lifecycle.policy.proposals import (
     require_policy_proposal_pass,
 )
 from agent_lifecycle.policy.quality_floor import quality_floor_mode, resolve_quality_floor
-from agent_lifecycle.policy.execution_strategy import (
-    deferred_execution_strategy_summary,
-    execution_strategy_summary,
-    resolve_execution_strategy,
-    validate_execution_strategy,
-)
 from agent_lifecycle.policy.runtime_receipts import (
     build_runtime_policy_receipt,
     require_runtime_policy_receipt_pass,
@@ -44,3 +38,18 @@ __all__ = [
     "validate_runtime_policy_receipt",
     "validate_execution_strategy",
 ]
+
+_LAZY_EXECUTION_STRATEGY_EXPORTS = {
+    "deferred_execution_strategy_summary",
+    "execution_strategy_summary",
+    "resolve_execution_strategy",
+    "validate_execution_strategy",
+}
+
+
+def __getattr__(name: str):
+    if name in _LAZY_EXECUTION_STRATEGY_EXPORTS:
+        from agent_lifecycle.policy import execution_strategy
+
+        return getattr(execution_strategy, name)
+    raise AttributeError(name)
