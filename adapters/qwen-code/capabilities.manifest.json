@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "d78eb4f9126f71ebdb021584a5481537afd85fd8825c6bebfe3a8b954ddf127a",
+  "descriptorDigest": "1c5f9254ae0937bc72839e70b452d7314db41f732bfa956213daba8f188ae9c9",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,11 +156,11 @@
     "usageReceiptRequired": true
   },
   "planningLaunch": {
-    "profileStatus": "UNSUPPORTED",
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
     "expectedHostVersion": "0.21.8",
-    "qualificationRequired": true,
-    "hostLaunchStarted": false
+    "hostLaunchStarted": false,
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "profileStatus": "UNSUPPORTED",
+    "qualificationRequired": true
   },
   "promotion": {
     "liveTestedHostRange": {
@@ -232,5 +232,70 @@
     }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "threadBridge": {
+    "adapterId": "qwen-code",
+    "capabilityManifestDigest": "0a042dc4ca68ae6df2a84ecf25df298207a3519803922df960a2900a6f095b73",
+    "descriptorDigest": "1c5f9254ae0937bc72839e70b452d7314db41f732bfa956213daba8f188ae9c9",
+    "evidencePolicy": "not-claimed",
+    "host": "qwen-code",
+    "hostExecutionOwned": true,
+    "hostRange": {
+      "evidence": [
+        "docs/adapters/evidence/qwen-code-host-local-live-2026-07-29.md",
+        "work/release-0-11/evidence/qwen-code/live-host-conformance-qwen-code.json",
+        "work/release-0-11/evidence/qwen-code/live-calibration-verification-qwen-code.json",
+        "work/release-0-11/evidence/qwen-code/full-lifecycle/final/final-proof.json"
+      ],
+      "host": "qwen-code",
+      "maximumVersion": "0.21.0",
+      "minimumVersion": "0.21.0",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "6c6b40210ee28de4b6a5993367af89e629fb99ff",
+      "testedAt": "2026-07-29"
+    },
+    "operations": [
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "create",
+        "qualificationRequired": true,
+        "readOnly": false
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "list",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "read",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "send",
+        "qualificationRequired": true,
+        "readOnly": false
+      }
+    ],
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "productionPromotionClaimed": false,
+    "profileDigest": "ccd3ece619d0c4019bdc6621f5ad33664afb7dcc4674097b224022ea76ad600a",
+    "profileId": "thread-bridge",
+    "providerIdentityUsed": false,
+    "qualificationRequired": true,
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "transport": "adapter-owned"
+  },
   "unsupportedOperationPolicy": "fail-closed"
 }

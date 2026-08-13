@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "c0f337edaab3b89caceeb6114d232afcdb40dee932f40c27d5f8f831263461f9",
+  "descriptorDigest": "cbc509fec0be6d5842d2d1b1787626c64561976d9c2738191c71fa736890be24",
   "eventCapture": {
     "categories": [
       "command",
@@ -156,11 +156,11 @@
     "usageReceiptRequired": true
   },
   "planningLaunch": {
-    "profileStatus": "CANDIDATE",
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
     "expectedHostVersion": "0.46.0",
-    "qualificationRequired": true,
-    "hostLaunchStarted": false
+    "hostLaunchStarted": false,
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "profileStatus": "CANDIDATE",
+    "qualificationRequired": true
   },
   "promotion": {
     "productionPromotionClaimed": false,
@@ -217,5 +217,56 @@
     }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "threadBridge": {
+    "adapterId": "gemini-cli",
+    "capabilityManifestDigest": "4c864fbfc73b3bc01684694f2ca1eeae86ad96045a2a28fe529c480efd33af41",
+    "descriptorDigest": "cbc509fec0be6d5842d2d1b1787626c64561976d9c2738191c71fa736890be24",
+    "evidencePolicy": "not-claimed",
+    "host": "gemini-cli",
+    "hostExecutionOwned": true,
+    "hostRange": {},
+    "operations": [
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "create",
+        "qualificationRequired": true,
+        "readOnly": false
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "list",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "read",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "send",
+        "qualificationRequired": true,
+        "readOnly": false
+      }
+    ],
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "productionPromotionClaimed": false,
+    "profileDigest": "dfb61c8b58f6a4379788163159b11d194c943ebf40549fd4e28da82aad545433",
+    "profileId": "thread-bridge",
+    "providerIdentityUsed": false,
+    "qualificationRequired": true,
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "transport": "adapter-owned"
+  },
   "unsupportedOperationPolicy": "fail-closed"
 }

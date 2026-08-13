@@ -240,5 +240,56 @@
       "Configure host-local model and profile settings outside the portable core.",
       "Keep the adapter EXPERIMENTAL until receipts are accepted."
     ]
+  },
+  "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
+    "adapterId": "kimi-code",
+    "host": "kimi-code",
+    "descriptorDigest": null,
+    "capabilityManifestDigest": null,
+    "hostRange": {},
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "operations": [
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "send",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "create",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      }
+    ],
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
+    "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
+    "qualificationRequired": true,
+    "productionPromotionClaimed": false,
+    "profileDigest": "c1a88d7b539275b35605c1ac38e55ecbb4969dccb7579a3389606f802ffb8093"
   }
 }

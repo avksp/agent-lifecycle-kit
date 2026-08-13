@@ -221,5 +221,56 @@
       "Replace the local plugin directory placeholder before running the command.",
       "Reload the host window and do not claim VERIFIED without accepted live receipts."
     ]
+  },
+  "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
+    "adapterId": "cursor",
+    "host": "cursor",
+    "descriptorDigest": null,
+    "capabilityManifestDigest": null,
+    "hostRange": {},
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "operations": [
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "send",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "create",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      }
+    ],
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
+    "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
+    "qualificationRequired": true,
+    "productionPromotionClaimed": false,
+    "profileDigest": "d2660df98049704d990c844a39a1a95156ea255c42474c33fc0041c91c3a9bdc"
   }
 }

@@ -5,6 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.contracts.thread_bridge_schemas import (
+    build_thread_bridge_profile,
+    build_thread_capability,
+    resolve_thread_operation_status,
+    validate_thread_bridge_profile,
+)
 from agent_lifecycle.host_protocol.acp_capability import validate_host_capabilities
 from agent_lifecycle.host_protocol.event_capture import EVENT_CAPTURE_OPERATION, adapter_declares_event_capture, event_capture_declaration
 from agent_lifecycle.host_protocol.validation import REQUIRED_OPERATION_NAMES, validate_adapter_descriptor
@@ -57,6 +63,12 @@ def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
     planning_launch = _planning_launch_from_descriptor(descriptor)
     if planning_launch is not None:
         manifest["planningLaunch"] = planning_launch
+    thread_bridge = _thread_bridge_from_descriptor(
+        descriptor,
+        capability_manifest_digest=capability_manifest_identity(manifest),
+    )
+    if thread_bridge is not None:
+        manifest["threadBridge"] = thread_bridge
     return manifest
 
 
@@ -100,6 +112,7 @@ def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[s
     _validate_sandbox_capability_drift(manifest, descriptor, blockers)
     _validate_event_capture(manifest, descriptor, blockers)
     _validate_planning_launch(manifest, descriptor, blockers)
+    _validate_thread_bridge(manifest, descriptor, blockers)
     status = "PASS" if not blockers else "FAIL"
     return {
         "schemaVersion": CAPABILITY_MANIFEST_VALIDATION_SCHEMA_VERSION,
@@ -110,6 +123,79 @@ def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[s
         "capabilityCount": len(manifest.get("capabilities", [])) if isinstance(manifest.get("capabilities"), list) else 0,
         "blockers": blockers,
     }
+
+
+def build_thread_bridge_capability_projection(
+    profile: dict[str, Any],
+    *,
+    qualification_receipt: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Project adapter metadata into the existing capability contract."""
+
+    profile_validation = validate_thread_bridge_profile(profile)
+    if profile_validation["status"] != "PASS":
+        raise ValueError("invalid thread bridge profile")
+    entries: list[dict[str, Any]] = []
+    for operation in profile["operations"]:
+        decision = resolve_thread_operation_status(
+            profile,
+            operation["name"],
+            qualification_receipt=qualification_receipt,
+        )
+        entries.append(
+            {
+                "name": operation["name"],
+                "support": decision["capabilitySupport"],
+                "declaredStatus": decision["declaredStatus"],
+                "qualificationStatus": decision["qualificationStatus"],
+                "effectiveStatus": decision["effectiveStatus"],
+                "capabilitySupport": decision["capabilitySupport"],
+                "readOnly": operation["readOnly"],
+                "approval": operation["approval"],
+                "execution": "adapter-owned",
+            }
+        )
+    supports = {item["support"] for item in entries}
+    overall = "supported" if "supported" in supports else "unsupported" if supports == {"unsupported"} else "unknown"
+    projection = build_thread_capability(
+        adapter_id=profile["adapterId"],
+        host=profile["host"],
+        support=overall,
+        operations=entries,
+        qualification_receipt_digest=qualification_receipt.get("receiptDigest") if qualification_receipt else None,
+    )
+    body = {
+        **projection,
+        "threadBridgeProfileDigest": profile["profileDigest"],
+    }
+    return {**body, "capabilityDigest": canonical_digest({key: value for key, value in body.items() if key != "capabilityDigest"})}
+
+
+def build_thread_bridge_profile_from_descriptor(
+    descriptor: dict[str, Any],
+    *,
+    capability_manifest_digest: str | None = None,
+) -> dict[str, Any]:
+    """Build a digest-bound thread profile from one adapter descriptor."""
+
+    section = descriptor.get("threadBridge")
+    if not isinstance(section, dict):
+        raise ValueError("adapter descriptor has no threadBridge profile")
+    return build_thread_bridge_profile(
+        adapter_id=descriptor.get("adapterId"),
+        host=descriptor.get("host"),
+        operations=section.get("operations", []),
+        descriptor_digest=canonical_digest(descriptor),
+        capability_manifest_digest=capability_manifest_digest,
+        host_range=descriptor.get("liveTestedHostRange"),
+        policy_version=section.get("policyVersion"),
+    )
+
+
+def capability_manifest_identity(manifest: dict[str, Any]) -> str:
+    """Return the non-circular digest basis used by thread profiles."""
+
+    return canonical_digest({key: value for key, value in manifest.items() if key != "threadBridge"})
 
 
 def _capability_from_operation(operation: dict[str, Any], descriptor: dict[str, Any]) -> dict[str, Any]:
@@ -162,6 +248,20 @@ def _planning_launch_from_descriptor(descriptor: dict[str, Any]) -> dict[str, An
         "qualificationRequired": qualified_launch.get("planningQualificationRequired"),
         "hostLaunchStarted": False,
     }
+
+
+def _thread_bridge_from_descriptor(
+    descriptor: dict[str, Any],
+    *,
+    capability_manifest_digest: str | None = None,
+) -> dict[str, Any] | None:
+    if not isinstance(descriptor.get("threadBridge"), dict):
+        return None
+    profile = build_thread_bridge_profile_from_descriptor(
+        descriptor,
+        capability_manifest_digest=capability_manifest_digest,
+    )
+    return profile
 
 
 def _validate_manifest_capabilities(
@@ -305,3 +405,26 @@ def _validate_planning_launch(
                 "actual": actual,
             }
         )
+
+
+def _validate_thread_bridge(
+    manifest: dict[str, Any],
+    descriptor: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> None:
+    descriptor_profile = descriptor.get("threadBridge")
+    manifest_profile = manifest.get("threadBridge")
+    if descriptor_profile is None and manifest_profile is None:
+        return
+    if not isinstance(descriptor_profile, dict) or not isinstance(manifest_profile, dict):
+        blockers.append({"code": "capability-thread-bridge-profile-missing"})
+        return
+    expected = build_thread_bridge_profile_from_descriptor(
+        descriptor,
+        capability_manifest_digest=capability_manifest_identity(manifest),
+    )
+    validation = validate_thread_bridge_profile(manifest_profile)
+    if validation["status"] != "PASS":
+        blockers.append({"code": "capability-thread-bridge-profile-invalid", "blockers": validation["blockers"]})
+    if manifest_profile != expected:
+        blockers.append({"code": "capability-thread-bridge-profile-drift"})

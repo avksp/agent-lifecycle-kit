@@ -129,7 +129,7 @@
     }
   ],
   "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "ac52841c3ffcc9cde575d3904539474b7cd088bb0b09c9dc86b26921ffc9c4fb",
+  "descriptorDigest": "21d7f4b78db2cbf7a9e8fa54d4ace5096e783e341b4f730c8ae6ea846557887a",
   "eventCapture": {
     "categories": [
       "command",
@@ -180,11 +180,11 @@
     "usageReceiptRequired": true
   },
   "planningLaunch": {
-    "profileStatus": "CANDIDATE",
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
     "expectedHostVersion": "1.45.0",
-    "qualificationRequired": true,
-    "hostLaunchStarted": false
+    "hostLaunchStarted": false,
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "profileStatus": "CANDIDATE",
+    "qualificationRequired": true
   },
   "promotion": {
     "liveTestedHostRange": {
@@ -260,5 +260,74 @@
     }
   },
   "schemaVersion": "agent-adapter-capability-manifest.v1",
+  "threadBridge": {
+    "adapterId": "goose",
+    "capabilityManifestDigest": "57fe13b319de3a81817becc98d358748cbad8267562f7b9a0d949babd0620df8",
+    "descriptorDigest": "21d7f4b78db2cbf7a9e8fa54d4ace5096e783e341b4f730c8ae6ea846557887a",
+    "evidencePolicy": "not-claimed",
+    "host": "goose",
+    "hostExecutionOwned": true,
+    "hostRange": {
+      "evidence": [
+        "docs/adapters/evidence/goose-live-verified.md",
+        "work/release-1-16/evidence/preflight/goose-preflight-report.json",
+        "work/release-1-16/evidence/goose-containment-receipt.json",
+        "work/release-1-16/evidence/live-host-receipts/goose.json",
+        "work/release-1-16/evidence/live-host-conformance-goose.json",
+        "work/release-1-16/evidence/live-calibration-receipts/goose.json",
+        "work/release-1-16/evidence/live-calibration-verification-goose.json",
+        "work/release-1-16/evidence/goose/full-lifecycle/final/final-proof-r5.json"
+      ],
+      "host": "goose",
+      "maximumVersion": "1.45.0",
+      "minimumVersion": "1.45.0",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "87fb1ce58612efbd2121d8eb56f9d54de8fbbcfb",
+      "testedAt": "2026-07-31"
+    },
+    "operations": [
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "create",
+        "qualificationRequired": true,
+        "readOnly": false
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "list",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "none",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "read",
+        "qualificationRequired": true,
+        "readOnly": true
+      },
+      {
+        "approval": "operator",
+        "declaredStatus": "UNSUPPORTED",
+        "execution": "adapter-owned",
+        "name": "send",
+        "qualificationRequired": true,
+        "readOnly": false
+      }
+    ],
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "productionPromotionClaimed": false,
+    "profileDigest": "092ee2d31380ee3129fdab2458bf8f6079efcd1aa40cf42b95eaed58500b18c0",
+    "profileId": "thread-bridge",
+    "providerIdentityUsed": false,
+    "qualificationRequired": true,
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "transport": "adapter-owned"
+  },
   "unsupportedOperationPolicy": "fail-closed"
 }

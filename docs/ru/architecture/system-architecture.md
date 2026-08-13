@@ -388,6 +388,19 @@ sequenceDiagram
 содержимое остаётся внешним контекстом и не становится полномочием плана,
 подтверждением приёмки или финальным доказательством.
 
+### Квалификация возможности адаптера
+
+В версии 1.66 появились профили и квалификационные квитанции в
+`contracts/thread_bridge_schemas.py`. Модуль `host_protocol/capabilities.py`
+переводит каждую операцию в существующие значения `capability_support` из
+контракта `capability_support`. Статус дескриптора (`UNSUPPORTED`, `WRAPPER_ONLY` или
+`SUPPORTED`) отделён от режима политики проекта. Значение `SUPPORTED`
+появляется только после совпадения отпечатка дескриптора, идентификатора
+capability-manifest, диапазона версий хоста, набора операций и версии
+политики. `cli/adapter.py` предоставляет команды
+`adapter thread-capability` и `adapter thread-qualify`; обе только читают
+локальные артефакты и не запускают хост из ядра.
+
 ### Единая команда запуска жизненного цикла
 
 ```mermaid
@@ -746,6 +759,7 @@ Git, и по умолчанию не читает локальные матер�
 | Исправление ошибки | `adapter task start` и контрольные точки зафиксированного плана | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Рекомендация профиля расследования, затем обязательные подтверждения по плану. |
 | Внешний контекст | `context external-import` и поиск по эпизодам | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Необязательные подсказки контекста без права заменять доказательства. |
 | Тредовый контекст | `thread request` и `thread import` | `host_protocol/thread_bridge.py`, `policy/thread_bridge.py`, `context/thread_bridge_context.py`, при необходимости `review_mesh/*` | Ограниченный запрос, квитанция адаптера и дополнительный импорт контекста. |
+| Квалификация возможности тредов | `adapter thread-capability`, `adapter thread-qualify` | `contracts/thread_bridge_schemas.py`, `host_protocol/capabilities.py`, `host_protocol/validation.py`, `adapters/*` | Объявление и результат квалификации, связанные с дескриптором; ядро не обращается к хосту. |
 | Статус цели | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Представление цели и прогресса без записи. |
 | Стратегия выполнения | `strategy resolve`, затем при необходимости `task compile --strategy` | `policy/execution_strategy.py`, `cli/strategy.py`, `compiler/*` | Полный артефакт без записи и ограниченная проекция в пакет задачи. |
 | Эталонное сравнение | `benchmark evaluate`, `benchmark compare` | `benchmarks/*`, `contracts/benchmark_schemas.py` | Детерминированная оценка или сравнение с приоритетом качества без вызова модели или внешнего инструмента. |

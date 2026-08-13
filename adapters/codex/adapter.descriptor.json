@@ -210,18 +210,116 @@
   },
   "installation": {
     "schemaVersion": "agent-adapter-installation-facts.v1",
-    "binaryAliases": ["codex"],
+    "binaryAliases": [
+      "codex"
+    ],
     "files": [
-      {"path": ".codex-plugin/plugin.json", "action": "read", "required": true},
-      {"path": ".agents/plugins/marketplace.json", "action": "read", "required": true}
+      {
+        "path": ".codex-plugin/plugin.json",
+        "action": "read",
+        "required": true
+      },
+      {
+        "path": ".agents/plugins/marketplace.json",
+        "action": "read",
+        "required": true
+      }
     ],
     "commands": [
-      {"argv": ["codex", "plugin", "marketplace", "add", "avksp/agent-lifecycle-kit", "--ref", "vX.Y.Z"], "purpose": "add a trusted tagged source marketplace", "mutatesHost": true, "requiresOperator": true},
-      {"argv": ["codex", "plugin", "add", "agent-lifecycle-kit@agent-lifecycle-kit"], "purpose": "install the plugin from the configured marketplace", "mutatesHost": true, "requiresOperator": true}
+      {
+        "argv": [
+          "codex",
+          "plugin",
+          "marketplace",
+          "add",
+          "avksp/agent-lifecycle-kit",
+          "--ref",
+          "vX.Y.Z"
+        ],
+        "purpose": "add a trusted tagged source marketplace",
+        "mutatesHost": true,
+        "requiresOperator": true
+      },
+      {
+        "argv": [
+          "codex",
+          "plugin",
+          "add",
+          "agent-lifecycle-kit@agent-lifecycle-kit"
+        ],
+        "purpose": "install the plugin from the configured marketplace",
+        "mutatesHost": true,
+        "requiresOperator": true
+      }
     ],
     "operatorActions": [
       "Choose the release tag before installation.",
       "Restart the host session after installation."
     ]
+  },
+  "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
+    "adapterId": "codex",
+    "host": "codex",
+    "descriptorDigest": null,
+    "capabilityManifestDigest": null,
+    "hostRange": {
+      "host": "codex",
+      "minimumVersion": "0.145.0",
+      "maximumVersion": "0.145.0",
+      "sourceRevision": "b01a1793e42f52e20077a7aa26b8e4e25c3bd216",
+      "testedAt": "2026-07-29",
+      "evidence": [
+        "docs/adapters/evidence/codex-cli-0.6.0.md",
+        "work/release-0-6/evidence/codex-live-promotion/live-host-conformance-codex.json",
+        "work/release-0-6/evidence/codex-live-promotion/live-calibration-verification-codex.json",
+        "work/release-0-6/evidence/codex-live-promotion/full-lifecycle/final/final-proof.json"
+      ],
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false
+    },
+    "policyVersion": "agent-thread-bridge-policy.v1",
+    "operations": [
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "send",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "create",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      }
+    ],
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
+    "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
+    "qualificationRequired": true,
+    "productionPromotionClaimed": false,
+    "profileDigest": "06e74ae704d24c9fb8f652cdd0ac64d1c2614045bbc2900ebb6406f351080aeb"
   }
 }

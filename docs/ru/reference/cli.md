@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.65.0
+python -m pip install agent-lifecycle-kit==1.66.0
 ```
 
 ## Основа
@@ -204,6 +204,13 @@ lock-файл остаются источником полномочий для 
 - `agent-lifecycle adapter event-capture-check`: проверка объявленного
   `adapter-owned` захвата событий через дескриптор, манифест возможностей,
   поток событий и `agent-adapter-event-stream-receipt.v1`.
+- `agent-lifecycle adapter thread-capability --descriptor <путь> --manifest
+  <путь> [--receipt <путь>]`: проверяет объявленные операции тредов выбранного
+  адаптера и возвращает их эффективные статусы без обращения к хосту.
+- `agent-lifecycle adapter thread-qualify --descriptor <путь> --receipt
+  <путь> [--manifest <путь>]`: проверяет квалификационную квитанцию адаптера по
+  отпечаткам дескриптора и capability-manifest. При неверном объявлении,
+  квитанции или связи команда завершается с ненулевым кодом.
 - `agent-lifecycle adapter session start/status/resume/promote`: запись и
   возобновление сессий адаптеров. Обычная интерактивная сессия возвращает
   `WAITING_FOR_TASK`; повышенная сессия связывается с состоянием рабочего цикла
