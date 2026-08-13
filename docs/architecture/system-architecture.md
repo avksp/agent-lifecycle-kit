@@ -714,3 +714,4 @@ their old enumeration behavior but carry a signed deprecation marker.
 - [Bug Forensics profile](../reference/bug-forensics.md)
 - [Quality-preserving execution strategy](../reference/execution-strategy.md)
 - [Neutrality scanning](../reference/neutrality.md)
+- [Context checkpoints and compaction recovery](../reference/context-checkpoints.md)

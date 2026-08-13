@@ -39,7 +39,7 @@ and start a task with:
 agent-lifecycle start --adapter <adapter-id> --file task.md
 ```
 
-The published [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14; install it with `python -m pip install agent-lifecycle-kit==1.63.2`.
+The published [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports Python 3.11-3.14; install it with `python -m pip install agent-lifecycle-kit==1.64.0`.
 Use [Quickstart](docs/guides/quickstart.md) for the first task and [Commands by task](docs/guides/commands-by-task.md) for detailed operations.
 Continue with [task workflows](docs/guides/how-alk-works.md) and
 [project profile init](docs/reference/project-workflow-profile.md),
@@ -47,7 +47,7 @@ Continue with [task workflows](docs/guides/how-alk-works.md) and
 [Lifecycle task scenarios](docs/guides/lifecycle-cookbook.md). The [planning-only](docs/reference/planning-only-launch.md)
 and [qualified frozen-task](docs/reference/qualified-host-launch.md) guides define launch boundaries.
 See [System architecture](docs/architecture/system-architecture.md), [Project comparison](docs/reference/project-comparison.md),
-and [Документация на русском](docs/ru/README.md).
+[context checkpoints](docs/reference/context-checkpoints.md), and [Документация на русском](docs/ru/README.md).
 
 ## What it gives you
 - A finish-oriented lifecycle: plan, execute, review, and prove the result.

@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.64.0 - 2026-08-13
+
+- Added typed context checkpoints with milestone, agent-requested,
+  adapter-hook and unavailable capture modes.
+- Added bounded local checkpoint storage, lineage-checked restoration and
+  continuation receipts that never grant implementation authority.
+- Added opt-in lifecycle checkpoint gates with atomic writes, idempotent
+  retries and bounded retention.
+- Added English and Russian operator documentation, CLI commands and contract
+  validation for context continuity and recovery after compaction.
+
 ## 1.63.2 - 2026-08-12
 
 - Added bilingual installation and first-run guides for GitHub checkouts and

@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.context import check_context, load_context_profile, render_context
+from agent_lifecycle.context.checkpoint_store import restore_context_checkpoint, write_context_checkpoint
+from agent_lifecycle.context.checkpoints import build_context_checkpoint
 from agent_lifecycle.context.external_memory import build_episode_retrieval_with_external_context, import_external_memory_context
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.goal import build_goal_progress_view, build_objective_snapshot, update_goal_record, validate_goal_record
@@ -176,7 +178,73 @@ def _dispatch_context(args: argparse.Namespace) -> dict[str, Any]:
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
+    if args.context_command == "checkpoint":
+        return _dispatch_context_checkpoint(args)
+    if args.context_command == "restore":
+        state = read_json_object(Path(args.state), label="workflow state")
+        payload = restore_context_checkpoint(
+            Path(args.checkpoint),
+            state=state,
+            session_id=args.session,
+            target_tokens=args.target_tokens,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        if payload.get("status") == "BLOCKED":
+            raise LifecycleError(
+                "context-restore-blocked",
+                "context checkpoint cannot be restored against the current workflow state",
+                {"continuation": payload},
+            )
+        return payload
     raise LifecycleError("command-not-implemented", "context command is not implemented")
+
+
+def _dispatch_context_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
+    state = read_json_object(Path(args.state), label="workflow state")
+    manifest = read_json_object(Path(args.plan), label="context checkpoint plan")
+    input_payload = read_json_object(Path(args.input), label="context checkpoint input")
+    reason = str(args.reason)
+    mode = args.capture_mode
+    reason_mode = {
+        "native-hook": "NATIVE_HOOK",
+        "milestone": "MILESTONE",
+        "agent-requested": "AGENT_REQUESTED",
+        "unavailable": "UNAVAILABLE",
+    }.get(reason.lower().replace("_", "-"))
+    if mode is None and reason_mode:
+        mode = reason_mode
+    if mode is None:
+        mode = "AGENT_REQUESTED"
+    target = Path(args.out) if args.out else Path(".alk/context/checkpoints") / "checkpoint.json"
+    root = target.parent
+    _require_checkpoint_output_root(root)
+    summary = dict(input_payload)
+    capture_evidence = summary.pop("nativeHookEvidence", None) if mode == "NATIVE_HOOK" else None
+    checkpoint = build_context_checkpoint(
+        session_id=args.session,
+        run_id=str(state.get("runId", "run")),
+        adapter_id=str(args.adapter or input_payload.get("adapterId") or state.get("adapterId") or "unknown-adapter"),
+        package_id=str(manifest.get("package", {}).get("id") or state.get("packageId") or "unknown-package"),
+        plan_revision=int(manifest.get("planRevision", state.get("planRevision", 1))),
+        plan_digest=canonical_digest(manifest),
+        state_revision=int(state.get("stateRevision", 1)),
+        source_revision=str(state.get("sourceRevision", "unknown-source")),
+        capture_mode=mode,
+        reason=reason,
+        summary=summary,
+        capture_evidence=capture_evidence,
+        checkpoint_id=target.stem if args.out else None,
+        created_at=str(state.get("updatedAt") or "1970-01-01T00:00:00Z"),
+    )
+    stored = write_context_checkpoint(checkpoint, root=root)
+    return {**checkpoint, "storage": stored}
+
+
+def _require_checkpoint_output_root(root: Path) -> None:
+    resolved = root.resolve()
+    if ".alk" not in resolved.parts or not resolved.name == "checkpoints":
+        raise LifecycleError("context-checkpoint-output-root-invalid", "checkpoint output must remain in a .alk/context/checkpoints directory")
 
 
 def _dispatch_goal(args: argparse.Namespace) -> dict[str, Any] | str:

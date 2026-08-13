@@ -47,6 +47,10 @@ from agent_lifecycle.workflow.risk_execution_gate import (
     validate_attempt_risk_usage,
     validate_task_risk_profile,
 )
+from agent_lifecycle.workflow.checkpoint_gate import (
+    invoke_checkpoint_gate,
+    normalize_context_checkpoint_policy,
+)
 
 __all__ = [
     "accept_task",
@@ -61,8 +65,10 @@ __all__ = [
     "classify_lease_status",
     "commit_task_result",
     "clear_task_risk_profile",
+    "invoke_checkpoint_gate",
     "finalize_run",
     "next_action",
+    "normalize_context_checkpoint_policy",
     "pause_for_budget_decision",
     "pause_for_external_action",
     "proof_integrity_required",
