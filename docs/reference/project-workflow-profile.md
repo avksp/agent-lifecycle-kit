@@ -91,6 +91,7 @@ The portable fields are intentionally small:
 | `defaultMode` and `defaultRisk` | Default lifecycle preparation mode and risk tier. |
 | `policies` | Relative references to existing ALK policy, routing, baseline, host model and review-mesh profiles. |
 | `stages` | Defaults for `intake`, `research`, `planning`, `review`, `implementation`, `audit` and `finalization`. |
+| `principles` | A contained project-principles path, digest and `sourceOfTruth: false`; it supplies context but no implementation authority. |
 | `guidanceRef` | A bounded, relative reference to host-owned guidance metadata for one stage. |
 
 Stage settings may select an existing ALK mode, a neutral model class, a review
@@ -108,20 +109,20 @@ Example:
   "defaultMode": "auto",
   "defaultRisk": "S1",
   "policies": {
-    "modelRoutingProfile": "profiles/model-routing-profile.v1.json",
-    "reviewMeshProfile": "profiles/review-mesh-profile.v1.json"
+    "routingProfile": "profiles/model-routing-profile.v1.json",
+    "baselineProfile": "profiles/review-mesh-profile.v1.json"
   },
   "stages": {
     "research": {
       "modelClass": "standard-code",
-      "reviewMesh": "advisory",
+      "reviewMesh": "parallel-research-synthesis",
       "maxAttempts": 2,
       "maxWallSeconds": 1800,
       "guidanceRef": "docs/agent-research-guidance.md"
     },
     "implementation": {
       "risk": "S1",
-      "reviewMesh": "blocking",
+      "reviewMesh": "implementation-audit-panel",
       "maxAttempts": 3
     }
   },
@@ -186,3 +187,6 @@ prompts to a model. The host adapter remains responsible for loading its own
 local instructions. For the full lifecycle and atomic commands, see [Workflow
 customization and execution controls](workflow-customization.md) and [the CLI
 reference](cli.md).
+
+For durable project context and controlled changes between plan revisions, see
+[Project principles and plan deltas](project-principles-and-plan-deltas.md).

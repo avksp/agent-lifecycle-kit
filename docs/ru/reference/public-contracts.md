@@ -47,6 +47,10 @@
   SDD tier.
 - `agent-plan-completeness-profile-validation.v1`: проверка профиля полноты.
 - `agent-plan-completeness-validation.v1`: результат проверки полноты плана.
+- `agent-project-principles.v1`: ограниченные принципы проекта с отпечатком.
+- `agent-project-principles-validation.v1`: результат проверки принципов проекта.
+- `agent-plan-delta.v1`: сравнение двух версий плана без изменения исходных файлов.
+- `agent-plan-delta-validation.v1`: результат проверки дельты и её линии наследования.
 - `agent-implementation-audit-report.v1`: отчёт аудита реализации по задаче.
 - `agent-implementation-audit-report-validation.v1`: проверка отчёта аудита
   реализации.

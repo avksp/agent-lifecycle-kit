@@ -43,6 +43,7 @@ def build_effective_project_profile(
     defaults.update({key: value for key, value in overrides.items() if key != "stages"})
     defaults["defaultRisk"] = _resolve_risk(defaults["defaultRisk"], authority)
     thread_bridge = merge_thread_bridge_policy(normalized.get("threadBridge"), authority.get("threadBridgePolicy"))
+    principles = copy.deepcopy(normalized.get("principles")) if normalized.get("principles") else None
 
     stages = copy.deepcopy(normalized.get("stages", {}))
     for stage, settings in overrides.get("stages", {}).items():
@@ -64,6 +65,8 @@ def build_effective_project_profile(
         **defaults,
         "policies": copy.deepcopy(normalized.get("policies", {})),
         "stages": stages,
+        "principles": principles,
+        "principlesDigest": principles.get("digest") if principles else None,
         "threadBridge": thread_bridge,
         "authority": authority,
         "blockers": [],

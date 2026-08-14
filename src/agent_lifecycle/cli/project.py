@@ -6,16 +6,25 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
+from agent_lifecycle.contracts import (
+    LifecycleError,
+    read_json_object,
+    write_json_create,
+)
 from agent_lifecycle.project import (
     PROJECT_PROFILE_RELATIVE_PATH,
     build_default_project_profile,
     build_effective_project_profile,
     load_project_profile,
+    validate_project_principles,
 )
 
 
 def dispatch_project(args: argparse.Namespace) -> dict[str, Any]:
+    if args.project_command == "principles":
+        if args.principles_command not in {"check", "validate"}:
+            raise LifecycleError("command-not-implemented", "project principles command is not implemented")
+        return _check_principles(args)
     if args.project_command != "profile":
         raise LifecycleError("command-not-implemented", "project command is not implemented")
     if args.profile_command == "init":
@@ -96,6 +105,21 @@ def _check_profile(args: argparse.Namespace) -> dict[str, Any]:
     if args.out:
         write_json_create(Path(args.out), effective)
     return effective
+
+
+def _check_principles(args: argparse.Namespace) -> dict[str, Any]:
+    root = Path(args.project_root).resolve()
+    source = Path(args.principles_path)
+    if not source.is_absolute():
+        source = root / source
+    try:
+        payload = read_json_object(source, label="project principles")
+    except OSError as exc:
+        raise LifecycleError("project-principles-read-failed", "project principles cannot be read", {"path": str(args.principles_path)}) from exc
+    result = validate_project_principles(payload, project_root=root, source_path=source)
+    if args.out:
+        write_json_create(Path(args.out), result)
+    return result
 
 
 def _ensure_output_contained(path: Path, root: Path) -> None:
