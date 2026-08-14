@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "agent-plugin-qualification-profile.v1",
+  "profileId": "claude-agent-plugin",
+  "adapterId": "claude",
+  "client": "Claude Code",
+  "host": "claude",
+  "hostVersionPolicy": {
+    "mode": "reported",
+    "accepted": "any-version"
+  },
+  "package": {
+    "name": "agent-lifecycle-kit",
+    "manifestPath": "plugin.json",
+    "skillsPath": "skills",
+    "requiredSkills": [
+      "agent-first-planning",
+      "agent-plan-to-workers",
+      "agent-workflow-orchestrator",
+      "audit-agent-plan",
+      "audit-plan-implementation",
+      "bug-forensics",
+      "issue-to-spec"
+    ]
+  },
+  "discovery": {
+    "versionArgs": ["--version"],
+    "helpArgs": ["--help"],
+    "pluginManifestPath": ".claude-plugin/plugin.json",
+    "skillsPath": "skills",
+    "requiredMarkers": []
+  },
+  "installation": {
+    "owner": "client",
+    "documentation": "docs/reference/agent-plugins.md",
+    "automatic": false,
+    "writesAllowed": false
+  },
+  "environment": {
+    "allow": ["PATH"],
+    "allowPatterns": []
+  },
+  "qualification": {
+    "status": "SUPPORTED",
+    "mode": "explicit-read-only",
+    "maxProcesses": 2,
+    "timeoutSeconds": 10,
+    "maxOutputBytes": 262144,
+    "modelCalls": 0,
+    "hostLaunch": true,
+    "lifecycleProof": false,
+    "managedLaunchProof": false
+  },
+  "descriptorBoundary": {
+    "maturityReadOnly": true,
+    "managedLaunchReadOnly": true
+  },
+  "profileDigest": "676e9d3755211037ada73a704c22ba098291ee0c00ff3fe356d0d9c8234bd65e"
+}

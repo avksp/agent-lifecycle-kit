@@ -46,6 +46,7 @@ from agent_lifecycle.contracts.thread_bridge_schemas import (
     validate_thread_bridge_profile,
     validate_thread_bridge_qualification_receipt,
 )
+from agent_lifecycle.host_protocol.agent_plugin_qualification import run_agent_plugin_qualification_probe
 
 
 def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -158,6 +159,13 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     adapter_thread_qualify.add_argument("--receipt", required=True)
     adapter_thread_qualify.add_argument("--manifest")
     adapter_thread_qualify.add_argument("--out")
+    adapter_plugin_qualify = adapter_sub.add_parser("plugin-qualify")
+    adapter_plugin_qualify.add_argument("--adapter", required=True, choices=["codex", "claude", "cursor"])
+    adapter_plugin_qualify.add_argument("--profile", required=True)
+    adapter_plugin_qualify.add_argument("--package", required=True)
+    adapter_plugin_qualify.add_argument("--project-root", default=".")
+    adapter_plugin_qualify.add_argument("--host-bin")
+    adapter_plugin_qualify.add_argument("--out")
 
 
 def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
@@ -268,6 +276,23 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         if payload.get("status") != "PASS":
             raise LifecycleError("thread-qualification-failed", "thread qualification validation failed", payload)
+        return payload
+    if args.adapter_command == "plugin-qualify":
+        profile = read_json_object(Path(args.profile), label="Agent Plugins qualification profile")
+        if profile.get("adapterId") != args.adapter:
+            raise LifecycleError(
+                "plugin-qualification-adapter-mismatch",
+                "qualification profile adapterId does not match --adapter",
+                {"profileAdapterId": profile.get("adapterId"), "adapterId": args.adapter},
+            )
+        payload = run_agent_plugin_qualification_probe(
+            package_root=Path(args.package),
+            project_root=Path(args.project_root),
+            profile=profile,
+            host_bin=args.host_bin,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
         return payload
     raise LifecycleError("command-not-implemented", "adapter command is not implemented")
 

@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.68.0 - 2026-08-14
+
+- Added digest-bound Agent Plugins qualification profiles for Codex, Claude
+  Code and Cursor.
+- Added offline package qualification with seven-skill verification and an
+  explicit read-only client probe with bounded process, time and output use.
+- Added redacted qualification receipts that distinguish offline validation,
+  local qualification, blocked checks and unavailable clients without claiming
+  lifecycle or managed-launch proof.
+- Added English and Russian documentation for client-owned installation and
+  qualification boundaries.
+
 ## 1.67.0 - 2026-08-13
 
 - Added a portable Agent Plugins 1.0.0 package containing the canonical ALK

@@ -21,16 +21,17 @@ class AgentPluginDocumentationTests(unittest.TestCase):
     def test_user_visible_package_pins_use_target_release(self) -> None:
         for relative_path in self.PIN_SURFACES:
             content = (ROOT / relative_path).read_text(encoding="utf-8")
-            self.assertIn("agent-lifecycle-kit==1.67.0", content, relative_path)
+            self.assertIn("agent-lifecycle-kit==1.68.0", content, relative_path)
             self.assertNotIn("agent-lifecycle-kit==1.66.0", content, relative_path)
+            self.assertNotIn("agent-lifecycle-kit==1.67.0", content, relative_path)
 
     def test_english_and_russian_package_pages_describe_same_contract(self) -> None:
         required = (
             "agent-plugins.org/specification",
             "plugin.json",
             "skills/",
-            "agent-lifecycle-kit-agent-plugin-v1.67.0.zip",
-            "1.67.0",
+            "agent-lifecycle-kit-agent-plugin-v1.68.0.zip",
+            "1.68.0",
         )
         for relative_path in (
             "docs/reference/agent-plugins.md",

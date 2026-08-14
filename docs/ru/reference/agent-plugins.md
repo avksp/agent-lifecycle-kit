@@ -10,7 +10,7 @@ ALK публикует поддерживаемые навыки в перено
 Архив релиза содержит один корневой манифест и канонический набор навыков ALK:
 
 ```text
-agent-lifecycle-kit-agent-plugin-v1.67.0.zip
+agent-lifecycle-kit-agent-plugin-v1.68.0.zip
 ├── plugin.json
 └── skills/
     ├── agent-first-planning/SKILL.md
@@ -28,7 +28,7 @@ agent-lifecycle-kit-agent-plugin-v1.67.0.zip
 
 ## Установка через совместимый клиент
 
-Скачайте архив из [релиза на GitHub](https://github.com/avksp/agent-lifecycle-kit/releases/tag/v1.67.0), распакуйте его и выполните процедуру установки выбранного клиента. Спецификация задаёт состав пакета и структуру компонентов, а клиент определяет команду установки, запрос доверия, полномочия, обновление и локальный кэш.
+Скачайте архив из [релиза на GitHub](https://github.com/avksp/agent-lifecycle-kit/releases/tag/v1.68.0), распакуйте его и выполните процедуру установки выбранного клиента. Спецификация задаёт состав пакета и структуру компонентов, а клиент определяет команду установки, запрос доверия, полномочия, обновление и локальный кэш.
 
 Команды для конкретного клиента приведены в [руководстве по установке
 адаптеров](../adapters/install.md) и на странице выбранного адаптера. Перед
@@ -37,21 +37,27 @@ agent-lifecycle-kit-agent-plugin-v1.67.0.zip
 ```bash
 python tools/release/build_agent_plugin.py \
   --root . \
-  --version 1.67.0 \
+  --version 1.68.0 \
   --out work/agent-plugin \
-  --archive work/agent-lifecycle-kit-agent-plugin-v1.67.0.zip
+  --archive work/agent-lifecycle-kit-agent-plugin-v1.68.0.zip
 
 python tools/release/validate_agent_plugin.py \
   --package work/agent-plugin \
-  --archive work/agent-lifecycle-kit-agent-plugin-v1.67.0.zip \
+  --archive work/agent-lifecycle-kit-agent-plugin-v1.68.0.zip \
   --root . \
-  --version 1.67.0 \
+  --version 1.68.0 \
   --evidence work/agent-plugin-validation.json
 ```
 
 Проверка сверяет локальный отпечаток схемы, манифест, обнаружение навыков,
 обычные файлы, границы каталога и пути в архиве без обращения к сети или
 модели.
+
+После установки способом выбранного клиента используйте страницу [Проверка
+Agent Plugins в клиентах](agent-plugin-qualification.md), чтобы выполнить
+явную безопасную проверку Codex, Claude Code или Cursor. Полученная квитанция
+связывает пакет с выбранным клиентом и не заменяет доказательство жизненного
+цикла.
 
 ## Загрузка пакета и доказательство жизненного цикла
 

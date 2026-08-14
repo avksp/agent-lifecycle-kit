@@ -15,9 +15,10 @@ that result. It is host-neutral and does not depend on a source project.
 
 - [Install ALK and make the first run](guides/install-and-first-run.md)
 - [Portable Agent Plugins package](reference/agent-plugins.md)
+- [Agent Plugins client qualification](reference/agent-plugin-qualification.md)
 - [Commands by task](guides/commands-by-task.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==1.67.0` from
+  `python -m pip install agent-lifecycle-kit==1.68.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -72,6 +73,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Project comparison](reference/project-comparison.md)
 - [Plugin publication](reference/plugin-publication.md)
 - [Portable Agent Plugins package](reference/agent-plugins.md)
+- [Agent Plugins client qualification](reference/agent-plugin-qualification.md)
 - [Completion check](reference/completion-check.md)
 - [Goal continuity](reference/goal-continuity.md)
 - [Follow-up register](reference/follow-up-register.md)

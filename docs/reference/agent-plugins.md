@@ -10,7 +10,7 @@ replace the Python package, adapter projections or lifecycle commands.
 The release archive contains one root manifest and the canonical ALK skills:
 
 ```text
-agent-lifecycle-kit-agent-plugin-v1.67.0.zip
+agent-lifecycle-kit-agent-plugin-v1.68.0.zip
 ├── plugin.json
 └── skills/
     ├── agent-first-planning/SKILL.md
@@ -28,28 +28,33 @@ release version. The `skills/` directory is generated from the repository
 
 ## Install through a compatible client
 
-Download the archive from the [GitHub release](https://github.com/avksp/agent-lifecycle-kit/releases/tag/v1.67.0), unpack it and follow the installation procedure of the selected client. The specification defines the package and component layout; the client defines the installation command, trust prompt, permissions, updates and local cache.
+Download the archive from the [GitHub release](https://github.com/avksp/agent-lifecycle-kit/releases/tag/v1.68.0), unpack it and follow the installation procedure of the selected client. The specification defines the package and component layout; the client defines the installation command, trust prompt, permissions, updates and local cache.
 
 For client-specific commands, use the [adapter installation guide](../adapters/install.md) and the page for the selected adapter. The package can also be inspected locally before installation:
 
 ```bash
 python tools/release/build_agent_plugin.py \
   --root . \
-  --version 1.67.0 \
+  --version 1.68.0 \
   --out work/agent-plugin \
-  --archive work/agent-lifecycle-kit-agent-plugin-v1.67.0.zip
+  --archive work/agent-lifecycle-kit-agent-plugin-v1.68.0.zip
 
 python tools/release/validate_agent_plugin.py \
   --package work/agent-plugin \
-  --archive work/agent-lifecycle-kit-agent-plugin-v1.67.0.zip \
+  --archive work/agent-lifecycle-kit-agent-plugin-v1.68.0.zip \
   --root . \
-  --version 1.67.0 \
+  --version 1.68.0 \
   --evidence work/agent-plugin-validation.json
 ```
 
 The validator checks the local schema digest, manifest identity, skill
 discovery, regular files, containment and archive paths without network or
 model calls.
+
+After the client-owned installation step, use the [Agent Plugins client
+qualification](agent-plugin-qualification.md) page to run the explicit
+read-only probe for Codex, Claude Code or Cursor. The resulting receipt binds
+the package to the selected client; it does not replace lifecycle proof.
 
 ## Package loading and lifecycle proof
 

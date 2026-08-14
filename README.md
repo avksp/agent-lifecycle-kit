@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.67.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.68.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -114,12 +114,12 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
   and display lifecycle state while support levels remain evidence-driven.
 - Import mappers and issue-to-spec intake normalize external workflows, agent
   dialects, and tickets into reviewable draft context.
-- The portable Agent Plugins package exposes the maintained ALK skills tree to
-  compatible clients; its package format and lifecycle boundary are described
-  in [portable Agent Plugins](docs/reference/agent-plugins.md).
+- The portable Agent Plugins package exposes the maintained ALK skills tree;
+  see [portable Agent Plugins](docs/reference/agent-plugins.md). After a
+  client-owned installation, [client qualification](docs/reference/agent-plugin-qualification.md)
+  checks discovery without claiming lifecycle proof.
 - Lightweight episode retrieval over receipt/session summaries keeps digest
   provenance and explicit `chainVerified` or `chainUnchecked` state.
-
 ### Operations
 
 - Runner recovery receipts cover attempt snapshot, restore, abandon, selected
