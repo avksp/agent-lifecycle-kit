@@ -78,7 +78,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.67.0
+python -m pip install agent-lifecycle-kit==1.68.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -89,7 +89,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.67.0
+python -m pip install agent-lifecycle-kit==1.68.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -187,7 +187,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v1.67.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v1.68.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -204,6 +204,10 @@ claude plugin list
 навыки и JS-проекцию отдельно; команды копирования приведены на [странице
 адаптера OpenCode](../adapters/opencode.md). Все варианты для комплектных
 адаптеров собраны в [руководстве по установке адаптеров](../adapters/install.md).
+
+После установки проверьте обнаружение пакета командой из раздела [проверка
+Agent Plugins в клиентах](../reference/agent-plugin-qualification.md). Это
+явная безопасная проверка, которая не заменяет жизненный цикл ALK.
 
 ## Запрос внутри сессии хоста
 

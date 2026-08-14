@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.67.0
+  python -m pip install agent-lifecycle-kit==1.68.0
 ```
 
 ## Foundation
@@ -219,6 +219,11 @@ atomic interface for scripts and advanced operators.
 - `agent-lifecycle adapter validate`: check a descriptor against the baseline.
 - `agent-lifecycle adapter inspect`: inspect source projection and safe host
   command surfaces.
+- `agent-lifecycle adapter plugin-qualify --adapter codex|claude|cursor
+  --profile <path> --package <path> --project-root <path>`: run the explicit,
+  bounded read-only Agent Plugins client probe and return a qualification
+  receipt. Installation remains client-owned; `QUALIFIED` is not lifecycle or
+  managed-launch proof.
 - `agent-lifecycle adapter scaffold`: create an `EXPERIMENTAL` adapter
   skeleton.
 - `agent-lifecycle adapter install-plan`: preview host setup without writes.

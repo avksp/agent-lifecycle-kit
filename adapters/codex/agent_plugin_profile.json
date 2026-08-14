@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "agent-plugin-qualification-profile.v1",
+  "profileId": "codex-agent-plugin",
+  "adapterId": "codex",
+  "client": "Codex",
+  "host": "codex",
+  "hostVersionPolicy": {
+    "mode": "reported",
+    "accepted": "any-version"
+  },
+  "package": {
+    "name": "agent-lifecycle-kit",
+    "manifestPath": "plugin.json",
+    "skillsPath": "skills",
+    "requiredSkills": [
+      "agent-first-planning",
+      "agent-plan-to-workers",
+      "agent-workflow-orchestrator",
+      "audit-agent-plan",
+      "audit-plan-implementation",
+      "bug-forensics",
+      "issue-to-spec"
+    ]
+  },
+  "discovery": {
+    "versionArgs": ["--version"],
+    "helpArgs": ["exec", "--help"],
+    "pluginManifestPath": ".codex-plugin/plugin.json",
+    "skillsPath": "skills",
+    "requiredMarkers": []
+  },
+  "installation": {
+    "owner": "client",
+    "documentation": "docs/reference/agent-plugins.md",
+    "automatic": false,
+    "writesAllowed": false
+  },
+  "environment": {
+    "allow": ["PATH"],
+    "allowPatterns": []
+  },
+  "qualification": {
+    "status": "SUPPORTED",
+    "mode": "explicit-read-only",
+    "maxProcesses": 2,
+    "timeoutSeconds": 10,
+    "maxOutputBytes": 262144,
+    "modelCalls": 0,
+    "hostLaunch": true,
+    "lifecycleProof": false,
+    "managedLaunchProof": false
+  },
+  "descriptorBoundary": {
+    "maturityReadOnly": true,
+    "managedLaunchReadOnly": true
+  },
+  "profileDigest": "d6bd12e80d0ec1abf5020755bfdb5feb626476e4e214d9d0a4b4c7e2c8c3e35f"
+}
