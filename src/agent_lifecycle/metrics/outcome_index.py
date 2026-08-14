@@ -121,6 +121,50 @@ def build_quality_cost_signal_summary(signals: dict[str, Any]) -> dict[str, Any]
     return {**body, "summaryDigest": canonical_digest(body)}
 
 
+def summarize_audit_quality(samples: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize quality outcomes from the audit-optimization sample shape."""
+
+    total = len(samples)
+    successful = 0
+    blockers = 0
+    false_acceptances = 0
+    corrections = 0
+    disagreements = 0
+    retries = 0
+    timeouts = 0
+    for sample in samples:
+        quality = sample.get("quality") if isinstance(sample.get("quality"), dict) else {}
+        status = str(quality.get("status", "UNKNOWN"))
+        if status in SUCCESS_STATUSES:
+            successful += 1
+        if quality.get("blocker") is True:
+            blockers += 1
+        if quality.get("falseAcceptance") is True:
+            false_acceptances += 1
+        corrections += _non_negative_value(quality.get("correctionCount"))
+        disagreements += _non_negative_value(quality.get("disagreementCount"))
+        attempts = sample.get("attempts") if isinstance(sample.get("attempts"), dict) else {}
+        retries += _non_negative_value(attempts.get("retryCount"))
+        timeouts += _non_negative_value(attempts.get("timeoutCount"))
+    return {
+        "sampleCount": total,
+        "successCount": successful,
+        "blockerCount": blockers,
+        "falseAcceptanceCount": false_acceptances,
+        "correctionCount": corrections,
+        "disagreementCount": disagreements,
+        "retryCount": retries,
+        "timeoutCount": timeouts,
+        "successRate": _rate(successful, total),
+        "blockerRate": _rate(blockers, total),
+        "falseAcceptanceRate": _rate(false_acceptances, total),
+        "correctionRate": _rate(corrections, total),
+        "disagreementRate": _rate(disagreements, total),
+        "retryRate": _rate(retries, total),
+        "timeoutRate": _rate(timeouts, total),
+    }
+
+
 def _task_key(artifact: dict[str, Any], index: int) -> tuple[str, str, str]:
     run_id = _string_at(artifact, "runId") or _string_at(artifact, "lineage.runId") or "run-unknown"
     package_id = _string_at(artifact, "packageId") or _string_at(artifact, "lineage.packageId") or "package-unknown"
@@ -230,7 +274,7 @@ def _best_signal(rows: list[Any]) -> dict[str, Any] | None:
     candidates = [item for item in rows if isinstance(item, dict)]
     if not candidates:
         return None
-    return sorted(candidates, key=lambda item: (-float(item.get("successRate", 0.0)), float(item.get("averageTokens", 0.0)), -int(item.get("sampleCount", 0))))[0]
+    return min(candidates, key=lambda item: (-float(item.get("successRate", 0.0)), float(item.get("averageTokens", 0.0)), -int(item.get("sampleCount", 0))))
 
 
 def _successful(record: dict[str, Any]) -> bool:
@@ -328,3 +372,7 @@ def _average(value: int, total: int) -> float:
 
 def _average_float(value: float, total: int) -> float:
     return round(value / total, 6) if total else 0.0
+
+
+def _non_negative_value(value: Any) -> int:
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0

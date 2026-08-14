@@ -1,0 +1,213 @@
+"""Versioned contracts for privacy-preserving audit optimization."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from agent_lifecycle.contracts.schema_builders import open_object_schema
+
+AUDIT_OPTIMIZATION_SAMPLE_SCHEMA = "agent-audit-optimization-sample.v1"
+AUDIT_OPTIMIZATION_SAMPLE_BATCH_SCHEMA = "agent-audit-optimization-sample-batch.v1"
+AUDIT_OPTIMIZATION_STATISTICS_SCHEMA = "agent-audit-optimization-statistics.v1"
+AUDIT_OPTIMIZATION_RECOMMENDATION_SCHEMA = "agent-audit-optimization-recommendation.v1"
+AUDIT_OPTIMIZATION_REPORT_SCHEMA = "agent-audit-optimization-report.v1"
+AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA = "agent-audit-optimization-proposal.v1"
+AUDIT_OPTIMIZATION_APPLIED_PROFILE_SCHEMA = "agent-audit-optimization-applied-profile.v1"
+AUDIT_OPTIMIZATION_APPLY_RESULT_SCHEMA = "agent-audit-optimization-apply-result.v1"
+
+
+AUDIT_OPTIMIZATION_SCHEMAS: dict[str, dict[str, Any]] = {
+    AUDIT_OPTIMIZATION_SAMPLE_SCHEMA: open_object_schema(
+        AUDIT_OPTIMIZATION_SAMPLE_SCHEMA,
+        required=[
+            "schemaVersion",
+            "sampleId",
+            "lineage",
+            "request",
+            "review",
+            "attempts",
+            "usage",
+            "process",
+            "quality",
+            "attestation",
+            "sourceDigests",
+            "rawPromptStored",
+            "rawOutputStored",
+            "secretsStored",
+            "providerModelNamesStored",
+            "localPathsStored",
+            "productionPromotionClaimed",
+            "sampleDigest",
+        ],
+        properties={
+            "sampleId": {"type": "string", "minLength": 1},
+            "lineage": {"type": "object"},
+            "request": {"type": "object"},
+            "review": {"type": "object"},
+            "attempts": {"type": "object"},
+            "usage": {"type": "object"},
+            "process": {"type": "object"},
+            "quality": {"type": "object"},
+            "attestation": {"type": "object"},
+            "sourceDigests": {"type": "array", "items": {"type": "string", "minLength": 64, "maxLength": 64}},
+            "rawPromptStored": {"const": False},
+            "rawOutputStored": {"const": False},
+            "secretsStored": {"const": False},
+            "providerModelNamesStored": {"const": False},
+            "localPathsStored": {"const": False},
+            "productionPromotionClaimed": {"const": False},
+            "sampleDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    AUDIT_OPTIMIZATION_SAMPLE_BATCH_SCHEMA: open_object_schema(
+        AUDIT_OPTIMIZATION_SAMPLE_BATCH_SCHEMA,
+        required=["schemaVersion", "status", "sampleCount", "samples", "sourceCount", "blockers", "productionPromotionClaimed", "batchDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "sampleCount": {"type": "integer", "minimum": 0},
+            "samples": {"type": "array", "items": {"type": "object"}},
+            "sourceCount": {"type": "integer", "minimum": 0},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "productionPromotionClaimed": {"const": False},
+            "batchDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    AUDIT_OPTIMIZATION_STATISTICS_SCHEMA: open_object_schema(
+        AUDIT_OPTIMIZATION_STATISTICS_SCHEMA,
+        required=["schemaVersion", "status", "sampleCount", "confidence", "minimumSample", "signals", "blockers", "statisticsDigest"],
+        properties={
+            "status": {"enum": ["PASS", "NO_RECOMMENDATION", "FAIL"]},
+            "sampleCount": {"type": "integer", "minimum": 0},
+            "confidence": {"enum": ["LOW", "MEDIUM", "HIGH"]},
+            "minimumSample": {"type": "object"},
+            "signals": {"type": "object"},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "statisticsDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    AUDIT_OPTIMIZATION_RECOMMENDATION_SCHEMA: open_object_schema(
+        AUDIT_OPTIMIZATION_RECOMMENDATION_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "taskShape",
+            "confidence",
+            "qualityFloor",
+            "qualityFloorPreserved",
+            "advisoryOnly",
+            "autoApply",
+            "changes",
+            "reasons",
+            "approval",
+            "rollback",
+            "productionPromotionClaimed",
+            "recommendationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "NO_RECOMMENDATION", "FAIL"]},
+            "taskShape": {"type": "string", "minLength": 1},
+            "confidence": {"enum": ["LOW", "MEDIUM", "HIGH"]},
+            "qualityFloor": {"type": "string", "minLength": 1},
+            "qualityFloorPreserved": {"const": True},
+            "advisoryOnly": {"const": True},
+            "autoApply": {"const": False},
+            "changes": {"type": "array", "items": {"type": "object"}},
+            "reasons": {"type": "array", "items": {"type": "object"}},
+            "approval": {"type": "object"},
+            "rollback": {"type": "object"},
+            "productionPromotionClaimed": {"const": False},
+            "recommendationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    AUDIT_OPTIMIZATION_REPORT_SCHEMA: open_object_schema(
+        AUDIT_OPTIMIZATION_REPORT_SCHEMA,
+        required=["schemaVersion", "status", "statistics", "evaluation", "recommendation", "nextAction", "productionPromotionClaimed", "reportDigest"],
+        properties={
+            "status": {"enum": ["PASS", "NO_RECOMMENDATION", "FAIL"]},
+            "statistics": {"type": "object"},
+            "evaluation": {"type": "object"},
+            "recommendation": {"type": "object"},
+            "nextAction": {"type": "string"},
+            "productionPromotionClaimed": {"const": False},
+            "reportDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA: open_object_schema(
+        AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA,
+        required=["schemaVersion", "status", "proposalId", "sourceRecommendationDigest", "approvalRequired", "applyAllowed", "candidateChanges", "rollback", "productionPromotionClaimed", "proposalDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "proposalId": {"type": "string", "minLength": 1},
+            "sourceRecommendationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "approvalRequired": {"const": True},
+            "applyAllowed": {"type": "boolean"},
+            "candidateChanges": {"type": "array", "items": {"type": "object"}},
+            "rollback": {"type": "object"},
+            "productionPromotionClaimed": {"const": False},
+            "proposalDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    AUDIT_OPTIMIZATION_APPLIED_PROFILE_SCHEMA: open_object_schema(
+        AUDIT_OPTIMIZATION_APPLIED_PROFILE_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "target",
+            "sourceProposalDigest",
+            "changes",
+            "rollback",
+            "approval",
+            "qualityFloorPreserved",
+            "productionPromotionClaimed",
+        ],
+        properties={
+            "status": {"const": "PASS"},
+            "target": {"type": "object"},
+            "sourceProposalDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "changes": {"type": "array", "items": {"type": "object"}},
+            "rollback": {"type": "object"},
+            "approval": {"type": "object"},
+            "qualityFloorPreserved": {"const": True},
+            "productionPromotionClaimed": {"const": False},
+        },
+    ),
+    AUDIT_OPTIMIZATION_APPLY_RESULT_SCHEMA: open_object_schema(
+        AUDIT_OPTIMIZATION_APPLY_RESULT_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "outputPath",
+            "outputBytes",
+            "outputDigest",
+            "proposalDigest",
+            "changed",
+            "liveCallsStarted",
+            "productionPromotionClaimed",
+            "applyDigest",
+        ],
+        properties={
+            "status": {"const": "PASS"},
+            "outputPath": {"type": "string", "minLength": 1},
+            "outputBytes": {"type": "integer", "minimum": 0},
+            "outputDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "proposalDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "changed": {"type": "boolean"},
+            "liveCallsStarted": {"const": False},
+            "productionPromotionClaimed": {"const": False},
+            "applyDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+}
+
+
+__all__ = [
+    "AUDIT_OPTIMIZATION_APPLIED_PROFILE_SCHEMA",
+    "AUDIT_OPTIMIZATION_APPLY_RESULT_SCHEMA",
+    "AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA",
+    "AUDIT_OPTIMIZATION_RECOMMENDATION_SCHEMA",
+    "AUDIT_OPTIMIZATION_REPORT_SCHEMA",
+    "AUDIT_OPTIMIZATION_SAMPLE_BATCH_SCHEMA",
+    "AUDIT_OPTIMIZATION_SAMPLE_SCHEMA",
+    "AUDIT_OPTIMIZATION_SCHEMAS",
+    "AUDIT_OPTIMIZATION_STATISTICS_SCHEMA",
+]

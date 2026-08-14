@@ -37,6 +37,11 @@ calls. `agent-lifecycle-recommendation.v1` remains advisory with
 Low-confidence data keeps the current or floor mode. Any policy change must go
 through the explicit policy proposal/apply path.
 
+For repeated independent audits, use the more specific
+[evidence-based audit optimization](audit-optimization.md) flow. It keeps
+quality as the first gate, adds process-resource measurements and evaluates
+candidate profiles on a bounded shared holdout set.
+
 ## Repeatable comparison
 
 Use `agent-lifecycle benchmark evaluate` when a process change needs a fixed

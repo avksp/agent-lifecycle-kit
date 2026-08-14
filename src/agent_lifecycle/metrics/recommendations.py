@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.metrics.outcome_index import QUALITY_COST_SIGNALS_SCHEMA
 from agent_lifecycle.metrics.costs import (
     COST_CATEGORIES,
     DEFAULT_MODE_LIMITS,
@@ -13,6 +12,7 @@ from agent_lifecycle.metrics.costs import (
     summarize_usage_confidence,
     validate_lifecycle_cost_report,
 )
+from agent_lifecycle.metrics.outcome_index import QUALITY_COST_SIGNALS_SCHEMA
 
 BASELINES_SCHEMA = "agent-lifecycle-baselines.v1"
 BASELINE_VALIDATION_SCHEMA = "agent-lifecycle-baselines-validation.v1"
@@ -20,6 +20,18 @@ STATISTICS_SCHEMA = "agent-lifecycle-overhead-statistics.v1"
 RECOMMENDATION_SCHEMA = "agent-lifecycle-recommendation.v1"
 RECOMMENDATION_SUMMARY_SCHEMA = "agent-lifecycle-recommendation-summary.v1"
 MODE_ORDER = tuple(DEFAULT_MODE_LIMITS)
+
+
+def quality_floor_preserved(candidate_mode: str, required_mode: str) -> bool:
+    """Return whether a candidate mode meets the existing quality floor."""
+
+    return _mode_index(candidate_mode) >= _mode_index(required_mode)
+
+
+def audit_recommendation_reason(code: str, **details: Any) -> dict[str, Any]:
+    """Build a stable reason object for the audit optimizer."""
+
+    return {"code": code, **{key: value for key, value in sorted(details.items())}}
 
 
 def validate_lifecycle_baselines(profile: dict[str, Any]) -> dict[str, Any]:
@@ -393,7 +405,7 @@ def _mode_index(mode: str) -> int:
 def _best_quality_cost_signal(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not rows:
         return None
-    return sorted(
+    return min(
         rows,
         key=lambda item: (
             -float(item.get("successRate", 0.0)),
@@ -401,7 +413,7 @@ def _best_quality_cost_signal(rows: list[dict[str, Any]]) -> dict[str, Any] | No
             float(item.get("averageTokens", 0.0)),
             -int(item.get("sampleCount", 0)),
         ),
-    )[0]
+    )
 
 
 def _quality_cost_warnings(
