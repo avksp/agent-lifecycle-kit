@@ -196,6 +196,33 @@ classes such as edge-case, API contract, race, flaky test, security bug or
 unknown. It records confidence, matched evidence and digest provenance without
 provider/model names in core.
 
+## Research evidence
+
+Research evidence contracts describe untrusted, provider-neutral material used
+to inform a draft specification or plan. They do not become lifecycle authority
+and cannot replace plan, acceptance or implementation evidence.
+
+Stable schema ids:
+
+- `agent-research-source.v1`
+- `agent-research-claim.v1`
+- `agent-research-citation.v1`
+- `agent-research-provenance-edge.v1`
+- `agent-research-evidence-package.v1`
+- `agent-research-evidence-validation.v1`
+- `agent-research-evidence-summary.v1`
+
+Sources, claims and citations are linked by bounded identifiers and digests.
+Explicit local snapshots can verify a quoted UTF-8 range. Provenance edges mark
+derived and duplicate material so repeated copies are not counted as independent
+evidence. Validation rejects raw source bodies, provider/model fields, prompt
+authority markers, secret-like content and private absolute paths. The core
+does not fetch locators, call models or launch host processes.
+
+The package and summary carry `sourceOfTruth: false` and
+`productionPromotionClaimed: false`. A `PASS` receipt means the package is
+structurally and security valid; it does not approve the claims for a plan.
+
 ## Sandbox boundaries
 
 The sandbox-boundary surface is additive and opt-in for tasks that require

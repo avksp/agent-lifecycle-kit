@@ -32,7 +32,7 @@ class CliDispatchBoundaryValidatorTests(unittest.TestCase):
 
         self.assertEqual(payload["status"], "PASS")
         self.assertLessEqual(payload["actualLines"], 800)
-        self.assertEqual(len(payload["routedDelegates"]), 5)
+        self.assertEqual(len(payload["routedDelegates"]), 6)
 
     def test_validator_rejects_oversized_dispatcher_without_delegates(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

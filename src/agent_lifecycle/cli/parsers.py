@@ -10,6 +10,7 @@ from agent_lifecycle.cli.followup import add_followup_parser
 from agent_lifecycle.cli.metrics_parser import add_metrics_parser
 from agent_lifecycle.cli.policy import add_policy_parser
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
+from agent_lifecycle.cli.research import add_research_parser
 from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.cli.worktree import add_worktree_parser
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
@@ -28,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_contract_parser(subparsers)
     subparsers.add_parser("neutrality", help="run neutrality subcommands")
     _add_evidence_parser(subparsers)
+    add_research_parser(subparsers)
     _add_import_parser(subparsers)
     _add_quality_parser(subparsers)
     _add_review_mesh_parser(subparsers)

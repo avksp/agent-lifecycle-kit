@@ -11,6 +11,7 @@ from agent_lifecycle.cli.dispatch_contracts import dispatch_contracts
 from agent_lifecycle.cli.dispatch_lifecycle import dispatch_lifecycle
 from agent_lifecycle.cli.dispatch_observability import dispatch_observability
 from agent_lifecycle.cli.dispatch_planning import dispatch_planning
+from agent_lifecycle.cli.dispatch_research import dispatch_research
 from agent_lifecycle.cli.followup import dispatch_followup
 from agent_lifecycle.cli.host_launch import dispatch_host_launch
 from agent_lifecycle.cli.policy import dispatch_policy
@@ -34,6 +35,8 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
     del remainder
     if args.command in {"diagnose", "diagnostics", "adapter"}:
         return dispatch_adapters(args)
+    if args.command == "research":
+        return dispatch_research(args)
     if args.command in {"version", "schema", "contract", "evidence", "import", "quality", "review-mesh"}:
         return dispatch_contracts(args)
     if args.command in {"workflow", "audit", "runner"}:

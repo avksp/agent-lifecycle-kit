@@ -14,6 +14,7 @@ REQUIRED_DELEGATES = {
     "dispatch_lifecycle": "agent_lifecycle.cli.dispatch_lifecycle",
     "dispatch_observability": "agent_lifecycle.cli.dispatch_observability",
     "dispatch_planning": "agent_lifecycle.cli.dispatch_planning",
+    "dispatch_research": "agent_lifecycle.cli.dispatch_research",
 }
 
 
