@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.69.0
+  python -m pip install agent-lifecycle-kit==1.70.0
 ```
 
 ## Foundation
@@ -173,6 +173,21 @@ remain authoritative for risk, quality, write scope, gates and receipts. See
   preserves the required quality floor.
 - `agent-lifecycle metrics outcome-index/quality-signals/learn-recommend`:
   derive advisory local learning signals from explicit lifecycle receipts.
+- `agent-lifecycle metrics audit-sample --receipt <path> --out <path>`:
+  build a bounded sample batch from review, usage and process receipts.
+- `agent-lifecycle metrics audit-report --sample <path> --candidate-profile <path> --out <path>`:
+  calculate quality, time, token and resource statistics, evaluate holdout
+  tasks and produce an advisory profile recommendation. Add `--terminal` for
+  a compact operator view.
+- `agent-lifecycle metrics audit-proposal --report <path> --out <path>`:
+  record an explicit approval decision for a recommendation. Use
+  `--approved` only after reviewing the report; it never edits a frozen plan.
+- `agent-lifecycle metrics audit-apply --proposal <path> --out <path>`:
+  write a new approved profile artifact. Plan manifests and lock files are
+  rejected as output targets.
+
+For the complete evidence, holdout and approval flow, see [Evidence-based audit
+optimization](audit-optimization.md).
 - `agent-lifecycle policy tune`: build a read-only policy proposal or write an
   approved policy artifact with `--apply --output`.
 - `agent-lifecycle policy adaptive-decision/adaptive-check`: build and validate

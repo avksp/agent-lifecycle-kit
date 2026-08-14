@@ -39,6 +39,34 @@ def summarize_regression_signals(signals: list[dict[str, Any]] | None) -> dict[s
     return {**body, "signalsDigest": canonical_digest(body)}
 
 
+def build_audit_regression_signals(samples: list[dict[str, Any]]) -> dict[str, Any]:
+    """Convert sample quality failures into the existing regression contract."""
+
+    signals: list[dict[str, Any]] = []
+    false_acceptances = sum(
+        1
+        for sample in samples
+        if isinstance(sample.get("quality"), dict) and sample["quality"].get("falseAcceptance") is True
+    )
+    corrections = sum(
+        int(sample.get("quality", {}).get("correctionCount", 0))
+        for sample in samples
+        if isinstance(sample.get("quality"), dict) and isinstance(sample["quality"].get("correctionCount", 0), int)
+    )
+    mixed_attestation = sum(
+        1
+        for sample in samples
+        if isinstance(sample.get("attestation"), dict) and sample["attestation"].get("overall") == "MIXED"
+    )
+    if false_acceptances:
+        signals.append({"type": "falseAcceptance", "count": false_acceptances, "severity": "BLOCKER", "source": "audit-samples"})
+    if corrections:
+        signals.append({"type": "repeatedRemediation", "count": corrections, "severity": "HIGH", "source": "audit-samples"})
+    if mixed_attestation:
+        signals.append({"type": "mixedAttestation", "count": mixed_attestation, "severity": "MEDIUM", "source": "audit-samples"})
+    return summarize_regression_signals(signals)
+
+
 def _normalize_signal(index: int, signal: dict[str, Any], blockers: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not isinstance(signal, dict):
         blockers.append({"code": "regression-signal-type", "index": index})

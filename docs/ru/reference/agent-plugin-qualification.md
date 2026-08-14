@@ -27,16 +27,16 @@ ALK публикует переносимый пакет Agent Plugins с сем
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/build_agent_plugin.py \
   --root . \
-  --version 1.69.0 \
-  --out work/release-1-69/agent-plugin \
-  --archive work/release-1-69/agent-lifecycle-kit-agent-plugin-v1.69.0.zip
+  --version 1.70.0 \
+  --out work/release-1-70/agent-plugin \
+  --archive work/release-1-70/agent-lifecycle-kit-agent-plugin-v1.70.0.zip
 
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 \
   tools/release/validate_agent_plugin_qualification.py \
-  --package work/release-1-69/agent-plugin \
+  --package work/release-1-70/agent-plugin \
   --profile adapters/codex/agent_plugin_profile.json \
-  --version 1.69.0 \
-  --evidence work/release-1-69/evidence/offline.json
+  --version 1.70.0 \
+  --evidence work/release-1-70/evidence/offline.json
 ```
 
 В этом режиме не запускаются процессы клиента и не выполняются вызовы модели
@@ -52,9 +52,9 @@ ALK с профилем этого клиента:
 agent-lifecycle adapter plugin-qualify \
   --adapter codex \
   --profile adapters/codex/agent_plugin_profile.json \
-  --package work/release-1-69/agent-plugin \
+  --package work/release-1-70/agent-plugin \
   --project-root . \
-  --out work/release-1-69/evidence/codex-qualification.json
+  --out work/release-1-70/evidence/codex-qualification.json
 ```
 
 Проверка выполняет только команды версии и справки, указанные в профиле. Для
@@ -88,7 +88,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 \
   --profiles adapters/codex/agent_plugin_profile.json \
              adapters/claude/agent_plugin_profile.json \
              adapters/cursor/agent_plugin_profile.json \
-  --evidence work/release-1-69/evidence/profiles.json
+  --evidence work/release-1-70/evidence/profiles.json
 ```
 
 Профили не могут изменять уровень зрелости адаптера или значение

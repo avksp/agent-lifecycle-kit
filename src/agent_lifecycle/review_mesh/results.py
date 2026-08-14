@@ -6,7 +6,9 @@ import re
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.thread_bridge_schemas import validate_thread_context_import
+from agent_lifecycle.contracts.thread_bridge_schemas import (
+    validate_thread_context_import,
+)
 from agent_lifecycle.review_mesh.contracts import (
     build_review_mesh_result,
     require_review_mesh_result_pass,
@@ -85,6 +87,46 @@ def build_thread_context_review_input(imported_context: dict[str, Any]) -> dict[
         "productionPromotionClaimed": False,
     }
     return {**body, "inputDigest": canonical_digest(body)}
+
+
+def project_review_result_for_optimization(result: dict[str, Any]) -> dict[str, Any]:
+    """Project a Review Mesh result without copying reviewer output or identity names."""
+
+    if not isinstance(result, dict):
+        raise LifecycleError("review-mesh-result-projection-invalid", "Review Mesh result must be an object")
+    findings = result.get("findings") if isinstance(result.get("findings"), list) else []
+    severity_counts: dict[str, int] = {}
+    accepted = 0
+    rejected = 0
+    for finding in findings:
+        if not isinstance(finding, dict):
+            continue
+        severity = finding.get("severity") if isinstance(finding.get("severity"), str) else "INFO"
+        severity_counts[severity] = severity_counts.get(severity, 0) + 1
+        status = str(finding.get("status", "open")).lower()
+        if status in {"accepted", "fixed", "closed"}:
+            accepted += 1
+        if status in {"rejected", "dismissed"}:
+            rejected += 1
+    reviewer = result.get("reviewer") if isinstance(result.get("reviewer"), dict) else {}
+    independence = result.get("independence") if isinstance(result.get("independence"), dict) else {}
+    subject = result.get("subject") if isinstance(result.get("subject"), dict) else {}
+    projection = {
+        "status": result.get("status") if result.get("status") in {"PASS", "FAIL", "SKIPPED"} else "UNKNOWN",
+        "findingCount": len(findings),
+        "severityCounts": dict(sorted(severity_counts.items())),
+        "acceptedCount": accepted,
+        "rejectedCount": rejected,
+        "disagreementCount": int(result.get("disagreementCount", 0)) if isinstance(result.get("disagreementCount"), int) else 0,
+        "independenceStatus": independence.get("status") if independence.get("status") in {"INDEPENDENT", "NOT_REQUIRED", "NOT_PROVEN"} else "MISSING",
+        "reviewerRole": reviewer.get("role") if isinstance(reviewer.get("role"), str) else "unknown",
+        "modelRouteClass": reviewer.get("modelClass") if isinstance(reviewer.get("modelClass"), str) else "unknown",
+        "phase": result.get("phase") if isinstance(result.get("phase"), str) else subject.get("phase", "unknown"),
+    }
+    for field in ("hostIdentityHash", "modelIdentityHash"):
+        if isinstance(reviewer.get(field), str) and len(reviewer[field]) == 64:
+            projection[field] = reviewer[field]
+    return projection
 
 
 def _sanitize_payload(value: Any, *, allow_local_evidence_refs: bool) -> tuple[Any, dict[str, Any]]:

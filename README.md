@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.69.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.70.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -89,8 +89,8 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
   quorum, while the operator or host wrapper starts each model. The bundled reference-task suite measures deterministic quality, false acceptances, retries, elapsed time, and confidence-labeled token usage.
 
 ### Routing and resource control
-- Compact context profiles, small-model packets, objective snapshots, and
-  local quality-cost learning help choose the lightest safe mode.
+- Compact context profiles, small-model packets and local quality-cost learning
+  help choose a safe mode; audit optimization compares quality, time, tokens and resources after holdout evidence and requires operator approval.
 - Phase resource measurements reuse the usage export envelope for tokens,
   duration, and resource counters without mandatory monetary accounting.
 - Usage/session exports include tokens, resources, receipt digests, and optional

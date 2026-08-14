@@ -4,6 +4,22 @@
 
 - No changes yet.
 
+## 1.70.0 - 2026-08-14
+
+- Added privacy-preserving audit samples derived from existing review, usage and
+  process receipts without storing prompts, host output, secrets or provider
+  and model names.
+- Added quality-first statistics for audit success, false acceptance,
+  correction, disagreement, retry, timeout, token, wall-time and process
+  resource signals.
+- Added bounded holdout evaluation and advisory recommendations for packet
+  size, reviewer count, timeout, retry limit and neutral route class. Changes
+  require explicit approval and never mutate a frozen plan.
+- Added local `metrics audit-sample`, `audit-report`, `audit-proposal` and
+  `audit-apply` commands plus a release boundary validator.
+- Added English and Russian documentation for evidence-based audit
+  optimization and its quality-first approval flow.
+
 ## 1.69.0 - 2026-08-14
 
 - Added redacted process-execution receipts with operation and attempt lineage,
