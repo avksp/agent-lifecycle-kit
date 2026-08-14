@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.69.0
+python -m pip install agent-lifecycle-kit==1.70.0
 ```
 
 ## Основа
@@ -168,6 +168,23 @@ lock-файл остаются источником полномочий для 
 - `agent-lifecycle metrics outcome-index/quality-signals/learn-recommend`:
   рекомендательное обучение по локальным артефактам без автоматического
   применения.
+- `agent-lifecycle metrics audit-sample --receipt <путь> --out <путь>`:
+  собирает ограниченную выборку из подтверждений проверки, использования и
+  ресурсов процесса.
+- `agent-lifecycle metrics audit-report --sample <путь> --candidate-profile <путь> --out <путь>`:
+  рассчитывает качество, время, токены и ресурсы, проверяет кандидатов на
+  эталонных задачах и выдаёт рекомендацию. Флаг `--terminal` показывает
+  краткий отчёт для оператора.
+- `agent-lifecycle metrics audit-proposal --report <путь> --out <путь>`:
+  фиксирует решение оператора по рекомендации. Флаг `--approved` следует
+  использовать только после просмотра отчёта; замороженный план не меняется.
+- `agent-lifecycle metrics audit-apply --proposal <путь> --out <путь>`:
+  создаёт новый подтверждённый профильный артефакт. Манифест и lock-файл
+  нельзя использовать как путь вывода.
+
+Полный порядок сбора подтверждений, проверки на эталонных задачах и
+подтверждения решения описан в разделе [оптимизация проверок по подтверждённым
+данным](audit-optimization.md).
 - `agent-lifecycle metrics usage-export`: экспорт сессий, отпечатков
   подтверждений, токенов, ресурсов, длительности, решений по бюджету и
   необязательного `cost_usd`, если его сообщает тарифицируемый хост.

@@ -11,7 +11,7 @@ class AgentPluginQualificationDocumentationTests(unittest.TestCase):
     def test_bilingual_pages_describe_the_same_outcomes(self) -> None:
         english = (ROOT / "docs/reference/agent-plugin-qualification.md").read_text(encoding="utf-8")
         russian = (ROOT / "docs/ru/reference/agent-plugin-qualification.md").read_text(encoding="utf-8")
-        for marker in ("OFFLINE_VALIDATED", "QUALIFIED", "BLOCKED", "UNAVAILABLE", "plugin-qualify", "1.69.0"):
+        for marker in ("OFFLINE_VALIDATED", "QUALIFIED", "BLOCKED", "UNAVAILABLE", "plugin-qualify", "1.70.0"):
             self.assertIn(marker, english)
             self.assertIn(marker, russian)
         self.assertIn("agent-plugin-qualification.md", english)

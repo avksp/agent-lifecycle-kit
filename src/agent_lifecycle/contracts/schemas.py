@@ -9,37 +9,46 @@ from agent_lifecycle.contracts.adapter_contract_schemas import ADAPTER_CONTRACT_
 from agent_lifecycle.contracts.adapter_event_schemas import ADAPTER_EVENT_SCHEMAS
 from agent_lifecycle.contracts.adapter_session_schemas import ADAPTER_SESSION_SCHEMAS
 from agent_lifecycle.contracts.adapter_task_schemas import ADAPTER_TASK_SCHEMAS
+from agent_lifecycle.contracts.audit_optimization_schemas import (
+    AUDIT_OPTIMIZATION_SCHEMAS,
+)
 from agent_lifecycle.contracts.audit_schemas import AUDIT_SCHEMAS
 from agent_lifecycle.contracts.benchmark_schemas import BENCHMARK_SCHEMAS
 from agent_lifecycle.contracts.bug_forensics_schemas import BUG_FORENSICS_SCHEMAS
+from agent_lifecycle.contracts.context_checkpoint_schemas import (
+    CONTEXT_CHECKPOINT_SCHEMAS,
+)
 from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
-from agent_lifecycle.contracts.context_checkpoint_schemas import CONTEXT_CHECKPOINT_SCHEMAS
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.cross_check_schemas import CROSS_CHECK_SCHEMAS
 from agent_lifecycle.contracts.evidence_import_schemas import EVIDENCE_IMPORT_SCHEMAS
-from agent_lifecycle.contracts.execution_strategy_schemas import EXECUTION_STRATEGY_SCHEMAS
+from agent_lifecycle.contracts.execution_strategy_schemas import (
+    EXECUTION_STRATEGY_SCHEMAS,
+)
 from agent_lifecycle.contracts.host_capability_schemas import HOST_CAPABILITY_SCHEMAS
 from agent_lifecycle.contracts.import_dialect_schemas import IMPORT_DIALECT_SCHEMAS
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.planning_launch_schemas import PLANNING_LAUNCH_SCHEMAS
 from agent_lifecycle.contracts.policy_schemas import POLICY_SCHEMAS
-from agent_lifecycle.contracts.proof_integrity_schemas import PROOF_INTEGRITY_SCHEMAS
 from agent_lifecycle.contracts.progress_bridge_schemas import PROGRESS_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.progress_hook_schemas import PROGRESS_HOOK_SCHEMAS
 from agent_lifecycle.contracts.project_profile_schemas import PROJECT_PROFILE_SCHEMAS
+from agent_lifecycle.contracts.proof_integrity_schemas import PROOF_INTEGRITY_SCHEMAS
 from agent_lifecycle.contracts.release_contract_schemas import RELEASE_CONTRACT_SCHEMAS
+from agent_lifecycle.contracts.review_mesh_recommendation_schemas import (
+    REVIEW_MESH_RECOMMENDATION_SCHEMAS,
+)
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_SCHEMAS
-from agent_lifecycle.contracts.review_mesh_recommendation_schemas import REVIEW_MESH_RECOMMENDATION_SCHEMAS
 from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHEMAS
 from agent_lifecycle.contracts.runner_schemas import RUNNER_SCHEMAS
 from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SCHEMAS
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
+from agent_lifecycle.contracts.schema_builders import open_object_schema
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
 from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
 from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
-from agent_lifecycle.contracts.schema_builders import open_object_schema
 
 SCHEMA_INDEX_VERSION = "agent-lifecycle-schema-index.v1"
 
@@ -374,6 +383,7 @@ RISK_EXECUTION_SCHEMAS: dict[str, dict[str, Any]] = {
 _SCHEMA_GROUPS = (
     CORE_SCHEMAS,
     AUDIT_SCHEMAS,
+    AUDIT_OPTIMIZATION_SCHEMAS,
     BENCHMARK_SCHEMAS,
     ADAPTER_SESSION_SCHEMAS,
     ADAPTER_TASK_SCHEMAS,
