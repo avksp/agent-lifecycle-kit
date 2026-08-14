@@ -18,7 +18,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Agent Plugins client qualification](reference/agent-plugin-qualification.md)
 - [Commands by task](guides/commands-by-task.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==1.71.0` from
+  `python -m pip install agent-lifecycle-kit==1.72.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -67,6 +67,8 @@ that result. It is host-neutral and does not depend on a source project.
 - [Verified-adapter release checklist](guides/verified-adapter-release-checklist.md)
 - [Production resource and security guide](guides/production-resource-security.md)
 - [Reference task evaluation guide](guides/reference-task-evaluation.md)
+- [External model harness evaluation](guides/model-harness-evaluation.md)
+- [Execution-setup validation with reference tasks](reference/benchmark-qualification.md)
 - [Research workflow](guides/research-workflow.md)
 - [System architecture](architecture/system-architecture.md)
 - [Workflow customization and execution controls](reference/workflow-customization.md)
@@ -114,6 +116,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Adaptive lifecycle policy](reference/adaptive-lifecycle-policy.md)
 - [Quality-cost learning](reference/quality-cost-learning.md)
 - [Reference task evaluation](reference/reference-task-evaluation.md)
+- [Execution-setup validation with reference tasks](reference/benchmark-qualification.md)
 - [Lifecycle cost accounting](reference/lifecycle-cost.md)
 - [Usage export](reference/usage-export.md)
 - [Process execution observability](reference/process-execution-observability.md)

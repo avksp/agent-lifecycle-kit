@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.71.0
+  python -m pip install agent-lifecycle-kit==1.72.0
 ```
 
 ## Foundation
@@ -144,6 +144,16 @@ remain authoritative for risk, quality, write scope, gates and receipts. See
 - `agent-lifecycle benchmark compare --baseline ... --candidate ...`: compare
   two evaluation receipts quality-first and report confidence-aware token,
   invocation, retry, remediation and elapsed-time deltas.
+- `agent-lifecycle benchmark sample`: create a deterministic bounded sample by
+  task family, tier and shape.
+- `agent-lifecycle benchmark receipt-check --receipt ...`: validate an
+  externally produced execution record without starting its runner. The
+  technical schema keeps `receipt` for compatibility.
+- `agent-lifecycle benchmark qualify --receipt ...`: apply minimum task, repeat,
+  stratum and quality-evidence thresholds to one route.
+- `agent-lifecycle benchmark compare-routes --baseline ... --candidate ...`:
+  compare execution setups that meet the minimum evidence requirements while
+  keeping environment and scorer changes explicit.
 - `agent-lifecycle audit review-check`: validate review verdicts.
 - `agent-lifecycle audit implementation`: emit
   `agent-implementation-audit-report.v1` for a task result and independent

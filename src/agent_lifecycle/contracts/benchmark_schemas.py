@@ -7,6 +7,24 @@ from typing import Any
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 
 
+RUN_RECEIPT_SCHEMA = "agent-benchmark-run-receipt.v1"
+RUN_RECEIPT_VALIDATION_SCHEMA = "agent-benchmark-run-receipt-validation.v1"
+STRATIFIED_SAMPLE_SCHEMA = "agent-benchmark-stratified-sample.v1"
+STRATIFIED_SAMPLE_VALIDATION_SCHEMA = "agent-benchmark-stratified-sample-validation.v1"
+QUALIFICATION_SCHEMA = "agent-benchmark-qualification.v1"
+QUALIFICATION_VALIDATION_SCHEMA = "agent-benchmark-qualification-validation.v1"
+ROUTE_COMPARISON_SCHEMA = "agent-benchmark-route-comparison.v1"
+ROUTE_COMPARISON_VALIDATION_SCHEMA = "agent-benchmark-route-comparison-validation.v1"
+
+_DIGEST = {"type": "string", "minLength": 64, "maxLength": 64}
+_BLOCKERS = {"type": "array", "items": {"type": "object"}}
+_SAFETY = {
+    "modelCallsStarted": {"const": False},
+    "hostLaunchStarted": {"const": False},
+    "productionPromotionClaimed": {"const": False},
+}
+
+
 BENCHMARK_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-reference-task-suite.v1": open_object_schema(
         "agent-reference-task-suite.v1",
@@ -14,7 +32,23 @@ BENCHMARK_SCHEMAS: dict[str, dict[str, Any]] = {
         properties={
             "suiteId": {"type": "string", "minLength": 1},
             "suiteVersion": {"type": "string", "minLength": 1},
-            "tasks": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+            "tasks": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "required": ["id", "version", "family", "tier", "shape", "taskPath", "oraclePath"],
+                    "properties": {
+                        "id": {"type": "string", "minLength": 1},
+                        "version": {"type": "string", "minLength": 1},
+                        "family": {"type": "string", "minLength": 1},
+                        "tier": {"enum": ["S0", "S1", "S2"]},
+                        "shape": {"enum": ["planning", "review", "investigation", "implementation", "evidence"]},
+                        "taskPath": {"type": "string", "minLength": 1},
+                        "oraclePath": {"type": "string", "minLength": 1},
+                    },
+                },
+            },
             "productionPromotionClaimed": {"const": False},
         },
     ),
@@ -135,6 +169,193 @@ BENCHMARK_SCHEMAS: dict[str, dict[str, Any]] = {
             "comparisonDigest": {"type": ["string", "null"]},
             "productionPromotionClaimed": {"const": False},
             "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    RUN_RECEIPT_SCHEMA: open_object_schema(
+        RUN_RECEIPT_SCHEMA,
+        required=[
+            "schemaVersion",
+            "receiptId",
+            "taskId",
+            "taskVersion",
+            "taskDigest",
+            "family",
+            "tier",
+            "shape",
+            "route",
+            "environment",
+            "scorer",
+            "source",
+            "completed",
+            "quality",
+            "measurements",
+            "productionPromotionClaimed",
+            "receiptDigest",
+        ],
+        properties={
+            "receiptId": {"type": "string", "minLength": 1},
+            "taskId": {"type": "string", "minLength": 1},
+            "taskVersion": {"type": "string", "minLength": 1},
+            "taskDigest": _DIGEST,
+            "family": {"type": "string", "minLength": 1},
+            "tier": {"enum": ["S0", "S1", "S2"]},
+            "shape": {"enum": ["planning", "review", "investigation", "implementation", "evidence"]},
+            "route": {"type": "object"},
+            "environment": {"type": "object"},
+            "scorer": {"type": "object"},
+            "source": {"type": "object"},
+            "completed": {"type": "boolean"},
+            "quality": {"type": "object"},
+            "measurements": {"type": "object"},
+            "productionPromotionClaimed": {"const": False},
+            "receiptDigest": _DIGEST,
+            **_SAFETY,
+        },
+    ),
+    RUN_RECEIPT_VALIDATION_SCHEMA: open_object_schema(
+        RUN_RECEIPT_VALIDATION_SCHEMA,
+        required=["schemaVersion", "status", "blockers", "receiptDigest", "productionPromotionClaimed", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "blockers": _BLOCKERS,
+            "receiptDigest": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
+        },
+    ),
+    STRATIFIED_SAMPLE_SCHEMA: open_object_schema(
+        STRATIFIED_SAMPLE_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "suite",
+            "seed",
+            "bounds",
+            "strata",
+            "selectedTaskIds",
+            "omittedTaskIds",
+            "productionPromotionClaimed",
+            "sampleDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "BLOCKED"]},
+            "suite": {"type": "object"},
+            "seed": {"type": "string", "minLength": 1},
+            "bounds": {"type": "object"},
+            "strata": {"type": "array", "items": {"type": "object"}},
+            "selectedTaskIds": {"type": "array", "items": {"type": "string"}},
+            "omittedTaskIds": {"type": "array", "items": {"type": "string"}},
+            "productionPromotionClaimed": {"const": False},
+            "sampleDigest": _DIGEST,
+        },
+    ),
+    STRATIFIED_SAMPLE_VALIDATION_SCHEMA: open_object_schema(
+        STRATIFIED_SAMPLE_VALIDATION_SCHEMA,
+        required=["schemaVersion", "status", "blockers", "sampleDigest", "productionPromotionClaimed", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "blockers": _BLOCKERS,
+            "sampleDigest": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
+        },
+    ),
+    QUALIFICATION_SCHEMA: open_object_schema(
+        QUALIFICATION_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "decision",
+            "sample",
+            "minimums",
+            "routes",
+            "qualityFirst",
+            "blockers",
+            "modelCallsStarted",
+            "hostLaunchStarted",
+            "productionPromotionClaimed",
+            "qualificationDigest",
+        ],
+        properties={
+            "status": {"enum": ["QUALIFIED", "NO_RECOMMENDATION", "BLOCKED", "INCOMPARABLE"]},
+            "decision": {"type": "object"},
+            "sample": {"type": ["object", "null"]},
+            "minimums": {"type": "object"},
+            "routes": {"type": "array", "items": {"type": "object"}},
+            "qualityFirst": {"const": True},
+            "blockers": _BLOCKERS,
+            "modelCallsStarted": {"const": False},
+            "hostLaunchStarted": {"const": False},
+            "productionPromotionClaimed": {"const": False},
+            "qualificationDigest": _DIGEST,
+        },
+    ),
+    QUALIFICATION_VALIDATION_SCHEMA: open_object_schema(
+        QUALIFICATION_VALIDATION_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "qualificationStatus",
+            "blockers",
+            "qualificationDigest",
+            "productionPromotionClaimed",
+            "validationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "qualificationStatus": {"type": ["string", "null"]},
+            "blockers": _BLOCKERS,
+            "qualificationDigest": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
+        },
+    ),
+    ROUTE_COMPARISON_SCHEMA: open_object_schema(
+        ROUTE_COMPARISON_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "lineage",
+            "quality",
+            "resources",
+            "decision",
+            "sourceQualificationDigests",
+            "blockers",
+            "modelCallsStarted",
+            "hostLaunchStarted",
+            "productionPromotionClaimed",
+            "comparisonDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "INCOMPARABLE", "NO_RECOMMENDATION", "BLOCKED"]},
+            "lineage": {"type": "object"},
+            "quality": {"type": "object"},
+            "resources": {"type": "object"},
+            "decision": {"type": "object"},
+            "sourceQualificationDigests": {"type": "object"},
+            "blockers": _BLOCKERS,
+            **_SAFETY,
+            "comparisonDigest": _DIGEST,
+        },
+    ),
+    ROUTE_COMPARISON_VALIDATION_SCHEMA: open_object_schema(
+        ROUTE_COMPARISON_VALIDATION_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "comparisonStatus",
+            "blockers",
+            "comparisonDigest",
+            "productionPromotionClaimed",
+            "validationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "comparisonStatus": {"type": ["string", "null"]},
+            "blockers": _BLOCKERS,
+            "comparisonDigest": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
         },
     ),
 }

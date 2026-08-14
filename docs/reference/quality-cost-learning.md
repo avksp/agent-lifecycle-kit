@@ -50,3 +50,8 @@ suite applies deterministic oracles and reports false acceptances, retries,
 elapsed time, and confidence-labeled token buckets. It remains read-only and
 does not turn synthetic results into production evidence. See [Reference task
 evaluation](reference-task-evaluation.md).
+
+For repeated setup or environment comparisons, validate external execution
+records with [execution-setup validation](benchmark-qualification.md) first. It requires
+quality evidence and minimum task/stratum coverage before resource signals can
+be compared; incomplete data returns `NO_RECOMMENDATION`.
