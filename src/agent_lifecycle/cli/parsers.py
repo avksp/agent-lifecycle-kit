@@ -73,7 +73,7 @@ class _RootArgumentParser(argparse.ArgumentParser):
 
 
 def _add_benchmark_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    benchmark = subparsers.add_parser("benchmark", help="deterministic reference-task evaluation")
+    benchmark = subparsers.add_parser("benchmark", help="deterministic reference-task evaluation and qualification")
     benchmark_sub = benchmark.add_subparsers(dest="benchmark_command", required=True)
     evaluate = benchmark_sub.add_parser("evaluate")
     evaluate.add_argument("--suite", required=True)
@@ -83,6 +83,27 @@ def _add_benchmark_parser(subparsers: argparse._SubParsersAction[argparse.Argume
     compare.add_argument("--baseline", required=True)
     compare.add_argument("--candidate", required=True)
     compare.add_argument("--out")
+    sample = benchmark_sub.add_parser("sample", aliases=["select"])
+    sample.add_argument("--suite", required=True)
+    sample.add_argument("--seed", default="default")
+    sample.add_argument("--max-tasks", type=int, default=24)
+    sample.add_argument("--max-strata", type=int, default=16)
+    sample.add_argument("--out")
+    receipt_check = benchmark_sub.add_parser("receipt-check", aliases=["validate-receipt"])
+    receipt_check.add_argument("--suite")
+    receipt_check.add_argument("--receipt", required=True)
+    receipt_check.add_argument("--out")
+    qualify = benchmark_sub.add_parser("qualify", aliases=["qualification"])
+    qualify.add_argument("--suite")
+    qualify.add_argument("--receipt", action="append", required=True)
+    qualify.add_argument("--sample")
+    qualify.add_argument("--out")
+    route_compare = benchmark_sub.add_parser("compare-routes")
+    route_compare.add_argument("--suite")
+    route_compare.add_argument("--baseline", action="append", required=True)
+    route_compare.add_argument("--candidate", action="append", required=True)
+    route_compare.add_argument("--sample")
+    route_compare.add_argument("--out")
 
 
 def _add_strategy_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

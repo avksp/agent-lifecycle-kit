@@ -293,7 +293,7 @@ flowchart LR
 | Reporting | `reporting/*` | Read-only status, event feed, progress, change summary and progress bridge. |
 | Metrics and policy | `metrics/*`, `policy/*`, `model_routing/*` | Usage export, token/resource policy, quality-cost signals and model class routing. |
 | Execution strategy | `policy/execution_strategy.py`, `cli/strategy.py` | Compose existing risk, quality, routing, compact-packet and review decisions into one read-only receipt. |
-| Reference task evaluation | `benchmarks/*`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Read-only deterministic quality, false-acceptance, retry, elapsed-time and token-confidence comparison. |
+| Reference task evaluation and execution-setup validation | `benchmarks/contracts.py`, `benchmarks/stratification.py`, `benchmarks/qualification.py`, `benchmarks/comparison.py`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Build a deterministic family/tier/shape sample, validate execution records with sensitive data removed, validate setups only after minimum evidence, and compare quality before resource and token-confidence signals. |
 | Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, external context imports, goal views and continuation records. |
 | Research evidence | `research/*`, `contracts/research_evidence_schemas.py`, `cli/research.py` | Local validation of `agent-research-evidence-package.v1` source, claim, citation and provenance bindings; bounded summary for draft planning input. |
 | Neutrality | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Git-index-bound release scanning, optional policy-limited local evidence, stable reads, authority checks and signed neutrality receipts. |
@@ -472,6 +472,49 @@ frozen quality floor, and protected S2 work cannot enter a compact packet.
 Comparison checks false acceptances and oracle lineage before resource deltas;
 automatic adoption eligibility additionally requires attested savings, no
 observed resource regression and complete measurements.
+
+### Reference-task execution-setup validation
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant CLI as cli/benchmarks.py
+  participant Sample as benchmarks/stratification.py
+  participant Receipts as benchmarks/contracts.py
+  participant Qualification as benchmarks/qualification.py
+  participant Compare as benchmarks/comparison.py
+  participant Contracts as contracts/benchmark_schemas.py
+
+  User->>CLI: benchmark sample --suite ...
+  CLI->>Sample: select_stratified_tasks()
+  Sample->>Contracts: validate task family, tier and shape
+  Sample-->>User: agent-benchmark-stratified-sample.v1
+  User->>CLI: benchmark receipt-check --receipt ...
+  CLI->>Receipts: validate_benchmark_run_receipt()
+  Receipts-->>User: agent-benchmark-run-receipt-validation.v1
+  User->>CLI: benchmark qualify --receipt ...
+  CLI->>Qualification: qualify_benchmark_runs()
+  Qualification-->>User: agent-benchmark-qualification.v1
+  User->>Compare: benchmark compare-routes
+  Compare->>Qualification: qualify baseline and candidate
+  Compare-->>User: quality-first route comparison
+```
+
+The validation path is local and deterministic. The external harness runs
+the reference tasks and produces an execution record with sensitive data removed; ALK validates
+task lineage, execution setup, environment, scorer, quality counts,
+false-acceptance status, measurement gaps and the record digest. Sampling is
+stratified by task family, lifecycle tier and bounded task shape so one easy
+task cannot represent an entire setup. An execution setup is `QUALIFIED` only
+after at least five distinct tasks,
+two completed runs per task, five distinct strata and two completed runs per
+stratum. Otherwise the result is `NO_RECOMMENDATION`, not a quality claim.
+
+Qualification compares quality and false acceptance before retries, elapsed
+time, tokens or other resources. Missing measurements remain explicit and are
+never treated as no usage. The process does not call a model, launch a host or
+change an execution policy; an operator may use the result to choose an execution setup,
+but adoption requires a separate approved lifecycle change.
 
 ### Raw task or Markdown intake
 

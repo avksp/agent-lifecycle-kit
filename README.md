@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.71.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.72.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -85,8 +85,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
   require proof for an external system update before acceptance.
 - Optional multi-model review can use any available adapter/model bindings;
   Codex, Claude Code and OpenCode/GLM are examples, not a required roster.
-  Review Mesh prepares packets, imports answers, synthesizes findings and checks
-  quorum, while the operator or host wrapper starts each model. The bundled reference-task suite measures deterministic quality, false acceptances, retries, elapsed time, and confidence-labeled token usage.
+  Review Mesh prepares packets, imports answers, synthesizes findings and checks quorum; the operator or host wrapper starts each model. The reference-task suite validates or compares execution setups only after enough quality evidence; insufficient data produces `NO_RECOMMENDATION`.
 
 ### Routing and resource control
 - Compact context profiles, small-model packets and local quality-cost learning

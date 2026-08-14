@@ -3,6 +3,11 @@
 Use the bundled suite when you need a repeatable local comparison of an ALK
 process change. No model account or external CLI is required.
 
+For multi-run comparison of adapter setups and environments, continue with
+[execution-setup validation](../reference/benchmark-qualification.md). This guide
+covers one-task oracle evaluation; the validation page adds stratified sampling
+and minimum evidence gates.
+
 ## 1. Start from an example
 
 ```bash

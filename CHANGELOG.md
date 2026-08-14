@@ -4,6 +4,21 @@
 
 - No changes yet.
 
+## 1.72.0 - 2026-08-15
+
+- Added deterministic stratified sampling for the bundled reference-task suite,
+  using bounded task family, lifecycle tier and task-shape dimensions.
+- Added redacted benchmark execution records with lineage, execution setup,
+  environment, scorer, quality, false-acceptance and measurement-gap fields.
+- Added quality-first execution-setup validation and baseline/candidate
+  comparison with explicit `NO_RECOMMENDATION` when the minimum evidence set is
+  incomplete.
+- Added `benchmark sample`, `benchmark receipt-check`, `benchmark qualify` and
+  `benchmark compare-routes` commands without model calls, host launches or
+  automatic policy adoption.
+- Added English and Russian documentation for external harness evaluation,
+  execution-setup validation and the related public contracts.
+
 ## 1.71.0 - 2026-08-14
 
 - Added provider-neutral research evidence contracts for sources, claims,

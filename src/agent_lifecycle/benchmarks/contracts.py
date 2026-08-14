@@ -6,6 +6,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import re
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
 
@@ -13,9 +14,50 @@ SUITE_SCHEMA = "agent-reference-task-suite.v1"
 ORACLE_SCHEMA = "agent-reference-task-oracle.v1"
 SUBMISSION_SCHEMA = "agent-reference-task-submission.v1"
 TASK_FAMILIES = {"planning", "architecture-review", "bug-forensics", "s1-managed-task", "s2-evidence-task"}
+TASK_SHAPES = {"planning", "review", "investigation", "implementation", "evidence"}
+_LEGACY_SHAPE_BY_FAMILY = {
+    "planning": "planning",
+    "architecture-review": "review",
+    "bug-forensics": "investigation",
+    "s1-managed-task": "implementation",
+    "s2-evidence-task": "evidence",
+}
+RUN_RECEIPT_SCHEMA = "agent-benchmark-run-receipt.v1"
+RUN_RECEIPT_VALIDATION_SCHEMA = "agent-benchmark-run-receipt-validation.v1"
 BUNDLED_SUITE_PATH = Path("benchmarks/reference-tasks/manifest.json")
 MAX_SUBMISSION_EVIDENCE_DEPTH = 64
 MAX_SUBMISSION_EVIDENCE_NODES = 100_000
+_DIGEST_FIELDS = {
+    "taskDigest": "task",
+    "routeDigest": "route",
+    "environmentDigest": "environment",
+    "scorerDigest": "scorer",
+    "sourceDigest": "source",
+}
+_FORBIDDEN_RECEIPT_KEYS = {
+    "apiKey",
+    "accessToken",
+    "argv",
+    "command",
+    "commands",
+    "credential",
+    "credentials",
+    "executable",
+    "localPath",
+    "model",
+    "modelName",
+    "password",
+    "path",
+    "prompt",
+    "provider",
+    "providerName",
+    "secret",
+    "secrets",
+}
+_SENSITIVE_TEXT = re.compile(
+    r"(?:-----BEGIN [^-]+-----|\bBearer\s+\S+|(?:^|[\\/])(?:Users|home|private|workspace)(?:[\\/]|$)|[A-Za-z]:\\\\)",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -56,6 +98,8 @@ def load_suite(path: Path) -> LoadedSuite:
             raise LifecycleError("reference-suite-task-family", "reference task family is unsupported", {"taskId": task_id})
         if row.get("tier") not in {"S0", "S1", "S2"}:
             raise LifecycleError("reference-suite-task-tier", "reference task tier is unsupported", {"taskId": task_id})
+        if row.get("shape") is not None and row.get("shape") not in TASK_SHAPES:
+            raise LifecycleError("reference-suite-task-shape", "reference task shape is unsupported", {"taskId": task_id})
         _require_text(row, "version", code="reference-suite-task-version")
         _require_text(row, "taskPath", code="reference-suite-task-path")
         _require_text(row, "oraclePath", code="reference-suite-oracle-path")
@@ -63,8 +107,11 @@ def load_suite(path: Path) -> LoadedSuite:
 
 
 def resolve_suite_path(path: Path) -> Path:
-    if path.is_file() or path.is_absolute() or path != BUNDLED_SUITE_PATH:
+    if path.is_absolute() or path != BUNDLED_SUITE_PATH:
         return path
+    local = Path.cwd() / path
+    if local.is_file():
+        return local
     installed = Path(sys.prefix) / BUNDLED_SUITE_PATH
     return installed if installed.is_file() else path
 
@@ -87,8 +134,10 @@ def load_task(suite: LoadedSuite, task_id: str) -> LoadedTask:
     required = oracle.get("requiredEvidenceSchemas")
     if not isinstance(required, list) or not required or any(not isinstance(item, str) or not item for item in required):
         raise LifecycleError("reference-oracle-evidence-schemas", "oracle requiredEvidenceSchemas must be non-empty strings")
+    task_row = dict(row)
+    task_row.setdefault("shape", _LEGACY_SHAPE_BY_FAMILY[task_row["family"]])
     return LoadedTask(
-        row=dict(row),
+        row=task_row,
         oracle=oracle,
         task_digest=sha256_hex(task_bytes),
         oracle_digest=sha256_hex(oracle_bytes),
@@ -114,6 +163,129 @@ def load_submission(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         "payloadDigest": canonical_digest(payload),
     }
     return payload, identity
+
+
+def load_benchmark_run_receipt(
+    path: Path,
+    *,
+    suite: LoadedSuite | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load and validate one externally produced benchmark-run receipt."""
+
+    payload, data = _load_json(path, label="benchmark run receipt")
+    validation = validate_benchmark_run_receipt(payload, suite=suite)
+    if validation["status"] != "PASS":
+        raise LifecycleError("benchmark-run-receipt-invalid", "benchmark run receipt failed validation", validation)
+    return payload, {
+        "sha256": sha256_hex(data),
+        "bytes": len(data),
+        "schemaVersion": payload["schemaVersion"],
+        "payloadDigest": canonical_digest(payload),
+    }
+
+
+def validate_benchmark_run_receipt(
+    receipt: dict[str, Any],
+    *,
+    suite: LoadedSuite | None = None,
+) -> dict[str, Any]:
+    """Validate a bounded receipt without executing its declared runner."""
+
+    blockers: list[dict[str, Any]] = []
+    if not isinstance(receipt, dict):
+        return _run_receipt_validation([{"code": "benchmark-receipt-not-object"}])
+    if receipt.get("schemaVersion") != RUN_RECEIPT_SCHEMA:
+        blockers.append({"code": "benchmark-receipt-schema"})
+    for field in ("receiptId", "taskId", "taskVersion", "shape"):
+        if not isinstance(receipt.get(field), str) or not receipt[field].strip():
+            blockers.append({"code": "benchmark-receipt-field", "field": field})
+    if receipt.get("tier") not in {"S0", "S1", "S2"}:
+        blockers.append({"code": "benchmark-receipt-tier"})
+    if not isinstance(receipt.get("completed"), bool):
+        blockers.append({"code": "benchmark-receipt-completed"})
+    if receipt.get("productionPromotionClaimed") is not False:
+        blockers.append({"code": "benchmark-receipt-production-claim"})
+    for key in ("route", "environment", "scorer", "source", "quality", "measurements"):
+        if not isinstance(receipt.get(key), dict):
+            blockers.append({"code": "benchmark-receipt-object", "field": key})
+    _check_digest(receipt, "taskDigest", blockers)
+    for field in ("routeDigest", "environmentDigest", "scorerDigest", "sourceDigest"):
+        container = _digest_container(receipt, field)
+        if container is None:
+            blockers.append({"code": "benchmark-receipt-digest", "field": field})
+        else:
+            _check_digest(container, field, blockers)
+    route = receipt.get("route") if isinstance(receipt.get("route"), dict) else {}
+    if not _non_empty_text(route.get("adapterClass")) or not _non_empty_text(route.get("routeClass")):
+        blockers.append({"code": "benchmark-receipt-route-class"})
+    quality = receipt.get("quality") if isinstance(receipt.get("quality"), dict) else {}
+    total = quality.get("criteriaTotal")
+    passed = quality.get("criteriaPassed")
+    if not _non_negative_int(total) or not _non_negative_int(passed) or passed > total:
+        blockers.append({"code": "benchmark-receipt-quality-counts"})
+    if not isinstance(quality.get("falseAcceptance"), bool):
+        blockers.append({"code": "benchmark-receipt-false-acceptance"})
+    if not isinstance(quality.get("measurementGap"), list) or not all(isinstance(item, str) for item in quality["measurementGap"]):
+        blockers.append({"code": "benchmark-receipt-quality-gap"})
+    _check_portable_value(receipt, blockers)
+    if suite is not None and not blockers:
+        try:
+            task = load_task(suite, receipt["taskId"])
+        except LifecycleError as exc:
+            blockers.append({"code": "benchmark-receipt-task-lineage", "detail": exc.code})
+        else:
+            expected = {
+                "taskId": task.row["id"],
+                "taskVersion": task.row["version"],
+                "taskDigest": task.task_digest,
+                "family": task.row["family"],
+                "tier": task.row["tier"],
+                "shape": task.row["shape"],
+            }
+            for field, expected_value in expected.items():
+                if receipt.get(field) != expected_value:
+                    blockers.append({"code": "benchmark-receipt-task-lineage", "field": field})
+    expected_digest = canonical_digest({key: value for key, value in receipt.items() if key != "receiptDigest"})
+    if receipt.get("receiptDigest") != expected_digest:
+        blockers.append({"code": "benchmark-receipt-digest-mismatch", "expected": expected_digest})
+    return _run_receipt_validation(blockers, receipt_digest=receipt.get("receiptDigest"))
+
+
+def build_benchmark_run_receipt(
+    *,
+    receipt_id: str,
+    task: dict[str, Any],
+    route: dict[str, Any],
+    environment: dict[str, Any],
+    scorer: dict[str, Any],
+    source: dict[str, Any],
+    completed: bool,
+    quality: dict[str, Any],
+    measurements: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a portable receipt from host-owned, already redacted facts."""
+
+    body = {
+        "schemaVersion": RUN_RECEIPT_SCHEMA,
+        "receiptId": receipt_id,
+        "taskId": task.get("taskId"),
+        "taskVersion": task.get("taskVersion"),
+        "taskDigest": task.get("taskDigest"),
+        "family": task.get("family"),
+        "tier": task.get("tier"),
+        "shape": task.get("shape"),
+        "route": dict(route),
+        "environment": dict(environment),
+        "scorer": dict(scorer),
+        "source": dict(source),
+        "completed": completed,
+        "quality": dict(quality),
+        "measurements": dict(measurements),
+        "modelCallsStarted": False,
+        "hostLaunchStarted": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
 
 
 def _load_json(path: Path, *, label: str) -> tuple[dict[str, Any], bytes]:
@@ -175,3 +347,48 @@ def _validate_evidence_limits(evidence: dict[str, Any]) -> None:
             stack.extend((item, depth + 1) for item in value.values())
         elif isinstance(value, list):
             stack.extend((item, depth + 1) for item in value)
+
+
+def _run_receipt_validation(blockers: list[dict[str, Any]], *, receipt_digest: Any = None) -> dict[str, Any]:
+    body = {
+        "schemaVersion": RUN_RECEIPT_VALIDATION_SCHEMA,
+        "status": "PASS" if not blockers else "FAIL",
+        "blockers": blockers,
+        "receiptDigest": receipt_digest if isinstance(receipt_digest, str) else None,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
+
+
+def _digest_container(receipt: dict[str, Any], field: str) -> dict[str, Any] | None:
+    for value in receipt.values():
+        if isinstance(value, dict) and field in value:
+            return value
+    return None
+
+
+def _check_digest(value: dict[str, Any], field: str, blockers: list[dict[str, Any]]) -> None:
+    digest = value.get(field)
+    if not isinstance(digest, str) or len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest.lower()):
+        blockers.append({"code": "benchmark-receipt-digest", "field": field})
+
+
+def _check_portable_value(value: Any, blockers: list[dict[str, Any]], *, path: tuple[str, ...] = ()) -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key in _FORBIDDEN_RECEIPT_KEYS:
+                blockers.append({"code": "benchmark-receipt-forbidden-field", "field": ".".join((*path, str(key)))})
+            _check_portable_value(child, blockers, path=(*path, str(key)))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            _check_portable_value(child, blockers, path=(*path, str(index)))
+    elif isinstance(value, str) and _SENSITIVE_TEXT.search(value):
+        blockers.append({"code": "benchmark-receipt-sensitive-text", "field": ".".join(path)})
+
+
+def _non_empty_text(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _non_negative_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
