@@ -127,6 +127,14 @@ Stable schema ids:
 - `agent-benchmark-route-comparison.v1` (comparison of execution setups)
 - `agent-benchmark-route-comparison-validation.v1` (validation of that comparison)
 
+Project workflow preset schemas:
+
+- `agent-project-workflow-preset.v1`
+- `agent-project-workflow-preset-validation.v1`
+- `agent-project-workflow-preset-list.v1`
+- `agent-project-workflow-preset-operation.v1`
+- `agent-project-workflow-preset-render-receipt.v1`
+
 `completionCheck` binds observable completion evidence. The completion gate is
 a deterministic stop/continue/escalate/split/follow-up decision over current
 evidence. Optional quality packs and read-only reports add bounded evidence,

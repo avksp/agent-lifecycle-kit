@@ -299,7 +299,7 @@ flowchart LR
 | Planning | `planning/*`, `specification/*`, `freeze/locks.py` | SDD tier, plan checks, completeness, acceptance and lock verification. |
 | Workflow | `workflow/*` | State mutation, task transitions, finalization and managed next actions. |
 | Adapter sessions | `adapter_sessions/*` | `adapter session`, `adapter task start`, `adapter run`, local profile validation and explicit frozen host launch. |
-| Project workflow profile | `project/profile.py`, `project/merge.py`, `project/guidance.py`, `cli/project.py` | `project profile init/check` and `start` when a local profile is discovered or selected explicitly. |
+| Project workflow profile and presets | `project/profile.py`, `project/merge.py`, `project/presets.py`, `project/guidance.py`, `cli/project.py` | `project profile` and `project preset list/inspect/validate/render`, plus `start` when a local profile or preset is selected. Presets provide bounded defaults; profile, CLI and frozen-plan authority remain separate. |
 | Host protocol | `host_protocol/*` | Adapter validation, inspection, event capture and capability checks. |
 | Optional thread bridge | `host_protocol/thread_bridge.py`, `policy/thread_bridge.py`, `context/thread_bridge_context.py` | Prepare and validate host-thread requests, import bounded context and expose it to retrieval or Review Mesh. Native thread calls remain adapter-owned. |
 | Audit | `audit/*` | Ownership checks, review verdicts, implementation audit, proof integrity. |
@@ -776,6 +776,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 | Adapter validation | `adapter validate/inspect/install-plan` | `cli/adapter.py`, `host_protocol/*`, `diagnostics/readiness.py` | Validation, safe inspection or dry-run install plan. |
 | Raw task intake | `adapter task start --file/--text` | `adapter_sessions/task_intake.py`, `imports/planning.py`, `review_mesh/recommendation.py`, `quality/bug_forensics_advisor.py` | Review-gated intake receipt. |
 | Project-guided start | `project profile init/check`, `start --project-profile` or discovered `.alk/project-profile.json` | `cli/project.py`, `project/profile.py`, `project/merge.py`, `adapter_sessions/unified_start.py` | Effective profile and guided action receipt; plan and lock authority remain unchanged. |
+| Workflow preset | `project preset list/inspect/validate/render`, `start --preset` | `cli/project.py`, `project/presets.py`, `project/profile.py`, `project/merge.py`, `contracts/project_profile_preset_schemas.py` | Local preset list, validation, render receipt or guided action defaults; no model or host launch. |
 | Plan validation | `plan check`, `plan completeness-check`, `plan acceptance-check` | `planning/*`, `freeze/locks.py` | PASS/FAIL plan evidence. |
 | Managed next action | `workflow run` or `adapter run` | `workflow/managed_runner.py`, `workflow/next_action.py`, `adapter_sessions/workflow_bridge.py` | Next action receipt, no host launch. |
 | Task mutation | `workflow task-start/task-result/task-accept` | `workflow/task_transitions.py`, `workflow/operation_kernel.py`, `workflow/gates.py` | Updated workflow state and event log. |

@@ -196,6 +196,14 @@
   выполнения после проверки качества и ложных приёмок.
 - `agent-benchmark-route-comparison-validation.v1`: проверка сравнения
   вариантов и запрета автоматического принятия без отдельного решения.
+
+Схемы профилей рабочего процесса проекта:
+
+- `agent-project-workflow-preset.v1`: один встроенный профиль маршрута.
+- `agent-project-workflow-preset-validation.v1`: проверка его данных и границ.
+- `agent-project-workflow-preset-list.v1`: список доступных профилей.
+- `agent-project-workflow-preset-operation.v1`: результат просмотра или проверки.
+- `agent-project-workflow-preset-render-receipt.v1`: результат создания локального профиля.
 - `agent-bug-forensics-profile.v1`: дополнительный профиль для исправления
   багов и регрессий.
 - `agent-bug-reproduction-receipt.v1`: подтверждение воспроизведения до

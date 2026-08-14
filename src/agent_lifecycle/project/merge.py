@@ -14,6 +14,7 @@ from agent_lifecycle.policy.risk_execution import RISK_TIERS, resolve_risk_tier
 from agent_lifecycle.policy.thread_bridge import merge_thread_bridge_policy
 from agent_lifecycle.project.profile import (
     normalize_project_profile,
+    profile_field_is_explicit,
     project_profile_digest,
     validate_stage_settings,
 )
@@ -22,6 +23,7 @@ from agent_lifecycle.project.profile import (
 def build_effective_project_profile(
     profile: dict[str, Any],
     *,
+    preset: dict[str, Any] | None = None,
     plan: dict[str, Any] | None = None,
     lock: dict[str, Any] | None = None,
     cli_overrides: dict[str, Any] | None = None,
@@ -29,6 +31,19 @@ def build_effective_project_profile(
 ) -> dict[str, Any]:
     """Return a bounded effective profile without changing any source artifact."""
 
+    preset_metadata = None
+    source_profile = copy.deepcopy(profile)
+    if preset is not None:
+        from agent_lifecycle.project.presets import merge_preset_defaults
+
+        profile = merge_preset_defaults(profile, preset, project_root=project_root)
+        preset_metadata = {
+            "presetId": preset.get("presetId"),
+            "presetVersion": preset.get("presetVersion"),
+            "reviewMesh": preset.get("reviewMesh"),
+            "implementationAuthority": preset.get("implementationAuthority"),
+            "presetDigest": preset.get("presetDigest"),
+        }
     normalized = normalize_project_profile(profile, project_root=project_root)
     if lock is not None and plan is None:
         raise LifecycleError("project-profile-lock-without-plan", "a profile lock requires a plan")
@@ -40,6 +55,8 @@ def build_effective_project_profile(
         "defaultMode": normalized["defaultMode"],
         "defaultRisk": normalized["defaultRisk"],
     }
+    if preset is not None and authority.get("planTier") is not None and not profile_field_is_explicit(source_profile, "defaultRisk"):
+        defaults["defaultRisk"] = "auto"
     defaults.update({key: value for key, value in overrides.items() if key != "stages"})
     defaults["defaultRisk"] = _resolve_risk(defaults["defaultRisk"], authority)
     thread_bridge = merge_thread_bridge_policy(normalized.get("threadBridge"), authority.get("threadBridgePolicy"))
@@ -48,7 +65,13 @@ def build_effective_project_profile(
     stages = copy.deepcopy(normalized.get("stages", {}))
     for stage, settings in overrides.get("stages", {}).items():
         stages.setdefault(stage, {}).update(settings)
+    explicit_stage_risks = {
+        stage: isinstance(settings, dict) and "risk" in settings
+        for stage, settings in source_profile.get("stages", {}).items()
+    }
     for stage, settings in stages.items():
+        if preset is not None and authority.get("planTier") is not None and not explicit_stage_risks.get(stage, False):
+            settings["risk"] = defaults["defaultRisk"]
         settings["risk"] = _resolve_risk(settings.get("risk", defaults["defaultRisk"]), authority)
         if authority["reviewMeshRequired"] and settings.get("reviewMesh", "off") == "off":
             raise LifecycleError(
@@ -68,6 +91,7 @@ def build_effective_project_profile(
         "principles": principles,
         "principlesDigest": principles.get("digest") if principles else None,
         "threadBridge": thread_bridge,
+        "preset": preset_metadata,
         "authority": authority,
         "blockers": [],
         "productionPromotionClaimed": False,
@@ -78,6 +102,7 @@ def build_effective_project_profile(
 def merge_project_profile(
     profile: dict[str, Any],
     *,
+    preset: dict[str, Any] | None = None,
     plan: dict[str, Any] | None = None,
     lock: dict[str, Any] | None = None,
     cli_overrides: dict[str, Any] | None = None,
@@ -87,6 +112,7 @@ def merge_project_profile(
 
     return build_effective_project_profile(
         profile,
+        preset=preset,
         plan=plan,
         lock=lock,
         cli_overrides=cli_overrides,
