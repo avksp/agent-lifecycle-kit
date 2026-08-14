@@ -198,6 +198,20 @@ flowchart TB
 | `adapters/*` | Host descriptors, operation projections, support manifests and evidence summaries. | Change lifecycle schemas. |
 | `tools/release` and tests | Release gates, validators, conformance and docs compatibility. | Establish a live host support level from synthetic data alone. |
 
+### Project continuity artifacts
+
+The project-profile layer may reference a bounded `agent-project-principles.v1`
+artifact by path and digest. `project/principles.py` validates its limits and
+authority boundary; `project/profile.py` and `project/merge.py` carry only the
+reference into the effective profile. The principles file is context, not a
+specification or execution authority.
+
+`planning/deltas.py` compares two explicit plan revisions. It projects
+requirements, writes, acceptance, evidence, budgets, risks and gates into
+digest-only change summaries. `plan delta` never mutates a manifest or lock;
+authority changes set `reviewRequired` and `newLockRequired` so the normal
+review and freeze process must run again.
+
 ## C3: runtime component map
 
 ```mermaid
@@ -301,6 +315,26 @@ flowchart LR
 | Worktree | `worktree/*`, `cli/worktree.py` | Worktree isolation policies and attempt receipts. |
 
 ## C4: code-level call paths
+
+For long-running project governance the call path is:
+
+```mermaid
+sequenceDiagram
+  participant O as Operator
+  participant C as CLI
+  participant P as Project profile
+  participant D as Plan delta
+  participant R as Reviewer
+
+  O->>C: project principles check
+  C->>P: validate_project_principles
+  P-->>C: digest-bound validation
+  O->>C: plan delta --before --after
+  C->>D: build_plan_delta
+  D-->>C: read-only authority impact
+  C-->>R: reviewRequired/newLockRequired
+  R->>C: normal plan review and freeze
+```
 
 The C4 level below names concrete functions and modules. It is intentionally
 limited to the public paths operators actually use.

@@ -18,7 +18,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 подтверждения, а основное время остаётся на исследование, реализацию и проверку
 продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 1.72.0 · Python 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 1.73.0 · Python 3.11-3.14
 
 Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
 
@@ -30,7 +30,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 Agent Plugins](reference/agent-plugins.md). Проверка установленного пакета
 описана в разделе [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md).
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==1.72.0` и разбор ошибок команды `agent-lifecycle version`.
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==1.73.0` и разбор ошибок команды `agent-lifecycle version`.
 
 Для быстрого старта выполните:
 
@@ -56,7 +56,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 - Границы [запуска только для планирования](reference/planning-only-launch.md) и [запуска зафиксированной задачи через проверенный профиль](reference/qualified-host-launch.md) описаны в справочнике. Поставляемые профили планирования остаются кандидатами с безопасным отказом до проверки соответствующего профиля.
 - Устройство проекта описывает [архитектура системы](architecture/system-architecture.md), а отличие от похожих инструментов показывает [сравнение проекта](reference/project-comparison.md).
 - Границы нескольких агентов, настройка рабочих потоков, выбор модели, промпты, тайм-ауты и повторы собраны в разделе [настройка рабочего процесса и управления выполнением](reference/workflow-customization.md).
-- Локальный профиль проекта создаётся командой `agent-lifecycle project profile init`; его описание приведено в разделе [профиль рабочего процесса проекта](reference/project-workflow-profile.md).
+- Локальный профиль проекта создаётся командой `agent-lifecycle project profile init`; его описание приведено в разделе [профиль рабочего процесса проекта](reference/project-workflow-profile.md). Принципы проекта и дельты плана описаны в [отдельном разделе](reference/project-principles-and-plan-deltas.md), а порядок работы с ними — в [руководстве долгосрочного управления](guides/long-term-project-governance.md).
 - Для длинных сессий используйте [снимки контекста и восстановление после сжатия](reference/context-checkpoints.md). Они сохраняют ограниченный локальный пакет продолжения, не меняя полномочия плана.
 
 ## Что даёт ALK

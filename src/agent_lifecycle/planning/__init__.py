@@ -9,6 +9,11 @@ from agent_lifecycle.planning.continuity import (
     require_repository_references_pass,
     validate_repository_references,
 )
+from agent_lifecycle.planning.deltas import (
+    build_plan_delta,
+    require_plan_delta_pass,
+    validate_plan_delta,
+)
 from agent_lifecycle.planning.completeness import (
     build_plan_completeness_profile,
     load_plan_completeness_profile,
@@ -27,6 +32,7 @@ from agent_lifecycle.planning.validation import validate_plan_manifest
 
 __all__ = [
     "build_plan_snapshot",
+    "build_plan_delta",
     "build_plan_completeness_profile",
     "build_task_template_library",
     "load_plan_completeness_profile",
@@ -34,6 +40,7 @@ __all__ = [
     "render_task_template",
     "render_plan_handoff",
     "require_reconciliation_pass",
+    "require_plan_delta_pass",
     "require_repository_references_pass",
     "require_plan_completeness_pass",
     "require_task_template_validation_pass",
@@ -42,6 +49,7 @@ __all__ = [
     "validate_plan_completeness",
     "validate_plan_completeness_profile",
     "validate_plan_manifest",
+    "validate_plan_delta",
     "validate_repository_references",
     "validate_task_template_library",
 ]

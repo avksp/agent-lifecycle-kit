@@ -9,6 +9,11 @@ from agent_lifecycle.project.profile import (
     project_profile_digest,
     validate_project_profile,
 )
+from agent_lifecycle.project.principles import (
+    load_project_principles,
+    project_principles_digest,
+    validate_project_principles,
+)
 
 __all__ = [
     "PROJECT_PROFILE_RELATIVE_PATH",
@@ -19,4 +24,7 @@ __all__ = [
     "normalize_project_profile",
     "project_profile_digest",
     "validate_project_profile",
+    "load_project_principles",
+    "project_principles_digest",
+    "validate_project_principles",
 ]

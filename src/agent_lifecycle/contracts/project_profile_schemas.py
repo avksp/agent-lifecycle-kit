@@ -103,6 +103,16 @@ _THREAD_BRIDGE_POLICY = {
     },
     "additionalProperties": False,
 }
+_PRINCIPLES_REFERENCE = {
+    "type": "object",
+    "required": ["path", "digest", "sourceOfTruth"],
+    "properties": {
+        "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+        "digest": _DIGEST,
+        "sourceOfTruth": {"const": False},
+    },
+    "additionalProperties": False,
+}
 
 
 PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
@@ -132,6 +142,7 @@ PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
                 "propertyNames": {"enum": list(PROJECT_PROFILE_STAGES)},
                 "additionalProperties": _STAGE_SETTINGS,
             },
+            "principles": _PRINCIPLES_REFERENCE,
             "threadBridge": _THREAD_BRIDGE_POLICY,
             "productionPromotionClaimed": {"const": False},
         },
@@ -148,6 +159,8 @@ PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
             "defaultRisk",
             "policies",
             "stages",
+            "principles",
+            "principlesDigest",
             "threadBridge",
             "authority",
             "blockers",
@@ -163,6 +176,8 @@ PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
             "defaultRisk": {"enum": ["S0", "S1", "S2"]},
             "policies": {"type": "object"},
             "stages": {"type": "object"},
+            "principles": {"type": ["object", "null"]},
+            "principlesDigest": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
             "threadBridge": _THREAD_BRIDGE_POLICY,
             "authority": {"type": "object"},
             "blockers": _BLOCKERS,

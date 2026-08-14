@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.72.0
+python -m pip install agent-lifecycle-kit==1.73.0
 ```
 
 ## Основа
@@ -75,6 +75,12 @@ python -m pip install agent-lifecycle-kit==1.72.0
 Профиль является локальным слоем настроек проекта. Зафиксированный план и его
 lock-файл остаются источником полномочий для риска, качества, границ записи,
 гейтов и подтверждений. Подробнее: [Профиль рабочего процесса проекта](project-workflow-profile.md).
+
+Проверьте файл принципов командой `agent-lifecycle project principles check
+--file <path>`. Сравните две версии плана командой `agent-lifecycle plan delta
+--before <manifest> --after <manifest>`, а созданный отчёт проверьте командой
+`agent-lifecycle plan delta-check --delta <delta.json>`. Обе операции только
+читают исходные файлы и возвращают устойчивые JSON-контракты.
 
 ## Выполнение
 
