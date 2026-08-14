@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.71.0
+python -m pip install agent-lifecycle-kit==1.72.0
 ```
 
 ## Основа
@@ -143,6 +143,17 @@ lock-файл остаются источником полномочий для 
 - `agent-lifecycle benchmark compare --baseline ... --candidate ...`:
   сравнивает два артефакта, начиная с качества, и показывает разницу токенов,
   обращений, повторов, циклов исправления и времени с учётом достоверности.
+- `agent-lifecycle benchmark sample`: создаёт ограниченную воспроизводимую
+  выборку по семейству, уровню и форме задачи.
+- `agent-lifecycle benchmark receipt-check --receipt ...`: проверяет внешнюю
+  запись выполнения без запуска указанного исполнителя. В техническом имени
+  схемы `receipt` сохранено ради совместимости.
+- `agent-lifecycle benchmark qualify --receipt ...`: применяет минимальные
+  требования к задачам, повторам, группам и подтверждениям качества для одного
+  маршрута.
+- `agent-lifecycle benchmark compare-routes --baseline ... --candidate ...`:
+  сравнивает варианты выполнения, для которых набрано минимальное количество
+  подтверждений, и явно показывает изменения среды и оценщика.
 - `agent-lifecycle audit`: проверка плана, реализации и вердиктов.
 - `agent-lifecycle audit implementation`: структурированный отчёт
   `agent-implementation-audit-report.v1` по результату задачи и независимой

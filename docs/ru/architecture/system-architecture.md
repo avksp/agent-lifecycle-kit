@@ -318,7 +318,7 @@ flowchart LR
 | Отчёты | `reporting/*` | Статус, лента событий, прогресс, счётчик изменений и мост прогресса. |
 | Метрики и правила | `metrics/*`, `policy/*`, `model_routing/*` | Экспорт расхода, политика токенов/ресурсов, локальная статистика и классы моделей. |
 | Стратегия выполнения | `policy/execution_strategy.py`, `cli/strategy.py` | Объединение существующих решений по риску, качеству, классу модели, компактному пакету и проверке в один артефакт без записи. |
-| Оценка по эталонным задачам | `benchmarks/*`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Детерминированное сравнение качества, ложных приёмок, повторов, времени и достоверности токенов без записи. |
+| Оценка и проверка вариантов выполнения по эталонным задачам | `benchmarks/contracts.py`, `benchmarks/stratification.py`, `benchmarks/qualification.py`, `benchmarks/comparison.py`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Построение детерминированной выборки по семейству, уровню и форме задачи, проверка записей выполнения без чувствительных данных, проверка варианта только при достаточном объёме данных и сравнение качества до расхода ресурсов и токенов. |
 | Контекст и подтверждения | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Компактные пакеты, поиск по эпизодам, импорт внешнего контекста, представление цели и продолжения. |
 | Исследовательские материалы | `research/*`, `contracts/research_evidence_schemas.py`, `cli/research.py` | Локальная проверка пакета `agent-research-evidence-package.v1`, связей источников, утверждений, цитат и происхождения; ограниченная сводка для чернового планирования. |
 | Нейтральность | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Привязанная к индексу Git проверка выпуска, явное включение локальных подтверждений из разрешённых корней, устойчивое чтение, проверка полномочий и подписанные квитанции. |
@@ -511,6 +511,52 @@ sequenceDiagram
 только после этого оценивает расход. Автоматическое принятие улучшения возможно
 лишь при подтверждённой экономии, отсутствии ухудшения ресурсов и полном наборе
 измерений.
+
+### Проверка варианта выполнения по эталонным задачам
+
+```mermaid
+sequenceDiagram
+  participant User as Пользователь
+  participant CLI as cli/benchmarks.py
+  participant Sample as benchmarks/stratification.py
+  participant Receipts as benchmarks/contracts.py
+  participant Qualification as benchmarks/qualification.py
+  participant Compare as benchmarks/comparison.py
+  participant Contracts as contracts/benchmark_schemas.py
+
+  User->>CLI: benchmark sample --suite ...
+  CLI->>Sample: select_stratified_tasks()
+  Sample->>Contracts: проверить семейство, уровень и форму задачи
+  Sample-->>User: agent-benchmark-stratified-sample.v1
+  User->>CLI: benchmark receipt-check --receipt ...
+  CLI->>Receipts: validate_benchmark_run_receipt()
+  Receipts-->>User: agent-benchmark-run-receipt-validation.v1
+  User->>CLI: benchmark qualify --receipt ...
+  CLI->>Qualification: qualify_benchmark_runs()
+  Qualification-->>User: agent-benchmark-qualification.v1
+  User->>Compare: benchmark compare-routes
+  Compare->>Qualification: проверить исходный и новый варианты
+  Compare-->>User: сравнение с приоритетом качества
+```
+
+Проверка варианта работает локально и детерминированно. Внешняя рабочая
+оболочка запускает эталонные задачи и формирует запись выполнения без
+чувствительных данных
+выполнения. ALK проверяет связь с задачей, вариант выполнения, среду, способ
+оценки, показатели качества, признак ложной приёмки, пробелы измерений и
+отпечаток записи. Выборка строится отдельно по семейству задач, уровню
+жизненного цикла и ограниченной форме задачи, поэтому один простой пример не
+может представить весь вариант. Вариант выполнения получает статус `QUALIFIED` только
+при наличии минимум пяти разных задач, двух завершённых запусков на задачу,
+пяти разных страт и двух завершённых запусков на страту. Иначе результатом
+будет `NO_RECOMMENDATION`, а не заявление о качестве.
+
+При сравнении сначала проверяются качество и ложные приёмки, а уже затем
+повторы, время, токены и другие ресурсы. Отсутствующие измерения сохраняются
+как явные пробелы и не считаются отсутствием расхода. Вариант не вызывает
+модель, не запускает внешний хост и не меняет политику выполнения. Оператор
+может использовать результат для выбора варианта, но его принятие требует
+отдельного утверждённого изменения жизненного цикла.
 
 ### Приём обычной задачи или Markdown
 

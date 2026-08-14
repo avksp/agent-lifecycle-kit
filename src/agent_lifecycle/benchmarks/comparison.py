@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_lifecycle.benchmarks.contracts import LoadedSuite
+from agent_lifecycle.benchmarks.qualification import qualify_benchmark_runs
 from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.contracts.benchmark_schemas import (
+    ROUTE_COMPARISON_SCHEMA,
+    ROUTE_COMPARISON_VALIDATION_SCHEMA,
+)
 
 COMPARISON_SCHEMA = "agent-reference-task-comparison.v1"
 COMPARISON_VALIDATION_SCHEMA = "agent-reference-task-comparison-validation.v1"
@@ -98,6 +104,180 @@ def validate_reference_task_comparison(comparison: dict[str, Any]) -> dict[str, 
         "productionPromotionClaimed": False,
     }
     return {**body, "validationDigest": canonical_digest(body)}
+
+
+def compare_qualified_routes(
+    baseline_receipts: list[dict[str, Any]],
+    candidate_receipts: list[dict[str, Any]],
+    *,
+    sample: dict[str, Any] | None = None,
+    suite: LoadedSuite | None = None,
+    minimums: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compare two qualified route pools while reporting changed axes."""
+
+    baseline = qualify_benchmark_runs(baseline_receipts, sample=sample, suite=suite, minimums=minimums)
+    candidate = qualify_benchmark_runs(candidate_receipts, sample=sample, suite=suite, minimums=minimums)
+    blockers: list[dict[str, Any]] = []
+    if baseline["status"] != "QUALIFIED":
+        blockers.append({"code": "baseline-not-qualified", "status": baseline["status"]})
+    if candidate["status"] != "QUALIFIED":
+        blockers.append({"code": "candidate-not-qualified", "status": candidate["status"]})
+    base_tasks = {receipt.get("taskId") for receipt in baseline_receipts}
+    candidate_tasks = {receipt.get("taskId") for receipt in candidate_receipts}
+    if base_tasks != candidate_tasks:
+        blockers.append({"code": "comparison-task-pool-mismatch"})
+    base_environment = _axis_values(baseline_receipts, "environment", "environmentDigest")
+    candidate_environment = _axis_values(candidate_receipts, "environment", "environmentDigest")
+    base_scorer = _axis_values(baseline_receipts, "scorer", "scorerDigest")
+    candidate_scorer = _axis_values(candidate_receipts, "scorer", "scorerDigest")
+    changed_axes = []
+    if base_environment != candidate_environment:
+        changed_axes.append("environment")
+    if base_scorer != candidate_scorer:
+        changed_axes.append("scorer")
+    if changed_axes:
+        blockers.append({"code": "comparison-axis-mismatch", "axes": changed_axes})
+    base_route = _first_axis(baseline_receipts, "route", "routeDigest")
+    candidate_route = _first_axis(candidate_receipts, "route", "routeDigest")
+    if base_route == candidate_route:
+        blockers.append({"code": "comparison-route-not-distinct"})
+    base_quality = _aggregate_quality(baseline)
+    candidate_quality = _aggregate_quality(candidate)
+    quality_blockers: list[dict[str, Any]] = []
+    if candidate_quality["falseAcceptanceCount"] > base_quality["falseAcceptanceCount"]:
+        quality_blockers.append({"code": "comparison-new-false-acceptance"})
+    if candidate_quality["criteriaPassed"] < base_quality["criteriaPassed"]:
+        quality_blockers.append({"code": "comparison-quality-regression"})
+    blockers.extend(quality_blockers)
+    base_resources = _aggregate_resources(baseline)
+    candidate_resources = _aggregate_resources(candidate)
+    resource_deltas = {
+        key: candidate_resources[key] - base_resources[key]
+        for key in base_resources
+    }
+    body = {
+        "schemaVersion": ROUTE_COMPARISON_SCHEMA,
+        "status": "PASS" if not blockers else ("INCOMPARABLE" if any(item["code"].startswith("comparison-") for item in blockers) else "NO_RECOMMENDATION"),
+        "lineage": {
+            "taskIds": sorted(item for item in base_tasks if isinstance(item, str)),
+            "baselineEnvironmentDigests": sorted(base_environment),
+            "candidateEnvironmentDigests": sorted(candidate_environment),
+            "baselineScorerDigests": sorted(base_scorer),
+            "candidateScorerDigests": sorted(candidate_scorer),
+            "changedAxes": changed_axes,
+        },
+        "quality": {
+            "qualityFirst": True,
+            "baseline": base_quality,
+            "candidate": candidate_quality,
+            "blockers": quality_blockers,
+        },
+        "resources": {
+            "baseline": base_resources,
+            "candidate": candidate_resources,
+            "deltas": resource_deltas if not blockers else None,
+            "attestation": {
+                "baseline": _attestation(baseline_receipts),
+                "candidate": _attestation(candidate_receipts),
+            },
+            "availableOnlyAfterQuality": True,
+        },
+        "decision": {
+            "qualityFirst": True,
+            "changedAxes": changed_axes,
+            "automaticRouteAdoptionEligible": False,
+            "advisoryOnly": True,
+        },
+        "sourceQualificationDigests": {
+            "baseline": baseline.get("qualificationDigest"),
+            "candidate": candidate.get("qualificationDigest"),
+        },
+        "blockers": blockers,
+        "modelCallsStarted": False,
+        "hostLaunchStarted": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "comparisonDigest": canonical_digest(body)}
+
+
+def validate_qualified_route_comparison(comparison: dict[str, Any]) -> dict[str, Any]:
+    blockers: list[dict[str, Any]] = []
+    if comparison.get("schemaVersion") != ROUTE_COMPARISON_SCHEMA:
+        blockers.append({"code": "benchmark-route-comparison-schema"})
+    if comparison.get("status") not in {"PASS", "INCOMPARABLE", "NO_RECOMMENDATION", "BLOCKED"}:
+        blockers.append({"code": "benchmark-route-comparison-status"})
+    if comparison.get("modelCallsStarted") is not False or comparison.get("hostLaunchStarted") is not False:
+        blockers.append({"code": "benchmark-route-comparison-side-effect"})
+    if comparison.get("productionPromotionClaimed") is not False:
+        blockers.append({"code": "benchmark-route-comparison-production-claim"})
+    if not isinstance(comparison.get("blockers"), list):
+        blockers.append({"code": "benchmark-route-comparison-blockers"})
+    expected = canonical_digest({key: value for key, value in comparison.items() if key != "comparisonDigest"})
+    if comparison.get("comparisonDigest") != expected:
+        blockers.append({"code": "benchmark-route-comparison-digest"})
+    body = {
+        "schemaVersion": ROUTE_COMPARISON_VALIDATION_SCHEMA,
+        "status": "PASS" if not blockers else "FAIL",
+        "comparisonStatus": comparison.get("status") if isinstance(comparison.get("status"), str) else None,
+        "blockers": blockers,
+        "comparisonDigest": comparison.get("comparisonDigest"),
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
+
+
+def _axis_values(receipts: list[dict[str, Any]], container: str, field: str) -> set[str]:
+    return {
+        value
+        for receipt in receipts
+        if isinstance(receipt.get(container), dict)
+        for value in [receipt[container].get(field)]
+        if isinstance(value, str)
+    }
+
+
+def _first_axis(receipts: list[dict[str, Any]], container: str, field: str) -> str | None:
+    values = sorted(_axis_values(receipts, container, field))
+    return values[0] if values else None
+
+
+def _aggregate_quality(report: dict[str, Any]) -> dict[str, int]:
+    totals = {"criteriaTotal": 0, "criteriaPassed": 0, "falseAcceptanceCount": 0, "measurementGapCount": 0}
+    for route in report.get("routes", []):
+        quality = route.get("quality", {}) if isinstance(route, dict) else {}
+        for key in totals:
+            value = quality.get(key)
+            if isinstance(value, int) and not isinstance(value, bool):
+                totals[key] += value
+    return totals
+
+
+def _aggregate_resources(report: dict[str, Any]) -> dict[str, int]:
+    totals = {"tokens": 0, "elapsedMilliseconds": 0, "retries": 0, "remediations": 0}
+    for route in report.get("routes", []):
+        resources = route.get("resources") if isinstance(route, dict) else None
+        if not isinstance(resources, dict):
+            continue
+        for key in totals:
+            value = resources.get(key)
+            if isinstance(value, int) and not isinstance(value, bool):
+                totals[key] += value
+    return totals
+
+
+def _attestation(receipts: list[dict[str, Any]]) -> str:
+    values = {
+        receipt.get("measurements", {}).get("usageConfidence")
+        for receipt in receipts
+        if isinstance(receipt.get("measurements"), dict)
+    }
+    values.discard(None)
+    if len(values) == 1:
+        return next(iter(values))
+    if len(values) > 1:
+        return "MIXED"
+    return "MISSING"
 
 
 def _evaluation_blockers(evaluation: dict[str, Any], label: str) -> list[dict[str, Any]]:

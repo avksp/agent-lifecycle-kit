@@ -113,6 +113,15 @@ Stable schema ids:
 - `agent-quality-cost-signals-summary.v1`
 - `agent-reference-task-comparison.v1`
 - `agent-reference-task-comparison-validation.v1`
+- `agent-benchmark-run-receipt.v1` (technical name for an execution record
+  with sensitive data removed)
+- `agent-benchmark-run-receipt-validation.v1` (validation of that record)
+- `agent-benchmark-stratified-sample.v1`
+- `agent-benchmark-stratified-sample-validation.v1`
+- `agent-benchmark-qualification.v1` (execution-setup validation result)
+- `agent-benchmark-qualification-validation.v1` (validation of that result)
+- `agent-benchmark-route-comparison.v1` (comparison of execution setups)
+- `agent-benchmark-route-comparison-validation.v1` (validation of that comparison)
 
 `completionCheck` binds observable completion evidence. The completion gate is
 a deterministic stop/continue/escalate/split/follow-up decision over current
