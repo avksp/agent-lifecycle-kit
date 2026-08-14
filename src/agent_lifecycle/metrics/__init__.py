@@ -1,26 +1,29 @@
 """Lifecycle resource and process-cost metrics."""
 
+from agent_lifecycle.metrics.cost_collection import (
+    build_lifecycle_cost_summary,
+    generate_lifecycle_cost_report,
+)
 from agent_lifecycle.metrics.costs import (
     COST_CATEGORIES,
     DEFAULT_MODE_LIMITS,
     require_lifecycle_cost_pass,
     validate_lifecycle_cost_report,
 )
-from agent_lifecycle.metrics.cost_collection import build_lifecycle_cost_summary, generate_lifecycle_cost_report
-from agent_lifecycle.metrics.phase_resources import (
-    build_phase_resource_measurement,
-    require_phase_resource_measurement_pass,
-    validate_phase_resource_measurement,
-)
 from agent_lifecycle.metrics.outcome_index import (
     build_quality_cost_signal_summary,
     build_quality_cost_signals,
     build_task_outcome_index,
 )
+from agent_lifecycle.metrics.phase_resources import (
+    build_phase_resource_measurement,
+    require_phase_resource_measurement_pass,
+    validate_phase_resource_measurement,
+)
 from agent_lifecycle.metrics.recommendations import (
     build_lifecycle_recommendation_summary,
-    recommend_lifecycle_mode,
     recommend_from_quality_cost_signals,
+    recommend_lifecycle_mode,
     require_lifecycle_recommendation_pass,
     summarize_lifecycle_overhead,
     validate_lifecycle_baselines,
@@ -36,16 +39,23 @@ from agent_lifecycle.metrics.usage_export import (
 __all__ = [
     "COST_CATEGORIES",
     "DEFAULT_MODE_LIMITS",
-    "build_usage_export",
-    "build_phase_resource_measurement",
+    "build_audit_optimization_report",
+    "build_audit_sample",
+    "build_audit_samples",
+    "build_audit_statistics",
     "build_lifecycle_cost_summary",
     "build_lifecycle_recommendation_summary",
+    "build_phase_resource_measurement",
     "build_quality_cost_signal_summary",
     "build_quality_cost_signals",
     "build_task_outcome_index",
+    "build_usage_export",
+    "evaluate_candidate_profiles",
     "generate_lifecycle_cost_report",
+    "recommend_audit_optimization",
     "recommend_from_quality_cost_signals",
     "recommend_lifecycle_mode",
+    "require_audit_sample_pass",
     "require_lifecycle_cost_pass",
     "require_lifecycle_recommendation_pass",
     "require_phase_resource_measurement_pass",
@@ -53,8 +63,36 @@ __all__ = [
     "summarize_lifecycle_overhead",
     "summarize_regression_signals",
     "usage_export_totals",
+    "validate_audit_optimization_report",
+    "validate_audit_sample",
     "validate_lifecycle_baselines",
     "validate_lifecycle_cost_report",
     "validate_phase_resource_measurement",
     "validate_usage_export",
 ]
+
+_LAZY_AUDIT_OPTIMIZATION_EXPORTS = {
+    "build_audit_optimization_report",
+    "build_audit_sample",
+    "build_audit_samples",
+    "build_audit_statistics",
+    "evaluate_candidate_profiles",
+    "recommend_audit_optimization",
+    "require_audit_sample_pass",
+    "validate_audit_optimization_report",
+    "validate_audit_sample",
+}
+
+__all__.extend(_LAZY_AUDIT_OPTIMIZATION_EXPORTS)
+
+
+def __getattr__(name: str):
+    if name in _LAZY_AUDIT_OPTIMIZATION_EXPORTS:
+        if name in {"build_audit_sample", "build_audit_samples", "require_audit_sample_pass", "validate_audit_sample"}:
+            from agent_lifecycle.metrics import audit_samples
+
+            return getattr(audit_samples, name)
+        from agent_lifecycle.metrics import audit_optimization
+
+        return getattr(audit_optimization, name)
+    raise AttributeError(name)

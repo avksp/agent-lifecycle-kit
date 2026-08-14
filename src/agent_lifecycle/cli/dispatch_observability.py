@@ -7,16 +7,32 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.context import check_context, load_context_profile, render_context
-from agent_lifecycle.context.checkpoint_store import restore_context_checkpoint, write_context_checkpoint
+from agent_lifecycle.context.checkpoint_store import (
+    restore_context_checkpoint,
+    write_context_checkpoint,
+)
 from agent_lifecycle.context.checkpoints import build_context_checkpoint
-from agent_lifecycle.context.external_memory import build_episode_retrieval_with_external_context, import_external_memory_context
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
+from agent_lifecycle.context.external_memory import (
+    build_episode_retrieval_with_external_context,
+    import_external_memory_context,
+)
+from agent_lifecycle.contracts import (
+    LifecycleError,
+    canonical_digest,
+    read_json_object,
+    write_json_create,
+)
+from agent_lifecycle.goal import (
+    build_goal_progress_view,
+    build_objective_snapshot,
+    update_goal_record,
+    validate_goal_record,
+)
 from agent_lifecycle.host_protocol.thread_bridge import (
     prepare_thread_context_import,
     prepare_thread_request,
     validate_thread_exchange,
 )
-from agent_lifecycle.goal import build_goal_progress_view, build_objective_snapshot, update_goal_record, validate_goal_record
 from agent_lifecycle.metrics import (
     build_lifecycle_cost_summary,
     build_lifecycle_recommendation_summary,
@@ -32,11 +48,22 @@ from agent_lifecycle.metrics import (
     validate_lifecycle_cost_report,
     validate_usage_export,
 )
+from agent_lifecycle.metrics.audit_optimization import (
+    build_audit_optimization_report,
+    render_audit_optimization_terminal,
+    validate_audit_optimization_report,
+)
+from agent_lifecycle.metrics.audit_samples import build_audit_samples
 from agent_lifecycle.model_routing import (
     resolve_model_route,
     validate_host_model_profile,
     validate_model_routing_profile,
     validate_usage_receipt,
+)
+from agent_lifecycle.policy.proposals import (
+    apply_optimization_proposal,
+    build_optimization_proposal,
+    require_optimization_proposal_pass,
 )
 from agent_lifecycle.reporting import (
     build_change_summary_receipt,
@@ -492,7 +519,68 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
         if args.summary_out:
             write_json_create(Path(args.summary_out), build_lifecycle_recommendation_summary(recommendation))
         return recommendation
+    if args.metrics_command == "audit-sample":
+        receipts = [read_json_object(Path(item), label="audit receipt bundle") for item in args.receipt]
+        payload = build_audit_samples(receipts, source_paths=list(args.receipt))
+        write_json_create(Path(args.out), payload)
+        return payload
+    if args.metrics_command == "audit-report":
+        samples = _read_audit_samples(args.sample)
+        candidates = _read_json_items(args.candidate_profile, label="candidate profile")
+        references = _read_json_items(args.reference_task, label="reference task")
+        holdouts = _read_json_items(args.holdout_task, label="holdout task")
+        current = read_json_object(Path(args.current_profile), label="current optimization profile") if args.current_profile else None
+        report = build_audit_optimization_report(
+            samples,
+            candidate_profiles=candidates,
+            reference_tasks=references,
+            holdout_tasks=holdouts,
+            task_shape=args.task_shape,
+            quality_floor=args.quality_floor,
+            current_profile=current,
+        )
+        validation = validate_audit_optimization_report(report)
+        if validation["status"] != "PASS":
+            raise LifecycleError("audit-optimization-report-invalid", "audit optimization report validation failed", {"validation": validation})
+        write_json_create(Path(args.out), report)
+        if args.terminal:
+            return render_audit_optimization_terminal(report)
+        return report
+    if args.metrics_command == "audit-proposal":
+        report = read_json_object(Path(args.report), label="audit optimization report")
+        recommendation = report.get("recommendation") if isinstance(report.get("recommendation"), dict) else {}
+        proposal = build_optimization_proposal(
+            recommendation,
+            approved=args.approved,
+            target_kind=args.target_kind,
+            target_revision=args.target_revision,
+            frozen_plan=args.frozen_plan,
+        )
+        write_json_create(Path(args.out), proposal)
+        return proposal
+    if args.metrics_command == "audit-apply":
+        proposal = read_json_object(Path(args.proposal), label="audit optimization proposal")
+        require_optimization_proposal_pass(proposal)
+        return apply_optimization_proposal(proposal, Path(args.out))
     raise LifecycleError("command-not-implemented", "metrics command is not implemented")
+
+
+def _read_audit_samples(paths: list[str]) -> list[dict[str, Any]]:
+    samples: list[dict[str, Any]] = []
+    for item in paths:
+        payload = read_json_object(Path(item), label="audit sample")
+        rows = payload.get("samples") if isinstance(payload.get("samples"), list) else [payload]
+        samples.extend(row for row in rows if isinstance(row, dict))
+    return samples
+
+
+def _read_json_items(paths: list[str], *, label: str) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for item in paths:
+        payload = read_json_object(Path(item), label=label)
+        rows = payload if isinstance(payload, list) else payload.get("items") if isinstance(payload.get("items"), list) else [payload]
+        items.extend(row for row in rows if isinstance(row, dict))
+    return items
 
 
 def _write_text_create(path: Path, text: str) -> bytes:

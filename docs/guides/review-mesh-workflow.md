@@ -13,6 +13,11 @@ default. With only one model, ordinary single-reviewer planning and audit remain
 valid. Multiple sessions of that model are not proof of model independence when
 the selected profile requires both `host` and `model` dimensions.
 
+After several reviews have completed, [evidence-based audit
+optimization](../reference/audit-optimization.md) can summarize local quality,
+wait, token and resource signals. It is an advisory follow-up: holdout quality
+checks and explicit approval are required before a future profile changes.
+
 Use this guide when a task needs stronger planning or audit confidence:
 
 - research before implementation;

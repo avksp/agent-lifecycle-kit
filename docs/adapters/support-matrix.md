@@ -85,6 +85,11 @@ descriptors use the `UNSUPPORTED` status for this contract. Qwen Code keeps its
 `VERIFIED` support level while the parser follows its own declaration. See
 [Host-local token accounting](../reference/host-local-token-accounting.md).
 
+Repeated audit operations can be measured locally with the evidence-based audit
+optimization flow. It combines review, usage and process receipts, requires a
+bounded holdout set and keeps recommendations advisory until an operator
+approves a new profile. See [Evidence-based audit optimization](../reference/audit-optimization.md).
+
 ## Runtime support
 
 | Host | Projection | Current support level | Managed launch | Verified scope |
