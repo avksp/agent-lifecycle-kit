@@ -214,6 +214,7 @@ flowchart TB
 | `src/agent_lifecycle/contracts` | Публичные схемы, канонический JSON, отпечатки, типовые ошибки и правила совместимости. | Зависеть от CLI хоста. |
 | Доменные пакеты | Планирование, рабочий цикл, аудит, контекст, метрики, качество, проверка несколькими моделями ИИ и отчёты. | Напрямую вызывать API провайдера. |
 | `src/agent_lifecycle/adapter_sessions` | Сессии по дескрипторам, приём задачи и мост к управляемому запуску. | Вставлять промпты в хост или разбирать телеметрию хоста в ядре. |
+| `src/agent_lifecycle/research` | Проверка ограниченных источников, утверждений, цитат и происхождения до передачи исследования в планирование. | Загружать источники, вызывать модели, выполнять инструкции из материалов или становиться источником полномочий жизненного цикла. |
 | `adapters/*` | Дескрипторы хостов, проекции операций, манифесты поддержки и резюме подтверждений. | Менять схемы жизненного цикла. |
 | `tools/release` и тесты | Релизные проверки, валидаторы, совместимость и документационные контрольные точки. | Устанавливать уровень поддержки реального хоста только по синтетическим данным. |
 
@@ -241,6 +242,7 @@ flowchart LR
   reporting[reporting]
   metrics[metrics и policy]
   context[context и evidence]
+  research[исследовательские материалы]
   quality[quality]
   strategy[Стратегия выполнения]
   benchmarks[Оценка по эталонным задачам]
@@ -258,6 +260,7 @@ flowchart LR
   cli --> reporting
   cli --> metrics
   cli --> context
+  cli --> research
   cli --> benchmarks
   cli --> strategy
   cli --> neutrality
@@ -291,6 +294,7 @@ flowchart LR
   benchmarks --> contracts
   metrics --> benchmarks
   context --> contracts
+  research --> contracts
   neutrality --> contracts
   runner --> workflow
   runner --> worktree
@@ -316,6 +320,7 @@ flowchart LR
 | Стратегия выполнения | `policy/execution_strategy.py`, `cli/strategy.py` | Объединение существующих решений по риску, качеству, классу модели, компактному пакету и проверке в один артефакт без записи. |
 | Оценка по эталонным задачам | `benchmarks/*`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Детерминированное сравнение качества, ложных приёмок, повторов, времени и достоверности токенов без записи. |
 | Контекст и подтверждения | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Компактные пакеты, поиск по эпизодам, импорт внешнего контекста, представление цели и продолжения. |
+| Исследовательские материалы | `research/*`, `contracts/research_evidence_schemas.py`, `cli/research.py` | Локальная проверка пакета `agent-research-evidence-package.v1`, связей источников, утверждений, цитат и происхождения; ограниченная сводка для чернового планирования. |
 | Нейтральность | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Привязанная к индексу Git проверка выпуска, явное включение локальных подтверждений из разрешённых корней, устойчивое чтение, проверка полномочий и подписанные квитанции. |
 | Контроллер выполнения | `runner/*` | Ограниченное состояние цикла выполнения поверх существующего рабочего цикла. |
 | Рабочее дерево | `worktree/*`, `cli/worktree.py` | Правила изоляции рабочего дерева и подтверждения попыток. |
@@ -758,6 +763,7 @@ Git, и по умолчанию не читает локальные матер�
 | Проверка кода | Git/CLI хоста и `adapter task start` | Git вне ALK, затем `adapter_sessions/task_intake.py` и при необходимости `review_mesh/*` | Приём пакета проверки и необязательный кворум. |
 | Исправление ошибки | `adapter task start` и контрольные точки зафиксированного плана | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Рекомендация профиля расследования, затем обязательные подтверждения по плану. |
 | Внешний контекст | `context external-import` и поиск по эпизодам | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Необязательные подсказки контекста без права заменять доказательства. |
+| Исследовательские материалы | `research validate`, `research summary` | `cli/research.py`, `research/validation.py`, `research/provenance.py`, `contracts/research_evidence_schemas.py` | Локальная проверка связи источника с утверждением и ограниченная сводка; без загрузки источников, вызова модели и полномочий жизненного цикла. |
 | Тредовый контекст | `thread request` и `thread import` | `host_protocol/thread_bridge.py`, `policy/thread_bridge.py`, `context/thread_bridge_context.py`, при необходимости `review_mesh/*` | Ограниченный запрос, квитанция адаптера и дополнительный импорт контекста. |
 | Квалификация возможности тредов | `adapter thread-capability`, `adapter thread-qualify` | `contracts/thread_bridge_schemas.py`, `host_protocol/capabilities.py`, `host_protocol/validation.py`, `adapters/*` | Объявление и результат квалификации, связанные с дескриптором; ядро не обращается к хосту. |
 | Статус цели | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Представление цели и прогресса без записи. |

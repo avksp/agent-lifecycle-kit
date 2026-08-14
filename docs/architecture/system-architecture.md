@@ -194,6 +194,7 @@ flowchart TB
 | Domain packages | Planning, workflow, audit, context, metrics, quality, review coordination and reporting. | Start provider API calls directly. |
 | `src/agent_lifecycle/adapter_sessions` | Descriptor-driven session records, task intake and managed-run bridge. | Inject prompts or parse host telemetry in core. |
 | `src/agent_lifecycle/project` | Project-local workflow defaults, bounded stage settings and deterministic effective-profile composition. | Replace a frozen plan, execute guidance or store provider authority. |
+| `src/agent_lifecycle/research` | Validate bounded sources, claims, citations and provenance before research is used as planning input. | Fetch sources, call models, execute source instructions or become a lifecycle authority. |
 | `adapters/*` | Host descriptors, operation projections, support manifests and evidence summaries. | Change lifecycle schemas. |
 | `tools/release` and tests | Release gates, validators, conformance and docs compatibility. | Establish a live host support level from synthetic data alone. |
 
@@ -216,6 +217,7 @@ flowchart LR
   reporting[reporting]
   metrics[metrics and policy]
   context[context and evidence]
+  research[research evidence]
   quality[quality profiles]
   strategy[execution strategy]
   benchmarks[reference task evaluation]
@@ -233,6 +235,7 @@ flowchart LR
   cli --> reporting
   cli --> metrics
   cli --> context
+  cli --> research
   cli --> benchmarks
   cli --> strategy
   cli --> neutrality
@@ -266,6 +269,7 @@ flowchart LR
   benchmarks --> contracts
   metrics --> benchmarks
   context --> contracts
+  research --> contracts
   neutrality --> contracts
   runner --> workflow
   runner --> worktree
@@ -291,6 +295,7 @@ flowchart LR
 | Execution strategy | `policy/execution_strategy.py`, `cli/strategy.py` | Compose existing risk, quality, routing, compact-packet and review decisions into one read-only receipt. |
 | Reference task evaluation | `benchmarks/*`, `contracts/benchmark_schemas.py`, `cli/benchmarks.py` | Read-only deterministic quality, false-acceptance, retry, elapsed-time and token-confidence comparison. |
 | Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, external context imports, goal views and continuation records. |
+| Research evidence | `research/*`, `contracts/research_evidence_schemas.py`, `cli/research.py` | Local validation of `agent-research-evidence-package.v1` source, claim, citation and provenance bindings; bounded summary for draft planning input. |
 | Neutrality | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Git-index-bound release scanning, optional policy-limited local evidence, stable reads, authority checks and signed neutrality receipts. |
 | Runner | `runner/*` | Bounded execution-loop state over existing workflow primitives. |
 | Worktree | `worktree/*`, `cli/worktree.py` | Worktree isolation policies and attempt receipts. |
@@ -703,6 +708,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 | Code review | Git/host CLI plus `adapter task start` | Git outside ALK, then `adapter_sessions/task_intake.py` and optional `review_mesh/*` | Review packet intake and optional quorum. |
 | Bug repair | `adapter task start` plus frozen plan gates | `adapter_sessions/task_intake.py`, `quality/bug_forensics_advisor.py`, `quality/bug_forensics.py`, `audit/bug_forensics.py`, `workflow/bug_forensics_gates.py` | Defect-shaped recommendation, then plan-required receipts. |
 | External context | `context external-import` and episode retrieval | `context/external_memory.py`, `evidence_index/external_context.py`, `evidence_index/episode_index.py` | Optional context hints with no proof authority. |
+| Research evidence | `research validate`, `research summary` | `cli/research.py`, `research/validation.py`, `research/provenance.py`, `contracts/research_evidence_schemas.py` | Local source-to-claim validation and bounded summary; no source fetch, model call or lifecycle authority. |
 | Thread context | `thread request` and `thread import` | `host_protocol/thread_bridge.py`, `policy/thread_bridge.py`, `context/thread_bridge_context.py`, optional `review_mesh/*` | Bounded thread request, adapter receipt and optional context import. |
 | Thread capability qualification | `adapter thread-capability`, `adapter thread-qualify` | `contracts/thread_bridge_schemas.py`, `host_protocol/capabilities.py`, `host_protocol/validation.py`, `adapters/*` | Descriptor-bound declaration and qualification result; no host call from the core. |
 | Goal status | `goal view` | `goal/view.py`, `reporting/progress_view.py`, `workflow/query.py` | Read-only goal and lifecycle progress view. |
