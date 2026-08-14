@@ -51,6 +51,10 @@ from agent_lifecycle.reporting import (
     render_usage_export_json,
     render_usage_export_table,
 )
+from agent_lifecycle.reporting.execution_resources import (
+    build_execution_resource_report,
+    validate_execution_resource_report,
+)
 
 
 def dispatch_observability(args: argparse.Namespace) -> dict[str, Any] | str:
@@ -420,6 +424,25 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
             "outputPath": args.out,
             "outputBytes": len(rendered.encode("utf-8")),
             "exportDigest": canonical_digest(export),
+            "validation": validation,
+            "liveCallsStarted": False,
+            "productionPromotionClaimed": False,
+        }
+    if args.metrics_command == "execution-report":
+        receipts: list[dict[str, Any]] = []
+        for item in args.receipt:
+            payload = read_json_object(Path(item), label="process execution receipt")
+            candidate = payload.get("processReceipt") if isinstance(payload.get("processReceipt"), dict) else payload
+            receipts.append(candidate)
+        lineage = {"operationId": args.operation_id} if args.operation_id else None
+        report = build_execution_resource_report(receipts, lineage=lineage)
+        validation = validate_execution_resource_report(report)
+        write_json_create(Path(args.out), report)
+        return {
+            "schemaVersion": "agent-execution-resource-report-generation.v1",
+            "status": validation["status"],
+            "reportPath": args.out,
+            "reportDigest": canonical_digest(report),
             "validation": validation,
             "liveCallsStarted": False,
             "productionPromotionClaimed": False,
