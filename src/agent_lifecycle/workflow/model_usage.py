@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts.process_execution_schemas import validate_process_execution_receipt
 from agent_lifecycle.model_routing import validate_usage_receipt
 
 UNSAFE_CRITICAL_REVIEW_CLASSES = {"budget", "local-compact"}
@@ -64,6 +65,72 @@ def validate_task_model_usage_receipt(
             {"validation": result},
         )
     return result
+
+
+def validate_task_process_execution_receipt(
+    task: dict[str, Any],
+    receipt: dict[str, Any],
+    *,
+    operation_id: str | None = None,
+    attempt_id: str | None = None,
+    fail_on_invalid: bool = True,
+) -> dict[str, Any]:
+    """Validate local process evidence before a host result is accepted."""
+
+    validation = validate_process_execution_receipt(receipt)
+    if receipt.get("status") != "PASS" or receipt.get("cleanup", {}).get("status") != "PASS":
+        validation["status"] = "FAIL"
+        validation.setdefault("blockers", []).append({"code": "process-execution-not-qualified"})
+    if operation_id is not None and receipt.get("operationId") != operation_id:
+        validation["status"] = "FAIL"
+        validation.setdefault("blockers", []).append({"code": "process-execution-operation-mismatch"})
+    expected_attempt = attempt_id if attempt_id is not None else str(task.get("attempt", ""))
+    if expected_attempt and receipt.get("attemptId") not in {expected_attempt, f"attempt-{expected_attempt}"}:
+        validation["status"] = "FAIL"
+        validation.setdefault("blockers", []).append({"code": "process-execution-attempt-mismatch"})
+    if fail_on_invalid and validation.get("status") != "PASS":
+        raise LifecycleError(
+            "process-execution-validation-failed",
+            "process execution receipt validation failed",
+            {"validation": validation},
+        )
+    return validation
+
+
+def process_execution_receipt_projection(receipt: dict[str, Any]) -> dict[str, Any]:
+    """Return the safe subset suitable for a task or host-operation result."""
+
+    return {
+        "receiptDigest": receipt.get("receiptDigest"),
+        "status": receipt.get("status"),
+        "operationId": receipt.get("operationId"),
+        "attemptId": receipt.get("attemptId"),
+        "timing": receipt.get("timing", {}),
+        "resources": receipt.get("resources", {}),
+        "cleanup": receipt.get("cleanup", {}),
+        "timedOut": bool(receipt.get("timedOut")),
+        "cancelled": bool(receipt.get("cancelled")),
+    }
+
+
+def bounded_process_retry_decision(
+    receipt: dict[str, Any],
+    *,
+    attempt: int,
+    max_retries: int = 1,
+) -> dict[str, Any]:
+    """Return one deterministic retry decision; never starts a retry loop."""
+
+    if max_retries < 0:
+        raise LifecycleError("invalid-process-retry-cap", "max_retries must not be negative")
+    cleanup_status = receipt.get("cleanup", {}).get("status") if isinstance(receipt.get("cleanup"), dict) else None
+    if cleanup_status != "PASS":
+        return {"decision": "BLOCKED", "retry": False, "reason": "cleanup-unverified", "attempt": attempt, "maxRetries": max_retries}
+    if receipt.get("status") == "PASS":
+        return {"decision": "ACCEPT", "retry": False, "reason": "process-passed", "attempt": attempt, "maxRetries": max_retries}
+    retry = attempt <= max_retries
+    reason = "timeout" if receipt.get("timedOut") else "cancelled" if receipt.get("cancelled") else "process-failed"
+    return {"decision": "RETRY" if retry else "BLOCKED", "retry": retry, "reason": reason, "attempt": attempt, "maxRetries": max_retries}
 
 
 def _attempt_route(task: dict[str, Any]) -> dict[str, Any] | None:

@@ -118,7 +118,7 @@ def _popen_blockers(path: Path, tree: ast.AST) -> list[dict[str, Any]]:
             if isinstance(child, ast.Call) and _is_subprocess_call(child, "Popen")
         ]
         for call in calls:
-            if path.name == "process.py" and node.name == "_run_bounded_process" and _is_bounded_popen(call, node):
+            if path.name == "process.py" and node.name in {"_run_bounded_process", "run_process"} and _is_bounded_popen(call, node):
                 continue
             blockers.append(
                 {
@@ -173,10 +173,19 @@ def _is_bounded_popen(call: ast.Call, function: ast.FunctionDef | ast.AsyncFunct
         and isinstance(child.func.value, ast.Name)
         and child.func.value.id == "process"
     }
+    owner_methods = {
+        child.func.attr
+        for child in ast.walk(function)
+        if isinstance(child, ast.Call)
+        and isinstance(child.func, ast.Attribute)
+        and isinstance(child.func.value, ast.Name)
+        and child.func.value.id == "owner"
+    }
     return (
         safe_call
         and {"max_input_bytes", "max_output_bytes", "timeout_seconds"} <= referenced_names
-        and {"kill", "wait"} <= process_methods
+        and {"poll", "wait"} <= process_methods
+        and ({"kill"} <= process_methods or {"terminate", "verify"} <= owner_methods)
     )
 
 

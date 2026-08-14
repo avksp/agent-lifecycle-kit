@@ -92,6 +92,14 @@ ALK-managed paths. JSON stdout remains stable. Use `--progress-hook off` to
 suppress terminal output, or `--progress-hook receipt --progress-receipt <path>`
 to persist `agent-progress-hook-receipt.v1`.
 
+Each bounded managed process also produces a redacted
+`agent-process-execution-receipt.v1`. It records monotonic duration, available
+CPU, memory and process-count metrics, timeout or cancellation state, and
+cleanup status. Combine receipts with
+[`metrics execution-report`](cli.md) to inspect resource use without
+storing argv, environment or host output. A missing or failed cleanup status
+blocks the managed result and is never hidden by a retry.
+
 ## Risk-aware managed execution
 
 For a frozen S1/S2 task, `start --risk auto` can derive a provider-neutral

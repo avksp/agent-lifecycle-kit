@@ -26,16 +26,16 @@ Build and inspect the package without starting a client:
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/build_agent_plugin.py \
   --root . \
-  --version 1.68.0 \
-  --out work/release-1-68/agent-plugin \
-  --archive work/release-1-68/agent-lifecycle-kit-agent-plugin-v1.68.0.zip
+  --version 1.69.0 \
+  --out work/release-1-69/agent-plugin \
+  --archive work/release-1-69/agent-lifecycle-kit-agent-plugin-v1.69.0.zip
 
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 \
   tools/release/validate_agent_plugin_qualification.py \
-  --package work/release-1-68/agent-plugin \
+  --package work/release-1-69/agent-plugin \
   --profile adapters/codex/agent_plugin_profile.json \
-  --version 1.68.0 \
-  --evidence work/release-1-68/evidence/offline.json
+  --version 1.69.0 \
+  --evidence work/release-1-69/evidence/offline.json
 ```
 
 This mode starts zero host processes and makes zero model or network calls.
@@ -50,9 +50,9 @@ ALK probe with the profile for that client:
 agent-lifecycle adapter plugin-qualify \
   --adapter codex \
   --profile adapters/codex/agent_plugin_profile.json \
-  --package work/release-1-68/agent-plugin \
+  --package work/release-1-69/agent-plugin \
   --project-root . \
-  --out work/release-1-68/evidence/codex-qualification.json
+  --out work/release-1-69/evidence/codex-qualification.json
 ```
 
 The probe executes only the profile's version and help commands, with
@@ -90,7 +90,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 \
   --profiles adapters/codex/agent_plugin_profile.json \
              adapters/claude/agent_plugin_profile.json \
              adapters/cursor/agent_plugin_profile.json \
-  --evidence work/release-1-68/evidence/profiles.json
+  --evidence work/release-1-69/evidence/profiles.json
 ```
 
 The profiles cannot change adapter maturity or `managedLaunch.status`.
@@ -102,5 +102,5 @@ an open-ended support or lifecycle claim.
 The qualification profile and receipt are versioned local contracts validated
 by the qualification commands. They are intentionally kept separate from the
 global lifecycle schema catalogue.
-Release 1.68 uses the observation-only policy for its shipped profiles; a
-closed version range requires a separately implemented and validated policy.
+The shipped profiles use an observation-only policy. A closed version range
+requires a separately implemented and validated policy.
