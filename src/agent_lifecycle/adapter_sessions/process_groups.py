@@ -6,6 +6,7 @@ import os
 import signal
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 
@@ -66,14 +67,15 @@ class ProcessGroupOwner:
 
     def verify(self) -> dict[str, Any]:
         if os.name == "posix":
-            alive = False
-            try:
-                os.killpg(self.pid, 0)
-                alive = True
-            except ProcessLookupError:
-                alive = False
-            except PermissionError:
-                alive = True
+            alive = _posix_group_has_live_processes(self.pid)
+            if alive is None:
+                try:
+                    os.killpg(self.pid, 0)
+                    alive = True
+                except ProcessLookupError:
+                    alive = False
+                except PermissionError:
+                    alive = True
             return {
                 "status": "BLOCKED" if alive else "PASS",
                 "attestation": self.attestation,
@@ -131,7 +133,14 @@ def _create_windows_job(process: subprocess.Popen[Any]) -> int | None:
         from ctypes import wintypes
 
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateJobObjectW.argtypes = [wintypes.LPVOID, wintypes.LPCWSTR]
         kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        kernel32.SetInformationJobObject.argtypes = [wintypes.HANDLE, wintypes.INT, ctypes.c_void_p, wintypes.DWORD]
+        kernel32.SetInformationJobObject.restype = wintypes.BOOL
+        kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
         handle = kernel32.CreateJobObjectW(None, None)
         if not handle:
             return None
@@ -150,20 +159,29 @@ def _create_windows_job(process: subprocess.Popen[Any]) -> int | None:
         if not kernel32.SetInformationJobObject(handle, 9, ctypes.byref(limits), ctypes.sizeof(limits)):
             kernel32.CloseHandle(handle)
             return None
-        if not kernel32.AssignProcessToJobObject(handle, wintypes.HANDLE(process._handle)):
+        process_handle_value = getattr(process._handle, "value", process._handle)
+        if not process_handle_value:
             kernel32.CloseHandle(handle)
             return None
-        return int(handle)
-    except (AttributeError, OSError, TypeError):
+        if not kernel32.AssignProcessToJobObject(handle, wintypes.HANDLE(process_handle_value)):
+            kernel32.CloseHandle(handle)
+            return None
+        handle_value = getattr(handle, "value", handle)
+        return int(handle_value) if handle_value else None
+    except (AttributeError, OSError, TypeError, ValueError):
         return None
 
 
 def _terminate_windows_job(handle: int) -> None:
     try:
         import ctypes
+        from ctypes import wintypes
 
-        ctypes.WinDLL("kernel32", use_last_error=True).TerminateJobObject(handle, 1)
-    except (AttributeError, OSError):
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+        kernel32.TerminateJobObject.restype = wintypes.BOOL
+        kernel32.TerminateJobObject(handle, 1)
+    except (AttributeError, OSError, TypeError, ValueError):
         return
 
 
@@ -182,17 +200,60 @@ def _windows_job_active_processes(handle: int) -> int | None:
 
         info = ACCOUNTING()
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.QueryInformationJobObject.argtypes = [wintypes.HANDLE, wintypes.INT, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
+        kernel32.QueryInformationJobObject.restype = wintypes.BOOL
         if not kernel32.QueryInformationJobObject(handle, 1, ctypes.byref(info), ctypes.sizeof(info), None):
             return None
         return int(info.ActiveProcesses)
-    except (AttributeError, OSError, TypeError):
+    except (AttributeError, OSError, TypeError, ValueError):
         return None
 
 
 def _close_windows_handle(handle: int) -> None:
     try:
         import ctypes
+        from ctypes import wintypes
 
-        ctypes.WinDLL("kernel32", use_last_error=True).CloseHandle(handle)
-    except (AttributeError, OSError):
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+        kernel32.CloseHandle(handle)
+    except (AttributeError, OSError, TypeError, ValueError):
         return
+
+
+def _posix_group_has_live_processes(group_id: int) -> bool | None:
+    """Return live-member state when Linux ``/proc`` permits exact checking.
+
+    ``killpg(..., 0)`` also reports a group containing only zombies as present.
+    Linux exposes the process state and process-group id in ``/proc/<pid>/stat``;
+    ignoring ``Z`` members prevents a false cleanup blocker while retaining a
+    fail-closed fallback when the process table cannot be inspected.
+    """
+
+    proc_root = Path("/proc")
+    if not proc_root.is_dir():
+        return None
+    try:
+        entries = list(proc_root.iterdir())
+    except OSError:
+        return None
+    for entry in entries:
+        if not entry.name.isdigit():
+            continue
+        try:
+            stat = (entry / "stat").read_text(encoding="ascii")
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return None
+        try:
+            _, remainder = stat.rsplit(")", 1)
+            fields = remainder.strip().split()
+            state = fields[0]
+            process_group = int(fields[2])
+        except (IndexError, ValueError):
+            return None
+        if process_group == group_id and state != "Z":
+            return True
+    return False
