@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_lifecycle.contracts.schema_builders import open_object_schema
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
-from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_MODES, THREAD_OPERATIONS, THREAD_SCOPES
+from agent_lifecycle.contracts.schema_builders import open_object_schema
+from agent_lifecycle.contracts.thread_bridge_schemas import (
+    THREAD_BRIDGE_MODES,
+    THREAD_OPERATIONS,
+    THREAD_SCOPES,
+)
 
 PROJECT_PROFILE_SCHEMA = "agent-project-workflow-profile.v1"
 EFFECTIVE_PROJECT_PROFILE_SCHEMA = "agent-effective-project-workflow-profile.v1"
@@ -15,6 +19,8 @@ PROJECT_PROFILE_BOUNDARY_SCHEMA = "agent-project-profile-boundary-validation.v1"
 
 PROJECT_PROFILE_MODES = ("auto", "research", "plan", "review", "implement")
 PROJECT_PROFILE_RISKS = ("auto", "S0", "S1", "S2")
+PROJECT_PROFILE_PRESET_IDS = ("quick-change", "research-review", "feature-implementation")
+PROJECT_PROFILE_PRESET_AUTHORITIES = ("excluded", "requires-frozen-plan")
 PROJECT_PROFILE_MODEL_CLASSES = (
     "no-model",
     "budget",
@@ -179,6 +185,7 @@ PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
             "principles": {"type": ["object", "null"]},
             "principlesDigest": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
             "threadBridge": _THREAD_BRIDGE_POLICY,
+            "preset": {"type": ["object", "null"]},
             "authority": {"type": "object"},
             "blockers": _BLOCKERS,
             "productionPromotionClaimed": {"const": False},

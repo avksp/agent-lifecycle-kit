@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "agent-project-workflow-preset.v1",
+  "presetId": "research-review",
+  "presetVersion": "1",
+  "title": "Research and review",
+  "description": "A research and planning route with independent review and no implementation stage.",
+  "defaultMode": "research",
+  "defaultRisk": "S1",
+  "reviewMesh": "parallel-research-synthesis",
+  "implementationAuthority": "excluded",
+  "stages": {
+    "research": {
+      "mode": "research",
+      "risk": "S1",
+      "modelClass": "standard-code",
+      "reviewMesh": "parallel-research-synthesis",
+      "minReviewers": 2,
+      "maxAttempts": 2,
+      "maxInvocations": 8,
+      "maxWallSeconds": 1800
+    },
+    "planning": {
+      "mode": "plan",
+      "risk": "S1",
+      "modelClass": "standard-code",
+      "reviewMesh": "parallel-research-synthesis",
+      "minReviewers": 2,
+      "maxAttempts": 2,
+      "maxInvocations": 8,
+      "maxWallSeconds": 1800
+    },
+    "review": {
+      "mode": "review",
+      "risk": "S1",
+      "modelClass": "specialist-review",
+      "reviewMesh": "parallel-research-synthesis",
+      "minReviewers": 2,
+      "maxAttempts": 2,
+      "maxInvocations": 8,
+      "maxWallSeconds": 1800
+    }
+  },
+  "source": "built-in",
+  "productionPromotionClaimed": false,
+  "presetDigest": "9c13af585ff868dcb3a88bac25af7f95d09182269d257b0571914cfb59edc4d5"
+}

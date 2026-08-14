@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import os
 import sys
 import tempfile
@@ -18,7 +18,7 @@ class FoundationTests(unittest.TestCase):
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         project = pyproject["project"]
         self.assertEqual(project["name"], "agent-lifecycle-kit")
-        self.assertEqual(project["version"], "1.73.0")
+        self.assertEqual(project["version"], "1.74.0")
         self.assertEqual(project["requires-python"], ">=3.11,<3.15")
         self.assertEqual(project["license"]["text"], "Apache-2.0")
         self.assertEqual(project["dependencies"], [])
@@ -59,6 +59,11 @@ class FoundationTests(unittest.TestCase):
             for path in (ROOT / "benchmarks/reference-tasks").rglob("*")
             if path.is_file()
         }
+        expected.update(
+            path.relative_to(ROOT).as_posix()
+            for path in (ROOT / "profiles/project-workflow-presets").rglob("*")
+            if path.is_file()
+        )
         self.assertEqual(declared, expected)
 
     def test_crlf_conversion_changes_content_addressed_fixture_identity(self) -> None:
@@ -73,7 +78,7 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(lock["requires-python"], ">=3.11, <3.15")
         packages = {package["name"]: package for package in lock["package"]}
         self.assertIn("agent-lifecycle-kit", packages)
-        self.assertEqual(packages["agent-lifecycle-kit"]["version"], "1.73.0")
+        self.assertEqual(packages["agent-lifecycle-kit"]["version"], "1.74.0")
 
     def test_foundation_ci_uses_stdlib_unittest(self) -> None:
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
