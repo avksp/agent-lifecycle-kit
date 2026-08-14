@@ -5,16 +5,18 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.cli.adapter import add_adapter_parser
 from agent_lifecycle.cli.followup import add_followup_parser
 from agent_lifecycle.cli.metrics_parser import add_metrics_parser
 from agent_lifecycle.cli.policy import add_policy_parser
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
 from agent_lifecycle.cli.research import add_research_parser
-from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.cli.worktree import add_worktree_parser
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
-from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
+from agent_lifecycle.review_mesh.operator_templates import (
+    REVIEW_MESH_OPERATOR_TEMPLATE_IDS,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -165,6 +167,10 @@ def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     start.add_argument("--out")
     start.add_argument("--project-profile")
     start.add_argument("--no-project-profile", action="store_true")
+    start.add_argument(
+        "--preset",
+        help="apply a built-in workflow preset below explicit project-profile settings",
+    )
 
 
 def _add_project_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -191,6 +197,19 @@ def _add_project_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     principles_check.add_argument("--file", "--path", dest="principles_path", required=True)
     principles_check.add_argument("--project-root", default=".")
     principles_check.add_argument("--out")
+    preset = project_sub.add_parser("preset", help="inspect and render built-in workflow presets")
+    preset_sub = preset.add_subparsers(dest="preset_command", required=True)
+    preset_sub.add_parser("list", help="list built-in workflow presets")
+    for command in ("inspect", "validate"):
+        child = preset_sub.add_parser(command, help=f"{command} a built-in workflow preset")
+        child.add_argument("--preset", required=True)
+        child.add_argument("--project-root", default=".")
+    render = preset_sub.add_parser("render", help="render a preset to an explicit profile path")
+    render.add_argument("--preset", required=True)
+    render.add_argument("--project-root", default=".")
+    render.add_argument("--profile-id")
+    render.add_argument("--adapter")
+    render.add_argument("--out", required=True)
 
 
 def _add_host_launch_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

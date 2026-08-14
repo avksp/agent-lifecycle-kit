@@ -40,6 +40,27 @@ agent-lifecycle project profile check \
 The check emits `agent-effective-project-workflow-profile.v1`. It does not
 start a model, launch an adapter, change the plan or write source files.
 
+## Use a built-in workflow preset
+
+For a common route, inspect and validate a built-in preset before creating the
+local profile:
+
+```bash
+agent-lifecycle project preset list
+agent-lifecycle project preset inspect --preset research-review
+agent-lifecycle project preset validate --preset research-review
+agent-lifecycle project preset render \
+  --preset research-review \
+  --adapter <adapter-id> \
+  --out .alk/project-profile.json
+```
+
+The rendered file is an ordinary local project profile. For a one-off task,
+skip rendering and pass `--preset <preset-id>` to `start`. Preset values are
+the lowest-priority defaults: explicit command-line values override the local
+profile, and a frozen plan can raise requirements. See [Workflow presets](workflow-presets.md)
+for the complete matrix and stage limits.
+
 ## Use the profile with start
 
 With `.alk/project-profile.json` in the current project, `start` discovers it
@@ -167,8 +188,9 @@ The effective order is:
 
 1. mandatory ALK lifecycle rules;
 2. the frozen plan and matching lock;
-3. the project profile;
-4. safe command-line defaults.
+3. explicit command-line values;
+4. the project profile;
+5. preset defaults.
 
 A lower layer can fill a default but cannot reduce the plan's risk tier,
 quality floor, write scope, required gate or receipt requirement. The profile

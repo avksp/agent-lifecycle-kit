@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.73.0
+python -m pip install agent-lifecycle-kit==1.74.0
 ```
 
 ## Основа
@@ -75,6 +75,30 @@ python -m pip install agent-lifecycle-kit==1.73.0
 Профиль является локальным слоем настроек проекта. Зафиксированный план и его
 lock-файл остаются источником полномочий для риска, качества, границ записи,
 гейтов и подтверждений. Подробнее: [Профиль рабочего процесса проекта](project-workflow-profile.md).
+
+## Профили рабочего процесса
+
+Встроенные профили помогают выбрать ограниченные настройки для распространённого
+маршрута:
+
+```bash
+agent-lifecycle project preset list
+agent-lifecycle project preset inspect --preset feature-implementation
+agent-lifecycle project preset validate --preset feature-implementation
+agent-lifecycle project preset render \
+  --preset research-review \
+  --adapter <adapter-id> \
+  --out .alk/project-profile.json
+```
+
+Команды `project preset` читают локальные версионируемые данные, возвращают
+устойчивый JSON, не вызывают модель и не запускают внешний инструмент. `render`
+пишет только в явно указанный путь и не перезаписывает существующий файл. Для
+одной задачи можно использовать `start --preset <идентификатор>` без создания
+профиля. Значения профиля являются настройками по умолчанию и уступают явно
+переданным значениям командной строки и профиля проекта; зафиксированный план
+может повысить требования, но профиль не может их ослабить. См. [профили
+рабочего процесса](workflow-presets.md).
 
 Проверьте файл принципов командой `agent-lifecycle project principles check
 --file <path>`. Сравните две версии плана командой `agent-lifecycle plan delta

@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.adapter_sessions import start_lifecycle
-from agent_lifecycle.contracts import LifecycleError, write_json_create
 from agent_lifecycle.cli.project import discover_project_profile
+from agent_lifecycle.contracts import LifecycleError, write_json_create
+from agent_lifecycle.project import load_project_preset, merge_preset_defaults
 
 
 def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any]:
@@ -22,7 +23,10 @@ def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, 
         explicit_path=args.project_profile,
         disabled=args.no_project_profile,
     )
-    if project_profile is None and not args.adapter:
+    if getattr(args, "preset", None):
+        preset = load_project_preset(args.preset, project_root=project_root)
+        project_profile = merge_preset_defaults(project_profile, preset, project_root=project_root)
+    if (project_profile is None or not project_profile.get("defaultAdapter")) and not args.adapter:
         raise LifecycleError(
             "start-adapter-required",
             "--adapter is required when no project profile supplies a default adapter",

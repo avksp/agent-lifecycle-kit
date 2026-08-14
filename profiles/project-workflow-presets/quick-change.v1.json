@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "agent-project-workflow-preset.v1",
+  "presetId": "quick-change",
+  "presetVersion": "1",
+  "title": "Quick change",
+  "description": "A bounded route for a small, low-ambiguity implementation with a separate audit stage.",
+  "defaultMode": "implement",
+  "defaultRisk": "S0",
+  "reviewMesh": "off",
+  "implementationAuthority": "requires-frozen-plan",
+  "stages": {
+    "implementation": {
+      "mode": "implement",
+      "risk": "S0",
+      "modelClass": "standard-code",
+      "reviewMesh": "off",
+      "maxAttempts": 2,
+      "maxInvocations": 8,
+      "maxWallSeconds": 900
+    },
+    "audit": {
+      "mode": "review",
+      "risk": "S0",
+      "modelClass": "standard-code",
+      "reviewMesh": "off",
+      "maxAttempts": 1,
+      "maxInvocations": 4,
+      "maxWallSeconds": 900
+    }
+  },
+  "source": "built-in",
+  "productionPromotionClaimed": false,
+  "presetDigest": "92ede2b867cd9857ae09a8a5af180e8586a7ff2da20a0eed24050de5dbdbc3c6"
+}

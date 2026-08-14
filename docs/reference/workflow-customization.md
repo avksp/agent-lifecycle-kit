@@ -101,6 +101,11 @@ limits. The profile is a consumer-side defaults layer: it does not create
 stages, replace a plan or change lifecycle authority. A frozen plan and lock
 always take precedence over it.
 
+For a common route, use a built-in [workflow preset](workflow-presets.md) as
+the lowest-priority defaults layer. Inspect, validate and render it locally, or
+pass `--preset <preset-id>` to one `start` command. Presets do not contain
+provider, model, prompt or executable settings.
+
 ## Provider, model and reasoning selection
 
 ALK resolves a provider-neutral model class such as `budget`, `standard-code` or
