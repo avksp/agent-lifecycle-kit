@@ -185,6 +185,12 @@ def _add_project_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     check.add_argument("--mode", choices=list(START_MODES))
     check.add_argument("--risk", choices=["auto", "S0", "S1", "S2"])
     check.add_argument("--out")
+    principles = project_sub.add_parser("principles", help="check a bounded project-principles artifact")
+    principles_sub = principles.add_subparsers(dest="principles_command", required=True)
+    principles_check = principles_sub.add_parser("check", aliases=["validate"])
+    principles_check.add_argument("--file", "--path", dest="principles_path", required=True)
+    principles_check.add_argument("--project-root", default=".")
+    principles_check.add_argument("--out")
 
 
 def _add_host_launch_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -804,6 +810,18 @@ def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     handoff.add_argument("--max-workstreams", type=int, default=12)
     handoff.add_argument("--target-tokens", type=int, default=4096)
     handoff.add_argument("--out")
+    delta = plan_sub.add_parser("delta", help="compare two explicit plan revisions")
+    delta.add_argument("--before", required=True)
+    delta.add_argument("--after", required=True)
+    delta.add_argument("--before-snapshot")
+    delta.add_argument("--after-snapshot")
+    delta.add_argument("--before-lock")
+    delta.add_argument("--after-lock")
+    delta.add_argument("--principles")
+    delta.add_argument("--out")
+    delta_check = plan_sub.add_parser("delta-check", aliases=["delta-validate"])
+    delta_check.add_argument("--delta", required=True)
+    delta_check.add_argument("--out")
 
 
 def _add_task_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

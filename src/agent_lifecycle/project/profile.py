@@ -39,6 +39,7 @@ _PROFILE_KEYS = {
     "defaultRisk",
     "policies",
     "stages",
+    "principles",
     "threadBridge",
     "productionPromotionClaimed",
 }
@@ -120,6 +121,10 @@ def normalize_project_profile(
     normalized = copy.deepcopy(profile)
     normalized.setdefault("policies", {})
     normalized.setdefault("stages", {})
+    if "principles" in normalized:
+        normalized["principles"] = _validate_principles_reference(
+            normalized["principles"], project_root=project_root
+        )
     normalized["threadBridge"] = normalize_thread_bridge_policy(normalized.get("threadBridge"))
     normalized.setdefault("productionPromotionClaimed", False)
     return normalized
@@ -151,6 +156,8 @@ def validate_project_profile(
     _require_enum(profile, "defaultRisk", PROJECT_PROFILE_RISKS)
     if profile.get("productionPromotionClaimed", False) is not False:
         raise LifecycleError("project-profile-production-claim", "project profile cannot claim production promotion")
+    if "principles" in profile:
+        _validate_principles_reference(profile["principles"], project_root=project_root)
 
     policies = profile.get("policies", {})
     if not isinstance(policies, dict):
@@ -257,6 +264,21 @@ def _validate_reference(value: Any, *, field: str, project_root: Path | None, al
             raise LifecycleError("project-profile-reference-escape", f"{field} escapes the project root", {"field": field})
         _reject_symlink_components(root, candidate, field=field)
     return normalized
+
+
+def _validate_principles_reference(value: Any, *, project_root: Path | None) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise LifecycleError("project-profile-principles-invalid", "principles must be an object")
+    if value.get("sourceOfTruth") is not False:
+        raise LifecycleError(
+            "project-profile-principles-authority",
+            "project principles cannot become the source of truth",
+        )
+    path = _validate_reference(value.get("path"), field="principles.path", project_root=project_root, allow_alk=False)
+    digest = value.get("digest")
+    if not isinstance(digest, str) or len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
+        raise LifecycleError("project-profile-principles-digest-invalid", "principles.digest must be a lowercase SHA-256 digest")
+    return {"path": path, "digest": digest, "sourceOfTruth": False}
 
 
 def _require_contained_file(path: Path, root: Path, *, label: str) -> None:

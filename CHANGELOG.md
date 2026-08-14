@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.73.0 - 2026-08-15
+
+- Added bounded, digest-bound project-principles artifacts that provide local
+  defaults and constraints without replacing the frozen plan and lock.
+- Added deterministic, read-only plan-delta reports for requirements, writes,
+  acceptance, evidence, budgets, risks, gates and documentation changes.
+- Added lineage checks that block package changes, non-increasing revisions,
+  snapshot drift and lock drift before a delta is accepted.
+- Added `project principles check`, `plan delta` and `plan delta-check` with
+  offline release validators and public JSON contracts.
+- Added English and Russian guidance for project governance and long-running
+  plan continuity.
+
 ## 1.72.0 - 2026-08-15
 
 - Added deterministic stratified sampling for the bundled reference-task suite,

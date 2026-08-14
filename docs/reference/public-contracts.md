@@ -60,6 +60,10 @@ Stable schema ids:
 - `agent-plan-completeness-profile.v1`
 - `agent-plan-completeness-profile-validation.v1`
 - `agent-plan-completeness-validation.v1`
+- `agent-project-principles.v1`
+- `agent-project-principles-validation.v1`
+- `agent-plan-delta.v1`
+- `agent-plan-delta-validation.v1`
 - `agent-implementation-audit-report.v1`
 - `agent-implementation-audit-report-validation.v1`
 - `agent-final-implementation-audit.v1`

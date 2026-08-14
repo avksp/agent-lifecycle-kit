@@ -91,6 +91,7 @@ agent-lifecycle start \
 | `defaultMode` и `defaultRisk` | Режим подготовки и уровень риска по умолчанию. |
 | `policies` | Относительные ссылки на существующие профили политики, маршрутизации, базовых ограничений, локальной модели и Review Mesh. |
 | `stages` | Настройки этапов `intake`, `research`, `planning`, `review`, `implementation`, `audit` и `finalization`. |
+| `principles` | Путь к принципам проекта, их отпечаток и `sourceOfTruth: false`; это контекст без полномочий на реализацию. |
 | `guidanceRef` | Ограниченная относительная ссылка на руководство хоста для одного этапа. |
 
 Настройки этапа могут выбрать существующий режим ALK, нейтральный класс модели,
@@ -108,20 +109,20 @@ agent-lifecycle start \
   "defaultMode": "auto",
   "defaultRisk": "S1",
   "policies": {
-    "modelRoutingProfile": "profiles/model-routing-profile.v1.json",
-    "reviewMeshProfile": "profiles/review-mesh-profile.v1.json"
+    "routingProfile": "profiles/model-routing-profile.v1.json",
+    "baselineProfile": "profiles/review-mesh-profile.v1.json"
   },
   "stages": {
     "research": {
       "modelClass": "standard-code",
-      "reviewMesh": "advisory",
+      "reviewMesh": "parallel-research-synthesis",
       "maxAttempts": 2,
       "maxWallSeconds": 1800,
       "guidanceRef": "docs/agent-research-guidance.md"
     },
     "implementation": {
       "risk": "S1",
-      "reviewMesh": "blocking",
+      "reviewMesh": "implementation-audit-panel",
       "maxAttempts": 3
     }
   },
@@ -190,3 +191,6 @@ agent-lifecycle start \
 инструкций остаётся обязанностью адаптера. Полное описание цикла и атомарных
 команд приведено в разделе [Настройка рабочего процесса и управления
 выполнением](workflow-customization.md) и [справочнике CLI](cli.md).
+
+Для долгосрочного контекста проекта и контролируемых изменений между версиями
+плана см. [принципы проекта и дельты плана](project-principles-and-plan-deltas.md).

@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.72.0
+  python -m pip install agent-lifecycle-kit==1.73.0
 ```
 
 ## Foundation
@@ -74,6 +74,13 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 The profile is a project-local defaults layer. A frozen plan and matching lock
 remain authoritative for risk, quality, write scope, gates and receipts. See
 [Project workflow profile](project-workflow-profile.md).
+
+Check a project-principles artifact with
+`agent-lifecycle project principles check --file <path>`. Compare two plan
+revisions with `agent-lifecycle plan delta --before <manifest> --after
+<manifest>` and validate the resulting report with `agent-lifecycle plan
+delta-check --delta <delta.json>`. Both paths are read-only and return stable
+JSON contracts.
 
 ## Execution
 

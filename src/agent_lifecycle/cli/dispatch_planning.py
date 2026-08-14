@@ -7,9 +7,14 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.compiler import compile_small_model_packets, compile_task_packets
-from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
+from agent_lifecycle.contracts import (
+    LifecycleError,
+    read_json_object,
+    write_json_create,
+)
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.planning import (
+    build_plan_delta,
     build_plan_snapshot,
     load_plan_completeness_profile,
     reconcile_plan_snapshot,
@@ -19,10 +24,14 @@ from agent_lifecycle.planning import (
     resolve_sdd_tier,
     validate_acceptance_checklist,
     validate_plan_completeness,
+    validate_plan_delta,
     validate_plan_manifest,
     validate_repository_references,
 )
-from agent_lifecycle.specification import build_completion_gate_receipt, validate_specification
+from agent_lifecycle.specification import (
+    build_completion_gate_receipt,
+    validate_specification,
+)
 
 
 def dispatch_planning(args: argparse.Namespace) -> dict[str, Any]:
@@ -131,6 +140,25 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
                 "plan handoff did not fit the requested limits",
                 {"handoff": payload},
             )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.plan_command == "delta":
+        read = lambda value, label: read_json_object(Path(value), label=label) if value else None
+        payload = build_plan_delta(
+            read(args.before, "before plan"),
+            read(args.after, "after plan"),
+            before_snapshot=read(args.before_snapshot, "before plan snapshot"),
+            after_snapshot=read(args.after_snapshot, "after plan snapshot"),
+            before_lock=read(args.before_lock, "before plan lock"),
+            after_lock=read(args.after_lock, "after plan lock"),
+            principles=read(args.principles, "project principles"),
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.plan_command in {"delta-check", "delta-validate"}:
+        payload = validate_plan_delta(read_json_object(Path(args.delta), label="plan delta"))
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
