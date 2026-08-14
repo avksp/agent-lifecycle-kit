@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.70.0
+  python -m pip install agent-lifecycle-kit==1.71.0
 ```
 
 ## Foundation
@@ -208,6 +208,21 @@ optimization](audit-optimization.md).
   host-owned reviewer packets, import redacted reviewer output, synthesize
   findings and build a quorum receipt. These commands do not call models or
   launch host CLIs.
+
+## Research evidence
+
+- `agent-lifecycle research validate --package <path> [--snapshot SOURCE_ID=PATH] --out <path>`:
+  validate a local `agent-research-evidence-package.v1`, bind citations to
+  explicit UTF-8 snapshots when supplied, inspect provenance and write a
+  fail-closed validation receipt.
+- `agent-lifecycle research summary --package <path> --validation <path> --out <path>`:
+  create a bounded summary with supported claims, evidence gaps, duplicate
+  groups and lifecycle counts.
+
+Research commands read only explicit local paths. They do not fetch URLs, call
+models or launch host processes. A research summary is planning input, not a
+specification, frozen plan or acceptance decision. See [research evidence](research-evidence.md)
+and the [research workflow](../guides/research-workflow.md).
 
 ## Context and continuity
 
