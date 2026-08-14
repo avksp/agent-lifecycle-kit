@@ -114,6 +114,7 @@ def popen_group_kwargs() -> dict[str, Any]:
     if os.name == "posix":
         return {"start_new_session": True}
     creation_flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    creation_flags |= getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0x01000000)
     return {"creationflags": creation_flags}
 
 

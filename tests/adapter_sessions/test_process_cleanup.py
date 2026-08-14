@@ -37,7 +37,7 @@ class ProcessCleanupTests(unittest.TestCase):
             adapter_id="fixture",
         )
 
-        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["status"], "PASS", result)
         self.assertEqual(result["processReceipt"]["cleanup"]["status"], "PASS")
 
 
