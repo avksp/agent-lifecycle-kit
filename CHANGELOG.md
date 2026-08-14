@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.71.0 - 2026-08-14
+
+- Added provider-neutral research evidence contracts for sources, claims,
+  citations, provenance, validation and bounded summaries.
+- Added local `research validate` and `research summary` commands with explicit
+  source snapshots, duplicate and derivative-source checks, lifecycle
+  boundaries and fail-closed content validation.
+- Added English and Russian guidance for preparing research evidence before it
+  is used as input to a reviewed plan.
+
 ## 1.70.0 - 2026-08-14
 
 - Added privacy-preserving audit samples derived from existing review, usage and
