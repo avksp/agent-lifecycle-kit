@@ -47,6 +47,32 @@ Small models should receive compact snapshots and receipts first:
 These compact artifacts guide execution. They do not replace full evidence for
 final review.
 
+## Process execution observability
+
+Every ALK-bounded host invocation produces a redacted
+`agent-process-execution-receipt.v1`. It contains:
+
+- monotonic elapsed time;
+- CPU time, peak memory and process-count metrics when the host can attest
+  them, otherwise `ESTIMATED` or `UNAVAILABLE`;
+- timeout and cancellation state;
+- bounded retry information; and
+- the result of process-group cleanup.
+
+Build a local summary from one or more receipts:
+
+```bash
+agent-lifecycle metrics execution-report \
+  --receipt work/evidence/process-receipt.json \
+  --out work/evidence/execution-resource-report.json
+```
+
+Repeat `--receipt` for several invocations. A failed or unverifiable cleanup
+marks the report `BLOCKED`; ALK does not hide it with another retry. The
+receipt and report keep command arguments, environment, secrets and host
+output out of stored artifacts. See [process execution observability](../reference/process-execution-observability.md)
+for the contract and platform behavior.
+
 ## External context
 
 External memory exports are optional hints, not authority:

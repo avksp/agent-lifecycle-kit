@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.68.0
+  python -m pip install agent-lifecycle-kit==1.69.0
 ```
 
 ## Foundation
@@ -165,6 +165,10 @@ remain authoritative for risk, quality, write scope, gates and receipts. See
 - `agent-lifecycle metrics usage-export`: export sessions, receipt digests,
   tokens, resources, durations, budget decisions, and optional host-reported
   `cost_usd` from explicit JSON artifact paths.
+- `agent-lifecycle metrics execution-report --receipt <path> --out <path>`:
+  aggregate redacted process-execution receipts into a local resource report.
+  Repeat `--receipt` for several invocations; add `--operation-id` to bind the
+  report to one operation.
 - `agent-lifecycle metrics recommend`: suggest the lightest lifecycle mode that
   preserves the required quality floor.
 - `agent-lifecycle metrics outcome-index/quality-signals/learn-recommend`:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 from dataclasses import dataclass, replace
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex
+from agent_lifecycle.adapter_sessions.process import run_process
 from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest
 from tools.live_hosts.common import (
     BudgetPolicy,
@@ -160,6 +162,7 @@ def run_live_host_receipt(
         live_calls_started = True
         transcript = write_invocation_diagnostic(diagnostic_dir, operation_name, invocation_id, result, diagnostic_schema)
         checks.append({"name": f"{host}-live-{operation_name}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": display_path(transcript)}})
+        record_process_receipt_status(result, blockers, checks, f"{host}-process-{operation_name}")
         record_post_invocation_cleanliness(checks, blockers, worktree, clean_worktree_checker, f"{host}-post-live-{operation_name}", host)
         if blockers:
             break
@@ -171,7 +174,7 @@ def run_live_host_receipt(
         except HarnessError as error:
             blockers.append({"code": error.code, "message": error.message})
             break
-        live_operations.append(build_live_operation_record(host=host, name=operation_name, invocation_id=invocation_id, usage=usage, output_identity=file_identity(transcript)))
+        live_operations.append(build_live_operation_record(host=host, name=operation_name, invocation_id=invocation_id, usage=usage, output_identity=file_identity(transcript), process_receipt=result.process_receipt))
 
     if not blockers and set(operation["name"] for operation in live_operations) != set(operations):
         blockers.append({"code": "live-host-operation-missing", "message": "not all baseline operations were executed"})
@@ -260,6 +263,7 @@ def run_live_calibration(
                 live_calls_started = True
                 transcript = write_invocation_diagnostic(diagnostic_dir, f"{scenario}-{cohort}-{run_index:02d}", invocation_id, result, diagnostic_schema)
                 checks.append({"name": f"{host}-calibration-{scenario}-{cohort}-{run_index:02d}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": display_path(transcript)}})
+                record_process_receipt_status(result, blockers, checks, f"{host}-process-{scenario}-{cohort}-{run_index:02d}")
                 record_post_invocation_cleanliness(checks, blockers, worktree, clean_worktree_checker, f"{host}-post-calibration-{scenario}-{cohort}-{run_index:02d}", host)
                 if blockers:
                     break
@@ -319,10 +323,19 @@ def build_fixture_operations(host: str, baseline: dict[str, Any]) -> list[dict[s
     return operations
 
 
-def build_live_operation_record(*, host: str, name: str, invocation_id: str, usage: JsonCliUsage, output_identity: dict[str, Any]) -> dict[str, Any]:
+def build_live_operation_record(*, host: str, name: str, invocation_id: str, usage: JsonCliUsage, output_identity: dict[str, Any], process_receipt: dict[str, Any] | None = None) -> dict[str, Any]:
     request = HostOperationRequest(operation_id=invocation_id, capability=name, inputs={"host": host}, outputs=[output_identity], constraints={"usageReceiptRequired": True, "syntheticReplayForbidden": True})
     receipt = HostOperationReceipt(operation_id=invocation_id, capability=name, status="PASS", outputs=[output_identity], usage=usage.to_receipt_usage())
-    return {"name": name, "status": "PASS", "syntheticReplayUsed": False, "hostOperationRequest": request.to_json(), "hostOperationReceipt": receipt.to_json()}
+    operation = {"name": name, "status": "PASS", "syntheticReplayUsed": False, "hostOperationRequest": request.to_json(), "hostOperationReceipt": receipt.to_json()}
+    if isinstance(process_receipt, dict):
+        operation["processExecutionReceipt"] = {
+            "receiptDigest": process_receipt.get("receiptDigest"),
+            "status": process_receipt.get("status"),
+            "cleanup": process_receipt.get("cleanup", {}),
+            "timing": process_receipt.get("timing", {}),
+            "resources": process_receipt.get("resources", {}),
+        }
+    return operation
 
 
 def parse_json_objects(text: str) -> list[dict[str, Any]]:
@@ -479,16 +492,22 @@ def check_clean_worktree(worktree: Path) -> dict[str, Any]:
 
 def run_command_capture(command: list[str], *, cwd: Path | None = None, timeout_seconds: float | None = None, env: dict[str, str] | None = None) -> CommandResult:
     started = time.monotonic()
-    try:
-        result = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout_seconds, check=False)
-    except subprocess.TimeoutExpired as error:
-        return CommandResult(
-            returncode=124,
-            stdout=error.stdout if isinstance(error.stdout, str) else "",
-            stderr=error.stderr if isinstance(error.stderr, str) else f"timed out after {timeout_seconds} seconds",
-            wall_seconds=round(time.monotonic() - started, 3),
-        )
-    return CommandResult(returncode=result.returncode, stdout=result.stdout, stderr=result.stderr, wall_seconds=round(time.monotonic() - started, 3))
+    result = run_process(
+        command,
+        cwd=cwd,
+        env=env or dict(os.environ),
+        timeout_seconds=timeout_seconds if timeout_seconds is not None else 600.0,
+        max_output_bytes=262_144,
+        operation_id=f"live-host-{canonical_digest({'command': command})[:16]}",
+        attempt_id="live-attempt-1",
+    )
+    return CommandResult(
+        returncode=result.get("exitCode") if isinstance(result.get("exitCode"), int) else 124,
+        stdout=str(result.get("stdout", "")),
+        stderr=str(result.get("stderr", "")),
+        wall_seconds=round(time.monotonic() - started, 3),
+        process_receipt=result.get("processReceipt") if isinstance(result.get("processReceipt"), dict) else None,
+    )
 
 
 def required_operations(baseline: dict[str, Any]) -> list[str]:
@@ -628,7 +647,8 @@ def run_command(command: list[str], checks: list[dict[str, Any]], name: str, *, 
 
 def write_invocation_diagnostic(diagnostic_dir: Path, operation_name: str, invocation_id: str, result: CommandResult, schema_version: str) -> Path:
     path = diagnostic_dir / f"{operation_name}.json"
-    write_json(path, {"schemaVersion": schema_version, "operation": operation_name, "invocationId": invocation_id, "returncode": result.returncode, "stdoutSha256": sha256_hex(result.stdout.encode("utf-8")), "stderrSha256": sha256_hex(result.stderr.encode("utf-8")), "stdoutBytes": len(result.stdout.encode("utf-8")), "stderrBytes": len(result.stderr.encode("utf-8")), "wallSeconds": result.wall_seconds})
+    process = result.process_receipt or {}
+    write_json(path, {"schemaVersion": schema_version, "operation": operation_name, "invocationId": invocation_id, "returncode": result.returncode, "stdoutSha256": sha256_hex(result.stdout.encode("utf-8")), "stderrSha256": sha256_hex(result.stderr.encode("utf-8")), "stdoutBytes": len(result.stdout.encode("utf-8")), "stderrBytes": len(result.stderr.encode("utf-8")), "wallSeconds": result.wall_seconds, "processExecution": {"receiptDigest": process.get("receiptDigest"), "status": process.get("status"), "cleanup": process.get("cleanup", {}), "timing": process.get("timing", {}), "resources": process.get("resources", {})} if process else None})
     return path
 
 
@@ -649,6 +669,17 @@ def record_post_invocation_cleanliness(checks: list[dict[str, Any]], blockers: l
     checks.append({"name": name, "status": "PASS" if clean.get("clean") else "FAIL", "details": clean})
     if not clean.get("clean"):
         blockers.append({"code": "BLOCKED_WORKTREE_MUTATED", "message": f"{host} live invocation left the worktree dirty"})
+
+
+def record_process_receipt_status(result: CommandResult, blockers: list[dict[str, Any]], checks: list[dict[str, Any]], name: str) -> None:
+    receipt = result.process_receipt
+    if not isinstance(receipt, dict):
+        checks.append({"name": name, "status": "UNAVAILABLE", "details": {"reason": "process-receipt-not-provided"}})
+        return
+    status = receipt.get("status")
+    checks.append({"name": name, "status": "PASS" if status == "PASS" else "FAIL", "details": {"receiptDigest": receipt.get("receiptDigest"), "cleanup": receipt.get("cleanup", {})}})
+    if status != "PASS":
+        blockers.append({"code": "BLOCKED_PROCESS_EXECUTION_RECEIPT", "receiptDigest": receipt.get("receiptDigest"), "status": status})
 
 
 def write_optional_model_selection(model_selection: HostModelSelection | None, model_selection_receipt_path: Path | None) -> dict[str, Any] | None:

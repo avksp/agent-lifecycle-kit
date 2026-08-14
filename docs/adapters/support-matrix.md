@@ -32,8 +32,8 @@ Plugins package](../reference/agent-plugins.md) and [Plugin publication](../refe
 
 ## Agent Plugins client qualification
 
-Release 1.68 adds data-only qualification profiles for Codex, Claude Code and
-Cursor. After a client-owned installation, `agent-lifecycle adapter
+The project provides data-only qualification profiles for Codex, Claude Code
+and Cursor. After a client-owned installation, `agent-lifecycle adapter
 plugin-qualify` performs two bounded, read-only discovery commands and returns
 `QUALIFIED`, `BLOCKED` or `UNAVAILABLE`. The offline package check returns
 `OFFLINE_VALIDATED`. These receipts describe package discovery for the named
@@ -54,6 +54,12 @@ adapters declare `managedLaunch.status: WRAPPER_ONLY`: lifecycle proof is bound
 through managed commands or wrappers. Verified local profiles provide the
 managed launch route for accepted frozen-task evidence. See [Managed adapter
 session support](managed-session-support.md).
+
+Every bounded managed invocation also produces a redacted
+`agent-process-execution-receipt.v1` with monotonic duration, available CPU,
+memory and process metrics, timeout/cancellation state and cleanup status. Use
+[process execution observability](../reference/process-execution-observability.md)
+to aggregate those receipts without storing host output.
 
 An operator may separately opt into the validated local profile route under
 `.alk/host-launch/`. That route uses frozen and risk bindings and produces a

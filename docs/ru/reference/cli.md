@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.68.0
+python -m pip install agent-lifecycle-kit==1.69.0
 ```
 
 ## Основа
@@ -171,6 +171,10 @@ lock-файл остаются источником полномочий для 
 - `agent-lifecycle metrics usage-export`: экспорт сессий, отпечатков
   подтверждений, токенов, ресурсов, длительности, решений по бюджету и
   необязательного `cost_usd`, если его сообщает тарифицируемый хост.
+- `agent-lifecycle metrics execution-report --receipt <path> --out <path>`:
+  объединяет обезличенные квитанции выполнения процессов в локальный отчёт о
+  ресурсах. Для нескольких запусков повторите `--receipt`; флаг
+  `--operation-id` связывает отчёт с одной операцией.
 - `agent-lifecycle policy`: адаптивные решения, артефакты правил запуска и
   рекомендательные предложения по настройке правил.
 - `agent-lifecycle review-mesh profile`: создаёт профиль групповой проверки с
