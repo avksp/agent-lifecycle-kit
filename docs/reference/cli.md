@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.73.0
+  python -m pip install agent-lifecycle-kit==1.74.0
 ```
 
 ## Foundation
@@ -74,6 +74,28 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 The profile is a project-local defaults layer. A frozen plan and matching lock
 remain authoritative for risk, quality, write scope, gates and receipts. See
 [Project workflow profile](project-workflow-profile.md).
+
+## Workflow presets
+
+Use the built-in workflow presets as bounded defaults for a common route:
+
+```bash
+agent-lifecycle project preset list
+agent-lifecycle project preset inspect --preset feature-implementation
+agent-lifecycle project preset validate --preset feature-implementation
+agent-lifecycle project preset render \
+  --preset research-review \
+  --adapter <adapter-id> \
+  --out .alk/project-profile.json
+```
+
+`project preset` commands read local versioned data, return stable JSON and do
+not call a model or start a host. `render` writes only to the explicit output
+path and never overwrites an existing file. For a one-off task, use
+`start --preset <preset-id>` without creating a profile. Preset values are
+defaults below explicit command-line and project-profile values; a frozen plan
+can raise requirements but a preset cannot lower them. See [Workflow
+presets](workflow-presets.md).
 
 Check a project-principles artifact with
 `agent-lifecycle project principles check --file <path>`. Compare two plan

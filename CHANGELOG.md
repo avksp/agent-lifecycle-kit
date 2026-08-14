@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 1.74.0 - 2026-08-15
+
+- Added three optional provider-neutral workflow presets for quick changes,
+  research review and feature implementation.
+- Added deterministic `project preset list`, `inspect`, `validate` and `render`
+  commands with stable contracts and write-once local profile output.
+- Added `start --preset` for one-off guided task intake without implicit host
+  launch or model selection.
+- Reused project-profile merge, frozen-plan authority, risk limits and Review
+  Mesh mode identifiers instead of introducing a second workflow controller or
+  quality policy.
+- Added English and Russian documentation for preset selection, precedence,
+  stage limits and advanced atomic control.
+
 ## 1.73.0 - 2026-08-15
 
 - Added bounded, digest-bound project-principles artifacts that provide local

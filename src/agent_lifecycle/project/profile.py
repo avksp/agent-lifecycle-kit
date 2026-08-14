@@ -7,7 +7,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object
-from agent_lifecycle.contracts.paths import MAX_REPO_PATH_BYTES, normalize_repo_path
+from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.project_profile_schemas import (
     PROFILE_POLICY_KEYS,
     PROJECT_PROFILE_MODEL_CLASSES,
@@ -30,6 +30,7 @@ MAX_POLICY_REFERENCES = 8
 MAX_STAGE_SETTINGS = 32
 MAX_PROFILE_ID_BYTES = 128
 PROJECT_PROFILE_RELATIVE_PATH = ".alk/project-profile.json"
+PROFILE_DEFAULTABLE_FIELDS = ("defaultAdapter", "defaultMode", "defaultRisk")
 
 _PROFILE_KEYS = {
     "schemaVersion",
@@ -107,6 +108,17 @@ def build_default_project_profile() -> dict[str, Any]:
         "threadBridge": build_default_thread_bridge_policy(),
         "productionPromotionClaimed": False,
     }
+
+
+def profile_field_is_explicit(profile: dict[str, Any], field: str) -> bool:
+    """Return whether a profile field should override a preset default."""
+
+    if field not in PROFILE_DEFAULTABLE_FIELDS:
+        raise LifecycleError("project-profile-field-unsupported", "field is not preset-defaultable", {"field": field})
+    value = profile.get(field)
+    if field == "defaultAdapter":
+        return value is not None
+    return value != "auto"
 
 
 def normalize_project_profile(

@@ -15,7 +15,12 @@ from agent_lifecycle.project import (
     PROJECT_PROFILE_RELATIVE_PATH,
     build_default_project_profile,
     build_effective_project_profile,
+    inspect_project_preset,
+    list_project_presets,
+    load_project_preset,
     load_project_profile,
+    render_project_preset,
+    validate_project_preset,
     validate_project_principles,
 )
 
@@ -25,6 +30,8 @@ def dispatch_project(args: argparse.Namespace) -> dict[str, Any]:
         if args.principles_command not in {"check", "validate"}:
             raise LifecycleError("command-not-implemented", "project principles command is not implemented")
         return _check_principles(args)
+    if args.project_command == "preset":
+        return _dispatch_preset(args)
     if args.project_command != "profile":
         raise LifecycleError("command-not-implemented", "project command is not implemented")
     if args.profile_command == "init":
@@ -120,6 +127,30 @@ def _check_principles(args: argparse.Namespace) -> dict[str, Any]:
     if args.out:
         write_json_create(Path(args.out), result)
     return result
+
+
+def _dispatch_preset(args: argparse.Namespace) -> dict[str, Any]:
+    root = Path(getattr(args, "project_root", ".")).resolve()
+    if args.preset_command == "list":
+        return list_project_presets(project_root=root)
+    if args.preset_command == "inspect":
+        return inspect_project_preset(args.preset, project_root=root)
+    if args.preset_command == "validate":
+        preset = load_project_preset(args.preset, project_root=root)
+        return validate_project_preset(preset)
+    if args.preset_command == "render":
+        output = Path(args.out)
+        if not output.is_absolute():
+            output = root / output
+        _ensure_output_contained(output, root)
+        return render_project_preset(
+            args.preset,
+            output_path=output,
+            project_root=root,
+            profile_id=args.profile_id,
+            default_adapter=args.adapter,
+        )
+    raise LifecycleError("command-not-implemented", "project preset command is not implemented")
 
 
 def _ensure_output_contained(path: Path, root: Path) -> None:
