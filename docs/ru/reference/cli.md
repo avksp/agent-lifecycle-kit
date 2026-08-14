@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.67.0
+python -m pip install agent-lifecycle-kit==1.68.0
 ```
 
 ## Основа
@@ -198,6 +198,11 @@ lock-файл остаются источником полномочий для 
 
 - `agent-lifecycle adapter validate`: проверка дескриптора.
 - `agent-lifecycle adapter inspect`: безопасный осмотр адаптера.
+- `agent-lifecycle adapter plugin-qualify --adapter codex|claude|cursor
+  --profile <путь> --package <путь> --project-root <путь>`: явная ограниченная
+  проверка обнаружения Agent Plugins в клиенте и создание квалификационной
+  квитанции. Установка остаётся ответственностью клиента; статус `QUALIFIED`
+  не доказывает выполнение жизненного цикла или управляемый запуск.
 - `agent-lifecycle adapter install-plan`: пробный план установки без записи.
 - `agent-lifecycle adapter event-check`: проверка нейтрального потока событий
   адаптера.

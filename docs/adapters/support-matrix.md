@@ -30,6 +30,16 @@ package makes skills available, while lifecycle proof still comes from the
 reviewed plan, state, evidence, audits and final proof. See [Portable Agent
 Plugins package](../reference/agent-plugins.md) and [Plugin publication](../reference/plugin-publication.md).
 
+## Agent Plugins client qualification
+
+Release 1.68 adds data-only qualification profiles for Codex, Claude Code and
+Cursor. After a client-owned installation, `agent-lifecycle adapter
+plugin-qualify` performs two bounded, read-only discovery commands and returns
+`QUALIFIED`, `BLOCKED` or `UNAVAILABLE`. The offline package check returns
+`OFFLINE_VALIDATED`. These receipts describe package discovery for the named
+client; they do not change the adapter support level, `managedLaunch.status` or
+ALK lifecycle proof. See [Agent Plugins client qualification](../reference/agent-plugin-qualification.md).
+
 For the operational difference between loading ALK inside a host and running
 the controller from the project terminal, see [Using ALK with an
 adapter](usage-modes.md).
