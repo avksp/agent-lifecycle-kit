@@ -57,7 +57,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
   deterministic checks for local or cheaper models.
 - Quality without overengineering: one provider-neutral execution strategy
   composes risk, model class, packet size, review and resource limits.
-- Usage visibility: tokens, time, resource counters and redacted process receipts are native; monetary cost is optional and only used when a metered host reports it.
+- Usage visibility: tokens, time, resource counters and structured execution records without sensitive data are native; monetary cost is optional and only used when a metered host reports it.
 - Project-specific workflow settings: ALK can discover and validate uncommitted local defaults for a repository while the frozen plan remains authoritative.
 - Read-only progress and managed sessions: host UIs can show lifecycle state,
   attested tokens and Git-style change counters; `start` accepts task text,
