@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.69.0 - 2026-08-14
+
+- Added redacted process-execution receipts with operation and attempt lineage,
+  monotonic wall time, honest CPU/memory/process availability and bounded
+  cleanup evidence.
+- Added shell-free POSIX process-session and Windows job-object handling for
+  timeout, cancellation and descendant cleanup.
+- Added local execution-resource reports, bounded retry decisions and JSON
+  host-harness integration without a background collector or model call.
+- Added English and Russian guidance for diagnosing slow audits, unavailable
+  measurements and cleanup blockers.
+
 ## 1.68.0 - 2026-08-14
 
 - Added digest-bound Agent Plugins qualification profiles for Codex, Claude

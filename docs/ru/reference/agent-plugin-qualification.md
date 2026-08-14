@@ -27,16 +27,16 @@ ALK публикует переносимый пакет Agent Plugins с сем
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/build_agent_plugin.py \
   --root . \
-  --version 1.68.0 \
-  --out work/release-1-68/agent-plugin \
-  --archive work/release-1-68/agent-lifecycle-kit-agent-plugin-v1.68.0.zip
+  --version 1.69.0 \
+  --out work/release-1-69/agent-plugin \
+  --archive work/release-1-69/agent-lifecycle-kit-agent-plugin-v1.69.0.zip
 
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 \
   tools/release/validate_agent_plugin_qualification.py \
-  --package work/release-1-68/agent-plugin \
+  --package work/release-1-69/agent-plugin \
   --profile adapters/codex/agent_plugin_profile.json \
-  --version 1.68.0 \
-  --evidence work/release-1-68/evidence/offline.json
+  --version 1.69.0 \
+  --evidence work/release-1-69/evidence/offline.json
 ```
 
 В этом режиме не запускаются процессы клиента и не выполняются вызовы модели
@@ -52,9 +52,9 @@ ALK с профилем этого клиента:
 agent-lifecycle adapter plugin-qualify \
   --adapter codex \
   --profile adapters/codex/agent_plugin_profile.json \
-  --package work/release-1-68/agent-plugin \
+  --package work/release-1-69/agent-plugin \
   --project-root . \
-  --out work/release-1-68/evidence/codex-qualification.json
+  --out work/release-1-69/evidence/codex-qualification.json
 ```
 
 Проверка выполняет только команды версии и справки, указанные в профиле. Для
@@ -88,7 +88,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 \
   --profiles adapters/codex/agent_plugin_profile.json \
              adapters/claude/agent_plugin_profile.json \
              adapters/cursor/agent_plugin_profile.json \
-  --evidence work/release-1-68/evidence/profiles.json
+  --evidence work/release-1-69/evidence/profiles.json
 ```
 
 Профили не могут изменять уровень зрелости адаптера или значение
@@ -101,6 +101,5 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 \
 Профиль и квитанция проверки являются отдельными версиями контрактов, которые
 непосредственно проверяют команды квалификации. Они намеренно отделены от
 общего каталога контрактов жизненного цикла.
-В релизе 1.68 поставляемые профили используют только режим наблюдения. Для
-закрытого диапазона версий потребуется отдельная реализованная и проверенная
-политика.
+Поставляемые профили используют режим наблюдения. Для закрытого диапазона
+версий потребуется отдельная реализованная и проверенная политика.

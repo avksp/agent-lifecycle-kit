@@ -29,6 +29,7 @@ class CommandResult:
     stdout: str
     stderr: str
     wall_seconds: float
+    process_receipt: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
