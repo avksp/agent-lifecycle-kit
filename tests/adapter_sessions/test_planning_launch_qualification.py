@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,10 +18,9 @@ class PlanningLaunchQualificationTests(unittest.TestCase):
             root = Path(tmp)
             path = root / ".alk/host-launch/codex.json"
             path.parent.mkdir(parents=True)
-            path.write_text(
-                json.dumps(load_shipped_launch_profile("codex", repository_root=ROOT)),
-                encoding="utf-8",
-            )
+            profile = load_shipped_launch_profile("codex", repository_root=ROOT)
+            profile["executable"] = sys.executable
+            path.write_text(json.dumps(profile), encoding="utf-8")
             receipt = launch_from_local_profile(
                 profile_path=path,
                 operation="planningTask",
@@ -30,6 +30,7 @@ class PlanningLaunchQualificationTests(unittest.TestCase):
                 explicit_launch=True,
                 requested_mode="plan",
                 task_text="inspect only",
+                process_env={"HOME": str(root), "PATH": str(Path(sys.executable).parent)},
             )
 
         self.assertEqual(receipt["status"], "BLOCKED")

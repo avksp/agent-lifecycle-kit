@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "agent-plan-lock.v2",
+  "packageId": "canonical-v2-plan-package",
+  "planRevision": 2,
+  "manifestHash": "56a93b7799f624a81122f38a0f062a56caf71d7fb7d4570284112c44a61bf60d",
+  "planFilesHash": "223da74dafcd6025df471fe1756472334ac1bfd9a03c8b207a9433868551dbe2",
+  "entries": [
+    {
+      "path": "tests/freeze/fixtures/canonical-v2-plan-package/plan.manifest.json",
+      "bytes": 896,
+      "sha256": "3fafebedc26d5b453a5e25fb7abbfc7f502a16684eb043888bcc024709dc2c2c"
+    },
+    {
+      "path": "tests/freeze/fixtures/canonical-v2-plan-package/plan.md",
+      "bytes": 62,
+      "sha256": "18068643e29e8de125cb43ca883c5b746ff3b5e87e3c8e94fe0c87dc51383d0c"
+    }
+  ]
+}

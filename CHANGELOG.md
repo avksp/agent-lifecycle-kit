@@ -4,6 +4,21 @@
 
 - No changes yet.
 
+## 1.75.0 - 2026-08-21
+
+- Hardened neutrality proof by binding signatures to claims, operation and the
+  primary artifact identity.
+- Prevented Git revision arguments from turning read-only reports into writes
+  and rejected repository evidence paths that escape through symlinks.
+- Added digest-bound local executable identity and expanded shared redaction for
+  common standalone token formats.
+- Made bounded JSON handling, private artifact permissions and Ed25519 decoding
+  fail closed.
+- Bound the complete authoritative plan package to its lock before audit or
+  execution and verified full test discovery in CI.
+- Hardened GitHub and PyPI publication controls while retaining the existing
+  Trusted Publisher configuration.
+
 ## 1.74.0 - 2026-08-15
 
 - Added three optional provider-neutral workflow presets for quick changes,

@@ -10,6 +10,7 @@ from unittest.mock import patch
 from agent_lifecycle.adapter_sessions.launcher import launch_from_descriptor, launch_from_local_profile
 from agent_lifecycle.adapter_sessions.process import run_process
 from agent_lifecycle.adapter_sessions.redaction import redact_process_text
+from agent_lifecycle.adapter_sessions.qualification import load_shipped_launch_profile
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.policy.risk_execution import derive_risk_execution_profile
 
@@ -180,6 +181,76 @@ class SecureAdapterLauncherTests(unittest.TestCase):
                 self.assertFalse(receipt["hostLaunchStarted"])
                 run_process.assert_not_called()
 
+    def test_local_profile_launch_blocks_tampered_qualification_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            profile = load_shipped_launch_profile("codex", repository_root=ROOT)
+            profile["executable"] = sys.executable
+            profile_path = root / ".alk/host-launch/codex.json"
+            profile_path.parent.mkdir(parents=True)
+            profile_path.write_text(json.dumps(profile), encoding="utf-8")
+            expected_version = profile["qualification"]["expectedVersion"]
+            probe = {
+                "status": "PASS",
+                "exitCode": 0,
+                "timedOut": False,
+                "stdoutTail": f"codex-cli {expected_version}",
+                "stdoutRedacted": False,
+                "stderrTail": "",
+                "stderrRedacted": False,
+                "blockers": [],
+            }
+            with patch(
+                "agent_lifecycle.adapter_sessions.launcher.run_process",
+                return_value=probe,
+            ):
+                preflight = launch_from_local_profile(
+                    profile_path=profile_path,
+                    project_root=root,
+                    operation="preflight",
+                    process_env={"PATH": "/usr/bin", "HOME": "/tmp"},
+                )
+
+            self.assertEqual(preflight["status"], "PASS")
+            receipt_path = root / ".alk/host-launch" / profile["qualification"]["receiptFile"]
+            qualification = json.loads(receipt_path.read_text(encoding="utf-8"))
+            qualification["executableIdentity"]["executableContentSha256"] = "0" * 64
+            qualification["receiptDigest"] = canonical_digest(
+                {key: value for key, value in qualification.items() if key != "receiptDigest"}
+            )
+            receipt_path.write_text(json.dumps(qualification), encoding="utf-8")
+
+            manifest = _manifest()
+            state = _state(manifest)
+            manifest_path, state_path, lock_path = _write_launch_context(
+                root,
+                manifest=manifest,
+                state=state,
+                lock_hash=canonical_digest(manifest),
+            )
+            risk_profile = _risk_profile(manifest, state)
+            with patch("agent_lifecycle.adapter_sessions.launcher.run_process") as run_process:
+                managed = launch_from_local_profile(
+                    profile_path=profile_path,
+                    project_root=root,
+                    operation="managedTask",
+                    adapter_id="codex",
+                    session_id="session-identity-tamper",
+                    explicit_launch=True,
+                    state_path=state_path,
+                    manifest_path=manifest_path,
+                    lock_path=lock_path,
+                    task_id="WS-01",
+                    operation_id="route-op",
+                    source_revision="source",
+                    risk_profile=risk_profile,
+                    process_env={"PATH": "/usr/bin", "HOME": "/tmp"},
+                )
+
+        self.assertEqual(managed["status"], "BLOCKED")
+        self.assertIn("qualified-launch-executable-identity-mismatch", {item["code"] for item in managed["blockers"]})
+        run_process.assert_not_called()
+
     def test_process_start_failure_is_a_redacted_structured_result(self) -> None:
         result = run_process(
             ["definitely-not-an-installed-alk-test-command"],
@@ -220,6 +291,7 @@ def _write_local_profile(root: Path) -> Path:
     profile = json.loads(
         (ROOT / "tests/adapter_sessions/fixtures/local_launch_profiles/valid.json").read_text(encoding="utf-8")
     )
+    profile["executable"] = sys.executable
     profile["argvTemplate"] = ["--state", "{state_path}", "--task", "{task_id}"]
     path = root / ".alk/host-launch/codex.json"
     path.parent.mkdir(parents=True)

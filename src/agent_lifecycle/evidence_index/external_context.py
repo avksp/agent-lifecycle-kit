@@ -9,6 +9,12 @@ from typing import Any
 
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex
+from agent_lifecycle.contracts.redaction import (
+    LOCAL_PATH_REDACTION,
+    contains_local_absolute_path,
+    redact_text,
+    redact_text_with_stats,
+)
 
 EXTERNAL_CONTEXT_RECEIPT_SCHEMA = "agent-external-context-import-receipt.v1"
 EXTERNAL_CONTEXT_VALIDATION_SCHEMA = "agent-external-context-import-validation.v1"
@@ -16,15 +22,6 @@ EXTERNAL_CONTEXT_VALIDATION_SCHEMA = "agent-external-context-import-validation.v
 DEFAULT_MAX_INPUT_BYTES = 32768
 DEFAULT_TARGET_TOKENS = 2048
 DEFAULT_MAX_HINT_CHARS = 1400
-
-_SECRET_PATTERNS = (
-    re.compile(r"\b[A-Z][A-Z0-9_]{2,}_(?:API_)?KEY\s*=\s*[^\s]+"),
-    re.compile(r"\b(?:api[_-]?key|token|secret|password)\s*[:=]\s*[^\s,;]+", re.IGNORECASE),
-    re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"),
-    re.compile(r"BEGIN [A-Z ]*PRIVATE KEY"),
-)
-_LOCAL_PATH_PATTERN = re.compile(r"(?<![A-Za-z0-9_])(?:/Volumes|/Users|/private|/var/folders)/[^\s\"'`]+")
-
 
 def build_external_context_import_receipt(
     source_path: Path,
@@ -157,7 +154,7 @@ def validate_external_context_import_receipt(receipt: dict[str, Any]) -> dict[st
     rendered = json.dumps(receipt, ensure_ascii=False, sort_keys=True)
     if _contains_secret_like(rendered):
         blockers.append({"code": "external-context-secret-leakage"})
-    if _LOCAL_PATH_PATTERN.search(rendered):
+    if contains_local_absolute_path(rendered):
         blockers.append({"code": "external-context-private-path-leakage"})
     expected_digest = canonical_digest({key: value for key, value in receipt.items() if key != "receiptDigest"})
     if receipt.get("receiptDigest") != expected_digest:
@@ -214,12 +211,10 @@ def _decode_context_text(data: bytes) -> str:
 
 def _sanitize_text(text: str, *, max_chars: int) -> tuple[str, dict[str, Any]]:
     redaction = _empty_redaction()
-    sanitized = text
-    for pattern in _SECRET_PATTERNS:
-        sanitized, count = pattern.subn("[REDACTED]", sanitized)
-        redaction["secretLikeMarkersRedacted"] += count
-    sanitized, path_count = _LOCAL_PATH_PATTERN.subn("[LOCAL_PATH]", sanitized)
-    redaction["localPathsRedacted"] += path_count
+    sanitized, _changed, stats = redact_text_with_stats(text)
+    sanitized = sanitized.replace(LOCAL_PATH_REDACTION, "[LOCAL_PATH]").replace("<redacted>", "[REDACTED]")
+    redaction["localPathsRedacted"] = stats["localPathsRedacted"]
+    redaction["secretLikeMarkersRedacted"] = stats["secretLikeMarkersRedacted"]
     sanitized = re.sub(r"\s+", " ", sanitized).strip()
     if len(sanitized) > max_chars:
         sanitized = sanitized[:max_chars].rstrip()
@@ -262,7 +257,8 @@ def _validate_hint(hint: Any, index: int, blockers: list[dict[str, Any]]) -> Non
 
 
 def _contains_secret_like(value: str) -> bool:
-    return any(pattern.search(value) for pattern in _SECRET_PATTERNS)
+    sanitized, changed = redact_text(value)
+    return changed and sanitized != value
 
 
 def _positive_int(value: int, field: str) -> None:
@@ -272,5 +268,6 @@ def _positive_int(value: int, field: str) -> None:
 
 def _safe_label(value: str) -> str:
     label = re.sub(r"\s+", " ", value.strip())
-    label = _LOCAL_PATH_PATTERN.sub("[LOCAL_PATH]", label)
+    label, _changed, _stats = redact_text_with_stats(label)
+    label = label.replace(LOCAL_PATH_REDACTION, "[LOCAL_PATH]").replace("<redacted>", "[REDACTED]")
     return label[:120] or "external-context"

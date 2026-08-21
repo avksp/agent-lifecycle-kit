@@ -59,3 +59,5 @@ class NeutralityReceiptValidatorTests(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("neutrality-completeness-gate-missing", {item["code"] for item in payload["blockers"]})
+        self.assertIn("neutrality-authority-source-missing", {item["code"] for item in payload["blockers"]})
+        self.assertIn("neutrality-v4-schema-missing", {item["code"] for item in payload["blockers"]})

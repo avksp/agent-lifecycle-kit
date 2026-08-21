@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import tomllib
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+TARGET_VERSION = tomllib.loads(
+    (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+)["project"]["version"]
 
 
 class AgentPluginDocumentationTests(unittest.TestCase):
@@ -20,7 +24,7 @@ class AgentPluginDocumentationTests(unittest.TestCase):
     def test_user_visible_package_pins_use_target_release(self) -> None:
         for relative_path in self.PIN_SURFACES:
             content = (ROOT / relative_path).read_text(encoding="utf-8")
-            self.assertIn("agent-lifecycle-kit==1.74.0", content, relative_path)
+            self.assertIn(f"agent-lifecycle-kit=={TARGET_VERSION}", content, relative_path)
             self.assertNotIn("agent-lifecycle-kit==1.66.0", content, relative_path)
             self.assertNotIn("agent-lifecycle-kit==1.67.0", content, relative_path)
 

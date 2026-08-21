@@ -4,6 +4,26 @@ Offline source-release generation must be deterministic and local. It may write
 release inventory and evidence files, but it must not read credentials or
 require network access.
 
+## Release 1.75 controls
+
+Release 1.75 provides one connected security proof for the local source and
+publication boundaries:
+
+- signed neutrality receipts bind claims, operation and primary artifact;
+- Git revision arguments are checked before a read-only report is produced;
+- repository evidence rejects symlinked inputs, while local launch evidence
+  records the resolved executable identity;
+- shared redaction removes common standalone tokens before evidence is stored;
+- JSON limits, private file permissions and strict Ed25519 decoding use
+  fail-closed checks;
+- the frozen plan package is bound to its lock before audit and execution;
+- CI and publication use immutable Action references, protected release tags
+  and the existing PyPI Trusted Publisher configuration.
+
+The 1.75.0 distribution provenance is verified after the protected release
+workflow publishes the wheel and source archive. The earlier 1.74.0 wheel and
+source archive already provide a verified Trusted Publishing baseline.
+
 Production promotion must use external signing and verification authorities.
 Those authorities are not stored in this repository.
 

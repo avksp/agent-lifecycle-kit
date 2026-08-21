@@ -6,7 +6,12 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, canonical_bytes, read_json_object, write_json_create
+from agent_lifecycle.contracts import LifecycleError, read_json_object
+from agent_lifecycle.contracts.canonical import (
+    ensure_private_directory,
+    write_json_create_private,
+    write_json_replace_private,
+)
 
 DEFAULT_SESSION_ROOT = ".alk/adapter-sessions"
 
@@ -51,7 +56,9 @@ def create_session(
         "secretValuesStored": False,
         "nativeConfigWritten": False,
     }
-    write_json_create(session_path(session_id, session_root=session_root), session)
+    path = session_path(session_id, session_root=session_root)
+    ensure_private_directory(path.parent)
+    write_json_create_private(path, session)
     return session
 
 
@@ -61,6 +68,5 @@ def load_session(session_id: str, *, session_root: Path | None = None) -> dict[s
 
 def update_session(session: dict[str, Any], *, session_root: Path | None = None) -> dict[str, Any]:
     path = session_path(session["sessionId"], session_root=session_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(canonical_bytes(session) + b"\n")
+    write_json_replace_private(path, session)
     return session

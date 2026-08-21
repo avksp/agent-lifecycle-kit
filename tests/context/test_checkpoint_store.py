@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -41,6 +43,19 @@ class ContextCheckpointStoreTests(unittest.TestCase):
             write_context_checkpoint(_checkpoint(3), root=root, max_checkpoints_per_run=2)
             stored = list_context_checkpoints(root=root, run_id="run-1")
             self.assertEqual([item["stateRevision"] for item in stored], [2, 3])
+
+    @unittest.skipUnless(os.name != "nt", "POSIX mode contract only")
+    def test_checkpoint_directory_and_file_are_owner_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "checkpoints"
+            old_umask = os.umask(0)
+            try:
+                result = write_context_checkpoint(_checkpoint(1), root=root)
+            finally:
+                os.umask(old_umask)
+            path = Path(result["path"])
+            self.assertEqual(stat.S_IMODE(root.stat().st_mode), 0o700)
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
 
     def test_store_rejects_conflicting_reuse_and_escape(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

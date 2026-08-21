@@ -13,7 +13,7 @@ from agent_lifecycle.audit.ownership import build_ownership_report, report_has_c
 from agent_lifecycle.changesets import changed_files
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
-from agent_lifecycle.freeze import verify_plan_lock
+from agent_lifecycle.freeze import plan_integrity_required, verify_plan_lock, verify_plan_package_integrity
 from agent_lifecycle.planning import (
     load_plan_completeness_profile,
     require_repository_references_pass,
@@ -72,7 +72,8 @@ def build_package_audit(
     findings: list[dict[str, Any]] = []
     blockers: list[dict[str, Any]] = []
 
-    package_files = _package_file_check(package_dir)
+    repository_root = (project_root or Path.cwd()).resolve()
+    package_files = _package_file_check(package_dir, manifest=manifest, repository_root=repository_root)
     _capture_check_failure("package-files", package_files, findings, blockers)
 
     profile = _load_profile(completeness_profile_path)
@@ -82,7 +83,12 @@ def build_package_audit(
     _capture_check_failure("completeness", completeness_check, findings, blockers)
 
     lock_path = package_dir / "plan.lock.json"
-    lock_check = _lock_check(manifest, lock_path, require_frozen=require_frozen)
+    lock_check = _lock_check(
+        manifest,
+        lock_path,
+        require_frozen=require_frozen,
+        repository_root=repository_root,
+    )
     _capture_check_failure("lock", lock_check, findings, blockers)
 
     acceptance_path = package_dir / "acceptance-criteria.md"
@@ -134,7 +140,7 @@ def build_package_audit(
         base=base,
         require_frozen=require_frozen,
         require_implementation=require_implementation,
-        project_root=project_root or Path.cwd(),
+        project_root=repository_root,
         findings=findings,
         blockers=blockers,
         package_id=package_id,
@@ -450,7 +456,40 @@ def _contained_relative_path(root: Path, raw: str) -> str:
     return normalize_repo_path(relative.as_posix(), label="implementation audit report")
 
 
-def _package_file_check(package_dir: Path) -> dict[str, Any]:
+def _package_file_check(
+    package_dir: Path,
+    *,
+    manifest: dict[str, Any],
+    repository_root: Path,
+) -> dict[str, Any]:
+    if plan_integrity_required(manifest):
+        lock_path = package_dir / "plan.lock.json"
+        if lock_path.is_symlink():
+            return _missing_check("plan-lock-symlink", "plan lock must not be a symlink")
+        if not lock_path.is_file():
+            return _missing_check("plan-lock-missing", "v2 package integrity requires a plan lock")
+        try:
+            lock = read_json_object(lock_path, label="plan lock")
+            verification = verify_plan_package_integrity(
+                manifest,
+                lock,
+                repository_root=repository_root,
+            )
+        except LifecycleError as exc:
+            return {"status": "FAIL", "blockers": [_error(exc)]}
+        entries = [
+            {"path": item["path"], "status": "PASS", "bytes": item["bytes"]}
+            for item in verification["entries"]
+        ]
+        body = {
+            "schemaVersion": "agent-plan-package-files.v2",
+            "status": "PASS",
+            "requiredFiles": [item["path"] for item in verification["entries"]],
+            "entries": entries,
+            "missing": [],
+            "integrity": verification,
+        }
+        return {**body, "checkDigest": canonical_digest(body)}
     entries = []
     missing = []
     for name in _PLAN_FILES:
@@ -472,13 +511,27 @@ def _package_file_check(package_dir: Path) -> dict[str, Any]:
     return {**body, "checkDigest": canonical_digest(body)}
 
 
-def _lock_check(manifest: dict[str, Any], lock_path: Path, *, require_frozen: bool) -> dict[str, Any]:
+def _lock_check(
+    manifest: dict[str, Any],
+    lock_path: Path,
+    *,
+    require_frozen: bool,
+    repository_root: Path,
+) -> dict[str, Any]:
     if lock_path.is_symlink():
         return _missing_check("plan-lock-symlink", "plan lock must not be a symlink")
     if not lock_path.is_file():
         if require_frozen or manifest.get("status") == "FROZEN":
             return _missing_check("plan-lock-missing", "frozen plan lock was not found")
         return {"status": "REVIEW_REQUIRED", "reason": "draft plan has no lock yet", "path": str(lock_path)}
+    if plan_integrity_required(manifest):
+        return _run_check(
+            lambda: verify_plan_package_integrity(
+                manifest,
+                read_json_object(lock_path, label="plan lock"),
+                repository_root=repository_root,
+            )
+        )
     return _run_check(lambda: verify_plan_lock(manifest, read_json_object(lock_path, label="plan lock")))
 
 

@@ -11,6 +11,7 @@ from agent_lifecycle.contracts import (
     canonical_digest,
     read_json_object,
 )
+from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.policy.execution_strategy import validate_execution_strategy
 
 
@@ -46,8 +47,7 @@ def _verify_manifest(root: Path, manifest: dict[str, Any]) -> str:
         raise LifecycleError("invalid-plan-manifest", "package.planArtifactRoot is required")
     digest = canonical_digest(manifest)
     lock = read_json_object(root / plan_root / "plan.lock.json", label="plan lock")
-    if lock.get("manifestHash") != digest:
-        raise LifecycleError("plan-lock-mismatch", "plan lock does not bind manifest")
+    verify_plan_package_integrity(manifest, lock, repository_root=root)
     return digest
 
 

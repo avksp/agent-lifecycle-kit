@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import unittest
 from pathlib import Path
 
 from agent_lifecycle.host_protocol import (
@@ -14,7 +15,18 @@ from agent_lifecycle.host_protocol import (
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
+class GooseAdapterTests(unittest.TestCase):
+    def test_descriptor_and_capability_manifest_pass_offline_contracts(self) -> None:
+        _test_descriptor_and_capability_manifest_pass_offline_contracts()
+
+    def test_descriptor_rejects_invalid_acp_capability_claim(self) -> None:
+        _test_descriptor_rejects_invalid_acp_capability_claim()
+
+    def test_goose_acp_host_capability_is_probe_required(self) -> None:
+        _test_goose_acp_host_capability_is_probe_required()
+
+
+def _test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
     descriptor_path = ROOT / "adapters/goose/adapter.descriptor.json"
     descriptor = _load_json(descriptor_path)
     baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
@@ -27,7 +39,7 @@ def test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
     assert manifest["hostCapabilities"][0]["capabilityId"] == "acp"
 
 
-def test_descriptor_rejects_invalid_acp_capability_claim() -> None:
+def _test_descriptor_rejects_invalid_acp_capability_claim() -> None:
     descriptor = _load_json(ROOT / "adapters/goose/adapter.descriptor.json")
     descriptor["hostCapabilities"][0]["providerIdentityUsed"] = True
 
@@ -43,7 +55,7 @@ def test_descriptor_rejects_invalid_acp_capability_claim() -> None:
     assert "host-capability-provider-identity" in nested_codes
 
 
-def test_goose_acp_host_capability_is_probe_required() -> None:
+def _test_goose_acp_host_capability_is_probe_required() -> None:
     descriptor = _load_json(ROOT / "adapters/goose/adapter.descriptor.json")
     capability = descriptor["hostCapabilities"][0]
 

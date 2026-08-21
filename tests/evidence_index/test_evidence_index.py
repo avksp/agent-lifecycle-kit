@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -40,6 +41,9 @@ class EvidenceIndexTests(unittest.TestCase):
             self.assertFalse(index["sourceOfTruth"])
             self.assertTrue(index["rebuildable"])
             self.assertFalse(index["enabledByDefault"])
+            self.assertEqual(index["entries"][0]["artifactRecognition"], "UNKNOWN")
+            self.assertEqual(index["entries"][0]["validationStatus"], "UNVALIDATED")
+            self.assertFalse(index["entries"][0]["validatedArtifact"])
             self.assertEqual(index["entries"][0]["redactionStatus"], "REDACTED")
             self.assertNotIn("private", json.dumps(summary, sort_keys=True))
             self.assertEqual(summary["status"], "PASS")
@@ -56,7 +60,7 @@ class EvidenceIndexTests(unittest.TestCase):
             self.assertEqual(index["status"], "FAIL")
             codes = {item["code"] for item in index["blockers"]}
             self.assertIn("evidence-index-artifact-path-invalid", codes)
-            self.assertIn("evidence-index-artifact-not-validated", codes)
+            self.assertNotIn("evidence-index-artifact-not-validated", codes)
             self.assertEqual(validate_evidence_index(index)["status"], "FAIL")
 
     def test_search_rejects_summary_over_target(self) -> None:
@@ -84,6 +88,32 @@ class EvidenceIndexTests(unittest.TestCase):
             self.assertEqual(index["status"], "FAIL")
             self.assertEqual(index["artifactCount"], 0)
             self.assertIn("evidence-index-input-cap-exceeded", {item["code"] for item in index["blockers"]})
+
+    @unittest.skipIf(os.name == "nt", "symlink fixture requires POSIX semantics")
+    def test_index_rejects_symlinked_inputs_inside_and_outside_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            root = Path(tmp)
+            outside = Path(outside_tmp) / "outside.json"
+            outside.write_text(json.dumps({"schemaVersion": "agent-change-summary-receipt.v1"}), encoding="utf-8")
+            inside = root / "inside.json"
+            inside.write_text(json.dumps({"schemaVersion": "agent-change-summary-receipt.v1"}), encoding="utf-8")
+            evidence = root / "evidence"
+            evidence.mkdir()
+            links = (evidence / "outside.json", evidence / "inside.json")
+            try:
+                links[0].symlink_to(outside)
+                links[1].symlink_to(inside)
+            except OSError as exc:
+                self.skipTest(f"symlink unavailable: {exc}")
+
+            index = build_evidence_index(root, ["evidence/outside.json", "evidence/inside.json"])
+
+            self.assertEqual(index["status"], "FAIL")
+            self.assertEqual(index["artifactCount"], 0)
+            self.assertEqual(
+                {item["code"] for item in index["blockers"]},
+                {"evidence-index-artifact-symlink"},
+            )
 
 
 if __name__ == "__main__":

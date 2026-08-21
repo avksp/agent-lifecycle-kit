@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import unittest
 from pathlib import Path
 
 from agent_lifecycle.host_protocol import (
@@ -14,7 +15,15 @@ from agent_lifecycle.host_protocol import (
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
+class PiAdapterTests(unittest.TestCase):
+    def test_descriptor_and_capability_manifest_pass_offline_contracts(self) -> None:
+        _test_descriptor_and_capability_manifest_pass_offline_contracts()
+
+    def test_transport_capability_is_not_claimed_for_alternate_protocol(self) -> None:
+        _test_transport_capability_is_not_claimed_for_alternate_protocol()
+
+
+def _test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
     descriptor = _load_json(ROOT / "adapters/pi/adapter.descriptor.json")
     baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
     manifest = _load_json(ROOT / "adapters/pi/capabilities.manifest.json")
@@ -26,7 +35,7 @@ def test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
     assert descriptor["maturity"] == "VERIFIED"
 
 
-def test_transport_capability_is_not_claimed_for_alternate_protocol() -> None:
+def _test_transport_capability_is_not_claimed_for_alternate_protocol() -> None:
     descriptor = _load_json(ROOT / "adapters/pi/adapter.descriptor.json")
     capability = descriptor["hostCapabilities"][0]
 

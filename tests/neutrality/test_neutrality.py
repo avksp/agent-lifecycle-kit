@@ -21,7 +21,7 @@ from agent_lifecycle.neutrality.authority import (  # noqa: E402
     trust_root_for_seed,
 )
 from agent_lifecycle.neutrality.canonical import canonical_bytes, write_json_create  # noqa: E402
-from agent_lifecycle.neutrality.ed25519 import fingerprint, publickey_from_seed, sign, verify  # noqa: E402
+from agent_lifecycle.neutrality.ed25519 import P, fingerprint, publickey_from_seed, sign, verify  # noqa: E402
 from agent_lifecycle.neutrality.errors import NeutralityError  # noqa: E402
 from agent_lifecycle.neutrality.paths import validate_output_paths  # noqa: E402
 from agent_lifecycle.neutrality.policy import load_policy  # noqa: E402
@@ -43,6 +43,14 @@ class NeutralityTests(unittest.TestCase):
         self.assertTrue(verify(public_key, b"message", signature))
         self.assertFalse(verify(public_key, b"changed", signature))
         self.assertTrue(fingerprint(public_key).startswith("ed25519:"))
+
+    def test_ed25519_rejects_noncanonical_public_and_r_encodings(self) -> None:
+        seed = bytes(range(32))
+        public_key = publickey_from_seed(seed)
+        signature = sign(seed, b"message")
+        noncanonical_y = P.to_bytes(32, "little")
+        self.assertFalse(verify(noncanonical_y, b"message", signature))
+        self.assertFalse(verify(public_key, b"message", noncanonical_y + signature[32:]))
 
     def test_scan_detects_deny_literal_without_fragment_leak(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -114,7 +122,10 @@ class NeutralityTests(unittest.TestCase):
                     report["counters"][counter] = 1
                     report_bytes = json.dumps(report, sort_keys=True).encode("utf-8")
                     (root / "out/report.json").write_bytes(report_bytes)
-                    receipt["primaryArtifact"] = {"sha256": hashlib.sha256(report_bytes).hexdigest(), "bytes": len(report_bytes)}
+                    receipt["envelope"]["primaryArtifact"] = {
+                        "sha256": hashlib.sha256(report_bytes).hexdigest(),
+                        "bytes": len(report_bytes),
+                    }
                     (root / "out/receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
                     self.assertFalse(
                         verify_existing_receipt(
@@ -150,7 +161,7 @@ class NeutralityTests(unittest.TestCase):
                     report["scopeBinding"][field] = value
                     report_bytes = json.dumps(report, sort_keys=True).encode("utf-8")
                     (root / "out/report.json").write_bytes(report_bytes)
-                    receipt["primaryArtifact"] = {
+                    receipt["envelope"]["primaryArtifact"] = {
                         "sha256": hashlib.sha256(report_bytes).hexdigest(),
                         "bytes": len(report_bytes),
                     }
@@ -278,6 +289,113 @@ class NeutralityTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertTrue((root / "out/report.json").is_file())
             self.assertTrue((root / "out/receipt.json").is_file())
+
+    def test_detached_receipt_requires_claims_in_signed_envelope(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = Path(tempfile.mkdtemp())
+            seed = b"v" * 32
+            paths = _write_authority(root, seed, datetime.now(UTC).replace(microsecond=0), authority_root=outside)
+            self.assertEqual(_run_cli(root, seed, env_paths=paths), 0)
+            receipt_path = root / "out/receipt.json"
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt["envelope"].pop("claims")
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+            self.assertFalse(
+                verify_existing_receipt(
+                    receipt_path=receipt_path,
+                    primary_path=root / "out/report.json",
+                    expected_operation=None,
+                    trust_root_path=paths["trust"],
+                    expected_signer_fingerprint=fingerprint(publickey_from_seed(seed)),
+                )
+            )
+
+    def test_detached_receipt_accepts_legitimate_v4_envelope(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = Path(tempfile.mkdtemp())
+            seed = b"y" * 32
+            paths = _write_authority(root, seed, datetime.now(UTC).replace(microsecond=0), authority_root=outside)
+            self.assertEqual(_run_cli(root, seed, env_paths=paths), 0)
+            self.assertTrue(
+                verify_existing_receipt(
+                    receipt_path=root / "out/receipt.json",
+                    primary_path=root / "out/report.json",
+                    expected_operation=None,
+                    trust_root_path=paths["trust"],
+                    expected_signer_fingerprint=fingerprint(publickey_from_seed(seed)),
+                )
+            )
+
+    def test_active_verifier_rejects_legacy_v3_detached_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = Path(tempfile.mkdtemp())
+            seed = b"x" * 32
+            paths = _write_authority(root, seed, datetime.now(UTC).replace(microsecond=0), authority_root=outside)
+            self.assertEqual(_run_cli(root, seed, env_paths=paths), 0)
+            receipt_path = root / "out/receipt.json"
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt["schemaVersion"] = "agent-neutrality-detached-receipt.v3"
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+            self.assertFalse(
+                verify_existing_receipt(
+                    receipt_path=receipt_path,
+                    primary_path=root / "out/report.json",
+                    expected_operation=None,
+                    trust_root_path=paths["trust"],
+                    expected_signer_fingerprint=fingerprint(publickey_from_seed(seed)),
+                )
+            )
+
+    def test_detached_signature_cannot_be_replayed_for_another_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = Path(tempfile.mkdtemp())
+            seed = b"w" * 32
+            paths = _write_authority(root, seed, datetime.now(UTC).replace(microsecond=0), authority_root=outside)
+            self.assertEqual(_run_cli(root, seed, env_paths=paths), 0)
+            report_path = root / "out/report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            report["operation"]["operationId"] = "different-operation"
+            report_path.write_text(json.dumps(report, sort_keys=True), encoding="utf-8")
+            self.assertFalse(
+                verify_existing_receipt(
+                    receipt_path=root / "out/receipt.json",
+                    primary_path=report_path,
+                    expected_operation=None,
+                    trust_root_path=paths["trust"],
+                    expected_signer_fingerprint=fingerprint(publickey_from_seed(seed)),
+                )
+            )
+
+    def test_detached_signature_binds_rewritten_primary_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = Path(tempfile.mkdtemp())
+            seed = b"q" * 32
+            paths = _write_authority(root, seed, datetime.now(UTC).replace(microsecond=0), authority_root=outside)
+            self.assertEqual(_run_cli(root, seed, env_paths=paths), 0)
+            report_path = root / "out/report.json"
+            receipt_path = root / "out/receipt.json"
+            rewritten = report_path.read_bytes() + b" "
+            report_path.write_bytes(rewritten)
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt["envelope"]["primaryArtifact"] = {
+                "sha256": hashlib.sha256(rewritten).hexdigest(),
+                "bytes": len(rewritten),
+            }
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+            self.assertFalse(
+                verify_existing_receipt(
+                    receipt_path=receipt_path,
+                    primary_path=report_path,
+                    expected_operation=None,
+                    trust_root_path=paths["trust"],
+                    expected_signer_fingerprint=fingerprint(publickey_from_seed(seed)),
+                )
+            )
 
     def test_cli_accepts_configurable_artifact_root(self) -> None:
         # NEG-R03-12 Hard-Coded Standalone Artifact Root
