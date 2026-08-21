@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts import canonical_digest, read_json_object
 from agent_lifecycle.goal.records import validate_goal_record
 from agent_lifecycle.reporting.progress_view import build_lifecycle_progress_view
 from agent_lifecycle.workflow.query import next_action
@@ -99,10 +99,12 @@ def _blockers(state: dict[str, Any], task_summary: dict[str, int]) -> list[dict[
     blockers: list[dict[str, Any]] = []
     blocker = state.get("blocker")
     if isinstance(blocker, dict):
-        blockers.append({
-            "code": str(blocker.get("code") or "workflow-blocked"),
-            "message": str(blocker.get("message") or blocker.get("reason") or "workflow is blocked"),
-        })
+        blockers.append(
+            {
+                "code": str(blocker.get("code") or "workflow-blocked"),
+                "message": str(blocker.get("message") or blocker.get("reason") or "workflow is blocked"),
+            }
+        )
     blocked_count = task_summary.get("BLOCKED", 0)
     if blocked_count:
         blockers.append({"code": "blocked-tasks-present", "count": blocked_count})

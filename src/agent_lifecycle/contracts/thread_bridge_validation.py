@@ -5,26 +5,21 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.redaction import redact_value
 from agent_lifecycle.contracts.thread_bridge_schema_definitions import (
+    _AUTHORITY_KEYS,
+    _AUTHORITY_MARKERS,
     THREAD_ADAPTER_STATUS_VALUES,
     THREAD_BRIDGE_PROFILE_SCHEMA,
     THREAD_BRIDGE_PROFILE_VALIDATION_SCHEMA,
-    THREAD_BRIDGE_POLICY_VERSION,
-    THREAD_BRIDGE_QUALIFICATION_RECEIPT_SCHEMA,
-    THREAD_CAPABILITY_SCHEMA,
-    THREAD_CONTEXT_IMPORT_SCHEMA,
     THREAD_EFFECTIVE_STATUS_VALUES,
-    THREAD_OPERATION_STATUSES,
     THREAD_OPERATION_VALIDATION_SCHEMA,
     THREAD_OPERATIONS,
     THREAD_QUALIFICATION_STATUS_VALUES,
     THREAD_READ_OPERATIONS,
     THREAD_SCOPES,
-    _AUTHORITY_KEYS,
-    _AUTHORITY_MARKERS,
 )
+
 
 def _normalize_target(target: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(target, dict):
@@ -126,9 +121,13 @@ def _normalize_adapter_operations(operations: list[dict[str, Any]]) -> list[dict
         name = item.get("name")
         status = item.get("declaredStatus", item.get("status"))
         if name not in THREAD_OPERATIONS or name in seen:
-            raise LifecycleError("thread-profile-operation-invalid", "thread profile operation is unsupported", {"operation": name})
+            raise LifecycleError(
+                "thread-profile-operation-invalid", "thread profile operation is unsupported", {"operation": name}
+            )
         if status not in THREAD_ADAPTER_STATUS_VALUES:
-            raise LifecycleError("thread-profile-status-invalid", "thread profile status is unsupported", {"operation": name})
+            raise LifecycleError(
+                "thread-profile-status-invalid", "thread profile status is unsupported", {"operation": name}
+            )
         seen.add(name)
         entries.append(
             {
@@ -145,9 +144,14 @@ def _normalize_adapter_operations(operations: list[dict[str, Any]]) -> list[dict
 
 def _normalize_operation_set(operation_set: list[str]) -> list[str]:
     if not isinstance(operation_set, list) or not operation_set:
-        raise LifecycleError("thread-qualification-operations-invalid", "qualification operationSet must be a non-empty list")
+        raise LifecycleError(
+            "thread-qualification-operations-invalid", "qualification operationSet must be a non-empty list"
+        )
     if any(item not in THREAD_OPERATIONS for item in operation_set) or len(set(operation_set)) != len(operation_set):
-        raise LifecycleError("thread-qualification-operations-invalid", "qualification operationSet contains an unsupported or duplicate operation")
+        raise LifecycleError(
+            "thread-qualification-operations-invalid",
+            "qualification operationSet contains an unsupported or duplicate operation",
+        )
     return sorted(operation_set)
 
 
@@ -203,7 +207,10 @@ def _qualification_matches(profile: dict[str, Any], receipt: dict[str, Any], ope
 def _contains_authority(value: Any) -> bool:
     if isinstance(value, dict):
         for key, item in value.items():
-            if key in _AUTHORITY_KEYS or (isinstance(key, str) and key.replace("_", "").lower() in {item.lower().replace("_", "") for item in _AUTHORITY_KEYS}):
+            if key in _AUTHORITY_KEYS or (
+                isinstance(key, str)
+                and key.replace("_", "").lower() in {item.lower().replace("_", "") for item in _AUTHORITY_KEYS}
+            ):
                 return True
             if _contains_authority(item):
                 return True
@@ -260,7 +267,12 @@ def _profile_validation(
         "checkedSchema": receipt_schema,
         "checks": [
             {"name": "shape", "status": "PASS" if not blockers else "FAIL"},
-            {"name": "digest", "status": "PASS" if not any(item.get("code") == "thread-digest-mismatch" for item in blockers) else "FAIL"},
+            {
+                "name": "digest",
+                "status": "PASS"
+                if not any(item.get("code") == "thread-digest-mismatch" for item in blockers)
+                else "FAIL",
+            },
         ],
         "blockers": blockers,
         "productionPromotionClaimed": False,

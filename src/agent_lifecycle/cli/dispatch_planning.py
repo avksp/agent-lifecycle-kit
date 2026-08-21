@@ -85,9 +85,7 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
         manifest = read_json_object(Path(args.manifest), label="plan manifest")
         lock = read_json_object(Path(args.lock), label="plan lock") if args.lock else None
         completeness_profile = (
-            load_plan_completeness_profile(Path(args.completeness_profile))
-            if args.completeness_profile
-            else None
+            load_plan_completeness_profile(Path(args.completeness_profile)) if args.completeness_profile else None
         )
         return {
             "schemaVersion": "agent-plan-check.v1",
@@ -127,10 +125,10 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
         return require_reconciliation_pass(reconcile_plan_snapshot(snapshot, manifest))
     if args.plan_command == "handoff":
         manifest = read_json_object(Path(args.manifest), label="plan manifest")
-        snapshot = read_json_object(Path(args.snapshot), label="plan snapshot") if args.snapshot else None
+        handoff_snapshot = read_json_object(Path(args.snapshot), label="plan snapshot") if args.snapshot else None
         payload = render_plan_handoff(
             manifest,
-            snapshot=snapshot,
+            snapshot=handoff_snapshot,
             max_workstreams=args.max_workstreams,
             target_tokens=args.target_tokens,
         )
@@ -144,10 +142,17 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         return payload
     if args.plan_command == "delta":
-        read = lambda value, label: read_json_object(Path(value), label=label) if value else None
+
+        def read(value: str | None, label: str) -> dict[str, Any] | None:
+            return read_json_object(Path(value), label=label) if value else None
+
+        before = read(args.before, "before plan")
+        after = read(args.after, "after plan")
+        if before is None or after is None:
+            raise LifecycleError("plan-delta-input-required", "before and after plans are required")
         payload = build_plan_delta(
-            read(args.before, "before plan"),
-            read(args.after, "after plan"),
+            before,
+            after,
             before_snapshot=read(args.before_snapshot, "before plan snapshot"),
             after_snapshot=read(args.after_snapshot, "after plan snapshot"),
             before_lock=read(args.before_lock, "before plan lock"),
@@ -168,9 +173,7 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
 def _dispatch_task(args: argparse.Namespace) -> dict[str, Any]:
     if args.task_command == "compile":
         execution_strategy = (
-            read_json_object(Path(args.strategy), label="execution strategy")
-            if args.strategy
-            else None
+            read_json_object(Path(args.strategy), label="execution strategy") if args.strategy else None
         )
         result = compile_task_packets(
             Path(args.manifest),
@@ -186,9 +189,7 @@ def _dispatch_task(args: argparse.Namespace) -> dict[str, Any]:
             else None
         )
         execution_strategy = (
-            read_json_object(Path(args.strategy), label="execution strategy")
-            if args.strategy
-            else None
+            read_json_object(Path(args.strategy), label="execution strategy") if args.strategy else None
         )
         result = compile_small_model_packets(
             Path(args.manifest),

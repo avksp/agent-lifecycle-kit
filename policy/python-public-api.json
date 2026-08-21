@@ -1,0 +1,170 @@
+{
+  "schemaVersion": "agent-python-public-api-policy.v1",
+  "revision": 1,
+  "package": "agent_lifecycle",
+  "modules": [
+    {
+      "module": "agent_lifecycle",
+      "exports": ["__version__"]
+    },
+    {
+      "module": "agent_lifecycle.contracts",
+      "exports": [
+        "LifecycleError",
+        "canonical_bytes",
+        "canonical_digest",
+        "load_json_object",
+        "is_under_repo_path",
+        "normalize_repo_path",
+        "read_json_object",
+        "sha256_hex",
+        "write_json_create"
+      ]
+    },
+    {
+      "module": "agent_lifecycle.context",
+      "exports": [
+        "build_episode_context",
+        "check_context",
+        "build_context_checkpoint",
+        "load_context_profile",
+        "list_context_checkpoints",
+        "load_context_checkpoint",
+        "render_context",
+        "restore_context_checkpoint",
+        "require_context_checkpoint_pass",
+        "validate_context_checkpoint",
+        "validate_context_profile",
+        "write_context_checkpoint",
+        "import_thread_context",
+        "build_thread_episode_context"
+      ]
+    },
+    {
+      "module": "agent_lifecycle.imports",
+      "exports": [
+        "agentskills_profile",
+        "bmad_profile",
+        "collect_markdown_collection",
+        "constitution_adr_profile",
+        "external_dialect_profile",
+        "external_dialect_registry",
+        "import_agentskills_dialect",
+        "import_bmad_planning",
+        "import_constitution_adr",
+        "import_external_agent",
+        "import_external_dialect",
+        "import_external_workflow",
+        "import_markdown_collection",
+        "import_openspec_planning",
+        "import_planning_input",
+        "import_planning_text",
+        "import_spec_kit_planning",
+        "import_spec_kitty_planning",
+        "openspec_profile",
+        "planning_dialect_profile",
+        "require_dialect_profile_pass",
+        "require_external_import_pass",
+        "require_external_profile_pass",
+        "require_import_validation_pass",
+        "require_skill_proposal_pass",
+        "spec_kit_profile",
+        "spec_kitty_profile",
+        "validate_agentskills_profile",
+        "validate_dialect_profile",
+        "validate_external_dialect_profile",
+        "validate_external_import_result",
+        "validate_import_result",
+        "validate_skill_improvement_proposal"
+      ]
+    },
+    {
+      "module": "agent_lifecycle.planning",
+      "exports": [
+        "build_plan_snapshot",
+        "build_plan_delta",
+        "build_plan_completeness_profile",
+        "build_task_template_library",
+        "load_plan_completeness_profile",
+        "reconcile_plan_snapshot",
+        "render_task_template",
+        "render_plan_handoff",
+        "require_reconciliation_pass",
+        "require_plan_delta_pass",
+        "require_repository_references_pass",
+        "require_plan_completeness_pass",
+        "require_task_template_validation_pass",
+        "resolve_sdd_tier",
+        "validate_acceptance_checklist",
+        "validate_plan_completeness",
+        "validate_plan_completeness_profile",
+        "validate_plan_manifest",
+        "validate_plan_delta",
+        "validate_repository_references",
+        "validate_task_template_library"
+      ]
+    },
+    {
+      "module": "agent_lifecycle.project",
+      "exports": [
+        "PROJECT_PROFILE_RELATIVE_PATH",
+        "build_default_project_profile",
+        "build_effective_project_profile",
+        "build_preset_profile_draft",
+        "inspect_project_preset",
+        "list_project_presets",
+        "load_project_preset",
+        "load_project_principles",
+        "load_project_profile",
+        "merge_preset_defaults",
+        "merge_project_profile",
+        "normalize_project_profile",
+        "profile_field_is_explicit",
+        "project_principles_digest",
+        "project_profile_digest",
+        "render_project_preset",
+        "validate_project_preset",
+        "validate_project_principles",
+        "validate_project_profile"
+      ]
+    },
+    {
+      "module": "agent_lifecycle.benchmarks",
+      "exports": [
+        "build_benchmark_run_receipt",
+        "load_benchmark_run_receipt",
+        "validate_benchmark_run_receipt",
+        "compare_reference_task_evaluations",
+        "compare_qualified_routes",
+        "evaluate_reference_task",
+        "qualify_benchmark_runs",
+        "build_stratified_sample",
+        "select_stratified_tasks",
+        "validate_qualified_route_comparison",
+        "validate_qualification_report",
+        "validate_reference_task_comparison",
+        "validate_stratified_sample"
+      ]
+    },
+    {
+      "module": "agent_lifecycle.neutrality",
+      "exports": [
+        "AuthorityBundle",
+        "LEGACY_NEUTRALITY_SCOPES",
+        "NEUTRALITY_SCOPE_CHOICES",
+        "NeutralityFinding",
+        "NeutralityReport",
+        "TRACKED_RELEASE_SCOPE",
+        "load_authority_bundle",
+        "scan_repository"
+      ]
+    }
+  ],
+  "rules": {
+    "rootExportsMustBeExplicit": true,
+    "facadeExportsMustBeExplicit": true,
+    "functionsRequireCompleteAnnotations": true,
+    "unlistedInternalModulesAreNotStable": true,
+    "productionPromotionClaimed": false
+  }
+}

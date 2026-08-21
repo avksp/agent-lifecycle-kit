@@ -1,0 +1,50 @@
+name: python-quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Python quality / ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install locked quality environment
+        run: |
+          python -m pip install --disable-pip-version-check uv==0.12.5
+          uv sync --locked --group quality
+      - name: Run bounded quality evidence
+        run: >-
+          uv run --frozen --group quality python tools/release/run_python_quality.py
+          --policy policy/python-quality.json
+          --package-root src/agent_lifecycle
+          --tests-root tests
+          --test-top-level .
+          --base-sha "${{ github.event.pull_request.base.sha || github.sha }}"
+          --work-root work/python-quality/raw
+          --evidence work/python-quality/run.json
+      - name: Validate quality evidence
+        run: >-
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src
+          uv run --frozen --group quality python tools/release/validate_python_quality.py
+          --policy policy/python-quality.json
+          --run-receipt work/python-quality/run.json
+          --work-root work/python-quality/raw
+          --evidence work/python-quality/validation.json

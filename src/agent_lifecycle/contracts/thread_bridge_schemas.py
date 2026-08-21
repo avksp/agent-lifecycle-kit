@@ -10,13 +10,13 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.redaction import redact_value
 from agent_lifecycle.contracts.thread_bridge_schema_definitions import (
-    THREAD_APPROVALS,
     THREAD_ADAPTER_STATUS_VALUES,
+    THREAD_APPROVALS,
     THREAD_BRIDGE_MODES,
-    THREAD_BRIDGE_PROFILE_SCHEMA,
-    THREAD_BRIDGE_PROFILE_VALIDATION_SCHEMA,
     THREAD_BRIDGE_POLICY_VERSION,
+    THREAD_BRIDGE_PROFILE_SCHEMA,
     THREAD_BRIDGE_QUALIFICATION_RECEIPT_SCHEMA,
+    THREAD_BRIDGE_SCHEMAS,
     THREAD_CAPABILITY_SCHEMA,
     THREAD_CONTEXT_IMPORT_SCHEMA,
     THREAD_EFFECTIVE_STATUS_VALUES,
@@ -30,9 +30,6 @@ from agent_lifecycle.contracts.thread_bridge_schema_definitions import (
     THREAD_READ_OPERATIONS,
     THREAD_SCOPES,
     THREAD_SUPPORT_VALUES,
-    THREAD_BRIDGE_SCHEMAS,
-    _AUTHORITY_KEYS,
-    _AUTHORITY_MARKERS,
 )
 from agent_lifecycle.contracts.thread_bridge_validation import (
     _check_digest,
@@ -43,9 +40,9 @@ from agent_lifecycle.contracts.thread_bridge_validation import (
     _normalize_target,
     _profile_validation,
     _qualification_matches,
-    _required_text,
     _require_digest,
     _require_digest_field,
+    _required_text,
     _validate_adapter_profile_operations,
     _validate_capability_operations,
     _validate_limits,
@@ -54,6 +51,18 @@ from agent_lifecycle.contracts.thread_bridge_validation import (
     _validate_target,
     _validation,
 )
+
+__all__ = [
+    "THREAD_ADAPTER_STATUS_VALUES",
+    "THREAD_APPROVALS",
+    "THREAD_BRIDGE_MODES",
+    "THREAD_BRIDGE_SCHEMAS",
+    "THREAD_EFFECTIVE_STATUS_VALUES",
+    "THREAD_QUALIFICATION_STATUS_VALUES",
+    "THREAD_SCOPES",
+    "normalize_repo_path",
+]
+
 
 def build_thread_capability(
     *,
@@ -74,21 +83,34 @@ def build_thread_capability(
     seen: set[str] = set()
     for item in selected:
         if isinstance(item, str):
-            name, item_support = item, support
+            name = item
+            item_support = support
             metadata: dict[str, Any] = {}
         elif isinstance(item, dict):
-            name, item_support = item.get("name"), item.get("support", support)
+            candidate_name = item.get("name")
+            if not isinstance(candidate_name, str):
+                raise LifecycleError(
+                    "thread-capability-operation-invalid", "thread capability operation name is required"
+                )
+            name = candidate_name
+            item_support = item.get("support", support)
             metadata = {
                 key: item[key]
                 for key in ("declaredStatus", "qualificationStatus", "effectiveStatus", "capabilitySupport")
                 if key in item
             }
         else:
-            raise LifecycleError("thread-capability-operation-invalid", "thread capability operation must be a string or object")
+            raise LifecycleError(
+                "thread-capability-operation-invalid", "thread capability operation must be a string or object"
+            )
         if name not in THREAD_OPERATIONS or name in seen:
-            raise LifecycleError("thread-capability-operation-invalid", "thread capability operation is unsupported", {"operation": name})
+            raise LifecycleError(
+                "thread-capability-operation-invalid", "thread capability operation is unsupported", {"operation": name}
+            )
         if item_support not in THREAD_SUPPORT_VALUES:
-            raise LifecycleError("thread-capability-support-invalid", "thread operation support is unsupported", {"operation": name})
+            raise LifecycleError(
+                "thread-capability-support-invalid", "thread operation support is unsupported", {"operation": name}
+            )
         seen.add(name)
         entries.append(
             {
@@ -243,7 +265,9 @@ def build_thread_operation_request(
     if operation in THREAD_MUTATING_OPERATIONS and not _required_text(idempotency_key, "idempotencyKey"):
         raise LifecycleError("thread-operation-idempotency-required", "send and create require an idempotency key")
     if operation in THREAD_READ_OPERATIONS and idempotency_key is not None:
-        raise LifecycleError("thread-operation-idempotency-unexpected", "read and list must not carry an idempotency key")
+        raise LifecycleError(
+            "thread-operation-idempotency-unexpected", "read and list must not carry an idempotency key"
+        )
     normalized_limits = _normalize_limits(limits)
     normalized_payload, _ = redact_value(payload or {})
     body = {
@@ -331,7 +355,9 @@ def build_thread_context_import(
     if max_imported_bytes < 1 or max_imported_tokens < 1:
         raise LifecycleError("thread-context-limit-invalid", "context limits must be positive")
     if _contains_authority(content):
-        raise LifecycleError("thread-context-authority", "thread content cannot grant prompt, tool or lifecycle authority")
+        raise LifecycleError(
+            "thread-context-authority", "thread content cannot grant prompt, tool or lifecycle authority"
+        )
     safe_content, changed = redact_value(content if isinstance(content, dict) else {"text": content})
     serialized = json.dumps(safe_content, ensure_ascii=False, sort_keys=True)
     estimated_tokens = max(1, (len(serialized.encode("utf-8")) + 3) // 4)
@@ -494,7 +520,15 @@ def validate_thread_bridge_qualification_receipt(receipt: dict[str, Any]) -> dic
     refs = receipt.get("evidenceRefs")
     if not isinstance(refs, list) or not refs or not all(isinstance(item, str) and item for item in refs):
         blockers.append({"code": "thread-qualification-evidence-invalid"})
-    for field in ("hostExecutionStarted", "modelCallsStarted", "networkCallsStarted", "rawContentStored", "sourceOfTruth", "proof", "productionPromotionClaimed"):
+    for field in (
+        "hostExecutionStarted",
+        "modelCallsStarted",
+        "networkCallsStarted",
+        "rawContentStored",
+        "sourceOfTruth",
+        "proof",
+        "productionPromotionClaimed",
+    ):
         expected = field == "hostExecutionStarted"
         if receipt.get(field) is not expected:
             blockers.append({"code": "thread-qualification-boundary-claim", "field": field})
@@ -524,7 +558,7 @@ def resolve_thread_operation_status(
             "qualificationStatus": "INVALID",
             "effectiveStatus": "UNSUPPORTED",
             "capabilitySupport": "unsupported",
-            "blockers": blockers + [{"code": "thread-profile-operation-missing", "operation": operation}],
+            "blockers": [*blockers, {"code": "thread-profile-operation-missing", "operation": operation}],
         }
     declared = operation_entry["declaredStatus"]
     effective = declared
@@ -604,7 +638,14 @@ def validate_thread_operation_receipt(receipt: dict[str, Any]) -> dict[str, Any]
     if receipt.get("operation") not in THREAD_OPERATIONS:
         blockers.append({"code": "thread-receipt-operation-invalid"})
     _validate_target(receipt.get("target"), blockers)
-    for key in ("sourceOfTruth", "proof", "rawContentStored", "nativeTargetIdStored", "modelCallsStarted", "productionPromotionClaimed"):
+    for key in (
+        "sourceOfTruth",
+        "proof",
+        "rawContentStored",
+        "nativeTargetIdStored",
+        "modelCallsStarted",
+        "productionPromotionClaimed",
+    ):
         if receipt.get(key) is not False:
             blockers.append({"code": "thread-receipt-authority-claim", "field": key})
     if not isinstance(receipt.get("redactionStatus"), dict):
@@ -626,7 +667,10 @@ def validate_thread_context_import(imported: dict[str, Any]) -> dict[str, Any]:
         if imported.get(key) is not False:
             blockers.append({"code": "thread-context-authority-claim", "field": key})
     authority = imported.get("authority")
-    if not isinstance(authority, dict) or any(authority.get(key) is not False for key in ("promptAuthority", "toolApproval", "planFreeze", "taskAcceptance", "lifecycleTransition")):
+    if not isinstance(authority, dict) or any(
+        authority.get(key) is not False
+        for key in ("promptAuthority", "toolApproval", "planFreeze", "taskAcceptance", "lifecycleTransition")
+    ):
         blockers.append({"code": "thread-context-authority-invalid"})
     _validate_limits(imported.get("resourceCaps"), blockers, context=True)
     if not isinstance(imported.get("redactionStatus"), dict):
@@ -640,19 +684,25 @@ def validate_thread_context_import(imported: dict[str, Any]) -> dict[str, Any]:
 
 def require_thread_operation_request_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("thread-request-invalid", "thread operation request validation failed", {"validation": validation})
+        raise LifecycleError(
+            "thread-request-invalid", "thread operation request validation failed", {"validation": validation}
+        )
     return validation
 
 
 def require_thread_operation_receipt_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("thread-receipt-invalid", "thread operation receipt validation failed", {"validation": validation})
+        raise LifecycleError(
+            "thread-receipt-invalid", "thread operation receipt validation failed", {"validation": validation}
+        )
     return validation
 
 
 def require_thread_context_import_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("thread-context-invalid", "thread context import validation failed", {"validation": validation})
+        raise LifecycleError(
+            "thread-context-invalid", "thread context import validation failed", {"validation": validation}
+        )
     return validation
 
 

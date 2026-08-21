@@ -67,6 +67,8 @@ def main() -> int:
         blockers.append({"code": "cli-dispatch-domain-handler-retained", "path": path.as_posix()})
     if role == "observability" and not _has_top_level_function(tree, "dispatch_observability"):
         blockers.append({"code": "cli-dispatch-entrypoint-missing", "path": path.as_posix(), "entrypoint": "dispatch_observability"})
+    if role == "planning" and not _has_top_level_function(tree, "dispatch_planning"):
+        blockers.append({"code": "cli-dispatch-entrypoint-missing", "path": path.as_posix(), "entrypoint": "dispatch_planning"})
     if role == "unknown":
         blockers.append({"code": "cli-dispatch-role-unknown", "path": path.as_posix()})
 
@@ -89,6 +91,8 @@ def _dispatch_role(path: Path) -> str:
         return "root"
     if path.name == "dispatch_observability.py":
         return "observability"
+    if path.name == "dispatch_planning.py":
+        return "planning"
     return "unknown"
 
 

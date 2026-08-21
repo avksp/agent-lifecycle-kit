@@ -37,18 +37,31 @@ def build_attempt_snapshot_receipt(
     snapshot_digest = canonical_digest(snapshot) if snapshot is not None else None
     body = {
         "schemaVersion": ATTEMPT_SNAPSHOT_RECEIPT_SCHEMA,
-        "status": _enum(status or ("FAIL" if blockers else "PASS"), ATTEMPT_RECEIPT_STATUSES, label="status", code="invalid-attempt-snapshot-receipt"),
+        "status": _enum(
+            status or ("FAIL" if blockers else "PASS"),
+            ATTEMPT_RECEIPT_STATUSES,
+            label="status",
+            code="invalid-attempt-snapshot-receipt",
+        ),
         "lineage": _lineage(lineage, code="invalid-attempt-snapshot-receipt"),
         "taskId": _required_string(task_id, label="taskId", code="invalid-attempt-snapshot-receipt"),
         "attempt": _positive_int(attempt, label="attempt", code="invalid-attempt-snapshot-receipt"),
         "action": normalized_action,
         "snapshot": dict(snapshot or {}),
         "snapshotDigest": snapshot_digest,
-        "restoreSourceDigest": _optional_digest(restore_source_digest, label="restoreSourceDigest", code="invalid-attempt-snapshot-receipt"),
+        "restoreSourceDigest": _optional_digest(
+            restore_source_digest, label="restoreSourceDigest", code="invalid-attempt-snapshot-receipt"
+        ),
         "abandonReason": _optional_string(abandon_reason),
-        "selectedAttempt": _optional_positive_int(selected_attempt, label="selectedAttempt", code="invalid-attempt-snapshot-receipt"),
-        "selectedAttemptDigest": _optional_digest(selected_attempt_digest, label="selectedAttemptDigest", code="invalid-attempt-snapshot-receipt"),
-        "evidenceIds": _string_list(evidence_ids or [], label="evidenceIds", code="invalid-attempt-snapshot-receipt", allow_empty=True),
+        "selectedAttempt": _optional_positive_int(
+            selected_attempt, label="selectedAttempt", code="invalid-attempt-snapshot-receipt"
+        ),
+        "selectedAttemptDigest": _optional_digest(
+            selected_attempt_digest, label="selectedAttemptDigest", code="invalid-attempt-snapshot-receipt"
+        ),
+        "evidenceIds": _string_list(
+            evidence_ids or [], label="evidenceIds", code="invalid-attempt-snapshot-receipt", allow_empty=True
+        ),
         "metadata": dict(metadata or {}),
         "blockers": list(blockers or []),
         "createdAt": _now_iso(),
@@ -77,10 +90,14 @@ def validate_attempt_snapshot_receipt(
     lineage = _checked_lineage(receipt.get("lineage"), blockers)
     if expected_lineage is not None and lineage is not None:
         _compare_lineage(lineage, expected_lineage, blockers)
-    actual_task_id = _checked_required_string(receipt.get("taskId"), blockers, label="taskId", code="attempt-snapshot-task-id-missing")
+    actual_task_id = _checked_required_string(
+        receipt.get("taskId"), blockers, label="taskId", code="attempt-snapshot-task-id-missing"
+    )
     if task_id is not None and actual_task_id != task_id:
         blockers.append({"code": "attempt-snapshot-task-id-mismatch", "expected": task_id, "actual": actual_task_id})
-    actual_attempt = _checked_positive_int(receipt.get("attempt"), blockers, label="attempt", code="attempt-snapshot-attempt-invalid")
+    actual_attempt = _checked_positive_int(
+        receipt.get("attempt"), blockers, label="attempt", code="attempt-snapshot-attempt-invalid"
+    )
     if attempt is not None and actual_attempt != attempt:
         blockers.append({"code": "attempt-snapshot-attempt-mismatch", "expected": attempt, "actual": actual_attempt})
     action = receipt.get("action")
@@ -110,11 +127,15 @@ def validate_attempt_snapshot_receipt(
     selected_attempt = receipt.get("selectedAttempt")
     selected_attempt_digest = receipt.get("selectedAttemptDigest")
     if action == "select":
-        _checked_positive_int(selected_attempt, blockers, label="selectedAttempt", code="attempt-selected-attempt-invalid")
+        _checked_positive_int(
+            selected_attempt, blockers, label="selectedAttempt", code="attempt-selected-attempt-invalid"
+        )
         _check_digest(selected_attempt_digest, "attempt-selected-digest-missing", blockers)
     else:
         if selected_attempt is not None:
-            _checked_positive_int(selected_attempt, blockers, label="selectedAttempt", code="attempt-selected-attempt-invalid")
+            _checked_positive_int(
+                selected_attempt, blockers, label="selectedAttempt", code="attempt-selected-attempt-invalid"
+            )
         if selected_attempt_digest is not None:
             _check_digest(selected_attempt_digest, "attempt-selected-digest-invalid", blockers)
     _check_string_list(receipt.get("evidenceIds", []), "attempt-snapshot-evidence-ids", blockers, allow_empty=True)
@@ -141,7 +162,9 @@ def validate_attempt_snapshot_receipt(
 
 def require_attempt_snapshot_receipt_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("receiptStatus") != "PASS":
-        raise LifecycleError("attempt-snapshot-validation-failed", "attempt snapshot receipt did not pass", {"validation": validation})
+        raise LifecycleError(
+            "attempt-snapshot-validation-failed", "attempt snapshot receipt did not pass", {"validation": validation}
+        )
     return validation
 
 
@@ -162,7 +185,8 @@ def _checked_lineage(value: Any, blockers: list[dict[str, Any]]) -> dict[str, An
     for key in ("runId", "packageId", "planDigest", "sourceRevision"):
         if not isinstance(value.get(key), str) or not value[key]:
             blockers.append({"code": "attempt-snapshot-lineage-field-missing", "field": key})
-    if not isinstance(value.get("planRevision"), int) or isinstance(value.get("planRevision"), bool) or value.get("planRevision") < 1:
+    plan_revision = value.get("planRevision")
+    if not isinstance(plan_revision, int) or isinstance(plan_revision, bool) or plan_revision < 1:
         blockers.append({"code": "attempt-snapshot-lineage-plan-revision-invalid"})
     return value
 
@@ -229,13 +253,21 @@ def _check_digest(value: Any, code: str, blockers: list[dict[str, Any]]) -> None
 
 
 def _string_list(value: Any, *, label: str, code: str, allow_empty: bool = False) -> list[str]:
-    if not isinstance(value, list) or (not allow_empty and not value) or not all(isinstance(item, str) and item for item in value):
+    if (
+        not isinstance(value, list)
+        or (not allow_empty and not value)
+        or not all(isinstance(item, str) and item for item in value)
+    ):
         raise LifecycleError(code, f"{label} must be a list of strings")
     return list(value)
 
 
 def _check_string_list(value: Any, code: str, blockers: list[dict[str, Any]], *, allow_empty: bool = False) -> None:
-    if not isinstance(value, list) or (not allow_empty and not value) or not all(isinstance(item, str) and item for item in value):
+    if (
+        not isinstance(value, list)
+        or (not allow_empty and not value)
+        or not all(isinstance(item, str) and item for item in value)
+    ):
         blockers.append({"code": code})
 
 

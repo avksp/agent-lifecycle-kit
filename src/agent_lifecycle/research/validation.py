@@ -8,7 +8,7 @@ from collections import Counter
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.redaction import contains_local_absolute_path, is_sensitive_key, redact_text
+from agent_lifecycle.contracts.redaction import contains_local_absolute_path, redact_text
 from agent_lifecycle.contracts.research_evidence_schemas import (
     RESEARCH_CITATION_MATCH_STATUSES,
     RESEARCH_EVIDENCE_STATUSES,
@@ -16,8 +16,8 @@ from agent_lifecycle.contracts.research_evidence_schemas import (
     RESEARCH_SOURCE_KINDS,
 )
 from agent_lifecycle.research.evidence import (
-    MAX_CLAIM_RECORDS,
     MAX_CITATION_RECORDS,
+    MAX_CLAIM_RECORDS,
     MAX_EVIDENCE_BYTES,
     MAX_PROVENANCE_EDGES,
     MAX_SOURCE_RECORDS,
@@ -28,7 +28,6 @@ from agent_lifecycle.research.evidence import (
     snapshot_digest,
 )
 from agent_lifecycle.research.provenance import analyze_provenance
-
 
 _AUTHORITY_MARKERS = re.compile(
     r"\b(?:ignore\s+(?:all\s+)?previous|system\s+instruction|developer\s+instruction|"
@@ -129,29 +128,40 @@ def validate_evidence_package(
 def build_evidence_summary(package: dict[str, Any], validation: dict[str, Any]) -> dict[str, Any]:
     """Build a bounded summary without copying source bodies or snapshots."""
 
-    claims = package.get("claims") if isinstance(package.get("claims"), list) else []
-    citations = package.get("citations") if isinstance(package.get("citations"), list) else []
-    citation_claim_ids = {item.get("claimId") for item in citations if isinstance(item, dict) and item.get("matchStatus") == "MATCHED"}
+    raw_claims = package.get("claims")
+    claims: list[Any] = raw_claims if isinstance(raw_claims, list) else []
+    raw_citations = package.get("citations")
+    citations: list[Any] = raw_citations if isinstance(raw_citations, list) else []
+    raw_sources = package.get("sources")
+    sources: list[Any] = raw_sources if isinstance(raw_sources, list) else []
+    raw_provenance = package.get("provenance")
+    provenance: list[Any] = raw_provenance if isinstance(raw_provenance, list) else []
+    citation_claim_ids = {
+        item.get("claimId") for item in citations if isinstance(item, dict) and item.get("matchStatus") == "MATCHED"
+    }
     supported_claims = sorted(
         str(item.get("claimId"))
         for item in claims
-        if isinstance(item, dict) and item.get("claimId") in citation_claim_ids and item.get("status") not in {"stale", "disputed"}
+        if isinstance(item, dict)
+        and item.get("claimId") in citation_claim_ids
+        and item.get("status") not in {"stale", "disputed"}
     )
     lifecycle_counts = Counter(
         str(item.get("status"))
-        for item in [*(package.get("sources") or []), *(package.get("claims") or [])]
+        for item in [*sources, *claims]
         if isinstance(item, dict) and item.get("status") in RESEARCH_EVIDENCE_STATUSES
     )
-    blockers = validation.get("blockers") if isinstance(validation.get("blockers"), list) else []
+    raw_blockers = validation.get("blockers")
+    blockers: list[Any] = raw_blockers if isinstance(raw_blockers, list) else []
     body = {
         "schemaVersion": "agent-research-evidence-summary.v1",
         "status": "PASS" if validation.get("status") == "PASS" else "FAIL",
         "packageDigest": package.get("packageDigest"),
         "counts": {
-            "sources": len(package.get("sources") or []),
+            "sources": len(sources),
             "claims": len(claims),
             "citations": len(citations),
-            "provenance": len(package.get("provenance") or []),
+            "provenance": len(provenance),
             "blockers": len(blockers),
         },
         "supportedClaims": supported_claims,
@@ -167,7 +177,9 @@ def build_evidence_summary(package: dict[str, Any], validation: dict[str, Any]) 
 
 def require_evidence_validation_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("research-evidence-validation-failed", "research evidence validation failed", {"validation": validation})
+        raise LifecycleError(
+            "research-evidence-validation-failed", "research evidence validation failed", {"validation": validation}
+        )
     return validation
 
 
@@ -203,7 +215,9 @@ def _records(package: dict[str, Any], key: str, limit: int, blockers: list[dict[
     return [item for item in value if isinstance(item, dict)]
 
 
-def _index_records(records: list[dict[str, Any]], key: str, label: str, blockers: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+def _index_records(
+    records: list[dict[str, Any]], key: str, label: str, blockers: list[dict[str, Any]]
+) -> dict[str, dict[str, Any]]:
     index: dict[str, dict[str, Any]] = {}
     for position, record in enumerate(records):
         value = record.get(key)
@@ -217,7 +231,12 @@ def _index_records(records: list[dict[str, Any]], key: str, label: str, blockers
     return index
 
 
-def _validate_source(source: dict[str, Any], source_map: dict[str, dict[str, Any]], lifecycle: list[dict[str, Any]], blockers: list[dict[str, Any]]) -> None:
+def _validate_source(
+    source: dict[str, Any],
+    _source_map: dict[str, dict[str, Any]],
+    lifecycle: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
+) -> None:
     source_id = source.get("sourceId")
     if source.get("kind") not in RESEARCH_SOURCE_KINDS:
         blockers.append({"code": "research-source-kind-invalid", "sourceId": source_id})
@@ -235,7 +254,12 @@ def _validate_source(source: dict[str, Any], source_map: dict[str, dict[str, Any
     _validate_locator(source.get("locator"), source_id, blockers)
 
 
-def _validate_claim(claim: dict[str, Any], claim_map: dict[str, dict[str, Any]], lifecycle: list[dict[str, Any]], blockers: list[dict[str, Any]]) -> None:
+def _validate_claim(
+    claim: dict[str, Any],
+    _claim_map: dict[str, dict[str, Any]],
+    lifecycle: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
+) -> None:
     claim_id = claim.get("claimId")
     value = claim.get("claim")
     if not isinstance(value, str) or not value.strip() or len(value) > 4096:
@@ -257,7 +281,7 @@ def _validate_citation(
     citation: dict[str, Any],
     source_map: dict[str, dict[str, Any]],
     claim_map: dict[str, dict[str, Any]],
-    citation_map: dict[str, dict[str, Any]],
+    _citation_map: dict[str, dict[str, Any]],
     snapshots: dict[str, str | bytes],
     checks: list[dict[str, Any]],
     blockers: list[dict[str, Any]],
@@ -265,8 +289,8 @@ def _validate_citation(
     citation_id = citation.get("citationId")
     source_id = citation.get("sourceId")
     claim_id = citation.get("claimId")
-    source = source_map.get(source_id)
-    claim = claim_map.get(claim_id)
+    source = source_map.get(source_id) if isinstance(source_id, str) else None
+    claim = claim_map.get(claim_id) if isinstance(claim_id, str) else None
     if source is None:
         blockers.append({"code": "research-citation-source-missing", "citationId": citation_id})
     if claim is None:
@@ -281,9 +305,13 @@ def _validate_citation(
     if match_status not in RESEARCH_CITATION_MATCH_STATUSES:
         blockers.append({"code": "research-citation-match-status-invalid", "citationId": citation_id})
     _validate_locator(citation.get("locator"), citation_id, blockers)
-    if source is not None and source.get("snapshotDigest") != citation.get("snapshotDigest") and citation.get("snapshotDigest") is not None:
+    if (
+        source is not None
+        and source.get("snapshotDigest") != citation.get("snapshotDigest")
+        and citation.get("snapshotDigest") is not None
+    ):
         blockers.append({"code": "research-citation-source-snapshot-mismatch", "citationId": citation_id})
-    snapshot = snapshots.get(source_id)
+    snapshot = snapshots.get(source_id) if isinstance(source_id, str) else None
     if snapshot is None:
         if match_status == "MATCHED":
             blockers.append({"code": "research-citation-snapshot-required", "citationId": citation_id})
@@ -300,7 +328,8 @@ def _validate_citation(
         blockers.append({"code": "research-citation-snapshot-mismatch", "citationId": citation_id})
     try:
         text = decode_snapshot(raw)
-        locator = citation.get("locator") if isinstance(citation.get("locator"), dict) else {}
+        raw_locator = citation.get("locator")
+        locator: dict[str, Any] = raw_locator if isinstance(raw_locator, dict) else {}
         start = locator.get("start")
         end = locator.get("end")
         if not isinstance(start, int) or not isinstance(end, int) or start < 0 or end < start or end > len(text):
@@ -316,7 +345,9 @@ def _validate_citation(
         blockers.append({"code": exc.code, "citationId": citation_id})
 
 
-def _validate_lifecycle(record: dict[str, Any], kind: str, record_id: Any, checks: list[dict[str, Any]], blockers: list[dict[str, Any]]) -> None:
+def _validate_lifecycle(
+    record: dict[str, Any], kind: str, record_id: Any, checks: list[dict[str, Any]], blockers: list[dict[str, Any]]
+) -> None:
     status = record.get("status")
     if status not in RESEARCH_EVIDENCE_STATUSES:
         blockers.append({"code": f"research-{kind}-status-invalid", "id": record_id})
@@ -373,7 +404,9 @@ def _walk(value: Any, path: str = "$") -> list[tuple[str, str, Any]]:
 
 
 def _evidence_gaps(claims: list[Any], citations: list[Any]) -> list[dict[str, Any]]:
-    cited = {item.get("claimId") for item in citations if isinstance(item, dict) and item.get("matchStatus") == "MATCHED"}
+    cited = {
+        item.get("claimId") for item in citations if isinstance(item, dict) and item.get("matchStatus") == "MATCHED"
+    }
     return [
         {"claimId": item.get("claimId"), "reason": "no-matched-citation"}
         for item in claims

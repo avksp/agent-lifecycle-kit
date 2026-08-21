@@ -10,6 +10,7 @@ from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, m
 from agent_lifecycle.adapter_sessions.session_store import create_session, load_session, update_session
 from agent_lifecycle.contracts import canonical_digest, read_json_object
 from agent_lifecycle.policy.risk_execution import derive_risk_execution_profile
+from agent_lifecycle.resources import builtin_profile_path
 from agent_lifecycle.workflow import run_managed_lifecycle_step
 
 
@@ -54,15 +55,15 @@ def managed_adapter_run(
             source_revision=source_revision,
             requested_risk=requested_risk,
             risk_policy=read_json_object(
-                risk_policy_path or Path("profiles/risk-execution-policy.v1.json"),
+                risk_policy_path or builtin_profile_path("risk-execution-policy.v1.json"),
                 label="risk execution policy",
             ),
             routing_profile=read_json_object(
-                routing_profile_path or Path("profiles/model-routing-profile.v1.json"),
+                routing_profile_path or builtin_profile_path("model-routing-profile.v1.json"),
                 label="model routing profile",
             ),
             baseline_profile=read_json_object(
-                baseline_profile_path or Path("profiles/lifecycle-baselines.v1.json"),
+                baseline_profile_path or builtin_profile_path("lifecycle-baselines.v1.json"),
                 label="lifecycle baseline profile",
             ),
             host_profile=read_json_object(host_model_profile_path, label="host model profile")
@@ -114,7 +115,9 @@ def promote_session_to_workflow(
             blockers=[{"code": "adapter-session-adapter-mismatch"}],
         )
     identity = {**_state_identity(state_path), "taskId": task_id}
-    proof = _managed_proof("adapter session promote", adapter_id=session["adapterId"], task_id=task_id, state_identity=identity)
+    proof = _managed_proof(
+        "adapter session promote", adapter_id=session["adapterId"], task_id=task_id, state_identity=identity
+    )
     session["mode"] = "PROMOTED"
     session["status"] = "READY"
     session["stateIdentity"] = identity
@@ -143,17 +146,26 @@ def resume_adapter_session(
     session = load_session(session_id, session_root=session_root)
     expected: dict[str, Any] = {}
     blockers: list[dict[str, Any]] = []
-    if adapter_id:
-        if session.get("adapterId") != adapter_id:
-            blockers.append({"code": "adapter-session-adapter-mismatch", "expected": adapter_id, "actual": session.get("adapterId")})
+    if adapter_id and session.get("adapterId") != adapter_id:
+        blockers.append(
+            {"code": "adapter-session-adapter-mismatch", "expected": adapter_id, "actual": session.get("adapterId")}
+        )
     if task_id:
         expected["taskId"] = task_id
-    actual = session.get("stateIdentity") if isinstance(session.get("stateIdentity"), dict) else {}
+    actual_value = session.get("stateIdentity")
+    actual: dict[str, Any] = actual_value if isinstance(actual_value, dict) else {}
     if state_path is not None:
         expected.update(_state_identity(state_path))
         for key, expected_value in expected.items():
             if actual.get(key) != expected_value:
-                blockers.append({"code": "adapter-session-lineage-mismatch", "field": key, "expected": expected_value, "actual": actual.get(key)})
+                blockers.append(
+                    {
+                        "code": "adapter-session-lineage-mismatch",
+                        "field": key,
+                        "expected": expected_value,
+                        "actual": actual.get(key),
+                    }
+                )
     return build_resume_receipt(
         session_id=session_id,
         adapter_id=session.get("adapterId", adapter_id or ""),
@@ -191,11 +203,7 @@ def _managed_proof(command: str, *, adapter_id: str, task_id: str, state_identit
 def _risk_aware_next_action(next_action: Any, profile: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(next_action, dict):
         next_action = {}
-    body = {
-        key: value
-        for key, value in next_action.items()
-        if key != "actionDigest"
-    }
+    body = {key: value for key, value in next_action.items() if key != "actionDigest"}
     body["riskExecutionProfile"] = profile
     body["riskProfileRequiredAtTaskStart"] = True
     body["stateMutationRequired"] = True
