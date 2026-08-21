@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import unittest
 from pathlib import Path
 
 
@@ -8,7 +9,18 @@ ROOT = Path(__file__).resolve().parents[2]
 EXPERIMENTAL_SECONDARY: tuple[str, ...] = ()
 
 
-def test_secondary_adapters_are_experimental_without_live_range() -> None:
+class SecondaryAdapterTests(unittest.TestCase):
+    def test_secondary_adapters_are_experimental_without_live_range(self) -> None:
+        _test_secondary_adapters_are_experimental_without_live_range()
+
+    def test_openinterpreter_secondary_adapter_is_verified_with_live_range(self) -> None:
+        _test_openinterpreter_secondary_adapter_is_verified_with_live_range()
+
+    def test_pi_secondary_adapter_is_verified_with_live_range(self) -> None:
+        _test_pi_secondary_adapter_is_verified_with_live_range()
+
+
+def _test_secondary_adapters_are_experimental_without_live_range() -> None:
     for adapter_id in EXPERIMENTAL_SECONDARY:
         descriptor = _load_json(ROOT / "adapters" / adapter_id / "adapter.descriptor.json")
         conformance = _load_json(ROOT / "conformance" / "adapters" / adapter_id / "offline-baseline.json")
@@ -19,7 +31,7 @@ def test_secondary_adapters_are_experimental_without_live_range() -> None:
         assert conformance["requiredMaturity"] == "EXPERIMENTAL"
 
 
-def test_openinterpreter_secondary_adapter_is_verified_with_live_range() -> None:
+def _test_openinterpreter_secondary_adapter_is_verified_with_live_range() -> None:
     descriptor = _load_json(ROOT / "adapters/openinterpreter/adapter.descriptor.json")
     conformance = _load_json(ROOT / "conformance/adapters/openinterpreter/offline-baseline.json")
 
@@ -31,7 +43,7 @@ def test_openinterpreter_secondary_adapter_is_verified_with_live_range() -> None
     assert conformance["requiredMaturity"] == "EXPERIMENTAL"
 
 
-def test_pi_secondary_adapter_is_verified_with_live_range() -> None:
+def _test_pi_secondary_adapter_is_verified_with_live_range() -> None:
     descriptor = _load_json(ROOT / "adapters/pi/adapter.descriptor.json")
     conformance = _load_json(ROOT / "conformance/adapters/pi/offline-baseline.json")
 

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "agent-plan-manifest.v1",
+  "status": "FROZEN",
+  "planRevision": 2,
+  "package": {
+    "id": "canonical-v2-plan-package",
+    "planArtifactRoot": "tests/freeze/fixtures/canonical-v2-plan-package",
+    "artifactRoot": "tests/freeze/fixtures/canonical-v2-plan-package"
+  },
+  "planFiles": [
+    "tests/freeze/fixtures/canonical-v2-plan-package/plan.manifest.json",
+    "tests/freeze/fixtures/canonical-v2-plan-package/plan.md"
+  ],
+  "packageIntegrity": {
+    "required": true,
+    "lockSchemaVersion": "agent-plan-lock.v2",
+    "inventorySource": "planFiles",
+    "undeclaredTopLevelFiles": "reject",
+    "allowedUnlistedFiles": ["plan.lock.json"]
+  },
+  "workstreams": [
+    {
+      "id": "WS-FIXTURE",
+      "title": "Fixture task",
+      "writes": ["tests/freeze/fixtures/canonical-v2-plan-package/plan.md"],
+      "acceptanceIds": [],
+      "evidenceIds": []
+    }
+  ]
+}

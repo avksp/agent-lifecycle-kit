@@ -1,0 +1,1 @@
+"""Grok Build adapter tests."""

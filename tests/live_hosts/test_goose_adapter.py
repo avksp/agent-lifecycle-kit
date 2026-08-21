@@ -257,7 +257,15 @@ class GooseHarnessTests(unittest.TestCase):
         self.assertIn("BLOCKED_WORKTREE_MUTATED", {item["code"] for item in report["blockers"]})
 
 
-def test_goose_probe_receipt_passes_without_live_model_call_when_probe_is_valid() -> None:
+class GooseProbeReceiptTests(unittest.TestCase):
+    def test_goose_probe_receipt_passes_without_live_model_call_when_probe_is_valid(self) -> None:
+        _test_goose_probe_receipt_passes_without_live_model_call_when_probe_is_valid()
+
+    def test_goose_probe_receipt_fails_closed_on_missing_executable(self) -> None:
+        _test_goose_probe_receipt_fails_closed_on_missing_executable()
+
+
+def _test_goose_probe_receipt_passes_without_live_model_call_when_probe_is_valid() -> None:
     descriptor = _load_json(ROOT / "adapters/goose/adapter.descriptor.json")
     receipt = build_acp_probe_receipt(
         descriptor["hostCapabilities"][0],
@@ -272,7 +280,7 @@ def test_goose_probe_receipt_passes_without_live_model_call_when_probe_is_valid(
     assert receipt["liveCallsStarted"] is False
 
 
-def test_goose_probe_receipt_fails_closed_on_missing_executable() -> None:
+def _test_goose_probe_receipt_fails_closed_on_missing_executable() -> None:
     descriptor = _load_json(ROOT / "adapters/goose/adapter.descriptor.json")
     receipt = build_acp_probe_receipt(
         descriptor["hostCapabilities"][0],

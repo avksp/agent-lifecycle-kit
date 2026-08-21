@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import unittest
 from pathlib import Path
 
 from agent_lifecycle.host_protocol import build_capability_manifest, validate_adapter_descriptor, validate_capability_manifest
@@ -9,7 +10,12 @@ from agent_lifecycle.host_protocol import build_capability_manifest, validate_ad
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
+class GeminiCliAdapterTests(unittest.TestCase):
+    def test_descriptor_and_capability_manifest_pass_offline_contracts(self) -> None:
+        _test_descriptor_and_capability_manifest_pass_offline_contracts()
+
+
+def _test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
     descriptor_path = ROOT / "adapters/gemini-cli/adapter.descriptor.json"
     descriptor = json.loads(descriptor_path.read_text(encoding="utf-8"))
     baseline = json.loads((ROOT / "conformance/core/adapter-baseline.v1.json").read_text(encoding="utf-8"))

@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.reporting import build_change_summary_receipt
 
 
@@ -37,6 +38,27 @@ class ChangeSummaryTests(unittest.TestCase):
         self.assertIn("3 files changed", summary["line"])
         self.assertTrue(summary["readOnly"])
         self.assertFalse(summary["modelCallsStarted"])
+
+    def test_option_shaped_base_and_head_fail_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _git(root, "init")
+            _git(root, "config", "user.email", "test@example.com")
+            _git(root, "config", "user.name", "Test User")
+            (root / "tracked.txt").write_text("tracked\n", encoding="utf-8")
+            _git(root, "add", "tracked.txt")
+            _git(root, "commit", "-m", "initial")
+            sentinel = root / "read-only-must-not-write"
+
+            for kwargs in (
+                {"base": f"--output={sentinel}"},
+                {"base": "HEAD", "head": f"--output={sentinel}"},
+            ):
+                with self.subTest(kwargs=kwargs), self.assertRaises(LifecycleError) as raised:
+                    build_change_summary_receipt(project_root=root, **kwargs)
+                self.assertEqual(raised.exception.code, "invalid-git-revision")
+
+            self.assertFalse(sentinel.exists())
 
 
 def _git(root: Path, *args: str) -> None:

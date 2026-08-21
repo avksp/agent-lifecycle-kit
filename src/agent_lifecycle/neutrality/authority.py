@@ -14,6 +14,7 @@ from .paths import ensure_external_regular_file, stable_read_bytes
 
 DENY_DOMAIN = b"agent-lifecycle-neutrality-deny-authority-v1\0"
 RECEIPT_DOMAIN = b"agent-lifecycle-neutrality-claims-v3\0"
+RECEIPT_V4_DOMAIN = b"agent-lifecycle-neutrality-receipt-envelope-v4\0"
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,13 @@ class AuthorityBundle:
         if self.signing_seed is None:
             raise NeutralityError("signing key is required to produce a receipt")
         return sign(self.signing_seed, RECEIPT_DOMAIN + claims_digest.encode("ascii")).hex()
+
+    def sign_receipt_envelope(self, envelope: dict[str, Any]) -> str:
+        """Sign the complete detached-receipt envelope for the active protocol."""
+
+        if self.signing_seed is None:
+            raise NeutralityError("signing key is required to produce a receipt")
+        return sign(self.signing_seed, RECEIPT_V4_DOMAIN + canonical_bytes(envelope)).hex()
 
 
 def load_authority_bundle(

@@ -86,7 +86,15 @@ class FoundationTests(unittest.TestCase):
         self.assertNotIn("optional-dependencies", pyproject["project"])
         workflow = (ROOT / ".github/workflows/neutrality.yml").read_text(encoding="utf-8")
         self.assertIn("python -m unittest discover", workflow)
+        self.assertIn("-t .", workflow)
         self.assertNotIn("pytest", workflow)
+
+    def test_ci_runs_security_suite_and_codeql_workflow_is_pinned(self) -> None:
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        codeql = (ROOT / ".github/workflows/codeql.yml").read_text(encoding="utf-8")
+        self.assertIn("python -m unittest discover -s tests/security -t . -v", ci)
+        self.assertIn("github/codeql-action/init@", codeql)
+        self.assertIn("github/codeql-action/analyze@", codeql)
 
     def test_ci_workflows_lock_line_endings_before_checkout(self) -> None:
         # NEG-R03-18 Windows CRLF Hash Drift

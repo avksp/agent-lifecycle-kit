@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import unittest
 from pathlib import Path
 
 from agent_lifecycle.host_protocol import (
@@ -14,7 +15,15 @@ from agent_lifecycle.host_protocol import (
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
+class GrokBuildAdapterTests(unittest.TestCase):
+    def test_descriptor_and_capability_manifest_pass_offline_contracts(self) -> None:
+        _test_descriptor_and_capability_manifest_pass_offline_contracts()
+
+    def test_acp_capability_is_probe_gated_with_positive_and_negative_receipts(self) -> None:
+        _test_acp_capability_is_probe_gated_with_positive_and_negative_receipts()
+
+
+def _test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
     descriptor = _load_json(ROOT / "adapters/grok-build/adapter.descriptor.json")
     baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
     manifest = _load_json(ROOT / "adapters/grok-build/capabilities.manifest.json")
@@ -27,7 +36,7 @@ def test_descriptor_and_capability_manifest_pass_offline_contracts() -> None:
     assert descriptor["modelRouting"]["liveVerified"] is True
 
 
-def test_acp_capability_is_probe_gated_with_positive_and_negative_receipts() -> None:
+def _test_acp_capability_is_probe_gated_with_positive_and_negative_receipts() -> None:
     descriptor = _load_json(ROOT / "adapters/grok-build/adapter.descriptor.json")
     capability = descriptor["hostCapabilities"][0]
     probe = _load_json(ROOT / "conformance/adapters/grok-build/grok-acp-probe-negative-fixture.json")

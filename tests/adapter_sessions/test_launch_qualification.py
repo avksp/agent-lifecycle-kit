@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,6 +18,7 @@ class LaunchQualificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             profile = load_shipped_launch_profile("codex", repository_root=ROOT)
+            profile["executable"] = sys.executable
             path = root / ".alk/host-launch/codex.json"
             path.parent.mkdir(parents=True)
             path.write_text(json.dumps(profile), encoding="utf-8")
@@ -31,6 +33,8 @@ class LaunchQualificationTests(unittest.TestCase):
             stored_exists = (root / ".alk/host-launch/codex-0.147.0.qualification.json").is_file()
         self.assertEqual(receipt["status"], "PASS")
         self.assertEqual(qualification["status"], "PASS")
+        self.assertEqual(qualification["executableIdentity"]["status"], "PASS")
+        self.assertEqual(receipt["hostIdentity"]["executableContentSha256"], qualification["executableIdentity"]["executableContentSha256"])
         self.assertTrue(stored_exists)
         run_process.assert_called_once()
 
@@ -38,6 +42,7 @@ class LaunchQualificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             profile = load_shipped_launch_profile("codex", repository_root=ROOT)
+            profile["executable"] = sys.executable
             path = root / ".alk/host-launch/codex.json"
             path.parent.mkdir(parents=True)
             path.write_text(json.dumps(profile), encoding="utf-8")
@@ -50,3 +55,7 @@ class LaunchQualificationTests(unittest.TestCase):
                 receipt = launch_from_local_profile(profile_path=path, operation="preflight", project_root=root, process_env={"PATH": "/bin", "HOME": "/tmp"})
         self.assertEqual(receipt["status"], "FAIL")
         self.assertIn("qualified-launch-version-mismatch", {item["code"] for item in receipt["blockers"]})
+
+
+if __name__ == "__main__":
+    unittest.main()

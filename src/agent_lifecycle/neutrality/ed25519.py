@@ -66,10 +66,16 @@ def _encode_point(point: tuple[int, int]) -> bytes:
 def _decode_point(data: bytes) -> tuple[int, int]:
     if len(data) != 32:
         raise ValueError("encoded point must be 32 bytes")
-    y = int.from_bytes(data, "little") & ((1 << 255) - 1)
+    encoded = int.from_bytes(data, "little")
+    sign_bit = encoded >> 255
+    y = encoded & ((1 << 255) - 1)
+    if y >= P:
+        raise ValueError("encoded point is not canonical")
     x = _x_recover(y)
-    if (x & 1) != (data[31] >> 7):
+    if (x & 1) != sign_bit:
         x = P - x
+    if x >= P or (x == 0 and sign_bit != 0):
+        raise ValueError("encoded point sign is not canonical")
     point = (x, y)
     if not _is_on_curve(point):
         raise ValueError("decoded point is not on curve")

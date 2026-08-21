@@ -20,13 +20,14 @@ jobs:
     steps:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install package
         run: python -m pip install -e .
       - name: Run foundation and neutrality negative tests
-        run: python -m unittest discover -s tests -p 'test_*.py'
+        run: python -m unittest discover -s tests -t . -p 'test_*.py'
