@@ -19,8 +19,22 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.76.0
+  python -m pip install agent-lifecycle-kit==1.77.0
 ```
+
+## Error and resource contracts
+
+The root CLI returns `agent-lifecycle-error.v1` with exit code `2` for expected
+I/O, decoding, JSON-depth and unexpected failures. The JSON is redacted and
+does not contain a traceback or local absolute path. Library exceptions and
+`KeyboardInterrupt`/`SystemExit` behavior are unchanged. See the [CLI error
+contract](cli-errors.md).
+
+Built-in profiles are loaded through `importlib.resources`, so commands work
+from an installed wheel outside the checkout. A same-named file in the current
+directory cannot shadow a built-in profile; an explicitly supplied path still
+takes precedence. The supported import surface is listed in the [Python API
+reference](python-api.md).
 
 ## Foundation
 

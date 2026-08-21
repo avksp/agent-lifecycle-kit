@@ -30,9 +30,19 @@ def main() -> int:
     dist_dir.mkdir(parents=True)
 
     _run_command(
-        [args.python, "-m", "build", "--wheel", "--sdist", "--outdir", str(dist_dir)],
+        [
+            args.python,
+            "-m",
+            "build",
+            "--wheel",
+            "--sdist",
+            "--outdir",
+            str(dist_dir.resolve()),
+            str(ROOT),
+        ],
         commands,
         blockers,
+        cwd=ROOT.parent,
     )
     wheels = sorted(dist_dir.glob("*.whl"))
     source_distributions = sorted([*dist_dir.glob("*.tar.gz"), *dist_dir.glob("*.zip")])
@@ -88,8 +98,17 @@ def _check_artifact(
     if created:
         python = _venv_python(venv_dir)
         _run_command([str(python), "-m", "pip", "install", "--force-reinstall", str(artifact)], commands, blockers)
-        _run_command([str(_venv_script(venv_dir, "agent-lifecycle")), "version"], commands, blockers)
-        _run_command([str(_venv_script(venv_dir, "agent-lifecycle-neutrality")), "--help"], commands, blockers)
+        outside = venv_dir.parent / f"{kind}-outside"
+        outside.mkdir(parents=True, exist_ok=True)
+        lifecycle = _venv_script(venv_dir, "agent-lifecycle")
+        _run_command([str(lifecycle), "version"], commands, blockers, cwd=outside)
+        _run_command(
+            [str(_venv_script(venv_dir, "agent-lifecycle-neutrality")), "--help"], commands, blockers, cwd=outside
+        )
+        request = outside / "model-route-request.json"
+        request.write_text(json.dumps(_model_route_request()), encoding="utf-8")
+        _run_command([str(lifecycle), "model", "route", "--request", str(request)], commands, blockers, cwd=outside)
+        _run_command([str(lifecycle), "project", "preset", "list"], commands, blockers, cwd=outside)
         marker = _probe_type_marker(python)
         commands.append(
             {"argv": _portable_argv([str(python), "-c", "py.typed probe"]), "returncode": 0 if marker else 1}
@@ -106,8 +125,14 @@ def _check_artifact(
     }
 
 
-def _run_command(argv: list[str], commands: list[dict[str, Any]], blockers: list[dict[str, Any]]) -> int:
-    result = subprocess.run(argv, cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+def _run_command(
+    argv: list[str],
+    commands: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
+    *,
+    cwd: Path = ROOT,
+) -> int:
+    result = subprocess.run(argv, cwd=cwd, text=True, capture_output=True, check=False)
     portable_argv = _portable_argv(argv)
     commands.append({"argv": portable_argv, "returncode": result.returncode})
     if result.returncode != 0:
@@ -155,12 +180,27 @@ def _file_identity(path: Path) -> dict[str, Any]:
     return {"name": path.name, "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
 
 
+def _model_route_request() -> dict[str, Any]:
+    return {
+        "schemaVersion": "agent-lifecycle-model-route-request.v1",
+        "operationId": "packaging-smoke",
+        "phase": "triage",
+        "sddTier": "S0",
+        "riskFlags": {},
+        "capabilityRequirements": ["text", "json"],
+        "targetContextWindow": "8k",
+        "routingPolicy": "balanced",
+        "budgetClass": "normal",
+        "userPolicy": {"localModelsAllowed": False, "cloudModelsAllowed": True},
+    }
+
+
 def _probe_type_marker(python: Path) -> bool:
     code = (
         "import importlib.resources as r; "
         "raise SystemExit(0 if (r.files('agent_lifecycle') / 'py.typed').is_file() else 1)"
     )
-    result = subprocess.run([str(python), "-c", code], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    result = subprocess.run([str(python), "-c", code], text=True, capture_output=True, check=False)
     return result.returncode == 0
 
 

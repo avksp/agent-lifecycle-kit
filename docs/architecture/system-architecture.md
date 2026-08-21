@@ -104,6 +104,30 @@ The guarantee boundary is explicit:
 | Code and behavior | Test results, validation output, changed-file scope, resource limits and audit completeness. | Semantic correctness of research, design and implementation; the plan must require tests, review or domain evidence for it. |
 | Host and model | Adapter identity, declared capabilities, environment boundary and attested usage. | The quality of model reasoning and the behavior of tools supplied by the host. |
 
+## Release 1.77 quality and packaging boundaries
+
+Release 1.77 adds maintenance controls around the existing lifecycle
+architecture. Ruff, mypy and coverage are development-only tools executed by a
+bounded release runner; they do not become runtime dependencies or a new
+execution authority. The quality policy keeps legacy findings tied to source
+digests and prevents new or growing debt.
+
+The root CLI remains the composition boundary. It translates expected I/O,
+decoding, JSON-depth and unexpected failures into the stable
+`agent-lifecycle-error.v1` contract, while domain libraries keep their native
+exceptions and interruption semantics. The CLI therefore exposes a safe
+machine-readable boundary without moving lifecycle rules into the parser.
+
+Built-in profiles are data owned by the package resource layer. Their reviewed
+source copies and installed copies are digest-checked, and `importlib.resources`
+resolves them independently of the current directory. An explicit operator
+path has higher precedence; a project file cannot shadow a built-in default.
+
+The supported Python API is an explicit allowlist of the root package and
+selected opt-in facades. The validator checks imports, exports, annotations and
+English/Russian documentation. Internal modules remain implementation details
+unless they are listed in that contract.
+
 ## C1: system context
 
 At system level ALK is a local CLI and Python package used inside a source

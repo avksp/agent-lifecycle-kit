@@ -43,6 +43,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
             "matrix.yml",
             "neutrality.yml",
             "publish.yml",
+            "python-quality.yml",
             "release.yml",
         })
         for path in workflow_paths:

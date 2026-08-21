@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypeGuard
 
 from agent_lifecycle.contracts.redaction import redact_value
 
 CONFIDENCE_LEVELS = ("ATTESTED", "ESTIMATED", "MISSING")
 
 
-def build_measurements(submission: dict[str, Any], oracle_result: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    evidence = submission.get("evidence") if isinstance(submission.get("evidence"), dict) else {}
-    usage_export = evidence.get("usageExport") if isinstance(evidence.get("usageExport"), dict) else {}
-    entries = usage_export.get("entries") if isinstance(usage_export.get("entries"), list) else []
+def build_measurements(
+    submission: dict[str, Any], oracle_result: dict[str, Any]
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    raw_evidence = submission.get("evidence")
+    evidence: dict[str, Any] = raw_evidence if isinstance(raw_evidence, dict) else {}
+    raw_usage_export = evidence.get("usageExport")
+    usage_export: dict[str, Any] = raw_usage_export if isinstance(raw_usage_export, dict) else {}
+    raw_entries = usage_export.get("entries")
+    entries: list[Any] = raw_entries if isinstance(raw_entries, list) else []
     buckets: dict[str, dict[str, Any]] = {
         "ATTESTED": _token_bucket(),
         "ESTIMATED": _token_bucket(),
@@ -31,7 +36,8 @@ def build_measurements(submission: dict[str, Any], oracle_result: dict[str, Any]
             continue
         buckets[confidence]["entryCount"] += 1
         if confidence != "MISSING":
-            tokens = entry.get("tokens") if isinstance(entry.get("tokens"), dict) else {}
+            raw_tokens = entry.get("tokens")
+            tokens: dict[str, Any] = raw_tokens if isinstance(raw_tokens, dict) else {}
             for key in ("input", "output", "total"):
                 buckets[confidence][key] += _non_negative_int(tokens.get(key))
         if _is_non_negative_int(entry.get("durationMs")):
@@ -58,13 +64,21 @@ def build_measurements(submission: dict[str, Any], oracle_result: dict[str, Any]
     remediations = _outcome_metric(evidence.get("outcomeIndex"), submission.get("taskId"), "remediationLoops")
     if remediations is None:
         gaps.append("remediation-count-missing")
-    checks = oracle_result.get("checks") if isinstance(oracle_result.get("checks"), list) else []
-    passed = sum(1 for item in checks if isinstance(item, dict) and item.get("passed") is True)
+    raw_checks = oracle_result.get("checks")
+    checks: list[Any] = raw_checks if isinstance(raw_checks, list) else []
+    passed = len([item for item in checks if isinstance(item, dict) and item.get("passed") is True])
     measurements = {
-        "quality": {"oraclePassed": oracle_result.get("status") == "PASS", "criteriaPassed": passed, "criteriaTotal": len(checks)},
+        "quality": {
+            "oraclePassed": oracle_result.get("status") == "PASS",
+            "criteriaPassed": passed,
+            "criteriaTotal": len(checks),
+        },
         "tokens": {"byConfidence": buckets, "headline": headline},
         "invocations": {"count": len(entries), "source": "agent-usage-export.v1" if entries else None},
-        "elapsed": {"milliseconds": duration_ms if duration_entries else None, "source": "agent-usage-export.v1" if duration_entries else None},
+        "elapsed": {
+            "milliseconds": duration_ms if duration_entries else None,
+            "source": "agent-usage-export.v1" if duration_entries else None,
+        },
         "retries": {"count": retries, "source": "agent-task-outcome-index.v1" if retries is not None else None},
         "remediations": {
             "count": remediations,
@@ -93,7 +107,7 @@ def _outcome_metric(outcome_index: Any, task_id: Any, field: str) -> int | None:
     if not isinstance(records, list):
         return None
     values = [item.get(field) for item in records if isinstance(item, dict) and item.get("taskId") == task_id]
-    valid = [item for item in values if _is_non_negative_int(item)]
+    valid = [int(item) for item in values if _is_non_negative_int(item)]
     return sum(valid) if valid else None
 
 
@@ -101,7 +115,7 @@ def _token_bucket() -> dict[str, int]:
     return {"entryCount": 0, "input": 0, "output": 0, "total": 0}
 
 
-def _is_non_negative_int(value: Any) -> bool:
+def _is_non_negative_int(value: Any) -> TypeGuard[int]:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 

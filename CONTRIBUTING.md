@@ -46,6 +46,24 @@ Rules:
 - Use `chore(release): prepare vX.Y.Z ...` for version bumps, release manifests, tags, marketplace metadata, and release docs.
 - Breaking changes must be explicit with `!` or a `BREAKING CHANGE:` body.
 
+## Python quality checks
+
+The runtime package keeps zero dependencies. Development quality tools are
+isolated in the `quality` dependency group and pinned by `uv.lock`:
+
+```bash
+uv sync --locked --group quality
+uv run --frozen --group quality ruff check src/agent_lifecycle
+uv run --frozen --group quality ruff format --check src/agent_lifecycle
+uv run --frozen --group quality mypy src/agent_lifecycle
+```
+
+The release quality runner records bounded Ruff, format, mypy and coverage
+evidence. A baseline is a review-bound migration aid: it cannot grow, its
+source digest cannot drift, and a file being changed must leave its baseline.
+Do not suppress a finding or edit a baseline to make a change pass without a
+reviewed owner, reason and source update.
+
 Before opening a change, run:
 
 ```bash

@@ -7,7 +7,6 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, load_json_object, sha256_hex
 from agent_lifecycle.metrics.costs import (
-    COST_CATEGORIES,
     COST_REPORT_SCHEMA,
     COST_SUMMARY_SCHEMA,
     cost_entry_totals,
@@ -53,7 +52,8 @@ def generate_lifecycle_cost_report(
 def build_lifecycle_cost_summary(report: dict[str, Any]) -> dict[str, Any]:
     """Build a small-context summary from a lifecycle cost report."""
 
-    entries = report.get("entries") if isinstance(report.get("entries"), list) else []
+    raw_entries = report.get("entries")
+    entries: list[Any] = raw_entries if isinstance(raw_entries, list) else []
     totals = cost_entry_totals(entries)
     ratios = cost_ratios(totals)
     usage_confidence = summarize_usage_confidence(entries)
@@ -114,11 +114,9 @@ def _load_source_artifact(raw_path: Path, project_root: Path) -> tuple[dict[str,
 
 
 def _source_paths(report: dict[str, Any]) -> list[str]:
-    return [
-        item.get("path")
-        for item in report.get("sourceArtifacts", [])
-        if isinstance(item, dict) and isinstance(item.get("path"), str)
-    ]
+    raw_artifacts = report.get("sourceArtifacts")
+    artifacts = raw_artifacts if isinstance(raw_artifacts, list) else []
+    return [item["path"] for item in artifacts if isinstance(item, dict) and isinstance(item.get("path"), str)]
 
 
 def _entry_from_artifact(index: int, source: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -254,9 +252,9 @@ def _collect_lineage_values(value: Any, found: dict[str, set[Any]]) -> None:
                 found["runIds"].add(item)
             elif key == "packageId" and isinstance(item, str):
                 found["packageIds"].add(item)
-            elif key == "taskId" and isinstance(item, str):
-                found["taskIds"].add(item)
-            elif key == "id" and isinstance(item, str) and item.startswith("WS-"):
+            elif (key == "taskId" and isinstance(item, str)) or (
+                key == "id" and isinstance(item, str) and item.startswith("WS-")
+            ):
                 found["taskIds"].add(item)
             elif key == "planDigest" and isinstance(item, str):
                 found["planDigests"].add(item)

@@ -20,7 +20,10 @@ class ProjectPresetTests(unittest.TestCase):
     def test_all_built_in_presets_validate_with_documented_matrix(self) -> None:
         result = list_project_presets()
         self.assertEqual(result["status"], "PASS")
-        self.assertEqual([item["presetId"] for item in result["presets"]], ["quick-change", "research-review", "feature-implementation"])
+        self.assertEqual(
+            [item["presetId"] for item in result["presets"]],
+            ["quick-change", "research-review", "feature-implementation"],
+        )
         self.assertEqual(result["presets"][1]["reviewMesh"], "parallel-research-synthesis")
         self.assertEqual(result["presets"][2]["implementationAuthority"], "requires-frozen-plan")
 
@@ -36,12 +39,16 @@ class ProjectPresetTests(unittest.TestCase):
         preset = load_project_preset("quick-change")
         unsafe = copy.deepcopy(preset)
         unsafe["provider"] = "vendor"
-        unsafe["presetDigest"] = canonical_digest({key: value for key, value in unsafe.items() if key != "presetDigest"})
+        unsafe["presetDigest"] = canonical_digest(
+            {key: value for key, value in unsafe.items() if key != "presetDigest"}
+        )
         self.assertEqual(validate_project_preset(unsafe)["status"], "FAIL")
 
         quality = copy.deepcopy(preset)
         quality["qualityFloor"] = "strict"
-        quality["presetDigest"] = canonical_digest({key: value for key, value in quality.items() if key != "presetDigest"})
+        quality["presetDigest"] = canonical_digest(
+            {key: value for key, value in quality.items() if key != "presetDigest"}
+        )
         self.assertEqual(validate_project_preset(quality)["status"], "FAIL")
 
     def test_explicit_profile_values_override_preset_defaults(self) -> None:

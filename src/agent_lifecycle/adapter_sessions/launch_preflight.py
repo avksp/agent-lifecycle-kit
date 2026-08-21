@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from agent_lifecycle.adapter_sessions.contracts import (
     build_launch_receipt,
@@ -12,11 +13,19 @@ from agent_lifecycle.adapter_sessions.contracts import (
     build_local_launch_profile_receipt,
 )
 from agent_lifecycle.adapter_sessions.env import resolve_launch_env
+from agent_lifecycle.adapter_sessions.launch_execution import (
+    _attach_qualification_receipt,
+    _blocked_local_launch,
+    _blocked_planning_launch,
+    _managed_launch_blockers,
+    _state_task,
+    capture_git_worktree_identity,
+)
 from agent_lifecycle.adapter_sessions.local_launch_profile import (
     build_executable_identity,
     load_local_launch_profile,
-    local_receipt_argv,
     local_profile_summary,
+    local_receipt_argv,
     planning_receipt_argv,
     render_local_launch_argv,
     render_planning_launch_argv,
@@ -32,18 +41,7 @@ from agent_lifecycle.adapter_sessions.qualification import (
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.freeze import verify_plan_package_integrity
-from agent_lifecycle.host_protocol.validation import validate_managed_launch_profile
 from agent_lifecycle.workflow.risk_execution_gate import validate_task_risk_profile
-
-from agent_lifecycle.adapter_sessions.launch_execution import (
-    _attach_qualification_receipt,
-    _blocked_local_launch,
-    _blocked_planning_launch,
-    _managed_launch_blockers,
-    _planning_qualification_report,
-    _state_task,
-    capture_git_worktree_identity,
-)
 
 
 @dataclass(frozen=True)
@@ -56,7 +54,7 @@ class _LaunchContext:
     env: dict[str, str]
     env_receipt: dict[str, Any]
     timeout_seconds: float
-    shipped_digest: str
+    shipped_digest: str | None
     runner: Callable[..., dict[str, Any]]
 
 
@@ -232,7 +230,9 @@ def _planning_task(
     identity = _identity(context, strict=False)
     try:
         if identity["status"] != "PASS":
-            raise LifecycleError("local-launch-executable-identity-unavailable", "planning launch executable identity is unavailable")
+            raise LifecycleError(
+                "local-launch-executable-identity-unavailable", "planning launch executable identity is unavailable"
+            )
         qualification_receipt = require_planning_qualification_receipt(
             project_root=context.root,
             profile=context.profile,
@@ -345,7 +345,9 @@ def _managed_task(
         if manifest.get("status") != "FROZEN":
             raise LifecycleError("local-launch-frozen-plan-required", "local launch requires a frozen plan")
         task = _state_task(state, task_id)
-        validate_task_risk_profile(state, task, risk_profile, operation_id=operation_id, source_revision=source_revision)
+        validate_task_risk_profile(
+            state, task, risk_profile, operation_id=operation_id, source_revision=source_revision
+        )
         qualification_receipt = require_qualification_receipt(
             project_root=context.root,
             profile=context.profile,
@@ -389,7 +391,7 @@ def _run_managed_process(
     operation_id: str,
     source_revision: str,
     risk_profile: dict[str, Any],
-    qualification_receipt: dict[str, Any],
+    qualification_receipt: dict[str, Any] | None,
     host_identity: dict[str, Any],
 ) -> dict[str, Any]:
     bindings = {

@@ -47,7 +47,9 @@ def build_worker_lease_receipt(
         "observedAt": _iso(observed, label="observedAt", code="invalid-worker-lease-receipt"),
         "heartbeatAt": _optional_iso(heartbeat_at, label="heartbeatAt", code="invalid-worker-lease-receipt"),
         "completedAt": _optional_iso(completed_at, label="completedAt", code="invalid-worker-lease-receipt"),
-        "evidenceIds": _string_list(evidence_ids or [], label="evidenceIds", code="invalid-worker-lease-receipt", allow_empty=True),
+        "evidenceIds": _string_list(
+            evidence_ids or [], label="evidenceIds", code="invalid-worker-lease-receipt", allow_empty=True
+        ),
         "metadata": dict(metadata or {}),
         "blockers": list(blockers or []),
         "productionPromotionClaimed": False,
@@ -65,7 +67,9 @@ def classify_lease_status(*, expires_at: str, observed_at: str, completed_at: st
     return "expired" if observed > expires else "active"
 
 
-def validate_worker_lease_receipt(receipt: dict[str, Any], *, expected_lineage: dict[str, Any] | None = None) -> dict[str, Any]:
+def validate_worker_lease_receipt(
+    receipt: dict[str, Any], *, expected_lineage: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Validate a worker lease receipt and recompute lease state."""
 
     blockers: list[dict[str, Any]] = []
@@ -99,7 +103,9 @@ def validate_worker_lease_receipt(receipt: dict[str, Any], *, expected_lineage: 
     if expires and observed:
         expected_status = "completed" if completed else "expired" if observed > expires else "active"
         if lease_status != expected_status:
-            blockers.append({"code": "worker-lease-status-mismatch", "expected": expected_status, "actual": lease_status})
+            blockers.append(
+                {"code": "worker-lease-status-mismatch", "expected": expected_status, "actual": lease_status}
+            )
     _check_string_list(receipt.get("evidenceIds", []), "worker-lease-evidence-ids", blockers, allow_empty=True)
     if not isinstance(receipt.get("metadata", {}), dict):
         blockers.append({"code": "worker-lease-metadata-invalid"})
@@ -125,7 +131,9 @@ def validate_worker_lease_receipt(receipt: dict[str, Any], *, expected_lineage: 
 
 def require_worker_lease_receipt_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("receiptStatus") != "PASS":
-        raise LifecycleError("worker-lease-validation-failed", "worker lease receipt did not pass", {"validation": validation})
+        raise LifecycleError(
+            "worker-lease-validation-failed", "worker lease receipt did not pass", {"validation": validation}
+        )
     return validation
 
 
@@ -187,7 +195,8 @@ def _checked_lineage(value: Any, blockers: list[dict[str, Any]]) -> dict[str, An
     for key in ("runId", "packageId", "planDigest", "sourceRevision"):
         if not isinstance(value.get(key), str) or not value[key]:
             blockers.append({"code": "worker-lease-lineage-field-missing", "field": key})
-    if not isinstance(value.get("planRevision"), int) or isinstance(value.get("planRevision"), bool) or value.get("planRevision") < 1:
+    plan_revision = value.get("planRevision")
+    if not isinstance(plan_revision, int) or isinstance(plan_revision, bool) or plan_revision < 1:
         blockers.append({"code": "worker-lease-lineage-plan-revision-invalid"})
     return value
 
@@ -205,13 +214,21 @@ def _required_string(value: Any, *, label: str, code: str) -> str:
 
 
 def _string_list(value: Any, *, label: str, code: str, allow_empty: bool = False) -> list[str]:
-    if not isinstance(value, list) or (not allow_empty and not value) or not all(isinstance(item, str) and item for item in value):
+    if (
+        not isinstance(value, list)
+        or (not allow_empty and not value)
+        or not all(isinstance(item, str) and item for item in value)
+    ):
         raise LifecycleError(code, f"{label} must be a list of strings")
     return list(value)
 
 
 def _check_string_list(value: Any, code: str, blockers: list[dict[str, Any]], *, allow_empty: bool = False) -> None:
-    if not isinstance(value, list) or (not allow_empty and not value) or not all(isinstance(item, str) and item for item in value):
+    if (
+        not isinstance(value, list)
+        or (not allow_empty and not value)
+        or not all(isinstance(item, str) and item for item in value)
+    ):
         blockers.append({"code": code})
 
 

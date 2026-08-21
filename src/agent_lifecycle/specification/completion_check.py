@@ -22,7 +22,10 @@ def validate_completion_check(check: dict[str, Any]) -> dict[str, Any]:
     if kind not in CHECK_KINDS:
         raise LifecycleError("invalid-completion-check", "completionCheck kind is unsupported")
     _required_string(check.get("description"), label="completionCheck.description")
-    receipt_path = normalize_repo_path(check.get("receiptPath"), label="completion check receipt")
+    receipt_path = normalize_repo_path(
+        _required_string(check.get("receiptPath"), label="completionCheck.receiptPath"),
+        label="completion check receipt",
+    )
     evidence_ids = _string_list(
         check.get("requiredEvidenceIds"),
         label="completionCheck.requiredEvidenceIds",
@@ -52,7 +55,9 @@ def validate_completion_check_receipt(
     if not isinstance(receipt, dict):
         raise LifecycleError("completion-check-receipt-required", "completion check receipt must be an object")
     if receipt.get("schemaVersion") != "agent-completion-check-receipt.v1":
-        raise LifecycleError("invalid-completion-check-receipt", "completion check receipt schemaVersion is unsupported")
+        raise LifecycleError(
+            "invalid-completion-check-receipt", "completion check receipt schemaVersion is unsupported"
+        )
     if receipt.get("checkId") != check_validation["checkId"]:
         raise LifecycleError("completion-check-receipt-mismatch", "completion check receipt checkId mismatch")
     status = receipt.get("status")

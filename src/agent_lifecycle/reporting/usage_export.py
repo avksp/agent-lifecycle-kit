@@ -26,12 +26,17 @@ def render_usage_export_table(export: dict[str, Any]) -> str:
             "host_cost",
         ]
     ]
-    for entry in export.get("entries", []):
+    raw_entries = export.get("entries")
+    entries = raw_entries if isinstance(raw_entries, list) else []
+    for entry in entries:
         if not isinstance(entry, dict):
             continue
-        tokens = entry.get("tokens") if isinstance(entry.get("tokens"), dict) else {}
-        budget = entry.get("budgetDecision") if isinstance(entry.get("budgetDecision"), dict) else {}
-        monetary = entry.get("monetary") if isinstance(entry.get("monetary"), dict) else {}
+        raw_tokens = entry.get("tokens")
+        tokens: dict[str, Any] = raw_tokens if isinstance(raw_tokens, dict) else {}
+        raw_budget = entry.get("budgetDecision")
+        budget: dict[str, Any] = raw_budget if isinstance(raw_budget, dict) else {}
+        raw_monetary = entry.get("monetary")
+        monetary: dict[str, Any] = raw_monetary if isinstance(raw_monetary, dict) else {}
         rows.append(
             [
                 str(entry.get("entryId") or ""),

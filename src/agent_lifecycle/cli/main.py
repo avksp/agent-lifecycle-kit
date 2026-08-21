@@ -5,20 +5,25 @@ from __future__ import annotations
 import sys
 
 from agent_lifecycle.cli.dispatch import dispatch
+from agent_lifecycle.cli.errors import to_lifecycle_error
 from agent_lifecycle.cli.parsers import build_parser
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes
-from agent_lifecycle.neutrality.cli import main as neutrality_main
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args, remainder = parser.parse_known_args(argv)
-    if args.command == "neutrality":
-        return neutrality_main(remainder)
     try:
+        if args.command == "neutrality":
+            from agent_lifecycle.neutrality.cli import main as neutrality_main
+
+            return neutrality_main(remainder)
         payload = dispatch(args, remainder)
     except LifecycleError as exc:
         _write(exc.to_json())
+        return 2
+    except Exception as exc:  # noqa: BLE001 - the root boundary must redact unknown failures
+        _write(to_lifecycle_error(exc).to_json())
         return 2
     if payload is None:
         return 0

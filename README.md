@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.76.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.77.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -42,7 +42,6 @@ and pass a task from a file:
 agent-lifecycle start --adapter <adapter-id> --file task.md
 ```
 
-- Start with [quickstart](docs/guides/quickstart.md).
 - Then choose a suitable scenario in [how ALK works for different tasks](docs/guides/how-alk-works.md).
 - The boundaries of [planning-only launch](docs/reference/planning-only-launch.md) and [frozen-task launch through a verified profile](docs/reference/qualified-host-launch.md) are documented in the reference. Shipped planning profiles remain candidates with safe failure until the corresponding profile is verified.
 - The [system architecture](docs/architecture/system-architecture.md) page explains how the project is organized, and [project comparison](docs/reference/project-comparison.md) shows how it differs from similar tools.
@@ -59,6 +58,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
   composes risk, model class, packet size, review and resource limits.
 - Usage visibility: tokens, time, resource counters and structured execution records without sensitive data are native; monetary cost is optional and only used when a metered host reports it.
 - Project-specific workflow settings: ALK can discover and validate uncommitted local defaults, or apply a built-in workflow preset for a common route, while the frozen plan remains authoritative.
+- Reproducible Python maintenance: pinned development-only Ruff, mypy and coverage checks, a non-growing quality ratchet, stable redacted CLI errors, installed package resources and an explicit documented Python API.
 - Project principles and plan deltas keep long-running work understandable: principles provide bounded defaults, while a digest-bound delta shows which plan authority changed and whether review and a new lock are required. CI also checks an acyclic module/package graph, layer direction and source-size limits; adapter inspection uses bounded literal profiles and fails closed without executing adapter code.
 - Read-only progress and managed sessions: host UIs can show lifecycle state,
   attested tokens and Git-style change counters; `start` accepts task text,

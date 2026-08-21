@@ -4,25 +4,36 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Any, cast
 
 from agent_lifecycle.cli.adapter import add_adapter_parser
 from agent_lifecycle.cli.followup import add_followup_parser
+from agent_lifecycle.cli.lifecycle_parsers import (
+    _add_host_launch_parser,
+    _add_project_parser,
+    _add_start_parser,
+    _add_workflow_parser,
+)
 from agent_lifecycle.cli.metrics_parser import add_metrics_parser
-from agent_lifecycle.cli.policy import add_policy_parser
-from agent_lifecycle.cli.research import add_research_parser
-from agent_lifecycle.cli.lifecycle_parsers import _add_host_launch_parser, _add_project_parser, _add_start_parser, _add_workflow_parser
 from agent_lifecycle.cli.observability_parsers import _add_report_parser
 from agent_lifecycle.cli.planning_parsers import _add_plan_parser, _add_task_parser
+from agent_lifecycle.cli.policy import add_policy_parser
+from agent_lifecycle.cli.research import add_research_parser
 from agent_lifecycle.cli.worktree import add_worktree_parser
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
+from agent_lifecycle.resources import builtin_profile_path
 from agent_lifecycle.review_mesh.operator_templates import (
     REVIEW_MESH_OPERATOR_TEMPLATE_IDS,
 )
 
+_BASELINE_PROFILE = builtin_profile_path("lifecycle-baselines.v1.json")
+_MODEL_ROUTING_PROFILE = builtin_profile_path("model-routing-profile.v1.json")
+_RISK_POLICY = builtin_profile_path("risk-execution-policy.v1.json")
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = _RootArgumentParser(prog="agent-lifecycle")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = cast(Any, parser.add_subparsers(dest="command", required=True))
     subparsers.add_parser("version", help="print package version as compact JSON")
     _add_start_parser(subparsers)
     _add_host_launch_parser(subparsers)
@@ -123,9 +134,9 @@ def _add_strategy_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     resolve.add_argument("--adapter", required=True)
     resolve.add_argument("--descriptor")
     resolve.add_argument("--risk", choices=["auto", "S0", "S1", "S2"], default="auto")
-    resolve.add_argument("--risk-policy", default="profiles/risk-execution-policy.v1.json")
-    resolve.add_argument("--routing-profile", default="profiles/model-routing-profile.v1.json")
-    resolve.add_argument("--baseline-profile", default="profiles/lifecycle-baselines.v1.json")
+    resolve.add_argument("--risk-policy", default=_RISK_POLICY)
+    resolve.add_argument("--routing-profile", default=_MODEL_ROUTING_PROFILE)
+    resolve.add_argument("--baseline-profile", default=_BASELINE_PROFILE)
     resolve.add_argument("--host-model-profile")
     resolve.add_argument("--out", required=True)
 
@@ -476,7 +487,7 @@ def _add_model_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     model_sub = model.add_subparsers(dest="model_command", required=True)
     model_route = model_sub.add_parser("route")
     model_route.add_argument("--request", required=True)
-    model_route.add_argument("--profile", default="profiles/model-routing-profile.v1.json")
+    model_route.add_argument("--profile", default=_MODEL_ROUTING_PROFILE)
     model_route.add_argument("--host-profile")
     model_profile_check = model_sub.add_parser("profile-check")
     model_profile_check.add_argument("--profile", required=True)
