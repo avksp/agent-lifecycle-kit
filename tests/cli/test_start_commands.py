@@ -11,6 +11,7 @@ from unittest.mock import patch
 from agent_lifecycle.adapter_sessions.session_store import create_session
 from agent_lifecycle.cli import main
 from agent_lifecycle.cli.parsers import build_parser
+from agent_lifecycle.resources import builtin_profile_path
 
 
 class StartCommandTests(unittest.TestCase):
@@ -40,7 +41,7 @@ class StartCommandTests(unittest.TestCase):
         explicit = parser.parse_args(["start", "--adapter", "codex", "--text", "task", "--risk", "S2"])
 
         self.assertEqual(parsed.risk, "auto")
-        self.assertEqual(parsed.risk_policy, "profiles/risk-execution-policy.v1.json")
+        self.assertEqual(parsed.risk_policy, builtin_profile_path("risk-execution-policy.v1.json"))
         self.assertEqual(explicit.risk, "S2")
         with contextlib.redirect_stderr(StringIO()), self.assertRaises(SystemExit):
             parser.parse_args(["start", "--adapter", "codex", "--text", "task", "--risk", "LOW"])
@@ -187,9 +188,12 @@ class StartCommandTests(unittest.TestCase):
             "nextAction": {"riskExecutionProfile": profile, "riskProfileRequiredAtTaskStart": True},
             "receiptDigest": "a" * 64,
         }
-        with tempfile.TemporaryDirectory() as tmp, patch(
-            "agent_lifecycle.adapter_sessions.task_intake.managed_adapter_run",
-            return_value=managed_receipt,
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch(
+                "agent_lifecycle.adapter_sessions.task_intake.managed_adapter_run",
+                return_value=managed_receipt,
+            ),
         ):
             out = Path(tmp) / "risk-profile.json"
             code, payload, stderr = _run_cli(
@@ -216,9 +220,7 @@ class StartCommandTests(unittest.TestCase):
             ["start", "--adapter", "codex", "--text", "task", "--host-launch-profile", ".alk/host-launch/codex.json"]
         )[1]
         planning = _run_cli(["start", "--adapter", "codex", "--text", "task", "--launch"])[1]
-        implement = _run_cli(
-            ["start", "--adapter", "codex", "--mode", "implement", "--text", "task", "--launch"]
-        )[1]
+        implement = _run_cli(["start", "--adapter", "codex", "--mode", "implement", "--text", "task", "--launch"])[1]
 
         self.assertEqual(profile_only["blockers"][0]["code"], "start-launch-arguments-incomplete")
         self.assertEqual(planning["status"], "BLOCKED")
@@ -256,16 +258,20 @@ class StartCommandTests(unittest.TestCase):
             "blockers": [],
             "receiptDigest": "c" * 64,
         }
-        with patch(
-            "agent_lifecycle.adapter_sessions.unified_start.start_adapter_task",
-            return_value=task_receipt,
-        ), patch(
-            "agent_lifecycle.adapter_sessions.unified_start.load_local_launch_profile",
-            return_value=(Path(".alk/host-launch/codex.json"), {"adapterId": "codex"}, {"status": "PASS"}),
-        ), patch(
-            "agent_lifecycle.adapter_sessions.unified_start.launch_from_local_profile",
-            return_value=launch_receipt,
-        ) as launch:
+        with (
+            patch(
+                "agent_lifecycle.adapter_sessions.unified_start.start_adapter_task",
+                return_value=task_receipt,
+            ),
+            patch(
+                "agent_lifecycle.adapter_sessions.unified_start.load_local_launch_profile",
+                return_value=(Path(".alk/host-launch/codex.json"), {"adapterId": "codex"}, {"status": "PASS"}),
+            ),
+            patch(
+                "agent_lifecycle.adapter_sessions.unified_start.launch_from_local_profile",
+                return_value=launch_receipt,
+            ) as launch,
+        ):
             code, payload, stderr = _run_cli(
                 [
                     "start",

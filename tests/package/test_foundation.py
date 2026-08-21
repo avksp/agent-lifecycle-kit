@@ -59,12 +59,10 @@ class FoundationTests(unittest.TestCase):
             for path in (ROOT / "benchmarks/reference-tasks").rglob("*")
             if path.is_file()
         }
-        expected.update(
-            path.relative_to(ROOT).as_posix()
-            for path in (ROOT / "profiles/project-workflow-presets").rglob("*")
-            if path.is_file()
-        )
         self.assertEqual(declared, expected)
+        package_data = pyproject["tool"]["setuptools"]["package-data"]["agent_lifecycle"]
+        self.assertIn("data/profiles/**/*.json", package_data)
+        self.assertNotIn("profiles/project-workflow-presets/quick-change.v1.json", declared)
 
     def test_crlf_conversion_changes_content_addressed_fixture_identity(self) -> None:
         # NEG-R03-18 Windows CRLF Hash Drift

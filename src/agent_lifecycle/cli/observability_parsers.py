@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+
 def _add_report_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     report = subparsers.add_parser("report", help="read-only report commands")
     report_sub = report.add_subparsers(dest="report_command", required=True)

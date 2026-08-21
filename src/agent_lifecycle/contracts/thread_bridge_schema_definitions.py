@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import json
 import re
-from copy import deepcopy
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.redaction import redact_value
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 
 THREAD_CAPABILITY_SCHEMA = "agent-thread-capability.v1"
@@ -142,7 +138,15 @@ THREAD_BRIDGE_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     THREAD_BRIDGE_PROFILE_VALIDATION_SCHEMA: open_object_schema(
         THREAD_BRIDGE_PROFILE_VALIDATION_SCHEMA,
-        required=["schemaVersion", "status", "adapterId", "checks", "blockers", "productionPromotionClaimed", "validationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "adapterId",
+            "checks",
+            "blockers",
+            "productionPromotionClaimed",
+            "validationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "adapterId": {"type": ["string", "null"]},

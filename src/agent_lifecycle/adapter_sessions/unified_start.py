@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.adapter_sessions.contracts import build_lifecycle_start_receipt
-from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, launch_from_local_profile
+from agent_lifecycle.adapter_sessions.launcher import launch_from_local_profile
 from agent_lifecycle.adapter_sessions.local_launch_profile import load_local_launch_profile
 from agent_lifecycle.adapter_sessions.planning_session import (
     create_planning_session,
@@ -15,21 +15,6 @@ from agent_lifecycle.adapter_sessions.planning_session import (
     transition_planning_session,
 )
 from agent_lifecycle.adapter_sessions.session_store import load_session
-from agent_lifecycle.adapter_sessions.task_intake import (
-    ADAPTER_TASK_RUN_REQUEST_SCHEMA,
-    start_adapter_task,
-)
-from agent_lifecycle.adapter_sessions.workflow_bridge import resume_adapter_session
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, read_json_object, sha256_hex
-from agent_lifecycle.policy.risk_execution import RISK_REQUESTS
-from agent_lifecycle.policy.execution_strategy import (
-    deferred_execution_strategy_summary,
-    execution_strategy_summary,
-    resolve_execution_strategy,
-)
-from agent_lifecycle.project.merge import build_effective_project_profile
-from agent_lifecycle.contracts.project_profile_schemas import GUIDED_ACTION_RECEIPT_SCHEMA
-from agent_lifecycle.project.guidance import build_stage_guidance_projection
 from agent_lifecycle.adapter_sessions.start_input import (
     _blocker_summaries,
     _empty_input,
@@ -53,6 +38,18 @@ from agent_lifecycle.adapter_sessions.start_routing import (
     _profile_plan_authority,
     _strategy_summary_for_receipt,
 )
+from agent_lifecycle.adapter_sessions.task_intake import (
+    ADAPTER_TASK_RUN_REQUEST_SCHEMA,
+    start_adapter_task,
+)
+from agent_lifecycle.adapter_sessions.workflow_bridge import resume_adapter_session
+from agent_lifecycle.contracts import LifecycleError, load_json_object
+from agent_lifecycle.policy.execution_strategy import (
+    deferred_execution_strategy_summary,
+)
+from agent_lifecycle.policy.risk_execution import RISK_REQUESTS
+from agent_lifecycle.project.merge import build_effective_project_profile
+from agent_lifecycle.resources import builtin_profile_path
 
 START_MODES = ("auto", "research", "plan", "review", "implement")
 _NON_EXECUTING_MODES = frozenset({"auto", "research", "plan", "review"})
@@ -98,6 +95,9 @@ def _start_lifecycle_core(
         return _blocked(adapter_id=adapter_id, mode="auto", input_summary=_empty_input(), code="start-mode-invalid")
     if requested_risk not in RISK_REQUESTS:
         return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_empty_input(), code="start-risk-invalid")
+    risk_policy_path = risk_policy_path or builtin_profile_path("risk-execution-policy.v1.json")
+    routing_profile_path = routing_profile_path or builtin_profile_path("model-routing-profile.v1.json")
+    baseline_profile_path = baseline_profile_path or builtin_profile_path("lifecycle-baselines.v1.json")
     if host_launch_profile_path is not None and not launch:
         return _blocked(
             adapter_id=adapter_id,
@@ -106,28 +106,28 @@ def _start_lifecycle_core(
             code="start-launch-arguments-incomplete",
         )
     has_task_source = task_file is not None or task_text is not None
-    if resume_session_id is not None:
-        if has_task_source or launch or host_launch_profile_path is not None:
-            return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_session_input(resume_session_id), code="start-action-conflict")
-        if mode != "auto":
-            return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_session_input(resume_session_id), code="start-resume-mode-invalid")
-        try:
-            if planning_session_exists(resume_session_id, session_root=session_root):
-                return _resume_planning(
-                    adapter_id=adapter_id,
-                    session_id=resume_session_id,
-                    session_root=session_root,
-                )
-        except LifecycleError:
-            pass
-        return _resume(adapter_id=adapter_id, session_id=resume_session_id, session_root=session_root)
+    resumed = _resume_if_requested(
+        adapter_id=adapter_id,
+        mode=mode,
+        resume_session_id=resume_session_id,
+        has_task_source=has_task_source,
+        launch=launch,
+        host_launch_profile_path=host_launch_profile_path,
+        session_root=session_root,
+    )
+    if resumed is not None:
+        return resumed
     if not has_task_source or (task_file is not None and task_text is not None):
-        return _blocked(adapter_id=adapter_id, mode=mode, input_summary=_empty_input(), code="start-task-source-invalid")
+        return _blocked(
+            adapter_id=adapter_id, mode=mode, input_summary=_empty_input(), code="start-task-source-invalid"
+        )
 
     input_summary, payload, input_bytes = _inspect_task_source(task_file=task_file, task_text=task_text)
     structured_frozen = _is_frozen_input(payload)
     if mode == "implement" and not structured_frozen:
-        return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-implement-frozen-input-required")
+        return _blocked(
+            adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-implement-frozen-input-required"
+        )
     if mode == "implement":
         missing = _missing_frozen_bindings(
             payload,
@@ -148,14 +148,18 @@ def _start_lifecycle_core(
                 blockers=[{"code": "start-frozen-binding-missing", "fields": missing}],
             )
     if mode in _NON_EXECUTING_MODES and structured_frozen:
-        return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-mode-implement-required")
+        return _blocked(
+            adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-mode-implement-required"
+        )
     planning_launch = launch and mode in _NON_EXECUTING_MODES
     intake_text: str | None = None
     if planning_launch:
         try:
             intake_text = input_bytes.decode("utf-8")
         except UnicodeDecodeError:
-            return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-task-utf8-required")
+            return _blocked(
+                adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-task-utf8-required"
+            )
     receipt = start_adapter_task(
         adapter_id=adapter_id,
         task_file=None if planning_launch else task_file,
@@ -179,7 +183,9 @@ def _start_lifecycle_core(
         host_model_profile_path=host_model_profile_path,
     )
     if mode in _NON_EXECUTING_MODES and _claims_execution(receipt):
-        return _blocked(adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-non-implement-execution-claim")
+        return _blocked(
+            adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-non-implement-execution-claim"
+        )
     strategy_summary = _strategy_summary_for_receipt(
         receipt,
         adapter_id=adapter_id,
@@ -205,6 +211,41 @@ def _start_lifecycle_core(
     )
 
 
+def _resume_if_requested(
+    *,
+    adapter_id: str,
+    mode: str,
+    resume_session_id: str | None,
+    has_task_source: bool,
+    launch: bool,
+    host_launch_profile_path: Path | None,
+    session_root: Path | None,
+) -> dict[str, Any] | None:
+    if resume_session_id is None:
+        return None
+    input_summary = _session_input(resume_session_id)
+    if has_task_source or launch or host_launch_profile_path is not None:
+        return _blocked(
+            adapter_id=adapter_id,
+            mode=mode,
+            input_summary=input_summary,
+            code="start-action-conflict",
+        )
+    if mode != "auto":
+        return _blocked(
+            adapter_id=adapter_id,
+            mode=mode,
+            input_summary=input_summary,
+            code="start-resume-mode-invalid",
+        )
+    try:
+        if planning_session_exists(resume_session_id, session_root=session_root):
+            return _resume_planning(adapter_id=adapter_id, session_id=resume_session_id, session_root=session_root)
+    except LifecycleError:
+        pass
+    return _resume(adapter_id=adapter_id, session_id=resume_session_id, session_root=session_root)
+
+
 def _finish_start(
     *,
     adapter_id: str,
@@ -219,7 +260,9 @@ def _finish_start(
     session_root: Path | None,
 ) -> dict[str, Any]:
     if not launch:
-        return _from_task_receipt(adapter_id=adapter_id, mode=mode, receipt=receipt, execution_strategy=strategy_summary)
+        return _from_task_receipt(
+            adapter_id=adapter_id, mode=mode, receipt=receipt, execution_strategy=strategy_summary
+        )
     profile_path = host_launch_profile_path or Path(".alk/host-launch") / f"{adapter_id}.json"
     if planning_launch:
         return _launch_planning_receipt(
@@ -245,7 +288,9 @@ def _resume(*, adapter_id: str, session_id: str, session_root: Path | None) -> d
     try:
         session = load_session(session_id, session_root=session_root)
     except (LifecycleError, OSError):
-        return _blocked(adapter_id=adapter_id, mode="auto", input_summary=input_summary, code="start-resume-session-missing")
+        return _blocked(
+            adapter_id=adapter_id, mode="auto", input_summary=input_summary, code="start-resume-session-missing"
+        )
 
     blockers = _session_blockers(session, session_id=session_id, adapter_id=adapter_id)
     if blockers:
@@ -260,7 +305,9 @@ def _resume(*, adapter_id: str, session_id: str, session_root: Path | None) -> d
     try:
         receipt = resume_adapter_session(session_id=session_id, session_root=session_root, adapter_id=adapter_id)
     except (LifecycleError, OSError):
-        return _blocked(adapter_id=adapter_id, mode="auto", input_summary=input_summary, code="start-resume-session-invalid")
+        return _blocked(
+            adapter_id=adapter_id, mode="auto", input_summary=input_summary, code="start-resume-session-invalid"
+        )
     status = str(receipt.get("status", "BLOCKED"))
     if status not in {"PASS", "UNMANAGED"}:
         return build_lifecycle_start_receipt(
@@ -333,12 +380,13 @@ def _session_blockers(session: dict[str, Any], *, session_id: str, adapter_id: s
     if not isinstance(identity, dict):
         blockers.append({"code": "start-resume-lineage-invalid"})
         return blockers
-    missing = [field for field in _LINEAGE_STRING_FIELDS if not isinstance(identity.get(field), str) or not identity.get(field)]
-    missing.extend(
-        field
-        for field in _LINEAGE_INTEGER_FIELDS
-        if not isinstance(identity.get(field), int) or isinstance(identity.get(field), bool) or identity.get(field) < 1
-    )
+    missing = [
+        field for field in _LINEAGE_STRING_FIELDS if not isinstance(identity.get(field), str) or not identity.get(field)
+    ]
+    for field in _LINEAGE_INTEGER_FIELDS:
+        value = identity.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            missing.append(field)
     if missing:
         blockers.append({"code": "start-resume-lineage-invalid", "fields": sorted(missing)})
         return blockers
@@ -593,10 +641,14 @@ def _launch_managed_receipt(
             receipt=receipt,
             execution_strategy=execution_strategy,
         )
-    binding = receipt.get("workflowBinding") if isinstance(receipt.get("workflowBinding"), dict) else {}
-    session = receipt.get("adapterSessionReceipt") if isinstance(receipt.get("adapterSessionReceipt"), dict) else {}
-    next_action = session.get("nextAction") if isinstance(session.get("nextAction"), dict) else {}
-    risk_profile = next_action.get("riskExecutionProfile") if isinstance(next_action.get("riskExecutionProfile"), dict) else None
+    binding_value = receipt.get("workflowBinding")
+    binding: dict[str, Any] = binding_value if isinstance(binding_value, dict) else {}
+    session_value = receipt.get("adapterSessionReceipt")
+    session: dict[str, Any] = session_value if isinstance(session_value, dict) else {}
+    next_action_value = session.get("nextAction")
+    next_action: dict[str, Any] = next_action_value if isinstance(next_action_value, dict) else {}
+    risk_profile_value = next_action.get("riskExecutionProfile")
+    risk_profile: dict[str, Any] | None = risk_profile_value if isinstance(risk_profile_value, dict) else None
     try:
         launch_receipt = launch_from_local_profile(
             profile_path=profile_path,

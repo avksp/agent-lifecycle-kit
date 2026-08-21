@@ -11,7 +11,6 @@ from agent_lifecycle.contracts.quality_modes import mode_index
 from agent_lifecycle.model_routing.profiles import (
     ALLOWED_MODEL_CLASSES,
     CRITICAL_REVIEW_CLASSES,
-    DATA_POLICIES,
     LOCAL_MODEL_CLASSES,
     ROUTING_POLICIES,
     SDD_TIERS,
@@ -131,7 +130,9 @@ def _validate_request(request: dict[str, Any]) -> dict[str, Any]:
         raise LifecycleError("invalid-model-route-request", "capabilityRequirements must be a list of strings")
     target_window = request.get("targetContextWindow", "8k")
     if target_window not in WINDOWS:
-        raise LifecycleError("invalid-model-route-request", "targetContextWindow is unsupported", {"targetContextWindow": target_window})
+        raise LifecycleError(
+            "invalid-model-route-request", "targetContextWindow is unsupported", {"targetContextWindow": target_window}
+        )
     policy = request.get("routingPolicy", "balanced")
     if policy not in ROUTING_POLICIES:
         raise LifecycleError("invalid-model-route-request", "routingPolicy is unsupported", {"routingPolicy": policy})
@@ -142,15 +143,25 @@ def _validate_request(request: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(user_policy, dict):
         raise LifecycleError("invalid-model-route-request", "userPolicy must be an object")
     max_billable = request.get("maxBillableTokens")
-    if max_billable is not None and (not isinstance(max_billable, int) or isinstance(max_billable, bool) or max_billable < 0):
+    if max_billable is not None and (
+        not isinstance(max_billable, int) or isinstance(max_billable, bool) or max_billable < 0
+    ):
         raise LifecycleError("invalid-model-route-request", "maxBillableTokens must be a non-negative integer")
     lifecycle_mode = request.get("lifecycleMode")
     if lifecycle_mode is not None and lifecycle_mode not in LIFECYCLE_MODES:
-        raise LifecycleError("invalid-model-route-request", "lifecycleMode is unsupported", {"lifecycleMode": lifecycle_mode})
+        raise LifecycleError(
+            "invalid-model-route-request", "lifecycleMode is unsupported", {"lifecycleMode": lifecycle_mode}
+        )
     quality_floor = request.get("qualityFloor")
     if quality_floor is not None and quality_floor not in LIFECYCLE_MODES:
-        raise LifecycleError("invalid-model-route-request", "qualityFloor is unsupported", {"qualityFloor": quality_floor})
-    if lifecycle_mode is not None and quality_floor is not None and mode_index(lifecycle_mode) < mode_index(quality_floor):
+        raise LifecycleError(
+            "invalid-model-route-request", "qualityFloor is unsupported", {"qualityFloor": quality_floor}
+        )
+    if (
+        lifecycle_mode is not None
+        and quality_floor is not None
+        and mode_index(lifecycle_mode) < mode_index(quality_floor)
+    ):
         raise LifecycleError(
             "model-route-lifecycle-floor",
             "lifecycleMode cannot be below qualityFloor",
@@ -222,7 +233,9 @@ def _apply_failure_escalation(candidate: str, request: dict[str, Any]) -> tuple[
     if validation_status in FAILURE_STATUSES and _rank(target) < _rank(standard):
         target = standard
         reasons.append("validation-failure-escalation")
-    if failure_class in {"api-contract", "serialization", "permission", "migration", "performance"} and _rank(target) < _rank(standard):
+    if failure_class in {"api-contract", "serialization", "permission", "migration", "performance"} and _rank(
+        target
+    ) < _rank(standard):
         target = standard
         reasons.append(f"failure-class-{failure_class}-standard-escalation")
     if failure_class in HIGH_RISK_FAILURE_CLASSES or failure_class == "flaky-test" or flake_status == "flaky":
@@ -272,25 +285,39 @@ def _failure_signals(value: Any) -> dict[str, Any]:
         raise LifecycleError("invalid-model-route-request", "failureSignals must be an object")
     forbidden = _forbidden_failure_signal_paths(value)
     if forbidden:
-        raise LifecycleError("invalid-model-route-request", "failureSignals must not contain provider/model names", {"paths": forbidden})
+        raise LifecycleError(
+            "invalid-model-route-request", "failureSignals must not contain provider/model names", {"paths": forbidden}
+        )
     failure_class = value.get("failureClass")
     if failure_class is not None and failure_class not in FAILURE_CLASSES:
-        raise LifecycleError("invalid-model-route-request", "failureSignals.failureClass is unsupported", {"failureClass": failure_class})
+        raise LifecycleError(
+            "invalid-model-route-request", "failureSignals.failureClass is unsupported", {"failureClass": failure_class}
+        )
     confidence = value.get("confidence")
     if confidence is not None and confidence not in {"LOW", "MEDIUM", "HIGH"}:
-        raise LifecycleError("invalid-model-route-request", "failureSignals.confidence is unsupported", {"confidence": confidence})
+        raise LifecycleError(
+            "invalid-model-route-request", "failureSignals.confidence is unsupported", {"confidence": confidence}
+        )
     validation_status = value.get("validationStatus")
     if validation_status is not None and not isinstance(validation_status, str):
         raise LifecycleError("invalid-model-route-request", "failureSignals.validationStatus must be a string")
     flake_status = value.get("flakeStatus")
     if flake_status is not None and flake_status not in FLAKE_STATUSES:
-        raise LifecycleError("invalid-model-route-request", "failureSignals.flakeStatus is unsupported", {"flakeStatus": flake_status})
+        raise LifecycleError(
+            "invalid-model-route-request", "failureSignals.flakeStatus is unsupported", {"flakeStatus": flake_status}
+        )
     previous = value.get("previousModelClass")
     if previous is not None and previous not in ALLOWED_MODEL_CLASSES:
-        raise LifecycleError("invalid-model-route-request", "failureSignals.previousModelClass is unsupported", {"previousModelClass": previous})
+        raise LifecycleError(
+            "invalid-model-route-request",
+            "failureSignals.previousModelClass is unsupported",
+            {"previousModelClass": previous},
+        )
     classification_digest = value.get("classificationDigest")
     if classification_digest is not None and not _is_digest(classification_digest):
-        raise LifecycleError("invalid-model-route-request", "failureSignals.classificationDigest must be a sha256 digest")
+        raise LifecycleError(
+            "invalid-model-route-request", "failureSignals.classificationDigest must be a sha256 digest"
+        )
     return {
         "failureClass": failure_class,
         "confidence": confidence,
@@ -386,7 +413,10 @@ def _local_strong_review_rejection(binding: dict[str, Any], request: dict[str, A
         return "usage-attestation-required"
     if binding.get("calibrationStatus") != "PASSED":
         return "live-calibration-required"
-    if binding.get("contextWindow") in {"4k-strict", "8k"} and binding.get("reviewStrategy") != "large-context-or-sliced-review":
+    if (
+        binding.get("contextWindow") in {"4k-strict", "8k"}
+        and binding.get("reviewStrategy") != "large-context-or-sliced-review"
+    ):
         return "review-strategy-required"
     return None
 
@@ -474,9 +504,9 @@ def _is_critical_review(request: dict[str, Any], profile: dict[str, Any]) -> boo
         return True
     if request["sddTier"] == "S2" and phase in {"s2-specification", "independent-review", "final-audit"}:
         return True
-    if phase.endswith("-review") and any(request["riskFlags"].get(key) for key in ("security", "performance", "architecture")):
-        return True
-    return False
+    return phase.endswith("-review") and any(
+        request["riskFlags"].get(key) for key in ("security", "performance", "architecture")
+    )
 
 
 def _is_critical_class_required(request: dict[str, Any]) -> bool:
@@ -484,7 +514,9 @@ def _is_critical_class_required(request: dict[str, Any]) -> bool:
         return True
     if request["sddTier"] == "S2" and request["phase"] in {"s2-specification", "independent-review", "final-audit"}:
         return True
-    return any(request["riskFlags"].get(key) for key in ("security", "performance")) and request["phase"].endswith("-review")
+    return any(request["riskFlags"].get(key) for key in ("security", "performance")) and request["phase"].endswith(
+        "-review"
+    )
 
 
 def _local_only(request: dict[str, Any]) -> bool:
@@ -495,11 +527,7 @@ def _local_only(request: dict[str, Any]) -> bool:
 
 
 def _active_risks(request: dict[str, Any]) -> set[str]:
-    return {
-        RISK_NAME_MAP.get(key, key)
-        for key, value in request["riskFlags"].items()
-        if value
-    }
+    return {RISK_NAME_MAP.get(key, key) for key, value in request["riskFlags"].items() if value}
 
 
 def _required_str(payload: dict[str, Any], key: str) -> str:

@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+# Helpers are intentionally imported conditionally for package and file execution.
+# ruff: noqa: F405
+
 try:
-    from .helpers import *  # noqa: F401,F403,E402
+    from .helpers import *  # noqa: F403
 except ImportError:
-    from helpers import *  # noqa: F401,F403,E402
+    from helpers import *  # noqa: F403
 
 
 class CliContractMetricsCommandTests(unittest.TestCase):
@@ -181,17 +183,21 @@ class CliContractMetricsCommandTests(unittest.TestCase):
             artifact_a.write_text(json.dumps(_outcome("WS-01", mode="light", tokens=800)), encoding="utf-8")
             artifact_b.write_text(json.dumps(_outcome("WS-02", mode="light", tokens=900)), encoding="utf-8")
 
-            code, index = _run_cli([
-                "metrics",
-                "outcome-index",
-                "--artifact",
-                str(artifact_a),
-                "--artifact",
-                str(artifact_b),
-                "--out",
-                str(index_path),
-            ])
-            signal_code, signals = _run_cli(["metrics", "quality-signals", "--index", str(index_path), "--out", str(signals_path)])
+            code, index = _run_cli(
+                [
+                    "metrics",
+                    "outcome-index",
+                    "--artifact",
+                    str(artifact_a),
+                    "--artifact",
+                    str(artifact_b),
+                    "--out",
+                    str(index_path),
+                ]
+            )
+            signal_code, signals = _run_cli(
+                ["metrics", "quality-signals", "--index", str(index_path), "--out", str(signals_path)]
+            )
             recommendation_code, recommendation = _run_cli(
                 [
                     "metrics",

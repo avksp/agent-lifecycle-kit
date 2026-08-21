@@ -1,24 +1,29 @@
 from __future__ import annotations
 
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+# Helpers are intentionally imported conditionally for package and file execution.
+# ruff: noqa: F405
+
 try:
-    from .helpers import *  # noqa: F401,F403,E402
+    from .helpers import *  # noqa: F403
 except ImportError:
-    from helpers import *  # noqa: F401,F403,E402
+    from helpers import *  # noqa: F403
+
 
 class CliModelRoutingCommandTests(unittest.TestCase):
     def test_model_profile_check_cli_validates_routing_profile(self) -> None:
-        code, payload = _run_cli([
-            "model",
-            "profile-check",
-            "--profile",
-            str(ROOT / "profiles/model-routing-profile.v1.json"),
-        ])
+        code, payload = _run_cli(
+            [
+                "model",
+                "profile-check",
+                "--profile",
+                str(ROOT / "profiles/model-routing-profile.v1.json"),
+            ]
+        )
         self.assertEqual(code, 0)
         self.assertEqual(payload["schemaVersion"], "agent-lifecycle-model-routing-profile-validation.v1")
         self.assertIn("strong-reasoning", payload["classes"])
@@ -27,28 +32,32 @@ class CliModelRoutingCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             request = Path(tmp) / "request.json"
             request.write_text(
-                json.dumps({
-                    "schemaVersion": "agent-lifecycle-model-route-request.v1",
-                    "operationId": "route-op",
-                    "phase": "triage",
-                    "sddTier": "S0",
-                    "riskFlags": {},
-                    "capabilityRequirements": ["text", "json"],
-                    "targetContextWindow": "8k",
-                    "routingPolicy": "balanced",
-                    "budgetClass": "normal",
-                    "userPolicy": {"localModelsAllowed": False, "cloudModelsAllowed": True},
-                }),
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-lifecycle-model-route-request.v1",
+                        "operationId": "route-op",
+                        "phase": "triage",
+                        "sddTier": "S0",
+                        "riskFlags": {},
+                        "capabilityRequirements": ["text", "json"],
+                        "targetContextWindow": "8k",
+                        "routingPolicy": "balanced",
+                        "budgetClass": "normal",
+                        "userPolicy": {"localModelsAllowed": False, "cloudModelsAllowed": True},
+                    }
+                ),
                 encoding="utf-8",
             )
-            code, payload = _run_cli([
-                "model",
-                "route",
-                "--profile",
-                str(ROOT / "profiles/model-routing-profile.v1.json"),
-                "--request",
-                str(request),
-            ])
+            code, payload = _run_cli(
+                [
+                    "model",
+                    "route",
+                    "--profile",
+                    str(ROOT / "profiles/model-routing-profile.v1.json"),
+                    "--request",
+                    str(request),
+                ]
+            )
             self.assertEqual(code, 0)
             self.assertEqual(payload["schemaVersion"], "agent-lifecycle-model-route-decision.v1")
             self.assertEqual(payload["modelClass"], "budget")
@@ -92,14 +101,16 @@ class CliModelRoutingCommandTests(unittest.TestCase):
             receipt_path = root / "receipt.json"
             decision_path.write_text(json.dumps(decision), encoding="utf-8")
             receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
-            code, payload = _run_cli([
-                "model",
-                "usage-check",
-                "--receipt",
-                str(receipt_path),
-                "--route-decision",
-                str(decision_path),
-            ])
+            code, payload = _run_cli(
+                [
+                    "model",
+                    "usage-check",
+                    "--receipt",
+                    str(receipt_path),
+                    "--route-decision",
+                    str(decision_path),
+                ]
+            )
             self.assertEqual(code, 2)
             self.assertEqual(payload["code"], "model-usage-validation-failed")
 
@@ -107,15 +118,17 @@ class CliModelRoutingCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "tier-request.json"
             path.write_text(
-                json.dumps({
-                    "schemaVersion": "agent-sdd-tier-resolution-request.v1",
-                    "taskCount": 1,
-                    "executableOwners": ["worker"],
-                    "capabilityHints": ["bounded-mechanical"],
-                    "riskFlags": {},
-                    "requirementsBytes": 1200,
-                    "externalSpecification": False,
-                }),
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-sdd-tier-resolution-request.v1",
+                        "taskCount": 1,
+                        "executableOwners": ["worker"],
+                        "capabilityHints": ["bounded-mechanical"],
+                        "riskFlags": {},
+                        "requirementsBytes": 1200,
+                        "externalSpecification": False,
+                    }
+                ),
                 encoding="utf-8",
             )
             code, payload = _run_cli(["tier", "resolve", "--request", str(path)])

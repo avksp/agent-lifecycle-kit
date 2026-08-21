@@ -15,15 +15,14 @@ from agent_lifecycle.contracts import (
 from agent_lifecycle.contracts.canonical import ensure_private_directory
 from agent_lifecycle.contracts.persistence import (
     create_private_json as write_json_create_private,
+)
+from agent_lifecycle.contracts.persistence import (
     replace_private_json as write_json_replace_private,
-    require_private_json as require_private_file,
 )
 
 PLANNING_SESSION_SCHEMA = "agent-planning-session-state.v1"
 PLANNING_SESSION_ROOT = Path(".alk/planning-sessions")
-PLANNING_SESSION_STATES = frozenset(
-    {"INTAKE_ACCEPTED", "PLANNING_RUNNING", "REVIEW_REQUIRED", "BLOCKED"}
-)
+PLANNING_SESSION_STATES = frozenset({"INTAKE_ACCEPTED", "PLANNING_RUNNING", "REVIEW_REQUIRED", "BLOCKED"})
 MAX_PLANNING_SESSION_BYTES = 65_536
 _SESSION_ID = re.compile(r"^[a-f0-9]{32}$")
 _TRANSITIONS = {
@@ -194,7 +193,9 @@ def _validate_state(
     if state.get("state") not in PLANNING_SESSION_STATES:
         raise LifecycleError("planning-session-state-invalid", "planning session state is invalid")
     if state.get("implementationAuthorized") is not False or state.get("rawTaskTextStored") is not False:
-        raise LifecycleError("planning-session-authority-invalid", "planning session cannot carry implementation authority")
+        raise LifecycleError(
+            "planning-session-authority-invalid", "planning session cannot carry implementation authority"
+        )
     if state.get("productionPromotionClaimed") is not False:
         raise LifecycleError("planning-session-production-claim", "planning session cannot claim production promotion")
     body = {key: value for key, value in state.items() if key != "stateDigest"}

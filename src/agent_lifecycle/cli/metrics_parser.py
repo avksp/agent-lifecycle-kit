@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import argparse
 
+from agent_lifecycle.resources import builtin_profile_path
+
+_BASELINE_PROFILE = builtin_profile_path("lifecycle-baselines.v1.json")
+
 MODES = ("light", "standard", "strict", "release")
 
 
@@ -35,7 +39,7 @@ def add_metrics_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     quality_signals.add_argument("--out")
     recommend = metrics_sub.add_parser("recommend")
     recommend.add_argument("--report", action="append", default=[])
-    recommend.add_argument("--baseline-profile", default="profiles/lifecycle-baselines.v1.json")
+    recommend.add_argument("--baseline-profile", default=_BASELINE_PROFILE)
     recommend.add_argument("--task-shape", default="feature")
     recommend.add_argument("--current-mode", choices=MODES)
     recommend.add_argument("--sdd-tier")
@@ -44,7 +48,7 @@ def add_metrics_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     recommend.add_argument("--summary-out")
     learn_recommend = metrics_sub.add_parser("learn-recommend")
     learn_recommend.add_argument("--signals", required=True)
-    learn_recommend.add_argument("--baseline-profile", default="profiles/lifecycle-baselines.v1.json")
+    learn_recommend.add_argument("--baseline-profile", default=_BASELINE_PROFILE)
     learn_recommend.add_argument("--task-shape", default="feature")
     learn_recommend.add_argument("--current-mode", choices=MODES)
     learn_recommend.add_argument("--sdd-tier")
@@ -68,7 +72,9 @@ def add_metrics_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     audit_proposal.add_argument("--report", required=True)
     audit_proposal.add_argument("--out", required=True)
     audit_proposal.add_argument("--approved", action="store_true")
-    audit_proposal.add_argument("--target-kind", choices=("project-profile", "plan-revision"), default="project-profile")
+    audit_proposal.add_argument(
+        "--target-kind", choices=("project-profile", "plan-revision"), default="project-profile"
+    )
     audit_proposal.add_argument("--target-revision")
     audit_proposal.add_argument("--frozen-plan", action="store_true")
     audit_apply = metrics_sub.add_parser("audit-apply", help="write an approved new optimization profile artifact")

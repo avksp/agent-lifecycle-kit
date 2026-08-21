@@ -6,6 +6,15 @@ import argparse
 
 from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
+from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
+from agent_lifecycle.resources import builtin_profile_path
+from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
+
+_BASELINE_PROFILE = builtin_profile_path("lifecycle-baselines.v1.json")
+_MODEL_ROUTING_PROFILE = builtin_profile_path("model-routing-profile.v1.json")
+_RISK_POLICY = builtin_profile_path("risk-execution-policy.v1.json")
+_SMALL_CONTEXT_PROFILE = builtin_profile_path("small-context-profile.v1.json")
+
 
 def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     start = subparsers.add_parser("start", help="start or resume an ALK lifecycle action")
@@ -16,9 +25,9 @@ def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     action.add_argument("--resume", dest="resume_session_id")
     start.add_argument("--mode", choices=list(START_MODES), default="auto")
     start.add_argument("--risk", choices=["auto", "S0", "S1", "S2"], default="auto")
-    start.add_argument("--risk-policy", default="profiles/risk-execution-policy.v1.json")
-    start.add_argument("--routing-profile", default="profiles/model-routing-profile.v1.json")
-    start.add_argument("--baseline-profile", default="profiles/lifecycle-baselines.v1.json")
+    start.add_argument("--risk-policy", default=_RISK_POLICY)
+    start.add_argument("--routing-profile", default=_MODEL_ROUTING_PROFILE)
+    start.add_argument("--baseline-profile", default=_BASELINE_PROFILE)
     start.add_argument("--host-model-profile")
     start.add_argument(
         "--launch",
@@ -49,6 +58,7 @@ def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
         "--preset",
         help="apply a built-in workflow preset below explicit project-profile settings",
     )
+
 
 def _add_project_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     project = subparsers.add_parser("project", help="project-local ALK configuration")
@@ -87,6 +97,7 @@ def _add_project_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     render.add_argument("--profile-id")
     render.add_argument("--adapter")
     render.add_argument("--out", required=True)
+
 
 def _add_host_launch_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     host_launch = subparsers.add_parser("host-launch", help="inspect or preflight an operator-local host profile")
@@ -443,7 +454,7 @@ def _add_model_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     model_sub = model.add_subparsers(dest="model_command", required=True)
     model_route = model_sub.add_parser("route")
     model_route.add_argument("--request", required=True)
-    model_route.add_argument("--profile", default="profiles/model-routing-profile.v1.json")
+    model_route.add_argument("--profile", default=_MODEL_ROUTING_PROFILE)
     model_route.add_argument("--host-profile")
     model_profile_check = model_sub.add_parser("profile-check")
     model_profile_check.add_argument("--profile", required=True)
@@ -560,12 +571,13 @@ def _add_task_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     task_compile.add_argument("--write", action="store_true")
     small_compile = task_sub.add_parser("compile-small")
     small_compile.add_argument("--manifest", required=True)
-    small_compile.add_argument("--context-profile", default="profiles/small-context-profile.v1.json")
+    small_compile.add_argument("--context-profile", default=_SMALL_CONTEXT_PROFILE)
     small_compile.add_argument("--target-window", default="4k-strict")
     small_compile.add_argument("--adaptive-decision")
     small_compile.add_argument("--strategy")
     small_compile.add_argument("--out-dir")
     small_compile.add_argument("--write", action="store_true")
+
 
 def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     workflow = subparsers.add_parser("workflow", help="workflow commands")

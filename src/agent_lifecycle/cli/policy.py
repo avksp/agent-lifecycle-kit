@@ -11,14 +11,16 @@ from agent_lifecycle.policy import (
     apply_policy_proposal,
     build_adaptive_lifecycle_decision,
     build_policy_proposal,
-    build_runtime_policy_receipt,
     build_policy_summary,
+    build_runtime_policy_receipt,
     require_policy_proposal_pass,
     validate_adaptive_lifecycle_decision,
     validate_runtime_policy_receipt,
 )
+from agent_lifecycle.resources import builtin_profile_path
 
 TUNE_RESULT_SCHEMA = "agent-lifecycle-policy-tune-result.v1"
+_BASELINE_PROFILE = builtin_profile_path("lifecycle-baselines.v1.json")
 
 
 def add_policy_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -43,7 +45,7 @@ def add_policy_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     runtime_check.add_argument("--receipt", required=True)
     adaptive_decision = policy_sub.add_parser("adaptive-decision")
     adaptive_decision.add_argument("--request", required=True)
-    adaptive_decision.add_argument("--baseline-profile", default="profiles/lifecycle-baselines.v1.json")
+    adaptive_decision.add_argument("--baseline-profile", default=_BASELINE_PROFILE)
     adaptive_decision.add_argument("--out")
     adaptive_check = policy_sub.add_parser("adaptive-check")
     adaptive_check.add_argument("--decision", required=True)
@@ -72,7 +74,9 @@ def dispatch_policy(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), decision)
         return decision
     if args.policy_command == "adaptive-check":
-        return validate_adaptive_lifecycle_decision(read_json_object(Path(args.decision), label="adaptive lifecycle decision"))
+        return validate_adaptive_lifecycle_decision(
+            read_json_object(Path(args.decision), label="adaptive lifecycle decision")
+        )
     if args.policy_command != "tune":
         raise LifecycleError("command-not-implemented", "policy command is not implemented")
     if args.output and not args.apply:
