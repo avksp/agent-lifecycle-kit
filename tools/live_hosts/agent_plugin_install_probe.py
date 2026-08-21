@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from agent_lifecycle.contracts import read_json_object, write_json_create
+from agent_lifecycle.adapter_sessions.agent_plugin_probe import build_agent_plugin_probe_runner
 from agent_lifecycle.host_protocol.agent_plugin_qualification import run_agent_plugin_qualification_probe
 
 
@@ -27,6 +28,7 @@ def main() -> int:
         project_root=Path(args.project_root),
         profile=profile,
         host_bin=args.host_bin,
+        command_runner=build_agent_plugin_probe_runner(profile, Path(args.project_root)),
     )
     if args.out:
         write_json_create(Path(args.out), receipt)

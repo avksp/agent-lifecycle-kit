@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_lifecycle.audit.proof_integrity import (
+from agent_lifecycle.contracts.proof_validation import (
     require_proof_integrity_pass,
     validate_proof_integrity_receipt,
 )

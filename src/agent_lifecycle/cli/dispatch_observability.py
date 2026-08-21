@@ -54,6 +54,7 @@ from agent_lifecycle.metrics.audit_optimization import (
     validate_audit_optimization_report,
 )
 from agent_lifecycle.metrics.audit_samples import build_audit_samples
+from agent_lifecycle.cli.dispatch_metrics import _dispatch_execution_report
 from agent_lifecycle.model_routing import (
     resolve_model_route,
     validate_host_model_profile,
@@ -77,10 +78,6 @@ from agent_lifecycle.reporting import (
     render_progress_terminal,
     render_usage_export_json,
     render_usage_export_table,
-)
-from agent_lifecycle.reporting.execution_resources import (
-    build_execution_resource_report,
-    validate_execution_resource_report,
 )
 
 
@@ -456,24 +453,7 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
             "productionPromotionClaimed": False,
         }
     if args.metrics_command == "execution-report":
-        receipts: list[dict[str, Any]] = []
-        for item in args.receipt:
-            payload = read_json_object(Path(item), label="process execution receipt")
-            candidate = payload.get("processReceipt") if isinstance(payload.get("processReceipt"), dict) else payload
-            receipts.append(candidate)
-        lineage = {"operationId": args.operation_id} if args.operation_id else None
-        report = build_execution_resource_report(receipts, lineage=lineage)
-        validation = validate_execution_resource_report(report)
-        write_json_create(Path(args.out), report)
-        return {
-            "schemaVersion": "agent-execution-resource-report-generation.v1",
-            "status": validation["status"],
-            "reportPath": args.out,
-            "reportDigest": canonical_digest(report),
-            "validation": validation,
-            "liveCallsStarted": False,
-            "productionPromotionClaimed": False,
-        }
+        return _dispatch_execution_report(args)
     if args.metrics_command == "outcome-index":
         artifacts = [read_json_object(Path(item), label="outcome artifact") for item in args.artifact]
         payload = build_task_outcome_index(artifacts, source_paths=list(args.artifact))

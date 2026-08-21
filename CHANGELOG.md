@@ -4,6 +4,21 @@
 
 - No changes yet.
 
+## 1.76.0 - 2026-08-21
+
+- Turned module, package and layer boundaries into executable release gates with
+  acyclic graph and complexity validation in CI.
+- Split oversized process, launch, unified-start, metrics, parser, proof and
+  thread-bridge paths behind compatible facades and shared bounded persistence
+  primitives.
+- Replaced central host-inspection branching with bounded, literal-only,
+  adapter-owned `inspection_profile.py` files; unsupported profiles fail closed
+  without executing adapter code.
+- Consolidated only semantically identical validation, redaction, token and
+  quality-mode primitives while preserving domain-specific contracts.
+- Updated English and Russian architecture documentation and synchronized all
+  package, plugin, installation and publication metadata to 1.76.0.
+
 ## 1.75.0 - 2026-08-21
 
 - Hardened neutrality proof by binding signatures to claims, operation and the

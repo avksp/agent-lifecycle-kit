@@ -6,6 +6,8 @@ from typing import Any
 
 from agent_lifecycle.context.profiles import WINDOWS
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.quality_modes import MODES as LIFECYCLE_MODES
+from agent_lifecycle.contracts.quality_modes import mode_index
 from agent_lifecycle.model_routing.profiles import (
     ALLOWED_MODEL_CLASSES,
     CRITICAL_REVIEW_CLASSES,
@@ -16,8 +18,6 @@ from agent_lifecycle.model_routing.profiles import (
     validate_host_model_profile,
     validate_model_routing_profile,
 )
-from agent_lifecycle.policy.quality_floor import MODES as LIFECYCLE_MODES
-from agent_lifecycle.policy.quality_floor import mode_index
 from agent_lifecycle.quality.failure_classification import FAILURE_CLASSES, HIGH_RISK_FAILURE_CLASSES
 
 DEFAULT_CRITICAL_PHASES = {

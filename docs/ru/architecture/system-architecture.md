@@ -234,6 +234,30 @@ flowchart TB
 `reviewRequired` и `newLockRequired`, после чего нужно снова пройти обычное
 ревью и заморозку.
 
+### Проверяемые архитектурные границы
+
+Точная политика проверенных слоёв хранится в
+`policy/architecture-dependencies.json`. Релизный валидатор строит граф
+модулей и пакетов, учитывает импорты внутри функций, проверяет, что граф
+ацикличен, и отклоняет зависимость из нижнего слоя в более высокий. CI
+дополнительно проверяет ограничения размера файлов, функций и символов.
+Поэтому политика и валидаторы превращают архитектуру в воспроизводимое
+условие релиза, а не оставляют её только на схеме.
+
+Граница запуска процессов также разделена явно: `adapter_sessions/process.py`
+отвечает за ограниченное создание процесса и очистку, `process_capture.py` —
+за ограниченный захват потоков, а `process_control.py` — за тайм-ауты,
+отмену и сбор результата. Совместимые фасады сохраняют публичные пути запуска
+и начала рабочего цикла. Общие средства записи и проверки вынесены в
+`contracts` только там, где их смысл полностью совпадает.
+
+Осмотр адаптера расширяется данными, а не ветвлениями ядра. Каждый встроенный
+адаптер содержит ограниченный литеральный файл `inspection_profile.py`. ALK
+проверяет профиль до выбора разрешённого обработчика, не импортирует код
+адаптера при чтении профиля и возвращает неподдержанный результат без запуска
+процесса хоста. Так граница расширения остаётся проверяемой и не переносит
+команды конкретного хоста в ядро жизненного цикла.
+
 ## C3: карта компонентов выполнения
 
 Внутри Python-пакета команды направляются в доменные компоненты. Компоненты
@@ -247,7 +271,7 @@ flowchart LR
   contracts[contracts]
   changesets[changesets]
   compiler[compiler]
-  planning[planning и specification]
+  planning[planning]
   freeze[freeze]
     workflow[Рабочий цикл]
     audit[audit]
@@ -256,8 +280,16 @@ flowchart LR
     host_protocol[host_protocol]
   review_mesh[review_mesh]
   reporting[reporting]
-  metrics[metrics и policy]
-  context[context и evidence]
+  metrics[metrics]
+  policy[policy]
+  model_routing[маршрутизация моделей]
+  context[context]
+  evidence_index[индекс подтверждений]
+  diagnostics[diagnostics]
+  followup[отложенная работа]
+  goal[цель]
+  imports[imports]
+  specification[specification]
   research[исследовательские материалы]
   quality[quality]
   strategy[Стратегия выполнения]
@@ -276,6 +308,14 @@ flowchart LR
   cli --> reporting
   cli --> metrics
   cli --> context
+  cli --> diagnostics
+  cli --> evidence_index
+  cli --> followup
+  cli --> goal
+  cli --> host_protocol
+  cli --> imports
+  cli --> model_routing
+  cli --> policy
   cli --> research
   cli --> benchmarks
   cli --> strategy
@@ -286,36 +326,74 @@ flowchart LR
   compiler --> contracts
   freeze --> contracts
   workflow --> contracts
-  workflow --> audit
+  workflow --> context
+  workflow --> followup
+  workflow --> freeze
+  workflow --> host_protocol
+  workflow --> model_routing
+  workflow --> planning
+  workflow --> policy
   workflow --> quality
   workflow --> review_mesh
-  workflow --> neutrality
+  workflow --> runner
+  workflow --> specification
   adapter_sessions --> workflow
+  adapter_sessions --> freeze
   adapter_sessions --> host_protocol
-  adapter_sessions --> planning
-  adapter_sessions --> strategy
+  adapter_sessions --> imports
+  adapter_sessions --> policy
+  adapter_sessions --> project_profile
+  adapter_sessions --> quality
+  adapter_sessions --> review_mesh
   project_profile --> contracts
-  project_profile --> strategy
-  compiler --> strategy
-  strategy --> contracts
-  strategy --> metrics
-  strategy --> review_mesh
+  project_profile --> policy
+  compiler --> context
+  compiler --> freeze
+  compiler --> policy
   review_mesh --> contracts
-  review_mesh --> metrics
+  review_mesh --> model_routing
+  review_mesh --> quality
   audit --> workflow
   audit --> changesets
-  audit --> review_mesh
+  audit --> freeze
+  audit --> planning
   reporting --> workflow
   metrics --> contracts
   benchmarks --> contracts
-  metrics --> benchmarks
+  metrics --> review_mesh
+  policy --> freeze
+  policy --> metrics
+  policy --> model_routing
+  policy --> quality
+  policy --> review_mesh
+  model_routing --> context
+  model_routing --> quality
+  host_protocol --> context
+  host_protocol --> runner
+  context --> evidence_index
+  diagnostics --> context
+  diagnostics --> host_protocol
+  diagnostics --> model_routing
+  followup --> context
+  goal --> context
+  goal --> reporting
+  goal --> workflow
+  imports --> context
+  imports --> planning
+  specification --> followup
+  runner --> context
+  runner --> worktree
   context --> contracts
   research --> contracts
   neutrality --> contracts
-  runner --> workflow
-  runner --> worktree
   worktree --> contracts
 ```
+
+На схеме показаны основные зависимости между пакетами, кроме повторяющегося
+входа в `contracts`. Полный граф модулей и пакетов, включая импорты внутри
+функций, проверяется по политике `policy/architecture-dependencies.json` и
+валидатором релиза. Граф ацикличен, а каждое ребро соответствует проверенному
+направлению слоёв.
 
 | Компонент | Основные модули | Когда вызывается |
 | --- | --- | --- |

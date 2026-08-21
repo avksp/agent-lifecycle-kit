@@ -52,7 +52,7 @@ def validate_task_implementation_audit_artifact(
     root = package_root(state_path, state)
     rel = normalize_repo_path(report_path, label="implementation audit report")
     report = read_json_object(root / rel, label="implementation audit report")
-    from agent_lifecycle.audit.implementation import (
+    from agent_lifecycle.contracts.implementation_audit_validation import (
         require_implementation_audit_accepted,
         validate_implementation_audit_report,
     )

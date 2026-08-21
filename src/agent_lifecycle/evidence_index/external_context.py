@@ -7,7 +7,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex
 from agent_lifecycle.contracts.redaction import (
     LOCAL_PATH_REDACTION,
@@ -15,6 +14,7 @@ from agent_lifecycle.contracts.redaction import (
     redact_text,
     redact_text_with_stats,
 )
+from agent_lifecycle.contracts.token_estimation import estimate_tokens
 
 EXTERNAL_CONTEXT_RECEIPT_SCHEMA = "agent-external-context-import-receipt.v1"
 EXTERNAL_CONTEXT_VALIDATION_SCHEMA = "agent-external-context-import-validation.v1"

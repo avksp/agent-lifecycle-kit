@@ -44,6 +44,12 @@ For the operational difference between loading ALK inside a host and running
 the controller from the project terminal, see [Using ALK with an
 adapter](usage-modes.md).
 
+Adapter inspection is data-driven. Each bundled adapter owns a literal-only
+`inspection_profile.py`; ALK validates the profile before resolving the
+allow-listed inspection handler. Profile loading never imports adapter code,
+and an unsupported profile is reported as unsupported without starting a host
+process. This keeps host-specific extension data outside the lifecycle core.
+
 Public contract compatibility is checked through
 `agent-public-contract-policy.v1`. That policy stabilizes schema ids, accepted
 deprecated inputs, CLI JSON envelopes and error codes. Adapter support level is

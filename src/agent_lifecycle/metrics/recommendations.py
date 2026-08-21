@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.quality_modes import max_mode, mode_index, quality_floor_mode
 from agent_lifecycle.metrics.costs import (
     COST_CATEGORIES,
     DEFAULT_MODE_LIMITS,
@@ -380,8 +381,6 @@ def _quality_floor_mode(
     sdd_tier: str | None,
     risk_flags: list[str],
 ) -> str:
-    from agent_lifecycle.policy.quality_floor import quality_floor_mode
-
     return quality_floor_mode(
         task_shape=task_shape,
         baseline_profile=baseline_profile,
@@ -391,14 +390,10 @@ def _quality_floor_mode(
 
 
 def _max_mode(first: str, second: str) -> str:
-    from agent_lifecycle.policy.quality_floor import max_mode
-
     return max_mode(first, second)
 
 
 def _mode_index(mode: str) -> int:
-    from agent_lifecycle.policy.quality_floor import mode_index
-
     return mode_index(mode)
 
 

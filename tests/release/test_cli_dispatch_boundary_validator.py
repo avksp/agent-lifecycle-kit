@@ -61,3 +61,26 @@ class CliDispatchBoundaryValidatorTests(unittest.TestCase):
         self.assertIn("cli-dispatch-line-limit-exceeded", codes)
         self.assertIn("cli-dispatch-delegate-import-missing", codes)
         self.assertIn("cli-dispatch-domain-handler-retained", codes)
+
+    def test_current_observability_dispatcher_uses_specialized_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = Path(tmp) / "observability-boundary.json"
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools/release/validate_cli_dispatch_boundary.py"),
+                    "--path",
+                    "src/agent_lifecycle/cli/dispatch_observability.py",
+                    "--max-lines",
+                    "800",
+                    "--evidence",
+                    str(evidence),
+                ],
+                cwd=ROOT,
+                check=True,
+            )
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["status"], "PASS")
+        self.assertEqual(payload["role"], "observability")
+        self.assertEqual(payload["requiredDelegates"], {})
