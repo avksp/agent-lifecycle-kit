@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, read_json_object
-from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest, write_json_replace_private
+from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest
+from agent_lifecycle.contracts.persistence import replace_private_json as write_json_replace_private
 
 TERMINAL_PHASES = {"COMPLETE", "FAILED", "CANCELLED"}
 EXECUTION_PHASES = {"RUNNING", "STEP_REVIEW", "REMEDIATING"}

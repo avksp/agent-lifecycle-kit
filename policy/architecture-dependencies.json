@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "agent-architecture-dependencies.v1",
+  "policyId": "agent-lifecycle-11-level-architecture",
+  "direction": "higher-level-imports-lower-or-same-level",
+  "packageLevels": {
+    "agent_lifecycle": 0,
+    "contracts": 0,
+    "benchmarks": 1,
+    "changesets": 1,
+    "evidence_index": 1,
+    "freeze": 1,
+    "neutrality": 1,
+    "quality": 1,
+    "research": 1,
+    "review": 1,
+    "worktree": 1,
+    "context": 2,
+    "followup": 3,
+    "model_routing": 3,
+    "planning": 3,
+    "runner": 3,
+    "host_protocol": 4,
+    "imports": 4,
+    "review_mesh": 4,
+    "specification": 4,
+    "diagnostics": 5,
+    "metrics": 5,
+    "policy": 6,
+    "compiler": 7,
+    "project": 7,
+    "workflow": 7,
+    "adapter_sessions": 8,
+    "audit": 8,
+    "reporting": 8,
+    "goal": 9,
+    "cli": 10
+  },
+  "moduleLevels": {
+    "agent_lifecycle.__main__": 10,
+    "agent_lifecycle._version": 0
+  }
+}

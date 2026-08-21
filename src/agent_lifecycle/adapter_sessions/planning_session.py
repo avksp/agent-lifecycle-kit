@@ -12,10 +12,11 @@ from agent_lifecycle.contracts import (
     canonical_digest,
     read_json_object,
 )
-from agent_lifecycle.contracts.canonical import (
-    ensure_private_directory,
-    write_json_create_private,
-    write_json_replace_private,
+from agent_lifecycle.contracts.canonical import ensure_private_directory
+from agent_lifecycle.contracts.persistence import (
+    create_private_json as write_json_create_private,
+    replace_private_json as write_json_replace_private,
+    require_private_json as require_private_file,
 )
 
 PLANNING_SESSION_SCHEMA = "agent-planning-session-state.v1"

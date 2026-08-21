@@ -125,6 +125,32 @@ The dependency direction is one-way: lower layers cannot import CLI, API, or
 surface adapters; adapters cannot import controller domain services directly.
 Controller services depend on ports and contracts rather than native host APIs.
 
+## Enforced architecture boundaries
+
+The reviewed package levels are recorded in
+`policy/architecture-dependencies.json`. The release validator builds the
+module graph from the source tree, includes imports inside functions, rejects
+non-trivial module and package cycles, and checks that every edge follows the
+declared layer direction. CI runs this check together with the source-size and
+function-complexity validator, so the architecture is an executable release
+condition rather than a diagram-only convention. The current graph is
+acyclic; a new dependency must update the policy and pass independent review.
+
+Runtime boundaries follow the same rule. `adapter_sessions/process.py` is the
+bounded process boundary; `process_capture.py` owns stream capture and
+`process_control.py` owns timeout, cleanup and receipt assembly. The public
+launcher and start modules retain compatible facades while the implementation
+is split behind them. Persistence helpers in `contracts/persistence.py` keep
+private create, replace and permission rules in one implementation.
+
+Host inspection is open for adapter-owned data, not for arbitrary code.
+Each adapter may provide a literal-only `inspection_profile.py`. ALK validates
+the profile, resolves only an allow-listed inspection handler and reports an
+unsupported profile without starting a host process. Loading the profile uses
+bounded literal parsing and never imports adapter code. Adding an adapter
+inspection profile therefore does not require a new host-name branch in the
+lifecycle core.
+
 ## Size and context limits
 
 The standalone implementation must be usable by small-context models. File and

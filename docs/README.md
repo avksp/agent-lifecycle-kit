@@ -18,7 +18,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Agent Plugins client qualification](reference/agent-plugin-qualification.md)
 - [Commands by task](guides/commands-by-task.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==1.75.0` from
+  `python -m pip install agent-lifecycle-kit==1.76.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -35,6 +35,9 @@ that result. It is host-neutral and does not depend on a source project.
 - [Research evidence reference](reference/research-evidence.md)
 - [Lifecycle task scenarios](guides/lifecycle-cookbook.md)
 - [System architecture](architecture/system-architecture.md)
+- Architecture boundaries are enforced by the acyclic module/package policy in
+  `policy/architecture-dependencies.json`; adapter inspection uses bounded
+  literal-only `inspection_profile.py` files.
 - [Project comparison](reference/project-comparison.md)
 - [Planning-only adapter launch](reference/planning-only-launch.md)
 - [Frozen-task launch through a verified profile](reference/qualified-host-launch.md)

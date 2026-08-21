@@ -37,3 +37,21 @@ jobs:
         run: python -m agent_lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
       - name: Run neutrality scan
         run: python -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --require-zero-findings
+      - name: Validate module and package architecture
+        run: >-
+          python tools/release/validate_module_dependencies.py
+          --package-root src/agent_lifecycle
+          --policy policy/architecture-dependencies.json
+          --require-acyclic-modules
+          --require-acyclic-packages
+          --evidence work/ci/module-dependencies.json
+      - name: Validate architecture complexity
+        run: >-
+          python tools/release/validate_architecture_complexity.py
+          --package-root src/agent_lifecycle
+          --target-file-lines 800
+          --hard-file-lines 1200
+          --target-function-lines 80
+          --hard-function-lines 150
+          --hard-symbols 120
+          --evidence work/ci/architecture-complexity.json
