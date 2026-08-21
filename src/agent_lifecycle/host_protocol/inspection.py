@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 from typing import Any
 
@@ -13,14 +14,7 @@ from agent_lifecycle.host_protocol.inspection_common import (
     _display_binary,
     _relative_display_path,
 )
-from agent_lifecycle.host_protocol.inspection_claude import _inspect_claude
-from agent_lifecycle.host_protocol.inspection_codex import _inspect_codex
-from agent_lifecycle.host_protocol.inspection_cursor import _inspect_cursor
-from agent_lifecycle.host_protocol.inspection_gemini_cli import _inspect_gemini_cli
-from agent_lifecycle.host_protocol.inspection_hermes import _inspect_hermes
-from agent_lifecycle.host_protocol.inspection_kimi_code import _inspect_kimi_code
-from agent_lifecycle.host_protocol.inspection_opencode import _inspect_opencode
-from agent_lifecycle.host_protocol.inspection_qwen_code import _inspect_qwen_code
+from agent_lifecycle.host_protocol.inspection_profile import load_inspection_profile
 from agent_lifecycle.host_protocol.validation import validate_adapter_descriptor
 
 SCHEMA_VERSION = "agent-host-adapter-inspection.v1"
@@ -80,26 +74,18 @@ def inspect_adapter_descriptor(
         "hostCapabilities": descriptor.get("hostCapabilities") if isinstance(descriptor.get("hostCapabilities"), list) else [],
     }
 
-    if skip_host_commands:
-        checks.append(
-            {
-                "name": "host-command-discovery",
-                "status": "SKIPPED",
-                "details": {"reason": "skip-host-commands"},
-            }
-        )
-    else:
-        host_checks, host_capabilities, host_blockers = _inspect_known_host(
-            descriptor,
-            descriptor_path=descriptor_path,
-            host_bin=host_bin,
-            project_root=root,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner or _default_command_runner,
-        )
-        checks.extend(host_checks)
-        capabilities.update(host_capabilities)
-        blockers.extend(host_blockers)
+    host_checks, host_capabilities, host_blockers = _inspect_known_host(
+        descriptor,
+        descriptor_path=descriptor_path,
+        host_bin=host_bin,
+        project_root=root,
+        timeout_seconds=timeout_seconds,
+        command_runner=command_runner or _default_command_runner,
+        skip_host_commands=skip_host_commands,
+    )
+    checks.extend(host_checks)
+    capabilities.update(host_capabilities)
+    blockers.extend(host_blockers)
 
     status = "PASS" if not blockers else "FAIL"
     return {
@@ -132,81 +118,95 @@ def _inspect_known_host(
     project_root: Path,
     timeout_seconds: float,
     command_runner: CommandRunner,
+    skip_host_commands: bool,
 ) -> tuple[list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
+    adapter_id = descriptor.get("adapterId")
     host = descriptor.get("host")
-    if host == "codex":
-        return _inspect_codex(
+    try:
+        profile, profile_info = load_inspection_profile(
+            adapter_id if isinstance(adapter_id, str) else "",
             descriptor_path=descriptor_path,
-            host_bin=host_bin or "codex",
             project_root=project_root,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
+            host=host if isinstance(host, str) else None,
         )
-    if host == "claude":
-        return _inspect_claude(
-            descriptor_path=descriptor_path,
-            host_bin=host_bin or "claude",
-            project_root=project_root,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
+    except LifecycleError as exc:
+        return (
+            [
+                {
+                    "name": "inspection-profile",
+                    "status": "FAIL",
+                    "details": {"reason": exc.code},
+                }
+            ],
+            {"hostCommands": {"status": "SKIPPED", "binary": _display_binary(host_bin or host), "profile": None}},
+            [{"code": exc.code}],
         )
-    if host == "opencode":
-        return _inspect_opencode(
-            descriptor_path=descriptor_path,
-            host_bin=host_bin or "opencode",
-            project_root=project_root,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
-        )
-    if host == "hermes":
-        return _inspect_hermes(
-            descriptor_maturity=descriptor.get("maturity"),
-            descriptor_path=descriptor_path,
-            host_bin=host_bin or "hermes",
-            project_root=project_root,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
-        )
-    if host == "cursor":
-        return _inspect_cursor(
-            descriptor_path=descriptor_path,
-            host_bin=host_bin or "cursor",
-            project_root=project_root,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
-        )
-    if host == "gemini-cli":
-        return _inspect_gemini_cli(
-            descriptor_path=descriptor_path,
-            host_bin=host_bin or "gemini",
-            project_root=project_root,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
-        )
-    if host == "qwen-code":
-        return _inspect_qwen_code(
-            descriptor_path=descriptor_path,
-            host_bin=host_bin or "qwen",
-            project_root=project_root,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
-        )
-    if host == "kimi-code":
-        return _inspect_kimi_code(
-            descriptor_path=descriptor_path,
-            host_bin=host_bin or "kimi",
-            project_root=project_root,
-            timeout_seconds=timeout_seconds,
-            command_runner=command_runner,
-        )
-    return (
-        [
+
+    profile_summary = {
+        "status": profile_info["status"],
+        "handler": profile_info.get("handler"),
+        "profileDigest": profile_info["profileDigest"],
+        "path": profile_info["path"],
+    }
+    if skip_host_commands:
+        return (
+            [
+                {"name": "inspection-profile", "status": "PASS", "details": {"profile": profile_summary}},
+                {
+                    "name": "host-command-discovery",
+                    "status": "SKIPPED",
+                    "details": {"reason": "skip-host-commands", "profile": profile_summary},
+                },
+            ],
             {
-                "name": "host-command-profile",
-                "status": "SKIPPED",
-                "details": {"reason": "no-safe-command-profile", "host": host},
-            }
-        ],
-        {"hostCommands": {"status": "SKIPPED", "binary": _display_binary(host_bin or host), "profile": None}},
-        [],
+                "hostCommands": {
+                    "status": "SKIPPED",
+                    "binary": _display_binary(host_bin or profile.get("binary") or host),
+                    "profile": profile_summary,
+                }
+            },
+            [],
+        )
+    if profile["status"] == "UNSUPPORTED":
+        return (
+            [
+                {
+                    "name": "inspection-profile",
+                    "status": "PASS",
+                    "details": {"profile": profile_summary},
+                },
+                {
+                    "name": "host-command-profile",
+                    "status": "SKIPPED",
+                    "details": {"reason": "unsupported-adapter-inspection-profile", "profile": profile_summary},
+                },
+            ],
+            {
+                "hostCommands": {
+                    "status": "SKIPPED",
+                    "binary": _display_binary(host_bin or profile.get("binary") or host),
+                    "profile": profile_summary,
+                }
+            },
+            [],
+        )
+
+    handler = _load_inspection_handler(str(profile["handler"]))
+    checks, capabilities, blockers = handler(
+        descriptor_path=descriptor_path,
+        host_bin=host_bin or str(profile.get("binary") or host),
+        project_root=project_root,
+        timeout_seconds=timeout_seconds,
+        command_runner=command_runner,
+        **({"descriptor_maturity": descriptor.get("maturity")} if profile["handler"] == "hermes" else {}),
     )
+    checks.insert(0, {"name": "inspection-profile", "status": "PASS", "details": {"profile": profile_summary}})
+    return checks, {**capabilities, "inspectionProfile": profile_summary}, blockers
+
+
+def _load_inspection_handler(handler_id: str) -> Any:
+    """Resolve only the allow-listed bundled evaluator for a profile handler."""
+
+    module_name = f"agent_lifecycle.host_protocol.inspection_{handler_id.replace('-', '_')}"
+    module = importlib.import_module(module_name)
+    return getattr(module, f"_inspect_{handler_id.replace('-', '_')}")

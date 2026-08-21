@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
-from agent_lifecycle.goal import validate_goal_record
+from agent_lifecycle.contracts.implementation_audit_validation import validate_final_implementation_audit
+from agent_lifecycle.contracts.goal_validation import validate_goal_record
 from agent_lifecycle.specification import (
     require_completion_gate_finalization,
     validate_completion_check,
@@ -355,8 +356,6 @@ def _validate_final_implementation_audit(
                 "final implementation audit is required before workflow finalization",
             )
         return None
-    from agent_lifecycle.audit import validate_final_implementation_audit
-
     rel = normalize_repo_path(final_implementation_audit_path, label="final implementation audit")
     audit = read_json_object(root / rel, label="final implementation audit")
     validation = validate_final_implementation_audit(audit, state=state)

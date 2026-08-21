@@ -198,6 +198,30 @@ flowchart TB
 | `adapters/*` | Host descriptors, operation projections, support manifests and evidence summaries. | Change lifecycle schemas. |
 | `tools/release` and tests | Release gates, validators, conformance and docs compatibility. | Establish a live host support level from synthetic data alone. |
 
+### Enforced module boundaries
+
+The exact reviewed layer policy is stored in
+`policy/architecture-dependencies.json`. Release validation builds the module
+and package graph, includes imports declared inside functions, checks that the
+graph is acyclic, and rejects an edge that points from a lower layer to a
+higher layer. CI also checks the documented file, function and symbol limits.
+The policy and validators turn the architecture into a repeatable release
+condition; a diagram alone is not evidence of compliance.
+
+The runtime split keeps the security-sensitive process boundary explicit:
+`adapter_sessions/process.py` owns bounded process creation and cleanup,
+`process_capture.py` owns capped stream capture, and `process_control.py` owns
+timeouts, cancellation and result assembly. Compatible facades preserve the
+public launcher and start paths. Shared persistence and validation primitives
+are kept in `contracts` only when their semantics are identical.
+
+Adapter inspection is data-driven. Every bundled adapter has a bounded,
+literal-only `inspection_profile.py`. ALK validates the profile before resolving
+an allow-listed inspection handler, never imports adapter code while reading
+the profile, and returns an unsupported result without starting a host process.
+This makes the open/closed boundary testable without moving host-specific
+commands into the lifecycle core.
+
 ### Project continuity artifacts
 
 The project-profile layer may reference a bounded `agent-project-principles.v1`
@@ -220,7 +244,7 @@ flowchart LR
   contracts[contracts]
   changesets[changesets]
   compiler[compiler]
-  planning[planning and specification]
+  planning[planning]
   freeze[freeze]
   workflow[workflow]
   audit[audit]
@@ -229,8 +253,16 @@ flowchart LR
   host_protocol[host protocol]
   review_mesh[review mesh]
   reporting[reporting]
-  metrics[metrics and policy]
-  context[context and evidence]
+  metrics[metrics]
+  policy[policy]
+  model_routing[model routing]
+  context[context]
+  evidence_index[evidence index]
+  diagnostics[diagnostics]
+  followup[followup]
+  goal[goal]
+  imports[imports]
+  specification[specification]
   research[research evidence]
   quality[quality profiles]
   strategy[execution strategy]
@@ -249,6 +281,14 @@ flowchart LR
   cli --> reporting
   cli --> metrics
   cli --> context
+  cli --> diagnostics
+  cli --> evidence_index
+  cli --> followup
+  cli --> goal
+  cli --> host_protocol
+  cli --> imports
+  cli --> model_routing
+  cli --> policy
   cli --> research
   cli --> benchmarks
   cli --> strategy
@@ -259,36 +299,74 @@ flowchart LR
   compiler --> contracts
   freeze --> contracts
   workflow --> contracts
-  workflow --> audit
+  workflow --> context
+  workflow --> followup
+  workflow --> freeze
+  workflow --> host_protocol
+  workflow --> model_routing
+  workflow --> planning
+  workflow --> policy
   workflow --> quality
   workflow --> review_mesh
-  workflow --> neutrality
+  workflow --> runner
+  workflow --> specification
   adapter_sessions --> workflow
+  adapter_sessions --> freeze
   adapter_sessions --> host_protocol
-  adapter_sessions --> planning
-  adapter_sessions --> strategy
+  adapter_sessions --> imports
+  adapter_sessions --> policy
+  adapter_sessions --> project_profile
+  adapter_sessions --> quality
+  adapter_sessions --> review_mesh
   project_profile --> contracts
-  project_profile --> strategy
-  compiler --> strategy
-  strategy --> contracts
-  strategy --> metrics
-  strategy --> review_mesh
+  project_profile --> policy
+  compiler --> context
+  compiler --> freeze
+  compiler --> policy
   review_mesh --> contracts
-  review_mesh --> metrics
+  review_mesh --> model_routing
+  review_mesh --> quality
   audit --> workflow
   audit --> changesets
-  audit --> review_mesh
+  audit --> freeze
+  audit --> planning
   reporting --> workflow
   metrics --> contracts
+  metrics --> review_mesh
+  policy --> freeze
+  policy --> metrics
+  policy --> model_routing
+  policy --> quality
+  policy --> review_mesh
+  model_routing --> context
+  model_routing --> quality
+  host_protocol --> context
+  host_protocol --> runner
+  context --> evidence_index
+  diagnostics --> context
+  diagnostics --> host_protocol
+  diagnostics --> model_routing
+  followup --> context
+  goal --> context
+  goal --> reporting
+  goal --> workflow
+  imports --> context
+  imports --> planning
+  specification --> followup
+  runner --> context
+  runner --> worktree
   benchmarks --> contracts
-  metrics --> benchmarks
   context --> contracts
   research --> contracts
   neutrality --> contracts
-  runner --> workflow
-  runner --> worktree
   worktree --> contracts
 ```
+
+The diagram shows the principal non-contract edges. The exact module and
+package graph, including function-local imports and the fan-in into
+`contracts`, is validated by `policy/architecture-dependencies.json` and the
+release validator. The graph is acyclic and every edge follows the reviewed
+layer direction.
 
 | Component | Main modules | Called when |
 | --- | --- | --- |

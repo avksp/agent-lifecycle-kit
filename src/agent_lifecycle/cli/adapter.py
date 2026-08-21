@@ -19,6 +19,7 @@ from agent_lifecycle.adapter_sessions import (
     start_adapter_task,
     update_session,
 )
+from agent_lifecycle.adapter_sessions.agent_plugin_probe import build_agent_plugin_probe_runner
 from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, managed_launch_profile
 from agent_lifecycle.adapter_sessions.qualification import load_shipped_launch_profile, qualified_profile_output_path
 from agent_lifecycle.adapter_sessions.local_launch_profile import validate_local_launch_profile
@@ -290,12 +291,19 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
                 "qualification profile adapterId does not match --adapter",
                 {"profileAdapterId": profile.get("adapterId"), "adapterId": args.adapter},
             )
-        payload = run_agent_plugin_qualification_probe(
-            package_root=Path(args.package),
-            project_root=Path(args.project_root),
-            profile=profile,
-            host_bin=args.host_bin,
-        )
+        probe_args: dict[str, Any] = {
+            "package_root": Path(args.package),
+            "project_root": Path(args.project_root),
+            "profile": profile,
+            "host_bin": args.host_bin,
+        }
+        # Keep profile validation in the qualification service. The explicit
+        # runner is composed only for a profile that has its bounded limits;
+        # this also preserves the dispatcher seam for lightweight callers and
+        # tests that replace the service.
+        if isinstance(profile.get("qualification"), dict):
+            probe_args["command_runner"] = build_agent_plugin_probe_runner(profile, Path(args.project_root))
+        payload = run_agent_plugin_qualification_probe(**probe_args)
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload

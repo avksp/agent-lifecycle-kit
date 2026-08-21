@@ -19,6 +19,7 @@ class HostProtocolInspectionTests(unittest.TestCase):
             descriptor_path.parent.mkdir(parents=True)
             descriptor = json.loads((ROOT / "adapters/opencode/adapter.descriptor.json").read_text(encoding="utf-8"))
             descriptor_path.write_text(json.dumps(descriptor), encoding="utf-8")
+            shutil.copyfile(ROOT / "adapters/opencode/inspection_profile.py", descriptor_path.parent / "inspection_profile.py")
             (root / "opencode.json").write_text(
                 json.dumps({"plugin": ["./adapters/opencode/plugins/agent-lifecycle-kit.js"]}),
                 encoding="utf-8",
@@ -76,6 +77,7 @@ class HostProtocolInspectionTests(unittest.TestCase):
             descriptor_path.parent.mkdir(parents=True)
             descriptor = json.loads((ROOT / "adapters/opencode/adapter.descriptor.json").read_text(encoding="utf-8"))
             descriptor_path.write_text(json.dumps(descriptor), encoding="utf-8")
+            shutil.copyfile(ROOT / "adapters/opencode/inspection_profile.py", descriptor_path.parent / "inspection_profile.py")
             (root / "opencode.json").write_text(
                 json.dumps({"plugin": ["./adapters/opencode/plugins/agent-lifecycle-kit.js"]}),
                 encoding="utf-8",
@@ -115,6 +117,7 @@ class HostProtocolInspectionTests(unittest.TestCase):
             descriptor_path.parent.mkdir(parents=True)
             descriptor = json.loads((ROOT / "adapters/hermes/adapter.descriptor.json").read_text(encoding="utf-8"))
             descriptor_path.write_text(json.dumps(descriptor), encoding="utf-8")
+            shutil.copyfile(ROOT / "adapters/hermes/inspection_profile.py", descriptor_path.parent / "inspection_profile.py")
             shutil.copyfile(ROOT / "adapters/hermes/hermes.registry.json", descriptor_path.parent / "hermes.registry.json")
             shutil.copyfile(ROOT / "adapters/hermes/slash-commands.json", descriptor_path.parent / "slash-commands.json")
             shutil.copyfile(ROOT / "skills.sh.json", root / "skills.sh.json")
@@ -164,6 +167,7 @@ class HostProtocolInspectionTests(unittest.TestCase):
             descriptor_path.parent.mkdir(parents=True)
             descriptor = json.loads((ROOT / "adapters/cursor/adapter.descriptor.json").read_text(encoding="utf-8"))
             descriptor_path.write_text(json.dumps(descriptor), encoding="utf-8")
+            shutil.copyfile(ROOT / "adapters/cursor/inspection_profile.py", descriptor_path.parent / "inspection_profile.py")
             root_plugin = root / ".cursor-plugin"
             root_plugin.mkdir()
             shutil.copyfile(ROOT / ".cursor-plugin/plugin.json", root_plugin / "plugin.json")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_lifecycle.audit.proof_integrity import FINDING_SCHEMA, FIX_IMPACT_SCHEMA, ROOT_CAUSE_SCHEMA
+from agent_lifecycle.contracts.proof_validation import FINDING_SCHEMA, FIX_IMPACT_SCHEMA, ROOT_CAUSE_SCHEMA
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.quality.bug_forensics import (
     BUG_FORENSICS_PROFILE_SCHEMA,

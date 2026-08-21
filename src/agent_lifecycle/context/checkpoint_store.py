@@ -6,11 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
-from agent_lifecycle.contracts.canonical import (
-    canonical_bytes,
-    ensure_private_directory,
-    require_private_file,
-    write_json_replace_private,
+from agent_lifecycle.contracts.canonical import canonical_bytes, ensure_private_directory
+from agent_lifecycle.contracts.persistence import (
+    require_private_json as require_private_file,
+    replace_private_json as write_json_replace_private,
 )
 from agent_lifecycle.contracts.redaction import redact_value
 from agent_lifecycle.context.checkpoints import (
