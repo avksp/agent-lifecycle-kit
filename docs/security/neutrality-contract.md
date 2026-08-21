@@ -1,5 +1,9 @@
 # Neutrality authority contract
 
+Release 1.75 signs the complete security subject: claims, operation and the
+primary artifact identity are verified together. Omitting or replacing one of
+these fields cannot turn an unrelated report into valid neutrality proof.
+
 The neutrality boundary prevents origin-specific repository information,
 secrets, injected deny values, trust roots, and signing keys from becoming part
 of the portable kit.
