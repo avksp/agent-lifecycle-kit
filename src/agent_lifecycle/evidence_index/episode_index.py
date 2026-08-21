@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.token_estimation import estimate_tokens
 from agent_lifecycle.evidence_index.core import build_evidence_index, validate_evidence_index
 
 EPISODE_INDEX_SCHEMA = "agent-episode-index.v1"

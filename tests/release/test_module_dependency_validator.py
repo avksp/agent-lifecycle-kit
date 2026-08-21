@@ -60,3 +60,77 @@ class ModuleDependencyValidatorTests(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("module-import-cycle", {item["code"] for item in payload["blockers"]})
+
+    def test_validator_includes_function_local_imports_and_ignores_self_edges(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "agent_lifecycle"
+            root.mkdir()
+            (root / "__init__.py").write_text("", encoding="utf-8")
+            (root / "first.py").write_text(
+                "def load():\n    from agent_lifecycle.second import value\n    return value\n",
+                encoding="utf-8",
+            )
+            (root / "second.py").write_text("value = 1\n", encoding="utf-8")
+            evidence = Path(tmp) / "evidence.json"
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools/release/validate_module_dependencies.py"),
+                    "--package-root",
+                    str(root),
+                    "--require-acyclic-modules",
+                    "--require-acyclic-packages",
+                    "--evidence",
+                    str(evidence),
+                ],
+                cwd=ROOT,
+                check=True,
+            )
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["status"], "PASS")
+        self.assertEqual(payload["moduleSccs"], [])
+        self.assertTrue(any(edge["to"] == "second" for edge in payload["packageEdges"]))
+
+    def test_validator_rejects_package_only_cycle_and_layer_violation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "agent_lifecycle"
+            (root / "one").mkdir(parents=True)
+            (root / "two").mkdir()
+            for package in (root, root / "one", root / "two"):
+                (package / "__init__.py").write_text("", encoding="utf-8")
+            (root / "one" / "first.py").write_text("from agent_lifecycle.two import second\n", encoding="utf-8")
+            (root / "two" / "second.py").write_text("from agent_lifecycle.one import first\n", encoding="utf-8")
+            policy = Path(tmp) / "policy.json"
+            policy.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-architecture-dependencies.v1",
+                        "packageLevels": {"one": 1, "two": 0},
+                        "moduleLevels": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            evidence = Path(tmp) / "evidence.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools/release/validate_module_dependencies.py"),
+                    "--package-root",
+                    str(root),
+                    "--policy",
+                    str(policy),
+                    "--require-acyclic-packages",
+                    "--evidence",
+                    str(evidence),
+                ],
+                cwd=ROOT,
+                text=True,
+            )
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+
+        self.assertNotEqual(result.returncode, 0)
+        codes = {item["code"] for item in payload["blockers"]}
+        self.assertIn("package-import-cycle", codes)
+        self.assertIn("architecture-layer-violation", codes)

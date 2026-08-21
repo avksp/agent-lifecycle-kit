@@ -11,7 +11,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.redaction import redact_value
-from agent_lifecycle.adapter_sessions.qualification import validate_qualification_policy
+from agent_lifecycle.contracts.local_launch_validation import validate_local_launch_profile
 
 LOCAL_HOST_LAUNCH_PROFILE_SCHEMA = "agent-local-host-launch-profile.v1"
 LOCAL_HOST_LAUNCH_PROFILE_VALIDATION_SCHEMA = "agent-local-host-launch-profile-validation.v1"
@@ -112,81 +112,6 @@ def load_local_launch_profile(
             {"validation": validation},
         )
     return LOCAL_PROFILE_ROOT / relative, profile, validation
-
-
-def validate_local_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
-    """Validate a closed, operator-local process launch declaration."""
-
-    blockers: list[dict[str, Any]] = []
-    if profile.get("schemaVersion") != LOCAL_HOST_LAUNCH_PROFILE_SCHEMA:
-        blockers.append({"code": "local-launch-profile-schema"})
-    if profile.get("status") != "LOCAL_OPT_IN":
-        blockers.append({"code": "local-launch-profile-status"})
-
-    adapter_id = profile.get("adapterId")
-    if not isinstance(adapter_id, str) or not _ADAPTER_ID.fullmatch(adapter_id):
-        blockers.append({"code": "local-launch-profile-adapter"})
-
-    executable = profile.get("executable")
-    if not _valid_executable(executable):
-        blockers.append({"code": "local-launch-profile-executable"})
-    elif _executable_name(executable).lower() in _SHELL_EXECUTABLES:
-        blockers.append({"code": "local-launch-profile-shell-executable"})
-
-    _validate_argv_template(profile.get("argvTemplate"), field="argvTemplate", placeholders=True, blockers=blockers)
-    _validate_argv_template(
-        profile.get("versionProbeArgs"),
-        field="versionProbeArgs",
-        placeholders=False,
-        blockers=blockers,
-        require_non_empty=True,
-    )
-    version_probe = profile.get("versionProbeArgs")
-    if isinstance(version_probe, list) and tuple(version_probe) not in SAFE_VERSION_PROBES:
-        blockers.append({"code": "local-launch-profile-version-probe"})
-    _validate_env(profile.get("env"), blockers)
-    _validate_planning_only(profile.get("planningOnly"), blockers)
-    if isinstance(executable, str) and "/" not in executable and "\\" not in executable:
-        if "PATH" not in _env_names(profile):
-            blockers.append({"code": "local-launch-profile-path-env-required"})
-
-    timeout = profile.get("timeoutSeconds")
-    if (
-        not isinstance(timeout, (int, float))
-        or isinstance(timeout, bool)
-        or timeout <= 0
-        or timeout > MAX_TIMEOUT_SECONDS
-    ):
-        blockers.append(
-            {
-                "code": "local-launch-profile-timeout",
-                "maximumSeconds": MAX_TIMEOUT_SECONDS,
-            }
-        )
-
-    required_false = (
-        "shell",
-        "writesNativeConfig",
-        "promptInjectionDefault",
-        "publicSupportClaimed",
-        "productionPromotionClaimed",
-    )
-    for field in required_false:
-        if profile.get(field) is not False:
-            blockers.append({"code": "local-launch-profile-safe-default", "field": field})
-    blockers.extend(validate_qualification_policy(profile))
-
-    body = {
-        "schemaVersion": LOCAL_HOST_LAUNCH_PROFILE_VALIDATION_SCHEMA,
-        "status": "PASS" if not blockers else "FAIL",
-        "profileDigest": canonical_digest(profile),
-        "adapterId": adapter_id if isinstance(adapter_id, str) else None,
-        "allowedPlaceholders": sorted(ALLOWED_LAUNCH_PLACEHOLDERS),
-        "blockers": blockers,
-        "hostLaunchStarted": False,
-        "productionPromotionClaimed": False,
-    }
-    return {**body, "validationDigest": canonical_digest(body)}
 
 
 def build_executable_identity(

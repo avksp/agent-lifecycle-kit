@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.contracts.local_launch_validation import validate_local_launch_profile
 from agent_lifecycle.contracts.thread_bridge_schemas import validate_thread_bridge_profile
 from agent_lifecycle.host_protocol.acp_capability import validate_host_capabilities
 from agent_lifecycle.host_protocol.contracts import HostOperationReceipt, HostOperationRequest
@@ -157,9 +158,6 @@ def validate_managed_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
 
 def validate_local_host_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
     """Validate an operator-local profile through its single domain validator."""
-
-    from agent_lifecycle.adapter_sessions.local_launch_profile import validate_local_launch_profile
-
     return validate_local_launch_profile(profile)
 
 

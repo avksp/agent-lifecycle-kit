@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
 from agent_lifecycle.contracts.schemas import get_schema
 from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file, resolve_repository_file
+from agent_lifecycle.contracts.token_estimation import estimate_tokens
 
 EVIDENCE_INDEX_SCHEMA = "agent-evidence-index.v1"
 EVIDENCE_INDEX_VALIDATION_SCHEMA = "agent-evidence-index-validation.v1"

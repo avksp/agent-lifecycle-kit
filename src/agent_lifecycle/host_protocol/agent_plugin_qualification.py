@@ -19,7 +19,7 @@ from agent_lifecycle.contracts.agent_plugin_qualification_schemas import (
     validate_qualification_profile,
     validate_qualification_receipt,
 )
-from agent_lifecycle.adapter_sessions.redaction import redact_process_text
+from agent_lifecycle.contracts.process_redaction import redact_process_text
 
 
 def package_identity(package_root: Path) -> dict[str, Any]:
@@ -278,24 +278,17 @@ def _inspect_project(
 
 
 def _default_probe_runner(profile: dict[str, Any], project_root: Path) -> Any:
-    from agent_lifecycle.adapter_sessions.env import resolve_launch_env
-    from agent_lifecycle.adapter_sessions.process import run_process
-
-    # Qualification profiles use a public ``environment`` section; adapt it
-    # to the shared launcher contract without widening the profile schema.
-    launch_profile = {**profile, "env": profile.get("environment", {})}
-    env, _ = resolve_launch_env(launch_profile)
-    timeout = float(profile["qualification"]["timeoutSeconds"])
-    output_limit = int(profile["qualification"]["maxOutputBytes"])
+    """Return a fail-closed runner when no composition adapter was supplied."""
 
     def runner(argv: list[str], _timeout: float) -> dict[str, Any]:
-        return run_process(
-            argv,
-            env=env,
-            timeout_seconds=timeout,
-            cwd=project_root,
-            max_output_bytes=output_limit,
-        )
+        return {
+            "status": "FAIL",
+            "exitCode": None,
+            "timedOut": False,
+            "stdout": "",
+            "stderr": "",
+            "blockers": [{"code": "qualification-runner-required"}],
+        }
 
     return runner
 

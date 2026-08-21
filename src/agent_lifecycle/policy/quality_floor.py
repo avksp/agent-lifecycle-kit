@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.contracts.quality_modes import MODES, is_downgrade, max_mode, mode_index
 from agent_lifecycle.metrics.costs import DEFAULT_MODE_LIMITS
 
-MODES = tuple(DEFAULT_MODE_LIMITS)
 PROTECTED_TASK_SHAPES = {"adapter", "architecture", "release"}
 PROTECTED_RISKS = {"security", "contracts", "adapter", "architecture", "release", "migration", "dataMigration", "S2"}
 QUALITY_FLOOR_DECISION_SCHEMA = "agent-lifecycle-quality-floor-decision.v1"
@@ -21,21 +21,6 @@ REQUIRED_EVIDENCE_FLOORS = {
     "sandbox": "strict",
     "security-review": "strict",
 }
-
-
-def mode_index(mode: str | None) -> int:
-    return MODES.index(mode) if mode in MODES else MODES.index("standard")
-
-
-def is_downgrade(before: str | None, after: str | None) -> bool:
-    return mode_index(after) < mode_index(before)
-
-
-def max_mode(*modes: str | None) -> str:
-    valid = [mode for mode in modes if mode in MODES]
-    if not valid:
-        return "standard"
-    return max(valid, key=mode_index)
 
 
 def quality_floor_mode(

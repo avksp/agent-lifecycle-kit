@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.context.profiles import REQUIRED_SUMMARY_FIELDS, resolve_window, validate_context_profile
-from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, read_json_object
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.token_estimation import estimate_tokens
 
 OPTIONAL_SUMMARY_FIELDS = {"toolOutputs"}
 
@@ -59,10 +60,6 @@ def check_context(
         "status": rendered["status"],
         "receipt": rendered["receipt"],
     }
-
-
-def estimate_tokens(value: Any) -> int:
-    return max(1, (len(canonical_bytes(value)) + 3) // 4)
 
 
 def _summary_projection(summary: dict[str, Any]) -> dict[str, Any]:
