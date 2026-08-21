@@ -18,7 +18,7 @@ class FoundationTests(unittest.TestCase):
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         project = pyproject["project"]
         self.assertEqual(project["name"], "agent-lifecycle-kit")
-        self.assertEqual(project["version"], "1.74.0")
+        self.assertRegex(project["version"], r"^[0-9]+\.[0-9]+\.[0-9]+$")
         self.assertEqual(project["requires-python"], ">=3.11,<3.15")
         self.assertEqual(project["license"]["text"], "Apache-2.0")
         self.assertEqual(project["dependencies"], [])
@@ -78,7 +78,8 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(lock["requires-python"], ">=3.11, <3.15")
         packages = {package["name"]: package for package in lock["package"]}
         self.assertIn("agent-lifecycle-kit", packages)
-        self.assertEqual(packages["agent-lifecycle-kit"]["version"], "1.74.0")
+        project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        self.assertEqual(packages["agent-lifecycle-kit"]["version"], project["project"]["version"])
 
     def test_foundation_ci_uses_stdlib_unittest(self) -> None:
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
@@ -86,7 +87,15 @@ class FoundationTests(unittest.TestCase):
         self.assertNotIn("optional-dependencies", pyproject["project"])
         workflow = (ROOT / ".github/workflows/neutrality.yml").read_text(encoding="utf-8")
         self.assertIn("python -m unittest discover", workflow)
+        self.assertIn("-t .", workflow)
         self.assertNotIn("pytest", workflow)
+
+    def test_ci_runs_security_suite_and_codeql_workflow_is_pinned(self) -> None:
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        codeql = (ROOT / ".github/workflows/codeql.yml").read_text(encoding="utf-8")
+        self.assertIn("python -m unittest discover -s tests/security -t . -v", ci)
+        self.assertIn("github/codeql-action/init@", codeql)
+        self.assertIn("github/codeql-action/analyze@", codeql)
 
     def test_ci_workflows_lock_line_endings_before_checkout(self) -> None:
         # NEG-R03-18 Windows CRLF Hash Drift

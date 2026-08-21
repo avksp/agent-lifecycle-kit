@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 import sys
 import tempfile
 import unittest
@@ -12,8 +14,18 @@ try:
     from .helpers import *  # noqa: F401,F403,E402
 except ImportError:
     from helpers import *  # noqa: F401,F403,E402
+from agent_lifecycle.workflow.state import write_state_replace
 
 class WorkflowStateTransitionTests(unittest.TestCase):
+    @unittest.skipUnless(os.name != "nt", "POSIX mode contract only")
+    def test_workflow_state_replace_uses_owner_only_modes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            write_state_replace(state_path, json.loads(state_path.read_text(encoding="utf-8")))
+            self.assertEqual(stat.S_IMODE(root.stat().st_mode), 0o700)
+            self.assertEqual(stat.S_IMODE(state_path.stat().st_mode), 0o600)
+
     def test_status_reports_ready_task(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_path = _write_state(Path(tmp), phase="RUNNING")

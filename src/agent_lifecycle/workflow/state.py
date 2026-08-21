@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import os
 from datetime import UTC, datetime
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, read_json_object
-from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest
+from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest, write_json_replace_private
 
 TERMINAL_PHASES = {"COMPLETE", "FAILED", "CANCELLED"}
 EXECUTION_PHASES = {"RUNNING", "STEP_REVIEW", "REMEDIATING"}
@@ -79,19 +78,7 @@ def deadline_after(started_at: str, seconds: int) -> str:
 
 
 def write_state_replace(path: Path, state: dict[str, Any]) -> None:
-    data = canonical_bytes(state) + b"\n"
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    try:
-        with os.fdopen(os.open(tmp, flags, 0o644), "wb") as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(tmp, path)
-        _fsync_dir(path.parent)
-    finally:
-        if tmp.exists():
-            tmp.unlink()
+    write_json_replace_private(path, state)
 
 
 def summarize_state(path: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -118,13 +105,3 @@ def summarize_state(path: Path, state: dict[str, Any]) -> dict[str, Any]:
         "authorization": state.get("authorization"),
         "tasks": tasks,
     }
-
-
-def _fsync_dir(path: Path) -> None:
-    if os.name == "nt":
-        return
-    fd = os.open(path, os.O_RDONLY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)

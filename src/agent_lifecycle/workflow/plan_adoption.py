@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.planning.task_compatibility import (
     build_task_plan_compatibility_receipt,
     task_contracts_compatible,
@@ -149,10 +150,7 @@ def _verify_frozen_manifest(root: Path, manifest: dict[str, Any]) -> str:
     if not isinstance(plan_root, str) or not plan_root:
         raise LifecycleError("invalid-plan-manifest", "package.planArtifactRoot is required")
     lock = read_json_object(root / plan_root / "plan.lock.json", label="plan lock")
-    if lock.get("manifestHash") != digest:
-        raise LifecycleError("plan-lock-mismatch", "plan lock manifestHash does not match manifest")
-    if lock.get("planRevision") != manifest.get("planRevision"):
-        raise LifecycleError("plan-lock-mismatch", "plan lock revision does not match manifest")
+    verify_plan_package_integrity(manifest, lock, repository_root=root)
     review_mesh = manifest.get("reviewMesh") if isinstance(manifest.get("reviewMesh"), dict) else None
     require_review_mesh_quorum_gate_pass(
         validate_review_mesh_quorum_path(

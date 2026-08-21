@@ -1,0 +1,1 @@
+"""Kimi Code adapter tests."""

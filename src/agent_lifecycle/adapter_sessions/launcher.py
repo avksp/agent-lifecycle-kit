@@ -15,6 +15,7 @@ from agent_lifecycle.adapter_sessions.contracts import (
 )
 from agent_lifecycle.adapter_sessions.env import resolve_launch_env
 from agent_lifecycle.adapter_sessions.local_launch_profile import (
+    build_executable_identity,
     load_local_launch_profile,
     local_receipt_argv,
     local_profile_summary,
@@ -28,10 +29,11 @@ from agent_lifecycle.adapter_sessions.qualification import (
     build_qualification_receipt,
     require_planning_qualification_receipt,
     require_qualification_receipt,
+    shipped_profile_digest,
     write_qualification_receipt,
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
-from agent_lifecycle.freeze import verify_plan_lock
+from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.host_protocol.validation import validate_managed_launch_profile
 from agent_lifecycle.workflow.risk_execution_gate import validate_task_risk_profile
 
@@ -107,6 +109,12 @@ def inspect_local_launch_profile(
 
     root = (project_root or Path.cwd()).absolute()
     relative, profile, validation = load_local_launch_profile(profile_path, project_root=root)
+    identity = build_executable_identity(
+        profile,
+        profile_digest=str(validation["profileDigest"]),
+        shipped_profile_digest=shipped_profile_digest(str(profile["adapterId"]), repository_root=root),
+        strict=False,
+    )
     return build_local_launch_profile_receipt(
         status="PASS",
         operation="INSPECT",
@@ -114,6 +122,7 @@ def inspect_local_launch_profile(
         profile_summary=local_profile_summary(profile),
         profile_digest=validation["profileDigest"],
         process_calls=0,
+        host_identity=identity,
     )
 
 
@@ -152,8 +161,27 @@ def launch_from_local_profile(
         )
     env, env_receipt = resolve_launch_env(profile, process_env=process_env)
     timeout_seconds = float(profile["timeoutSeconds"])
+    shipped_digest = shipped_profile_digest(profile_adapter, repository_root=root)
 
     if operation == "preflight":
+        host_identity = build_executable_identity(
+            profile,
+            process_env=env,
+            profile_digest=profile_digest,
+            shipped_profile_digest=shipped_digest,
+            strict=False,
+        )
+        if host_identity["status"] != "PASS":
+            return build_local_launch_profile_receipt(
+                status="FAIL",
+                operation="PREFLIGHT",
+                profile_path=relative.as_posix(),
+                profile_summary=local_profile_summary(profile),
+                profile_digest=profile_digest,
+                process_calls=0,
+                host_identity=host_identity,
+                blockers=[{"code": "local-launch-executable-identity-unavailable"}],
+            )
         argv = [str(profile["executable"]), *profile["versionProbeArgs"]]
         probe_timeout = min(timeout_seconds, 10.0)
         result = run_process(argv, env=env, timeout_seconds=probe_timeout)
@@ -170,6 +198,7 @@ def launch_from_local_profile(
                 profile=profile,
                 profile_digest=profile_digest,
                 probe_receipt=probe,
+                executable_identity=host_identity,
             )
             blockers.extend(qualification_receipt["blockers"])
             write_qualification_receipt(root, profile, qualification_receipt)
@@ -182,6 +211,7 @@ def launch_from_local_profile(
             process_calls=1,
             probe_receipt=probe,
             blockers=blockers,
+            host_identity=host_identity,
         )
         return _attach_qualification_receipt(payload, qualification_receipt)
     if operation == "planningTask":
@@ -205,11 +235,24 @@ def launch_from_local_profile(
                 blockers=[{"code": "planning-launch-input-invalid"}],
                 profile_digest=profile_digest,
             )
+        host_identity = build_executable_identity(
+            profile,
+            process_env=env,
+            profile_digest=profile_digest,
+            shipped_profile_digest=shipped_digest,
+            strict=False,
+        )
         try:
+            if host_identity["status"] != "PASS":
+                raise LifecycleError(
+                    "local-launch-executable-identity-unavailable",
+                    "planning launch executable identity is unavailable",
+                )
             qualification_receipt = require_planning_qualification_receipt(
                 project_root=root,
                 profile=profile,
                 profile_digest=profile_digest,
+                executable_identity=host_identity,
             )
             argv = render_planning_launch_argv(profile)
             before = capture_git_worktree_identity(root)
@@ -234,6 +277,7 @@ def launch_from_local_profile(
                 input_source=input_source,
                 blockers=[{"code": exc.code, "message": exc.message, "context": exc.details}],
                 profile_digest=profile_digest,
+                host_identity=host_identity,
             )
         body = {key: value for key, value in receipt.items() if key != "receiptDigest"}
         body["profileDigest"] = profile_digest
@@ -289,11 +333,29 @@ def launch_from_local_profile(
     assert operation_id is not None
     assert source_revision is not None
     assert risk_profile is not None
+    host_identity = build_executable_identity(
+        profile,
+        process_env=env,
+        profile_digest=profile_digest,
+        shipped_profile_digest=shipped_digest,
+        strict=False,
+    )
+    if host_identity["status"] != "PASS":
+        return _blocked_local_launch(
+            adapter_id=profile_adapter,
+            session_id=session_id,
+            timeout_seconds=timeout_seconds,
+            env_receipt=env_receipt,
+            blockers=[{"code": "local-launch-executable-identity-unavailable"}],
+            profile_digest=profile_digest,
+            risk_profile=risk_profile,
+            host_identity=host_identity,
+        )
     manifest = read_json_object(manifest_path, label="frozen plan manifest")
     state = read_json_object(state_path, label="workflow state")
     lock = read_json_object(lock_path, label="plan lock")
     try:
-        verify_plan_lock(manifest, lock)
+        verify_plan_package_integrity(manifest, lock, repository_root=root)
         if manifest.get("status") != "FROZEN":
             raise LifecycleError("local-launch-frozen-plan-required", "local launch requires a frozen plan")
         task = _state_task(state, task_id)
@@ -308,6 +370,7 @@ def launch_from_local_profile(
             project_root=root,
             profile=profile,
             profile_digest=profile_digest,
+            executable_identity=host_identity,
         )
     except LifecycleError as exc:
         return _blocked_local_launch(
@@ -318,6 +381,7 @@ def launch_from_local_profile(
             blockers=[{"code": exc.code, "message": exc.message, "context": exc.details}],
             profile_digest=profile_digest,
             risk_profile=risk_profile,
+            host_identity=host_identity,
         )
 
     bindings = {
@@ -341,6 +405,7 @@ def launch_from_local_profile(
             blockers=[{"code": exc.code, "message": exc.message, "context": exc.details}],
             profile_digest=profile_digest,
             risk_profile=risk_profile,
+            host_identity=host_identity,
         )
     result = run_process(argv, env=env, timeout_seconds=timeout_seconds)
     payload = build_launch_receipt(
@@ -362,6 +427,7 @@ def launch_from_local_profile(
         profile_digest=profile_digest,
         risk_profile_digest=str(risk_profile["profileDigest"]),
         receipt_argv=local_receipt_argv(profile),
+        host_identity=host_identity,
     )
     return _attach_qualification_receipt(payload, qualification_receipt)
 
@@ -518,6 +584,7 @@ def _blocked_local_launch(
     blockers: list[dict[str, Any]],
     profile_digest: str,
     risk_profile: dict[str, Any] | None,
+    host_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     risk_digest = risk_profile.get("profileDigest") if isinstance(risk_profile, dict) else None
     return build_launch_receipt(
@@ -534,6 +601,7 @@ def _blocked_local_launch(
         blockers=blockers,
         profile_digest=profile_digest,
         risk_profile_digest=risk_digest if isinstance(risk_digest, str) else None,
+        host_identity=host_identity,
     )
 
 
@@ -640,6 +708,7 @@ def _blocked_planning_launch(
     input_source: str,
     blockers: list[dict[str, Any]],
     profile_digest: str,
+    host_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     task_value = task_text if isinstance(task_text, str) else ""
     body = {
@@ -682,6 +751,7 @@ def _blocked_planning_launch(
         "nativeConfigWritten": False,
         "blockers": blockers,
         "profileDigest": profile_digest,
+        "hostIdentity": host_identity,
         "productionPromotionClaimed": False,
     }
     return {**body, "receiptDigest": canonical_digest(body)}

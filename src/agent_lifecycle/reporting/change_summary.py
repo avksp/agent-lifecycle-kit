@@ -6,11 +6,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import (
-    LifecycleError,
-    canonical_digest,
-    normalize_repo_path,
-)
+from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.paths import normalize_git_revision, normalize_repo_path
 
 CHANGE_SUMMARY_SCHEMA = "agent-change-summary-receipt.v1"
 
@@ -25,28 +22,30 @@ def build_change_summary_receipt(
 ) -> dict[str, Any]:
     """Build a read-only summary using Git's diff counters."""
 
-    if staged and (base or head):
+    if staged and (base is not None or head is not None):
         raise LifecycleError(
             "change-summary-range-conflict",
             "--staged cannot be combined with --base or --head",
         )
-    if head and not base:
+    if head is not None and base is None:
         raise LifecycleError("change-summary-base-required", "--head requires --base")
     normalized_paths = [_normalize_filter(item) for item in paths or []]
     root = project_root.resolve()
+    resolved_base = _resolve_revision(root, base, label="base") if base is not None else None
+    resolved_head = _resolve_revision(root, head, label="head") if head is not None else None
     numstat = _run_git(
         root,
-        _diff_args("--numstat", base=base, head=head, staged=staged, paths=normalized_paths),
+        _diff_args("--numstat", base=resolved_base, head=resolved_head, staged=staged, paths=normalized_paths),
     )
     name_status = _run_git(
         root,
-        _diff_args("--name-status", base=base, head=head, staged=staged, paths=normalized_paths),
+        _diff_args("--name-status", base=resolved_base, head=resolved_head, staged=staged, paths=normalized_paths),
     )
     counters = _parse_numstat(numstat)
     counters.update(_parse_name_status(name_status))
     scope = {
-        "base": base or ("<index>" if staged else "HEAD"),
-        "head": head or ("<index>" if staged else "<worktree>"),
+        "base": resolved_base or ("<index>" if staged else "HEAD"),
+        "head": resolved_head or ("<index>" if staged else "<worktree>"),
         "staged": staged,
         "paths": normalized_paths,
     }
@@ -87,13 +86,13 @@ def _diff_args(
     staged: bool,
     paths: list[str],
 ) -> list[str]:
-    args = ["diff", "--no-ext-diff", "--find-renames", mode]
+    args = ["diff", "--no-ext-diff", "--no-textconv", "--find-renames", mode]
     if staged:
         args.append("--cached")
-    elif base and head:
-        args.append(f"{base}..{head}")
-    elif base:
-        args.append(base)
+    elif base is not None and head is not None:
+        args.extend(["--end-of-options", f"{base}..{head}"])
+    elif base is not None:
+        args.extend(["--end-of-options", base])
     else:
         args.append("HEAD")
     return [*args, "--", *paths]
@@ -111,6 +110,23 @@ def _run_git(root: Path, args: list[str]) -> str:
         detail = completed.stderr.strip() or completed.stdout.strip() or "git diff failed"
         raise LifecycleError("change-summary-git-failed", detail, {"args": ["git", *args]})
     return completed.stdout
+
+
+def _resolve_revision(root: Path, revision: str, *, label: str) -> str:
+    value = normalize_git_revision(revision, label=label)
+    completed = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--verify", "--end-of-options", f"{value}^{{commit}}"],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise LifecycleError("invalid-git-revision", f"{label}: revision cannot be resolved")
+    resolved = completed.stdout.strip().splitlines()
+    if len(resolved) != 1 or not resolved[0]:
+        raise LifecycleError("invalid-git-revision", f"{label}: revision cannot be resolved")
+    return resolved[0]
 
 
 def _parse_numstat(output: str) -> dict[str, int]:

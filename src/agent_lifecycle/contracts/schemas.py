@@ -193,6 +193,7 @@ LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
             "expectedHostVersion": {"type": "string", "minLength": 5},
             "actualHostVersion": {"type": ["string", "null"]},
             "profileDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "executableIdentity": {"type": ["object", "null"]},
             "probeReceiptDigest": {"type": "string", "minLength": 64, "maxLength": 64},
             "processCalls": {"const": 1},
             "modelCallsStarted": {"const": False},
@@ -217,6 +218,8 @@ LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
             "adapterId": {"type": "string", "minLength": 1},
             "profilePath": {"type": "string", "minLength": 1},
             "profileDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "profileOrigin": {"enum": ["SHIPPED_PROFILE_BOUND", "OPERATOR_OWNED_UNVERIFIED"]},
+            "shippedProfileDigest": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
             "publicSupportClaimed": {"const": False},
             "productionPromotionClaimed": {"const": False},
         },
@@ -271,6 +274,7 @@ LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
             "profilePath": {"type": "string", "minLength": 1},
             "profile": {"type": "object"},
             "profileDigest": {"type": ["string", "null"]},
+            "hostIdentity": {"type": ["object", "null"]},
             "processCalls": {"type": "integer", "minimum": 0, "maximum": 1},
             "probeReceipt": {"type": ["object", "null"]},
             "qualificationReceipt": {"type": ["object", "null"]},
@@ -320,6 +324,45 @@ LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
             "blockers": {"type": "array", "items": {"type": "object"}},
             "productionPromotionClaimed": {"const": False},
             "receiptDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+}
+
+PLAN_INTEGRITY_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-plan-file-inventory.v1": open_object_schema(
+        "agent-plan-file-inventory.v1",
+        required=["schemaVersion", "entries"],
+        properties={
+            "schemaVersion": {"const": "agent-plan-file-inventory.v1"},
+            "entries": {"type": "array", "items": {"type": "object"}},
+        },
+    ),
+    "agent-plan-lock.v2": open_object_schema(
+        "agent-plan-lock.v2",
+        required=["schemaVersion", "packageId", "planRevision", "manifestHash", "planFilesHash", "entries"],
+        properties={
+            "schemaVersion": {"const": "agent-plan-lock.v2"},
+            "packageId": {"type": "string", "minLength": 1},
+            "planRevision": {"type": "integer", "minimum": 1},
+            "manifestHash": {"type": "string", "minLength": 64, "maxLength": 64},
+            "planFilesHash": {"type": "string", "minLength": 64, "maxLength": 64},
+            "entries": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+        },
+    ),
+    "agent-plan-package-integrity-verification.v1": open_object_schema(
+        "agent-plan-package-integrity-verification.v1",
+        required=["schemaVersion", "status", "required", "lockSchemaVersion", "filesystemVerified", "blockers", "verificationDigest"],
+        properties={
+            "schemaVersion": {"const": "agent-plan-package-integrity-verification.v1"},
+            "status": {"enum": ["PASS", "FAIL"]},
+            "required": {"type": "boolean"},
+            "lockSchemaVersion": {"enum": ["agent-plan-lock.v1", "agent-plan-lock.v2"]},
+            "filesystemVerified": {"type": "boolean"},
+            "manifestHash": {"type": "string", "minLength": 64, "maxLength": 64},
+            "planFilesHash": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
+            "entries": {"type": "array", "items": {"type": "object"}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "verificationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
         },
     ),
 }
@@ -428,6 +471,7 @@ _SCHEMA_GROUPS = (
     POLICY_SCHEMAS,
     LIFECYCLE_START_SCHEMAS,
     RISK_EXECUTION_SCHEMAS,
+    PLAN_INTEGRITY_SCHEMAS,
 )
 
 _SCHEMAS: dict[str, dict[str, Any]] = {}

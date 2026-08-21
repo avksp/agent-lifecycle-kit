@@ -154,8 +154,9 @@ def _bootstrap(args: argparse.Namespace) -> int:
         primary_sha256=sha256_hex(report_bytes),
         primary_bytes=len(report_bytes),
         signer_fingerprint=authority.signer_fingerprint,
-        signature=authority.sign_claims_digest(sha256_hex(canonical_bytes(claims))),
+        signature="",
     )
+    receipt["signature"] = authority.sign_receipt_envelope(receipt["envelope"])
     write_json_create(receipt_path, receipt)
     print(f"neutrality: wrote {primary_path.relative_to(workspace_root)} and {receipt_path.relative_to(workspace_root)}")
     return 0

@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
-import os
 import re
 import uuid
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
-from agent_lifecycle.contracts.canonical import canonical_bytes
+from agent_lifecycle.contracts import (
+    LifecycleError,
+    canonical_digest,
+    read_json_object,
+)
+from agent_lifecycle.contracts.canonical import (
+    ensure_private_directory,
+    write_json_create_private,
+    write_json_replace_private,
+)
 
 PLANNING_SESSION_SCHEMA = "agent-planning-session-state.v1"
 PLANNING_SESSION_ROOT = Path(".alk/planning-sessions")
@@ -65,7 +72,7 @@ def create_planning_session(
     path = planning_session_path(identifier, session_root=session_root)
     _prepare_session_directory(path)
     try:
-        write_json_create(path, state)
+        write_json_create_private(path, state)
     except FileExistsError as exc:
         raise LifecycleError(
             "planning-session-already-exists",
@@ -159,31 +166,16 @@ def _session_root(session_root: Path | None) -> Path:
 
 def _prepare_session_directory(path: Path) -> None:
     root = path.parent.parent
-    if root.is_symlink():
-        raise LifecycleError("planning-session-root-symlink", "planning session root must not be a symlink")
-    root.mkdir(parents=True, exist_ok=True)
+    ensure_private_directory(root)
     if path.parent.exists():
         raise LifecycleError("planning-session-already-exists", "planning session directory already exists")
-    path.parent.mkdir(mode=0o700)
+    ensure_private_directory(path.parent)
 
 
 def _replace_state(path: Path, state: dict[str, Any]) -> None:
     if path.is_symlink() or not path.is_file():
         raise LifecycleError("planning-session-path-invalid", "planning session state path is invalid")
-    data = canonical_bytes(state) + b"\n"
-    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    try:
-        with os.fdopen(os.open(temporary, flags, 0o600), "wb") as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-    finally:
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
+    write_json_replace_private(path, state)
 
 
 def _validate_state(

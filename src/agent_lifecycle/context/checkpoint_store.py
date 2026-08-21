@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, read_json_object
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.canonical import (
+    canonical_bytes,
+    ensure_private_directory,
+    require_private_file,
+    write_json_replace_private,
+)
 from agent_lifecycle.contracts.redaction import redact_value
 from agent_lifecycle.context.checkpoints import (
     CHECKPOINT_SCHEMA,
@@ -45,15 +50,15 @@ def write_context_checkpoint(
     validation = validate_context_checkpoint(checkpoint)
     require_context_checkpoint_pass(validation)
     path = checkpoint_path(str(checkpoint["checkpointId"]), root=root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    data = canonical_bytes(checkpoint) + b"\n"
+    ensure_private_directory(path.parent)
     created = not path.exists()
     if not created:
+        require_private_file(path)
         existing = read_json_object(path, label="existing context checkpoint")
         if canonical_digest(existing) != canonical_digest(checkpoint):
             raise LifecycleError("context-checkpoint-conflict", "checkpoint id already contains a different artifact")
     else:
-        _write_atomic(path, data)
+        write_json_replace_private(path, checkpoint)
     _retain_latest(path.parent, run_id=str(checkpoint["runId"]), limit=max_checkpoints_per_run)
     return {
         "status": "PASS",
@@ -68,19 +73,23 @@ def write_context_checkpoint(
 
 
 def load_context_checkpoint(checkpoint_id: str, *, root: Path | None = None) -> dict[str, Any]:
-    return read_json_object(checkpoint_path(checkpoint_id, root=root), label="context checkpoint")
+    path = checkpoint_path(checkpoint_id, root=root)
+    require_private_file(path)
+    return read_json_object(path, label="context checkpoint")
 
 
 def list_context_checkpoints(*, root: Path | None = None, run_id: str | None = None) -> list[dict[str, Any]]:
     directory = (root or DEFAULT_CHECKPOINT_ROOT).resolve()
     if not directory.exists():
         return []
+    ensure_private_directory(directory)
     if not directory.is_dir():
         raise LifecycleError("context-checkpoint-root-invalid", "checkpoint root is not a directory")
     result: list[dict[str, Any]] = []
     for path in sorted(directory.glob("*.json")):
         if not path.resolve().is_relative_to(directory):
             raise LifecycleError("context-checkpoint-path-escape", "checkpoint listing escaped the checkpoint root")
+        require_private_file(path)
         value = read_json_object(path, label="context checkpoint")
         if run_id is None or value.get("runId") == run_id:
             result.append(value)
@@ -97,6 +106,7 @@ def restore_context_checkpoint(
 ) -> dict[str, Any]:
     """Return a bounded continuation packet after checking current lineage."""
 
+    require_private_file(checkpoint_path_value)
     checkpoint = read_json_object(checkpoint_path_value, label="context checkpoint")
     expected = _lineage_from_state(state, session_id=session_id)
     validation = validate_context_checkpoint(
@@ -182,17 +192,3 @@ def _retain_latest(directory: Path, *, run_id: str, limit: int) -> None:
         path = checkpoint_path(str(item["checkpointId"]), root=directory)
         if path.resolve().is_relative_to(directory.resolve()):
             path.unlink()
-
-
-def _write_atomic(path: Path, data: bytes) -> None:
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    try:
-        with os.fdopen(os.open(temporary, flags, 0o644), "wb") as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-    finally:
-        if temporary.exists():
-            temporary.unlink()

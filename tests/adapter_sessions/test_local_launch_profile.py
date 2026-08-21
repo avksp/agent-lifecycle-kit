@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 from agent_lifecycle.adapter_sessions.local_launch_profile import (
+    build_executable_identity,
     load_local_launch_profile,
     render_local_launch_argv,
     validate_local_launch_profile,
@@ -101,6 +103,19 @@ class LocalLaunchProfileTests(unittest.TestCase):
         validation = validate_local_launch_profile(profile)
         self.assertEqual(validation["status"], "FAIL")
         self.assertIn("local-launch-profile-placeholder-shape", {item["code"] for item in validation["blockers"]})
+
+    def test_executable_identity_is_content_bound_and_path_free(self) -> None:
+        profile = _fixture("valid.json")
+        profile["executable"] = sys.executable
+        profile_digest = validate_local_launch_profile(profile)["profileDigest"]
+
+        identity = build_executable_identity(profile, profile_digest=profile_digest)
+
+        self.assertEqual(identity["status"], "PASS")
+        self.assertEqual(identity["trustClass"], "OPERATOR_OWNED_UNVERIFIED")
+        self.assertEqual(len(identity["resolvedPathSha256"]), 64)
+        self.assertEqual(len(identity["executableContentSha256"]), 64)
+        self.assertNotIn(str(Path(sys.executable).parent), json.dumps(identity))
 
 
 def _fixture(name: str) -> dict:

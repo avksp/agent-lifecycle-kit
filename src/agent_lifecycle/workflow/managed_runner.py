@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
-from agent_lifecycle.freeze import verify_plan_lock
+from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.workflow.next_action import MODEL_CALLS_STARTED, build_managed_next_action
 from agent_lifecycle.workflow.implementation_audit_gate import implementation_audit_blockers
 from agent_lifecycle.workflow.state import load_state, state_identity
@@ -37,7 +37,7 @@ def run_managed_lifecycle_step(
         manifest = read_json_object(manifest_path, label="frozen plan manifest")
         _require_frozen_manifest(manifest)
         lock = _load_lock(manifest_path, lock_path)
-        verify_plan_lock(manifest, lock)
+        verify_plan_package_integrity(manifest, lock, repository_root=Path.cwd())
     except LifecycleError as exc:
         blockers.append(_blocker(exc.code, exc.message, exc.details))
 

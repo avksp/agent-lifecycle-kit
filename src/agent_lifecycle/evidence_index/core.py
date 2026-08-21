@@ -8,7 +8,8 @@ from typing import Any
 
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
-from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.schemas import get_schema
+from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file, resolve_repository_file
 
 EVIDENCE_INDEX_SCHEMA = "agent-evidence-index.v1"
 EVIDENCE_INDEX_VALIDATION_SCHEMA = "agent-evidence-index-validation.v1"
@@ -55,21 +56,36 @@ def build_evidence_index(
         except LifecycleError as exc:
             blockers.append({"code": "evidence-index-artifact-path-invalid", "index": index, "reason": exc.code})
             continue
-        path = root / repo_path
-        if not path.is_file():
-            blockers.append({"code": "evidence-index-artifact-missing", "index": index, "path": repo_path})
+        try:
+            path = resolve_repository_file(root, repo_path, label="artifact")
+        except LifecycleError as exc:
+            code = "evidence-index-artifact-symlink" if exc.code == "repository-input-symlink" else "evidence-index-artifact-missing"
+            blockers.append({"code": code, "index": index, "path": repo_path, "reason": exc.code})
             continue
         size = path.stat().st_size
         if total_bytes + size > max_input_bytes:
             omitted.append({"path": repo_path, "reason": "maxInputBytes"})
             blockers.append({"code": "evidence-index-input-cap-exceeded", "index": index, "path": repo_path, "cap": max_input_bytes})
             continue
-        data = path.read_bytes()
+        try:
+            data = read_stable_repository_file(
+                root,
+                repo_path,
+                max_bytes=max_input_bytes - total_bytes,
+                label="artifact",
+            )
+        except LifecycleError as exc:
+            if exc.code == "repository-input-symlink":
+                code = "evidence-index-artifact-symlink"
+            elif exc.code == "repository-input-too-large":
+                code = "evidence-index-input-cap-exceeded"
+            else:
+                code = "evidence-index-artifact-read-failed"
+            blockers.append({"code": code, "index": index, "path": repo_path, "reason": exc.code})
+            continue
         total_bytes += len(data)
         entry = _entry_from_bytes(repo_path, data)
         entries.append(entry)
-        if not entry["validatedArtifact"]:
-            blockers.append({"code": "evidence-index-artifact-not-validated", "index": index, "path": repo_path})
     body = {
         "schemaVersion": EVIDENCE_INDEX_SCHEMA,
         "status": "PASS",
@@ -199,11 +215,15 @@ def _entry_from_bytes(repo_path: str, data: bytes) -> dict[str, Any]:
         payload = None
     redacted = _needs_redaction(data)
     summary = _payload_summary(payload) if payload is not None else {"format": "non-json"}
+    schema_version = payload.get("schemaVersion") if isinstance(payload, dict) else None
+    recognition = _recognize_schema(schema_version)
     return {
         "sourcePath": repo_path,
         "artifactDigest": digest,
         "artifactType": summary.get("schemaVersion") or summary.get("format") or "unknown",
-        "validatedArtifact": isinstance(summary.get("schemaVersion"), str),
+        "artifactRecognition": recognition,
+        "validationStatus": "UNVALIDATED",
+        "validatedArtifact": False,
         "redactionStatus": "REDACTED" if redacted else "CLEAR",
         "summary": summary,
     }
@@ -223,7 +243,16 @@ def _validate_entry(entry: object, index: int, blockers: list[dict[str, Any]]) -
     if not isinstance(entry, dict):
         blockers.append({"code": "evidence-index-entry-invalid", "index": index})
         return
-    for key in ("sourcePath", "artifactDigest", "artifactType", "validatedArtifact", "redactionStatus", "summary"):
+    for key in (
+        "sourcePath",
+        "artifactDigest",
+        "artifactType",
+        "artifactRecognition",
+        "validationStatus",
+        "validatedArtifact",
+        "redactionStatus",
+        "summary",
+    ):
         if key not in entry:
             blockers.append({"code": "evidence-index-entry-field-missing", "index": index, "field": key})
     try:
@@ -232,8 +261,16 @@ def _validate_entry(entry: object, index: int, blockers: list[dict[str, Any]]) -
         blockers.append({"code": "evidence-index-entry-path-invalid", "index": index, "reason": exc.code})
     if entry.get("redactionStatus") not in {"CLEAR", "REDACTED"}:
         blockers.append({"code": "evidence-index-entry-redaction-invalid", "index": index})
-    if entry.get("validatedArtifact") is not True:
-        blockers.append({"code": "evidence-index-entry-not-validated", "index": index})
+    if entry.get("artifactRecognition") not in {"RECOGNIZED", "UNKNOWN"}:
+        blockers.append({"code": "evidence-index-entry-recognition-invalid", "index": index})
+    if entry.get("validationStatus") not in {"SCHEMA_VALIDATED", "UNVALIDATED"}:
+        blockers.append({"code": "evidence-index-entry-validation-status-invalid", "index": index})
+    if not isinstance(entry.get("validatedArtifact"), bool):
+        blockers.append({"code": "evidence-index-entry-validation-flag-invalid", "index": index})
+    if entry.get("validatedArtifact") is True and entry.get("validationStatus") != "SCHEMA_VALIDATED":
+        blockers.append({"code": "evidence-index-entry-validation-claim-mismatch", "index": index})
+    if entry.get("validationStatus") == "SCHEMA_VALIDATED" and entry.get("artifactRecognition") != "RECOGNIZED":
+        blockers.append({"code": "evidence-index-entry-unrecognized-validation", "index": index})
 
 
 def _rank_entries(entries: list[Any], query: str) -> list[dict[str, Any]]:
@@ -265,6 +302,16 @@ def _search_projection(entry: dict[str, Any]) -> dict[str, Any]:
 
 def _needs_redaction(data: bytes) -> bool:
     return any(marker in data for marker in REDACTION_MARKERS)
+
+
+def _recognize_schema(schema_version: object) -> str:
+    if not isinstance(schema_version, str) or not schema_version:
+        return "UNKNOWN"
+    try:
+        get_schema(schema_version)
+    except LifecycleError:
+        return "UNKNOWN"
+    return "RECOGNIZED"
 
 
 def _check_positive_cap(value: int, field: str) -> None:

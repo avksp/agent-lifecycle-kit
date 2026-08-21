@@ -1,0 +1,40 @@
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+TOOLS_RELEASE = ROOT / "tools" / "release"
+
+import sys
+
+sys.path.insert(0, str(TOOLS_RELEASE))
+
+from validate_ci_security import validate_ci_security  # noqa: E402
+
+
+class CiSecurityValidatorTests(unittest.TestCase):
+    def test_current_ci_and_test_loader_pass(self) -> None:
+        result = validate_ci_security(workflow_root=ROOT / ".github/workflows", tests_root=ROOT / "tests", repository_root=ROOT)
+
+        self.assertEqual(result["status"], "PASS", result["blockers"])
+        self.assertEqual(result["loader"]["loaderErrors"], [])
+        self.assertGreaterEqual(result["loader"]["discoveredCaseCount"], result["loader"]["expectedCaseCount"])
+        self.assertEqual(result["testInventory"]["topLevelFunctionCount"], 0)
+        self.assertTrue(all(item["status"] == "PASS" for item in result["mutationChecks"]))
+
+    def test_missing_action_pin_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workflow_root = Path(tmp) / "workflows"
+            workflow_root.mkdir()
+            workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+            (workflow_root / "ci.yml").write_text(workflow.replace("actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8", "actions/checkout@v5"), encoding="utf-8")
+            result = validate_ci_security(workflow_root=workflow_root, tests_root=ROOT / "tests", repository_root=ROOT)
+
+        self.assertEqual(result["status"], "FAIL")
+        self.assertIn("action-reference-not-immutable", {item["code"] for item in result["blockers"]})
+
+
+if __name__ == "__main__":
+    unittest.main()

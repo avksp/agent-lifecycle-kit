@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import sys
 import tempfile
 import unittest
 from io import StringIO
@@ -76,7 +77,10 @@ def _write_profile(root: Path, *, fixture: str = "valid.json") -> Path:
     profile = root / ".alk/host-launch/codex.json"
     profile.parent.mkdir(parents=True)
     source = ROOT / "tests/adapter_sessions/fixtures/local_launch_profiles" / fixture
-    profile.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if fixture == "valid.json":
+        payload["executable"] = sys.executable
+    profile.write_text(json.dumps(payload), encoding="utf-8")
     return profile
 
 
