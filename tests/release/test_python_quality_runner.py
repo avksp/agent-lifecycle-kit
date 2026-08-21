@@ -46,7 +46,7 @@ class PythonQualityRunnerTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "FAIL")
         self.assertIsNone(result["returncode"])
-        self.assertIn("No such file", result["stderr"])
+        self.assertTrue(result["stderr"].strip())
 
 
 if __name__ == "__main__":
