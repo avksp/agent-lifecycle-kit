@@ -1,0 +1,4226 @@
+{
+  "schemaVersion": "agent-python-quality-policy.v1",
+  "revision": 1,
+  "toolchain": {
+    "ruff": "0.16.3",
+    "mypy": "1.17.1",
+    "coverage": "7.10.6"
+  },
+  "ruff": {
+    "targetVersion": "py311",
+    "lineLength": 120,
+    "sourceRoots": [
+      "src"
+    ],
+    "firstParty": [
+      "agent_lifecycle"
+    ],
+    "correctnessSelectors": [
+      "E4",
+      "E7",
+      "E9",
+      "F",
+      "B"
+    ],
+    "migrationSelectors": [
+      "I",
+      "UP",
+      "RUF",
+      "SIM",
+      "PTH",
+      "ARG",
+      "BLE"
+    ],
+    "intentionalFindings": [
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics_advisor.py",
+        "code": "RUF001",
+        "owner": "quality-domain",
+        "reason": "Russian bug marker is user-visible domain text."
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/recommendation.py",
+        "code": "RUF001",
+        "owner": "review-mesh-domain",
+        "reason": "Russian review marker is user-visible domain text."
+      }
+    ],
+    "correctnessBaseline": [
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_execution.py",
+        "code": "F401",
+        "count": 11,
+        "sourceDigest": "3593fe97edeedb30845ca08f9cc3fad2b463e2707b9f691b8c470b82f9a2ad7a"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_preflight.py",
+        "code": "F401",
+        "count": 2,
+        "sourceDigest": "48fdb505c910bc726a96e312785afedb78c2eb832e29e31d9f3239e34add35f0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launcher.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "d38ac0dd685d61dfef26c5e3ff0dbb97fe854015b2a80d036f9eb993cc8db769"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/local_launch_profile.py",
+        "code": "F841",
+        "count": 1,
+        "sourceDigest": "05331f6aa2b98bc28ef67f74734f8bd84b4576adb4ca67ca7a017d3af7296c93"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/planning_session.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "06b3225680d0ca4a3a6d0b6062784d3a12913b51be48b8577ef4084cb18082b1"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/process_groups.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "bcf45a42bc80e4cbf3877f698f5502c31d7b873b46ccbec8c4929e2a47a95ead"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/qualification.py",
+        "code": "F401",
+        "count": 2,
+        "sourceDigest": "0137f8e070d99fac980017a766ad6f576b9013428a8bd5a668a0719d5c455691"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/qualification.py",
+        "code": "F841",
+        "count": 1,
+        "sourceDigest": "0137f8e070d99fac980017a766ad6f576b9013428a8bd5a668a0719d5c455691"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/unified_start.py",
+        "code": "F401",
+        "count": 8,
+        "sourceDigest": "4529090abd38ba7d2cdf0718a2266b44b3bf43c1b28a7dc77c31e35bd07c1a6b"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/proof_integrity.py",
+        "code": "F405",
+        "count": 15,
+        "sourceDigest": "1beb7eb4e07e977c1611b631bbefdfc1ad9b85f8aa17383397ca13ad61dae72a"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_planning.py",
+        "code": "E731",
+        "count": 1,
+        "sourceDigest": "30f90a465131eba5e25b6be139d7c3f2c26439683704550f9725b19205d65582"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/lifecycle_parsers.py",
+        "code": "F821",
+        "count": 5,
+        "sourceDigest": "cdaf86a9c9f031ca95314db658aa3b2ee13ee9c8782494091357f40f03a64262"
+      },
+      {
+        "path": "src/agent_lifecycle/context/checkpoint_store.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "185e71a6707a73760e53fce09446275787739248b35473989b17163479d4ea22"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_schema_definitions.py",
+        "code": "F401",
+        "count": 5,
+        "sourceDigest": "d47ef736380b12cc92610598b5b52e4b1b8acab363e702b4e48de4927225f1fb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_schemas.py",
+        "code": "F401",
+        "count": 11,
+        "sourceDigest": "138ce48883962a194ab0b78cdcab050b6a8a1ec7d5fdf64bf9708f630aa736a1"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_validation.py",
+        "code": "F401",
+        "count": 6,
+        "sourceDigest": "c57cfb83eeecabdc59a9b2c231678077f78a22845d58f7369ddf0b12ca53b729"
+      },
+      {
+        "path": "src/agent_lifecycle/goal/view.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "ddb96bc050a36d781f9c6baa992e855eab795780c63cdf3378f4012087729455"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "fe31164db12e075b6d12a1f270f36cc30ffb654cde0f69b87823022d042d50f5"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_cursor.py",
+        "code": "F401",
+        "count": 7,
+        "sourceDigest": "7e39be71888a6e0407a268999f36c5877c10fd08f437269d79d2cfdece11c1a2"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_gemini_cli.py",
+        "code": "F401",
+        "count": 10,
+        "sourceDigest": "49aa2deccb4cddf72277ae49f19757cd16cea34f276ca2595410439c24983e93"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_hermes.py",
+        "code": "F401",
+        "count": 8,
+        "sourceDigest": "2a5bb0a1643bf43186e845b8eee8e7c713db026015e7113250cdd81bc94107bf"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_kimi_code.py",
+        "code": "F401",
+        "count": 10,
+        "sourceDigest": "2ce286a9e9ec712551d1edded60ed7e190895cf1ca860b73e235b7394829e9c3"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_opencode.py",
+        "code": "F401",
+        "count": 10,
+        "sourceDigest": "89c6122c49c36d081c9d78af831a5e4ad2cfa5de469cf62bcdc4713da842ad11"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_qwen_code.py",
+        "code": "F401",
+        "count": 10,
+        "sourceDigest": "aec62921f9fb7a6998d779347e9585f0c43b5c00287ce7bbc27adfd9d0df3ea7"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/planning.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "8318764e89d51e466128de4b9f81470fa7865ab2a3b089cae4dd03a883994cc9"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/cost_collection.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "8d9a887b056aec17ef56600b66224b6a4537509a2d8f88101865d199ccdb3f47"
+      },
+      {
+        "path": "src/agent_lifecycle/model_routing/resolver.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "32b7d36105fbe87dbeb8ad4744a01b3026c1283bbd1ab4d02f4e025d9d88179c"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/canonical.py",
+        "code": "F401",
+        "count": 2,
+        "sourceDigest": "3119a86ea26b509ba569a851e97c7b303dfd7f82adea53e55ebda3f64ed969e2"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/ed25519.py",
+        "code": "E741",
+        "count": 1,
+        "sourceDigest": "f0f759ae68a5c0f5ad6cd18f1db34b212d61fb969ff7288fdd7e88ec346e198e"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/quality_floor.py",
+        "code": "F401",
+        "count": 3,
+        "sourceDigest": "9c35f98636e9f4c36735ac27332260ea7760d622f068075af5da603e656aba5d"
+      },
+      {
+        "path": "src/agent_lifecycle/research/validation.py",
+        "code": "F401",
+        "count": 1,
+        "sourceDigest": "a461a396caffa36f59012e88500c3059404bbd07155024b81fb61c892ab94567"
+      }
+    ],
+    "migrationBaseline": [
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "ee58622bcd25e85f4cbfeeace30b1c25d87fadac4dc9be71d4bf801340428c68"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "ee58622bcd25e85f4cbfeeace30b1c25d87fadac4dc9be71d4bf801340428c68"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/contracts.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "337326c86c6151b1acbc8215c5688bbb63574ab9c84ea853403c9a9b4bc72d9f"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/env.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "4d1f984319537fc90a3e4b1512b1c5ac8244dd25aa61adde857a9fdd829a0862"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_execution.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "3593fe97edeedb30845ca08f9cc3fad2b463e2707b9f691b8c470b82f9a2ad7a"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_execution.py",
+        "code": "PTH115",
+        "count": 1,
+        "sourceDigest": "3593fe97edeedb30845ca08f9cc3fad2b463e2707b9f691b8c470b82f9a2ad7a"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_execution.py",
+        "code": "UP022",
+        "count": 1,
+        "sourceDigest": "3593fe97edeedb30845ca08f9cc3fad2b463e2707b9f691b8c470b82f9a2ad7a"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_execution.py",
+        "code": "UP035",
+        "count": 1,
+        "sourceDigest": "3593fe97edeedb30845ca08f9cc3fad2b463e2707b9f691b8c470b82f9a2ad7a"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_preflight.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "48fdb505c910bc726a96e312785afedb78c2eb832e29e31d9f3239e34add35f0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_preflight.py",
+        "code": "UP035",
+        "count": 1,
+        "sourceDigest": "48fdb505c910bc726a96e312785afedb78c2eb832e29e31d9f3239e34add35f0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launcher.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "d38ac0dd685d61dfef26c5e3ff0dbb97fe854015b2a80d036f9eb993cc8db769"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launcher.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "d38ac0dd685d61dfef26c5e3ff0dbb97fe854015b2a80d036f9eb993cc8db769"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/local_launch_profile.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "05331f6aa2b98bc28ef67f74734f8bd84b4576adb4ca67ca7a017d3af7296c93"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/planning_session.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "06b3225680d0ca4a3a6d0b6062784d3a12913b51be48b8577ef4084cb18082b1"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/process_capture.py",
+        "code": "SIM105",
+        "count": 1,
+        "sourceDigest": "cc0278564cb21d2cb921e8a5856221b2e19e0a8b69c6e1356bcc9484d2b7ad37"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/process_groups.py",
+        "code": "SIM105",
+        "count": 2,
+        "sourceDigest": "bcf45a42bc80e4cbf3877f698f5502c31d7b873b46ccbec8c4929e2a47a95ead"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/start_receipts.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "c2e62a47373087b67ea0ab49fc7d28e1f5b74bfdaf1f93069080d9d6d4c3528f"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/task_intake.py",
+        "code": "PTH201",
+        "count": 1,
+        "sourceDigest": "40eab3e2ce99c93c2582a9d1147e754a202991fc5ed994b4f57af8441b855dc0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/task_intake.py",
+        "code": "SIM102",
+        "count": 1,
+        "sourceDigest": "40eab3e2ce99c93c2582a9d1147e754a202991fc5ed994b4f57af8441b855dc0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/unified_start.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "4529090abd38ba7d2cdf0718a2266b44b3bf43c1b28a7dc77c31e35bd07c1a6b"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/workflow_bridge.py",
+        "code": "SIM102",
+        "count": 1,
+        "sourceDigest": "a6bcdc851e94337d215a3b9a8b7a19cb8af83bdc02eedf7deb213a7cac44bfb1"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "8b5258fe96a0c5ea868edc631824c7c13bb964e49e4fc18337baeeb93c8da5f0"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "8b5258fe96a0c5ea868edc631824c7c13bb964e49e4fc18337baeeb93c8da5f0"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/implementation.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "43b7cc08434d7b39d11253ed47b90747c357a2b90829f53caf59f8145936f478"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/package.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "5a5e6a42cca2e0b525864de44e3097f734e5a06c1e6984afb24924bc0980d10b"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/package.py",
+        "code": "UP035",
+        "count": 1,
+        "sourceDigest": "5a5e6a42cca2e0b525864de44e3097f734e5a06c1e6984afb24924bc0980d10b"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/proof_integrity.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "1beb7eb4e07e977c1611b631bbefdfc1ad9b85f8aa17383397ca13ad61dae72a"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/proof_integrity.py",
+        "code": "RUF100",
+        "count": 1,
+        "sourceDigest": "1beb7eb4e07e977c1611b631bbefdfc1ad9b85f8aa17383397ca13ad61dae72a"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "d10839a1726d789159308f2f6e7da9b1b32c393084b4da6828456a55d9dfd40b"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "d10839a1726d789159308f2f6e7da9b1b32c393084b4da6828456a55d9dfd40b"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/contracts.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "95e85bc43fbde9b2e11d77daa047bae79b62101e71db012356c7fa2cc2f49f88"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/oracles.py",
+        "code": "UP035",
+        "count": 1,
+        "sourceDigest": "8637fafef562fd1e84489485af392f03f94e55ef131ef0bd01f46f3e81ea31d2"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/qualification.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "bc617308bf7518c927b75a7e3663ae1797a50d374435de1f692e00209f60e75f"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/qualification.py",
+        "code": "UP035",
+        "count": 1,
+        "sourceDigest": "bc617308bf7518c927b75a7e3663ae1797a50d374435de1f692e00209f60e75f"
+      },
+      {
+        "path": "src/agent_lifecycle/changesets/git.py",
+        "code": "UP022",
+        "count": 2,
+        "sourceDigest": "5defb5863406e25e1a6bbb85d3448aca4f3ac6fa0d6dc2f76c90ab90ac49850d"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/adapter.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "6683e138690dbe4b7d58b40f502ceaeb93949b73502cb08208f1b9a6fe5b4c8e"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "6428a65f978438c790db909b218277a71de0ed5fb2fab056708990d0b1258519"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_lifecycle.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "e681520ad5f7ab8ced460eb9d03f70f2ee6a8628133496e9ca8d9c69c6ef3d05"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_observability.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "e54995ad1ffabe7cb3862aafc6cc52808679ccd648a29a5ef2515030326435e8"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/lifecycle_parsers.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "cdaf86a9c9f031ca95314db658aa3b2ee13ee9c8782494091357f40f03a64262"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/observability_parsers.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "204c254497360e6634de4505119512d74d7efc6818cd52b2fe30b4227d1b6a21"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/parsers.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "6f952cdfe6890fb0bd146e96faeca054a935f75e306c9c210275635dc628450c"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/planning_parsers.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "0a2885641e320e5ec4f0cba2a65179cce285194e0445dd7d4667abe973448bd8"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/policy.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "452e26b99661a02cccb4e9fba9cdb91ad40cbb2a04493278aa7e15ed9eb77956"
+      },
+      {
+        "path": "src/agent_lifecycle/compiler/small_model_packets.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "7d5e34f65a07caa09c65c77316f60ac682787d5c36de8b7156a66273243a42b9"
+      },
+      {
+        "path": "src/agent_lifecycle/compiler/task_packets.py",
+        "code": "ARG001",
+        "count": 1,
+        "sourceDigest": "cb067822aaacee63e77b0d499acae14dbe7857df3f7d2f55e81bbaacda9ada89"
+      },
+      {
+        "path": "src/agent_lifecycle/context/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "7f9527caa492b1a41af5d5aa8b88845fb4b3ec4519a6fa9e6060a2e209c54c72"
+      },
+      {
+        "path": "src/agent_lifecycle/context/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "7f9527caa492b1a41af5d5aa8b88845fb4b3ec4519a6fa9e6060a2e209c54c72"
+      },
+      {
+        "path": "src/agent_lifecycle/context/checkpoint_store.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "185e71a6707a73760e53fce09446275787739248b35473989b17163479d4ea22"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "84c0ef78eabb3511e3ebb56c0714ee3a4c747bcd817156037f07fbbf0e7c926f"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "84c0ef78eabb3511e3ebb56c0714ee3a4c747bcd817156037f07fbbf0e7c926f"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/agent_plugin_qualification_schemas.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "e98cb589edf609d5d06a8d263c4e707a632618340b6482e435d22af0bba8fdbf"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/audit_schemas.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "3f3463490cceed25a9ed06cb1bfdb8a45a60c409e604e10b6e295671bbdae497"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/benchmark_schemas.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "1831b4e4cc0b348d2f9567a9ea5eeab0ab595f85eb0bd4641439b6ffdd624a6d"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/canonical.py",
+        "code": "PTH105",
+        "count": 1,
+        "sourceDigest": "e1b985720047714fe775db02bbedf661988aa6417aec4ad8443da073b7959051"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/canonical.py",
+        "code": "SIM105",
+        "count": 1,
+        "sourceDigest": "e1b985720047714fe775db02bbedf661988aa6417aec4ad8443da073b7959051"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/context_checkpoint_schemas.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "c4755f02a7f7cbf87741ef59e4f0c639592ca29d982cd5e39da7dc0cb7c243cd"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/execution_strategy_schemas.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "48cffe10ec808d9cda3c10433d1fa6ec98f9b6030ac80b47ee86da509af245e9"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/implementation_audit_validation.py",
+        "code": "ARG001",
+        "count": 1,
+        "sourceDigest": "94a664768593d2ffc0d4718998864a1d856725aa8b76770785c35e5410ec517b"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/local_launch_validation.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "d6b031550663845bb264a58c28c9f1d3d65e73e988048dd20a9185b991cef23a"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/local_launch_validation.py",
+        "code": "SIM102",
+        "count": 1,
+        "sourceDigest": "d6b031550663845bb264a58c28c9f1d3d65e73e988048dd20a9185b991cef23a"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/paths.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "28eacab3ca9cb7371df28933de58c4c87870ea389d0f8d08a77b48f6fee561f4"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/paths.py",
+        "code": "PTH116",
+        "count": 1,
+        "sourceDigest": "28eacab3ca9cb7371df28933de58c4c87870ea389d0f8d08a77b48f6fee561f4"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/planning_launch_schemas.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "07782cb10b638bba6a8a21265c0afe079cc826c407bfa9972272ed3f59a1bb86"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/quality_modes.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "2d5665ba91237edae42fe4ac51f64d9ac4e40f25d56e38cc016df421db7e51cb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/research_evidence_schemas.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "0b5b7926a990be941d233e763a5eb9b03204e3bf643fb2be714ecb960ac8d9dc"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_schemas.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "138ce48883962a194ab0b78cdcab050b6a8a1ec7d5fdf64bf9708f630aa736a1"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_schemas.py",
+        "code": "RUF005",
+        "count": 1,
+        "sourceDigest": "138ce48883962a194ab0b78cdcab050b6a8a1ec7d5fdf64bf9708f630aa736a1"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_validation.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "c57cfb83eeecabdc59a9b2c231678077f78a22845d58f7369ddf0b12ca53b729"
+      },
+      {
+        "path": "src/agent_lifecycle/diagnostics/readiness.py",
+        "code": "ARG001",
+        "count": 1,
+        "sourceDigest": "5c047f01f0be8ecf7228e9182ff87e271fa149e3205606ae5b89fb8702af8569"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "479ed00343fa22e20c56bdefc64e76186ce8984a69ef61e2e0671cd237b60ad4"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/core.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "5e6df046c17055d8028d193d7471e751eb6938d08e9d68ce0180d0fe4cf2369f"
+      },
+      {
+        "path": "src/agent_lifecycle/freeze/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "07aca8644578ec33985b7e59dfcfea4f4e18c34169e272929d33142e010b65e6"
+      },
+      {
+        "path": "src/agent_lifecycle/freeze/package_integrity.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "c9665f7eb2d68596bbabd3a97d98fd427a55240348eb5136dae598da0d8b4107"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "885c88d513b6f9dcd9c4710b12e9c6aaeac2fee968362aecf511cc5ea3987dae"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/agent_plugin_qualification.py",
+        "code": "ARG001",
+        "count": 3,
+        "sourceDigest": "c8e85f33422b36bd4e3eda315a376400dd4d10a46f354b9536ff7dfa036eb651"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/agent_plugin_qualification.py",
+        "code": "BLE001",
+        "count": 1,
+        "sourceDigest": "c8e85f33422b36bd4e3eda315a376400dd4d10a46f354b9536ff7dfa036eb651"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/capabilities.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "471e90f054db57e07f18ae451b4093fb9377dbb09c48ffb1d4187575fb8f6841"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/context_events.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "5871bac71e41a5cde5f53dca0e00009225c5cc9e26b6d676f2658e20d504f38d"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/contracts.py",
+        "code": "UP037",
+        "count": 3,
+        "sourceDigest": "8306a8d7e8b77e8a25c3ce484ef019370c804851d8b98384343f5b6acf33109c"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection.py",
+        "code": "PTH201",
+        "count": 1,
+        "sourceDigest": "fe31164db12e075b6d12a1f270f36cc30ffb654cde0f69b87823022d042d50f5"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_common.py",
+        "code": "UP022",
+        "count": 1,
+        "sourceDigest": "e93b0e1f27bdabc700554c1049ec851bf714c75cbc03bd359d56348ea4e89e57"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_common.py",
+        "code": "UP035",
+        "count": 1,
+        "sourceDigest": "e93b0e1f27bdabc700554c1049ec851bf714c75cbc03bd359d56348ea4e89e57"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_cursor.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "7e39be71888a6e0407a268999f36c5877c10fd08f437269d79d2cfdece11c1a2"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_gemini_cli.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "49aa2deccb4cddf72277ae49f19757cd16cea34f276ca2595410439c24983e93"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_hermes.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "2a5bb0a1643bf43186e845b8eee8e7c713db026015e7113250cdd81bc94107bf"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_kimi_code.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "2ce286a9e9ec712551d1edded60ed7e190895cf1ca860b73e235b7394829e9c3"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_opencode.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "89c6122c49c36d081c9d78af831a5e4ad2cfa5de469cf62bcdc4713da842ad11"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_qwen_code.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "aec62921f9fb7a6998d779347e9585f0c43b5c00287ce7bbc27adfd9d0df3ea7"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/thread_bridge.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "59aac9864069440c43d69efea4cce4cac7810d2ebd90fe7d53abd21a7b94e7c0"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/thread_bridge.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "59aac9864069440c43d69efea4cce4cac7810d2ebd90fe7d53abd21a7b94e7c0"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/usage_normalizers.py",
+        "code": "RUF046",
+        "count": 1,
+        "sourceDigest": "8a6cdb05a1f1b0a12fcf38ccef68a943d93febc72fad4a60dcade2634cb12136"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/usage_normalizers.py",
+        "code": "UP037",
+        "count": 1,
+        "sourceDigest": "8a6cdb05a1f1b0a12fcf38ccef68a943d93febc72fad4a60dcade2634cb12136"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_optimization.py",
+        "code": "SIM108",
+        "count": 1,
+        "sourceDigest": "757a981a375b00f616fc307b6c52f08746bf2284bb6d7edd3c3658fa0a4d06e2"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/cost_collection.py",
+        "code": "SIM114",
+        "count": 1,
+        "sourceDigest": "8d9a887b056aec17ef56600b66224b6a4537509a2d8f88101865d199ccdb3f47"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/usage_export.py",
+        "code": "RUF046",
+        "count": 1,
+        "sourceDigest": "41e9878679cba8a5bfa73d78d5790f2dc8e6831e8bae0e53d0c6685fa5feba21"
+      },
+      {
+        "path": "src/agent_lifecycle/model_routing/resolver.py",
+        "code": "SIM103",
+        "count": 1,
+        "sourceDigest": "32b7d36105fbe87dbeb8ad4744a01b3026c1283bbd1ab4d02f4e025d9d88179c"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "aaec423babbfe3ac74301cd0883b0764337ee28e5a7a5b7be5f7ef3cb1fa82ba"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/gate.py",
+        "code": "RUF005",
+        "count": 1,
+        "sourceDigest": "2f0f964b4e8f51bbdf602e5829e88f53ee6dc1d55e00a7415c2ebfe55d65d99a"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/paths.py",
+        "code": "PTH116",
+        "count": 2,
+        "sourceDigest": "0eae995a5e265c507e231e04594bb318af540cb6a1f4275f227263981b7f1a48"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/policy.py",
+        "code": "UP035",
+        "count": 1,
+        "sourceDigest": "2df84db1bc2c6fd1089f330e1e5667086443be889be304fcb1aab8d7566ca065"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/scanner.py",
+        "code": "PTH115",
+        "count": 1,
+        "sourceDigest": "73b009c48b9df8d63438971045df4bd060424bc8696a49a9e369d396c9437a4d"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/scanner.py",
+        "code": "PTH116",
+        "count": 1,
+        "sourceDigest": "73b009c48b9df8d63438971045df4bd060424bc8696a49a9e369d396c9437a4d"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/scanner.py",
+        "code": "UP022",
+        "count": 5,
+        "sourceDigest": "73b009c48b9df8d63438971045df4bd060424bc8696a49a9e369d396c9437a4d"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/scanner.py",
+        "code": "UP035",
+        "count": 2,
+        "sourceDigest": "73b009c48b9df8d63438971045df4bd060424bc8696a49a9e369d396c9437a4d"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "a82c6b7b7f459cc7e226dc2678d54f0dd333eb868fedc4f53c91a8242cb28d56"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "a82c6b7b7f459cc7e226dc2678d54f0dd333eb868fedc4f53c91a8242cb28d56"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/acceptance_markdown.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "3a6778ac9cb9df3adf54571afb190f81e9913b85d1c5b1f6b9a0cd97c2ce4191"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/completeness.py",
+        "code": "ARG001",
+        "count": 2,
+        "sourceDigest": "564b983ac7d2c21cdca7287e85afd54438ae51b10d5fe418eb940a97ce5b84b9"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/deltas.py",
+        "code": "RUF005",
+        "count": 1,
+        "sourceDigest": "9f4cfac04a31006dfb589f8539d05d7782e13094886f4b1504d781b2fbee2bb5"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/templates.py",
+        "code": "PTH201",
+        "count": 2,
+        "sourceDigest": "8a301e623b784ca28a6f8ae756b421d571b16164e422cd775a10e5e43b82652a"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "4ee0f1175aea211a6bc003d3ed1cbe1dbcd3bf3171adda9e7e40c15b128b12a0"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "4ee0f1175aea211a6bc003d3ed1cbe1dbcd3bf3171adda9e7e40c15b128b12a0"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/thread_bridge.py",
+        "code": "SIM102",
+        "count": 3,
+        "sourceDigest": "feb02a92a61a71b760c00f7c4aa9d8cc857fc7733efa611eaf0cb55045be949f"
+      },
+      {
+        "path": "src/agent_lifecycle/project/presets.py",
+        "code": "ARG001",
+        "count": 1,
+        "sourceDigest": "b0781e4d93f78231dd923c0e7deacca626a50a98d098fbdb12033bd7e5282b52"
+      },
+      {
+        "path": "src/agent_lifecycle/project/profile.py",
+        "code": "ARG001",
+        "count": 1,
+        "sourceDigest": "28916285ca398e32c7d39e76c25ff393018d264d7b9cd759b66b8f91db971bf6"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "b3ae0a2d8bd155b16b536f5e8ef38ea0613fc0ed133bd7cf4c8e290470d90e2f"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "b3ae0a2d8bd155b16b536f5e8ef38ea0613fc0ed133bd7cf4c8e290470d90e2f"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics_advisor.py",
+        "code": "RUF001",
+        "count": 10,
+        "sourceDigest": "10ecb86b9b2f3c6d71f1a241e365c88d1eb544ec785874b87c122d623e8b4e57"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics_recipes.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "b724584808700f15ef8f639c6f4babf7e5be6065371d6263df6f988eb36cdddf"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/cross_check.py",
+        "code": "SIM114",
+        "count": 1,
+        "sourceDigest": "9f3b2c7f2a9e7d864e691330b368d360aafdd0d54494bd813a3aa9e9264ac1ed"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "ffec96ea1226c27473a4288f92fb23943d352811ff18ebb31af6052c4198abdd"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "ffec96ea1226c27473a4288f92fb23943d352811ff18ebb31af6052c4198abdd"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/change_summary.py",
+        "code": "UP022",
+        "count": 2,
+        "sourceDigest": "05b75dc825a674f7a9d25dfe10addf6eca11e429dc382db98934899708576b8d"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_terminal.py",
+        "code": "RUF010",
+        "count": 6,
+        "sourceDigest": "9792ed964086235b174c069bb644144fdf208a1fe1420730e9b06893a30cf6e5"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_view.py",
+        "code": "UP017",
+        "count": 1,
+        "sourceDigest": "839c6084df8eec9ce4c1e8177d0bc10b6c682bc72583ae96ab11175b7b8594a1"
+      },
+      {
+        "path": "src/agent_lifecycle/research/evidence.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "fd9eab5dd9f7a87971c8200dcfdea11339a7a7361f821da62ba8d53ae44d03e5"
+      },
+      {
+        "path": "src/agent_lifecycle/research/provenance.py",
+        "code": "RUF005",
+        "count": 2,
+        "sourceDigest": "306f084452029af88b3b014c0ccf6ac7fcec99d56abdff949afb275ce6a068a4"
+      },
+      {
+        "path": "src/agent_lifecycle/research/validation.py",
+        "code": "ARG001",
+        "count": 3,
+        "sourceDigest": "a461a396caffa36f59012e88500c3059404bbd07155024b81fb61c892ab94567"
+      },
+      {
+        "path": "src/agent_lifecycle/research/validation.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "a461a396caffa36f59012e88500c3059404bbd07155024b81fb61c892ab94567"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "2e156b7172e543ff5e537f169b36f2b8366bdf8d8d13c682da3f6eea0def2565"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "2e156b7172e543ff5e537f169b36f2b8366bdf8d8d13c682da3f6eea0def2565"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/assignments.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "095e8896eb8b5408ba8a0c7dab73c80b28d3f3dcabac01a20709f1028ca36021"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/recommendation.py",
+        "code": "ARG001",
+        "count": 1,
+        "sourceDigest": "0a55ffeb6e4dffe521d9d2266654a2b210efc95c6604b0e6760f758eb9841684"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/recommendation.py",
+        "code": "RUF001",
+        "count": 10,
+        "sourceDigest": "0a55ffeb6e4dffe521d9d2266654a2b210efc95c6604b0e6760f758eb9841684"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/results.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "51f1188d3a3e91d31e91e366b40362ee4c302551bd38a1b78db2c07ca4635619"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "acf0ece76383ce4330b83f65d36f1b0696937f950915b71dc27f572dfc91315b"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/sandbox_receipts.py",
+        "code": "SIM114",
+        "count": 1,
+        "sourceDigest": "7cd3f42fd7f9410fdc7a755d6946014a7bc47b2e8b6c156f490f65cb90347471"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "2fd3bc1a2896c2ed26297101da02bb9490a56ad4c8b4d35fec0a91c4b7313a8e"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "2fd3bc1a2896c2ed26297101da02bb9490a56ad4c8b4d35fec0a91c4b7313a8e"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/budget_decisions.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "bcf97b4d906e1695042549cbea1f1c3d34191c6d0d9014d884d45e0bc063e2a0"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/bug_forensics_gates.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "6605f71979b6667a86fe942c64a88f2e02698d199c965151a9a5163d47e42648"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/bug_forensics_gates.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "6605f71979b6667a86fe942c64a88f2e02698d199c965151a9a5163d47e42648"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/bug_forensics_gates.py",
+        "code": "SIM103",
+        "count": 1,
+        "sourceDigest": "6605f71979b6667a86fe942c64a88f2e02698d199c965151a9a5163d47e42648"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/checkpoint_gate.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "1575b858626eeaa6a3a1293c4308bf59754e1c954f20a107e92d2b43b8a80ede"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/controller.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "b17025164f7a2f5ca1578cbd17c27d20e9c03fa0af3df86af2f69941e86d1cef"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/final_proof_integrity.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "735f00211e430a20283e860944ce7fdd47ffd7cac488559787e3aa3cb71cea56"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/finalization.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "acb8a1b586e99d460759b07bfbd53d20db4c373af3e5b258193a0ff4c02bda6f"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/managed_runner.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "76ed6031cd9490be285b3012672160b6dccfb129423a9a6564cc0e51af1152f9"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/next_action.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "a1a3d1be87514d3149e467b8d634e09b258c14552bd2865536f97bed7f419706"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/plan_adoption.py",
+        "code": "ARG001",
+        "count": 1,
+        "sourceDigest": "055fc39462080f41b68dc8adefe9a0af854d8db477347263cf3e2ee0c9f6a574"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/plan_adoption.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "055fc39462080f41b68dc8adefe9a0af854d8db477347263cf3e2ee0c9f6a574"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/risk_execution_gate.py",
+        "code": "SIM102",
+        "count": 1,
+        "sourceDigest": "ad51147749d79761ec33f2e5599b9e4e1c02834da64849946d0f99cf7d0e7746"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/sandbox_policy.py",
+        "code": "SIM110",
+        "count": 1,
+        "sourceDigest": "330a183ff1273363953f4c5459853b7f88ea6153086921d549b3bbbc73a9d7a8"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/state.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "e838a0496f4ccff974de9e3cbfd3ae58b6fa92a537203af931727009aec94377"
+      },
+      {
+        "path": "src/agent_lifecycle/worktree/__init__.py",
+        "code": "I001",
+        "count": 1,
+        "sourceDigest": "817a02e040759684c6f915e7f9bd59fbd50297e2aa25b6d5332d841134cc1268"
+      },
+      {
+        "path": "src/agent_lifecycle/worktree/__init__.py",
+        "code": "RUF022",
+        "count": 1,
+        "sourceDigest": "817a02e040759684c6f915e7f9bd59fbd50297e2aa25b6d5332d841134cc1268"
+      }
+    ],
+    "formatBaseline": [
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/contracts.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "337326c86c6151b1acbc8215c5688bbb63574ab9c84ea853403c9a9b4bc72d9f"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/env.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "4d1f984319537fc90a3e4b1512b1c5ac8244dd25aa61adde857a9fdd829a0862"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_execution.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "3593fe97edeedb30845ca08f9cc3fad2b463e2707b9f691b8c470b82f9a2ad7a"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_preflight.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "48fdb505c910bc726a96e312785afedb78c2eb832e29e31d9f3239e34add35f0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/local_launch_profile.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "05331f6aa2b98bc28ef67f74734f8bd84b4576adb4ca67ca7a017d3af7296c93"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/planning_launch.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "45d4b98e642dd86737318f939d11366cd7951dc5fc690f1f2debea78adf88983"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/planning_session.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "06b3225680d0ca4a3a6d0b6062784d3a12913b51be48b8577ef4084cb18082b1"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/process_control.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "5ecfe91f5a2e10e27030f705703e972d2b1ed6424146a765e166e8294065e98d"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/process_groups.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "bcf45a42bc80e4cbf3877f698f5502c31d7b873b46ccbec8c4929e2a47a95ead"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/process_telemetry.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "1591e74160d2c589a1fddd1e632382ac1507e116119bf63d9a8bef88ec3af3e5"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/qualification.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "0137f8e070d99fac980017a766ad6f576b9013428a8bd5a668a0719d5c455691"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/start_receipts.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "c2e62a47373087b67ea0ab49fc7d28e1f5b74bfdaf1f93069080d9d6d4c3528f"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/task_intake.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "40eab3e2ce99c93c2582a9d1147e754a202991fc5ed994b4f57af8441b855dc0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/unified_start.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "4529090abd38ba7d2cdf0718a2266b44b3bf43c1b28a7dc77c31e35bd07c1a6b"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/workflow_bridge.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "a6bcdc851e94337d215a3b9a8b7a19cb8af83bdc02eedf7deb213a7cac44bfb1"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/bug_forensics.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "42a753b3db4ca6d47bf50cd9f830b542abe183f7bd84443c18503550054d2113"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/implementation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "43b7cc08434d7b39d11253ed47b90747c357a2b90829f53caf59f8145936f478"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/ownership.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "79fec131d1d6d43f1dd5ace5148f1fb7668c5d3bbeba2373f045edcde4c012b7"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/package.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "5a5e6a42cca2e0b525864de44e3097f734e5a06c1e6984afb24924bc0980d10b"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/comparison.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "966c72d5bf6ffc1d1c78b00d558303ac92b32583300d563b3098f5b9d0f18144"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/contracts.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "95e85bc43fbde9b2e11d77daa047bae79b62101e71db012356c7fa2cc2f49f88"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/evaluator.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "23d3761f2434c9fb4a71187bc2327c78b54b7acdebac01c4cf846c6e36bf72c9"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/oracles.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8637fafef562fd1e84489485af392f03f94e55ef131ef0bd01f46f3e81ea31d2"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/qualification.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "bc617308bf7518c927b75a7e3663ae1797a50d374435de1f692e00209f60e75f"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/reporting.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "9a41650eed88b80f7d1ccc3192e3e6673080df2dc7a7a61c9d6aaece77077a71"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/stratification.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "75948205dd9854ed0debee9d8eb4a20aa19381581d59fee5ea5597773dcb969f"
+      },
+      {
+        "path": "src/agent_lifecycle/changesets/git.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "5defb5863406e25e1a6bbb85d3448aca4f3ac6fa0d6dc2f76c90ab90ac49850d"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/adapter.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "6683e138690dbe4b7d58b40f502ceaeb93949b73502cb08208f1b9a6fe5b4c8e"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_contracts.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "cfd40d7bce641ad20d88e376c2038cc42e919809f640541c1ddacbcab223e09b"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_lifecycle.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "e681520ad5f7ab8ced460eb9d03f70f2ee6a8628133496e9ca8d9c69c6ef3d05"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_observability.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "e54995ad1ffabe7cb3862aafc6cc52808679ccd648a29a5ef2515030326435e8"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_planning.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "30f90a465131eba5e25b6be139d7c3f2c26439683704550f9725b19205d65582"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/lifecycle_parsers.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "cdaf86a9c9f031ca95314db658aa3b2ee13ee9c8782494091357f40f03a64262"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/metrics_parser.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "70c0021696e0d5aafea655e604a5c52814d0ea4f6ea6ecb4c5d2fb3b37cdc9f7"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/observability_parsers.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "204c254497360e6634de4505119512d74d7efc6818cd52b2fe30b4227d1b6a21"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/parsers.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "6f952cdfe6890fb0bd146e96faeca054a935f75e306c9c210275635dc628450c"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/planning_parsers.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "0a2885641e320e5ec4f0cba2a65179cce285194e0445dd7d4667abe973448bd8"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/policy.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "452e26b99661a02cccb4e9fba9cdb91ad40cbb2a04493278aa7e15ed9eb77956"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/progress_hooks.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "cb790736ea5c76e4f84606a0e447962ee7c223a3ea1d7a5e93067234fe259abb"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/project.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "ac4e1ffacf7c462bca36e5d3f7ed9619c1e06edcf2961348a3abd50b5bded28f"
+      },
+      {
+        "path": "src/agent_lifecycle/compiler/small_model_packets.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "7d5e34f65a07caa09c65c77316f60ac682787d5c36de8b7156a66273243a42b9"
+      },
+      {
+        "path": "src/agent_lifecycle/compiler/task_packets.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "cb067822aaacee63e77b0d499acae14dbe7857df3f7d2f55e81bbaacda9ada89"
+      },
+      {
+        "path": "src/agent_lifecycle/context/checkpoint_store.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "185e71a6707a73760e53fce09446275787739248b35473989b17163479d4ea22"
+      },
+      {
+        "path": "src/agent_lifecycle/context/checkpoints.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "d372d0601936c2166773e271431162fee06a7bd6c7e9a898450a056d2d0e7c19"
+      },
+      {
+        "path": "src/agent_lifecycle/context/profiles.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "f40ee6607fb45dd6a0fcb43062ac828fbb53fcb43583b629bc4f4381d2faa30d"
+      },
+      {
+        "path": "src/agent_lifecycle/context/rendering.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "cb228a91b8f0e2a14448439ad7a8138ac2f76ad48ea102e60f0b761516a294ae"
+      },
+      {
+        "path": "src/agent_lifecycle/context/thread_bridge_context.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8ed12f70b088a5615c956e04ec967b1be439b5317d775e74ccf0ccc044c56611"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/adapter_event_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "e033a332f166e7492948ea63015834d99e82999eff4637d165bacf43f5883bd7"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/agent_plugin_qualification_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "e98cb589edf609d5d06a8d263c4e707a632618340b6482e435d22af0bba8fdbf"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/audit_optimization_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "2fdab3f7116a68f115082f7c57d8adaa8b0ce16827f7a84bbbd39793cb5e0bed"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/benchmark_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "1831b4e4cc0b348d2f9567a9ea5eeab0ab595f85eb0bd4641439b6ffdd624a6d"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/bug_forensics_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "7b7bbedc1e9392cd78392c9304b9bfdc102fa20963f69100f6db40ac9ef6e8ea"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/compatibility.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "bdd42dd0f044844e53300eaadf5b156f830267d1804efd041362b078f4e1dc1e"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/cross_check_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "c9af369e1e1424c1a0dc62b1638ae6e9662c138bdc49ccbad97c5d2a5b4081d4"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/evidence_import_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "a36fd66863528b71684a0512af4a1724674779e97a4eaaace786e55f66482ba4"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/goal_validation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "9cdfa01fb6dac466f1360969a0a411749576063d4a89ebbb40ca63c5e818445c"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/implementation_audit_validation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "94a664768593d2ffc0d4718998864a1d856725aa8b76770785c35e5410ec517b"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/import_dialect_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "09afa35d489328da24ee7316ed926f31c97ce90eb1489e28e42d6335512f6605"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/local_launch_validation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "d6b031550663845bb264a58c28c9f1d3d65e73e988048dd20a9185b991cef23a"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/metric_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "84b4709bb2162435ba675eb335d200983339ff462b4387f60e05255729984d30"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/plan_contract_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "58a9df36627f67b63c2031621c70ba4c8cfa6768ff268b51fb515da86bdbf6ed"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/process_execution_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "c8f60b6aecfe446b758a727951cf4a3460b12c7f03652db0bcac7eddaac024c0"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/proof_integrity_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "97f5d7b7e241d4b20a1e49b8290b355b1e90bf36cddad463b9957afe21b127b2"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/proof_validation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "bf57e747964c7b11447c5af615cb83bb348c7a184766bdeecb65442871312231"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/quality_modes.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "2d5665ba91237edae42fe4ac51f64d9ac4e40f25d56e38cc016df421db7e51cb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/redaction.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "848c125800758a9a5fd746c82b212e008d1b49b6e1dd9afecd9cf257d8c68feb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/review_quality_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "ee427418952913785b96c0ad0947b651e95634dd4557b93fa27be298b66c5f03"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/review_verdict.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "ed79213a7d8aedceaff6051061f39caaf0d493a8db834cd4d4d73d52c4ec3cfb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/runner_worktree_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "c86e6f89ca51fc4a6704324f41e8658d7ad252f7ffd5db0a44aa7b34d7eba165"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8d75223207da407344cc4dd802a07628e5e8f562acfee560410e5a62317a6f03"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/status_goal_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "3d2e3b6f2da3d9f9a811c2cb9dec8c0b57fc062a90002c9f24827d0d28186e1c"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_schema_definitions.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "d47ef736380b12cc92610598b5b52e4b1b8acab363e702b4e48de4927225f1fb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_schemas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "138ce48883962a194ab0b78cdcab050b6a8a1ec7d5fdf64bf9708f630aa736a1"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_validation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "c57cfb83eeecabdc59a9b2c231678077f78a22845d58f7369ddf0b12ca53b729"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/validation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "63bd9a07e5017fa9f32231b70e1db5c546d4dc8d148a175f4929808db2eb5130"
+      },
+      {
+        "path": "src/agent_lifecycle/diagnostics/bundles.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8d38439bf657e882c4c37de2dcd4b0a1ec6dbcede75f839c03b1751f192d79aa"
+      },
+      {
+        "path": "src/agent_lifecycle/diagnostics/readiness.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "5c047f01f0be8ecf7228e9182ff87e271fa149e3205606ae5b89fb8702af8569"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/core.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "5e6df046c17055d8028d193d7471e751eb6938d08e9d68ce0180d0fe4cf2369f"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/episode_index.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "87837918ac601badf06885c928dbcbf20a8d50d64ab74e4224cde51307b879bf"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/external_context.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "ec8bc4783d101c75c0b2dffd837334c1ce89fb2420b6435c4694d671be851cb3"
+      },
+      {
+        "path": "src/agent_lifecycle/followup/records.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "80c9f3fd9342c4eff491bb15e672fa9d8383c7715ba8578392b2dd4dd8345248"
+      },
+      {
+        "path": "src/agent_lifecycle/freeze/package_integrity.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "c9665f7eb2d68596bbabd3a97d98fd427a55240348eb5136dae598da0d8b4107"
+      },
+      {
+        "path": "src/agent_lifecycle/goal/records.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "90193f96c3219ba192c8f797a64efa3e070cb3ccaffc0fdafb70f08402814d60"
+      },
+      {
+        "path": "src/agent_lifecycle/goal/view.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "ddb96bc050a36d781f9c6baa992e855eab795780c63cdf3378f4012087729455"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/acp_capability.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "b9e5f18eb0377b8545b39f637cc85d112228096b217a393f8fbf7018ac06240f"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/agent_plugin_qualification.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "c8e85f33422b36bd4e3eda315a376400dd4d10a46f354b9536ff7dfa036eb651"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/capabilities.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "471e90f054db57e07f18ae451b4093fb9377dbb09c48ffb1d4187575fb8f6841"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/context_events.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "5871bac71e41a5cde5f53dca0e00009225c5cc9e26b6d676f2658e20d504f38d"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/event_capture.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "40d8b2e4e5a500b03530440b5a04ab9c1224ab23434b863b50d97a42582ae952"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/events.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "f61c15ec6e18825e1390433d35ce74955608fed28082522090da26441623366d"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "fe31164db12e075b6d12a1f270f36cc30ffb654cde0f69b87823022d042d50f5"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_claude.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "eff81f3daaa2f37a0d38813ab65a7d3a595a68fbc189a24dae082247e9efcfb7"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_codex.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "67d49ebe065e0d774b8c9667149a64eb7491b693a113b87a57d393e21fa95021"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_common.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "e93b0e1f27bdabc700554c1049ec851bf714c75cbc03bd359d56348ea4e89e57"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_cursor.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "7e39be71888a6e0407a268999f36c5877c10fd08f437269d79d2cfdece11c1a2"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_gemini_cli.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "49aa2deccb4cddf72277ae49f19757cd16cea34f276ca2595410439c24983e93"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_hermes.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "2a5bb0a1643bf43186e845b8eee8e7c713db026015e7113250cdd81bc94107bf"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_kimi_code.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "2ce286a9e9ec712551d1edded60ed7e190895cf1ca860b73e235b7394829e9c3"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_opencode.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "89c6122c49c36d081c9d78af831a5e4ad2cfa5de469cf62bcdc4713da842ad11"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_qwen_code.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "aec62921f9fb7a6998d779347e9585f0c43b5c00287ce7bbc27adfd9d0df3ea7"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/scaffold.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "c20353e1366d0878d772a4e6f8a47655776467df62e431eb25d97811fadd3171"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/usage_normalizers.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8a6cdb05a1f1b0a12fcf38ccef68a943d93febc72fad4a60dcade2634cb12136"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/validation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "65ddbbd4c06316a46a736c710751dcd45e10b0fb7033027ac0ffcd48014ee61c"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/constitution_adr.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "16f4def30fe7753cc1d97a3468d5a2a47e3b4d48fe333bf47670512dc6a9ffcf"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/dialect_profiles.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "b86d53e15358fb3b9f819563ef0f4a83d3dd7e1df5836ba1edaf300955f750b5"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/external_dialects.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "4dd51811b39f6feb484f932401b12be81cd620217baa1cc68d6346f3f0773ed3"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/multi_markdown.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "bb14d63e1ff1011c61ccebd1e69aefb98b2390ed98638d227c9e2b42b7c218bd"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/planning.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8318764e89d51e466128de4b9f81470fa7865ab2a3b089cae4dd03a883994cc9"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_optimization.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "757a981a375b00f616fc307b6c52f08746bf2284bb6d7edd3c3658fa0a4d06e2"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_samples.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "25d7ca6e24313503974758d5b0ea19277dd10d8f386800e62bebd6316c4b3e8e"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/costs.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "dedb33733b52c73df0600534aca1332065f0aff04287c1647f7ba85951270dce"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/outcome_index.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8403638c0ba5df442a6dfbfffd3007d7fc3660c20dbef857a1225e175c0cc9fc"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/phase_resources.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "19b56f9e6387229208bf759d73b31ede32a75815caff963a1a47454b9ea3715b"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/recommendations.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "bae99faae84f8c0354d844a661d3c31bf2d25b294e0c422b1fb7834b48497b97"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/regression_signals.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "38a5ed3b15d7191fc86347a67fb4a85c07c8fc30664e9956300204a2b4340b49"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/usage_export.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "41e9878679cba8a5bfa73d78d5790f2dc8e6831e8bae0e53d0c6685fa5feba21"
+      },
+      {
+        "path": "src/agent_lifecycle/model_routing/profiles.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "892d16746c34ee520dee8d5d91d1afa8d662360687e9feb6ed192045f4247c9a"
+      },
+      {
+        "path": "src/agent_lifecycle/model_routing/receipts.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "08e35c3aec8c865509ee9b4b9bae340e39eb32cede6e096742e62b3fa9b1968c"
+      },
+      {
+        "path": "src/agent_lifecycle/model_routing/resolver.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "32b7d36105fbe87dbeb8ad4744a01b3026c1283bbd1ab4d02f4e025d9d88179c"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/authority.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "764db4e146a4a4887f7b36135b3fd6ebedee0af75a984ab0346ba5e45845761a"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/cli.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "28d15f8e6d9ce53e33ac7abb2f19c94eb15976e95b3c8391f995b3e0b640b677"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/gate.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "2f0f964b4e8f51bbdf602e5829e88f53ee6dc1d55e00a7415c2ebfe55d65d99a"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/scanner.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "73b009c48b9df8d63438971045df4bd060424bc8696a49a9e369d396c9437a4d"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/completeness.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "564b983ac7d2c21cdca7287e85afd54438ae51b10d5fe418eb940a97ce5b84b9"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/continuity.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "0e2c0f4eb798d681a75995dc3611721de4fc39b2f5f37e69682ff655bd086e7d"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/deltas.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "9f4cfac04a31006dfb589f8539d05d7782e13094886f4b1504d781b2fbee2bb5"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/task_compatibility.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "9f92bf7854a7780d8003b1506b6d5a3db152e0c729b34b3a19a1337822ed55b8"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/templates.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8a301e623b784ca28a6f8ae756b421d571b16164e422cd775a10e5e43b82652a"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/__init__.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "4ee0f1175aea211a6bc003d3ed1cbe1dbcd3bf3171adda9e7e40c15b128b12a0"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/adaptive_lifecycle.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "014330071719064bbf82b3d8ea36936487c2dff476c7df4a0f163c37c976bd81"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/apply.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "7907dd3266857bb269154995b70eb5201301ea190c9df68b89f1971bc6bc1850"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/execution_strategy.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "cc9b2808fbd802f79b61c3c2a2b37fdc4115e85ad640ac533a4eb0129d5342d2"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/proposals.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "9d88447b00ecc098e54805986ef92e25dc173bccd2e4e62b79c3a9268e9ca748"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/quality_floor.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "9c35f98636e9f4c36735ac27332260ea7760d622f068075af5da603e656aba5d"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/risk_execution.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "50000727235fe8ee0804026898b6931f9264fd36cee737cf2d12eed3177ae98c"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/runtime_receipts.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8d5740bff5f353b6175eb9ada2a6fbae2a0b4b9c829f77ac322529f95c2cf9d7"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/thread_bridge.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "feb02a92a61a71b760c00f7c4aa9d8cc857fc7733efa611eaf0cb55045be949f"
+      },
+      {
+        "path": "src/agent_lifecycle/project/merge.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "72c43bb08c871134b3fe86d5f2b30fecb675d6cb4559037c57d19456e7399142"
+      },
+      {
+        "path": "src/agent_lifecycle/project/presets.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "b0781e4d93f78231dd923c0e7deacca626a50a98d098fbdb12033bd7e5282b52"
+      },
+      {
+        "path": "src/agent_lifecycle/project/profile.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "28916285ca398e32c7d39e76c25ff393018d264d7b9cd759b66b8f91db971bf6"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "ca618f804dd99ed455e718e3e6df3e5c8fd30180c3f721299f5456fb4b8e1ea2"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics_advisor.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "10ecb86b9b2f3c6d71f1a241e365c88d1eb544ec785874b87c122d623e8b4e57"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics_recipes.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "b724584808700f15ef8f639c6f4babf7e5be6065371d6263df6f988eb36cdddf"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/cross_check.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "9f3b2c7f2a9e7d864e691330b368d360aafdd0d54494bd813a3aa9e9264ac1ed"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/failure_classification.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "f8301172c4e2918e6ca856d5d3e6a21e6039aec07bad07382d06b78a01c6bea0"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/packs.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8a68de7d69627727f1abc5b431b0a88b43baf9b3774d1fccf7f07ef322304f26"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/execution_resources.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "5965f6c2eaf12c964778f8d772c829d97f4f86677896a0f93d41705761be2c07"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_bridge.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "29d20dde4fe81e432d3c20ffc2136ebca78801f894e5ab29af1e50006f808a02"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_hooks.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "477cc7867140b4f3cf2667972fcb2ecfa59303466b30d837c700628d175a4d8d"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_terminal.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "9792ed964086235b174c069bb644144fdf208a1fe1420730e9b06893a30cf6e5"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_view.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "839c6084df8eec9ce4c1e8177d0bc10b6c682bc72583ae96ab11175b7b8594a1"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/status_view.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "3cbcaadd13dd77aa5a27b82c15dffa10fcfe0cc7c7db22f6631fadfd4c3d0807"
+      },
+      {
+        "path": "src/agent_lifecycle/research/provenance.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "306f084452029af88b3b014c0ccf6ac7fcec99d56abdff949afb275ce6a068a4"
+      },
+      {
+        "path": "src/agent_lifecycle/research/validation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "a461a396caffa36f59012e88500c3059404bbd07155024b81fb61c892ab94567"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/assignments.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "095e8896eb8b5408ba8a0c7dab73c80b28d3f3dcabac01a20709f1028ca36021"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/contracts.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "8c8d78af45a1afffc030d9c6ef873b38ec17b1b19bed80509a31ba0acf296c90"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/operator_templates.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "aff6f62115a9abf798e7bab9136370ba42bdd299326fc04c1096672d3cbb062c"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/recommendation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "0a55ffeb6e4dffe521d9d2266654a2b210efc95c6604b0e6760f758eb9841684"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/results.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "51f1188d3a3e91d31e91e366b40362ee4c302551bd38a1b78db2c07ca4635619"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/synthesis.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "aa396c941a7db2af61cc27be79cc57e4d794960814ac3012852b93df7484c3fc"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/attempt_snapshots.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "592c8992db10aaf2493081929cce53a9b3647d0cfe68f0d7dbbc73ff3207fe1a"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/core.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "fe92a639ee4b2460bc6b0a0730c5c671b6d5e13b49a178f18b5cc7a43caa84e5"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/sandbox_receipts.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "7cd3f42fd7f9410fdc7a755d6946014a7bc47b2e8b6c156f490f65cb90347471"
+      },
+      {
+        "path": "src/agent_lifecycle/specification/completion_check.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "6901bfa871d3c301228c44f552761654adf7e8454c3cbd44ea7278cae46cd749"
+      },
+      {
+        "path": "src/agent_lifecycle/specification/completion_gate.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "7b470c7d17c215f9b1ac1037c50eb9720a349f5e0a7098601779799a2f7590db"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/budget_decisions.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "bcf97b4d906e1695042549cbea1f1c3d34191c6d0d9014d884d45e0bc063e2a0"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/budget_policy.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "e60227bc6fb7692945a078255f117e6ff98879b58bebf18b9de90040571103ec"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/bug_forensics_gates.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "6605f71979b6667a86fe942c64a88f2e02698d199c965151a9a5163d47e42648"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/checkpoint_gate.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "1575b858626eeaa6a3a1293c4308bf59754e1c954f20a107e92d2b43b8a80ede"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/final_proof_integrity.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "735f00211e430a20283e860944ce7fdd47ffd7cac488559787e3aa3cb71cea56"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/finalization.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "acb8a1b586e99d460759b07bfbd53d20db4c373af3e5b258193a0ff4c02bda6f"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/gates.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "5b94ff84bfa574e9ec69ee3cd100e4e05ce9587cf9b7561597b10f8a3340833c"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/implementation_audit_gate.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "ead4697a2d2486080387551d37fef3572f9158bc89547b1e81e1a6909016f38e"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/leases.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "6e2c7de0bf4350917191567f8571d0230356d57288015c36821fb0b6e360250d"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/lineage.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "43bb19a207605006bcfd316063e509af1966bc58e02ebbb25223f7813ce71f8f"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/model_usage.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "81e4bc439955f1cbeb5a01d8702d4aa6ed496bc3abe8d3669ede219ae3404d79"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/next_action.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "a1a3d1be87514d3149e467b8d634e09b258c14552bd2865536f97bed7f419706"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/plan_adoption.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "055fc39462080f41b68dc8adefe9a0af854d8db477347263cf3e2ee0c9f6a574"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/review_mesh_gate.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "faab2ae4922513476efc45ebff207de1d16d8922b4d0827219deeb81327e2407"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/reviews.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "234111757f6c5e5d00d223aa1ddb98845a24dd2e49b0b007d0646bc04c186182"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/risk_execution_gate.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "ad51147749d79761ec33f2e5599b9e4e1c02834da64849946d0f99cf7d0e7746"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/run_transitions.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "2170402138022476c3916c66b83a0591c634b7325d90bd974ee2ba2518d66df0"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/sandbox_policy.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "330a183ff1273363953f4c5459853b7f88ea6153086921d549b3bbbc73a9d7a8"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/selectors.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "d888771d2eaa8358577d4fbc10584bf6b5dd6904e5b393c0cd1bd31d87964427"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/task_transitions.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "1768a34c921f28a4e819f361e826dcecee543bc687b2a4f7dd90ac019759ab38"
+      },
+      {
+        "path": "src/agent_lifecycle/worktree/isolation.py",
+        "code": "FORMAT",
+        "count": 1,
+        "sourceDigest": "207036e7a4bcc08d8df0006653db2ef49ec5d6b528869c94b8b3a96470bb3d33"
+      }
+    ],
+    "lineLengthBaseline": [
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/contracts.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "337326c86c6151b1acbc8215c5688bbb63574ab9c84ea853403c9a9b4bc72d9f"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/env.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "4d1f984319537fc90a3e4b1512b1c5ac8244dd25aa61adde857a9fdd829a0862"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_preflight.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "48fdb505c910bc726a96e312785afedb78c2eb832e29e31d9f3239e34add35f0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/local_launch_profile.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "05331f6aa2b98bc28ef67f74734f8bd84b4576adb4ca67ca7a017d3af7296c93"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/planning_session.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "06b3225680d0ca4a3a6d0b6062784d3a12913b51be48b8577ef4084cb18082b1"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/process_groups.py",
+        "code": "E501",
+        "count": 5,
+        "sourceDigest": "bcf45a42bc80e4cbf3877f698f5502c31d7b873b46ccbec8c4929e2a47a95ead"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/process_telemetry.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "1591e74160d2c589a1fddd1e632382ac1507e116119bf63d9a8bef88ec3af3e5"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/qualification.py",
+        "code": "E501",
+        "count": 7,
+        "sourceDigest": "0137f8e070d99fac980017a766ad6f576b9013428a8bd5a668a0719d5c455691"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/start_receipts.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "c2e62a47373087b67ea0ab49fc7d28e1f5b74bfdaf1f93069080d9d6d4c3528f"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/task_intake.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "40eab3e2ce99c93c2582a9d1147e754a202991fc5ed994b4f57af8441b855dc0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/unified_start.py",
+        "code": "E501",
+        "count": 12,
+        "sourceDigest": "4529090abd38ba7d2cdf0718a2266b44b3bf43c1b28a7dc77c31e35bd07c1a6b"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/workflow_bridge.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "a6bcdc851e94337d215a3b9a8b7a19cb8af83bdc02eedf7deb213a7cac44bfb1"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/bug_forensics.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "42a753b3db4ca6d47bf50cd9f830b542abe183f7bd84443c18503550054d2113"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/implementation.py",
+        "code": "E501",
+        "count": 21,
+        "sourceDigest": "43b7cc08434d7b39d11253ed47b90747c357a2b90829f53caf59f8145936f478"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/package.py",
+        "code": "E501",
+        "count": 14,
+        "sourceDigest": "5a5e6a42cca2e0b525864de44e3097f734e5a06c1e6984afb24924bc0980d10b"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/comparison.py",
+        "code": "E501",
+        "count": 5,
+        "sourceDigest": "966c72d5bf6ffc1d1c78b00d558303ac92b32583300d563b3098f5b9d0f18144"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/contracts.py",
+        "code": "E501",
+        "count": 11,
+        "sourceDigest": "95e85bc43fbde9b2e11d77daa047bae79b62101e71db012356c7fa2cc2f49f88"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/evaluator.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "23d3761f2434c9fb4a71187bc2327c78b54b7acdebac01c4cf846c6e36bf72c9"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/oracles.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "8637fafef562fd1e84489485af392f03f94e55ef131ef0bd01f46f3e81ea31d2"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/qualification.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "bc617308bf7518c927b75a7e3663ae1797a50d374435de1f692e00209f60e75f"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/reporting.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "9a41650eed88b80f7d1ccc3192e3e6673080df2dc7a7a61c9d6aaece77077a71"
+      },
+      {
+        "path": "src/agent_lifecycle/changesets/git.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "5defb5863406e25e1a6bbb85d3448aca4f3ac6fa0d6dc2f76c90ab90ac49850d"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/adapter.py",
+        "code": "E501",
+        "count": 11,
+        "sourceDigest": "6683e138690dbe4b7d58b40f502ceaeb93949b73502cb08208f1b9a6fe5b4c8e"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_contracts.py",
+        "code": "E501",
+        "count": 5,
+        "sourceDigest": "cfd40d7bce641ad20d88e376c2038cc42e919809f640541c1ddacbcab223e09b"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_lifecycle.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "e681520ad5f7ab8ced460eb9d03f70f2ee6a8628133496e9ca8d9c69c6ef3d05"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_observability.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "e54995ad1ffabe7cb3862aafc6cc52808679ccd648a29a5ef2515030326435e8"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/metrics_parser.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "70c0021696e0d5aafea655e604a5c52814d0ea4f6ea6ecb4c5d2fb3b37cdc9f7"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/parsers.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "6f952cdfe6890fb0bd146e96faeca054a935f75e306c9c210275635dc628450c"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/policy.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "452e26b99661a02cccb4e9fba9cdb91ad40cbb2a04493278aa7e15ed9eb77956"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/progress_hooks.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "cb790736ea5c76e4f84606a0e447962ee7c223a3ea1d7a5e93067234fe259abb"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/project.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "ac4e1ffacf7c462bca36e5d3f7ed9619c1e06edcf2961348a3abd50b5bded28f"
+      },
+      {
+        "path": "src/agent_lifecycle/compiler/small_model_packets.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "7d5e34f65a07caa09c65c77316f60ac682787d5c36de8b7156a66273243a42b9"
+      },
+      {
+        "path": "src/agent_lifecycle/compiler/task_packets.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "cb067822aaacee63e77b0d499acae14dbe7857df3f7d2f55e81bbaacda9ada89"
+      },
+      {
+        "path": "src/agent_lifecycle/context/checkpoint_store.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "185e71a6707a73760e53fce09446275787739248b35473989b17163479d4ea22"
+      },
+      {
+        "path": "src/agent_lifecycle/context/checkpoints.py",
+        "code": "E501",
+        "count": 10,
+        "sourceDigest": "d372d0601936c2166773e271431162fee06a7bd6c7e9a898450a056d2d0e7c19"
+      },
+      {
+        "path": "src/agent_lifecycle/context/profiles.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "f40ee6607fb45dd6a0fcb43062ac828fbb53fcb43583b629bc4f4381d2faa30d"
+      },
+      {
+        "path": "src/agent_lifecycle/context/rendering.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "cb228a91b8f0e2a14448439ad7a8138ac2f76ad48ea102e60f0b761516a294ae"
+      },
+      {
+        "path": "src/agent_lifecycle/context/thread_bridge_context.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "8ed12f70b088a5615c956e04ec967b1be439b5317d775e74ccf0ccc044c56611"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/adapter_event_schemas.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "e033a332f166e7492948ea63015834d99e82999eff4637d165bacf43f5883bd7"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/agent_plugin_qualification_schemas.py",
+        "code": "E501",
+        "count": 7,
+        "sourceDigest": "e98cb589edf609d5d06a8d263c4e707a632618340b6482e435d22af0bba8fdbf"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/audit_optimization_schemas.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "2fdab3f7116a68f115082f7c57d8adaa8b0ce16827f7a84bbbd39793cb5e0bed"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/benchmark_schemas.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "1831b4e4cc0b348d2f9567a9ea5eeab0ab595f85eb0bd4641439b6ffdd624a6d"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/bug_forensics_schemas.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "7b7bbedc1e9392cd78392c9304b9bfdc102fa20963f69100f6db40ac9ef6e8ea"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/compatibility.py",
+        "code": "E501",
+        "count": 52,
+        "sourceDigest": "bdd42dd0f044844e53300eaadf5b156f830267d1804efd041362b078f4e1dc1e"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/cross_check_schemas.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "c9af369e1e1424c1a0dc62b1638ae6e9662c138bdc49ccbad97c5d2a5b4081d4"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/evidence_import_schemas.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "a36fd66863528b71684a0512af4a1724674779e97a4eaaace786e55f66482ba4"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/goal_validation.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "9cdfa01fb6dac466f1360969a0a411749576063d4a89ebbb40ca63c5e818445c"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/implementation_audit_validation.py",
+        "code": "E501",
+        "count": 18,
+        "sourceDigest": "94a664768593d2ffc0d4718998864a1d856725aa8b76770785c35e5410ec517b"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/import_dialect_schemas.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "09afa35d489328da24ee7316ed926f31c97ce90eb1489e28e42d6335512f6605"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/local_launch_validation.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "d6b031550663845bb264a58c28c9f1d3d65e73e988048dd20a9185b991cef23a"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/metric_schemas.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "84b4709bb2162435ba675eb335d200983339ff462b4387f60e05255729984d30"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/plan_contract_schemas.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "58a9df36627f67b63c2031621c70ba4c8cfa6768ff268b51fb515da86bdbf6ed"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/process_execution_schemas.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "c8f60b6aecfe446b758a727951cf4a3460b12c7f03652db0bcac7eddaac024c0"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/proof_integrity_schemas.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "97f5d7b7e241d4b20a1e49b8290b355b1e90bf36cddad463b9957afe21b127b2"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/proof_validation.py",
+        "code": "E501",
+        "count": 11,
+        "sourceDigest": "bf57e747964c7b11447c5af615cb83bb348c7a184766bdeecb65442871312231"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/quality_modes.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "2d5665ba91237edae42fe4ac51f64d9ac4e40f25d56e38cc016df421db7e51cb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/review_quality_schemas.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "ee427418952913785b96c0ad0947b651e95634dd4557b93fa27be298b66c5f03"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/review_verdict.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "ed79213a7d8aedceaff6051061f39caaf0d493a8db834cd4d4d73d52c4ec3cfb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/runner_worktree_schemas.py",
+        "code": "E501",
+        "count": 8,
+        "sourceDigest": "c86e6f89ca51fc4a6704324f41e8658d7ad252f7ffd5db0a44aa7b34d7eba165"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/schemas.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "8d75223207da407344cc4dd802a07628e5e8f562acfee560410e5a62317a6f03"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/status_goal_schemas.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "3d2e3b6f2da3d9f9a811c2cb9dec8c0b57fc062a90002c9f24827d0d28186e1c"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_schema_definitions.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "d47ef736380b12cc92610598b5b52e4b1b8acab363e702b4e48de4927225f1fb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_schemas.py",
+        "code": "E501",
+        "count": 11,
+        "sourceDigest": "138ce48883962a194ab0b78cdcab050b6a8a1ec7d5fdf64bf9708f630aa736a1"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_validation.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "c57cfb83eeecabdc59a9b2c231678077f78a22845d58f7369ddf0b12ca53b729"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/validation.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "63bd9a07e5017fa9f32231b70e1db5c546d4dc8d148a175f4929808db2eb5130"
+      },
+      {
+        "path": "src/agent_lifecycle/diagnostics/bundles.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "8d38439bf657e882c4c37de2dcd4b0a1ec6dbcede75f839c03b1751f192d79aa"
+      },
+      {
+        "path": "src/agent_lifecycle/diagnostics/readiness.py",
+        "code": "E501",
+        "count": 9,
+        "sourceDigest": "5c047f01f0be8ecf7228e9182ff87e271fa149e3205606ae5b89fb8702af8569"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/core.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "5e6df046c17055d8028d193d7471e751eb6938d08e9d68ce0180d0fe4cf2369f"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/episode_index.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "87837918ac601badf06885c928dbcbf20a8d50d64ab74e4224cde51307b879bf"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/external_context.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "ec8bc4783d101c75c0b2dffd837334c1ce89fb2420b6435c4694d671be851cb3"
+      },
+      {
+        "path": "src/agent_lifecycle/followup/records.py",
+        "code": "E501",
+        "count": 10,
+        "sourceDigest": "80c9f3fd9342c4eff491bb15e672fa9d8383c7715ba8578392b2dd4dd8345248"
+      },
+      {
+        "path": "src/agent_lifecycle/freeze/package_integrity.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "c9665f7eb2d68596bbabd3a97d98fd427a55240348eb5136dae598da0d8b4107"
+      },
+      {
+        "path": "src/agent_lifecycle/goal/records.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "90193f96c3219ba192c8f797a64efa3e070cb3ccaffc0fdafb70f08402814d60"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/acp_capability.py",
+        "code": "E501",
+        "count": 5,
+        "sourceDigest": "b9e5f18eb0377b8545b39f637cc85d112228096b217a393f8fbf7018ac06240f"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/agent_plugin_qualification.py",
+        "code": "E501",
+        "count": 13,
+        "sourceDigest": "c8e85f33422b36bd4e3eda315a376400dd4d10a46f354b9536ff7dfa036eb651"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/capabilities.py",
+        "code": "E501",
+        "count": 10,
+        "sourceDigest": "471e90f054db57e07f18ae451b4093fb9377dbb09c48ffb1d4187575fb8f6841"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/context_events.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "5871bac71e41a5cde5f53dca0e00009225c5cc9e26b6d676f2658e20d504f38d"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/event_capture.py",
+        "code": "E501",
+        "count": 14,
+        "sourceDigest": "40d8b2e4e5a500b03530440b5a04ab9c1224ab23434b863b50d97a42582ae952"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/events.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "f61c15ec6e18825e1390433d35ce74955608fed28082522090da26441623366d"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "fe31164db12e075b6d12a1f270f36cc30ffb654cde0f69b87823022d042d50f5"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_claude.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "eff81f3daaa2f37a0d38813ab65a7d3a595a68fbc189a24dae082247e9efcfb7"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_codex.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "67d49ebe065e0d774b8c9667149a64eb7491b693a113b87a57d393e21fa95021"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_common.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "e93b0e1f27bdabc700554c1049ec851bf714c75cbc03bd359d56348ea4e89e57"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_cursor.py",
+        "code": "E501",
+        "count": 13,
+        "sourceDigest": "7e39be71888a6e0407a268999f36c5877c10fd08f437269d79d2cfdece11c1a2"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_gemini_cli.py",
+        "code": "E501",
+        "count": 10,
+        "sourceDigest": "49aa2deccb4cddf72277ae49f19757cd16cea34f276ca2595410439c24983e93"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_hermes.py",
+        "code": "E501",
+        "count": 14,
+        "sourceDigest": "2a5bb0a1643bf43186e845b8eee8e7c713db026015e7113250cdd81bc94107bf"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_kimi_code.py",
+        "code": "E501",
+        "count": 10,
+        "sourceDigest": "2ce286a9e9ec712551d1edded60ed7e190895cf1ca860b73e235b7394829e9c3"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_opencode.py",
+        "code": "E501",
+        "count": 7,
+        "sourceDigest": "89c6122c49c36d081c9d78af831a5e4ad2cfa5de469cf62bcdc4713da842ad11"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/inspection_qwen_code.py",
+        "code": "E501",
+        "count": 9,
+        "sourceDigest": "aec62921f9fb7a6998d779347e9585f0c43b5c00287ce7bbc27adfd9d0df3ea7"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/scaffold.py",
+        "code": "E501",
+        "count": 9,
+        "sourceDigest": "c20353e1366d0878d772a4e6f8a47655776467df62e431eb25d97811fadd3171"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/usage_normalizers.py",
+        "code": "E501",
+        "count": 10,
+        "sourceDigest": "8a6cdb05a1f1b0a12fcf38ccef68a943d93febc72fad4a60dcade2634cb12136"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/validation.py",
+        "code": "E501",
+        "count": 27,
+        "sourceDigest": "65ddbbd4c06316a46a736c710751dcd45e10b0fb7033027ac0ffcd48014ee61c"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/constitution_adr.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "16f4def30fe7753cc1d97a3468d5a2a47e3b4d48fe333bf47670512dc6a9ffcf"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/dialect_profiles.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "b86d53e15358fb3b9f819563ef0f4a83d3dd7e1df5836ba1edaf300955f750b5"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/external_dialects.py",
+        "code": "E501",
+        "count": 5,
+        "sourceDigest": "4dd51811b39f6feb484f932401b12be81cd620217baa1cc68d6346f3f0773ed3"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/multi_markdown.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "bb14d63e1ff1011c61ccebd1e69aefb98b2390ed98638d227c9e2b42b7c218bd"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/planning.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "8318764e89d51e466128de4b9f81470fa7865ab2a3b089cae4dd03a883994cc9"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_optimization.py",
+        "code": "E501",
+        "count": 16,
+        "sourceDigest": "757a981a375b00f616fc307b6c52f08746bf2284bb6d7edd3c3658fa0a4d06e2"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_samples.py",
+        "code": "E501",
+        "count": 22,
+        "sourceDigest": "25d7ca6e24313503974758d5b0ea19277dd10d8f386800e62bebd6316c4b3e8e"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/costs.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "dedb33733b52c73df0600534aca1332065f0aff04287c1647f7ba85951270dce"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/outcome_index.py",
+        "code": "E501",
+        "count": 9,
+        "sourceDigest": "8403638c0ba5df442a6dfbfffd3007d7fc3660c20dbef857a1225e175c0cc9fc"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/phase_resources.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "19b56f9e6387229208bf759d73b31ede32a75815caff963a1a47454b9ea3715b"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/recommendations.py",
+        "code": "E501",
+        "count": 9,
+        "sourceDigest": "bae99faae84f8c0354d844a661d3c31bf2d25b294e0c422b1fb7834b48497b97"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/regression_signals.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "38a5ed3b15d7191fc86347a67fb4a85c07c8fc30664e9956300204a2b4340b49"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/usage_export.py",
+        "code": "E501",
+        "count": 8,
+        "sourceDigest": "41e9878679cba8a5bfa73d78d5790f2dc8e6831e8bae0e53d0c6685fa5feba21"
+      },
+      {
+        "path": "src/agent_lifecycle/model_routing/profiles.py",
+        "code": "E501",
+        "count": 5,
+        "sourceDigest": "892d16746c34ee520dee8d5d91d1afa8d662360687e9feb6ed192045f4247c9a"
+      },
+      {
+        "path": "src/agent_lifecycle/model_routing/receipts.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "08e35c3aec8c865509ee9b4b9bae340e39eb32cede6e096742e62b3fa9b1968c"
+      },
+      {
+        "path": "src/agent_lifecycle/model_routing/resolver.py",
+        "code": "E501",
+        "count": 15,
+        "sourceDigest": "32b7d36105fbe87dbeb8ad4744a01b3026c1283bbd1ab4d02f4e025d9d88179c"
+      },
+      {
+        "path": "src/agent_lifecycle/neutrality/cli.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "28d15f8e6d9ce53e33ac7abb2f19c94eb15976e95b3c8391f995b3e0b640b677"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/completeness.py",
+        "code": "E501",
+        "count": 19,
+        "sourceDigest": "564b983ac7d2c21cdca7287e85afd54438ae51b10d5fe418eb940a97ce5b84b9"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/continuity.py",
+        "code": "E501",
+        "count": 8,
+        "sourceDigest": "0e2c0f4eb798d681a75995dc3611721de4fc39b2f5f37e69682ff655bd086e7d"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/deltas.py",
+        "code": "E501",
+        "count": 9,
+        "sourceDigest": "9f4cfac04a31006dfb589f8539d05d7782e13094886f4b1504d781b2fbee2bb5"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/templates.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "8a301e623b784ca28a6f8ae756b421d571b16164e422cd775a10e5e43b82652a"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/adaptive_lifecycle.py",
+        "code": "E501",
+        "count": 13,
+        "sourceDigest": "014330071719064bbf82b3d8ea36936487c2dff476c7df4a0f163c37c976bd81"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/apply.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "7907dd3266857bb269154995b70eb5201301ea190c9df68b89f1971bc6bc1850"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/execution_strategy.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "cc9b2808fbd802f79b61c3c2a2b37fdc4115e85ad640ac533a4eb0129d5342d2"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/proposals.py",
+        "code": "E501",
+        "count": 11,
+        "sourceDigest": "9d88447b00ecc098e54805986ef92e25dc173bccd2e4e62b79c3a9268e9ca748"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/quality_floor.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "9c35f98636e9f4c36735ac27332260ea7760d622f068075af5da603e656aba5d"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/risk_execution.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "50000727235fe8ee0804026898b6931f9264fd36cee737cf2d12eed3177ae98c"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/runtime_receipts.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "8d5740bff5f353b6175eb9ada2a6fbae2a0b4b9c829f77ac322529f95c2cf9d7"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/thread_bridge.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "feb02a92a61a71b760c00f7c4aa9d8cc857fc7733efa611eaf0cb55045be949f"
+      },
+      {
+        "path": "src/agent_lifecycle/project/merge.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "72c43bb08c871134b3fe86d5f2b30fecb675d6cb4559037c57d19456e7399142"
+      },
+      {
+        "path": "src/agent_lifecycle/project/presets.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "b0781e4d93f78231dd923c0e7deacca626a50a98d098fbdb12033bd7e5282b52"
+      },
+      {
+        "path": "src/agent_lifecycle/project/profile.py",
+        "code": "E501",
+        "count": 16,
+        "sourceDigest": "28916285ca398e32c7d39e76c25ff393018d264d7b9cd759b66b8f91db971bf6"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics.py",
+        "code": "E501",
+        "count": 27,
+        "sourceDigest": "ca618f804dd99ed455e718e3e6df3e5c8fd30180c3f721299f5456fb4b8e1ea2"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics_advisor.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "10ecb86b9b2f3c6d71f1a241e365c88d1eb544ec785874b87c122d623e8b4e57"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics_recipes.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "b724584808700f15ef8f639c6f4babf7e5be6065371d6263df6f988eb36cdddf"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/cross_check.py",
+        "code": "E501",
+        "count": 13,
+        "sourceDigest": "9f3b2c7f2a9e7d864e691330b368d360aafdd0d54494bd813a3aa9e9264ac1ed"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/failure_classification.py",
+        "code": "E501",
+        "count": 5,
+        "sourceDigest": "f8301172c4e2918e6ca856d5d3e6a21e6039aec07bad07382d06b78a01c6bea0"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/packs.py",
+        "code": "E501",
+        "count": 8,
+        "sourceDigest": "8a68de7d69627727f1abc5b431b0a88b43baf9b3774d1fccf7f07ef322304f26"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/execution_resources.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "5965f6c2eaf12c964778f8d772c829d97f4f86677896a0f93d41705761be2c07"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_bridge.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "29d20dde4fe81e432d3c20ffc2136ebca78801f894e5ab29af1e50006f808a02"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_hooks.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "477cc7867140b4f3cf2667972fcb2ecfa59303466b30d837c700628d175a4d8d"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_terminal.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "9792ed964086235b174c069bb644144fdf208a1fe1420730e9b06893a30cf6e5"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/status_view.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "3cbcaadd13dd77aa5a27b82c15dffa10fcfe0cc7c7db22f6631fadfd4c3d0807"
+      },
+      {
+        "path": "src/agent_lifecycle/research/provenance.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "306f084452029af88b3b014c0ccf6ac7fcec99d56abdff949afb275ce6a068a4"
+      },
+      {
+        "path": "src/agent_lifecycle/research/validation.py",
+        "code": "E501",
+        "count": 9,
+        "sourceDigest": "a461a396caffa36f59012e88500c3059404bbd07155024b81fb61c892ab94567"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/assignments.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "095e8896eb8b5408ba8a0c7dab73c80b28d3f3dcabac01a20709f1028ca36021"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/contracts.py",
+        "code": "E501",
+        "count": 17,
+        "sourceDigest": "8c8d78af45a1afffc030d9c6ef873b38ec17b1b19bed80509a31ba0acf296c90"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/operator_templates.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "aff6f62115a9abf798e7bab9136370ba42bdd299326fc04c1096672d3cbb062c"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/recommendation.py",
+        "code": "E501",
+        "count": 12,
+        "sourceDigest": "0a55ffeb6e4dffe521d9d2266654a2b210efc95c6604b0e6760f758eb9841684"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/results.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "51f1188d3a3e91d31e91e366b40362ee4c302551bd38a1b78db2c07ca4635619"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/synthesis.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "aa396c941a7db2af61cc27be79cc57e4d794960814ac3012852b93df7484c3fc"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/attempt_snapshots.py",
+        "code": "E501",
+        "count": 13,
+        "sourceDigest": "592c8992db10aaf2493081929cce53a9b3647d0cfe68f0d7dbbc73ff3207fe1a"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/core.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "fe92a639ee4b2460bc6b0a0730c5c671b6d5e13b49a178f18b5cc7a43caa84e5"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/sandbox_receipts.py",
+        "code": "E501",
+        "count": 21,
+        "sourceDigest": "7cd3f42fd7f9410fdc7a755d6946014a7bc47b2e8b6c156f490f65cb90347471"
+      },
+      {
+        "path": "src/agent_lifecycle/specification/completion_check.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "6901bfa871d3c301228c44f552761654adf7e8454c3cbd44ea7278cae46cd749"
+      },
+      {
+        "path": "src/agent_lifecycle/specification/completion_gate.py",
+        "code": "E501",
+        "count": 14,
+        "sourceDigest": "7b470c7d17c215f9b1ac1037c50eb9720a349f5e0a7098601779799a2f7590db"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/budget_decisions.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "bcf97b4d906e1695042549cbea1f1c3d34191c6d0d9014d884d45e0bc063e2a0"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/budget_policy.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "e60227bc6fb7692945a078255f117e6ff98879b58bebf18b9de90040571103ec"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/bug_forensics_gates.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "6605f71979b6667a86fe942c64a88f2e02698d199c965151a9a5163d47e42648"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/checkpoint_gate.py",
+        "code": "E501",
+        "count": 6,
+        "sourceDigest": "1575b858626eeaa6a3a1293c4308bf59754e1c954f20a107e92d2b43b8a80ede"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/final_proof_integrity.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "735f00211e430a20283e860944ce7fdd47ffd7cac488559787e3aa3cb71cea56"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/finalization.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "acb8a1b586e99d460759b07bfbd53d20db4c373af3e5b258193a0ff4c02bda6f"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/gates.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "5b94ff84bfa574e9ec69ee3cd100e4e05ce9587cf9b7561597b10f8a3340833c"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/implementation_audit_gate.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "ead4697a2d2486080387551d37fef3572f9158bc89547b1e81e1a6909016f38e"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/leases.py",
+        "code": "E501",
+        "count": 7,
+        "sourceDigest": "6e2c7de0bf4350917191567f8571d0230356d57288015c36821fb0b6e360250d"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/lineage.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "43bb19a207605006bcfd316063e509af1966bc58e02ebbb25223f7813ce71f8f"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/model_usage.py",
+        "code": "E501",
+        "count": 3,
+        "sourceDigest": "81e4bc439955f1cbeb5a01d8702d4aa6ed496bc3abe8d3669ede219ae3404d79"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/plan_adoption.py",
+        "code": "E501",
+        "count": 4,
+        "sourceDigest": "055fc39462080f41b68dc8adefe9a0af854d8db477347263cf3e2ee0c9f6a574"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/review_mesh_gate.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "faab2ae4922513476efc45ebff207de1d16d8922b4d0827219deeb81327e2407"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/reviews.py",
+        "code": "E501",
+        "count": 2,
+        "sourceDigest": "234111757f6c5e5d00d223aa1ddb98845a24dd2e49b0b007d0646bc04c186182"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/risk_execution_gate.py",
+        "code": "E501",
+        "count": 7,
+        "sourceDigest": "ad51147749d79761ec33f2e5599b9e4e1c02834da64849946d0f99cf7d0e7746"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/run_transitions.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "2170402138022476c3916c66b83a0591c634b7325d90bd974ee2ba2518d66df0"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/sandbox_policy.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "330a183ff1273363953f4c5459853b7f88ea6153086921d549b3bbbc73a9d7a8"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/task_transitions.py",
+        "code": "E501",
+        "count": 1,
+        "sourceDigest": "1768a34c921f28a4e819f361e826dcecee543bc687b2a4f7dd90ac019759ab38"
+      },
+      {
+        "path": "src/agent_lifecycle/worktree/isolation.py",
+        "code": "E501",
+        "count": 15,
+        "sourceDigest": "207036e7a4bcc08d8df0006653db2ef49ec5d6b528869c94b8b3a96470bb3d33"
+      }
+    ]
+  },
+  "mypy": {
+    "strictClean": [
+      "src/agent_lifecycle/__init__.py"
+    ],
+    "baseline": [
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_execution.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "3593fe97edeedb30845ca08f9cc3fad2b463e2707b9f691b8c470b82f9a2ad7a"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_execution.py",
+        "code": "union-attr",
+        "count": 4,
+        "sourceDigest": "3593fe97edeedb30845ca08f9cc3fad2b463e2707b9f691b8c470b82f9a2ad7a"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/launch_preflight.py",
+        "code": "arg-type",
+        "count": 2,
+        "sourceDigest": "48fdb505c910bc726a96e312785afedb78c2eb832e29e31d9f3239e34add35f0"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/local_launch_profile.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "05331f6aa2b98bc28ef67f74734f8bd84b4576adb4ca67ca7a017d3af7296c93"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/local_launch_profile.py",
+        "code": "index",
+        "count": 2,
+        "sourceDigest": "05331f6aa2b98bc28ef67f74734f8bd84b4576adb4ca67ca7a017d3af7296c93"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/local_launch_profile.py",
+        "code": "union-attr",
+        "count": 1,
+        "sourceDigest": "05331f6aa2b98bc28ef67f74734f8bd84b4576adb4ca67ca7a017d3af7296c93"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/planning_launch.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "45d4b98e642dd86737318f939d11366cd7951dc5fc690f1f2debea78adf88983"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/planning_launch.py",
+        "code": "union-attr",
+        "count": 3,
+        "sourceDigest": "45d4b98e642dd86737318f939d11366cd7951dc5fc690f1f2debea78adf88983"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/process_groups.py",
+        "code": "attr-defined",
+        "count": 5,
+        "sourceDigest": "bcf45a42bc80e4cbf3877f698f5502c31d7b873b46ccbec8c4929e2a47a95ead"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/start_receipts.py",
+        "code": "arg-type",
+        "count": 8,
+        "sourceDigest": "c2e62a47373087b67ea0ab49fc7d28e1f5b74bfdaf1f93069080d9d6d4c3528f"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/start_receipts.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "c2e62a47373087b67ea0ab49fc7d28e1f5b74bfdaf1f93069080d9d6d4c3528f"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/start_receipts.py",
+        "code": "union-attr",
+        "count": 6,
+        "sourceDigest": "c2e62a47373087b67ea0ab49fc7d28e1f5b74bfdaf1f93069080d9d6d4c3528f"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/unified_start.py",
+        "code": "arg-type",
+        "count": 6,
+        "sourceDigest": "4529090abd38ba7d2cdf0718a2266b44b3bf43c1b28a7dc77c31e35bd07c1a6b"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/unified_start.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "4529090abd38ba7d2cdf0718a2266b44b3bf43c1b28a7dc77c31e35bd07c1a6b"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/unified_start.py",
+        "code": "union-attr",
+        "count": 3,
+        "sourceDigest": "4529090abd38ba7d2cdf0718a2266b44b3bf43c1b28a7dc77c31e35bd07c1a6b"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/workflow_bridge.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "a6bcdc851e94337d215a3b9a8b7a19cb8af83bdc02eedf7deb213a7cac44bfb1"
+      },
+      {
+        "path": "src/agent_lifecycle/adapter_sessions/workflow_bridge.py",
+        "code": "union-attr",
+        "count": 2,
+        "sourceDigest": "a6bcdc851e94337d215a3b9a8b7a19cb8af83bdc02eedf7deb213a7cac44bfb1"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/bug_forensics.py",
+        "code": "union-attr",
+        "count": 6,
+        "sourceDigest": "42a753b3db4ca6d47bf50cd9f830b542abe183f7bd84443c18503550054d2113"
+      },
+      {
+        "path": "src/agent_lifecycle/audit/package.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "5a5e6a42cca2e0b525864de44e3097f734e5a06c1e6984afb24924bc0980d10b"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/comparison.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "966c72d5bf6ffc1d1c78b00d558303ac92b32583300d563b3098f5b9d0f18144"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/comparison.py",
+        "code": "union-attr",
+        "count": 15,
+        "sourceDigest": "966c72d5bf6ffc1d1c78b00d558303ac92b32583300d563b3098f5b9d0f18144"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/contracts.py",
+        "code": "index",
+        "count": 1,
+        "sourceDigest": "95e85bc43fbde9b2e11d77daa047bae79b62101e71db012356c7fa2cc2f49f88"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/contracts.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "95e85bc43fbde9b2e11d77daa047bae79b62101e71db012356c7fa2cc2f49f88"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/contracts.py",
+        "code": "union-attr",
+        "count": 5,
+        "sourceDigest": "95e85bc43fbde9b2e11d77daa047bae79b62101e71db012356c7fa2cc2f49f88"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/oracles.py",
+        "code": "arg-type",
+        "count": 2,
+        "sourceDigest": "8637fafef562fd1e84489485af392f03f94e55ef131ef0bd01f46f3e81ea31d2"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/qualification.py",
+        "code": "union-attr",
+        "count": 1,
+        "sourceDigest": "bc617308bf7518c927b75a7e3663ae1797a50d374435de1f692e00209f60e75f"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/reporting.py",
+        "code": "arg-type",
+        "count": 3,
+        "sourceDigest": "9a41650eed88b80f7d1ccc3192e3e6673080df2dc7a7a61c9d6aaece77077a71"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/reporting.py",
+        "code": "misc",
+        "count": 1,
+        "sourceDigest": "9a41650eed88b80f7d1ccc3192e3e6673080df2dc7a7a61c9d6aaece77077a71"
+      },
+      {
+        "path": "src/agent_lifecycle/benchmarks/reporting.py",
+        "code": "union-attr",
+        "count": 7,
+        "sourceDigest": "9a41650eed88b80f7d1ccc3192e3e6673080df2dc7a7a61c9d6aaece77077a71"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/adapter.py",
+        "code": "index",
+        "count": 1,
+        "sourceDigest": "6683e138690dbe4b7d58b40f502ceaeb93949b73502cb08208f1b9a6fe5b4c8e"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/adapter.py",
+        "code": "union-attr",
+        "count": 1,
+        "sourceDigest": "6683e138690dbe4b7d58b40f502ceaeb93949b73502cb08208f1b9a6fe5b4c8e"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_contracts.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "cfd40d7bce641ad20d88e376c2038cc42e919809f640541c1ddacbcab223e09b"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_lifecycle.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "e681520ad5f7ab8ced460eb9d03f70f2ee6a8628133496e9ca8d9c69c6ef3d05"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_metrics.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "0d09687a78f0f564a7b2dbd5ddd2c6b25e6bcf9a4c801eb64249ce2bd2126e3c"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_observability.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "e54995ad1ffabe7cb3862aafc6cc52808679ccd648a29a5ef2515030326435e8"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_observability.py",
+        "code": "return-value",
+        "count": 1,
+        "sourceDigest": "e54995ad1ffabe7cb3862aafc6cc52808679ccd648a29a5ef2515030326435e8"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_observability.py",
+        "code": "union-attr",
+        "count": 4,
+        "sourceDigest": "e54995ad1ffabe7cb3862aafc6cc52808679ccd648a29a5ef2515030326435e8"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_planning.py",
+        "code": "arg-type",
+        "count": 2,
+        "sourceDigest": "30f90a465131eba5e25b6be139d7c3f2c26439683704550f9725b19205d65582"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_planning.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "30f90a465131eba5e25b6be139d7c3f2c26439683704550f9725b19205d65582"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/dispatch_research.py",
+        "code": "arg-type",
+        "count": 2,
+        "sourceDigest": "462c541eeeba44d2f0847387f4b830516cac0e0b7a4edd61cd42205ced853e09"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/lifecycle_parsers.py",
+        "code": "name-defined",
+        "count": 5,
+        "sourceDigest": "cdaf86a9c9f031ca95314db658aa3b2ee13ee9c8782494091357f40f03a64262"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/parsers.py",
+        "code": "arg-type",
+        "count": 30,
+        "sourceDigest": "6f952cdfe6890fb0bd146e96faeca054a935f75e306c9c210275635dc628450c"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/progress_hooks.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "cb790736ea5c76e4f84606a0e447962ee7c223a3ea1d7a5e93067234fe259abb"
+      },
+      {
+        "path": "src/agent_lifecycle/cli/worktree.py",
+        "code": "assignment",
+        "count": 2,
+        "sourceDigest": "8c1ac6af11d0c43bc4a1adfb0f00499c517e824f37bee2f4708efee04d8073d8"
+      },
+      {
+        "path": "src/agent_lifecycle/compiler/task_packets.py",
+        "code": "union-attr",
+        "count": 7,
+        "sourceDigest": "cb067822aaacee63e77b0d499acae14dbe7857df3f7d2f55e81bbaacda9ada89"
+      },
+      {
+        "path": "src/agent_lifecycle/context/rendering.py",
+        "code": "union-attr",
+        "count": 5,
+        "sourceDigest": "cb228a91b8f0e2a14448439ad7a8138ac2f76ad48ea102e60f0b761516a294ae"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/agent_plugin_qualification_schemas.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "e98cb589edf609d5d06a8d263c4e707a632618340b6482e435d22af0bba8fdbf"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/local_launch_validation.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "d6b031550663845bb264a58c28c9f1d3d65e73e988048dd20a9185b991cef23a"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/local_launch_validation.py",
+        "code": "index",
+        "count": 2,
+        "sourceDigest": "d6b031550663845bb264a58c28c9f1d3d65e73e988048dd20a9185b991cef23a"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/local_launch_validation.py",
+        "code": "union-attr",
+        "count": 1,
+        "sourceDigest": "d6b031550663845bb264a58c28c9f1d3d65e73e988048dd20a9185b991cef23a"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/paths.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "28eacab3ca9cb7371df28933de58c4c87870ea389d0f8d08a77b48f6fee561f4"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/proof_validation.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "bf57e747964c7b11447c5af615cb83bb348c7a184766bdeecb65442871312231"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/proof_validation.py",
+        "code": "attr-defined",
+        "count": 1,
+        "sourceDigest": "bf57e747964c7b11447c5af615cb83bb348c7a184766bdeecb65442871312231"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/proof_validation.py",
+        "code": "union-attr",
+        "count": 7,
+        "sourceDigest": "bf57e747964c7b11447c5af615cb83bb348c7a184766bdeecb65442871312231"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/redaction.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "848c125800758a9a5fd746c82b212e008d1b49b6e1dd9afecd9cf257d8c68feb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/redaction.py",
+        "code": "attr-defined",
+        "count": 1,
+        "sourceDigest": "848c125800758a9a5fd746c82b212e008d1b49b6e1dd9afecd9cf257d8c68feb"
+      },
+      {
+        "path": "src/agent_lifecycle/contracts/thread_bridge_schemas.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "138ce48883962a194ab0b78cdcab050b6a8a1ec7d5fdf64bf9708f630aa736a1"
+      },
+      {
+        "path": "src/agent_lifecycle/diagnostics/installation_catalog.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "6175bfe63681d3f5917cee73752989946bdad8e0542e636f5cee2210ddc0a6c1"
+      },
+      {
+        "path": "src/agent_lifecycle/diagnostics/readiness.py",
+        "code": "var-annotated",
+        "count": 2,
+        "sourceDigest": "5c047f01f0be8ecf7228e9182ff87e271fa149e3205606ae5b89fb8702af8569"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/core.py",
+        "code": "arg-type",
+        "count": 2,
+        "sourceDigest": "5e6df046c17055d8028d193d7471e751eb6938d08e9d68ce0180d0fe4cf2369f"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/core.py",
+        "code": "attr-defined",
+        "count": 1,
+        "sourceDigest": "5e6df046c17055d8028d193d7471e751eb6938d08e9d68ce0180d0fe4cf2369f"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/core.py",
+        "code": "dict-item",
+        "count": 2,
+        "sourceDigest": "5e6df046c17055d8028d193d7471e751eb6938d08e9d68ce0180d0fe4cf2369f"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/core.py",
+        "code": "index",
+        "count": 1,
+        "sourceDigest": "5e6df046c17055d8028d193d7471e751eb6938d08e9d68ce0180d0fe4cf2369f"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/core.py",
+        "code": "operator",
+        "count": 6,
+        "sourceDigest": "5e6df046c17055d8028d193d7471e751eb6938d08e9d68ce0180d0fe4cf2369f"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/core.py",
+        "code": "union-attr",
+        "count": 4,
+        "sourceDigest": "5e6df046c17055d8028d193d7471e751eb6938d08e9d68ce0180d0fe4cf2369f"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/episode_index.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "87837918ac601badf06885c928dbcbf20a8d50d64ab74e4224cde51307b879bf"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/episode_index.py",
+        "code": "dict-item",
+        "count": 2,
+        "sourceDigest": "87837918ac601badf06885c928dbcbf20a8d50d64ab74e4224cde51307b879bf"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/episode_index.py",
+        "code": "operator",
+        "count": 10,
+        "sourceDigest": "87837918ac601badf06885c928dbcbf20a8d50d64ab74e4224cde51307b879bf"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/episode_index.py",
+        "code": "union-attr",
+        "count": 14,
+        "sourceDigest": "87837918ac601badf06885c928dbcbf20a8d50d64ab74e4224cde51307b879bf"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/external_context.py",
+        "code": "attr-defined",
+        "count": 1,
+        "sourceDigest": "ec8bc4783d101c75c0b2dffd837334c1ce89fb2420b6435c4694d671be851cb3"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/external_context.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "ec8bc4783d101c75c0b2dffd837334c1ce89fb2420b6435c4694d671be851cb3"
+      },
+      {
+        "path": "src/agent_lifecycle/evidence_index/external_context.py",
+        "code": "union-attr",
+        "count": 3,
+        "sourceDigest": "ec8bc4783d101c75c0b2dffd837334c1ce89fb2420b6435c4694d671be851cb3"
+      },
+      {
+        "path": "src/agent_lifecycle/freeze/package_integrity.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "c9665f7eb2d68596bbabd3a97d98fd427a55240348eb5136dae598da0d8b4107"
+      },
+      {
+        "path": "src/agent_lifecycle/freeze/package_integrity.py",
+        "code": "union-attr",
+        "count": 6,
+        "sourceDigest": "c9665f7eb2d68596bbabd3a97d98fd427a55240348eb5136dae598da0d8b4107"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/capabilities.py",
+        "code": "arg-type",
+        "count": 3,
+        "sourceDigest": "471e90f054db57e07f18ae451b4093fb9377dbb09c48ffb1d4187575fb8f6841"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/capabilities.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "471e90f054db57e07f18ae451b4093fb9377dbb09c48ffb1d4187575fb8f6841"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/capabilities.py",
+        "code": "type-var",
+        "count": 2,
+        "sourceDigest": "471e90f054db57e07f18ae451b4093fb9377dbb09c48ffb1d4187575fb8f6841"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/capabilities.py",
+        "code": "union-attr",
+        "count": 8,
+        "sourceDigest": "471e90f054db57e07f18ae451b4093fb9377dbb09c48ffb1d4187575fb8f6841"
+      },
+      {
+        "path": "src/agent_lifecycle/host_protocol/validation.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "65ddbbd4c06316a46a736c710751dcd45e10b0fb7033027ac0ffcd48014ee61c"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/external_dialects.py",
+        "code": "union-attr",
+        "count": 2,
+        "sourceDigest": "4dd51811b39f6feb484f932401b12be81cd620217baa1cc68d6346f3f0773ed3"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/planning.py",
+        "code": "attr-defined",
+        "count": 1,
+        "sourceDigest": "8318764e89d51e466128de4b9f81470fa7865ab2a3b089cae4dd03a883994cc9"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/planning.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "8318764e89d51e466128de4b9f81470fa7865ab2a3b089cae4dd03a883994cc9"
+      },
+      {
+        "path": "src/agent_lifecycle/imports/planning.py",
+        "code": "union-attr",
+        "count": 6,
+        "sourceDigest": "8318764e89d51e466128de4b9f81470fa7865ab2a3b089cae4dd03a883994cc9"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_optimization.py",
+        "code": "arg-type",
+        "count": 3,
+        "sourceDigest": "757a981a375b00f616fc307b6c52f08746bf2284bb6d7edd3c3658fa0a4d06e2"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_optimization.py",
+        "code": "index",
+        "count": 8,
+        "sourceDigest": "757a981a375b00f616fc307b6c52f08746bf2284bb6d7edd3c3658fa0a4d06e2"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_optimization.py",
+        "code": "operator",
+        "count": 7,
+        "sourceDigest": "757a981a375b00f616fc307b6c52f08746bf2284bb6d7edd3c3658fa0a4d06e2"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_optimization.py",
+        "code": "union-attr",
+        "count": 13,
+        "sourceDigest": "757a981a375b00f616fc307b6c52f08746bf2284bb6d7edd3c3658fa0a4d06e2"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_samples.py",
+        "code": "assignment",
+        "count": 2,
+        "sourceDigest": "25d7ca6e24313503974758d5b0ea19277dd10d8f386800e62bebd6316c4b3e8e"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_samples.py",
+        "code": "operator",
+        "count": 2,
+        "sourceDigest": "25d7ca6e24313503974758d5b0ea19277dd10d8f386800e62bebd6316c4b3e8e"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/audit_samples.py",
+        "code": "union-attr",
+        "count": 6,
+        "sourceDigest": "25d7ca6e24313503974758d5b0ea19277dd10d8f386800e62bebd6316c4b3e8e"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/cost_collection.py",
+        "code": "arg-type",
+        "count": 2,
+        "sourceDigest": "8d9a887b056aec17ef56600b66224b6a4537509a2d8f88101865d199ccdb3f47"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/cost_collection.py",
+        "code": "misc",
+        "count": 1,
+        "sourceDigest": "8d9a887b056aec17ef56600b66224b6a4537509a2d8f88101865d199ccdb3f47"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/costs.py",
+        "code": "operator",
+        "count": 4,
+        "sourceDigest": "dedb33733b52c73df0600534aca1332065f0aff04287c1647f7ba85951270dce"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/costs.py",
+        "code": "type-var",
+        "count": 4,
+        "sourceDigest": "dedb33733b52c73df0600534aca1332065f0aff04287c1647f7ba85951270dce"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/outcome_index.py",
+        "code": "arg-type",
+        "count": 6,
+        "sourceDigest": "8403638c0ba5df442a6dfbfffd3007d7fc3660c20dbef857a1225e175c0cc9fc"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/outcome_index.py",
+        "code": "index",
+        "count": 1,
+        "sourceDigest": "8403638c0ba5df442a6dfbfffd3007d7fc3660c20dbef857a1225e175c0cc9fc"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/outcome_index.py",
+        "code": "list-item",
+        "count": 1,
+        "sourceDigest": "8403638c0ba5df442a6dfbfffd3007d7fc3660c20dbef857a1225e175c0cc9fc"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/outcome_index.py",
+        "code": "union-attr",
+        "count": 7,
+        "sourceDigest": "8403638c0ba5df442a6dfbfffd3007d7fc3660c20dbef857a1225e175c0cc9fc"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/recommendations.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "bae99faae84f8c0354d844a661d3c31bf2d25b294e0c422b1fb7834b48497b97"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/recommendations.py",
+        "code": "index",
+        "count": 1,
+        "sourceDigest": "bae99faae84f8c0354d844a661d3c31bf2d25b294e0c422b1fb7834b48497b97"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/recommendations.py",
+        "code": "union-attr",
+        "count": 2,
+        "sourceDigest": "bae99faae84f8c0354d844a661d3c31bf2d25b294e0c422b1fb7834b48497b97"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/usage_export.py",
+        "code": "operator",
+        "count": 3,
+        "sourceDigest": "41e9878679cba8a5bfa73d78d5790f2dc8e6831e8bae0e53d0c6685fa5feba21"
+      },
+      {
+        "path": "src/agent_lifecycle/metrics/usage_export.py",
+        "code": "union-attr",
+        "count": 4,
+        "sourceDigest": "41e9878679cba8a5bfa73d78d5790f2dc8e6831e8bae0e53d0c6685fa5feba21"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/completeness.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "564b983ac7d2c21cdca7287e85afd54438ae51b10d5fe418eb940a97ce5b84b9"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/completeness.py",
+        "code": "type-var",
+        "count": 1,
+        "sourceDigest": "564b983ac7d2c21cdca7287e85afd54438ae51b10d5fe418eb940a97ce5b84b9"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/completeness.py",
+        "code": "union-attr",
+        "count": 1,
+        "sourceDigest": "564b983ac7d2c21cdca7287e85afd54438ae51b10d5fe418eb940a97ce5b84b9"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/continuity.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "0e2c0f4eb798d681a75995dc3611721de4fc39b2f5f37e69682ff655bd086e7d"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/continuity.py",
+        "code": "type-var",
+        "count": 1,
+        "sourceDigest": "0e2c0f4eb798d681a75995dc3611721de4fc39b2f5f37e69682ff655bd086e7d"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/continuity.py",
+        "code": "union-attr",
+        "count": 1,
+        "sourceDigest": "0e2c0f4eb798d681a75995dc3611721de4fc39b2f5f37e69682ff655bd086e7d"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/deltas.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "9f4cfac04a31006dfb589f8539d05d7782e13094886f4b1504d781b2fbee2bb5"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/deltas.py",
+        "code": "call-overload",
+        "count": 1,
+        "sourceDigest": "9f4cfac04a31006dfb589f8539d05d7782e13094886f4b1504d781b2fbee2bb5"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/deltas.py",
+        "code": "index",
+        "count": 1,
+        "sourceDigest": "9f4cfac04a31006dfb589f8539d05d7782e13094886f4b1504d781b2fbee2bb5"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/deltas.py",
+        "code": "union-attr",
+        "count": 4,
+        "sourceDigest": "9f4cfac04a31006dfb589f8539d05d7782e13094886f4b1504d781b2fbee2bb5"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/task_compatibility.py",
+        "code": "var-annotated",
+        "count": 1,
+        "sourceDigest": "9f92bf7854a7780d8003b1506b6d5a3db152e0c729b34b3a19a1337822ed55b8"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/templates.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "8a301e623b784ca28a6f8ae756b421d571b16164e422cd775a10e5e43b82652a"
+      },
+      {
+        "path": "src/agent_lifecycle/planning/validation.py",
+        "code": "arg-type",
+        "count": 2,
+        "sourceDigest": "ffd650280e268469849858d84a897cb336d0a1c44e4330f14481ee903058f491"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/adaptive_lifecycle.py",
+        "code": "dict-item",
+        "count": 1,
+        "sourceDigest": "014330071719064bbf82b3d8ea36936487c2dff476c7df4a0f163c37c976bd81"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/execution_strategy.py",
+        "code": "union-attr",
+        "count": 9,
+        "sourceDigest": "cc9b2808fbd802f79b61c3c2a2b37fdc4115e85ad640ac533a4eb0129d5342d2"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/execution_strategy.py",
+        "code": "var-annotated",
+        "count": 1,
+        "sourceDigest": "cc9b2808fbd802f79b61c3c2a2b37fdc4115e85ad640ac533a4eb0129d5342d2"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/proposals.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "9d88447b00ecc098e54805986ef92e25dc173bccd2e4e62b79c3a9268e9ca748"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/proposals.py",
+        "code": "union-attr",
+        "count": 9,
+        "sourceDigest": "9d88447b00ecc098e54805986ef92e25dc173bccd2e4e62b79c3a9268e9ca748"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/risk_execution.py",
+        "code": "union-attr",
+        "count": 8,
+        "sourceDigest": "50000727235fe8ee0804026898b6931f9264fd36cee737cf2d12eed3177ae98c"
+      },
+      {
+        "path": "src/agent_lifecycle/policy/runtime_receipts.py",
+        "code": "union-attr",
+        "count": 2,
+        "sourceDigest": "8d5740bff5f353b6175eb9ada2a6fbae2a0b4b9c829f77ac322529f95c2cf9d7"
+      },
+      {
+        "path": "src/agent_lifecycle/project/guidance.py",
+        "code": "union-attr",
+        "count": 1,
+        "sourceDigest": "b997122c5bd4fff37f991cb4e348c49ebaba30ea2d7a74eebb6940491b3239b4"
+      },
+      {
+        "path": "src/agent_lifecycle/project/principles.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "14db5cad6a59163e0b3c2f4f7eec5c0bf1fd49c1ce14713781edc4d38ac9146d"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/bug_forensics.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "ca618f804dd99ed455e718e3e6df3e5c8fd30180c3f721299f5456fb4b8e1ea2"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/cross_check.py",
+        "code": "arg-type",
+        "count": 2,
+        "sourceDigest": "9f3b2c7f2a9e7d864e691330b368d360aafdd0d54494bd813a3aa9e9264ac1ed"
+      },
+      {
+        "path": "src/agent_lifecycle/quality/packs.py",
+        "code": "assignment",
+        "count": 2,
+        "sourceDigest": "8a68de7d69627727f1abc5b431b0a88b43baf9b3774d1fccf7f07ef322304f26"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/progress_view.py",
+        "code": "assignment",
+        "count": 1,
+        "sourceDigest": "839c6084df8eec9ce4c1e8177d0bc10b6c682bc72583ae96ab11175b7b8594a1"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/usage_export.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "263853a38d3e82f0d56e7b043678884322b496a6e64264646829dccd679a2a4e"
+      },
+      {
+        "path": "src/agent_lifecycle/reporting/usage_export.py",
+        "code": "union-attr",
+        "count": 4,
+        "sourceDigest": "263853a38d3e82f0d56e7b043678884322b496a6e64264646829dccd679a2a4e"
+      },
+      {
+        "path": "src/agent_lifecycle/research/provenance.py",
+        "code": "arg-type",
+        "count": 7,
+        "sourceDigest": "306f084452029af88b3b014c0ccf6ac7fcec99d56abdff949afb275ce6a068a4"
+      },
+      {
+        "path": "src/agent_lifecycle/research/provenance.py",
+        "code": "index",
+        "count": 8,
+        "sourceDigest": "306f084452029af88b3b014c0ccf6ac7fcec99d56abdff949afb275ce6a068a4"
+      },
+      {
+        "path": "src/agent_lifecycle/research/provenance.py",
+        "code": "misc",
+        "count": 2,
+        "sourceDigest": "306f084452029af88b3b014c0ccf6ac7fcec99d56abdff949afb275ce6a068a4"
+      },
+      {
+        "path": "src/agent_lifecycle/research/validation.py",
+        "code": "arg-type",
+        "count": 8,
+        "sourceDigest": "a461a396caffa36f59012e88500c3059404bbd07155024b81fb61c892ab94567"
+      },
+      {
+        "path": "src/agent_lifecycle/research/validation.py",
+        "code": "union-attr",
+        "count": 4,
+        "sourceDigest": "a461a396caffa36f59012e88500c3059404bbd07155024b81fb61c892ab94567"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/assignments.py",
+        "code": "union-attr",
+        "count": 3,
+        "sourceDigest": "095e8896eb8b5408ba8a0c7dab73c80b28d3f3dcabac01a20709f1028ca36021"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/recommendation.py",
+        "code": "union-attr",
+        "count": 6,
+        "sourceDigest": "0a55ffeb6e4dffe521d9d2266654a2b210efc95c6604b0e6760f758eb9841684"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/results.py",
+        "code": "arg-type",
+        "count": 2,
+        "sourceDigest": "51f1188d3a3e91d31e91e366b40362ee4c302551bd38a1b78db2c07ca4635619"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/results.py",
+        "code": "index",
+        "count": 3,
+        "sourceDigest": "51f1188d3a3e91d31e91e366b40362ee4c302551bd38a1b78db2c07ca4635619"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/results.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "51f1188d3a3e91d31e91e366b40362ee4c302551bd38a1b78db2c07ca4635619"
+      },
+      {
+        "path": "src/agent_lifecycle/review_mesh/results.py",
+        "code": "union-attr",
+        "count": 7,
+        "sourceDigest": "51f1188d3a3e91d31e91e366b40362ee4c302551bd38a1b78db2c07ca4635619"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/attempt_snapshots.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "592c8992db10aaf2493081929cce53a9b3647d0cfe68f0d7dbbc73ff3207fe1a"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/core.py",
+        "code": "attr-defined",
+        "count": 3,
+        "sourceDigest": "fe92a639ee4b2460bc6b0a0730c5c671b6d5e13b49a178f18b5cc7a43caa84e5"
+      },
+      {
+        "path": "src/agent_lifecycle/runner/core.py",
+        "code": "index",
+        "count": 3,
+        "sourceDigest": "fe92a639ee4b2460bc6b0a0730c5c671b6d5e13b49a178f18b5cc7a43caa84e5"
+      },
+      {
+        "path": "src/agent_lifecycle/specification/completion_check.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "6901bfa871d3c301228c44f552761654adf7e8454c3cbd44ea7278cae46cd749"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/budget_policy.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "e60227bc6fb7692945a078255f117e6ff98879b58bebf18b9de90040571103ec"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/finalization.py",
+        "code": "arg-type",
+        "count": 1,
+        "sourceDigest": "acb8a1b586e99d460759b07bfbd53d20db4c373af3e5b258193a0ff4c02bda6f"
+      },
+      {
+        "path": "src/agent_lifecycle/workflow/leases.py",
+        "code": "operator",
+        "count": 1,
+        "sourceDigest": "6e2c7de0bf4350917191567f8571d0230356d57288015c36821fb0b6e360250d"
+      }
+    ]
+  },
+  "coverage": {
+    "minimumStatementLinePercent": 76.0,
+    "baseline": {
+      "sourceRevision": "f05f77ab9a33dfbff52e877582a4dac351005b42",
+      "os": "darwin",
+      "pythonImplementation": "CPython",
+      "pythonVersion": "3.11",
+      "coverageVersion": "7.10.6",
+      "statementPercent": 81.4643,
+      "statementCovered": 21931,
+      "statementTotal": 26921,
+      "branchCovered": 7254,
+      "branchTotal": 11144,
+      "combinedPercent": 76.6715
+    }
+  },
+  "limits": {
+    "maxWallSeconds": 900,
+    "maxOutputBytes": 16777216,
+    "maxBaselineEntries": 20000
+  },
+  "productionPromotionClaimed": false
+}

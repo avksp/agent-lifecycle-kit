@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "agent-project-workflow-preset.v1",
+  "presetId": "feature-implementation",
+  "presetVersion": "1",
+  "title": "Feature implementation",
+  "description": "A complete route for a planned feature with planning, implementation and audit review.",
+  "defaultMode": "implement",
+  "defaultRisk": "S2",
+  "reviewMesh": "implementation-audit-panel",
+  "implementationAuthority": "requires-frozen-plan",
+  "stages": {
+    "planning": {
+      "mode": "plan",
+      "risk": "S2",
+      "modelClass": "standard-code",
+      "reviewMesh": "implementation-audit-panel",
+      "minReviewers": 2,
+      "maxAttempts": 2,
+      "maxInvocations": 8,
+      "maxWallSeconds": 1800
+    },
+    "implementation": {
+      "mode": "implement",
+      "risk": "S2",
+      "modelClass": "standard-code",
+      "reviewMesh": "implementation-audit-panel",
+      "minReviewers": 2,
+      "maxAttempts": 3,
+      "maxInvocations": 12,
+      "maxWallSeconds": 3600
+    },
+    "audit": {
+      "mode": "review",
+      "risk": "S2",
+      "modelClass": "specialist-review",
+      "reviewMesh": "implementation-audit-panel",
+      "minReviewers": 2,
+      "maxAttempts": 2,
+      "maxInvocations": 8,
+      "maxWallSeconds": 1800
+    }
+  },
+  "source": "built-in",
+  "productionPromotionClaimed": false,
+  "presetDigest": "1e24dd14d5e72a956763060c7bbc47095e337a1b6fdcd057c992e16dfb67141e"
+}

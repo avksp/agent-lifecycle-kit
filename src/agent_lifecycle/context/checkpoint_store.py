@@ -5,20 +5,21 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
-from agent_lifecycle.contracts.canonical import canonical_bytes, ensure_private_directory
-from agent_lifecycle.contracts.persistence import (
-    require_private_json as require_private_file,
-    replace_private_json as write_json_replace_private,
-)
-from agent_lifecycle.contracts.redaction import redact_value
 from agent_lifecycle.context.checkpoints import (
-    CHECKPOINT_SCHEMA,
     DEFAULT_MAX_CHECKPOINT_BYTES,
     DEFAULT_TARGET_TOKENS,
     require_context_checkpoint_pass,
     validate_context_checkpoint,
 )
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.canonical import canonical_bytes, ensure_private_directory
+from agent_lifecycle.contracts.persistence import (
+    replace_private_json as write_json_replace_private,
+)
+from agent_lifecycle.contracts.persistence import (
+    require_private_json as require_private_file,
+)
+from agent_lifecycle.contracts.redaction import redact_value
 
 DEFAULT_CHECKPOINT_ROOT = Path(".alk/context/checkpoints")
 MAX_CHECKPOINTS_PER_RUN = 64
@@ -146,7 +147,16 @@ def restore_context_checkpoint(
         "checkpointDigest": checkpoint["checkpointDigest"],
         "lineage": {
             key: checkpoint[key]
-            for key in ("sessionId", "runId", "adapterId", "packageId", "planRevision", "planDigest", "stateRevision", "sourceRevision")
+            for key in (
+                "sessionId",
+                "runId",
+                "adapterId",
+                "packageId",
+                "planRevision",
+                "planDigest",
+                "stateRevision",
+                "sourceRevision",
+            )
         },
         "captureMode": checkpoint["captureMode"],
         "summary": summary,

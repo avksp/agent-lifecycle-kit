@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 1.77.0 - 2026-08-21
+
+- Added a pinned development-only Ruff, mypy and coverage toolchain with a
+  non-growing quality ratchet and a least-privilege CI workflow.
+- Added stable redacted CLI errors for expected I/O, decoding, recursion and
+  unexpected failures while preserving library and interruption behavior.
+- Made built-in profiles available from installed wheels independently of the
+  current directory, with explicit operator paths taking precedence.
+- Added a measured 76% statement-line coverage floor, complete unittest
+  discovery checks and an explicit documented Python API surface.
+- Updated English and Russian quality, architecture, installation and CLI
+  documentation and synchronized publication metadata to 1.77.0.
+
 ## 1.76.0 - 2026-08-21
 
 - Turned module, package and layer boundaries into executable release gates with

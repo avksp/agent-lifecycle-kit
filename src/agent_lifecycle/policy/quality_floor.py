@@ -6,7 +6,16 @@ from typing import Any
 
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.contracts.quality_modes import MODES, is_downgrade, max_mode, mode_index
-from agent_lifecycle.metrics.costs import DEFAULT_MODE_LIMITS
+
+__all__ = [
+    "MODES",
+    "is_downgrade",
+    "max_mode",
+    "mode_index",
+    "protected_work",
+    "quality_floor_mode",
+    "resolve_quality_floor",
+]
 
 PROTECTED_TASK_SHAPES = {"adapter", "architecture", "release"}
 PROTECTED_RISKS = {"security", "contracts", "adapter", "architecture", "release", "migration", "dataMigration", "S2"}
@@ -57,7 +66,9 @@ def resolve_quality_floor(
     risks = _risk_list(risk_flags)
     evidence = sorted({item for item in (required_evidence or []) if isinstance(item, str) and item})
     shapes = baseline_profile.get("taskShapes") if isinstance(baseline_profile, dict) else None
-    shape_config = shapes.get(task_shape) if isinstance(shapes, dict) and isinstance(shapes.get(task_shape), dict) else None
+    shape_config = (
+        shapes.get(task_shape) if isinstance(shapes, dict) and isinstance(shapes.get(task_shape), dict) else None
+    )
     floor = "standard"
     min_mode: str | None = None
     if shape_config is None:

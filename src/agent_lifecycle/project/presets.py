@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -35,8 +34,9 @@ from agent_lifecycle.project.profile import (
     profile_field_is_explicit,
     validate_stage_settings,
 )
+from agent_lifecycle.resources import builtin_profile_path
 
-PRESET_DIRECTORY = Path("profiles/project-workflow-presets")
+PRESET_DIRECTORY = Path("project-workflow-presets")
 MAX_PRESET_BYTES = 32768
 MAX_PRESETS = 8
 _URL = re.compile(r"(?:https?|file)://", re.IGNORECASE)
@@ -212,7 +212,9 @@ def render_project_preset(
     try:
         data = write_json_create(output_path, profile)
     except FileExistsError as exc:
-        raise LifecycleError("preset-output-exists", "preset output already exists", {"path": str(output_path)}) from exc
+        raise LifecycleError(
+            "preset-output-exists", "preset output already exists", {"path": str(output_path)}
+        ) from exc
     body = {
         "schemaVersion": PROJECT_PROFILE_PRESET_RENDER_SCHEMA,
         "status": "PASS",
@@ -313,13 +315,11 @@ def _preset_paths(project_root: Path | None) -> list[Path]:
     # Preset ids are built-in release data. A consuming project must not be
     # able to shadow a shipped preset by placing a same-named JSON file in its
     # own tree.
-    roots = [Path(__file__).resolve().parents[3], Path(sys.prefix).resolve()]
-    result: list[Path] = []
-    for root in roots:
-        candidate = root / PRESET_DIRECTORY
-        if candidate not in result:
-            result.append(candidate)
-    return [directory / f"{preset_id}.v1.json" for directory in result for preset_id in PROJECT_PROFILE_PRESET_IDS]
+    del project_root
+    return [
+        builtin_profile_path(f"{PRESET_DIRECTORY.as_posix()}/{preset_id}.v1.json")
+        for preset_id in PROJECT_PROFILE_PRESET_IDS
+    ]
 
 
 def _summary(preset: dict[str, Any]) -> dict[str, Any]:
@@ -348,7 +348,9 @@ def _validation(preset_id: str | None, digest: str | None, blockers: list[dict[s
 
 def _require_valid(validation: dict[str, Any]) -> None:
     if validation.get("status") != "PASS":
-        raise LifecycleError("preset-validation-failed", "workflow preset failed validation", {"validation": validation})
+        raise LifecycleError(
+            "preset-validation-failed", "workflow preset failed validation", {"validation": validation}
+        )
 
 
 def _reject_unsafe_values(value: Any, blockers: list[dict[str, Any]], *, path: str = "") -> None:

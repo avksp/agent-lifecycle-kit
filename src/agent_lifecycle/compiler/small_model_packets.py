@@ -8,8 +8,15 @@ from typing import Any
 from agent_lifecycle.compiler.task_packets import compile_task_packets
 from agent_lifecycle.context import render_context
 from agent_lifecycle.context.profiles import small_model_windows
-from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, is_under_repo_path, read_json_object
+from agent_lifecycle.contracts import (
+    LifecycleError,
+    canonical_bytes,
+    canonical_digest,
+    is_under_repo_path,
+    read_json_object,
+)
 from agent_lifecycle.policy.adaptive_lifecycle import small_model_packet_eligibility
+from agent_lifecycle.resources import builtin_profile_path
 
 SMALL_MODEL_PACKET_SCHEMA = "agent-small-model-task-packet.v1"
 SMALL_MODEL_INDEX_SCHEMA = "agent-small-model-task-packet-index.v1"
@@ -46,16 +53,25 @@ def compile_small_model_packets(
     """Compile frozen task packets into bounded small-model packets."""
 
     manifest = read_json_object(manifest_path, label="plan manifest")
-    profile = read_json_object(context_profile_path, label="context profile")
+    profile = read_json_object(
+        context_profile_path or builtin_profile_path("small-context-profile.v1.json"),
+        label="context profile",
+    )
     if target_window not in small_model_windows(profile):
-        raise LifecycleError("small-model-window-unsupported", "target window is not allowed for small-model packets", {"targetWindow": target_window})
+        raise LifecycleError(
+            "small-model-window-unsupported",
+            "target window is not allowed for small-model packets",
+            {"targetWindow": target_window},
+        )
     compiled = compile_task_packets(
         manifest_path,
         write=False,
         execution_strategy=execution_strategy,
     )
     output_dir = out_dir or _default_output_dir(manifest)
-    eligibility = small_model_packet_eligibility(adaptive_decision) if adaptive_decision is not None else _default_eligibility()
+    eligibility = (
+        small_model_packet_eligibility(adaptive_decision) if adaptive_decision is not None else _default_eligibility()
+    )
     blockers = list(eligibility.get("blockers", []))
     packets: list[dict[str, Any]] = []
     records: list[dict[str, Any]] = []

@@ -84,3 +84,26 @@ class CliDispatchBoundaryValidatorTests(unittest.TestCase):
         self.assertEqual(payload["status"], "PASS")
         self.assertEqual(payload["role"], "observability")
         self.assertEqual(payload["requiredDelegates"], {})
+
+    def test_current_planning_dispatcher_uses_specialized_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = Path(tmp) / "planning-boundary.json"
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools/release/validate_cli_dispatch_boundary.py"),
+                    "--path",
+                    "src/agent_lifecycle/cli/dispatch_planning.py",
+                    "--max-lines",
+                    "800",
+                    "--evidence",
+                    str(evidence),
+                ],
+                cwd=ROOT,
+                check=True,
+            )
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["status"], "PASS")
+        self.assertEqual(payload["role"], "planning")
+        self.assertEqual(payload["requiredDelegates"], {})

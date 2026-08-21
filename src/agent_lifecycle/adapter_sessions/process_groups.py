@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
-import time
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -39,16 +39,12 @@ class ProcessGroupOwner:
         escalation = "none"
         if self.process.poll() is None:
             if os.name == "posix":
-                try:
+                with suppress(ProcessLookupError):
                     os.killpg(self.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
                 if not _wait_process(self.process, grace_seconds):
                     escalation = "SIGKILL"
-                    try:
+                    with suppress(ProcessLookupError):
                         os.killpg(self.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
                     _wait_process(self.process, grace_seconds)
             elif self._job_handle is not None:
                 _terminate_windows_job(self._job_handle)
@@ -132,7 +128,10 @@ def _create_windows_job(process: subprocess.Popen[Any]) -> int | None:
         import ctypes
         from ctypes import wintypes
 
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        win_dll = getattr(ctypes, "WinDLL", None)
+        if not callable(win_dll):
+            return None
+        kernel32 = win_dll("kernel32", use_last_error=True)
         kernel32.CreateJobObjectW.argtypes = [wintypes.LPVOID, wintypes.LPCWSTR]
         kernel32.CreateJobObjectW.restype = wintypes.HANDLE
         kernel32.SetInformationJobObject.argtypes = [wintypes.HANDLE, wintypes.INT, ctypes.c_void_p, wintypes.DWORD]
@@ -146,20 +145,45 @@ def _create_windows_job(process: subprocess.Popen[Any]) -> int | None:
             return None
 
         class IO_COUNTERS(ctypes.Structure):
-            _fields_ = [("ReadOperationCount", ctypes.c_uint64), ("WriteOperationCount", ctypes.c_uint64), ("OtherOperationCount", ctypes.c_uint64), ("ReadTransferCount", ctypes.c_uint64), ("WriteTransferCount", ctypes.c_uint64), ("OtherTransferCount", ctypes.c_uint64)]
+            _fields_ = [
+                ("ReadOperationCount", ctypes.c_uint64),
+                ("WriteOperationCount", ctypes.c_uint64),
+                ("OtherOperationCount", ctypes.c_uint64),
+                ("ReadTransferCount", ctypes.c_uint64),
+                ("WriteTransferCount", ctypes.c_uint64),
+                ("OtherTransferCount", ctypes.c_uint64),
+            ]
 
         class BASIC_LIMITS(ctypes.Structure):
-            _fields_ = [("PerProcessUserTimeLimit", ctypes.c_int64), ("PerJobUserTimeLimit", ctypes.c_int64), ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t), ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD), ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD), ("SchedulingClass", wintypes.DWORD)]
+            _fields_ = [
+                ("PerProcessUserTimeLimit", ctypes.c_int64),
+                ("PerJobUserTimeLimit", ctypes.c_int64),
+                ("LimitFlags", wintypes.DWORD),
+                ("MinimumWorkingSetSize", ctypes.c_size_t),
+                ("MaximumWorkingSetSize", ctypes.c_size_t),
+                ("ActiveProcessLimit", wintypes.DWORD),
+                ("Affinity", ctypes.c_size_t),
+                ("PriorityClass", wintypes.DWORD),
+                ("SchedulingClass", wintypes.DWORD),
+            ]
 
         class EXTENDED_LIMITS(ctypes.Structure):
-            _fields_ = [("BasicLimitInformation", BASIC_LIMITS), ("IoInfo", IO_COUNTERS), ("ProcessMemoryLimit", ctypes.c_size_t), ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t), ("PeakJobMemoryUsed", ctypes.c_size_t)]
+            _fields_ = [
+                ("BasicLimitInformation", BASIC_LIMITS),
+                ("IoInfo", IO_COUNTERS),
+                ("ProcessMemoryLimit", ctypes.c_size_t),
+                ("JobMemoryLimit", ctypes.c_size_t),
+                ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                ("PeakJobMemoryUsed", ctypes.c_size_t),
+            ]
 
         limits = EXTENDED_LIMITS()
         limits.BasicLimitInformation.LimitFlags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
         if not kernel32.SetInformationJobObject(handle, 9, ctypes.byref(limits), ctypes.sizeof(limits)):
             kernel32.CloseHandle(handle)
             return None
-        process_handle_value = getattr(process._handle, "value", process._handle)
+        process_handle = getattr(process, "_handle", None)
+        process_handle_value = getattr(process_handle, "value", process_handle)
         if not process_handle_value:
             kernel32.CloseHandle(handle)
             return None
@@ -177,7 +201,10 @@ def _terminate_windows_job(handle: int) -> None:
         import ctypes
         from ctypes import wintypes
 
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        win_dll = getattr(ctypes, "WinDLL", None)
+        if not callable(win_dll):
+            return
+        kernel32 = win_dll("kernel32", use_last_error=True)
         kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
         kernel32.TerminateJobObject.restype = wintypes.BOOL
         kernel32.TerminateJobObject(handle, 1)
@@ -193,11 +220,29 @@ def _windows_job_active_processes(handle: int) -> int | None:
         from ctypes import wintypes
 
         class ACCOUNTING(ctypes.Structure):
-            _fields_ = [("TotalUserTime", ctypes.c_int64), ("TotalKernelTime", ctypes.c_int64), ("ThisPeriodTotalUserTime", ctypes.c_int64), ("ThisPeriodTotalKernelTime", ctypes.c_int64), ("TotalPageFaultCount", wintypes.DWORD), ("TotalProcesses", wintypes.DWORD), ("ActiveProcesses", wintypes.DWORD), ("TotalTerminatedProcesses", wintypes.DWORD)]
+            _fields_ = [
+                ("TotalUserTime", ctypes.c_int64),
+                ("TotalKernelTime", ctypes.c_int64),
+                ("ThisPeriodTotalUserTime", ctypes.c_int64),
+                ("ThisPeriodTotalKernelTime", ctypes.c_int64),
+                ("TotalPageFaultCount", wintypes.DWORD),
+                ("TotalProcesses", wintypes.DWORD),
+                ("ActiveProcesses", wintypes.DWORD),
+                ("TotalTerminatedProcesses", wintypes.DWORD),
+            ]
 
         info = ACCOUNTING()
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        kernel32.QueryInformationJobObject.argtypes = [wintypes.HANDLE, wintypes.INT, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
+        win_dll = getattr(ctypes, "WinDLL", None)
+        if not callable(win_dll):
+            return None
+        kernel32 = win_dll("kernel32", use_last_error=True)
+        kernel32.QueryInformationJobObject.argtypes = [
+            wintypes.HANDLE,
+            wintypes.INT,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            ctypes.POINTER(wintypes.DWORD),
+        ]
         kernel32.QueryInformationJobObject.restype = wintypes.BOOL
         if not kernel32.QueryInformationJobObject(handle, 1, ctypes.byref(info), ctypes.sizeof(info), None):
             return None
@@ -211,7 +256,10 @@ def _close_windows_handle(handle: int) -> None:
         import ctypes
         from ctypes import wintypes
 
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        win_dll = getattr(ctypes, "WinDLL", None)
+        if not callable(win_dll):
+            return
+        kernel32 = win_dll("kernel32", use_last_error=True)
         kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
         kernel32.CloseHandle.restype = wintypes.BOOL
         kernel32.CloseHandle(handle)

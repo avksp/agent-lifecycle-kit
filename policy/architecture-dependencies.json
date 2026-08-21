@@ -4,6 +4,8 @@
   "direction": "higher-level-imports-lower-or-same-level",
   "packageLevels": {
     "agent_lifecycle": 0,
+    "data": 0,
+    "resources": 0,
     "contracts": 0,
     "benchmarks": 1,
     "changesets": 1,

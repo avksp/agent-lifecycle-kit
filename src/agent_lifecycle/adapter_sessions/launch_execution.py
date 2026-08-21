@@ -5,37 +5,27 @@ from __future__ import annotations
 import hashlib
 import os
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from agent_lifecycle.adapter_sessions.contracts import (
     build_launch_receipt,
-    build_local_launch_probe_receipt,
     build_local_launch_profile_receipt,
 )
 from agent_lifecycle.adapter_sessions.env import resolve_launch_env
 from agent_lifecycle.adapter_sessions.local_launch_profile import (
     build_executable_identity,
     load_local_launch_profile,
-    local_receipt_argv,
     local_profile_summary,
-    planning_receipt_argv,
-    render_local_launch_argv,
     render_planning_launch_argv,
 )
 from agent_lifecycle.adapter_sessions.planning_launch import run_planning_launch
-from agent_lifecycle.adapter_sessions.process import run_process as _process_runner
 from agent_lifecycle.adapter_sessions.qualification import (
-    build_qualification_receipt,
-    require_planning_qualification_receipt,
-    require_qualification_receipt,
     shipped_profile_digest,
-    write_qualification_receipt,
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
-from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.host_protocol.validation import validate_managed_launch_profile
-from agent_lifecycle.workflow.risk_execution_gate import validate_task_risk_profile
 
 
 def load_adapter_descriptor(adapter_id: str, descriptor_path: Path | None = None) -> tuple[Path, dict[str, Any]]:
@@ -69,7 +59,8 @@ def launch_from_descriptor(
     raw_profile = descriptor.get("managedLaunch")
     profile = raw_profile if isinstance(raw_profile, dict) else {}
     validation = validate_managed_launch_profile(profile)
-    adapter_id = descriptor.get("adapterId") if isinstance(descriptor.get("adapterId"), str) else "unknown"
+    raw_adapter_id = descriptor.get("adapterId")
+    adapter_id = raw_adapter_id if isinstance(raw_adapter_id, str) else "unknown"
     timeout_seconds = _timeout_seconds(profile)
     blockers: list[dict[str, Any]] = []
     if validation["status"] != "PASS":
@@ -124,8 +115,6 @@ def inspect_local_launch_profile(
         process_calls=0,
         host_identity=identity,
     )
-
-
 
 
 def run_planning_qualification_candidate(
@@ -198,7 +187,8 @@ def run_planning_qualification_candidate(
     )
     after = identity_runner(root)
     blockers = list(receipt.get("blockers", []))
-    usage = receipt.get("usageEvidence") if isinstance(receipt.get("usageEvidence"), dict) else {}
+    raw_usage = receipt.get("usageEvidence")
+    usage: dict[str, Any] = raw_usage if isinstance(raw_usage, dict) else {}
     input_tokens = usage.get("inputTokens")
     output_tokens = usage.get("outputTokens")
     if usage.get("confidence") != "ATTESTED" or not isinstance(input_tokens, int) or not isinstance(output_tokens, int):
@@ -332,7 +322,7 @@ def capture_git_worktree_identity(project_root: Path) -> dict[str, Any]:
         try:
             before = path.lstat()
             if path.is_symlink():
-                payload = os.fsencode(os.readlink(path))
+                payload = os.fsencode(path.readlink())
                 kind = "symlink"
             else:
                 payload = path.read_bytes()
@@ -379,8 +369,7 @@ def _git_bytes(root: Path, args: list[str]) -> bytes:
             cwd=root,
             shell=False,
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             timeout=10,
             check=False,
         )
@@ -478,7 +467,8 @@ def _planning_qualification_report(
         and before.get("identityDigest") == after.get("identityDigest")
         and not blockers
     )
-    policy = profile.get("qualification") if isinstance(profile.get("qualification"), dict) else {}
+    raw_policy = profile.get("qualification")
+    policy: dict[str, Any] = raw_policy if isinstance(raw_policy, dict) else {}
     body = {
         "schemaVersion": "agent-planning-launch-qualification-evidence.v1",
         "status": "PASS" if passed else "FAIL",
@@ -490,7 +480,8 @@ def _planning_qualification_report(
             "maxWallSeconds": approved_wall_seconds,
             "modelTokenBudget": approved_model_token_budget,
         },
-        "usageEvidence": usage_evidence or {
+        "usageEvidence": usage_evidence
+        or {
             "confidence": "MISSING",
             "inputTokens": None,
             "outputTokens": None,
@@ -499,9 +490,7 @@ def _planning_qualification_report(
         "planningSupportStatus": "PLANNING_ONLY_QUALIFIED" if passed else "PLANNING_ONLY_UNSUPPORTED",
         "processCalls": 1 if receipt and receipt.get("hostLaunchStarted") else 0,
         "modelCallsStarted": bool(receipt and receipt.get("modelCallsStarted")),
-        "worktreeUnchanged": bool(
-            before and after and before.get("identityDigest") == after.get("identityDigest")
-        ),
+        "worktreeUnchanged": bool(before and after and before.get("identityDigest") == after.get("identityDigest")),
         "planningReceiptDigest": receipt.get("receiptDigest") if receipt else None,
         "blockers": blockers,
         "productionPromotionClaimed": False,

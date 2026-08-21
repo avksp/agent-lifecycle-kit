@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import argparse
 
+from agent_lifecycle.resources import builtin_profile_path
+
+_SMALL_CONTEXT_PROFILE = builtin_profile_path("small-context-profile.v1.json")
+
+
 def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     plan = subparsers.add_parser("plan", help="plan commands")
     plan_sub = plan.add_subparsers(dest="plan_command", required=True)
@@ -46,6 +51,7 @@ def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     delta_check.add_argument("--delta", required=True)
     delta_check.add_argument("--out")
 
+
 def _add_task_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     task = subparsers.add_parser("task", help="task commands")
     task_sub = task.add_subparsers(dest="task_command", required=True)
@@ -56,7 +62,7 @@ def _add_task_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     task_compile.add_argument("--write", action="store_true")
     small_compile = task_sub.add_parser("compile-small")
     small_compile.add_argument("--manifest", required=True)
-    small_compile.add_argument("--context-profile", default="profiles/small-context-profile.v1.json")
+    small_compile.add_argument("--context-profile", default=_SMALL_CONTEXT_PROFILE)
     small_compile.add_argument("--target-window", default="4k-strict")
     small_compile.add_argument("--adaptive-decision")
     small_compile.add_argument("--strategy")

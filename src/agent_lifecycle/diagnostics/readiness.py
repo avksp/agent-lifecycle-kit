@@ -15,6 +15,7 @@ from agent_lifecycle.host_protocol import (
     validate_adapter_descriptor,
 )
 from agent_lifecycle.model_routing import validate_model_routing_profile
+from agent_lifecycle.resources import builtin_profile_path
 
 READINESS_SCHEMA_VERSION = "agent-readiness-report.v1"
 INSTALL_PLAN_SCHEMA_VERSION = "agent-adapter-install-plan.v1"
@@ -43,8 +44,16 @@ def build_readiness_report(
     if max_host_probes < 0:
         raise LifecycleError("invalid-diagnose-probe-cap", "diagnose probe cap must be non-negative")
 
-    context_profile_path = _resolve(root, context_profile or Path("profiles/small-context-profile.v1.json"))
-    model_profile_path = _resolve(root, model_profile or Path("profiles/model-routing-profile.v1.json"))
+    context_profile_path = (
+        builtin_profile_path("small-context-profile.v1.json")
+        if context_profile is None
+        else _resolve(root, context_profile)
+    )
+    model_profile_path = (
+        builtin_profile_path("model-routing-profile.v1.json")
+        if model_profile is None
+        else _resolve(root, model_profile)
+    )
     baseline_path = _resolve(root, adapter_baseline or Path("conformance/core/adapter-baseline.v1.json"))
     evidence_index_path = _resolve(root, evidence_summary_index or DEFAULT_EVIDENCE_SUMMARY_INDEX)
     descriptors = [_resolve(root, item) for item in adapter_paths] if adapter_paths else _discover_adapters(root)
@@ -116,9 +125,7 @@ def build_adapter_install_plan(*, project_root: Path, descriptor_path: Path) -> 
     adapter_id = _required_str(descriptor, "adapterId", path)
     maturity = descriptor.get("maturity")
     installation = (
-        load_installation_facts(descriptor)
-        if "installation" in descriptor
-        else _undeclared_installation_facts()
+        load_installation_facts(descriptor) if "installation" in descriptor else _undeclared_installation_facts()
     )
     return {
         "schemaVersion": INSTALL_PLAN_SCHEMA_VERSION,
@@ -297,9 +304,17 @@ def _context_profile_check(root: Path, path: Path) -> dict[str, Any]:
     try:
         validation = load_context_profile(path)
     except OSError as exc:
-        return {"name": "profile:context", "status": "FAIL", "details": {"path": _display_path(path, root), "reason": type(exc).__name__}}
+        return {
+            "name": "profile:context",
+            "status": "FAIL",
+            "details": {"path": _display_path(path, root), "reason": type(exc).__name__},
+        }
     except LifecycleError as exc:
-        return {"name": "profile:context", "status": "FAIL", "details": {"path": _display_path(path, root), "reason": exc.code}}
+        return {
+            "name": "profile:context",
+            "status": "FAIL",
+            "details": {"path": _display_path(path, root), "reason": exc.code},
+        }
     return {
         "name": "profile:context",
         "status": "PASS",
@@ -316,9 +331,17 @@ def _model_profile_check(root: Path, path: Path) -> dict[str, Any]:
     try:
         validation = validate_model_routing_profile(read_json_object(path, label=_display_path(path, root)))
     except OSError as exc:
-        return {"name": "profile:model-routing", "status": "FAIL", "details": {"path": _display_path(path, root), "reason": type(exc).__name__}}
+        return {
+            "name": "profile:model-routing",
+            "status": "FAIL",
+            "details": {"path": _display_path(path, root), "reason": type(exc).__name__},
+        }
     except LifecycleError as exc:
-        return {"name": "profile:model-routing", "status": "FAIL", "details": {"path": _display_path(path, root), "reason": exc.code}}
+        return {
+            "name": "profile:model-routing",
+            "status": "FAIL",
+            "details": {"path": _display_path(path, root), "reason": exc.code},
+        }
     return {
         "name": "profile:model-routing",
         "status": "PASS",
@@ -335,10 +358,22 @@ def _read_optional_json(root: Path, path: Path, label: str, checks: list[dict[st
     try:
         payload = read_json_object(path, label=label)
     except OSError as exc:
-        checks.append({"name": "adapter:baseline", "status": "FAIL", "details": {"path": _display_path(path, root), "reason": type(exc).__name__}})
+        checks.append(
+            {
+                "name": "adapter:baseline",
+                "status": "FAIL",
+                "details": {"path": _display_path(path, root), "reason": type(exc).__name__},
+            }
+        )
         return None
     except LifecycleError as exc:
-        checks.append({"name": "adapter:baseline", "status": "FAIL", "details": {"path": _display_path(path, root), "reason": exc.code}})
+        checks.append(
+            {
+                "name": "adapter:baseline",
+                "status": "FAIL",
+                "details": {"path": _display_path(path, root), "reason": exc.code},
+            }
+        )
         return None
     checks.append({"name": "adapter:baseline", "status": "PASS", "details": {"path": _display_path(path, root)}})
     return payload
@@ -349,10 +384,22 @@ def _read_tracked_evidence_index(root: Path, path: Path, checks: list[dict[str, 
     try:
         payload = read_json_object(path, label=display_path)
     except OSError as exc:
-        checks.append({"name": "evidence:tracked-summary-index", "status": "WARN", "details": {"path": display_path, "reason": type(exc).__name__}})
+        checks.append(
+            {
+                "name": "evidence:tracked-summary-index",
+                "status": "WARN",
+                "details": {"path": display_path, "reason": type(exc).__name__},
+            }
+        )
         return {}
     except LifecycleError as exc:
-        checks.append({"name": "evidence:tracked-summary-index", "status": "WARN", "details": {"path": display_path, "reason": exc.code}})
+        checks.append(
+            {
+                "name": "evidence:tracked-summary-index",
+                "status": "WARN",
+                "details": {"path": display_path, "reason": exc.code},
+            }
+        )
         return {}
 
     invalid: list[dict[str, Any]] = []
@@ -403,10 +450,10 @@ def _discover_adapters(root: Path) -> list[Path]:
     return sorted(adapters.glob("*/adapter.descriptor.json"))
 
 
-def _evidence_summary(root: Path, adapters: list[dict[str, Any]]) -> dict[str, Any]:
+def _evidence_summary(_root: Path, adapters: list[dict[str, Any]]) -> dict[str, Any]:
     verified = [item for item in adapters if item.get("maturity") == "VERIFIED"]
-    missing_local_raw = []
-    missing_tracked = []
+    missing_local_raw: list[dict[str, Any]] = []
+    missing_tracked: list[dict[str, Any]] = []
     local_only = 0
     tracked_summary_count = 0
     for item in verified:
@@ -616,5 +663,7 @@ def _display_path(path: Path, root: Path) -> str:
 def _required_str(payload: dict[str, Any], field: str, path: Path) -> str:
     value = payload.get(field)
     if not isinstance(value, str) or not value:
-        raise LifecycleError("invalid-adapter-descriptor", f"{_display_path(path, path.parent)}: {field} must be a non-empty string")
+        raise LifecycleError(
+            "invalid-adapter-descriptor", f"{_display_path(path, path.parent)}: {field} must be a non-empty string"
+        )
     return value

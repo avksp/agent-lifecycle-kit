@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import Any
@@ -126,7 +125,7 @@ def _build_import_result(
     )
     if text and candidate is None and not blockers:
         blockers.append({"code": "planning-import-requirements-missing"})
-    body = {
+    body: dict[str, Any] = {
         "schemaVersion": PLANNING_IMPORT_RESULT_SCHEMA,
         "status": "PASS",
         "enabledByDefault": False,
@@ -193,7 +192,8 @@ def validate_import_result(result: dict[str, Any]) -> dict[str, Any]:
             blockers.append({"code": "planning-import-candidate-schema"})
         if candidate.get("status") != "DRAFT":
             blockers.append({"code": "planning-import-candidate-not-draft", "status": candidate.get("status")})
-        import_state = candidate.get("importState") if isinstance(candidate.get("importState"), dict) else {}
+        raw_import_state = candidate.get("importState")
+        import_state: dict[str, Any] = raw_import_state if isinstance(raw_import_state, dict) else {}
         if import_state.get("requiresReview") is not True:
             blockers.append({"code": "planning-import-candidate-review-not-required"})
         if import_state.get("auditRequired") is not True:
@@ -264,13 +264,17 @@ def validate_skill_improvement_proposal(proposal: dict[str, Any]) -> dict[str, A
 
 def require_import_validation_pass(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("status") != "PASS":
-        raise LifecycleError("planning-import-validation-failed", "planning import validation failed", {"validation": payload})
+        raise LifecycleError(
+            "planning-import-validation-failed", "planning import validation failed", {"validation": payload}
+        )
     return payload
 
 
 def require_skill_proposal_pass(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("status") != "PASS":
-        raise LifecycleError("skill-proposal-validation-failed", "skill proposal validation failed", {"validation": payload})
+        raise LifecycleError(
+            "skill-proposal-validation-failed", "skill proposal validation failed", {"validation": payload}
+        )
     return payload
 
 
@@ -370,7 +374,8 @@ def _extract_title(text: str, parsed: dict[str, Any] | None) -> str:
         title = parsed.get("title")
         if isinstance(title, str) and title.strip():
             return _clean_line(title, limit=96)
-        package = parsed.get("package") if isinstance(parsed.get("package"), dict) else {}
+        raw_package = parsed.get("package")
+        package: dict[str, Any] = raw_package if isinstance(raw_package, dict) else {}
         package_title = package.get("title")
         if isinstance(package_title, str) and package_title.strip():
             return _clean_line(package_title, limit=96)
@@ -386,7 +391,8 @@ def _extract_requirements(text: str, parsed: dict[str, Any] | None) -> list[dict
     if parsed is not None:
         raw_requirements = parsed.get("requirements")
         if not isinstance(raw_requirements, list):
-            spec = parsed.get("specification") if isinstance(parsed.get("specification"), dict) else {}
+            raw_spec = parsed.get("specification")
+            spec: dict[str, Any] = raw_spec if isinstance(raw_spec, dict) else {}
             raw_requirements = spec.get("requirements")
         if isinstance(raw_requirements, list):
             for item in raw_requirements:
@@ -402,11 +408,15 @@ def _extract_requirements(text: str, parsed: dict[str, Any] | None) -> list[dict
             elif re.match(r"^\d+\.\s+", stripped):
                 extracted.append(re.sub(r"^\d+\.\s+", "", stripped))
     if not extracted:
-        fallback = " ".join(line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith("#"))
+        fallback = " ".join(
+            line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith("#")
+        )
         if fallback:
             extracted.append(fallback)
     cleaned = [_clean_line(item, limit=MAX_REQUIREMENT_CHARS) for item in extracted if item.strip()]
-    return [{"id": f"R-IMPORT-{index + 1}", "description": item} for index, item in enumerate(cleaned[:MAX_REQUIREMENTS])]
+    return [
+        {"id": f"R-IMPORT-{index + 1}", "description": item} for index, item in enumerate(cleaned[:MAX_REQUIREMENTS])
+    ]
 
 
 def _decode_text(data: bytes, blockers: list[dict[str, Any]]) -> str:

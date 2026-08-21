@@ -11,7 +11,9 @@ from agent_lifecycle.contracts import canonical_digest
 def analyze_provenance(sources: list[dict[str, Any]], edges: list[dict[str, Any]]) -> dict[str, Any]:
     """Analyze source relationships without treating copies as independent."""
 
-    source_ids = {item.get("sourceId") for item in sources if isinstance(item, dict) and isinstance(item.get("sourceId"), str)}
+    source_ids: set[str] = {
+        item["sourceId"] for item in sources if isinstance(item, dict) and isinstance(item.get("sourceId"), str)
+    }
     blockers: list[dict[str, Any]] = []
     adjacency: dict[str, list[str]] = defaultdict(list)
     undirected: dict[str, set[str]] = {source_id: set() for source_id in source_ids}
@@ -26,7 +28,12 @@ def analyze_provenance(sources: list[dict[str, Any]], edges: list[dict[str, Any]
         source_id = edge.get("sourceId")
         related_id = edge.get("relatedSourceId")
         relationship = edge.get("relationship")
-        if source_id not in source_ids or related_id not in source_ids:
+        if (
+            not isinstance(source_id, str)
+            or not isinstance(related_id, str)
+            or source_id not in source_ids
+            or related_id not in source_ids
+        ):
             blockers.append({"code": "provenance-source-missing", "index": index})
             continue
         if source_id == related_id:
@@ -40,9 +47,7 @@ def analyze_provenance(sources: list[dict[str, Any]], edges: list[dict[str, Any]
         undirected[related_id].add(source_id)
         if relationship == "duplicate-of":
             duplicate_union.join(source_id, related_id)
-            duplicate_edges.append(
-                {"sourceId": source_id, "relatedSourceId": related_id, "independence": "duplicate"}
-            )
+            duplicate_edges.append({"sourceId": source_id, "relatedSourceId": related_id, "independence": "duplicate"})
             independence[source_id] = "duplicate"
             independence[related_id] = "duplicate"
         elif relationship == "derived-from":
@@ -104,7 +109,7 @@ def _find_cycles(adjacency: dict[str, list[str]], source_ids: set[str]) -> list[
     def visit(node: str, path: list[str]) -> None:
         if node in visiting:
             start = path.index(node) if node in path else 0
-            cycle = path[start:] + [node]
+            cycle = [*path[start:], node]
             if cycle not in cycles:
                 cycles.append(cycle)
             return
@@ -112,7 +117,7 @@ def _find_cycles(adjacency: dict[str, list[str]], source_ids: set[str]) -> list[
             return
         visiting.add(node)
         for child in adjacency.get(node, []):
-            visit(child, path + [node])
+            visit(child, [*path, node])
         visiting.remove(node)
         visited.add(node)
 
