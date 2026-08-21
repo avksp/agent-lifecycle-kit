@@ -163,7 +163,11 @@ def _regular_stat(path: Path, *, label: str) -> os.stat_result:
 
 
 def _require_same_identity(before: os.stat_result, after: os.stat_result, *, label: str) -> None:
-    identity = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+    # Windows changed ``st_ctime`` semantics in Python 3.12. File identity,
+    # size and modification time remain stable across path/fd stat calls.
+    identity = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
+    if os.name != "nt":
+        identity += ("st_ctime_ns",)
     if any(getattr(before, field) != getattr(after, field) for field in identity):
         raise LifecycleError("repository-input-changed-during-read", f"{label}: file changed during read")
 
