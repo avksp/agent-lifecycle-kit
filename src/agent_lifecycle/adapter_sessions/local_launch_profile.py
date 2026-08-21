@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +21,7 @@ MAX_PROFILE_BYTES = 32768
 MAX_TIMEOUT_SECONDS = 300.0
 MAX_ARGV_ITEMS = 64
 MAX_ARG_BYTES = 4096
+EXECUTABLE_HASH_CHUNK_BYTES = 256 * 1024
 SAFE_VERSION_PROBES = (("--version",), ("-V",), ("version",))
 PLANNING_SUPPORT_STATUSES = frozenset(
     {"PLANNING_ONLY_QUALIFIED", "PLANNING_ONLY_UNSUPPORTED"}
@@ -183,6 +187,91 @@ def validate_local_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
         "productionPromotionClaimed": False,
     }
     return {**body, "validationDigest": canonical_digest(body)}
+
+
+def build_executable_identity(
+    profile: dict[str, Any],
+    *,
+    process_env: dict[str, str] | None = None,
+    profile_digest: str | None = None,
+    shipped_profile_digest: str | None = None,
+    strict: bool = True,
+) -> dict[str, Any]:
+    """Bind a launch receipt to the resolved executable without storing its path."""
+
+    executable = str(profile.get("executable", ""))
+    source_env = os.environ if process_env is None else process_env
+    if Path(executable).is_absolute():
+        candidate = Path(executable)
+    else:
+        path_value = None if process_env is None else source_env.get("PATH", "")
+        resolved_name = shutil.which(executable, path=path_value)
+        candidate = Path(resolved_name) if resolved_name else None
+    origin = "SHIPPED_PROFILE_BOUND" if profile_digest and profile_digest == shipped_profile_digest else "OPERATOR_OWNED_UNVERIFIED"
+    base = {
+        "schemaVersion": "agent-host-executable-identity.v1",
+        "status": "UNAVAILABLE",
+        "trustClass": origin,
+        "profileOrigin": origin,
+        "profileDigest": profile_digest,
+        "shippedProfileDigest": shipped_profile_digest,
+        "executableName": _executable_name(executable),
+        "resolvedPathSha256": None,
+        "executableContentSha256": None,
+        "executableBytes": None,
+        "resolvedFromSymlink": False,
+        "pathStored": False,
+    }
+    if candidate is None:
+        if strict:
+            raise LifecycleError(
+                "local-launch-executable-identity-unavailable",
+                "launch executable could not be resolved from the allowlisted environment",
+                {"executableName": _executable_name(executable)},
+            )
+        return {**base, "identityDigest": canonical_digest(base)}
+    try:
+        resolved = candidate.resolve(strict=True)
+        before = resolved.stat()
+        if not resolved.is_file():
+            raise OSError("executable is not a regular file")
+        digest = hashlib.sha256()
+        byte_count = 0
+        with resolved.open("rb") as handle:
+            while True:
+                chunk = handle.read(EXECUTABLE_HASH_CHUNK_BYTES)
+                if not chunk:
+                    break
+                digest.update(chunk)
+                byte_count += len(chunk)
+        after = resolved.stat()
+    except OSError as exc:
+        if strict:
+            raise LifecycleError(
+                "local-launch-executable-identity-unavailable",
+                "launch executable identity could not be read",
+                {"executableName": _executable_name(executable), "errorType": type(exc).__name__},
+            ) from exc
+        return {**base, "identityDigest": canonical_digest(base)}
+    identity_before = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
+    identity_after = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)
+    if identity_before != identity_after:
+        if not strict:
+            return {**base, "identityDigest": canonical_digest(base)}
+        raise LifecycleError(
+            "local-launch-executable-changed",
+            "launch executable changed while its identity was captured",
+            {"executableName": _executable_name(executable)},
+        )
+    body = {
+        **base,
+        "status": "PASS",
+        "resolvedPathSha256": hashlib.sha256(os.fsencode(str(resolved))).hexdigest(),
+        "executableContentSha256": digest.hexdigest(),
+        "executableBytes": byte_count,
+        "resolvedFromSymlink": candidate != resolved,
+    }
+    return {**body, "identityDigest": canonical_digest(body)}
 
 
 def render_local_launch_argv(profile: dict[str, Any], bindings: dict[str, str]) -> list[str]:

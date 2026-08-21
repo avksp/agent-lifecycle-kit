@@ -227,8 +227,11 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
         )
     if args.adapter_command == "launch-profile":
         profile = load_shipped_launch_profile(args.adapter, repository_root=Path(args.repository_root))
+        shipped_digest = canonical_digest(profile)
+        profile_origin = "SHIPPED_PROFILE_BOUND"
         if args.executable:
             profile = {**profile, "executable": args.executable}
+            profile_origin = "OPERATOR_OWNED_UNVERIFIED"
         validation = validate_local_launch_profile(profile)
         if validation["status"] != "PASS":
             raise LifecycleError("qualified-launch-profile-invalid", "shipped launch profile failed validation", validation)
@@ -240,6 +243,8 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
             "adapterId": args.adapter,
             "profilePath": out.as_posix(),
             "profileDigest": validation["profileDigest"],
+            "profileOrigin": profile_origin,
+            "shippedProfileDigest": shipped_digest,
             "publicSupportClaimed": False,
             "productionPromotionClaimed": False,
         }

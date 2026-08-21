@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .authority import RECEIPT_DOMAIN
+from .authority import RECEIPT_V4_DOMAIN
 from .canonical import canonical_bytes, load_json, sha256_hex
 from .ed25519 import fingerprint, verify
 from .errors import NeutralityError
@@ -22,6 +22,10 @@ REQUIRED_COMPLETENESS_COUNTERS = (
     "occupiedOutputConflicts",
     "pathAliasConflicts",
 )
+
+CLAIMS_SCHEMA_VERSION = "agent-neutrality-claims.v4"
+ENVELOPE_SCHEMA_VERSION = "agent-neutrality-receipt-envelope.v4"
+RECEIPT_SCHEMA_VERSION = "agent-neutrality-detached-receipt.v4"
 
 
 def build_claims(
@@ -55,7 +59,7 @@ def build_claims(
         },
     ]
     return {
-        "schemaVersion": "agent-neutrality-claims.v3",
+        "schemaVersion": CLAIMS_SCHEMA_VERSION,
         "operation": operation,
         "projectionSchemaVersion": "agent-neutrality-subject-projection.v2",
         "profileDigest": sha256_hex(canonical_bytes(profile)),
@@ -85,14 +89,18 @@ def build_receipt(
     signature: str,
 ) -> dict[str, Any]:
     claims_digest = sha256_hex(canonical_bytes(claims))
-    return {
-        "schemaVersion": "agent-neutrality-detached-receipt.v3",
+    envelope = {
+        "schemaVersion": ENVELOPE_SCHEMA_VERSION,
         "operation": operation,
+        "claims": claims,
         "claimsDigest": claims_digest,
         "primaryArtifact": {"sha256": primary_sha256, "bytes": primary_bytes},
+    }
+    return {
+        "schemaVersion": RECEIPT_SCHEMA_VERSION,
+        "envelope": envelope,
         "signer": {"algorithm": "Ed25519", "fingerprint": signer_fingerprint},
         "signature": signature,
-        "claims": claims,
     }
 
 
@@ -108,51 +116,83 @@ def verify_existing_receipt(
         receipt = load_json(stable_read_bytes(receipt_path))
         primary = stable_read_bytes(primary_path)
         report = load_json(primary)
-    except (OSError, NeutralityError):
+        trust_root = load_json(stable_read_bytes(trust_root_path))
+        public_key = _public_key_for_fingerprint(trust_root, expected_signer_fingerprint)
+    except (OSError, NeutralityError, TypeError, ValueError):
         return False
-    if receipt.get("schemaVersion") != "agent-neutrality-detached-receipt.v3":
+    if receipt.get("schemaVersion") != RECEIPT_SCHEMA_VERSION:
         return False
-    if expected_operation is not None and receipt.get("operation") != expected_operation:
+    if set(receipt) != {"schemaVersion", "envelope", "signer", "signature"}:
         return False
-    primary_identity = receipt.get("primaryArtifact")
-    if not isinstance(primary_identity, dict):
+    envelope = receipt.get("envelope")
+    if not isinstance(envelope, dict) or set(envelope) != {
+        "schemaVersion",
+        "operation",
+        "claims",
+        "claimsDigest",
+        "primaryArtifact",
+    }:
+        return False
+    if envelope.get("schemaVersion") != ENVELOPE_SCHEMA_VERSION:
+        return False
+    operation = envelope.get("operation")
+    if not isinstance(operation, dict):
+        return False
+    if expected_operation is not None and operation != expected_operation:
+        return False
+    if report.get("operation") != operation:
+        return False
+    claims = envelope.get("claims")
+    if not isinstance(claims, dict) or claims.get("schemaVersion") != CLAIMS_SCHEMA_VERSION:
+        return False
+    if claims.get("operation") != operation:
+        return False
+    claims_digest = envelope.get("claimsDigest")
+    if not isinstance(claims_digest, str) or sha256_hex(canonical_bytes(claims)) != claims_digest:
+        return False
+    if report.get("claimsDigest") != claims_digest:
+        return False
+    primary_identity = envelope.get("primaryArtifact")
+    if not isinstance(primary_identity, dict) or set(primary_identity) != {"sha256", "bytes"}:
         return False
     if primary_identity.get("sha256") != sha256_hex(primary):
         return False
     if primary_identity.get("bytes") != len(primary):
         return False
-    trust_root = load_json(stable_read_bytes(trust_root_path))
-    public_key = _public_key_for_fingerprint(trust_root, expected_signer_fingerprint)
-    claims_digest = receipt.get("claimsDigest")
-    signature = receipt.get("signature")
-    if not isinstance(claims_digest, str) or not isinstance(signature, str):
-        return False
-    if report.get("claimsDigest") != claims_digest:
-        return False
     try:
         zero_counters = require_zero_completeness_counters(report)
+        actual_subject_digest = _report_subject_digest(report)
+        scope_binding = _scope_binding(report)
     except NeutralityError:
         return False
-    claims = receipt.get("claims")
-    if claims is not None:
-        if not isinstance(claims, dict) or sha256_hex(canonical_bytes(claims)) != claims_digest:
-            return False
-        try:
-            actual_subject_digest = _report_subject_digest(report)
-            scope_binding = _scope_binding(report)
-        except NeutralityError:
-            return False
-        if (
-            report.get("digests", {}).get("subjectDigest") != actual_subject_digest
-            or claims.get("subjectDigest") != actual_subject_digest
-            or claims.get("scopeBinding") != scope_binding
-            or claims.get("scopeBindingDigest") != sha256_hex(canonical_bytes(scope_binding))
-            or claims.get("scopeProfileDigest") != sha256_hex(canonical_bytes(scope_binding))
-            or claims.get("deprecatedScope") != scope_binding["deprecatedScope"]
-            or claims.get("zeroCounters") != zero_counters
-        ):
-            return False
-    return verify(public_key, RECEIPT_DOMAIN + claims_digest.encode("ascii"), bytes.fromhex(signature))
+    if (
+        report.get("digests", {}).get("subjectDigest") != actual_subject_digest
+        or claims.get("subjectDigest") != actual_subject_digest
+        or claims.get("scopeBinding") != scope_binding
+        or claims.get("scopeBindingDigest") != sha256_hex(canonical_bytes(scope_binding))
+        or claims.get("scopeProfileDigest") != sha256_hex(canonical_bytes(scope_binding))
+        or claims.get("deprecatedScope") != scope_binding["deprecatedScope"]
+        or claims.get("zeroCounters") != zero_counters
+    ):
+        return False
+    signer = receipt.get("signer")
+    signature = receipt.get("signature")
+    if (
+        not isinstance(signer, dict)
+        or set(signer) != {"algorithm", "fingerprint"}
+        or signer.get("algorithm") != "Ed25519"
+        or signer.get("fingerprint") != expected_signer_fingerprint
+        or not isinstance(signature, str)
+    ):
+        return False
+    try:
+        signature_bytes = bytes.fromhex(signature)
+    except ValueError:
+        return False
+    try:
+        return verify(public_key, RECEIPT_V4_DOMAIN + canonical_bytes(envelope), signature_bytes)
+    except (TypeError, ValueError):
+        return False
 
 
 def require_zero_completeness_counters(report: dict[str, Any]) -> dict[str, int]:

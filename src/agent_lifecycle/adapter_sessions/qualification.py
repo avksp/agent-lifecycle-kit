@@ -69,6 +69,15 @@ def load_shipped_launch_profile(adapter_id: str, *, repository_root: Path | None
     return profile
 
 
+def shipped_profile_digest(adapter_id: str, *, repository_root: Path | None = None) -> str | None:
+    """Return the digest of the shipped literal profile when this checkout has one."""
+
+    try:
+        return canonical_digest(load_shipped_launch_profile(adapter_id, repository_root=repository_root))
+    except LifecycleError:
+        return None
+
+
 def validate_qualification_policy(profile: dict[str, Any]) -> list[dict[str, Any]]:
     policy = profile.get("qualification")
     if policy is None:
@@ -94,6 +103,7 @@ def build_qualification_receipt(
     profile: dict[str, Any],
     profile_digest: str,
     probe_receipt: dict[str, Any],
+    executable_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Bind a successful version probe to one exact local profile."""
 
@@ -121,6 +131,7 @@ def build_qualification_receipt(
         "expectedHostVersion": expected,
         "actualHostVersion": actual,
         "profileDigest": profile_digest,
+        "executableIdentity": executable_identity,
         "probeReceiptDigest": probe_receipt.get("receiptDigest"),
         "processCalls": 1,
         "modelCallsStarted": False,
@@ -154,6 +165,7 @@ def require_qualification_receipt(
     project_root: Path,
     profile: dict[str, Any],
     profile_digest: str,
+    executable_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Return the bound receipt or fail before the process boundary."""
 
@@ -185,6 +197,8 @@ def require_qualification_receipt(
     }
     if any(receipt.get(key) != value for key, value in expected.items()) or receipt.get("receiptDigest") != canonical_digest({k: v for k, v in receipt.items() if k != "receiptDigest"}):
         raise LifecycleError("qualified-launch-receipt-invalid", "qualification receipt does not bind this profile and version")
+    if executable_identity is not None and receipt.get("executableIdentity") != executable_identity:
+        raise LifecycleError("qualified-launch-executable-identity-mismatch", "qualification receipt does not bind the current executable identity")
     if receipt.get("blockers") != []:
         raise LifecycleError("qualified-launch-receipt-invalid", "qualification receipt contains blockers")
     return receipt
@@ -205,6 +219,7 @@ def require_planning_qualification_receipt(
     project_root: Path,
     profile: dict[str, Any],
     profile_digest: str,
+    executable_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Require both release planning evidence and a bound local version probe."""
 
@@ -224,6 +239,7 @@ def require_planning_qualification_receipt(
         project_root=project_root,
         profile=profile,
         profile_digest=profile_digest,
+        executable_identity=executable_identity,
     )
     if not isinstance(receipt, dict) or receipt.get("planningSupportStatus") != "PLANNING_ONLY_QUALIFIED":
         raise LifecycleError(

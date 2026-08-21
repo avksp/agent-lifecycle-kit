@@ -195,7 +195,12 @@ class GrokBuildHarnessTests(unittest.TestCase):
             self.assertEqual(first_usage["cumulativeContextBytesSource"], "harness-observed-prompt-and-json-output-bytes")
 
 
-def test_grok_build_probe_receipt_passes_without_live_model_call_when_probe_is_valid() -> None:
+class GrokBuildProbeReceiptTests(unittest.TestCase):
+    def test_grok_build_probe_receipt_passes_without_live_model_call_when_probe_is_valid(self) -> None:
+        _test_grok_build_probe_receipt_passes_without_live_model_call_when_probe_is_valid()
+
+
+def _test_grok_build_probe_receipt_passes_without_live_model_call_when_probe_is_valid() -> None:
     descriptor = _load_json(ROOT / "adapters/grok-build/adapter.descriptor.json")
     receipt = build_acp_probe_receipt(
         descriptor["hostCapabilities"][0],

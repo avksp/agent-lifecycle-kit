@@ -79,6 +79,7 @@ def build_launch_receipt(
     profile_digest: str | None = None,
     risk_profile_digest: str | None = None,
     receipt_argv: list[str] | None = None,
+    host_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stdout_tail, stdout_changed = redact_process_text(stdout_tail[-2000:])
     stderr_tail, stderr_changed = redact_process_text(stderr_tail[-2000:])
@@ -101,6 +102,7 @@ def build_launch_receipt(
         "argvRedacted": argv_changed,
         "profileDigest": profile_digest,
         "riskProfileDigest": risk_profile_digest,
+        "hostIdentity": host_identity,
         "hostLaunchStarted": host_launch_started,
         "modelCallsStarted": False,
         "secretsWritten": False,
@@ -121,6 +123,7 @@ def build_local_launch_profile_receipt(
     process_calls: int,
     probe_receipt: dict[str, Any] | None = None,
     blockers: list[dict[str, Any]] | None = None,
+    host_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a portable inspect or preflight receipt without local values."""
 
@@ -132,6 +135,7 @@ def build_local_launch_profile_receipt(
         "profilePath": profile_path,
         "profile": safe_summary,
         "profileDigest": profile_digest,
+        "hostIdentity": host_identity,
         "processCalls": process_calls,
         "probeReceipt": probe_receipt,
         "redactionApplied": summary_changed

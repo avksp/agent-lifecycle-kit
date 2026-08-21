@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +13,7 @@ from agent_lifecycle.adapter_sessions.planning_session import (
     planning_session_path,
     transition_planning_session,
 )
+from agent_lifecycle.adapter_sessions.session_store import create_session, session_path
 from agent_lifecycle.contracts import LifecycleError
 
 
@@ -47,6 +50,35 @@ class PlanningSessionTests(unittest.TestCase):
         self.assertFalse(reviewed["implementationAuthorized"])
         self.assertFalse(reviewed["productionPromotionClaimed"])
         self.assertNotIn(raw, stored)
+
+    @unittest.skipUnless(os.name != "nt", "POSIX mode contract only")
+    def test_planning_and_adapter_session_state_is_owner_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            old_umask = os.umask(0)
+            try:
+                planning = create_planning_session(
+                    adapter_id="codex",
+                    requested_mode="plan",
+                    input_summary={"source": "TEXT", "sha256": "a" * 64, "byteCount": 4},
+                    session_root=root / "planning",
+                )
+                adapter = create_session(
+                    adapter_id="codex",
+                    mode="INTERACTIVE",
+                    status="WAITING_FOR_TASK",
+                    launch_profile={"status": "WRAPPER_ONLY"},
+                    session_root=root / "adapter",
+                )
+            finally:
+                os.umask(old_umask)
+            planning_file = planning_session_path(planning["sessionId"], session_root=root / "planning")
+            adapter_file = session_path(adapter["sessionId"], session_root=root / "adapter")
+            self.assertEqual(stat.S_IMODE(planning_file.parent.parent.stat().st_mode), 0o700)
+            self.assertEqual(stat.S_IMODE(planning_file.parent.stat().st_mode), 0o700)
+            self.assertEqual(stat.S_IMODE(planning_file.stat().st_mode), 0o600)
+            self.assertEqual(stat.S_IMODE(adapter_file.parent.stat().st_mode), 0o700)
+            self.assertEqual(stat.S_IMODE(adapter_file.stat().st_mode), 0o600)
 
     def test_adapter_mismatch_invalid_transition_and_tamper_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

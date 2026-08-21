@@ -5,7 +5,10 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from release_common import digest_value, file_identity, write_json
+try:
+    from release_common import digest_value, file_identity, write_json
+except ModuleNotFoundError:  # pragma: no cover - supports package-style test imports
+    from tools.release.release_common import digest_value, file_identity, write_json
 
 FORBIDDEN_SNIPPETS = (
     "shell=True",
@@ -19,13 +22,21 @@ FORBIDDEN_SNIPPETS = (
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--paths", action="append", required=True)
+    parser.add_argument("--paths", action="append", default=[])
+    parser.add_argument("--launcher")
+    parser.add_argument("--profile")
+    parser.add_argument("--qualification")
+    parser.add_argument("--redaction")
     parser.add_argument("--evidence", required=True)
     args = parser.parse_args()
 
+    paths = list(args.paths)
+    paths.extend(path for path in (args.launcher, args.profile, args.qualification, args.redaction) if path)
+    if not paths:
+        parser.error("at least one --paths or named source path is required")
     blockers: list[dict[str, Any]] = []
     scanned: list[dict[str, Any]] = []
-    for raw in args.paths:
+    for raw in paths:
         path = Path(raw)
         files = sorted(path.rglob("*.py")) if path.is_dir() else [path]
         for file_path in files:
@@ -35,6 +46,7 @@ def main() -> int:
                 if snippet in text and not _allowed_write(file_path, snippet):
                     blockers.append({"code": "adapter-launcher-forbidden-snippet", "path": file_path.as_posix(), "snippet": snippet})
             blockers.extend(_boundary_blockers(file_path, text))
+            blockers.extend(_identity_and_redaction_blockers(file_path, text, args))
     body = {
         "schemaVersion": "agent-adapter-launcher-security-validation.v1",
         "status": "PASS" if not blockers else "FAIL",
@@ -49,6 +61,8 @@ def main() -> int:
             "secretStorage": False,
             "genericDescriptorLaunch": False,
             "exactEnvironmentNames": True,
+            "contentBoundExecutableIdentity": True,
+            "sharedRedactionAuthority": True,
         },
         "productionPromotionClaimed": False,
     }
@@ -105,6 +119,34 @@ def _boundary_blockers(path: Path, text: str) -> list[dict[str, Any]]:
         if "adapter-env-wildcard-disallowed" not in text:
             blockers.append({"code": "adapter-env-wildcard-blocker-missing", "path": path.as_posix()})
     return blockers
+
+
+def _identity_and_redaction_blockers(path: Path, text: str, args: argparse.Namespace) -> list[dict[str, Any]]:
+    required_markers: tuple[str, ...] = ()
+    category = None
+    if args.profile and path.as_posix() == Path(args.profile).as_posix():
+        required_markers = ("build_executable_identity", "resolvedPathSha256", "executableContentSha256", "pathStored")
+        category = "profile"
+    elif args.qualification and path.as_posix() == Path(args.qualification).as_posix():
+        required_markers = ("executableIdentity", "shipped_profile_digest", "qualified-launch-executable-identity-mismatch")
+        category = "qualification"
+    elif args.redaction and path.as_posix() == Path(args.redaction).as_posix():
+        required_markers = ("_BARE_TOKEN", "redact_text_with_stats", "LOCAL_PATH_REDACTION")
+        category = "redaction"
+    elif args.launcher and path.as_posix() == Path(args.launcher).as_posix():
+        required_markers = ("host_identity", "verify_plan_package_integrity", "executable-identity-unavailable")
+        category = "launcher"
+    if category is None:
+        return []
+    missing = [marker for marker in required_markers if marker not in text]
+    return [
+        {
+            "code": "adapter-launcher-security-marker-missing",
+            "path": path.as_posix(),
+            "category": category,
+            "markers": missing,
+        }
+    ] if missing else []
 
 
 def _popen_blockers(path: Path, tree: ast.AST) -> list[dict[str, Any]]:

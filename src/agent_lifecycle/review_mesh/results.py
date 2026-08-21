@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.redaction import (
+    LOCAL_PATH_REDACTION,
+    contains_local_absolute_path,
+    redact_text_with_stats,
+)
 from agent_lifecycle.contracts.thread_bridge_schemas import (
     validate_thread_context_import,
 )
@@ -14,14 +18,6 @@ from agent_lifecycle.review_mesh.contracts import (
     require_review_mesh_result_pass,
     validate_review_mesh_result,
 )
-
-_SECRET_PATTERNS = (
-    re.compile(r"\b[A-Z][A-Z0-9_]{2,}_API_KEY\s*=\s*[^\s]+"),
-    re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"),
-    re.compile(r"BEGIN [A-Z ]*PRIVATE KEY"),
-)
-_LOCAL_PATH_PATTERN = re.compile(r"(?<![A-Za-z0-9_])(?:/Volumes|/Users|/private|/var/folders)/[^\s\"'`]+")
-
 
 def import_review_mesh_result(
     *,
@@ -144,15 +140,13 @@ def _sanitize_payload(value: Any, *, allow_local_evidence_refs: bool) -> tuple[A
 def _sanitize_value(value: Any, *, stats: dict[str, int], allow_local_evidence_refs: bool, path: str) -> Any:
     if isinstance(value, str):
         text = value
-        for pattern in _SECRET_PATTERNS:
-            text, count = pattern.subn("[REDACTED]", text)
-            stats["secretLikeMarkersRedacted"] += count
-        matches = list(_LOCAL_PATH_PATTERN.finditer(text))
-        if matches and not allow_local_evidence_refs:
+        path_present = contains_local_absolute_path(text)
+        if path_present and not allow_local_evidence_refs:
             raise LifecycleError("review-mesh-local-path-leakage", "reviewer output contains a local absolute path", {"path": path})
-        if matches:
-            text = _LOCAL_PATH_PATTERN.sub("[LOCAL_PATH]", text)
-            stats["localPathsRedacted"] += len(matches)
+        redacted, _changed, counts = redact_text_with_stats(text)
+        text = redacted.replace(LOCAL_PATH_REDACTION, "[LOCAL_PATH]").replace("<redacted>", "[REDACTED]")
+        stats["localPathsRedacted"] += counts["localPathsRedacted"]
+        stats["secretLikeMarkersRedacted"] += counts["secretLikeMarkersRedacted"]
         return text
     if isinstance(value, dict):
         return {key: _sanitize_value(item, stats=stats, allow_local_evidence_refs=allow_local_evidence_refs, path=f"{path}.{key}") for key, item in value.items()}

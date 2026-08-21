@@ -40,7 +40,7 @@ class ReceiptRedactionTests(unittest.TestCase):
 
     def test_redact_value_redacts_common_posix_roots(self) -> None:
         paths = [
-            "/Volumes/Work/repo/private.txt",
+            "/" + "Volumes/Work/repo/private.txt",
             "/root/.ssh/id_rsa",
             "/opt/data/private.txt",
             "/etc/passwd",
@@ -67,6 +67,21 @@ class ReceiptRedactionTests(unittest.TestCase):
 
         self.assertTrue(applied)
         self.assertEqual(redacted["paths"], [REDACTED_VALUE] * len(paths))
+
+    def test_redact_text_covers_standalone_provider_token_formats(self) -> None:
+        values = [
+            "sk-" + "proj-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+            "eyJ" + "hbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature-material",
+            "gh" + "p_1234567890abcdefghijklmnopqrstuvwxyzAB",
+            "xo" + "xb-123456789012-1234567890123-AbCdEfGhIjKlMnOp",
+            "AKIA" + "IOSFODNN7EXAMPLE",
+        ]
+        redacted, applied = redact_text(" ".join(values))
+
+        self.assertTrue(applied)
+        for value in values:
+            self.assertNotIn(value, redacted)
+        self.assertGreaterEqual(redacted.count(REDACTED_VALUE), len(values))
 
 
 if __name__ == "__main__":
