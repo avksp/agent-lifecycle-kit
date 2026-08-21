@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -29,7 +30,13 @@ class CiSecurityValidatorTests(unittest.TestCase):
             workflow_root = Path(tmp) / "workflows"
             workflow_root.mkdir()
             workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-            (workflow_root / "ci.yml").write_text(workflow.replace("actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8", "actions/checkout@v5"), encoding="utf-8")
+            mutated_workflow = re.sub(
+                r"(?m)^(\s*-\s+uses:\s*actions/checkout)@[^\s#]+",
+                r"\1@v5",
+                workflow,
+                count=1,
+            )
+            (workflow_root / "ci.yml").write_text(mutated_workflow, encoding="utf-8")
             result = validate_ci_security(workflow_root=workflow_root, tests_root=ROOT / "tests", repository_root=ROOT)
 
         self.assertEqual(result["status"], "FAIL")
