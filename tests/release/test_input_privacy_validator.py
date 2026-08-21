@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,8 +22,9 @@ class InputPrivacyValidatorTests(unittest.TestCase):
             workflow_state_path=ROOT / "src/agent_lifecycle/workflow/state.py",
         )
         self.assertEqual(payload["status"], "PASS")
-        self.assertEqual(payload["permissionContract"]["platform"], "POSIX")
-        self.assertTrue(payload["permissionContract"]["posixModesAuthoritative"])
+        expected_platform = "POSIX" if os.name != "nt" else "WINDOWS"
+        self.assertEqual(payload["permissionContract"]["platform"], expected_platform)
+        self.assertEqual(payload["permissionContract"]["posixModesAuthoritative"], os.name != "nt")
         self.assertFalse(any(Path(item["name"]).is_absolute() for item in payload["files"]))
 
     def test_validator_fails_when_a_required_boundary_is_removed(self) -> None:
