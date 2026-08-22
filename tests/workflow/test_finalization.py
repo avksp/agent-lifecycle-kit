@@ -9,13 +9,41 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 try:
-    from .helpers import *  # noqa: F401,F403,E402
+    from .helpers import *  # noqa: F403
 except ImportError:
-    from helpers import *  # noqa: F401,F403,E402
+    from helpers import *  # noqa: F403
 
 from agent_lifecycle.specification import build_completion_gate_receipt  # noqa: E402
+from agent_lifecycle.workflow.finalization import _evaluate_lifecycle_control_stop  # noqa: E402
+
 
 class WorkflowFinalizationTests(unittest.TestCase):
+    def test_enforced_control_stop_requires_finalize_events(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state["lifecycleControl"] = {
+                "level": "ENFORCED",
+                "source": "frozen-plan",
+                "planDigest": state["planDigest"],
+                "planRevision": state["planRevision"],
+            }
+
+            with self.assertRaises(LifecycleError) as raised:
+                _evaluate_lifecycle_control_stop(
+                    state,
+                    final_audit={"status": "PASS", "planDigest": state["planDigest"]},
+                    final_proof={
+                        "schemaVersion": "agent-run-final-proof.v1",
+                        "runId": state["runId"],
+                        "planDigest": state["planDigest"],
+                    },
+                )
+
+            self.assertEqual(raised.exception.code, "lifecycle-gate-blocked")
+
     def test_finalize_run_writes_proof_and_completes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

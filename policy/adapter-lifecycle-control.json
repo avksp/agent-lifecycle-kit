@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "agent-lifecycle-control-policy.v1",
+  "policyId": "provider-neutral-adapter-lifecycle-control",
+  "revision": 1,
+  "defaultLevel": "GUIDANCE_ONLY",
+  "operations": {
+    "file-edit": {
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supported": false,
+      "qualified": false,
+      "effectiveLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "UNQUALIFIED",
+      "hostOwnedPreAction": false
+    },
+    "shell-command": {
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supported": false,
+      "qualified": false,
+      "effectiveLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "UNQUALIFIED",
+      "hostOwnedPreAction": false
+    },
+    "task-accept": {
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supported": false,
+      "qualified": false,
+      "effectiveLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "UNQUALIFIED",
+      "hostOwnedPreAction": false
+    },
+    "run-finalize": {
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supported": false,
+      "qualified": false,
+      "effectiveLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "UNQUALIFIED",
+      "hostOwnedPreAction": false
+    }
+  },
+  "limits": {
+    "maxEvents": 64,
+    "maxPayloadBytes": 8192,
+    "maxChangedPaths": 64,
+    "maxAttestationAgeSeconds": 300,
+    "maxNonceBytes": 128
+  },
+  "authority": {
+    "modelWritable": false,
+    "settingsAutoEdited": false,
+    "keysExternal": true,
+    "providerIdentityUsed": false
+  },
+  "productionPromotionClaimed": false,
+  "policyDigest": "a58b45d5fc07629c10d3d61bd490e8a089c7d1aa279d9d64606742d9e0d15ecb"
+}

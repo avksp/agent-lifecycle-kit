@@ -27,6 +27,22 @@ from agent_lifecycle.contracts.execution_strategy_schemas import (
 )
 from agent_lifecycle.contracts.host_capability_schemas import HOST_CAPABILITY_SCHEMAS
 from agent_lifecycle.contracts.import_dialect_schemas import IMPORT_DIALECT_SCHEMAS
+from agent_lifecycle.contracts.lifecycle_control_definitions import (
+    CONTROL_EVENT_TYPES,
+    CONTROL_LEVELS,
+    CONTROL_OPERATIONS,
+    CONTROL_STATUSES,
+    LIFECYCLE_CONTROL_ATTESTATION_SCHEMA,
+    LIFECYCLE_CONTROL_DECISION_SCHEMA,
+    LIFECYCLE_CONTROL_EVENT_SCHEMA,
+    LIFECYCLE_CONTROL_POLICY_SCHEMA,
+    LIFECYCLE_CONTROL_POLICY_VALIDATION_SCHEMA,
+    LIFECYCLE_CONTROL_QUALIFICATION_SCHEMA,
+    LIFECYCLE_CONTROL_QUALIFICATION_VALIDATION_SCHEMA,
+    LIFECYCLE_CONTROL_REQUEST_SCHEMA,
+    MAX_CONTROL_STRING_LENGTH,
+    QUALIFICATION_STATUSES,
+)
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.plan_delta_schemas import PLAN_DELTA_SCHEMAS
@@ -439,6 +455,244 @@ RISK_EXECUTION_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
 }
 
+
+def _closed_schema(schema_id: str, required: list[str], properties: dict[str, Any]) -> dict[str, Any]:
+    schema = open_object_schema(schema_id, required=required, properties=properties)
+    schema["additionalProperties"] = False
+    return schema
+
+
+def _required(*fields: str) -> list[str]:
+    return ["schemaVersion", *fields]
+
+
+_DIGEST = {"type": "string", "minLength": 64, "maxLength": 64}
+_BLOCKERS = {"type": "array", "items": {"type": "object"}, "maxItems": 64}
+_PATHS = {"type": "array", "items": {"type": "string", "minLength": 1}, "maxItems": 64}
+
+
+def _strings(*fields: str, max_length: int = 128) -> dict[str, dict[str, Any]]:
+    return {field: {"type": "string", "minLength": 1, "maxLength": max_length} for field in fields}
+
+
+_LIFECYCLE_CONTROL_SCHEMAS: dict[str, dict[str, Any]] = {
+    LIFECYCLE_CONTROL_POLICY_SCHEMA: _closed_schema(
+        LIFECYCLE_CONTROL_POLICY_SCHEMA,
+        _required(
+            "policyId",
+            "revision",
+            "defaultLevel",
+            "operations",
+            "limits",
+            "authority",
+            "productionPromotionClaimed",
+            "policyDigest",
+        ),
+        {
+            "policyId": {"type": "string", "minLength": 1, "maxLength": MAX_CONTROL_STRING_LENGTH},
+            "revision": {"type": "integer", "minimum": 1},
+            "defaultLevel": {"enum": list(CONTROL_LEVELS)},
+            "operations": {"type": "object"},
+            "limits": {"type": "object"},
+            "authority": {"type": "object"},
+            "productionPromotionClaimed": {"const": False},
+            "policyDigest": _DIGEST,
+        },
+    ),
+    LIFECYCLE_CONTROL_POLICY_VALIDATION_SCHEMA: open_object_schema(
+        LIFECYCLE_CONTROL_POLICY_VALIDATION_SCHEMA,
+        required=_required("status", "policyId", "blockers", "productionPromotionClaimed", "validationDigest"),
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "policyId": {"type": ["string", "null"]},
+            "blockers": _BLOCKERS,
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
+        },
+    ),
+    LIFECYCLE_CONTROL_REQUEST_SCHEMA: _closed_schema(
+        LIFECYCLE_CONTROL_REQUEST_SCHEMA,
+        _required(
+            "requestId",
+            "adapterId",
+            "host",
+            "hostVersion",
+            "operation",
+            "runId",
+            "taskId",
+            "packageId",
+            "planRevision",
+            "planDigest",
+            "lockDigest",
+            "stateRevision",
+            "actionDigest",
+            "paths",
+            "requestedLevel",
+            "producerId",
+            "nonce",
+            "createdAt",
+            "productionPromotionClaimed",
+            "requestDigest",
+        ),
+        {
+            **_strings("requestId", "adapterId", "host", "hostVersion", "runId", "taskId", "packageId", "producerId"),
+            "operation": {"enum": list(CONTROL_OPERATIONS)},
+            "planRevision": {"type": "integer", "minimum": 1},
+            "planDigest": _DIGEST,
+            "lockDigest": _DIGEST,
+            "stateRevision": {"type": "integer", "minimum": 1},
+            "actionDigest": _DIGEST,
+            "paths": _PATHS,
+            "requestedLevel": {"enum": list(CONTROL_LEVELS)},
+            "nonce": {"type": "string", "minLength": 16, "maxLength": 128},
+            "createdAt": {"type": "string", "minLength": 1, "maxLength": 64},
+            "productionPromotionClaimed": {"const": False},
+            "requestDigest": _DIGEST,
+        },
+    ),
+    LIFECYCLE_CONTROL_DECISION_SCHEMA: _closed_schema(
+        LIFECYCLE_CONTROL_DECISION_SCHEMA,
+        _required(
+            "status",
+            "requestDigest",
+            "operation",
+            "effectiveLevel",
+            "hostActionAllowed",
+            "authority",
+            "blockers",
+            "productionPromotionClaimed",
+            "decisionDigest",
+        ),
+        {
+            "status": {"enum": list(CONTROL_STATUSES)},
+            "requestDigest": _DIGEST,
+            "operation": {"enum": list(CONTROL_OPERATIONS)},
+            "effectiveLevel": {"enum": list(CONTROL_LEVELS)},
+            "hostActionAllowed": {"type": "boolean"},
+            "authority": {"enum": ["frozen-plan-and-state", "guidance-only", "none"]},
+            "blockers": _BLOCKERS,
+            "productionPromotionClaimed": {"const": False},
+            "decisionDigest": _DIGEST,
+        },
+    ),
+    LIFECYCLE_CONTROL_EVENT_SCHEMA: _closed_schema(
+        LIFECYCLE_CONTROL_EVENT_SCHEMA,
+        _required(
+            "eventId",
+            "eventType",
+            "status",
+            "requestDigest",
+            "operation",
+            "producer",
+            "nonce",
+            "changedPaths",
+            "outcome",
+            "recordedAt",
+            "productionPromotionClaimed",
+            "eventDigest",
+        ),
+        {
+            "eventId": {"type": "string", "minLength": 1, "maxLength": 128},
+            "eventType": {"enum": list(CONTROL_EVENT_TYPES)},
+            "status": {"enum": list(CONTROL_STATUSES)},
+            "requestDigest": _DIGEST,
+            "operation": {"enum": list(CONTROL_OPERATIONS)},
+            "producer": {"type": "object"},
+            "nonce": {"type": "string", "minLength": 16, "maxLength": 128},
+            "changedPaths": _PATHS,
+            "outcome": {"type": "object"},
+            "recordedAt": {"type": "string", "minLength": 1, "maxLength": 64},
+            "productionPromotionClaimed": {"const": False},
+            "eventDigest": _DIGEST,
+        },
+    ),
+    LIFECYCLE_CONTROL_ATTESTATION_SCHEMA: _closed_schema(
+        LIFECYCLE_CONTROL_ATTESTATION_SCHEMA,
+        _required(
+            "attestationId",
+            "domain",
+            "producerId",
+            "adapterId",
+            "hostVersion",
+            "operation",
+            "nonce",
+            "issuedAt",
+            "expiresAt",
+            "planDigest",
+            "lockDigest",
+            "stateRevision",
+            "actionDigest",
+            "outcomeDigest",
+            "keyId",
+            "signature",
+            "productionPromotionClaimed",
+            "attestationDigest",
+        ),
+        {
+            **_strings("attestationId", "producerId", "adapterId", "hostVersion", "keyId"),
+            "domain": {"const": LIFECYCLE_CONTROL_ATTESTATION_SCHEMA},
+            "operation": {"enum": list(CONTROL_OPERATIONS)},
+            "nonce": {"type": "string", "minLength": 16, "maxLength": 128},
+            "issuedAt": {"type": "string", "minLength": 1, "maxLength": 64},
+            "expiresAt": {"type": "string", "minLength": 1, "maxLength": 64},
+            "planDigest": _DIGEST,
+            "lockDigest": _DIGEST,
+            "stateRevision": {"type": "integer", "minimum": 1},
+            "actionDigest": _DIGEST,
+            "outcomeDigest": _DIGEST,
+            "signature": {"type": "string", "minLength": 1, "maxLength": 2048},
+            "productionPromotionClaimed": {"const": False},
+            "attestationDigest": _DIGEST,
+        },
+    ),
+    LIFECYCLE_CONTROL_QUALIFICATION_SCHEMA: _closed_schema(
+        LIFECYCLE_CONTROL_QUALIFICATION_SCHEMA,
+        _required(
+            "status",
+            "adapterId",
+            "host",
+            "hostVersion",
+            "operation",
+            "declaredLevel",
+            "supportedLevel",
+            "qualifiedLevel",
+            "positiveEvidence",
+            "negativeEvidence",
+            "evidenceRefs",
+            "blockers",
+            "productionPromotionClaimed",
+            "receiptDigest",
+        ),
+        {
+            "status": {"enum": list(QUALIFICATION_STATUSES)},
+            **_strings("adapterId", "host", "hostVersion", max_length=MAX_CONTROL_STRING_LENGTH),
+            "operation": {"enum": list(CONTROL_OPERATIONS)},
+            "declaredLevel": {"enum": list(CONTROL_LEVELS)},
+            "supportedLevel": {"enum": list(CONTROL_LEVELS)},
+            "qualifiedLevel": {"enum": list(CONTROL_LEVELS)},
+            "positiveEvidence": {"type": "array", "items": {"type": "object"}, "maxItems": 64},
+            "negativeEvidence": {"type": "array", "items": {"type": "object"}, "maxItems": 64},
+            "evidenceRefs": {"type": "array", "items": {"type": "string", "minLength": 1}, "maxItems": 64},
+            "blockers": _BLOCKERS,
+            "productionPromotionClaimed": {"const": False},
+            "receiptDigest": _DIGEST,
+        },
+    ),
+    LIFECYCLE_CONTROL_QUALIFICATION_VALIDATION_SCHEMA: open_object_schema(
+        LIFECYCLE_CONTROL_QUALIFICATION_VALIDATION_SCHEMA,
+        required=_required(
+            "status", "qualificationStatus", "blockers", "productionPromotionClaimed", "validationDigest"
+        ),
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "qualificationStatus": {"enum": list(QUALIFICATION_STATUSES)},
+            "blockers": _BLOCKERS,
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
+        },
+    ),
+}
+
 _SCHEMA_GROUPS = (
     CORE_SCHEMAS,
     AUDIT_SCHEMAS,
@@ -462,6 +716,7 @@ _SCHEMA_GROUPS = (
     REVIEW_MESH_RECOMMENDATION_SCHEMAS,
     SANDBOX_SCHEMAS,
     HOST_CAPABILITY_SCHEMAS,
+    _LIFECYCLE_CONTROL_SCHEMAS,
     USAGE_EXPORT_SCHEMAS,
     PROOF_INTEGRITY_SCHEMAS,
     RESEARCH_EVIDENCE_SCHEMAS,

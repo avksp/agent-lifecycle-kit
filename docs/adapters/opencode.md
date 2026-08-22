@@ -48,6 +48,21 @@ qualification path uses a safe native planning profile and live containment
 evidence. See [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
+## Lifecycle-control status
+
+For OpenCode, every operation in the descriptor (`install`, `discover`, `validate-envelope`, `launch`, `model-route-execution`, `wait`, `cancel`, `resume`, `tool-execution`, `adapter-event-stream`, `result-collection`, `usage-attestation`, `task-audit`, `final-audit`) publishes
+`declaredLevel: GUIDANCE_ONLY`, `supportedLevel: GUIDANCE_ONLY`,
+`qualifiedLevel: GUIDANCE_ONLY` and `qualificationStatus: NO_RECOMMENDATION`.
+The managed-launch status is `WRAPPER_ONLY`. These are operation-level
+lifecycle-control claims and are separate from the general adapter support
+level in the matrix.
+
+The page and the adapter skill describe how to follow ALK inside the host. They
+do not claim that a prompt, plugin or wrapper blocks an action. An exact-version
+host-owned producer may be qualified later for selected operations; offline
+fixtures alone do not promote the level. See [optional adapter lifecycle
+control](lifecycle-control.md) and [using ALK with an adapter](usage-modes.md).
+
 ## Use ALK with OpenCode
 
 After copying the shared skills and JS projection into the configured OpenCode

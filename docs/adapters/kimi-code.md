@@ -50,6 +50,21 @@ agent-lifecycle host-launch preflight --profile .alk/host-launch/kimi-code.json
 The planning route uses the status and evidence described in [Planning-only adapter
 launch](../reference/planning-only-launch.md).
 
+## Lifecycle-control status
+
+For Kimi Code, every operation in the descriptor (`cancel`, `discover`, `final-audit`, `install`, `launch`, `model-route-execution`, `result-collection`, `resume`, `task-audit`, `tool-execution`, `adapter-event-stream`, `usage-attestation`, `validate-envelope`, `wait`) publishes
+`declaredLevel: GUIDANCE_ONLY`, `supportedLevel: GUIDANCE_ONLY`,
+`qualifiedLevel: GUIDANCE_ONLY` and `qualificationStatus: NO_RECOMMENDATION`.
+The managed-launch status is `WRAPPER_ONLY`. These are operation-level
+lifecycle-control claims and are separate from the general adapter support
+level in the matrix.
+
+The page and the adapter skill describe how to follow ALK inside the host. They
+do not claim that a prompt, plugin or wrapper blocks an action. An exact-version
+host-owned producer may be qualified later for selected operations; offline
+fixtures alone do not promote the level. See [optional adapter lifecycle
+control](lifecycle-control.md) and [using ALK with an adapter](usage-modes.md).
+
 ## Use ALK with Kimi Code
 
 Kimi Code exposes skill-directory selection. Configure the tagged shared

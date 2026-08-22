@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "agent-lifecycle-control-candidate.v1",
+  "candidateId": "claude-code-lifecycle-control-copy-preview",
+  "adapterId": "claude",
+  "host": "claude-code",
+  "hostVersion": "2.1.226",
+  "supportStatus": "CANDIDATE",
+  "supportedEvents": [
+    "pre-action",
+    "post-action",
+    "stop"
+  ],
+  "eventTransport": "host-owned-event-producer",
+  "copyPreview": {
+    "automatic": false,
+    "writesOperatorSettings": false,
+    "writesProjectSettings": false,
+    "requiresOperatorReview": true,
+    "sourceOnly": true
+  },
+  "operations": {
+    "file-edit": {
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION",
+      "reason": "The candidate has no independently reproduced Claude pre-action denial evidence."
+    },
+    "shell-command": {
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION",
+      "reason": "The candidate does not claim a host-owned shell interception boundary."
+    },
+    "task-accept": {
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION",
+      "reason": "Task acceptance remains governed by ALK workflow evidence, not a native Claude hook."
+    },
+    "run-finalize": {
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION",
+      "reason": "Finalization control requires separately qualified host evidence."
+    }
+  },
+  "qualification": {
+    "status": "NO_RECOMMENDATION",
+    "requiredEvidence": [
+      "positive-pre-post-stop",
+      "negative-direct-edit",
+      "negative-shell-write",
+      "negative-stale-state",
+      "negative-missing-alk",
+      "negative-timeout",
+      "negative-malformed-output",
+      "negative-disabled-control",
+      "negative-modified-control",
+      "negative-replay",
+      "negative-producer-crash"
+    ],
+    "exactHostVersionRequired": true,
+    "fixturePromotionAllowed": false,
+    "productionPromotionClaimed": false
+  },
+  "installation": {
+    "mode": "copy-preview",
+    "operatorSettingsModified": false,
+    "automaticInstall": false,
+    "reviewBeforeCopy": true
+  },
+  "productionPromotionClaimed": false
+}

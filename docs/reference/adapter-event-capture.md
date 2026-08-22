@@ -20,6 +20,14 @@ producer boundary. `agent-adapter-event-capture-validation.v1` fails closed
 when declared event capture has no stream, no receipt, malformed events or
 stale digests.
 
+Release 1.80 uses the same portable event boundary for optional lifecycle
+control. The adapter publishes `declaredLevel`, `supportedLevel`,
+`qualifiedLevel` and `qualificationStatus` for each operation. The bundled
+adapters currently remain `GUIDANCE_ONLY` and `NO_RECOMMENDATION`; an event
+receipt alone cannot promote an operation to `OBSERVED` or `ENFORCED`.
+`ENFORCED` additionally requires a qualified host-owned pre-action block and
+matching post-action and stop evidence for the exact host version.
+
 ```bash
 agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>
 agent-lifecycle adapter event-capture-check --descriptor <adapter.descriptor.json> --capability-manifest <capabilities.manifest.json> --receipt <event-stream-receipt.json> --event <adapter-event-1.json>

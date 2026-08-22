@@ -1,6 +1,6 @@
 {
   "adapterId": "cursor",
-  "descriptorDigest": "30386658ed502bfb4ef864b3baec6e4b0f4913f24850d2a602420caff882ef3a",
+  "descriptorDigest": "0a6c7cef35e571fcdb19b675a98320f890b3656aa8e19b7390e8832c0bba2848",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "f93f100d087f0d95b57bdf023b14a912bed5cfb5b795cb7f8ee006f63cf409a9",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "84c1c25916acfcf3b55cc2fc1907b1e4fa772ba56e028455cfb9bdb8b0e2ba1f",
+  "receiptDigest": "66a9877a97f4cd371594a93d6b9f872fd3e1c7e2925d3eac5c18bd50cbcf503b",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",

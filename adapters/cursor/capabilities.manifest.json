@@ -1,136 +1,257 @@
 {
+  "schemaVersion": "agent-adapter-capability-manifest.v1",
   "adapterId": "cursor",
+  "host": "cursor",
+  "maturity": "EXPERIMENTAL",
+  "descriptorDigest": "0a6c7cef35e571fcdb19b675a98320f890b3656aa8e19b7390e8832c0bba2848",
+  "unsupportedOperationPolicy": "fail-closed",
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
   "capabilities": [
     {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false,
-      "mapping": "cursor-plugin-install",
       "name": "install",
+      "mapping": "cursor-plugin-install",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": false,
-      "mapping": "cursor-agent-discovery",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "discover",
+      "mapping": "cursor-agent-discovery",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": false,
-      "mapping": "core-schema-validation",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "validate-envelope",
+      "mapping": "core-schema-validation",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true,
-      "mapping": "host-agent-launch",
       "name": "launch",
+      "mapping": "host-agent-launch",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "attemptModelRoute-to-host-model",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "model-route-execution",
+      "mapping": "attemptModelRoute-to-host-model",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "host-bounded-wait",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "wait",
+      "mapping": "host-bounded-wait",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "host-cancel-request",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "cancel",
+      "mapping": "host-cancel-request",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "workflow-state-resume",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "resume",
+      "mapping": "workflow-state-resume",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "host-tool-call",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "tool-execution",
+      "mapping": "host-tool-call",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false,
-      "mapping": "agent-adapter-event.v1",
-      "name": "adapter-event-stream",
-      "offlineConformance": "deterministic",
-      "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false,
-      "mapping": "task-result-artifact",
-      "name": "result-collection",
-      "offlineConformance": "deterministic",
-      "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "host-usage-ledger",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
+      "name": "adapter-event-stream",
+      "mapping": "agent-adapter-event.v1",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
+      "name": "result-collection",
+      "mapping": "task-result-artifact",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "usage-attestation",
+      "mapping": "host-usage-ledger",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false,
-      "mapping": "audit-plan-implementation",
       "name": "task-audit",
+      "mapping": "audit-plan-implementation",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": false,
-      "mapping": "audit-plan-implementation",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "final-audit",
+      "mapping": "audit-plan-implementation",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     }
   ],
-  "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "30386658ed502bfb4ef864b3baec6e4b0f4913f24850d2a602420caff882ef3a",
+  "modelRouting": {
+    "profileSupport": "host-local",
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "usageReceiptRequired": true,
+    "unsupportedClassPolicy": "fail-closed",
+    "providerModelNamesInCore": false,
+    "liveVerified": false
+  },
+  "runtimeBoundary": {
+    "hostSpecificCode": "adapter-owned",
+    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+    "unsupportedOperations": "fail-closed",
+    "providerModelNamesInCore": false
+  },
+  "hostCapabilities": [],
+  "sandboxCapabilities": {
+    "schemaVersion": "agent-sandbox-capability.v1",
+    "status": "UNKNOWN",
+    "boundaries": {
+      "filesystem": {
+        "mode": "UNKNOWN",
+        "evidenceIds": [],
+        "details": {}
+      },
+      "network": {
+        "mode": "UNKNOWN",
+        "evidenceIds": [],
+        "details": {}
+      },
+      "process": {
+        "mode": "UNKNOWN",
+        "evidenceIds": [],
+        "details": {}
+      },
+      "environment": {
+        "mode": "UNKNOWN",
+        "evidenceIds": [],
+        "details": {}
+      }
+    },
+    "enforcement": {
+      "source": "UNKNOWN",
+      "verified": false,
+      "evidenceIds": [],
+      "details": {}
+    },
+    "writeScopeBoundary": {
+      "gitWriteScopeGovernedSeparately": true,
+      "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
+      "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
+    },
+    "verified": false,
+    "evidenceIds": [],
+    "notes": [
+      "Sandbox support is not live-verified for this adapter descriptor.",
+      "Git write-scope governance is separate from OS/process/network/environment containment."
+    ],
+    "productionPromotionClaimed": false
+  },
   "eventCapture": {
+    "status": "DECLARED",
+    "portableEventSchema": "agent-adapter-event.v1",
     "categories": [
       "command",
       "file-change",
@@ -139,134 +260,69 @@
       "user-decision",
       "validation"
     ],
-    "portableEventSchema": "agent-adapter-event.v1",
     "producerBoundary": "adapter-owned",
-    "promotionRequired": false,
-    "status": "DECLARED"
-  },
-  "host": "cursor",
-  "hostCapabilities": [],
-  "maturity": "EXPERIMENTAL",
-  "modelRouting": {
-    "attemptRoutePolicy": "must-execute-or-fail-closed",
-    "liveVerified": false,
-    "profileSupport": "host-local",
-    "providerModelNamesInCore": false,
-    "unsupportedClassPolicy": "fail-closed",
-    "usageReceiptRequired": true
-  },
-  "planningLaunch": {
-    "expectedHostVersion": "2026.07.23",
-    "hostLaunchStarted": false,
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
-    "profileStatus": "UNSUPPORTED",
-    "qualificationRequired": true
+    "promotionRequired": false
   },
   "promotion": {
-    "productionPromotionClaimed": false,
-    "verifiedRequiresLiveTestedHostRange": true
+    "verifiedRequiresLiveTestedHostRange": true,
+    "productionPromotionClaimed": false
   },
-  "runtimeBoundary": {
-    "hostSpecificCode": "adapter-owned",
-    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-    "providerModelNamesInCore": false,
-    "unsupportedOperations": "fail-closed"
+  "planningLaunch": {
+    "profileStatus": "UNSUPPORTED",
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "expectedHostVersion": "2026.07.23",
+    "qualificationRequired": true,
+    "hostLaunchStarted": false
   },
-  "sandboxCapabilities": {
-    "boundaries": {
-      "environment": {
-        "details": {},
-        "evidenceIds": [],
-        "mode": "UNKNOWN"
-      },
-      "filesystem": {
-        "details": {},
-        "evidenceIds": [],
-        "mode": "UNKNOWN"
-      },
-      "network": {
-        "details": {},
-        "evidenceIds": [],
-        "mode": "UNKNOWN"
-      },
-      "process": {
-        "details": {},
-        "evidenceIds": [],
-        "mode": "UNKNOWN"
-      }
-    },
-    "enforcement": {
-      "details": {},
-      "evidenceIds": [],
-      "source": "UNKNOWN",
-      "verified": false
-    },
-    "evidenceIds": [],
-    "notes": [
-      "Sandbox support is not live-verified for this adapter descriptor.",
-      "Git write-scope governance is separate from OS/process/network/environment containment."
-    ],
-    "productionPromotionClaimed": false,
-    "schemaVersion": "agent-sandbox-capability.v1",
-    "status": "UNKNOWN",
-    "verified": false,
-    "writeScopeBoundary": {
-      "gitWriteScopeGovernedSeparately": true,
-      "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
-      "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
-    }
-  },
-  "schemaVersion": "agent-adapter-capability-manifest.v1",
   "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
     "adapterId": "cursor",
-    "capabilityManifestDigest": "b977349d1607cc6a82602035fa21b1ccd0d18162747de4db1b8d7324e105fb4a",
-    "descriptorDigest": "30386658ed502bfb4ef864b3baec6e4b0f4913f24850d2a602420caff882ef3a",
-    "evidencePolicy": "not-claimed",
     "host": "cursor",
-    "hostExecutionOwned": true,
+    "descriptorDigest": "0a6c7cef35e571fcdb19b675a98320f890b3656aa8e19b7390e8832c0bba2848",
+    "capabilityManifestDigest": "42849c6a75fc90b817a2f94da53338a023d47f8f6c0dfaa37adeda4b2890e8ad",
     "hostRange": {},
+    "policyVersion": "agent-thread-bridge-policy.v1",
     "operations": [
       {
-        "approval": "operator",
-        "declaredStatus": "UNSUPPORTED",
-        "execution": "adapter-owned",
         "name": "create",
-        "qualificationRequired": true,
-        "readOnly": false
-      },
-      {
-        "approval": "none",
         "declaredStatus": "UNSUPPORTED",
-        "execution": "adapter-owned",
-        "name": "list",
-        "qualificationRequired": true,
-        "readOnly": true
-      },
-      {
-        "approval": "none",
-        "declaredStatus": "UNSUPPORTED",
-        "execution": "adapter-owned",
-        "name": "read",
-        "qualificationRequired": true,
-        "readOnly": true
-      },
-      {
+        "readOnly": false,
         "approval": "operator",
-        "declaredStatus": "UNSUPPORTED",
         "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
         "name": "send",
-        "qualificationRequired": true,
-        "readOnly": false
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
       }
     ],
-    "policyVersion": "agent-thread-bridge-policy.v1",
-    "productionPromotionClaimed": false,
-    "profileDigest": "1f00060547458bce51d294281e41b2fe47a71bcd3f72bceae5fec1674fb495f9",
-    "profileId": "thread-bridge",
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
     "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
     "qualificationRequired": true,
-    "schemaVersion": "agent-thread-bridge-profile.v1",
-    "transport": "adapter-owned"
-  },
-  "unsupportedOperationPolicy": "fail-closed"
+    "productionPromotionClaimed": false,
+    "profileDigest": "69e088a15a69b597d607b3e6b7c7a67c920bdbb5ad2324aa9f3ddaf5bfb11965"
+  }
 }

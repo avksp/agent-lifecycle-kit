@@ -173,6 +173,46 @@ for research and implementation, while ALK remains responsible for structured
 authority, state transitions, evidence and fail-closed handoff decisions. See
 [Plan verification and integrity](../reference/plan-verification.md).
 
+## Release 1.80: optional adapter lifecycle control
+
+Release 1.80 adds a bounded control plane at the adapter boundary. It is
+optional and provider-neutral. The model still proposes content and uses host
+tools; the host or adapter remains the producer of observable events; ALK
+validates the event, decision and attestation contracts and connects them to
+the existing plan and workflow state.
+
+The control plane publishes four operation-level fields:
+`declaredLevel`, `supportedLevel`, `qualifiedLevel` and
+`qualificationStatus`. The levels are `GUIDANCE_ONLY`, `OBSERVED` and
+`ENFORCED`:
+
+- `GUIDANCE_ONLY` describes instructions from a skill or adapter page. It has
+  no blocking authority.
+- `OBSERVED` records activity through a qualified host-owned producer. It can
+  make later acceptance fail, but it does not prove that an action was
+  prevented.
+- `ENFORCED` requires a host-owned pre-action block plus post-action and stop
+  checks. It is valid only for the exact host version and operation covered by
+  positive and negative qualification evidence.
+
+The boundary is layered deliberately. Contract modules define bounded,
+redacted request, decision, event and qualification shapes. Host-protocol
+modules resolve the configured operation level and evaluate pure gates. The
+workflow layer consumes accepted post-action evidence during task acceptance
+and finalization. The CLI serializes checks but does not launch models or
+become the source of plan authority. Adapter projections own native hook
+configuration, while any host settings and attestation keys remain outside
+model-writable scope.
+
+The release currently publishes `GUIDANCE_ONLY` and
+`NO_RECOMMENDATION` for the lifecycle-control operations of every bundled
+adapter, and `WRAPPER_ONLY` for managed launch. This is an honest capability
+result: declarations, prompts, plugin installation, event fixtures and a
+successful happy path cannot promote an adapter. Missing ALK, timeout,
+malformed output, disabled control and producer failure remain non-qualification
+evidence. See [optional adapter lifecycle control](../adapters/lifecycle-control.md)
+and [adapter event capture](../reference/adapter-event-capture.md).
+
 ## C1: system context
 
 At system level ALK is a local CLI and Python package used inside a source

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.contracts.thread_bridge_schemas import (
@@ -12,7 +12,11 @@ from agent_lifecycle.contracts.thread_bridge_schemas import (
     validate_thread_bridge_profile,
 )
 from agent_lifecycle.host_protocol.acp_capability import validate_host_capabilities
-from agent_lifecycle.host_protocol.event_capture import EVENT_CAPTURE_OPERATION, adapter_declares_event_capture, event_capture_declaration
+from agent_lifecycle.host_protocol.event_capture import (
+    EVENT_CAPTURE_OPERATION,
+    adapter_declares_event_capture,
+    event_capture_declaration,
+)
 from agent_lifecycle.host_protocol.validation import REQUIRED_OPERATION_NAMES, validate_adapter_descriptor
 from agent_lifecycle.runner import validate_sandbox_capability
 
@@ -23,9 +27,11 @@ CAPABILITY_MANIFEST_VALIDATION_SCHEMA_VERSION = "agent-adapter-capability-manife
 def build_capability_manifest(descriptor: dict[str, Any]) -> dict[str, Any]:
     """Build a stable capability manifest from an adapter descriptor."""
 
-    model_routing = descriptor.get("modelRouting") if isinstance(descriptor.get("modelRouting"), dict) else {}
-    operations = descriptor.get("operations") if isinstance(descriptor.get("operations"), list) else []
-    promotion = {
+    raw_model_routing = descriptor.get("modelRouting")
+    model_routing: dict[str, Any] = raw_model_routing if isinstance(raw_model_routing, dict) else {}
+    raw_operations = descriptor.get("operations")
+    operations: list[Any] = raw_operations if isinstance(raw_operations, list) else []
+    promotion: dict[str, Any] = {
         "verifiedRequiresLiveTestedHostRange": True,
         "productionPromotionClaimed": False,
     }
@@ -86,7 +92,9 @@ def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[s
             }
         )
     if manifest.get("schemaVersion") != CAPABILITY_MANIFEST_SCHEMA_VERSION:
-        blockers.append({"code": "invalid-capability-manifest-schema", "message": "unsupported capability manifest schemaVersion"})
+        blockers.append(
+            {"code": "invalid-capability-manifest-schema", "message": "unsupported capability manifest schemaVersion"}
+        )
     for key in ("adapterId", "host", "maturity", "unsupportedOperationPolicy", "coreSemantics"):
         if manifest.get(key) != descriptor.get(key):
             blockers.append(
@@ -120,7 +128,9 @@ def validate_capability_manifest(manifest: dict[str, Any], *, descriptor: dict[s
         "adapterId": descriptor.get("adapterId"),
         "host": descriptor.get("host"),
         "maturity": descriptor.get("maturity"),
-        "capabilityCount": len(manifest.get("capabilities", [])) if isinstance(manifest.get("capabilities"), list) else 0,
+        "capabilityCount": len(manifest.get("capabilities", []))
+        if isinstance(manifest.get("capabilities"), list)
+        else 0,
         "blockers": blockers,
     }
 
@@ -168,7 +178,10 @@ def build_thread_bridge_capability_projection(
         **projection,
         "threadBridgeProfileDigest": profile["profileDigest"],
     }
-    return {**body, "capabilityDigest": canonical_digest({key: value for key, value in body.items() if key != "capabilityDigest"})}
+    return {
+        **body,
+        "capabilityDigest": canonical_digest({key: value for key, value in body.items() if key != "capabilityDigest"}),
+    }
 
 
 def build_thread_bridge_profile_from_descriptor(
@@ -182,13 +195,13 @@ def build_thread_bridge_profile_from_descriptor(
     if not isinstance(section, dict):
         raise ValueError("adapter descriptor has no threadBridge profile")
     return build_thread_bridge_profile(
-        adapter_id=descriptor.get("adapterId"),
-        host=descriptor.get("host"),
+        adapter_id=cast(str, descriptor.get("adapterId")),
+        host=cast(str, descriptor.get("host")),
         operations=section.get("operations", []),
         descriptor_digest=canonical_digest(descriptor),
         capability_manifest_digest=capability_manifest_digest,
         host_range=descriptor.get("liveTestedHostRange"),
-        policy_version=section.get("policyVersion"),
+        policy_version=cast(str, section.get("policyVersion")),
     )
 
 
@@ -200,7 +213,7 @@ def capability_manifest_identity(manifest: dict[str, Any]) -> str:
 
 def _capability_from_operation(operation: dict[str, Any], descriptor: dict[str, Any]) -> dict[str, Any]:
     offline_conformance = operation.get("offlineConformance")
-    return {
+    capability = {
         "name": operation.get("name"),
         "mapping": operation.get("mapping"),
         "offlineConformance": offline_conformance,
@@ -209,6 +222,12 @@ def _capability_from_operation(operation: dict[str, Any], descriptor: dict[str, 
         "lifecycleSemantics": descriptor.get("coreSemantics"),
         "liveEvidenceRequiredForVerified": offline_conformance != "deterministic",
     }
+    # Keep generated manifests aligned with operation-level lifecycle-control
+    # declarations while preserving compatibility with older descriptors.
+    for field in ("declaredLevel", "supportedLevel", "qualifiedLevel", "qualificationStatus"):
+        if field in operation:
+            capability[field] = operation[field]
+    return capability
 
 
 def _event_capture_from_descriptor(descriptor: dict[str, Any]) -> dict[str, Any]:
@@ -276,8 +295,16 @@ def _validate_manifest_capabilities(
     descriptor_operations = descriptor.get("operations")
     if not isinstance(descriptor_operations, list):
         return
-    descriptor_names = {item.get("name") for item in descriptor_operations if isinstance(item, dict)}
-    manifest_names = {item.get("name") for item in capabilities if isinstance(item, dict)}
+    descriptor_names: set[str] = {
+        name
+        for item in descriptor_operations
+        if isinstance(item, dict)
+        for name in [item.get("name")]
+        if isinstance(name, str)
+    }
+    manifest_names: set[str] = {
+        name for item in capabilities if isinstance(item, dict) for name in [item.get("name")] if isinstance(name, str)
+    }
     missing_required = sorted(REQUIRED_OPERATION_NAMES.difference(manifest_names))
     extra = sorted(manifest_names.difference(descriptor_names))
     missing_descriptor = sorted(descriptor_names.difference(manifest_names))
@@ -315,7 +342,12 @@ def _validate_runtime_boundary(
     if boundary.get("unsupportedOperations") != "fail-closed":
         blockers.append({"code": "capability-runtime-boundary-policy", "field": "unsupportedOperations"})
     if boundary.get("providerModelNamesInCore") is not False:
-        blockers.append({"code": "capability-provider-model-boundary", "message": "provider model names must stay out of core contracts"})
+        blockers.append(
+            {
+                "code": "capability-provider-model-boundary",
+                "message": "provider model names must stay out of core contracts",
+            }
+        )
 
 
 def _validate_host_capability_drift(
@@ -373,17 +405,37 @@ def _validate_event_capture(
     expected_declared = adapter_declares_event_capture(descriptor=descriptor)
     actual_declared = capture.get("status") == "DECLARED"
     if actual_declared != expected_declared:
-        blockers.append({"code": "capability-event-capture-drift", "expectedDeclared": expected_declared, "actualStatus": capture.get("status")})
+        blockers.append(
+            {
+                "code": "capability-event-capture-drift",
+                "expectedDeclared": expected_declared,
+                "actualStatus": capture.get("status"),
+            }
+        )
     if actual_declared:
         operations = descriptor.get("operations", [])
         if not any(isinstance(item, dict) and item.get("name") == EVENT_CAPTURE_OPERATION for item in operations):
-            blockers.append({"code": "capability-event-capture-operation-missing", "operation": EVENT_CAPTURE_OPERATION})
+            blockers.append(
+                {"code": "capability-event-capture-operation-missing", "operation": EVENT_CAPTURE_OPERATION}
+            )
         if capture.get("portableEventSchema") != "agent-adapter-event.v1":
-            blockers.append({"code": "capability-event-capture-schema", "message": "event capture must use agent-adapter-event.v1"})
+            blockers.append(
+                {"code": "capability-event-capture-schema", "message": "event capture must use agent-adapter-event.v1"}
+            )
         if capture.get("producerBoundary") != "adapter-owned":
-            blockers.append({"code": "capability-event-capture-boundary", "message": "event producer boundary must be adapter-owned"})
+            blockers.append(
+                {
+                    "code": "capability-event-capture-boundary",
+                    "message": "event producer boundary must be adapter-owned",
+                }
+            )
     if capture.get("promotionRequired") is not False:
-        blockers.append({"code": "capability-event-capture-promotion-overclaim", "message": "event capture declaration must not imply promotion"})
+        blockers.append(
+            {
+                "code": "capability-event-capture-promotion-overclaim",
+                "message": "event capture declaration must not imply promotion",
+            }
+        )
 
 
 def _validate_planning_launch(

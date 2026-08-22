@@ -18,6 +18,18 @@ def build_ownership_report(
     base: str | None = None,
 ) -> dict[str, Any]:
     manifest = read_json_object(manifest_path, label="plan manifest")
+    return build_ownership_report_from_manifest(manifest, paths, manifest_path=manifest_path, base=base)
+
+
+def build_ownership_report_from_manifest(
+    manifest: dict[str, Any],
+    paths: list[str],
+    *,
+    manifest_path: Path | None = None,
+    base: str | None = None,
+) -> dict[str, Any]:
+    """Classify changed paths against an already loaded frozen manifest."""
+
     classifiers = _classifiers(manifest, manifest_path)
     entries = [_classify_path(path, classifiers) for path in sorted(set(paths))]
     categories = Counter(entry["category"] for entry in entries)
@@ -41,7 +53,7 @@ def report_has_category(report: dict[str, Any], categories: set[str]) -> bool:
     return any(entry.get("category") in categories for entry in report.get("entries", []))
 
 
-def _classifiers(manifest: dict[str, Any], manifest_path: Path) -> dict[str, Any]:
+def _classifiers(manifest: dict[str, Any], manifest_path: Path | None) -> dict[str, Any]:
     package_value = manifest.get("package")
     package = package_value if isinstance(package_value, dict) else {}
     plan_root = package.get("planArtifactRoot")
@@ -150,7 +162,9 @@ def _entry(
     return value
 
 
-def _repo_relative(path: Path) -> str | None:
+def _repo_relative(path: Path | None) -> str | None:
+    if path is None:
+        return None
     try:
         return normalize_repo_path(str(path.resolve().relative_to(Path.cwd().resolve())))
     except ValueError:

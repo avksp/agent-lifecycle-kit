@@ -6,8 +6,6 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
-from agent_lifecycle.contracts import write_json_create
 from agent_lifecycle.adapter_sessions import (
     build_adapter_session_receipt,
     create_session,
@@ -21,33 +19,39 @@ from agent_lifecycle.adapter_sessions import (
 )
 from agent_lifecycle.adapter_sessions.agent_plugin_probe import build_agent_plugin_probe_runner
 from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, managed_launch_profile
-from agent_lifecycle.adapter_sessions.qualification import load_shipped_launch_profile, qualified_profile_output_path
 from agent_lifecycle.adapter_sessions.local_launch_profile import validate_local_launch_profile
-from agent_lifecycle.reporting.progress_hooks import build_progress_hook_receipt
-from agent_lifecycle.diagnostics import build_adapter_install_plan
-from agent_lifecycle.host_protocol import (
-    inspect_adapter_descriptor,
-    require_adapter_event_stream_pass,
-    require_event_capture_pass,
-    require_adapter_inspection_pass,
-    require_adapter_validation_pass,
-    scaffold_adapter,
-    validate_adapter_descriptor,
-    validate_adapter_event_stream,
-    validate_event_capture_conformance,
-    validate_capability_manifest,
-)
-from agent_lifecycle.host_protocol.capabilities import (
-    build_thread_bridge_capability_projection,
-    build_thread_bridge_profile_from_descriptor,
-    capability_manifest_identity,
-)
+from agent_lifecycle.adapter_sessions.qualification import load_shipped_launch_profile, qualified_profile_output_path
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.contracts.thread_bridge_schemas import (
     resolve_thread_operation_status,
     validate_thread_bridge_profile,
     validate_thread_bridge_qualification_receipt,
 )
+from agent_lifecycle.diagnostics import build_adapter_install_plan
+from agent_lifecycle.host_protocol import (
+    inspect_adapter_descriptor,
+    require_adapter_event_stream_pass,
+    require_adapter_inspection_pass,
+    require_adapter_validation_pass,
+    require_event_capture_pass,
+    scaffold_adapter,
+    validate_adapter_descriptor,
+    validate_adapter_event_stream,
+    validate_capability_manifest,
+    validate_event_capture_conformance,
+)
 from agent_lifecycle.host_protocol.agent_plugin_qualification import run_agent_plugin_qualification_probe
+from agent_lifecycle.host_protocol.capabilities import (
+    build_thread_bridge_capability_projection,
+    build_thread_bridge_profile_from_descriptor,
+    capability_manifest_identity,
+)
+from agent_lifecycle.host_protocol.event_capture import (
+    require_lifecycle_control_bundle_pass,
+    validate_lifecycle_control_bundle,
+)
+from agent_lifecycle.host_protocol.lifecycle_control import load_lifecycle_control_policy
+from agent_lifecycle.reporting.progress_hooks import build_progress_hook_receipt
 
 
 def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -75,6 +79,12 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     adapter_event_capture.add_argument("--capability-manifest")
     adapter_event_capture.add_argument("--event", action="append", required=True)
     adapter_event_capture.add_argument("--receipt", required=True)
+    adapter_control = adapter_sub.add_parser("lifecycle-control-check")
+    adapter_control.add_argument("--policy")
+    adapter_control.add_argument("--request")
+    adapter_control.add_argument("--decision")
+    adapter_control.add_argument("--control-event", action="append", default=[])
+    adapter_control.add_argument("--attestation")
     adapter_scaffold = adapter_sub.add_parser("scaffold")
     adapter_scaffold.add_argument("--host", required=True)
     adapter_scaffold.add_argument("--target", required=True)
@@ -207,7 +217,11 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
     if args.adapter_command == "event-capture-check":
         descriptor = read_json_object(Path(args.descriptor), label="adapter descriptor")
         projection = read_json_object(Path(args.projection), label="adapter projection") if args.projection else None
-        capability_manifest = read_json_object(Path(args.capability_manifest), label="capability manifest") if args.capability_manifest else None
+        capability_manifest = (
+            read_json_object(Path(args.capability_manifest), label="capability manifest")
+            if args.capability_manifest
+            else None
+        )
         receipt = read_json_object(Path(args.receipt), label="adapter event stream receipt")
         events = [read_json_object(Path(path), label="adapter event") for path in args.event]
         return require_event_capture_pass(
@@ -219,6 +233,8 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
                 receipt=receipt,
             )
         )
+    if args.adapter_command == "lifecycle-control-check":
+        return _dispatch_lifecycle_control_check(args)
     if args.adapter_command == "scaffold":
         return scaffold_adapter(
             host=args.host,
@@ -235,7 +251,9 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
             profile_origin = "OPERATOR_OWNED_UNVERIFIED"
         validation = validate_local_launch_profile(profile)
         if validation["status"] != "PASS":
-            raise LifecycleError("qualified-launch-profile-invalid", "shipped launch profile failed validation", validation)
+            raise LifecycleError(
+                "qualified-launch-profile-invalid", "shipped launch profile failed validation", validation
+            )
         out = qualified_profile_output_path(args.out)
         write_json_create(out, profile)
         return {
@@ -310,13 +328,34 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
     raise LifecycleError("command-not-implemented", "adapter command is not implemented")
 
 
+def _dispatch_lifecycle_control_check(args: argparse.Namespace) -> dict[str, Any]:
+    policy = load_lifecycle_control_policy(Path(args.policy)) if args.policy else load_lifecycle_control_policy()
+    request = read_json_object(Path(args.request), label="lifecycle control request") if args.request else None
+    decision = read_json_object(Path(args.decision), label="lifecycle control decision") if args.decision else None
+    events = [read_json_object(Path(path), label="lifecycle control event") for path in args.control_event]
+    attestation = (
+        read_json_object(Path(args.attestation), label="lifecycle control attestation") if args.attestation else None
+    )
+    return require_lifecycle_control_bundle_pass(
+        validate_lifecycle_control_bundle(
+            policy=policy,
+            request=request,
+            decision=decision,
+            events=events or None,
+            attestation=attestation,
+        )
+    )
+
+
 def _build_thread_capability_payload(args: argparse.Namespace) -> dict[str, Any]:
     descriptor_path = Path(args.descriptor)
     descriptor = read_json_object(descriptor_path, label="adapter descriptor")
     manifest = read_json_object(Path(args.manifest), label="adapter capability manifest")
     manifest_validation = validate_capability_manifest(manifest, descriptor=descriptor)
     if manifest_validation["status"] != "PASS":
-        raise LifecycleError("thread-capability-manifest-invalid", "adapter capability manifest failed validation", manifest_validation)
+        raise LifecycleError(
+            "thread-capability-manifest-invalid", "adapter capability manifest failed validation", manifest_validation
+        )
     manifest_digest = capability_manifest_identity(manifest)
     profile = build_thread_bridge_profile_from_descriptor(
         descriptor,
@@ -324,7 +363,9 @@ def _build_thread_capability_payload(args: argparse.Namespace) -> dict[str, Any]
     )
     profile_validation = validate_thread_bridge_profile(profile)
     if profile_validation["status"] != "PASS":
-        raise LifecycleError("thread-capability-profile-invalid", "adapter thread profile failed validation", profile_validation)
+        raise LifecycleError(
+            "thread-capability-profile-invalid", "adapter thread profile failed validation", profile_validation
+        )
     receipt = read_json_object(Path(args.receipt), label="thread qualification receipt") if args.receipt else None
     return build_thread_bridge_capability_projection(profile, qualification_receipt=receipt)
 
@@ -332,7 +373,9 @@ def _build_thread_capability_payload(args: argparse.Namespace) -> dict[str, Any]
 def _build_thread_qualification_payload(args: argparse.Namespace) -> dict[str, Any]:
     descriptor_path = Path(args.descriptor)
     descriptor = read_json_object(descriptor_path, label="adapter descriptor")
-    manifest_path = Path(args.manifest) if args.manifest else _manifest_path_from_descriptor(descriptor_path, descriptor)
+    manifest_path = (
+        Path(args.manifest) if args.manifest else _manifest_path_from_descriptor(descriptor_path, descriptor)
+    )
     manifest = read_json_object(manifest_path, label="adapter capability manifest")
     manifest_validation = validate_capability_manifest(manifest, descriptor=descriptor)
     receipt = read_json_object(Path(args.receipt), label="thread qualification receipt")
@@ -362,7 +405,12 @@ def _build_thread_qualification_payload(args: argparse.Namespace) -> dict[str, A
             {"name": "descriptor", "status": "PASS" if manifest_validation["status"] == "PASS" else "FAIL"},
             {"name": "profile", "status": profile_validation["status"]},
             {"name": "qualification", "status": receipt_validation["status"]},
-            {"name": "operation-bindings", "status": "PASS" if operation_results and all(item["qualificationStatus"] == "QUALIFIED" for item in operation_results) else "FAIL"},
+            {
+                "name": "operation-bindings",
+                "status": "PASS"
+                if operation_results and all(item["qualificationStatus"] == "QUALIFIED" for item in operation_results)
+                else "FAIL",
+            },
         ],
         "operations": operation_results,
         "blockers": blockers,
@@ -381,7 +429,9 @@ def _manifest_path_from_descriptor(descriptor_path: Path, descriptor: dict[str, 
     relative_path = descriptor_path.parent / configured_path.name
     if relative_path.exists():
         return relative_path
-    raise LifecycleError("thread-capability-manifest-missing", "capability manifest path does not exist", {"path": configured})
+    raise LifecycleError(
+        "thread-capability-manifest-missing", "capability manifest path does not exist", {"path": configured}
+    )
 
 
 def _dispatch_adapter_task(args: argparse.Namespace) -> dict[str, Any]:
@@ -404,9 +454,12 @@ def _dispatch_adapter_task(args: argparse.Namespace) -> dict[str, Any]:
         target_tokens=args.target_tokens,
         package_id=args.package_id,
     )
-    binding = payload.get("workflowBinding") if isinstance(payload.get("workflowBinding"), dict) else {}
+    raw_binding = payload.get("workflowBinding")
+    binding: dict[str, Any] = raw_binding if isinstance(raw_binding, dict) else {}
     if payload.get("executionStarted") and binding.get("state") and binding.get("task"):
-        _emit_adapter_progress(args, adapter_id=args.adapter, state_path=Path(binding["state"]), task_id=str(binding["task"]))
+        _emit_adapter_progress(
+            args, adapter_id=args.adapter, state_path=Path(binding["state"]), task_id=str(binding["task"])
+        )
     if args.out:
         write_json_create(Path(args.out), payload)
     return payload
@@ -414,7 +467,9 @@ def _dispatch_adapter_task(args: argparse.Namespace) -> dict[str, Any]:
 
 def _dispatch_adapter_session(args: argparse.Namespace) -> dict[str, Any]:
     if args.adapter_session_command == "start":
-        _descriptor_path, descriptor = load_adapter_descriptor(args.adapter, Path(args.descriptor) if args.descriptor else None)
+        _descriptor_path, descriptor = load_adapter_descriptor(
+            args.adapter, Path(args.descriptor) if args.descriptor else None
+        )
         profile = managed_launch_profile(descriptor)
         session = create_session(
             adapter_id=args.adapter,
@@ -490,7 +545,9 @@ def _dispatch_adapter_session(args: argparse.Namespace) -> dict[str, Any]:
             task_id=args.task,
         )
         if payload.get("status") != "BLOCKED":
-            _emit_adapter_progress(args, adapter_id=payload["adapterId"], state_path=Path(args.state), task_id=args.task)
+            _emit_adapter_progress(
+                args, adapter_id=payload["adapterId"], state_path=Path(args.state), task_id=args.task
+            )
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
@@ -527,4 +584,6 @@ def _emit_adapter_progress(args: argparse.Namespace, *, adapter_id: str, state_p
 
 def _validate_adapter_progress_args(args: argparse.Namespace) -> None:
     if getattr(args, "progress_hook", "off") == "receipt" and not getattr(args, "progress_receipt", None):
-        raise LifecycleError("adapter-progress-receipt-path-missing", "--progress-hook receipt requires --progress-receipt")
+        raise LifecycleError(
+            "adapter-progress-receipt-path-missing", "--progress-hook receipt requires --progress-receipt"
+        )

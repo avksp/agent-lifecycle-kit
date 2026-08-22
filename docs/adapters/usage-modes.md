@@ -63,6 +63,20 @@ Run `agent-lifecycle adapter install-plan --descriptor
 adapters/<adapter-id>/adapter.descriptor.json` before changing host files. The
 plan is a preview: it does not execute installation commands.
 
+## Optional lifecycle control inside an adapter
+
+Release 1.80 adds an optional, provider-neutral control boundary for
+`file-edit`, `shell-command`, `task-accept` and `run-finalize`. It is separate
+from plugin installation and from managed launch. Every adapter currently
+publishes `GUIDANCE_ONLY` with `NO_RECOMMENDATION` for these operation-level
+claims, so the host skill can guide the model but cannot claim to block it.
+
+When an adapter later provides an exact-version qualified producer, its
+operation can be published as `OBSERVED` or `ENFORCED` independently. Use the
+[lifecycle-control reference](lifecycle-control.md) for the event, decision,
+qualification and security boundaries. The command route and the inside-host
+route use the same plan and evidence authority.
+
 ## Command route versus host route
 
 | Property | Inside the host CLI | `agent-lifecycle` command |

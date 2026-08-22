@@ -1,150 +1,209 @@
 {
+  "schemaVersion": "agent-adapter-capability-manifest.v1",
   "adapterId": "pi",
+  "host": "pi",
+  "maturity": "VERIFIED",
+  "descriptorDigest": "1a6784c72fd64ea33b7405fc4464323a502c68bbc268cba844273ccd2e0425c6",
+  "unsupportedOperationPolicy": "fail-closed",
+  "coreSemantics": "delegated-to-agent-lifecycle-core",
   "capabilities": [
     {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true,
-      "mapping": "pi-rpc-json-skills-install",
       "name": "install",
+      "mapping": "pi-rpc-json-skills-install",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "pi-rpc-json-skills-discover",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "discover",
+      "mapping": "pi-rpc-json-skills-discover",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false,
-      "mapping": "core-schema-validation",
       "name": "validate-envelope",
+      "mapping": "core-schema-validation",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": true,
-      "mapping": "pi-rpc-json-skills-launch",
       "name": "launch",
+      "mapping": "pi-rpc-json-skills-launch",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "attemptModelRoute-to-host-model",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "model-route-execution",
+      "mapping": "attemptModelRoute-to-host-model",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "pi-rpc-json-skills-wait",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "wait",
+      "mapping": "pi-rpc-json-skills-wait",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "pi-rpc-json-skills-cancel",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "cancel",
+      "mapping": "pi-rpc-json-skills-cancel",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "pi-rpc-json-skills-resume",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "resume",
+      "mapping": "pi-rpc-json-skills-resume",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "pi-rpc-json-skills-tool-execution",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "tool-execution",
+      "mapping": "pi-rpc-json-skills-tool-execution",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false,
-      "mapping": "agent-adapter-event.v1",
-      "name": "adapter-event-stream",
-      "offlineConformance": "deterministic",
-      "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false,
-      "mapping": "task-result-artifact",
-      "name": "result-collection",
-      "offlineConformance": "deterministic",
-      "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": true,
-      "mapping": "pi-rpc-json-skills-usage-attestation",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
+      "name": "adapter-event-stream",
+      "mapping": "agent-adapter-event.v1",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
+      "name": "result-collection",
+      "mapping": "task-result-artifact",
+      "offlineConformance": "deterministic",
+      "support": "declared",
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "usage-attestation",
+      "mapping": "pi-rpc-json-skills-usage-attestation",
       "offlineConformance": "synthetic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": true,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
-      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-      "liveEvidenceRequiredForVerified": false,
-      "mapping": "audit-plan-implementation",
       "name": "task-audit",
+      "mapping": "audit-plan-implementation",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
-    },
-    {
+      "unsupportedOperationPolicy": "fail-closed",
       "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
       "liveEvidenceRequiredForVerified": false,
-      "mapping": "audit-plan-implementation",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
+    },
+    {
       "name": "final-audit",
+      "mapping": "audit-plan-implementation",
       "offlineConformance": "deterministic",
       "support": "declared",
-      "unsupportedOperationPolicy": "fail-closed"
+      "unsupportedOperationPolicy": "fail-closed",
+      "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+      "liveEvidenceRequiredForVerified": false,
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     }
   ],
-  "coreSemantics": "delegated-to-agent-lifecycle-core",
-  "descriptorDigest": "e7199741f5b5226126d4997f0d530d549de60308653d2e24b669c4a12d86323e",
-  "eventCapture": {
-    "categories": [
-      "command",
-      "file-change",
-      "lifecycle-transition",
-      "model-usage",
-      "user-decision",
-      "validation"
-    ],
-    "portableEventSchema": "agent-adapter-event.v1",
-    "producerBoundary": "adapter-owned",
-    "promotionRequired": false,
-    "status": "DECLARED"
+  "modelRouting": {
+    "profileSupport": "host-local",
+    "attemptRoutePolicy": "must-execute-or-fail-closed",
+    "usageReceiptRequired": true,
+    "unsupportedClassPolicy": "fail-closed",
+    "providerModelNamesInCore": false,
+    "liveVerified": true
   },
-  "host": "pi",
+  "runtimeBoundary": {
+    "hostSpecificCode": "adapter-owned",
+    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
+    "unsupportedOperations": "fail-closed",
+    "providerModelNamesInCore": false
+  },
   "hostCapabilities": [
     {
       "adapterId": "pi",
@@ -159,54 +218,6 @@
       "transport": "unknown"
     }
   ],
-  "maturity": "VERIFIED",
-  "modelRouting": {
-    "attemptRoutePolicy": "must-execute-or-fail-closed",
-    "liveVerified": true,
-    "profileSupport": "host-local",
-    "providerModelNamesInCore": false,
-    "unsupportedClassPolicy": "fail-closed",
-    "usageReceiptRequired": true
-  },
-  "planningLaunch": {
-    "expectedHostVersion": "0.83.0",
-    "hostLaunchStarted": false,
-    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
-    "profileStatus": "UNSUPPORTED",
-    "qualificationRequired": true
-  },
-  "promotion": {
-    "liveTestedHostRange": {
-      "evidence": [
-        "docs/adapters/evidence/pi-live-verified.md",
-        "work/release-1-19/evidence/pi-install-probe.json",
-        "work/release-1-19/evidence/preflight/pi-preflight-report-live-ready.json",
-        "work/release-1-19/evidence/pi-containment-receipt-live-ready.json",
-        "work/release-1-19/evidence/live-host-receipts/pi.json",
-        "work/release-1-19/evidence/live-host-conformance-pi.json",
-        "work/release-1-19/evidence/live-calibration-receipts/pi.json",
-        "work/release-1-19/evidence/live-calibration-verification-pi.json",
-        "work/release-1-19/evidence/host-env-hygiene-pi-harness-reports.json",
-        "work/release-1-19/evidence/host-env-hygiene-pi-all-scanned.json",
-        "work/release-1-19/evidence/pi/full-lifecycle/final/final-proof.json"
-      ],
-      "host": "pi",
-      "maximumVersion": "0.83.0",
-      "minimumVersion": "0.83.0",
-      "productionPromotionClaimed": false,
-      "publicDirectoryApprovalClaimed": false,
-      "sourceRevision": "75317878358a3dffa4b503cdb8bd8fff40de770b",
-      "testedAt": "2026-08-01"
-    },
-    "productionPromotionClaimed": false,
-    "verifiedRequiresLiveTestedHostRange": true
-  },
-  "runtimeBoundary": {
-    "hostSpecificCode": "adapter-owned",
-    "lifecycleSemantics": "delegated-to-agent-lifecycle-core",
-    "providerModelNamesInCore": false,
-    "unsupportedOperations": "fail-closed"
-  },
   "sandboxCapabilities": {
     "boundaries": {
       "environment": {
@@ -251,15 +262,27 @@
       "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access."
     }
   },
-  "schemaVersion": "agent-adapter-capability-manifest.v1",
-  "threadBridge": {
-    "adapterId": "pi",
-    "capabilityManifestDigest": "86d3e4e82da2cbc141e22376ec9e38830ece3c5d0a3349c5ba6268ec0c019398",
-    "descriptorDigest": "e7199741f5b5226126d4997f0d530d549de60308653d2e24b669c4a12d86323e",
-    "evidencePolicy": "not-claimed",
-    "host": "pi",
-    "hostExecutionOwned": true,
-    "hostRange": {
+  "eventCapture": {
+    "status": "DECLARED",
+    "portableEventSchema": "agent-adapter-event.v1",
+    "categories": [
+      "command",
+      "file-change",
+      "lifecycle-transition",
+      "model-usage",
+      "user-decision",
+      "validation"
+    ],
+    "producerBoundary": "adapter-owned",
+    "promotionRequired": false
+  },
+  "promotion": {
+    "verifiedRequiresLiveTestedHostRange": true,
+    "productionPromotionClaimed": false,
+    "liveTestedHostRange": {
+      "host": "pi",
+      "minimumVersion": "0.83.0",
+      "maximumVersion": "0.83.0",
       "evidence": [
         "docs/adapters/evidence/pi-live-verified.md",
         "work/release-1-19/evidence/pi-install-probe.json",
@@ -273,56 +296,89 @@
         "work/release-1-19/evidence/host-env-hygiene-pi-all-scanned.json",
         "work/release-1-19/evidence/pi/full-lifecycle/final/final-proof.json"
       ],
-      "host": "pi",
-      "maximumVersion": "0.83.0",
-      "minimumVersion": "0.83.0",
+      "testedAt": "2026-08-01",
       "productionPromotionClaimed": false,
       "publicDirectoryApprovalClaimed": false,
-      "sourceRevision": "75317878358a3dffa4b503cdb8bd8fff40de770b",
-      "testedAt": "2026-08-01"
+      "sourceRevision": "75317878358a3dffa4b503cdb8bd8fff40de770b"
+    }
+  },
+  "planningLaunch": {
+    "profileStatus": "UNSUPPORTED",
+    "planningSupportStatus": "PLANNING_ONLY_UNSUPPORTED",
+    "expectedHostVersion": "0.83.0",
+    "qualificationRequired": true,
+    "hostLaunchStarted": false
+  },
+  "threadBridge": {
+    "schemaVersion": "agent-thread-bridge-profile.v1",
+    "profileId": "thread-bridge",
+    "adapterId": "pi",
+    "host": "pi",
+    "descriptorDigest": "1a6784c72fd64ea33b7405fc4464323a502c68bbc268cba844273ccd2e0425c6",
+    "capabilityManifestDigest": "a940ff140c4cdb3b83867066f4db33a8488843446d5649c7c189c26d5d83ab4d",
+    "hostRange": {
+      "host": "pi",
+      "minimumVersion": "0.83.0",
+      "maximumVersion": "0.83.0",
+      "evidence": [
+        "docs/adapters/evidence/pi-live-verified.md",
+        "work/release-1-19/evidence/pi-install-probe.json",
+        "work/release-1-19/evidence/preflight/pi-preflight-report-live-ready.json",
+        "work/release-1-19/evidence/pi-containment-receipt-live-ready.json",
+        "work/release-1-19/evidence/live-host-receipts/pi.json",
+        "work/release-1-19/evidence/live-host-conformance-pi.json",
+        "work/release-1-19/evidence/live-calibration-receipts/pi.json",
+        "work/release-1-19/evidence/live-calibration-verification-pi.json",
+        "work/release-1-19/evidence/host-env-hygiene-pi-harness-reports.json",
+        "work/release-1-19/evidence/host-env-hygiene-pi-all-scanned.json",
+        "work/release-1-19/evidence/pi/full-lifecycle/final/final-proof.json"
+      ],
+      "testedAt": "2026-08-01",
+      "productionPromotionClaimed": false,
+      "publicDirectoryApprovalClaimed": false,
+      "sourceRevision": "75317878358a3dffa4b503cdb8bd8fff40de770b"
     },
+    "policyVersion": "agent-thread-bridge-policy.v1",
     "operations": [
       {
-        "approval": "operator",
-        "declaredStatus": "UNSUPPORTED",
-        "execution": "adapter-owned",
         "name": "create",
-        "qualificationRequired": true,
-        "readOnly": false
-      },
-      {
-        "approval": "none",
         "declaredStatus": "UNSUPPORTED",
-        "execution": "adapter-owned",
-        "name": "list",
-        "qualificationRequired": true,
-        "readOnly": true
-      },
-      {
-        "approval": "none",
-        "declaredStatus": "UNSUPPORTED",
-        "execution": "adapter-owned",
-        "name": "read",
-        "qualificationRequired": true,
-        "readOnly": true
-      },
-      {
+        "readOnly": false,
         "approval": "operator",
-        "declaredStatus": "UNSUPPORTED",
         "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "list",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
+        "name": "read",
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": true,
+        "approval": "none",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
+      },
+      {
         "name": "send",
-        "qualificationRequired": true,
-        "readOnly": false
+        "declaredStatus": "UNSUPPORTED",
+        "readOnly": false,
+        "approval": "operator",
+        "execution": "adapter-owned",
+        "qualificationRequired": true
       }
     ],
-    "policyVersion": "agent-thread-bridge-policy.v1",
-    "productionPromotionClaimed": false,
-    "profileDigest": "95900d0d913db0ae2c4c5baeebd9356eef846c752e6b03a45fc5bfcfcff51383",
-    "profileId": "thread-bridge",
+    "transport": "adapter-owned",
+    "evidencePolicy": "not-claimed",
     "providerIdentityUsed": false,
+    "hostExecutionOwned": true,
     "qualificationRequired": true,
-    "schemaVersion": "agent-thread-bridge-profile.v1",
-    "transport": "adapter-owned"
-  },
-  "unsupportedOperationPolicy": "fail-closed"
+    "productionPromotionClaimed": false,
+    "profileDigest": "dcb7055adb38b6b52876683471ad40b61a02d50db6dc82f3dcc3d25604fe06ea"
+  }
 }
