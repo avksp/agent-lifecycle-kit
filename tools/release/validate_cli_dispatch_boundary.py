@@ -52,8 +52,13 @@ def main() -> int:
     tree = ast.parse(source, filename=path.as_posix())
     role = _dispatch_role(path)
     required_delegates = REQUIRED_DELEGATES if role == "root" else {}
-    imported_delegates = _imported_delegates(tree, required_delegates)
-    routed_delegates = _routed_delegates(tree, required_delegates)
+    registry_delegates = _registry_delegates(path, required_delegates)
+    if registry_delegates is None:
+        imported_delegates = _imported_delegates(tree, required_delegates)
+        routed_delegates = _routed_delegates(tree, required_delegates)
+    else:
+        imported_delegates = registry_delegates
+        routed_delegates = registry_delegates
     missing_imports = sorted(set(required_delegates).difference(imported_delegates))
     missing_routes = sorted(set(required_delegates).difference(routed_delegates))
     if missing_imports:
@@ -119,6 +124,35 @@ def _routed_delegates(tree: ast.AST, required_delegates: dict[str, str]) -> set[
         if node.func.id in required_delegates:
             routed.add(node.func.id)
     return routed
+
+
+def _registry_delegates(path: Path, required_delegates: dict[str, str]) -> set[str] | None:
+    """Read lazy delegate bindings from a sibling command registry when present."""
+    if not required_delegates:
+        return None
+    registry_path = path.with_name("command_registry.py")
+    if not registry_path.is_file():
+        return None
+    try:
+        tree = ast.parse(registry_path.read_text(encoding="utf-8"), filename=registry_path.as_posix())
+    except (OSError, SyntaxError):
+        return None
+    delegates: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        for value in node.values:
+            if not isinstance(value, ast.Tuple) or len(value.elts) < 2:
+                continue
+            module, function = value.elts[0], value.elts[1]
+            if not isinstance(module, ast.Constant) or not isinstance(module.value, str):
+                continue
+            if not isinstance(function, ast.Constant) or not isinstance(function.value, str):
+                continue
+            for name, required_module in required_delegates.items():
+                if module.value == required_module and function.value == name:
+                    delegates.add(name)
+    return delegates
 
 
 def _body(

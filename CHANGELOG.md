@@ -4,6 +4,22 @@
 
 - No changes yet.
 
+## 1.78.0 - 2026-08-22
+
+- Added revision-bound performance budgets and deterministic evidence for CLI
+  startup, neutrality scanning, cryptographic operations and resource limits.
+- Replaced the affine Ed25519 hot path with iterative extended-coordinate
+  arithmetic while preserving published vectors, receipt compatibility and
+  strict malformed-input handling.
+- Replaced per-object Git subprocesses with bounded batch streams and added a
+  differential literal matcher without weakening deny-rule attribution or
+  fail-closed resource limits.
+- Streamed untracked worktree hashing, reduced Linux process-group sampling
+  overhead and added lazy command-family imports for faster one-shot CLI use.
+- Added synchronized English and Russian documentation for performance
+  evidence, hard resource limits, advisory timings and operator-visible
+  failure states.
+
 ## 1.77.0 - 2026-08-21
 
 - Added a pinned development-only Ruff, mypy and coverage toolchain with a

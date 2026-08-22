@@ -128,6 +128,29 @@ selected opt-in facades. The validator checks imports, exports, annotations and
 English/Russian documentation. Internal modules remain implementation details
 unless they are listed in that contract.
 
+## Release 1.78 performance boundaries
+
+Release 1.78 optimizes repeated local work without changing lifecycle
+authority. The performance policy and typed ceilings are separate from the
+plan, lock and acceptance authorities: a faster measurement can never approve
+an implementation or replace a required security check.
+
+The Ed25519 implementation uses iterative extended-coordinate arithmetic and is
+checked against published vectors, accepted receipt fixtures and malformed
+inputs. Neutrality scanning uses bounded Git batch streams and a differential
+literal matcher; worktree identity uses bounded streaming reads; Linux group
+enumeration has a separate cadence; and the root CLI loads command families
+only after selection. Each optimization retains shell-free execution, fail
+closed limits, stable reads, before/after identity captures, redaction and
+deterministic evidence.
+
+The performance harness records revision, environment, samples and bounded
+operation summaries under `work/`. Wall time and memory are advisory unless a
+plan gives them an explicit threshold. The one 1.78 timing gate is an
+interleaved Ed25519 median comparison against the frozen affine reference;
+there is no constant-time claim and no runtime dependency or cache-based
+shortcut. See [performance and resource budgets](../reference/performance-and-resource-budgets.md).
+
 ## C1: system context
 
 At system level ALK is a local CLI and Python package used inside a source
@@ -945,4 +968,5 @@ their old enumeration behavior but carry a signed deprecation marker.
 - [Bug Forensics profile](../reference/bug-forensics.md)
 - [Quality-preserving execution strategy](../reference/execution-strategy.md)
 - [Neutrality scanning](../reference/neutrality.md)
+- [Performance and resource budgets](../reference/performance-and-resource-budgets.md)
 - [Context checkpoints and compaction recovery](../reference/context-checkpoints.md)

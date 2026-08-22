@@ -18,7 +18,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Agent Plugins client qualification](reference/agent-plugin-qualification.md)
 - [Commands by task](guides/commands-by-task.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==1.77.0` from
+  `python -m pip install agent-lifecycle-kit==1.78.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -31,6 +31,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Workflow customization and execution controls](reference/workflow-customization.md)
 - [Evidence-based audit optimization](reference/audit-optimization.md)
 - [Quality and cost learning](reference/quality-cost-learning.md)
+- [Performance and resource budgets](reference/performance-and-resource-budgets.md)
 - [Research evidence workflow](guides/research-workflow.md)
 - [Research evidence reference](reference/research-evidence.md)
 - [Lifecycle task scenarios](guides/lifecycle-cookbook.md)

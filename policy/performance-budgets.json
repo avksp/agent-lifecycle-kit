@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "agent-performance-budgets.v1",
+  "revision": 1,
+  "sourceRevision": "dbf0ffbc6a3f8bd53f7408f58cb4475d3aef2350",
+  "limits": {
+    "maxGitProcessesPerFullScan": 4,
+    "maxGitObjects": 1000000,
+    "maxGitInventoryBytes": 134217728,
+    "maxGitObjectBytes": 16777216,
+    "maxGitExpandedBytes": 4294967296,
+    "maxGitBatchFramingBytes": 134217728,
+    "maxFullScanWallSeconds": 600,
+    "maxUntrackedFiles": 100000,
+    "maxUntrackedBytes": 4294967296,
+    "maxHashChunkBytes": 262144,
+    "maxWorktreeIdentityWallSecondsPerCapture": 120,
+    "maxDenyRules": 1024,
+    "maxDenyRuleBytes": 4096,
+    "maxDenyRuleAggregateBytes": 1048576,
+    "maxSimpleLiteralRules": 64,
+    "maxLinuxGroupSamplesPerSecond": 4,
+    "maxEd25519OptimizedToReferenceMedianRatioBps": 2000,
+    "maxBenchmarkSamplesPerCase": 31,
+    "maxBenchmarkOutputBytes": 16777216,
+    "maxEvidenceBytesPerRun": 100663296
+  },
+  "benchmark": {
+    "warmupSamples": 2,
+    "samplesPerCase": 7,
+    "maxCommandWallSeconds": 120,
+    "maxTotalWallSeconds": 600,
+    "maxOutputBytes": 16777216
+  },
+  "operations": [
+    "cli-version",
+    "neutrality-tracked",
+    "canonical-digest"
+  ],
+  "productionPromotionClaimed": false
+}

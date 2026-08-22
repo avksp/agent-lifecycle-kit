@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.adapter_sessions.process_telemetry import ProcessTelemetry, capture_process_snapshot
 
@@ -23,6 +25,17 @@ class ProcessTelemetryTests(unittest.TestCase):
         self.assertIsInstance(snapshot, dict)
         self.assertNotIn("argv", snapshot)
         self.assertNotIn("environment", snapshot)
+
+    def test_linux_group_count_is_decoupled_from_fast_samples(self) -> None:
+        if not Path("/proc").is_dir():
+            self.skipTest("Linux procfs fixture")
+        with patch("agent_lifecycle.adapter_sessions.process_telemetry._linux_group_count", return_value=1) as counter:
+            telemetry = ProcessTelemetry(pid=os.getpid(), group_id=os.getpgrp())
+            telemetry.sample()
+            telemetry.sample()
+            result = telemetry.finish()
+        self.assertEqual(counter.call_count, 2)
+        self.assertEqual(result["sampleCount"], 4)
 
 
 if __name__ == "__main__":
