@@ -5,9 +5,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, read_json_object
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.ownership_paths import is_under_authority_path, normalize_authority_path
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.freeze import verify_plan_lock_envelope
+from agent_lifecycle.host_protocol.lifecycle_gate import (
+    evaluate_post_action_gate,
+    lifecycle_control_selection,
+    lifecycle_control_selection_blockers,
+    require_lifecycle_gate_pass,
+)
 from agent_lifecycle.workflow.artifacts import (
     artifact_identity,
     artifact_path,
@@ -128,6 +135,7 @@ def commit_task_result(
     result = read_json_object(root / expected_path, label="task result")
     identity = artifact_identity(root, expected_path, result)
     validate_task_result(state, task, result, identity)
+    control_post_action = _validate_control_post_action(state, task, result, root)
     model_usage_identity = None
     if model_usage_receipt_required(task):
         if model_usage_receipt_path is None:
@@ -164,6 +172,8 @@ def commit_task_result(
             "task attempt does not require a model usage receipt",
         )
     task["result"] = identity
+    if control_post_action is not None:
+        task["lifecycleControlPostAction"] = control_post_action
     task["status"] = "VERIFYING"
     task["lastReason"] = reason
     record_gate_receipts(task, gate_receipts)
@@ -223,6 +233,7 @@ def accept_task(
         task,
         implementation_audit_path=implementation_audit_path,
     )
+    _require_control_task_acceptance(state, task)
     record_gate_receipts(task, gate_receipts)
     task["ownershipReceipt"] = ownership_receipt
     if implementation_audit is not None:
@@ -462,3 +473,87 @@ def _validate_task_authority_paths(state: dict[str, Any], task: dict[str, Any]) 
         for path in policy.get(field, []):
             if isinstance(path, str):
                 normalize_authority_path(path, label=f"{field} path")
+
+
+def _validate_control_post_action(
+    state: dict[str, Any],
+    task: dict[str, Any],
+    result: dict[str, Any],
+    root: Path,
+) -> dict[str, Any] | None:
+    level, policy, evidence = lifecycle_control_selection(state)
+    selection_blockers = lifecycle_control_selection_blockers(state, requested_level=level)
+    if selection_blockers:
+        raise LifecycleError(
+            "lifecycle-control-selection-invalid",
+            "selected lifecycle control is not bound to the frozen plan",
+            {"blockers": selection_blockers},
+        )
+    if level not in {"OBSERVED", "ENFORCED"}:
+        return None
+    manifest_path = state.get("manifestPath")
+    if not isinstance(manifest_path, str):
+        raise LifecycleError(
+            "lifecycle-control-context-missing",
+            "selected lifecycle control requires the adopted manifest path",
+        )
+    manifest = read_json_object(root / normalize_repo_path(manifest_path), label="frozen plan manifest")
+    lock_path = Path(manifest_path).with_name("plan.lock.json")
+    lock = read_json_object(root / normalize_repo_path(lock_path.as_posix()), label="plan lock")
+    verify_plan_lock_envelope(manifest, lock)
+    selection_blockers = lifecycle_control_selection_blockers(
+        state,
+        manifest=manifest,
+        requested_level=level,
+    )
+    if selection_blockers:
+        raise LifecycleError(
+            "lifecycle-control-selection-invalid",
+            "selected lifecycle control is not bound to the frozen plan",
+            {"blockers": selection_blockers},
+        )
+    pre_action = task.get("lifecycleControlPreAction")
+    if not isinstance(pre_action, dict):
+        pre_action = evidence.get("preAction") if isinstance(evidence.get("preAction"), dict) else None
+    gate = evaluate_post_action_gate(
+        pre_action=pre_action or {},
+        manifest=manifest,
+        actual_changed_paths=result.get("changedFiles", []),
+        outcome={
+            "status": "PASS",
+            "changed": bool(result.get("changedFiles")),
+            "taskId": task.get("id"),
+        },
+        actual_status="PASS",
+        event=evidence.get("postEvent") if isinstance(evidence.get("postEvent"), dict) else None,
+        policy=policy,
+    )
+    require_lifecycle_gate_pass(gate, gate_type="post-action")
+    return gate
+
+
+def _require_control_task_acceptance(state: dict[str, Any], task: dict[str, Any]) -> None:
+    level, _, evidence = lifecycle_control_selection(state)
+    selection_blockers = lifecycle_control_selection_blockers(state, requested_level=level)
+    if selection_blockers:
+        raise LifecycleError(
+            "lifecycle-control-selection-invalid",
+            "selected lifecycle control is not bound to the frozen plan",
+            {"blockers": selection_blockers},
+        )
+    if level not in {"OBSERVED", "ENFORCED"}:
+        return
+    post_action = task.get("lifecycleControlPostAction")
+    if not isinstance(post_action, dict):
+        post_action = evidence.get("postAction") if isinstance(evidence.get("postAction"), dict) else None
+    if (
+        not isinstance(post_action, dict)
+        or post_action.get("status") != "PASS"
+        or post_action.get("gateDigest")
+        != canonical_digest({key: value for key, value in post_action.items() if key != "gateDigest"})
+    ):
+        raise LifecycleError(
+            "lifecycle-control-evidence-required",
+            "selected lifecycle control requires accepted post-action evidence",
+            {"taskId": task.get("id"), "level": level},
+        )

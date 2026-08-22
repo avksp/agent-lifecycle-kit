@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.79.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.80.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -59,6 +59,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 - Usage visibility: tokens, time, resource counters and structured execution records without sensitive data are native; monetary cost is optional and only used when a metered host reports it.
 - Project-specific workflow settings: ALK can discover and validate uncommitted local defaults, or apply a built-in workflow preset for a common route, while the frozen plan remains authoritative.
 - Reproducible Python maintenance: pinned development-only Ruff, mypy and coverage checks, a non-growing quality ratchet, stable redacted CLI errors, installed package resources, an explicit documented Python API, and bounded performance controls that preserve security and evidence rules.
+- Optional adapter lifecycle control: operation-level `GUIDANCE_ONLY`, `OBSERVED` and `ENFORCED` declarations remain separate from general adapter support; bundled adapters currently publish `GUIDANCE_ONLY` with `NO_RECOMMENDATION`, and managed launch remains `WRAPPER_ONLY`. See [optional adapter lifecycle control](docs/adapters/lifecycle-control.md).
 - Project principles and plan deltas keep long-running work understandable: principles provide bounded defaults, while a digest-bound delta shows which plan authority changed and whether review and a new lock are required. CI also checks an acyclic module/package graph, layer direction and source-size limits; adapter inspection uses bounded literal profiles and fails closed without executing adapter code.
 - Read-only progress and managed sessions preserve review/freeze boundaries;
   host UIs show lifecycle state and counters, `start` accepts task text,

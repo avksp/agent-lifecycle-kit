@@ -52,6 +52,21 @@ agent-lifecycle host-launch preflight --profile .alk/host-launch/kimi-code.json
 Маршрут планирования использует статус и подтверждения из раздела [запуск адаптера только для
 планирования](../reference/planning-only-launch.md).
 
+## Статус контроля жизненного цикла
+
+Для адаптера Kimi Code каждая операция дескриптора (`cancel`, `discover`, `final-audit`, `install`, `launch`, `model-route-execution`, `result-collection`, `resume`, `task-audit`, `tool-execution`, `adapter-event-stream`, `usage-attestation`, `validate-envelope`, `wait`) публикует
+`declaredLevel: GUIDANCE_ONLY`, `supportedLevel: GUIDANCE_ONLY`,
+`qualifiedLevel: GUIDANCE_ONLY` и `qualificationStatus: NO_RECOMMENDATION`.
+Статус управляемого запуска - `WRAPPER_ONLY`. Это значения контроля жизненного
+цикла для отдельных операций, а не общий уровень поддержки адаптера в матрице.
+
+Страница и навык адаптера объясняют порядок работы ALK внутри хоста. Они не
+заявляют, что промпт, плагин или обёртка блокируют действие. Позже для отдельных
+операций можно квалифицировать производителя хоста для точной версии, но
+одних офлайн-фикстур для повышения уровня недостаточно. См. [необязательный
+контроль жизненного цикла](lifecycle-control.md) и [использование ALK с
+адаптером](usage-modes.md).
+
 ## Использование ALK в Kimi Code
 
 Kimi Code позволяет выбрать каталог навыков. Подключите общий каталог `skills/` из отмеченной

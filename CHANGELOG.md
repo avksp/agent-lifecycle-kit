@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.80.0 - 2026-08-22
+
+- Added optional provider-neutral adapter lifecycle control with explicit
+  `GUIDANCE_ONLY`, `OBSERVED` and `ENFORCED` levels for observable operations.
+- Added pre-action, post-action and stop boundaries that can bind adapter work
+  to a frozen ALK plan without claiming access to private model reasoning.
+- Added exact host-version and operation qualification rules; declarations,
+  prompts, plugins and offline fixtures do not promote an adapter to an
+  enforced level.
+- Kept the feature off by default, with no automatic host-setting changes and
+  honest bundled-adapter status: `GUIDANCE_ONLY`, `NO_RECOMMENDATION` and
+  `WRAPPER_ONLY` managed launch.
+- Added synchronized English and Russian documentation, adapter-level status
+  pages, publication metadata and deterministic documentation checks.
+
 ## 1.79.0 - 2026-08-22
 
 - Added the canonical `agent-plan-manifest.v1` contract and deterministic

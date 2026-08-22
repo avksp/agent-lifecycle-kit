@@ -45,6 +45,21 @@ agent-lifecycle adapter inspect \
 завершается безопасным отказом. Подробнее: [запуск адаптера только для
 планирования](../reference/planning-only-launch.md).
 
+## Статус контроля жизненного цикла
+
+Для адаптера Codex каждая операция дескриптора (`install`, `discover`, `validate-envelope`, `launch`, `model-route-execution`, `wait`, `cancel`, `resume`, `tool-execution`, `adapter-event-stream`, `result-collection`, `usage-attestation`, `task-audit`, `final-audit`) публикует
+`declaredLevel: GUIDANCE_ONLY`, `supportedLevel: GUIDANCE_ONLY`,
+`qualifiedLevel: GUIDANCE_ONLY` и `qualificationStatus: NO_RECOMMENDATION`.
+Статус управляемого запуска - `WRAPPER_ONLY`. Это значения контроля жизненного
+цикла для отдельных операций, а не общий уровень поддержки адаптера в матрице.
+
+Страница и навык адаптера объясняют порядок работы ALK внутри хоста. Они не
+заявляют, что промпт, плагин или обёртка блокируют действие. Позже для отдельных
+операций можно квалифицировать производителя хоста для точной версии, но
+одних офлайн-фикстур для повышения уровня недостаточно. См. [необязательный
+контроль жизненного цикла](lifecycle-control.md) и [использование ALK с
+адаптером](usage-modes.md).
+
 ## Использование ALK в Codex
 
 После установки модуля перезапустите Codex, откройте целевой проект и укажите:

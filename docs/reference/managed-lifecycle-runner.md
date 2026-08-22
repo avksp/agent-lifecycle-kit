@@ -14,6 +14,16 @@ precondition; it is not an implementation audit or a release decision.
 This closes the gap between the lifecycle skills and the CLI surface: a host
 can ask ALK what must happen next without reconstructing the process from chat.
 
+## Optional lifecycle control
+
+Release 1.80 does not change the runner's authority. Optional adapter control
+can add pre-action, post-action and stop evidence around the action returned by
+`nextAction`, but the runner still derives that action from the frozen plan,
+lock, state and accepted receipts. A plugin prompt or an adapter declaration
+cannot rewrite those inputs. Current bundled adapters publish
+`GUIDANCE_ONLY` and `NO_RECOMMENDATION`; `ENFORCED` is reserved for an
+exact-version host-owned producer with negative evidence.
+
 ## Command
 
 ```bash

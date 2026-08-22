@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.audit import build_ownership_report  # noqa: E402
+from agent_lifecycle.audit.ownership import build_ownership_report_from_manifest  # noqa: E402
 from agent_lifecycle.contracts import LifecycleError  # noqa: E402
 
 
@@ -55,6 +56,20 @@ class OwnershipTests(unittest.TestCase):
                 build_ownership_report(manifest, ["src/agent_lifecycle/neutrality/gate.py"])
 
             self.assertEqual(raised.exception.code, "invalid-authority-path")
+
+    def test_loaded_manifest_classification_matches_file_backed_report(self) -> None:
+        manifest = _manifest()
+        loaded_report = build_ownership_report_from_manifest(
+            manifest,
+            ["src/package/core.py", "runtime/state.json", "LICENSE"],
+            base="main",
+        )
+
+        by_path = {entry["path"]: entry for entry in loaded_report["entries"]}
+        self.assertEqual(loaded_report["packageId"], "sample")
+        self.assertEqual(by_path["src/package/core.py"]["owners"], ["WS-01"])
+        self.assertEqual(by_path["runtime/state.json"]["category"], "lead-owned")
+        self.assertEqual(by_path["LICENSE"]["category"], "forbidden")
 
 
 def _manifest() -> dict:

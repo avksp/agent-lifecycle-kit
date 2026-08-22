@@ -113,6 +113,23 @@ approves a new profile. See [Evidence-based audit optimization](../reference/aud
 | [Pi](pi.md) | RPC/JSON plus AGENTS/agentskills projection, bounded JSONL live harness and capability manifest | VERIFIED | `WRAPPER_ONLY` | Pi 0.83.0: live conformance, calibration, containment, host-env hygiene and ALK lifecycle proof passed locally on a host-local provider/model binding |
 | [Qwen Code](qwen-code.md) | Host-local qwen CLI runner, source projection, and capability manifest | VERIFIED | `WRAPPER_ONLY` | Qwen Code 0.21.0: live conformance, calibration and ALK lifecycle proof passed on a host-local provider/model binding |
 
+## Optional lifecycle-control status
+
+The general support level in the runtime table describes the adapter
+integration. It is not an operation-level lifecycle-control guarantee. The
+operation-level declaration is published separately and is currently the same
+for every bundled adapter:
+
+| Operations | Declared | Supported | Qualified | Qualification status | Managed launch |
+| --- | --- | --- | --- | --- | --- |
+| `install`, `discover`, `validate-envelope`, `launch`, `model-route-execution`, `wait`, `cancel`, `resume`, `tool-execution`, `adapter-event-stream`, `result-collection`, `usage-attestation`, `task-audit`, `final-audit` | `GUIDANCE_ONLY` | `GUIDANCE_ONLY` | `GUIDANCE_ONLY` | `NO_RECOMMENDATION` | `WRAPPER_ONLY` |
+
+These values are copied from every adapter descriptor and capability manifest.
+They mean that the bundled pages and skills describe the lifecycle, while no
+adapter currently has an independently qualified host producer that can
+observe or block these operations. The operation-specific contract is
+described in [Optional adapter lifecycle control](lifecycle-control.md).
+
 ## Optional thread bridge support
 
 Thread operations use a separate adapter-owned qualification contract. The
