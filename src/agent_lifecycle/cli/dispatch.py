@@ -3,57 +3,86 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 from typing import Any
 
-from agent_lifecycle.cli.dispatch_adapters import dispatch_adapters
-from agent_lifecycle.cli.benchmarks import dispatch_benchmark
-from agent_lifecycle.cli.dispatch_contracts import dispatch_contracts
-from agent_lifecycle.cli.dispatch_lifecycle import dispatch_lifecycle
-from agent_lifecycle.cli.dispatch_observability import dispatch_observability
-from agent_lifecycle.cli.dispatch_planning import dispatch_planning
-from agent_lifecycle.cli.dispatch_research import dispatch_research
-from agent_lifecycle.cli.followup import dispatch_followup
-from agent_lifecycle.cli.host_launch import dispatch_host_launch
-from agent_lifecycle.cli.policy import dispatch_policy
-from agent_lifecycle.cli.start import dispatch_start
-from agent_lifecycle.cli.project import dispatch_project
-from agent_lifecycle.cli.strategy import dispatch_strategy
-from agent_lifecycle.cli.worktree import dispatch_worktree
+from agent_lifecycle.cli.command_registry import COMMAND_DISPATCH
 from agent_lifecycle.contracts import LifecycleError
+
+
+def _lazy_call(
+    module_name: str, function_name: str, args: argparse.Namespace, remainder: list[str] | None = None
+) -> dict[str, Any] | str | None:
+    function = getattr(importlib.import_module(module_name), function_name)
+    return function(args, remainder) if remainder is not None else function(args)
+
+
+def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.start", "dispatch_start", args, remainder)
+
+
+def dispatch_host_launch(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.host_launch", "dispatch_host_launch", args)
+
+
+def dispatch_strategy(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.strategy", "dispatch_strategy", args)
+
+
+def dispatch_project(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.project", "dispatch_project", args)
+
+
+def dispatch_adapters(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.dispatch_adapters", "dispatch_adapters", args)
+
+
+def dispatch_research(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.dispatch_research", "dispatch_research", args)
+
+
+def dispatch_contracts(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.dispatch_contracts", "dispatch_contracts", args)
+
+
+def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.dispatch_lifecycle", "dispatch_lifecycle", args)
+
+
+def dispatch_observability(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.dispatch_observability", "dispatch_observability", args)
+
+
+def dispatch_planning(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.dispatch_planning", "dispatch_planning", args)
+
+
+def dispatch_policy(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.policy", "dispatch_policy", args)
+
+
+def dispatch_followup(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.followup", "dispatch_followup", args)
+
+
+def dispatch_worktree(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.worktree", "dispatch_worktree", args)
+
+
+def dispatch_benchmark(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.benchmarks", "dispatch_benchmark", args)
 
 
 def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] | str | None:
     """Route a parsed command without owning domain behavior or CLI output."""
-    if args.command == "start":
-        return dispatch_start(args, remainder)
-    if args.command == "host-launch":
-        return dispatch_host_launch(args)
-    if args.command == "strategy":
-        return dispatch_strategy(args)
-    if args.command == "project":
-        return dispatch_project(args)
+    target = COMMAND_DISPATCH.get(args.command)
+    if target is None:
+        raise LifecycleError(
+            "command-not-implemented", f"{args.command} command group is reserved but not implemented in this build"
+        )
+    _, function_name, accepts_remainder = target
+    function = globals()[function_name]
+    if accepts_remainder:
+        return function(args, remainder)
     del remainder
-    if args.command in {"diagnose", "diagnostics", "adapter"}:
-        return dispatch_adapters(args)
-    if args.command == "research":
-        return dispatch_research(args)
-    if args.command in {"version", "schema", "contract", "evidence", "import", "quality", "review-mesh"}:
-        return dispatch_contracts(args)
-    if args.command in {"workflow", "audit", "runner"}:
-        return dispatch_lifecycle(args)
-    if args.command in {"report", "context", "goal", "model", "metrics", "thread"}:
-        return dispatch_observability(args)
-    if args.command in {"tier", "specification", "plan", "task"}:
-        return dispatch_planning(args)
-    if args.command == "policy":
-        return dispatch_policy(args)
-    if args.command == "followup":
-        return dispatch_followup(args)
-    if args.command == "worktree":
-        return dispatch_worktree(args)
-    if args.command == "benchmark":
-        return dispatch_benchmark(args)
-    raise LifecycleError(
-        "command-not-implemented",
-        f"{args.command} command group is reserved but not implemented in this build",
-    )
+    return function(args)

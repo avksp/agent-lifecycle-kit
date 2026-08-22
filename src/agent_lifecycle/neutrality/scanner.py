@@ -7,12 +7,16 @@ import re
 import stat
 import subprocess
 import zipfile
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Pattern
+from re import Pattern
+from typing import Any
 
 from .canonical import canonical_bytes, sha256_hex
 from .errors import NeutralityError
+from .git_objects import iter_git_objects
+from .matching import LiteralMatcher, build_literal_matcher, validate_rule_limits
 from .paths import (
     StableReadRaceError,
     resolve_repository_relative_root,
@@ -166,8 +170,11 @@ def scan_repository(
         if (workspace_root / output_path).exists():
             report.occupied_output_conflicts += 1
 
-    literal_rules = tuple(deny_literals) + policy.deny_literals
-    regex_rules = tuple(re.compile(value) for value in deny_regexes) + policy.deny_regexes
+    literal_values = tuple(deny_literals) + policy.deny_literals
+    regex_values = tuple(deny_regexes)
+    validate_rule_limits(literal_values, regex_values + tuple(policy.raw.get("denyRegexes", [])))
+    literal_rules = build_literal_matcher(literal_values)
+    regex_rules = tuple(re.compile(value) for value in regex_values) + policy.deny_regexes
     archive_budget = ArchiveScanBudget()
 
     worktree_entries: list[dict[str, Any]] = []
@@ -202,20 +209,14 @@ def scan_repository(
     local_entries: list[dict[str, Any]] = []
     if include_local_artifacts:
         report.local_artifact_roots = policy.local_artifact_roots
-        report.local_artifact_roots_digest = sha256_hex(
-            canonical_bytes({"roots": list(policy.local_artifact_roots)})
-        )
+        report.local_artifact_roots_digest = sha256_hex(canonical_bytes({"roots": list(policy.local_artifact_roots)}))
         output_set = set(normalized_outputs)
         local_budget = LocalArtifactScanBudget()
         for root_value in policy.local_artifact_roots:
             try:
                 root = resolve_repository_relative_root(workspace_root, root_value, label="local artifact root")
                 for rel_path in _walk_local_artifacts(workspace_root, root):
-                    if (
-                        rel_path in tracked_paths
-                        or rel_path in output_set
-                        or _excluded(rel_path, policy.path_excludes)
-                    ):
+                    if rel_path in tracked_paths or rel_path in output_set or _excluded(rel_path, policy.path_excludes):
                         continue
                     _scan_local_artifact(
                         workspace_root,
@@ -238,10 +239,14 @@ def scan_repository(
 
     git_entries: list[dict[str, Any]] = []
     if scope == "full-repository" and (workspace_root / ".git").exists():
-        for object_id, data in _git_objects(workspace_root, policy):
-            report.scanned_git_objects += 1
-            report.findings.extend(_match_data(f"git:{object_id}", data, literal_rules, regex_rules))
-            git_entries.append({"object": object_id, "sha256": sha256_hex(data), "bytes": len(data)})
+        try:
+            for object_id, data in iter_git_objects(workspace_root, policy):
+                report.scanned_git_objects += 1
+                report.findings.extend(_match_data(f"git:{object_id}", data, literal_rules, regex_rules))
+                git_entries.append({"object": object_id, "sha256": sha256_hex(data), "bytes": len(data)})
+        except NeutralityError:
+            report.skipped_inputs += 1
+            report.incomplete_scans += 1
 
     report.working_tree_digest = sha256_hex(canonical_bytes({"files": worktree_entries, "outputs": normalized_outputs}))
     report.git_object_set_digest = sha256_hex(canonical_bytes({"objects": git_entries}))
@@ -253,7 +258,7 @@ def _scan_tracked_release(
     workspace_root: Path,
     policy: NeutralityPolicy,
     report: NeutralityReport,
-    literal_rules: tuple[str, ...],
+    literal_rules: LiteralMatcher,
     regex_rules: tuple[Pattern[str], ...],
     archive_budget: ArchiveScanBudget,
     content_entries: list[dict[str, Any]],
@@ -333,7 +338,7 @@ def _scan_regular_path(
     rel_path: str,
     policy: NeutralityPolicy,
     report: NeutralityReport,
-    literal_rules: tuple[str, ...],
+    literal_rules: LiteralMatcher,
     regex_rules: tuple[Pattern[str], ...],
     archive_budget: ArchiveScanBudget,
     entries: list[dict[str, Any]],
@@ -369,7 +374,7 @@ def _scan_local_artifact(
     rel_path: str,
     policy: NeutralityPolicy,
     report: NeutralityReport,
-    literal_rules: tuple[str, ...],
+    literal_rules: LiteralMatcher,
     regex_rules: tuple[Pattern[str], ...],
     archive_budget: ArchiveScanBudget,
     entries: list[dict[str, Any]],
@@ -378,7 +383,7 @@ def _scan_local_artifact(
     try:
         validate_repository_relative_path(rel_path)
         path = workspace_root / rel_path
-        estimated_size = os.stat(path, follow_symlinks=False).st_size
+        estimated_size = path.stat(follow_symlinks=False).st_size
         if (
             budget.files + 1 > policy.max_local_artifact_files
             or budget.bytes + estimated_size > policy.max_local_artifact_bytes
@@ -429,7 +434,7 @@ def _record_scanned_data(
     data: bytes,
     report: NeutralityReport,
     policy: NeutralityPolicy,
-    literal_rules: tuple[str, ...],
+    literal_rules: LiteralMatcher,
     regex_rules: tuple[Pattern[str], ...],
     archive_budget: ArchiveScanBudget,
     entries: list[dict[str, Any]],
@@ -439,9 +444,7 @@ def _record_scanned_data(
     report.scanned_files += 1
     report.findings.extend(_match_data(rel_path, data, literal_rules, regex_rules))
     _scan_archive(rel_path, data, policy, report, literal_rules, regex_rules, archive_budget, depth=1)
-    entries.append(
-        {"path": rel_path, "sourceClass": source_class, "sha256": sha256_hex(data), "bytes": len(data)}
-    )
+    entries.append({"path": rel_path, "sourceClass": source_class, "sha256": sha256_hex(data), "bytes": len(data)})
 
 
 def _git_tracked_entries(workspace_root: Path) -> list[dict[str, Any]]:
@@ -450,8 +453,7 @@ def _git_tracked_entries(workspace_root: Path) -> list[dict[str, Any]]:
             ["git", "ls-files", "-z", "--stage", "--cached"],
             cwd=workspace_root,
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             timeout=_GIT_COMMAND_TIMEOUT_SECONDS,
         ).stdout
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
@@ -486,8 +488,7 @@ def _git_head_revision(workspace_root: Path) -> str | None:
             ["git", "rev-parse", "HEAD"],
             cwd=workspace_root,
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             timeout=_GIT_COMMAND_TIMEOUT_SECONDS,
         ).stdout.strip()
@@ -513,7 +514,7 @@ def _read_symlink_once(path: Path, *, max_bytes: int) -> bytes:
     before = os.lstat(path)
     if not stat.S_ISLNK(before.st_mode):
         raise NeutralityError(f"not a tracked symlink: {path}")
-    payload = os.fsencode(os.readlink(path))
+    payload = os.fsencode(path.readlink())
     if len(payload) > max_bytes:
         raise NeutralityError(f"file exceeds max bytes: {path}")
     after = os.lstat(path)
@@ -567,9 +568,7 @@ def _walk_repository_files(workspace_root: Path, policy: NeutralityPolicy) -> It
         root_path = Path(root)
         rel_root = root_path.relative_to(workspace_root).as_posix()
         dirnames[:] = [
-            dirname
-            for dirname in dirnames
-            if not _excluded(_join_rel(rel_root, dirname), policy.path_excludes)
+            dirname for dirname in dirnames if not _excluded(_join_rel(rel_root, dirname), policy.path_excludes)
         ]
         for filename in filenames:
             rel_path = _join_rel(rel_root, filename)
@@ -591,14 +590,13 @@ def _excluded(path: str, excludes: tuple[Pattern[str], ...]) -> bool:
 def _match_data(
     source: str,
     data: bytes,
-    literal_rules: tuple[str, ...],
+    literal_rules: LiteralMatcher,
     regex_rules: tuple[Pattern[str], ...],
 ) -> list[NeutralityFinding]:
     findings: list[NeutralityFinding] = []
     text = data.decode("utf-8", errors="ignore")
-    for index, literal in enumerate(literal_rules):
-        if literal and literal in text:
-            findings.append(NeutralityFinding(source=source, ruleId=f"literal:{index}", category="deny-literal"))
+    for index in literal_rules.matching_indices(text):
+        findings.append(NeutralityFinding(source=source, ruleId=f"literal:{index}", category="deny-literal"))
     for index, pattern in enumerate(regex_rules):
         if pattern.search(text):
             findings.append(NeutralityFinding(source=source, ruleId=f"regex:{index}", category="deny-regex"))
@@ -610,7 +608,7 @@ def _scan_archive(
     data: bytes,
     policy: NeutralityPolicy,
     report: NeutralityReport,
-    literal_rules: tuple[str, ...],
+    literal_rules: LiteralMatcher,
     regex_rules: tuple[Pattern[str], ...],
     archive_budget: ArchiveScanBudget,
     *,
@@ -690,49 +688,3 @@ def _ratio_exceeds(expanded_bytes: int, compressed_bytes: int, max_ratio: int) -
     if compressed_bytes <= 0:
         return True
     return expanded_bytes > compressed_bytes * max_ratio
-
-
-def _git_objects(workspace_root: Path, policy: NeutralityPolicy) -> Iterable[tuple[str, bytes]]:
-    try:
-        objects = subprocess.run(
-            ["git", "rev-list", "--objects", "--all", "--reflog"],
-            cwd=workspace_root,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=_GIT_COMMAND_TIMEOUT_SECONDS,
-        ).stdout.splitlines()
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        return
-    seen: set[str] = set()
-    for line in objects:
-        object_id = line.split(" ", 1)[0]
-        if object_id in seen:
-            continue
-        seen.add(object_id)
-        try:
-            size = int(
-                subprocess.run(
-                    ["git", "cat-file", "-s", object_id],
-                    cwd=workspace_root,
-                    check=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    timeout=_GIT_COMMAND_TIMEOUT_SECONDS,
-                ).stdout.strip()
-            )
-            if size > policy.max_object_bytes:
-                continue
-            data = subprocess.run(
-                ["git", "cat-file", "-p", object_id],
-                cwd=workspace_root,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=_GIT_COMMAND_TIMEOUT_SECONDS,
-            ).stdout
-        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError):
-            continue
-        yield object_id, data

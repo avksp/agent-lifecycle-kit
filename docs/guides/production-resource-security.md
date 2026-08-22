@@ -4,6 +4,10 @@ ALK should help finish the user's task with evidence, not spend most of the run
 proving its own process. Use the lightest lifecycle mode that still matches
 task risk.
 
+Release 1.78 adds bounded performance evidence for repeated local commands.
+Read [performance and resource budgets](../reference/performance-and-resource-budgets.md)
+for the distinction between hard resource gates and advisory timing data.
+
 ## Resource mode
 
 - Use `light` for small, low-risk edits with narrow ownership and quick checks.

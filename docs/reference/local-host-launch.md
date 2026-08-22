@@ -6,6 +6,11 @@ level and host credentials under their declared boundaries, and it does not
 inject task text or turn a
 `WRAPPER_ONLY` adapter into a publicly supported native launcher.
 
+Release 1.78 performance changes do not relax this boundary: profile
+validation is not cached, process limits and cleanup remain mandatory, and
+performance evidence cannot grant launch authority. See [performance and
+resource budgets](performance-and-resource-budgets.md).
+
 The local profile is operator-owned and must be stored below
 `.alk/host-launch/`. The complete `.alk/` tree is ignored by Git.
 Its public schema id is `agent-local-host-launch-profile.v1`.

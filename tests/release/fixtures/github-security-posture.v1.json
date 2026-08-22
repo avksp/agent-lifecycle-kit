@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "github-security-posture.v1",
+  "repository": "avksp/agent-lifecycle-kit",
+  "observedAt": "2026-08-22T00:00:00Z",
+  "source": {
+    "kind": "github-api-read-only"
+  },
+  "main": {
+    "protected": true,
+    "administratorsCannotBypass": true,
+    "forcePushesDisabled": true,
+    "deletionsDisabled": true,
+    "requiredChecks": ["ci", "neutrality", "publish"]
+  },
+  "releaseRefs": {
+    "immutableTags": true,
+    "protectedReleaseRefs": true
+  },
+  "actions": {
+    "immutablePins": true
+  },
+  "codeql": {
+    "required": true
+  },
+  "pypi": {
+    "trustedPublishing": true,
+    "environmentProtected": true,
+    "tagRestriction": true,
+    "selfReviewPrevented": true
+  },
+  "security": {
+    "secretScanning": true,
+    "pushProtection": true,
+    "dependencyUpdates": true
+  },
+  "reviewPosture": {
+    "eligibleIndependentMaintainers": 0,
+    "singleMaintainerCompensatingControls": {
+      "mandatoryChecksWithoutAdministratorBypass": true,
+      "codeqlRequired": true,
+      "immutableActionIdentities": true,
+      "protectedReleaseRefs": true,
+      "protectedPyPITrustedPublishing": true,
+      "residualRisk": "Independent maintainer quorum is unavailable; required checks and protected release controls remain mandatory."
+    }
+  },
+  "productionPromotionClaimed": false
+}
