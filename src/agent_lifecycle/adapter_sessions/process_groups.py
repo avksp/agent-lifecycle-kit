@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
+import time
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -37,16 +38,19 @@ class ProcessGroupOwner:
         """Terminate the owned group and return bounded cleanup evidence."""
 
         escalation = "none"
-        if self.process.poll() is None:
-            if os.name == "posix":
+        if os.name == "posix":
+            if self.process.poll() is None:
                 with suppress(ProcessLookupError):
                     os.killpg(self.pid, signal.SIGTERM)
-                if not _wait_process(self.process, grace_seconds):
-                    escalation = "SIGKILL"
-                    with suppress(ProcessLookupError):
-                        os.killpg(self.pid, signal.SIGKILL)
-                    _wait_process(self.process, grace_seconds)
-            elif self._job_handle is not None:
+            _wait_process(self.process, grace_seconds)
+            if not _wait_process_group_exit(self.pid, grace_seconds):
+                escalation = "SIGKILL"
+                with suppress(ProcessLookupError):
+                    os.killpg(self.pid, signal.SIGKILL)
+                _wait_process(self.process, grace_seconds)
+                _wait_process_group_exit(self.pid, grace_seconds)
+        elif self.process.poll() is None:
+            if self._job_handle is not None:
                 _terminate_windows_job(self._job_handle)
                 _wait_process(self.process, grace_seconds)
                 escalation = "job-terminate"
@@ -119,6 +123,20 @@ def _wait_process(process: subprocess.Popen[Any], timeout: float) -> bool:
         return True
     except subprocess.TimeoutExpired:
         return False
+
+
+def _wait_process_group_exit(group_id: int, timeout: float) -> bool:
+    """Wait for every observable member of a POSIX process group to exit."""
+
+    deadline = time.monotonic() + max(0.01, timeout)
+    while True:
+        alive = _posix_group_has_live_processes(group_id)
+        if alive is False:
+            return True
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        time.sleep(min(0.02, remaining))
 
 
 def _create_windows_job(process: subprocess.Popen[Any]) -> int | None:
