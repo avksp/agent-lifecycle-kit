@@ -11,20 +11,32 @@ import hashlib
 P = 2**255 - 19
 Q = 2**252 + 27742317777372353535851937790883648493
 D = -121665 * pow(121666, P - 2, P) % P
-I = pow(2, (P - 1) // 4, P)
+SQRT_M1 = pow(2, (P - 1) // 4, P)
 
 
 def _x_recover(y: int) -> int:
     xx = (y * y - 1) * pow(D * y * y + 1, P - 2, P)
     x = pow(xx, (P + 3) // 8, P)
     if (x * x - xx) % P != 0:
-        x = (x * I) % P
+        x = (x * SQRT_M1) % P
     if x % 2 != 0:
         x = P - x
     return x
 
 
-B = (_x_recover(4 * pow(5, P - 2, P) % P), 4 * pow(5, P - 2, P) % P)
+_BASE_Y = 4 * pow(5, P - 2, P) % P
+B = (_x_recover(_BASE_Y), _BASE_Y)
+
+# Extended Edwards coordinates keep X/Z and Y/Z while retaining XY/Z in T.
+# The representation removes field inversions from the scalar-multiplication
+# loop; conversion back to affine coordinates happens only when encoding.
+ExtendedPoint = tuple[int, int, int, int]
+_IDENTITY: ExtendedPoint = (0, 1, 1, 0)
+
+
+def _extended_from_affine(point: tuple[int, int]) -> ExtendedPoint:
+    x, y = point
+    return x, y, 1, (x * y) % P
 
 
 def _is_on_curve(point: tuple[int, int]) -> bool:
@@ -32,32 +44,53 @@ def _is_on_curve(point: tuple[int, int]) -> bool:
     return (-x * x + y * y - 1 - D * x * x * y * y) % P == 0
 
 
-def _point_add(left: tuple[int, int], right: tuple[int, int]) -> tuple[int, int]:
-    x1, y1 = left
-    x2, y2 = right
-    denominator = pow(1 + D * x1 * x2 * y1 * y2, P - 2, P)
-    x3 = (x1 * y2 + x2 * y1) * denominator % P
-    denominator = pow(1 - D * x1 * x2 * y1 * y2, P - 2, P)
-    y3 = (y1 * y2 + x1 * x2) * denominator % P
-    return x3, y3
+def _extended_add(left: ExtendedPoint, right: ExtendedPoint) -> ExtendedPoint:
+    x1, y1, z1, t1 = left
+    x2, y2, z2, t2 = right
+    a = ((y1 - x1) * (y2 - x2)) % P
+    b = ((y1 + x1) * (y2 + x2)) % P
+    c = (2 * D * t1 * t2) % P
+    d = (2 * z1 * z2) % P
+    e = (b - a) % P
+    f = (d - c) % P
+    g = (d + c) % P
+    h = (b + a) % P
+    return (e * f) % P, (g * h) % P, (f * g) % P, (e * h) % P
 
 
-def _scalar_mult(point: tuple[int, int], scalar: int) -> tuple[int, int]:
-    if scalar == 0:
-        return 0, 1
-    half = _scalar_mult(point, scalar // 2)
-    doubled = _point_add(half, half)
-    if scalar & 1:
-        return _point_add(doubled, point)
-    return doubled
+def _extended_double(point: ExtendedPoint) -> ExtendedPoint:
+    x1, y1, z1, _t1 = point
+    a = (x1 * x1) % P
+    b = (y1 * y1) % P
+    c = (2 * z1 * z1) % P
+    d = (-a) % P
+    e = ((x1 + y1) * (x1 + y1) - a - b) % P
+    g = (d + b) % P
+    f = (g - c) % P
+    h = (d - b) % P
+    return (e * f) % P, (g * h) % P, (f * g) % P, (e * h) % P
+
+
+def _scalar_mult(point: tuple[int, int], scalar: int) -> ExtendedPoint:
+    result = _IDENTITY
+    addend = _extended_from_affine(point)
+    while scalar > 0:
+        if scalar & 1:
+            result = _extended_add(result, addend)
+        addend = _extended_double(addend)
+        scalar >>= 1
+    return result
 
 
 def _encode_int(value: int) -> bytes:
     return value.to_bytes(32, "little")
 
 
-def _encode_point(point: tuple[int, int]) -> bytes:
-    x, y = point
+def _encode_point(point: ExtendedPoint) -> bytes:
+    x_projective, y_projective, z, _t = point
+    z_inverse = pow(z, P - 2, P)
+    x = (x_projective * z_inverse) % P
+    y = (y_projective * z_inverse) % P
     encoded = bytearray(_encode_int(y))
     encoded[31] |= (x & 1) << 7
     return bytes(encoded)
@@ -123,7 +156,9 @@ def verify(public_key: bytes, message: bytes, signature: bytes) -> bool:
     if s >= Q:
         return False
     h = _hint(signature[:32] + public_key + message) % Q
-    return _scalar_mult(B, s) == _point_add(point_r, _scalar_mult(point_a, h))
+    left = _scalar_mult(B, s)
+    right = _extended_add(_extended_from_affine(point_r), _scalar_mult(point_a, h))
+    return _encode_point(left) == _encode_point(right)
 
 
 def fingerprint(public_key: bytes) -> str:

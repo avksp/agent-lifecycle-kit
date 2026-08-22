@@ -35,6 +35,22 @@ The report binds the selected scope, source class, current revision and a
 digest of staged entries in `scopeBinding`. Legacy scopes remain accepted, but
 their signed binding contains `deprecatedScope: true`.
 
+## Performance and completeness in 1.78
+
+`tracked-release` remains the normal release route. When a plan explicitly
+requires `full-repository`, Git objects are read through bounded batch streams:
+the accepted inventory, object IDs, types, sizes and protocol framing are
+validated before an object is matched. A timeout, malformed response, limit or
+truncated object produces incomplete evidence; the scanner does not silently
+drop the object and report a clean partial scan.
+
+Authority and policy deny rules are checked against combined count, length and
+aggregate-byte limits before matching. Literal matching preserves rule IDs,
+finding order and duplicates; regular expressions retain their separate
+semantics. Performance evidence is advisory unless a plan makes a specific
+threshold an acceptance criterion. See [performance and resource
+budgets](performance-and-resource-budgets.md).
+
 ## Local artifacts
 
 Ignored or untracked local evidence is excluded by default. Include it only

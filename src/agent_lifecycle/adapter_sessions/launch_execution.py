@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import os
-import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -24,6 +21,7 @@ from agent_lifecycle.adapter_sessions.planning_launch import run_planning_launch
 from agent_lifecycle.adapter_sessions.qualification import (
     shipped_profile_digest,
 )
+from agent_lifecycle.adapter_sessions.worktree_identity import capture_git_worktree_identity
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.host_protocol.validation import validate_managed_launch_profile
 
@@ -303,89 +301,6 @@ def _state_task(state: dict[str, Any], task_id: str) -> dict[str, Any]:
         if isinstance(task, dict) and task.get("id") == task_id:
             return task
     raise LifecycleError("local-launch-task-missing", "task is not present in workflow state", {"taskId": task_id})
-
-
-def capture_git_worktree_identity(project_root: Path) -> dict[str, Any]:
-    """Capture normalized authoritative Git content without requiring cleanliness."""
-
-    root = project_root.resolve()
-    head = _git_bytes(root, ["rev-parse", "HEAD"]).decode("ascii", errors="strict").strip()
-    staged = _git_bytes(root, ["diff", "--cached", "--binary", "--no-ext-diff"])
-    unstaged = _git_bytes(root, ["diff", "--binary", "--no-ext-diff"])
-    submodules = _git_bytes(root, ["submodule", "status", "--recursive"])
-    untracked_raw = _git_bytes(root, ["ls-files", "--others", "--exclude-standard", "-z"])
-    untracked_rows: list[dict[str, Any]] = []
-    total_bytes = 0
-    for raw_name in sorted(item for item in untracked_raw.split(b"\0") if item):
-        relative = os.fsdecode(raw_name)
-        path = root / relative
-        try:
-            before = path.lstat()
-            if path.is_symlink():
-                payload = os.fsencode(path.readlink())
-                kind = "symlink"
-            else:
-                payload = path.read_bytes()
-                kind = "file"
-            after = path.lstat()
-        except OSError as exc:
-            raise LifecycleError(
-                "planning-worktree-read-race",
-                "failed to capture an untracked worktree entry",
-                {"errorType": type(exc).__name__},
-            ) from exc
-        if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
-            raise LifecycleError(
-                "planning-worktree-read-race",
-                "untracked worktree entry changed during identity capture",
-            )
-        total_bytes += len(payload)
-        untracked_rows.append(
-            {
-                "pathBytesSha256": hashlib.sha256(raw_name).hexdigest(),
-                "kind": kind,
-                "bytes": len(payload),
-                "sha256": hashlib.sha256(payload).hexdigest(),
-            }
-        )
-    body = {
-        "schemaVersion": "agent-planning-worktree-identity.v1",
-        "head": head,
-        "stagedDiffSha256": hashlib.sha256(staged).hexdigest(),
-        "unstagedDiffSha256": hashlib.sha256(unstaged).hexdigest(),
-        "submoduleStateSha256": hashlib.sha256(submodules).hexdigest(),
-        "untrackedTreeSha256": canonical_digest({"entries": untracked_rows}),
-        "untrackedCount": len(untracked_rows),
-        "untrackedBytes": total_bytes,
-        "ignoredLocalStateExcluded": True,
-    }
-    return {**body, "identityDigest": canonical_digest(body)}
-
-
-def _git_bytes(root: Path, args: list[str]) -> bytes:
-    try:
-        result = subprocess.run(
-            ["git", *args],
-            cwd=root,
-            shell=False,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            timeout=10,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise LifecycleError(
-            "planning-worktree-identity-failed",
-            "Git identity capture failed closed",
-            {"errorType": type(exc).__name__},
-        ) from exc
-    if result.returncode != 0:
-        raise LifecycleError(
-            "planning-worktree-identity-failed",
-            "Git identity command failed closed",
-            {"command": args[0], "exitCode": result.returncode},
-        )
-    return result.stdout
 
 
 def _blocked_planning_launch(
