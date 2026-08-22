@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.audit import build_ownership_report  # noqa: E402
+from agent_lifecycle.contracts import LifecycleError  # noqa: E402
 
 
 class OwnershipTests(unittest.TestCase):
@@ -42,6 +43,18 @@ class OwnershipTests(unittest.TestCase):
             self.assertEqual(by_path["plan/files/spec.json"]["category"], "plan-authority")
             self.assertEqual(by_path["README.extra.md"]["category"], "unowned")
             self.assertEqual(by_path["LICENSE"]["category"], "forbidden")
+
+    def test_pseudo_glob_authority_is_rejected_before_classification(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "plan.manifest.json"
+            value = _manifest()
+            value["readOnly"] = ["src/agent_lifecycle/**"]
+            manifest.write_text(json.dumps(value), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                build_ownership_report(manifest, ["src/agent_lifecycle/neutrality/gate.py"])
+
+            self.assertEqual(raised.exception.code, "invalid-authority-path")
 
 
 def _manifest() -> dict:

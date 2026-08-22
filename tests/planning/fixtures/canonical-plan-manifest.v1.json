@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "agent-plan-manifest.v1",
+  "status": "FROZEN",
+  "planRevision": 1,
+  "package": {
+    "id": "canonical-plan",
+    "artifactRoot": "tests/planning/fixtures/canonical-plan",
+    "planArtifactRoot": "tests/planning/fixtures/canonical-plan"
+  },
+  "planFiles": [
+    "tests/planning/fixtures/canonical-plan/plan.manifest.json",
+    "tests/planning/fixtures/canonical-plan/plan.md"
+  ],
+  "packageIntegrity": {
+    "required": true,
+    "lockSchemaVersion": "agent-plan-lock.v2",
+    "inventorySource": "planFiles",
+    "undeclaredTopLevelFiles": "reject",
+    "allowedUnlistedFiles": ["plan.lock.json"]
+  },
+  "specification": {
+    "tier": "S1",
+    "requirements": [{"id": "REQ-1", "description": "Keep the plan bounded."}]
+  },
+  "workstreams": [
+    {
+      "id": "WS-01",
+      "owner": "worker",
+      "dependsOn": [],
+      "writes": ["tests/planning/fixtures/canonical-plan/plan.md"],
+      "acceptanceIds": ["AC-1"],
+      "evidenceIds": ["EV-1"]
+    }
+  ],
+  "acceptance": {
+    "criteria": [{
+      "id": "AC-1",
+      "requirementIds": ["REQ-1"],
+      "evidenceIds": ["EV-1"],
+      "statement": "The plan remains bounded."
+    }],
+    "evidence": [{"id": "EV-1", "description": "A deterministic check."}]
+  },
+  "validation": {"commands": ["python -m unittest"], "extraEvidence": []}
+}

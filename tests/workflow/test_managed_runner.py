@@ -10,6 +10,28 @@ from agent_lifecycle.workflow.managed_runner import run_managed_lifecycle_step
 
 
 class ManagedRunnerTests(unittest.TestCase):
+    def test_managed_runner_rejects_unknown_authority_before_next_action(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path, state_path = _write_bundle(root, phase="RUNNING", task_status="READY")
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["schemaVersion"] = "agent-plan-manifest.v1"
+            manifest["integrationSeams"] = ["controller"]
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            receipt = run_managed_lifecycle_step(
+                state_path=state_path,
+                manifest_path=manifest_path,
+                operation_id="managed-invalid-op",
+                expected_revision=1,
+                source_revision="source",
+            )
+
+            self.assertEqual(receipt["status"], "FAIL")
+            self.assertIn("plan-manifest-contract-failed", {item["code"] for item in receipt["blockers"]})
+            self.assertEqual(receipt["nextAction"]["type"], "blocked")
+            self.assertFalse(receipt["stateWritten"])
+
     def test_ready_task_returns_host_owned_launch_action(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

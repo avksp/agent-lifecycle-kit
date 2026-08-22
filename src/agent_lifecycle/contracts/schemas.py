@@ -30,6 +30,7 @@ from agent_lifecycle.contracts.import_dialect_schemas import IMPORT_DIALECT_SCHE
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.plan_delta_schemas import PLAN_DELTA_SCHEMAS
+from agent_lifecycle.contracts.plan_manifest_schemas import PLAN_MANIFEST_SCHEMAS
 from agent_lifecycle.contracts.planning_launch_schemas import PLANNING_LAUNCH_SCHEMAS
 from agent_lifecycle.contracts.policy_schemas import POLICY_SCHEMAS
 from agent_lifecycle.contracts.progress_bridge_schemas import PROGRESS_BRIDGE_SCHEMAS
@@ -351,7 +352,15 @@ PLAN_INTEGRITY_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-plan-package-integrity-verification.v1": open_object_schema(
         "agent-plan-package-integrity-verification.v1",
-        required=["schemaVersion", "status", "required", "lockSchemaVersion", "filesystemVerified", "blockers", "verificationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "required",
+            "lockSchemaVersion",
+            "filesystemVerified",
+            "blockers",
+            "verificationDigest",
+        ],
         properties={
             "schemaVersion": {"const": "agent-plan-package-integrity-verification.v1"},
             "status": {"enum": ["PASS", "FAIL"]},
@@ -465,6 +474,7 @@ _SCHEMA_GROUPS = (
     CONTEXT_CHECKPOINT_SCHEMAS,
     RELEASE_CONTRACT_SCHEMAS,
     PLAN_CONTRACT_SCHEMAS,
+    PLAN_MANIFEST_SCHEMAS,
     PLAN_DELTA_SCHEMAS,
     PLANNING_LAUNCH_SCHEMAS,
     METRIC_SCHEMAS,
@@ -485,10 +495,7 @@ for _group in _SCHEMA_GROUPS:
 def list_schemas() -> dict[str, Any]:
     return {
         "schemaVersion": SCHEMA_INDEX_VERSION,
-        "schemas": [
-            {"id": schema_id, "draft": schema["$schema"]}
-            for schema_id, schema in sorted(_SCHEMAS.items())
-        ],
+        "schemas": [{"id": schema_id, "draft": schema["$schema"]} for schema_id, schema in sorted(_SCHEMAS.items())],
     }
 
 

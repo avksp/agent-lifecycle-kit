@@ -30,3 +30,20 @@ agent-lifecycle audit package \
 
 Подробное описание форматов и отдельных проверок находится в
 [`Сводной проверке реализации`](../reference/implementation-audit.md).
+
+Перед передачей только пакета плана сначала проверьте его целостность:
+
+```bash
+agent-lifecycle plan verify \
+  --manifest tasks/release-1-79/plan.manifest.json \
+  --package-root tasks/release-1-79 \
+  --lock tasks/release-1-79/plan.lock.json \
+  --acceptance tasks/release-1-79/acceptance-criteria.md \
+  --out work/release-1-79/evidence/plan-verification.json
+```
+
+Это безопасная проверка без записи: она проверяет закрытый контракт манифеста,
+буквальные пути полномочий, трассируемость «требование - критерий -
+подтверждение» и состав пакета по lock-файлу. Команды из плана не выполняются,
+а полномочие на реализацию не выдаётся. Если план этого требует, после неё
+нужен отдельный S2-аудит или аудит реализации.

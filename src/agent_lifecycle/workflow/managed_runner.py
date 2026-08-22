@@ -12,8 +12,10 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.freeze import verify_plan_package_integrity
-from agent_lifecycle.workflow.next_action import MODEL_CALLS_STARTED, build_managed_next_action
+from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
+from agent_lifecycle.planning.validation import validate_plan_manifest
 from agent_lifecycle.workflow.implementation_audit_gate import implementation_audit_blockers
+from agent_lifecycle.workflow.next_action import MODEL_CALLS_STARTED, build_managed_next_action
 from agent_lifecycle.workflow.state import load_state, state_identity
 
 
@@ -35,7 +37,10 @@ def run_managed_lifecycle_step(
 
     try:
         manifest = read_json_object(manifest_path, label="frozen plan manifest")
+        validate_plan_manifest(manifest)
         _require_frozen_manifest(manifest)
+        if isinstance(manifest.get("packageIntegrity"), dict):
+            require_plan_completeness_pass(validate_plan_completeness(manifest))
         lock = _load_lock(manifest_path, lock_path)
         verify_plan_package_integrity(manifest, lock, repository_root=Path.cwd())
     except LifecycleError as exc:

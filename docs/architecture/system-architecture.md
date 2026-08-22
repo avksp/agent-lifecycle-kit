@@ -151,6 +151,28 @@ interleaved Ed25519 median comparison against the frozen affine reference;
 there is no constant-time claim and no runtime dependency or cache-based
 shortcut. See [performance and resource budgets](../reference/performance-and-resource-budgets.md).
 
+## Release 1.79 plan integrity boundary
+
+Release 1.79 adds a canonical, read-only verification facade for plan
+handoffs. The `contracts` layer defines the manifest shape and shared literal
+authority-path rules. The `planning` layer checks requirement, acceptance,
+evidence and final-gate traceability, then composes the checks into
+`agent-plan-verification-receipt.v1`. The CLI only loads explicit inputs and
+serializes that receipt; it does not become a workflow authority.
+
+Workflow adoption and managed-runner paths call the same contract and
+completeness checks before writing state. Package integrity remains owned by
+the freeze layer and reuses `agent-plan-lock.v2`, so plan verification does not
+introduce a second inventory or lock algorithm. A frozen plan requires a
+matching lock; a draft may be inspected without one, but it cannot authorize
+implementation.
+
+The verification facade does not execute validation commands, call models,
+access the network or launch an adapter. The host and model remain responsible
+for research and implementation, while ALK remains responsible for structured
+authority, state transitions, evidence and fail-closed handoff decisions. See
+[Plan verification and integrity](../reference/plan-verification.md).
+
 ## C1: system context
 
 At system level ALK is a local CLI and Python package used inside a source

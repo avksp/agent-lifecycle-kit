@@ -7,6 +7,7 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
 from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
+from agent_lifecycle.planning.manifest_contract import require_plan_manifest_contract
 
 
 def validate_plan_manifest(
@@ -15,6 +16,8 @@ def validate_plan_manifest(
     require_completeness: bool = False,
     completeness_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if manifest.get("schemaVersion") == "agent-plan-manifest.v1":
+        require_plan_manifest_contract(manifest)
     _require_package(manifest)
     workstreams = _workstreams(manifest)
     overlaps = _write_overlaps(workstreams)
@@ -57,6 +60,8 @@ def _write_overlaps(workstreams: list[dict[str, Any]]) -> list[dict[str, str]]:
     overlaps: list[dict[str, str]] = []
     for workstream in workstreams:
         owner = workstream.get("id")
+        if not isinstance(owner, str):
+            continue
         for raw_path in workstream.get("writes", []):
             path = normalize_repo_path(raw_path)
             overlaps.extend(_overlaps(owner, path, seen))
