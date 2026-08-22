@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.77.0
+  python -m pip install agent-lifecycle-kit==1.78.0
 ```
 
 ## Error and resource contracts
@@ -35,6 +35,14 @@ from an installed wheel outside the checkout. A same-named file in the current
 directory cannot shadow a built-in profile; an explicitly supplied path still
 takes precedence. The supported import surface is listed in the [Python API
 reference](python-api.md).
+
+## Performance and resource evidence
+
+Release 1.78 keeps `version` lightweight through lazy command-family imports.
+The performance harness and its hard ceilings are documented in [performance
+and resource budgets](performance-and-resource-budgets.md). Timing is advisory
+unless a plan says otherwise; security, compatibility, resource and
+fail-closed checks remain mandatory.
 
 ## Foundation
 

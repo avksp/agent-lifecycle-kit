@@ -11,8 +11,9 @@ from agent_lifecycle.contracts import LifecycleError, canonical_bytes
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args, remainder = parser.parse_known_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    parser = build_parser(raw_argv)
+    args, remainder = parser.parse_known_args(raw_argv)
     try:
         if args.command == "neutrality":
             from agent_lifecycle.neutrality.cli import main as neutrality_main
