@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.78.0
+  python -m pip install agent-lifecycle-kit==1.79.0
 ```
 
 ## Error and resource contracts
@@ -64,6 +64,9 @@ fail-closed checks remain mandatory.
 - `agent-lifecycle plan check`: validate a plan manifest and optional lock. Add
   `--require-completeness` to enforce structural completeness for the selected
   SDD tier.
+- `agent-lifecycle plan verify`: compose a read-only verification receipt for a
+  plan package, including manifest, traceability, lock and package integrity.
+  It does not execute the plan's validation commands or authorize changes.
 - `agent-lifecycle plan completeness-check`: return
   `agent-plan-completeness-validation.v1` with actionable tier blockers.
 - `agent-lifecycle plan snapshot/reconcile/handoff`: maintain compact,
@@ -78,6 +81,10 @@ fail-closed checks remain mandatory.
   draft-only task templates.
 - Task scenario entry points for common tasks are documented in
   `docs/guides/lifecycle-cookbook.md`.
+
+For a reviewer handoff, use `plan verify` with the manifest, package root,
+acceptance checklist, lock and workflow state. See [Plan verification and
+integrity](plan-verification.md) for the exact command and failure rules.
 
 ## Project profile
 
