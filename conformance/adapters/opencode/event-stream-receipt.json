@@ -1,6 +1,6 @@
 {
   "adapterId": "opencode",
-  "descriptorDigest": "20a6186a19821d6cd37516ea30d0b3aeb95a6256b8431c4656781d3a94b2d750",
+  "descriptorDigest": "e4cbb3c0569f687c94086434fbc9187d5b722bd0e69c857fee162f98b766adbb",
   "emittedAt": "2026-07-30T00:18:01Z",
   "eventCount": 6,
   "eventStreamDigest": "2660e01336059be098c7787788f6e87a05441efd05c85b650900b742dd01071e",
@@ -20,7 +20,7 @@
     "portableEventSchema": "agent-adapter-event.v1"
   },
   "productionPromotionClaimed": false,
-  "receiptDigest": "11b872982659f93112580394e52eb9858d36b9ee3ce0903858e49f6194a214c0",
+  "receiptDigest": "cf76a83b3f0b99af0fba17e34e00996ffc443966b8e989b4c535a4872da625be",
   "runId": "offline-conformance",
   "schemaVersion": "agent-adapter-event-stream-receipt.v1",
   "status": "PASS",

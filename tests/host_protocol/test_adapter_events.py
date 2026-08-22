@@ -5,20 +5,33 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from datetime import UTC, datetime, timedelta
 from io import StringIO
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.cli import main  # noqa: E402
-from agent_lifecycle.contracts import LifecycleError  # noqa: E402
+from agent_lifecycle.contracts import LifecycleError, canonical_digest  # noqa: E402
+from agent_lifecycle.contracts.lifecycle_control_schemas import (  # noqa: E402
+    build_default_lifecycle_control_policy,
+    build_lifecycle_control_attestation,
+    build_lifecycle_control_decision,
+    build_lifecycle_control_event,
+    build_lifecycle_control_request,
+)
 from agent_lifecycle.host_protocol import (  # noqa: E402
     build_adapter_event_stream,
     build_event_stream_receipt,
     require_adapter_event_stream_pass,
     validate_adapter_event_stream,
     validate_event_capture_conformance,
+)
+from agent_lifecycle.host_protocol.event_capture import (  # noqa: E402
+    require_lifecycle_control_bundle_pass,
+    validate_lifecycle_control_bundle,
 )
 
 
@@ -32,7 +45,8 @@ class AdapterEventStreamTests(unittest.TestCase):
         self.assertIn("usage.reported", result["eventTypes"])
 
     def test_blocked_stream_can_end_without_completion_overclaim(self) -> None:
-        stream = _base_stream() + [
+        stream = [
+            *_base_stream(),
             _event(3, "task.blocked", "BLOCKED", payload={"blocker": "external action required"}),
         ]
 
@@ -95,7 +109,9 @@ class AdapterEventStreamTests(unittest.TestCase):
         )
         receipt = build_event_stream_receipt(stream, descriptor=descriptor, producer_id="claude-event-producer")
 
-        validation = validate_event_capture_conformance(descriptor=descriptor, capability_manifest=_capability_manifest(), events=stream, receipt=receipt)
+        validation = validate_event_capture_conformance(
+            descriptor=descriptor, capability_manifest=_capability_manifest(), events=stream, receipt=receipt
+        )
 
         self.assertEqual(validation["status"], "PASS")
         self.assertTrue(validation["declaredEventCapture"])
@@ -107,7 +123,9 @@ class AdapterEventStreamTests(unittest.TestCase):
         receipt = build_event_stream_receipt(stream, descriptor=descriptor, producer_id="claude-event-producer")
         stream[3]["payload"]["changedFiles"] = ["src/agent_lifecycle/other.py"]
 
-        validation = validate_event_capture_conformance(descriptor=descriptor, capability_manifest=_capability_manifest(), events=stream, receipt=receipt)
+        validation = validate_event_capture_conformance(
+            descriptor=descriptor, capability_manifest=_capability_manifest(), events=stream, receipt=receipt
+        )
 
         self.assertEqual(validation["status"], "FAIL")
         self.assertIn("adapter-event-stream-stale", {item["code"] for item in validation["blockers"]})
@@ -171,10 +189,20 @@ class AdapterEventStreamTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         for adapter_id in ("codex", "claude", "opencode"):
             with self.subTest(adapter_id=adapter_id):
-                descriptor = json.loads((root / "adapters" / adapter_id / "adapter.descriptor.json").read_text(encoding="utf-8"))
-                capability_manifest = json.loads((root / "adapters" / adapter_id / "capabilities.manifest.json").read_text(encoding="utf-8"))
-                events = json.loads((root / "conformance" / "adapters" / adapter_id / "event-stream.json").read_text(encoding="utf-8"))
-                receipt = json.loads((root / "conformance" / "adapters" / adapter_id / "event-stream-receipt.json").read_text(encoding="utf-8"))
+                descriptor = json.loads(
+                    (root / "adapters" / adapter_id / "adapter.descriptor.json").read_text(encoding="utf-8")
+                )
+                capability_manifest = json.loads(
+                    (root / "adapters" / adapter_id / "capabilities.manifest.json").read_text(encoding="utf-8")
+                )
+                events = json.loads(
+                    (root / "conformance" / "adapters" / adapter_id / "event-stream.json").read_text(encoding="utf-8")
+                )
+                receipt = json.loads(
+                    (root / "conformance" / "adapters" / adapter_id / "event-stream-receipt.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
 
                 validation = validate_event_capture_conformance(
                     descriptor=descriptor,
@@ -186,9 +214,187 @@ class AdapterEventStreamTests(unittest.TestCase):
                 self.assertEqual(validation["status"], "PASS")
                 self.assertTrue(validation["declaredEventCapture"])
 
+    def test_lifecycle_control_bundle_binds_all_producer_surfaces(self) -> None:
+        request = _control_request()
+        decision = build_lifecycle_control_decision(
+            request,
+            status="PASS",
+            effective_level="GUIDANCE_ONLY",
+            host_action_allowed=False,
+        )
+        event = build_lifecycle_control_event(
+            request,
+            event_id="event-1",
+            event_type="post-action",
+            status="PASS",
+            producer_id=request["producerId"],
+            outcome={"changed": False},
+        )
+        attestation = _control_attestation(request)
+
+        validation = validate_lifecycle_control_bundle(
+            policy=build_default_lifecycle_control_policy(),
+            request=request,
+            decision=decision,
+            events=[event],
+            attestation=attestation,
+            reference_time=datetime.now(UTC).replace(microsecond=0),
+        )
+
+        self.assertEqual(validation["status"], "PASS")
+        self.assertIs(require_lifecycle_control_bundle_pass(validation), validation)
+
+    def test_lifecycle_control_bundle_rejects_request_lineage_drift(self) -> None:
+        request = _control_request()
+        event = build_lifecycle_control_event(
+            request,
+            event_id="event-1",
+            event_type="post-action",
+            status="PASS",
+            producer_id="host-hook",
+            outcome={"changed": False},
+        )
+        drifted = dict(event)
+        drifted["requestDigest"] = "f" * 64
+        drifted["eventDigest"] = "e" * 64
+
+        validation = validate_lifecycle_control_bundle(
+            policy=build_default_lifecycle_control_policy(),
+            request=request,
+            events=[drifted],
+        )
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn(
+            "lifecycle-control-request-lineage-mismatch",
+            {item["code"] for item in validation["blockers"]},
+        )
+
+    def test_lifecycle_control_bundle_rejects_attestation_and_decision_drift(self) -> None:
+        request = _control_request()
+        decision = build_lifecycle_control_decision(
+            request,
+            status="PASS",
+            effective_level="GUIDANCE_ONLY",
+            host_action_allowed=False,
+        )
+        decision["operation"] = "shell-command"
+        decision["decisionDigest"] = canonical_digest(
+            {key: value for key, value in decision.items() if key != "decisionDigest"}
+        )
+        attestation = _control_attestation(request)
+        attestation["actionDigest"] = "d" * 64
+        attestation["attestationDigest"] = canonical_digest(
+            {key: value for key, value in attestation.items() if key != "attestationDigest"}
+        )
+
+        validation = validate_lifecycle_control_bundle(
+            policy=build_default_lifecycle_control_policy(),
+            request=request,
+            decision=decision,
+            attestation=attestation,
+        )
+
+        codes = {item["code"] for item in validation["blockers"]}
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn("lifecycle-control-operation-lineage-mismatch", codes)
+        self.assertIn("lifecycle-control-attestation-lineage-mismatch", codes)
+
+    def test_lifecycle_control_bundle_rejects_mixed_event_batch_without_request(self) -> None:
+        first_request = _control_request(request_id="request-1")
+        second_request = _control_request(request_id="request-2")
+        events = [
+            build_lifecycle_control_event(
+                first_request,
+                event_id="event-1",
+                event_type="pre-action",
+                status="PASS",
+                producer_id="host-hook",
+                outcome={},
+            ),
+            build_lifecycle_control_event(
+                second_request,
+                event_id="event-2",
+                event_type="post-action",
+                status="PASS",
+                producer_id="host-hook",
+                outcome={},
+            ),
+        ]
+
+        validation = validate_lifecycle_control_bundle(
+            policy=build_default_lifecycle_control_policy(),
+            events=events,
+        )
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn(
+            "lifecycle-control-event-batch-lineage-mismatch",
+            {item["code"] for item in validation["blockers"]},
+        )
+
+    def test_lifecycle_control_bundle_rejects_event_count_over_policy_limit(self) -> None:
+        request = _control_request()
+        events = [
+            build_lifecycle_control_event(
+                request,
+                event_id=f"event-{index}",
+                event_type="post-action",
+                status="PASS",
+                producer_id="host-hook",
+                outcome={},
+            )
+            for index in range(65)
+        ]
+
+        validation = validate_lifecycle_control_bundle(
+            policy=build_default_lifecycle_control_policy(),
+            request=request,
+            events=events,
+        )
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn("control-event-batch-limit", {item["code"] for item in validation["blockers"]})
+
+    def test_lifecycle_control_bundle_rejects_unbound_proof_and_camel_case_secret(self) -> None:
+        request = _control_request()
+        decision = build_lifecycle_control_decision(
+            request,
+            status="PASS",
+            effective_level="GUIDANCE_ONLY",
+            host_action_allowed=False,
+        )
+        event = build_lifecycle_control_event(
+            request,
+            event_id="event-1",
+            event_type="post-action",
+            status="PASS",
+            producer_id=request["producerId"],
+            outcome={},
+        )
+        event["outcome"] = {"apiToken": "secret"}
+        event["eventDigest"] = canonical_digest({key: value for key, value in event.items() if key != "eventDigest"})
+
+        unbound = validate_lifecycle_control_bundle(
+            policy=build_default_lifecycle_control_policy(),
+            decision=decision,
+            attestation=_control_attestation(request),
+        )
+        secret = validate_lifecycle_control_bundle(
+            policy=build_default_lifecycle_control_policy(),
+            request=request,
+            events=[event],
+        )
+
+        self.assertEqual(unbound["status"], "FAIL")
+        self.assertIn("lifecycle-control-request-required-for-proof", {item["code"] for item in unbound["blockers"]})
+        self.assertEqual(secret["status"], "FAIL")
+        self.assertIn("lifecycle-control-unredacted-sensitive-value", {item["code"] for item in secret["blockers"]})
+
 
 def _completed_stream() -> list[dict[str, object]]:
-    return _base_stream() + [
+    return [
+        *_base_stream(),
         _event(3, "command.completed", "PASS", payload={"command": "python -m unittest", "exitCode": 0}),
         _event(4, "writes.summarized", "PASS", payload={"changedFiles": ["src/agent_lifecycle/example.py"]}),
         _event(5, "usage.reported", "PASS", payload={"inputTokens": 100, "outputTokens": 20}),
@@ -199,7 +405,12 @@ def _completed_stream() -> list[dict[str, object]]:
 def _base_stream() -> list[dict[str, object]]:
     return [
         _event(1, "session.started", "INFO", payload={"surface": "claude-code"}),
-        _event(2, "task.launched", "PASS", payload={"packet": "work/release-0-5/workflow/task-packets/WS05-01.task-packet.json"}),
+        _event(
+            2,
+            "task.launched",
+            "PASS",
+            payload={"packet": "work/release-0-5/workflow/task-packets/WS05-01.task-packet.json"},
+        ),
     ]
 
 
@@ -236,7 +447,9 @@ def _descriptor() -> dict[str, object]:
         "contractCompatibility": {"rangeKind": "closed-offline"},
         "unsupportedOperationPolicy": "fail-closed",
         "coreSemantics": "delegated-to-agent-lifecycle-core",
-        "operations": [{"name": "adapter-event-stream", "mapping": "agent-adapter-event.v1", "offlineConformance": "deterministic"}],
+        "operations": [
+            {"name": "adapter-event-stream", "mapping": "agent-adapter-event.v1", "offlineConformance": "deterministic"}
+        ],
     }
 
 
@@ -248,6 +461,47 @@ def _capability_manifest() -> dict[str, object]:
         "eventCapture": {"status": "DECLARED"},
         "capabilities": [{"name": "adapter-event-stream"}],
     }
+
+
+def _control_request(*, request_id: str = "request-1") -> dict[str, Any]:
+    return build_lifecycle_control_request(
+        request_id=request_id,
+        adapter_id="example",
+        host="example-host",
+        host_version="1.2.3",
+        operation="file-edit",
+        run_id="run-1",
+        task_id="WS80-03",
+        package_id="release-1-80",
+        plan_revision=6,
+        plan_digest="a" * 64,
+        lock_digest="b" * 64,
+        state_revision=17,
+        action_digest="c" * 64,
+        paths=["src/example.py"],
+        nonce="0123456789abcdef",
+    )
+
+
+def _control_attestation(request: dict[str, Any]) -> dict[str, Any]:
+    now = datetime.now(UTC).replace(microsecond=0)
+    return build_lifecycle_control_attestation(
+        attestation_id="attestation-1",
+        producer_id=request["producerId"],
+        adapter_id=request["adapterId"],
+        host_version=request["hostVersion"],
+        operation=request["operation"],
+        nonce=request["nonce"],
+        issued_at=(now - timedelta(minutes=1)).isoformat().replace("+00:00", "Z"),
+        expires_at=(now + timedelta(minutes=4)).isoformat().replace("+00:00", "Z"),
+        plan_digest=request["planDigest"],
+        lock_digest=request["lockDigest"],
+        state_revision=request["stateRevision"],
+        action_digest=request["actionDigest"],
+        outcome_digest="e" * 64,
+        key_id="external-key-1",
+        signature="signature",
+    )
 
 
 if __name__ == "__main__":

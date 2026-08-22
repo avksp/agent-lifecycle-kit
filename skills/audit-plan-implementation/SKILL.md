@@ -61,6 +61,15 @@ For each planned item, verify:
 - task result identity bound to run, task, attempt, packet, plan, source, and
   reviewer.
 
+For adapter lifecycle control, also verify the operation-specific declared,
+supported and qualified levels in the descriptor and capability manifest.
+Treat `GUIDANCE_ONLY` as instructions only, require exact-host live evidence
+for `ENFORCED`, and treat `OBSERVED` as recorded outcome evidence rather than
+pre-action prevention. Treat `NO_RECOMMENDATION` or a stale receipt as a
+finding when the frozen plan selects a stronger level. Check the host-owned
+pre-action decision, post-action binding and stop evidence; a prompt or skill
+alone is not enforcement.
+
 ## Verdicts
 
 - `ACCEPTED`: task scope, ownership, evidence, and review pass with no open

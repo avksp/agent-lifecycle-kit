@@ -87,72 +87,128 @@
     {
       "mapping": "host-local-fail-closed",
       "name": "cancel",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "discover",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "final-audit",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "install",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "launch",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "model-route-execution",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "result-collection",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "resume",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "task-audit",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "tool-execution",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "name": "adapter-event-stream",
       "mapping": "agent-adapter-event.v1",
-      "offlineConformance": "deterministic"
+      "offlineConformance": "deterministic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "usage-attestation",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "validate-envelope",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "host-local-fail-closed",
       "name": "wait",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     }
   ],
   "schemaVersion": "agent-lifecycle-host-adapter.v1",

@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.79.0
+  python -m pip install agent-lifecycle-kit==1.80.0
 ```
 
 ## Error and resource contracts
@@ -43,6 +43,19 @@ The performance harness and its hard ceilings are documented in [performance
 and resource budgets](performance-and-resource-budgets.md). Timing is advisory
 unless a plan says otherwise; security, compatibility, resource and
 fail-closed checks remain mandatory.
+
+## Optional adapter lifecycle control
+
+`agent-lifecycle adapter lifecycle-control-check` validates the optional local
+policy or supplied lifecycle-control request, decision, events and attestation
+without starting a host. `agent-lifecycle adapter event-check` validates a
+portable event stream. These commands return evidence for review; they do not
+promote an adapter or edit host settings.
+
+The operation-level fields are `declaredLevel`, `supportedLevel`,
+`qualifiedLevel` and `qualificationStatus`. The bundled adapters currently
+publish `GUIDANCE_ONLY` and `NO_RECOMMENDATION`, while managed launch remains
+`WRAPPER_ONLY`. See [Optional adapter lifecycle control](../adapters/lifecycle-control.md).
 
 ## Foundation
 

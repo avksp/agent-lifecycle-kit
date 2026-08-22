@@ -12,6 +12,10 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.freeze import verify_plan_package_integrity
+from agent_lifecycle.host_protocol.lifecycle_gate import (
+    evaluate_pre_action_gate,
+    lifecycle_control_selection,
+)
 from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
 from agent_lifecycle.planning.validation import validate_plan_manifest
 from agent_lifecycle.workflow.implementation_audit_gate import implementation_audit_blockers
@@ -32,8 +36,10 @@ def run_managed_lifecycle_step(
     blockers: list[dict[str, Any]] = []
     manifest: dict[str, Any] | None = None
     lock: dict[str, Any] | None = None
+    package_integrity: dict[str, Any] | None = None
     state: dict[str, Any] | None = None
     next_action: dict[str, Any] | None = None
+    control_gate: dict[str, Any] | None = None
 
     try:
         manifest = read_json_object(manifest_path, label="frozen plan manifest")
@@ -42,7 +48,7 @@ def run_managed_lifecycle_step(
         if isinstance(manifest.get("packageIntegrity"), dict):
             require_plan_completeness_pass(validate_plan_completeness(manifest))
         lock = _load_lock(manifest_path, lock_path)
-        verify_plan_package_integrity(manifest, lock, repository_root=Path.cwd())
+        package_integrity = verify_plan_package_integrity(manifest, lock, repository_root=Path.cwd())
     except LifecycleError as exc:
         blockers.append(_blocker(exc.code, exc.message, exc.details))
 
@@ -55,7 +61,26 @@ def run_managed_lifecycle_step(
             source_revision=source_revision,
         )
         if not blockers:
+            if manifest is None or lock is None:
+                raise LifecycleError("lifecycle-control-context-missing", "frozen plan context is unavailable")
             next_action = build_managed_next_action(state)
+            control_gate = _managed_control_gate(
+                manifest=manifest,
+                lock=lock,
+                state=state,
+                next_action=next_action,
+                package_integrity=package_integrity,
+                expected_revision=expected_revision,
+            )
+            if control_gate.get("blocking") is True and control_gate.get("status") != "PASS":
+                blockers.append(
+                    {
+                        "code": "lifecycle-gate-blocked",
+                        "message": "selected lifecycle control blocked the next host action",
+                        "context": {"gate": control_gate},
+                    }
+                )
+                next_action = None
             audit_blockers = implementation_audit_blockers(state_path, state)
             if audit_blockers:
                 blockers.extend(audit_blockers)
@@ -74,6 +99,7 @@ def run_managed_lifecycle_step(
         "state": _state_summary(state_path, state),
         "plan": _plan_summary(manifest, manifest_path),
         "nextAction": next_action or _blocked_next_action(blockers),
+        "lifecycleControl": control_gate or _control_off_projection(state),
         "blockers": blockers,
         "modelCallsStarted": MODEL_CALLS_STARTED,
         "stateWritten": False,
@@ -81,6 +107,116 @@ def run_managed_lifecycle_step(
         "productionPromotionClaimed": False,
     }
     return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def _managed_control_gate(
+    *,
+    manifest: dict[str, Any],
+    lock: dict[str, Any] | None,
+    state: dict[str, Any],
+    next_action: dict[str, Any],
+    package_integrity: dict[str, Any] | None,
+    expected_revision: int,
+) -> dict[str, Any]:
+    level, policy, _ = lifecycle_control_selection(state)
+    if level == "OFF":
+        return _control_off_projection(state)
+    if lock is None:
+        return {
+            "schemaVersion": "agent-lifecycle-control-gate.v1",
+            "gateType": "pre-action",
+            "status": "BLOCKED",
+            "blocking": True,
+            "selected": True,
+            "enforcementActive": True,
+            "blockers": [{"code": "plan-lock-missing"}],
+            "productionPromotionClaimed": False,
+            "gateDigest": canonical_digest(
+                {
+                    "schemaVersion": "agent-lifecycle-control-gate.v1",
+                    "gateType": "pre-action",
+                    "status": "BLOCKED",
+                    "blocking": True,
+                    "selected": True,
+                    "enforcementActive": True,
+                    "blockers": [{"code": "plan-lock-missing"}],
+                    "productionPromotionClaimed": False,
+                }
+            ),
+        }
+    raw_projected = next_action.get("projectedAction")
+    projected: dict[str, Any] = raw_projected if isinstance(raw_projected, dict) else {}
+    action_type = projected.get("type")
+    raw_task_ids = projected.get("taskIds")
+    task_ids = [item for item in raw_task_ids if isinstance(item, str)] if isinstance(raw_task_ids, list) else []
+    paths = sorted(
+        {
+            path
+            for task in state.get("tasks", [])
+            if task.get("id") in task_ids
+            for path in task.get("writes", [])
+            if isinstance(path, str)
+        }
+    )
+    if action_type == "finalize-run":
+        operation = "run-finalize"
+    elif action_type == "launch-tasks":
+        operation = "file-edit" if paths else "shell-command"
+    elif action_type == "accept-task":
+        operation = "task-accept"
+    else:
+        return _unsupported_control_action_projection(level, action_type)
+    return evaluate_pre_action_gate(
+        manifest=manifest,
+        lock=lock,
+        state=state,
+        operation=operation,
+        action_digest=str(next_action.get("actionDigest") or canonical_digest(projected)),
+        paths=paths,
+        requested_level=level,
+        policy=policy,
+        next_action=next_action,
+        task_id=task_ids[0] if task_ids else None,
+        expected_state_revision=expected_revision,
+        package_integrity=package_integrity,
+    )
+
+
+def _unsupported_control_action_projection(level: str, action_type: Any) -> dict[str, Any]:
+    """Report an action without inventing a host operation for it."""
+
+    selected = level in {"OBSERVED", "ENFORCED"}
+    blocking = level == "ENFORCED"
+    status = "BLOCKED" if blocking else ("REVIEW_REQUIRED" if selected else "PASS")
+    body = {
+        "schemaVersion": "agent-lifecycle-control-gate.v1",
+        "gateType": "pre-action",
+        "status": status,
+        "blocking": blocking,
+        "selected": selected,
+        "enforcementActive": blocking,
+        "operation": None,
+        "actionType": action_type,
+        "blockers": [{"code": "control-action-unsupported", "actionType": action_type}],
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "gateDigest": canonical_digest(body)}
+
+
+def _control_off_projection(state: dict[str, Any] | None) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "schemaVersion": "agent-lifecycle-control-gate.v1",
+        "gateType": "pre-action",
+        "status": "PASS",
+        "blocking": False,
+        "selected": False,
+        "enforcementActive": False,
+        "level": "OFF",
+        "stateRevision": state.get("stateRevision") if isinstance(state, dict) else None,
+        "blockers": [],
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "gateDigest": canonical_digest(body)}
 
 
 def _load_lock(manifest_path: Path, lock_path: Path | None) -> dict[str, Any]:
