@@ -8,16 +8,21 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.freeze import verify_plan_package_integrity
+from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
 from agent_lifecycle.planning.task_compatibility import (
     build_task_plan_compatibility_receipt,
     task_contracts_compatible,
 )
+from agent_lifecycle.planning.validation import validate_plan_manifest
 from agent_lifecycle.specification import validate_completion_check
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
-from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.checkpoint_gate import normalize_context_checkpoint_policy
+from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
-from agent_lifecycle.workflow.review_mesh_gate import require_review_mesh_quorum_gate_pass, validate_review_mesh_quorum_path
+from agent_lifecycle.workflow.review_mesh_gate import (
+    require_review_mesh_quorum_gate_pass,
+    validate_review_mesh_quorum_path,
+)
 from agent_lifecycle.workflow.selectors import unlock_ready_tasks
 from agent_lifecycle.workflow.state import (
     TERMINAL_PHASES,
@@ -143,8 +148,11 @@ def _require_adoptable(state: dict[str, Any], *, reset_tasks: bool) -> None:
 
 
 def _verify_frozen_manifest(root: Path, manifest: dict[str, Any]) -> str:
+    validate_plan_manifest(manifest)
     if manifest.get("status") != "FROZEN":
         raise LifecycleError("plan-not-frozen", "only FROZEN plans can be adopted")
+    if isinstance(manifest.get("packageIntegrity"), dict):
+        require_plan_completeness_pass(validate_plan_completeness(manifest))
     digest = canonical_digest(manifest)
     plan_root = manifest.get("package", {}).get("planArtifactRoot")
     if not isinstance(plan_root, str) or not plan_root:
@@ -216,35 +224,41 @@ def _build_tasks(
     for workstream in manifest.get("workstreams", []):
         task_id = workstream["id"]
         depends_on = list(workstream.get("dependsOn", []))
-        tasks.append({
-            "id": task_id,
-            "title": workstream.get("title"),
-            "owner": workstream.get("owner"),
-            "dependsOn": depends_on,
-            "writes": list(workstream.get("writes", [])),
-            "reviewer": workstream.get("reviewer"),
-            "launchGate": workstream.get("launchGate"),
-            "capabilityHints": list(workstream.get("capabilityHints", [])),
-            "requiredTools": list(workstream.get("requiredTools", [])),
-            "contextRefs": list(workstream.get("contextRefs", [])),
-            "acceptanceIds": list(workstream.get("acceptanceIds", [])),
-            "evidenceIds": list(workstream.get("evidenceIds", [])),
-            "executionPolicy": workstream.get("executionPolicy", {}),
-            "modelRoute": dict(workstream.get("modelRoute", {})) if isinstance(workstream.get("modelRoute"), dict) else None,
-            "reviewMesh": dict(workstream.get("reviewMesh", {})) if isinstance(workstream.get("reviewMesh"), dict) else None,
-            "artifactPaths": workstream.get("artifactPaths", _default_artifacts(manifest, task_id)),
-            "controllerGates": _task_gates(gates, task_id),
-            "packet": packets.get(task_id),
-            "required": workstream.get("required", True),
-            "status": "READY" if not depends_on else "PENDING",
-            "attempt": 0,
-            "attemptHistory": [],
-            "usageIterations": [],
-            "usageTotals": {"iterations": 0, "reportedTokens": 0, "toolCalls": 0},
-            "validationRuns": 0,
-            "controllerGateReceipts": [],
-            "remediationFindingIds": [],
-        })
+        tasks.append(
+            {
+                "id": task_id,
+                "title": workstream.get("title"),
+                "owner": workstream.get("owner"),
+                "dependsOn": depends_on,
+                "writes": list(workstream.get("writes", [])),
+                "reviewer": workstream.get("reviewer"),
+                "launchGate": workstream.get("launchGate"),
+                "capabilityHints": list(workstream.get("capabilityHints", [])),
+                "requiredTools": list(workstream.get("requiredTools", [])),
+                "contextRefs": list(workstream.get("contextRefs", [])),
+                "acceptanceIds": list(workstream.get("acceptanceIds", [])),
+                "evidenceIds": list(workstream.get("evidenceIds", [])),
+                "executionPolicy": workstream.get("executionPolicy", {}),
+                "modelRoute": dict(workstream.get("modelRoute", {}))
+                if isinstance(workstream.get("modelRoute"), dict)
+                else None,
+                "reviewMesh": dict(workstream.get("reviewMesh", {}))
+                if isinstance(workstream.get("reviewMesh"), dict)
+                else None,
+                "artifactPaths": workstream.get("artifactPaths", _default_artifacts(manifest, task_id)),
+                "controllerGates": _task_gates(gates, task_id),
+                "packet": packets.get(task_id),
+                "required": workstream.get("required", True),
+                "status": "READY" if not depends_on else "PENDING",
+                "attempt": 0,
+                "attemptHistory": [],
+                "usageIterations": [],
+                "usageTotals": {"iterations": 0, "reportedTokens": 0, "toolCalls": 0},
+                "validationRuns": 0,
+                "controllerGateReceipts": [],
+                "remediationFindingIds": [],
+            }
+        )
     return tasks
 
 
@@ -324,19 +338,21 @@ def _default_artifacts(manifest: dict[str, Any], task_id: str) -> dict[str, str]
 
 
 def _archive_prior_snapshot(state: dict[str, Any]) -> None:
-    state.setdefault("priorSnapshots", []).append({
-        "planRevision": state.get("planRevision"),
-        "planDigest": state.get("planDigest"),
-        "phase": state.get("phase"),
-        "taskSummary": {task.get("id"): task.get("status") for task in state.get("tasks", [])},
-        "archivedAt": now_iso(),
-    })
+    state.setdefault("priorSnapshots", []).append(
+        {
+            "planRevision": state.get("planRevision"),
+            "planDigest": state.get("planDigest"),
+            "phase": state.get("phase"),
+            "taskSummary": {task.get("id"): task.get("status") for task in state.get("tasks", [])},
+            "archivedAt": now_iso(),
+        }
+    )
 
 
 def _replace_plan_state(
     state: dict[str, Any],
     *,
-    state_path: Path,
+    state_path: Path,  # noqa: ARG001
     manifest_path: Path,
     manifest: dict[str, Any],
     digest: str,
@@ -371,7 +387,9 @@ def _replace_plan_state(
     else:
         state.pop("reviewMesh", None)
     _replace_completion_check_state(state, manifest)
-    state["runDeadlineAt"] = deadline_after(state["runStartedAt"], int(state["budgets"].get("maxRunWallSeconds", 86400)))
+    state["runDeadlineAt"] = deadline_after(
+        state["runStartedAt"], int(state["budgets"].get("maxRunWallSeconds", 86400))
+    )
     state["packetSet"] = packet_set
     state["tasks"] = tasks
     unlock_ready_tasks(state)

@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, read_json_object
-from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
+from agent_lifecycle.contracts.ownership_paths import is_under_authority_path, normalize_authority_path
+from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.workflow.artifacts import (
     artifact_identity,
     artifact_path,
@@ -58,6 +59,7 @@ def start_task(
         raise LifecycleError("invalid-task-status", f"task {task_id} is not launchable")
     _require_dependencies_accepted(state, task)
     _require_parallel_capacity(state)
+    _validate_task_authority_paths(state, task)
     if risk_profile_path is not None:
         profile, profile_identity = load_task_risk_profile(
             state_path,
@@ -283,11 +285,7 @@ def _require_dependencies_accepted(state: dict[str, Any], task: dict[str, Any]) 
 
 
 def _require_parallel_capacity(state: dict[str, Any]) -> None:
-    running = sum(
-        1
-        for item in state["tasks"]
-        if item.get("status") in {"RUNNING", "VALIDATING", "VERIFYING"}
-    )
+    running = sum(1 for item in state["tasks"] if item.get("status") in {"RUNNING", "VALIDATING", "VERIFYING"})
     max_parallel = int(state.get("budgets", {}).get("maxParallelTasks", 1))
     if running >= max_parallel:
         raise LifecycleError("parallelism-budget-exhausted", "maxParallelTasks budget reached")
@@ -383,7 +381,7 @@ def _validate_task_write_scope(
     if not isinstance(changed_files, list) or not all(isinstance(path, str) for path in changed_files):
         raise LifecycleError("task-result-invalid", "task result changedFiles must be a list of strings")
     writes = [
-        normalize_repo_path(path)
+        normalize_authority_path(path, label="task write path")
         for path in task.get("writes", [])
         if isinstance(path, str)
     ]
@@ -409,21 +407,21 @@ def _validate_task_write_scope(
         }
     policy = state.get("writePolicy", {}) if isinstance(state.get("writePolicy"), dict) else {}
     forbidden_roots = [
-        normalize_repo_path(path)
+        normalize_authority_path(path, label="forbidden write path")
         for path in policy.get("forbiddenWrites", [])
         if isinstance(path, str)
     ]
     read_only_roots = [
-        normalize_repo_path(path)
+        normalize_authority_path(path, label="read-only path")
         for path in policy.get("readOnly", [])
         if isinstance(path, str)
     ]
     entries: list[dict[str, Any]] = []
     for raw_path in sorted(set(changed_files)):
-        path = normalize_repo_path(raw_path)
-        forbidden = [root for root in forbidden_roots if is_under_repo_path(path, root)]
-        read_only = [root for root in read_only_roots if is_under_repo_path(path, root)]
-        owned = [root for root in writes if is_under_repo_path(path, root)]
+        path = normalize_authority_path(raw_path, label="changed file path")
+        forbidden = [root for root in forbidden_roots if is_under_authority_path(path, root)]
+        read_only = [root for root in read_only_roots if is_under_authority_path(path, root)]
+        owned = [root for root in writes if is_under_authority_path(path, root)]
         if forbidden:
             entries.append({"path": path, "category": "forbidden", "matched": forbidden})
         elif read_only:
@@ -432,11 +430,7 @@ def _validate_task_write_scope(
             entries.append({"path": path, "category": "task-owned", "matched": owned})
         else:
             entries.append({"path": path, "category": "unowned"})
-    blockers = [
-        entry
-        for entry in entries
-        if entry["category"] in {"forbidden", "read-only", "unowned"}
-    ]
+    blockers = [entry for entry in entries if entry["category"] in {"forbidden", "read-only", "unowned"}]
     receipt = {
         "schemaVersion": "agent-task-ownership-receipt.v1",
         "status": "PASS" if not blockers else "FAIL",
@@ -451,5 +445,20 @@ def _validate_task_write_scope(
         "blockers": blockers,
     }
     if blockers:
-        raise LifecycleError("task-ownership-violation", "task result changed files are outside task write scope", {"ownership": receipt})
+        raise LifecycleError(
+            "task-ownership-violation", "task result changed files are outside task write scope", {"ownership": receipt}
+        )
     return receipt
+
+
+def _validate_task_authority_paths(state: dict[str, Any], task: dict[str, Any]) -> None:
+    """Reject pseudo-glob task authority before a task state mutation."""
+
+    for path in task.get("writes", []):
+        if isinstance(path, str):
+            normalize_authority_path(path, label="task write path")
+    policy = state.get("writePolicy", {}) if isinstance(state.get("writePolicy"), dict) else {}
+    for field in ("readOnly", "forbiddenWrites"):
+        for path in policy.get(field, []):
+            if isinstance(path, str):
+                normalize_authority_path(path, label=f"{field} path")

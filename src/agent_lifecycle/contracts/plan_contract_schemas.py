@@ -7,6 +7,36 @@ from typing import Any
 from agent_lifecycle.contracts.schema_builders import open_object_schema as _open_object_schema
 
 PLAN_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-plan-verification-receipt.v1": _open_object_schema(
+        "agent-plan-verification-receipt.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "packageId",
+            "planStatus",
+            "planRevision",
+            "planDigest",
+            "checks",
+            "blockers",
+            "executedCommands",
+            "productionPromotionClaimed",
+            "verificationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "packageId": {"type": ["string", "null"]},
+            "planStatus": {"type": ["string", "null"]},
+            "planRevision": {"type": ["integer", "null"], "minimum": 0},
+            "planDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "manifestPath": {"type": "string"},
+            "packageRoot": {"type": ["string", "null"]},
+            "checks": {"type": "object"},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "executedCommands": {"const": False},
+            "productionPromotionClaimed": {"const": False},
+            "verificationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
     "agent-plan-completeness-profile.v1": _open_object_schema(
         "agent-plan-completeness-profile.v1",
         required=["schemaVersion", "profileId", "profiles", "profileDigest"],
@@ -58,7 +88,15 @@ PLAN_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-plan-reference-validation.v1": _open_object_schema(
         "agent-plan-reference-validation.v1",
-        required=["schemaVersion", "status", "packageId", "referenceCount", "repositoryIds", "blockers", "validationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "packageId",
+            "referenceCount",
+            "repositoryIds",
+            "blockers",
+            "validationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "packageId": {"type": ["string", "null"]},
@@ -100,7 +138,16 @@ PLAN_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-plan-reconciliation.v1": _open_object_schema(
         "agent-plan-reconciliation.v1",
-        required=["schemaVersion", "status", "classification", "packageId", "snapshotDigest", "currentDigest", "blockers", "reconciliationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "classification",
+            "packageId",
+            "snapshotDigest",
+            "currentDigest",
+            "blockers",
+            "reconciliationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "classification": {"enum": ["MATCH", "REQUIRES_NEW_PLAN", "BLOCKED"]},
@@ -145,4 +192,5 @@ PLAN_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
             "targetTokens": {"type": "integer", "minimum": 1},
             "handoffDigest": {"type": "string", "minLength": 64, "maxLength": 64},
         },
-    ),}
+    ),
+}

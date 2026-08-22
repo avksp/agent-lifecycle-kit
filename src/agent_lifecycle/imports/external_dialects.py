@@ -27,8 +27,8 @@ EXTERNAL_IMPORT_VALIDATION_SCHEMA = "agent-external-dialect-import-validation.v1
 MAX_REQUIREMENTS = 8
 MAX_REQUIREMENT_CHARS = 180
 
-_POSIX_USER_PREFIX = "/" "Users" "/"
-_POSIX_VOLUME_PREFIX = "/" "Volumes" "/"
+_POSIX_USER_PREFIX = "/" + "Users/"
+_POSIX_VOLUME_PREFIX = "/" + "Volumes/"
 _LOCAL_PATH_RE = re.compile(
     r"(" + re.escape(_POSIX_USER_PREFIX) + r"|" + re.escape(_POSIX_VOLUME_PREFIX) + r"|[A-Za-z]:[\\/])\S+"
 )
@@ -62,15 +62,25 @@ def import_external_dialect(
     text = _decode_source(data, blockers) if data else ""
     parsed = _parse_input(text, blockers) if text else {}
     mapping = _map_family(family, parsed, text, blockers)
-    candidate = _candidate_plan(
-        mapping,
-        package_id=package_id,
-        source_label=source_path.name,
-        source_digest=sha256_hex(data),
-        profile=profile,
-    ) if not blockers else None
+    candidate = (
+        _candidate_plan(
+            mapping,
+            package_id=package_id,
+            source_label=source_path.name,
+            source_digest=sha256_hex(data),
+            profile=profile,
+        )
+        if not blockers
+        else None
+    )
     if candidate is None and not blockers:
         blockers.append({"code": "external-dialect-requirements-missing"})
+    if candidate is not None:
+        try:
+            validate_plan_manifest(candidate)
+        except LifecycleError as exc:
+            candidate = None
+            blockers.append({"code": "external-dialect-candidate-invalid", "reason": exc.code})
     body = {
         "schemaVersion": PLANNING_IMPORT_RESULT_SCHEMA,
         "status": "PASS",
@@ -123,7 +133,8 @@ def validate_external_import_result(result: dict[str, Any]) -> dict[str, Any]:
             blockers.append({"code": "external-dialect-provider-default"})
     candidate = result.get("candidatePlan")
     if isinstance(candidate, dict):
-        external_state = candidate.get("externalImport") if isinstance(candidate.get("externalImport"), dict) else {}
+        external_import = candidate.get("externalImport")
+        external_state = external_import if isinstance(external_import, dict) else {}
         if external_state.get("sourceTrusted") is not False:
             blockers.append({"code": "external-dialect-candidate-source-trusted"})
         if external_state.get("executesInput") is not False:
@@ -261,8 +272,13 @@ def _map_agent(parsed: dict[str, Any], text: str) -> dict[str, Any]:
     requirements = []
     role = _first_string(parsed, "role", "description", "purpose")
     if role:
-        requirements.append(f"Review imported agent role hint before converting it into ALK task scope: {_safe_summary(role)}.")
-    requirements.extend(f"Review imported agent policy hint {index + 1}: {_safe_summary(item)}." for index, item in enumerate(policies[:MAX_REQUIREMENTS]))
+        requirements.append(
+            f"Review imported agent role hint before converting it into ALK task scope: {_safe_summary(role)}."
+        )
+    requirements.extend(
+        f"Review imported agent policy hint {index + 1}: {_safe_summary(item)}."
+        for index, item in enumerate(policies[:MAX_REQUIREMENTS])
+    )
     if not requirements:
         requirements = _requirements_from_lines(text, prefix="Review imported agent instruction")
     return {
@@ -301,7 +317,10 @@ def _candidate_plan(
         for index, requirement in enumerate(requirements)
     ]
     evidence = [
-        {"id": f"EV-EXT-{index + 1}", "description": "Independent review evidence for imported external dialect content."}
+        {
+            "id": f"EV-EXT-{index + 1}",
+            "description": "Independent review evidence for imported external dialect content.",
+        }
         for index, _ in enumerate(requirements)
     ]
     return {
@@ -361,7 +380,9 @@ def _candidate_plan(
         "acceptance": {
             "criteria": criteria,
             "evidence": evidence,
-            "releaseGate": "External dialect imports require ALK plan review and explicit freeze before implementation.",
+            "releaseGate": (
+                "External dialect imports require ALK plan review and explicit freeze before implementation."
+            ),
             "qualityFloor": "Imported workflow or agent content cannot replace source-of-truth ALK artifacts.",
         },
     }
@@ -415,7 +436,9 @@ def _redaction_summary(parsed: dict[str, Any]) -> dict[str, Any]:
     keys = []
     for key in parsed:
         lowered = str(key).lower()
-        if lowered in {"provider", "model", "auth", "env", "environment", "tools"} or any(marker in lowered for marker in ("token", "secret", "password")):
+        if lowered in {"provider", "model", "auth", "env", "environment", "tools"} or any(
+            marker in lowered for marker in ("token", "secret", "password")
+        ):
             keys.append(str(key))
     return {"redactedOrHostLocalKeys": sorted(keys), "secretValuesStored": False}
 

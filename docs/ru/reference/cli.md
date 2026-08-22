@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.78.0
+python -m pip install agent-lifecycle-kit==1.79.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -62,6 +62,9 @@ python -m pip install agent-lifecycle-kit==1.78.0
 - `agent-lifecycle plan check`: проверка плана и файла блокировки. Флаг
   `--require-completeness` включает структурную проверку полноты выбранного SDD
   уровня.
+- `agent-lifecycle plan verify`: формирует безопасный отчёт проверки пакета
+  плана: манифеста, трассируемости, lock-файла и целостности пакета. Команда не
+  выполняет команды из плана и не даёт полномочий на изменения.
 - `agent-lifecycle plan completeness-check`: возвращает
   `agent-plan-completeness-validation.v1` с конкретными блокерами по выбранному
   уровню.
@@ -77,6 +80,11 @@ python -m pip install agent-lifecycle-kit==1.78.0
   черновых шаблонов задач.
 - Частые сценарии собраны в `docs/ru/lifecycle-cookbook.md`: исследование,
   проверка Markdown, проверка изменений и аудит реализации.
+
+Для передачи плана другому проверяющему используйте `plan verify` с манифестом,
+папкой пакета, критериями приёмки, lock-файлом и состоянием рабочего цикла.
+Точная команда и правила отказа описаны в разделе [проверка целостности
+плана](plan-verification.md).
 
 ## Профиль проекта
 
