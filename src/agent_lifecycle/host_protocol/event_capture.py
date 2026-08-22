@@ -2,16 +2,26 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.lifecycle_control_schemas import (
+    validate_lifecycle_control_attestation,
+    validate_lifecycle_control_decision,
+    validate_lifecycle_control_event_batch,
+    validate_lifecycle_control_policy,
+    validate_lifecycle_control_request,
+)
+from agent_lifecycle.contracts.redaction import REDACTED_VALUE, is_sensitive_key
 from agent_lifecycle.host_protocol.events import validate_adapter_event_stream
 
 EVENT_CAPTURE_OPERATION = "adapter-event-stream"
 EVENT_CAPTURE_STATUS = "DECLARED"
 EVENT_STREAM_RECEIPT_SCHEMA = "agent-adapter-event-stream-receipt.v1"
 EVENT_CAPTURE_VALIDATION_SCHEMA = "agent-adapter-event-capture-validation.v1"
+LIFECYCLE_CONTROL_VALIDATION_SCHEMA = "agent-adapter-lifecycle-control-validation.v1"
 EVENT_CATEGORIES = (
     "command",
     "file-change",
@@ -76,8 +86,30 @@ def build_adapter_event_stream(
         raise LifecycleError("invalid-adapter-event-producer-input", "exitCode must be an integer")
     files = list(changed_files or [])
     stream = [
-        _event(1, "session.started", "INFO", host, adapter_id, run_id, task_id, operation_id, recorded_at, {"category": "lifecycle-transition"}),
-        _event(2, "task.launched", "PASS", host, adapter_id, run_id, task_id, operation_id, recorded_at, {"category": "lifecycle-transition"}),
+        _event(
+            1,
+            "session.started",
+            "INFO",
+            host,
+            adapter_id,
+            run_id,
+            task_id,
+            operation_id,
+            recorded_at,
+            {"category": "lifecycle-transition"},
+        ),
+        _event(
+            2,
+            "task.launched",
+            "PASS",
+            host,
+            adapter_id,
+            run_id,
+            task_id,
+            operation_id,
+            recorded_at,
+            {"category": "lifecycle-transition"},
+        ),
         _event(
             3,
             "command.completed",
@@ -165,7 +197,9 @@ def build_event_stream_receipt(
 ) -> dict[str, Any]:
     validation = validate_adapter_event_stream(events)
     if validation["status"] != "PASS":
-        raise LifecycleError("adapter-event-validation-failed", "adapter event stream validation failed", {"validation": validation})
+        raise LifecycleError(
+            "adapter-event-validation-failed", "adapter event stream validation failed", {"validation": validation}
+        )
     _required_string(producer_id, "producer.id")
     host = _required_string(descriptor.get("host"), "descriptor.host")
     adapter_id = _required_string(descriptor.get("adapterId"), "descriptor.adapterId")
@@ -209,8 +243,12 @@ def validate_event_capture_receipt(
     if receipt.get("eventStreamDigest") != canonical_digest(events):
         blockers.append({"code": "adapter-event-stream-stale", "message": "event stream digest does not match receipt"})
     stored_digest = receipt.get("receiptDigest")
-    if stored_digest is not None and stored_digest != canonical_digest({key: value for key, value in receipt.items() if key != "receiptDigest"}):
-        blockers.append({"code": "adapter-event-receipt-digest-mismatch", "message": "receiptDigest does not match receipt"})
+    if stored_digest is not None and stored_digest != canonical_digest(
+        {key: value for key, value in receipt.items() if key != "receiptDigest"}
+    ):
+        blockers.append(
+            {"code": "adapter-event-receipt-digest-mismatch", "message": "receiptDigest does not match receipt"}
+        )
     if receipt.get("eventCount") != len(events):
         blockers.append({"code": "adapter-event-count-mismatch", "message": "event count does not match receipt"})
     if events:
@@ -220,7 +258,9 @@ def validate_event_capture_receipt(
                 blockers.append({"code": "adapter-event-receipt-lineage-mismatch", "field": key})
     if descriptor is not None:
         if receipt.get("descriptorDigest") != canonical_digest(descriptor):
-            blockers.append({"code": "adapter-event-descriptor-stale", "message": "descriptor digest does not match receipt"})
+            blockers.append(
+                {"code": "adapter-event-descriptor-stale", "message": "descriptor digest does not match receipt"}
+            )
         for key in ("adapterId", "host"):
             if receipt.get(key) != descriptor.get(key):
                 blockers.append({"code": "adapter-event-receipt-descriptor-mismatch", "field": key})
@@ -258,9 +298,19 @@ def validate_event_capture_conformance(
     blockers: list[dict[str, Any]] = []
     receipt_validation: dict[str, Any] | None = None
     if declared and events is None:
-        blockers.append({"code": "adapter-event-capture-stream-missing", "message": "declared event capture requires an event stream fixture"})
+        blockers.append(
+            {
+                "code": "adapter-event-capture-stream-missing",
+                "message": "declared event capture requires an event stream fixture",
+            }
+        )
     if declared and receipt is None:
-        blockers.append({"code": "adapter-event-capture-receipt-missing", "message": "declared event capture requires an event stream receipt"})
+        blockers.append(
+            {
+                "code": "adapter-event-capture-receipt-missing",
+                "message": "declared event capture requires an event stream receipt",
+            }
+        )
     if declared and events is not None and receipt is not None:
         receipt_validation = validate_event_capture_receipt(receipt, events, descriptor=descriptor)
         if receipt_validation["status"] == "FAIL":
@@ -281,7 +331,96 @@ def validate_event_capture_conformance(
 
 def require_event_capture_pass(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("status") == "FAIL":
-        raise LifecycleError("adapter-event-capture-validation-failed", "adapter event capture validation failed", {"validation": payload})
+        raise LifecycleError(
+            "adapter-event-capture-validation-failed",
+            "adapter event capture validation failed",
+            {"validation": payload},
+        )
+    return payload
+
+
+def validate_lifecycle_control_bundle(
+    *,
+    policy: dict[str, Any],
+    request: dict[str, Any] | None = None,
+    decision: dict[str, Any] | None = None,
+    events: list[dict[str, Any]] | None = None,
+    attestation: dict[str, Any] | None = None,
+    reference_time: datetime | None = None,
+) -> dict[str, Any]:
+    """Validate bounded lifecycle envelopes and their shared request lineage."""
+
+    blockers: list[dict[str, Any]] = []
+    policy_validation = validate_lifecycle_control_policy(policy)
+    if policy_validation["status"] != "PASS":
+        blockers.extend(_tag_blockers(policy_validation["blockers"], "policy"))
+    policy_limits = policy.get("limits") if policy_validation["status"] == "PASS" else None
+    request_validation = None
+    decision_validation = None
+    event_validation = None
+    attestation_validation = None
+    provided = any(value is not None for value in (request, decision, events, attestation))
+    if not provided:
+        blockers.append({"code": "lifecycle-control-input-missing"})
+    for surface, value in (
+        ("request", request),
+        ("decision", decision),
+        ("events", events),
+        ("attestation", attestation),
+    ):
+        _validate_camel_case_sensitive_keys(value, surface, blockers)
+    if request is not None:
+        request_validation = validate_lifecycle_control_request(
+            request, policy_limits=policy_limits, reference_time=reference_time
+        )
+        if request_validation["status"] != "PASS":
+            blockers.extend(_tag_blockers(request_validation["blockers"], "request"))
+    if decision is not None:
+        decision_validation = validate_lifecycle_control_decision(decision, policy_limits=policy_limits)
+        if decision_validation["status"] != "PASS":
+            blockers.extend(_tag_blockers(decision_validation["blockers"], "decision"))
+    if events is not None:
+        event_validation = validate_lifecycle_control_event_batch(
+            events, policy_limits=policy_limits, reference_time=reference_time
+        )
+        if event_validation["status"] != "PASS":
+            blockers.extend(_tag_blockers(event_validation["blockers"], "events"))
+    if attestation is not None:
+        attestation_validation = validate_lifecycle_control_attestation(
+            attestation, policy_limits=policy_limits, reference_time=reference_time
+        )
+        if attestation_validation["status"] != "PASS":
+            blockers.extend(_tag_blockers(attestation_validation["blockers"], "attestation"))
+    _validate_lifecycle_control_lineage(
+        request=request,
+        decision=decision,
+        events=events or [],
+        attestation=attestation,
+        blockers=blockers,
+    )
+    body = {
+        "schemaVersion": LIFECYCLE_CONTROL_VALIDATION_SCHEMA,
+        "status": "PASS" if not blockers else "FAIL",
+        "policy": policy_validation,
+        "request": request_validation,
+        "decision": decision_validation,
+        "events": event_validation,
+        "attestation": attestation_validation,
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
+
+
+def require_lifecycle_control_bundle_pass(payload: dict[str, Any]) -> dict[str, Any]:
+    """Raise a stable error when lifecycle-control CLI evidence is invalid."""
+
+    if payload.get("status") == "FAIL":
+        raise LifecycleError(
+            "lifecycle-control-validation-failed",
+            "lifecycle control evidence validation failed",
+            {"validation": payload},
+        )
     return payload
 
 
@@ -320,7 +459,9 @@ def _descriptor_declares(descriptor: dict[str, Any] | None) -> bool:
     if isinstance(capture, dict) and capture.get("status") == EVENT_CAPTURE_STATUS:
         return True
     operations = descriptor.get("operations")
-    return isinstance(operations, list) and any(isinstance(item, dict) and item.get("name") == EVENT_CAPTURE_OPERATION for item in operations)
+    return isinstance(operations, list) and any(
+        isinstance(item, dict) and item.get("name") == EVENT_CAPTURE_OPERATION for item in operations
+    )
 
 
 def _projection_declares(projection: dict[str, Any] | None) -> bool:
@@ -337,7 +478,9 @@ def _capability_manifest_declares(capability_manifest: dict[str, Any] | None) ->
     if isinstance(capture, dict) and capture.get("status") == EVENT_CAPTURE_STATUS:
         return True
     capabilities = capability_manifest.get("capabilities")
-    return isinstance(capabilities, list) and any(isinstance(item, dict) and item.get("name") == EVENT_CAPTURE_OPERATION for item in capabilities)
+    return isinstance(capabilities, list) and any(
+        isinstance(item, dict) and item.get("name") == EVENT_CAPTURE_OPERATION for item in capabilities
+    )
 
 
 def _validate_receipt_shape(receipt: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
@@ -363,13 +506,29 @@ def _validate_receipt_shape(receipt: dict[str, Any], blockers: list[dict[str, An
     }
     missing = sorted(required.difference(receipt))
     if missing:
-        blockers.append({"code": "invalid-adapter-event-receipt", "message": "required receipt fields are missing", "fields": missing})
+        blockers.append(
+            {
+                "code": "invalid-adapter-event-receipt",
+                "message": "required receipt fields are missing",
+                "fields": missing,
+            }
+        )
     if receipt.get("schemaVersion") != EVENT_STREAM_RECEIPT_SCHEMA:
-        blockers.append({"code": "invalid-adapter-event-receipt-schema", "message": "unsupported event stream receipt schemaVersion"})
+        blockers.append(
+            {
+                "code": "invalid-adapter-event-receipt-schema",
+                "message": "unsupported event stream receipt schemaVersion",
+            }
+        )
     if receipt.get("status") != "PASS":
         blockers.append({"code": "adapter-event-receipt-not-pass", "message": "event stream receipt must be PASS"})
     if receipt.get("productionPromotionClaimed") is not False:
-        blockers.append({"code": "adapter-event-receipt-production-claim", "message": "event stream receipt must not claim production promotion"})
+        blockers.append(
+            {
+                "code": "adapter-event-receipt-production-claim",
+                "message": "event stream receipt must not claim production promotion",
+            }
+        )
     if not isinstance(receipt.get("eventCount"), int) or isinstance(receipt.get("eventCount"), bool):
         blockers.append({"code": "invalid-adapter-event-receipt", "message": "eventCount must be an integer"})
     if not isinstance(receipt.get("eventTypes"), list):
@@ -378,6 +537,82 @@ def _validate_receipt_shape(receipt: dict[str, Any], blockers: list[dict[str, An
 
 def _tag_blockers(blockers: list[dict[str, Any]], source: str) -> list[dict[str, Any]]:
     return [{**item, "source": source} for item in blockers if isinstance(item, dict)]
+
+
+def _validate_lifecycle_control_lineage(
+    *,
+    request: dict[str, Any] | None,
+    decision: dict[str, Any] | None,
+    events: list[dict[str, Any]],
+    attestation: dict[str, Any] | None,
+    blockers: list[dict[str, Any]],
+) -> None:
+    if request is None:
+        if decision is not None or attestation is not None:
+            blockers.append({"code": "lifecycle-control-request-required-for-proof", "surface": "bundle"})
+        request_digests = {
+            event.get("requestDigest")
+            for event in events
+            if isinstance(event, dict) and isinstance(event.get("requestDigest"), str)
+        }
+        if events and (
+            len(request_digests) != 1
+            or any(not isinstance(event, dict) or not event.get("requestDigest") for event in events)
+        ):
+            blockers.append({"code": "lifecycle-control-event-batch-lineage-mismatch", "surface": "events"})
+        return
+    request_digest = request.get("requestDigest")
+    if isinstance(decision, dict):
+        if decision.get("requestDigest") != request_digest:
+            blockers.append({"code": "lifecycle-control-request-lineage-mismatch", "surface": "decision"})
+        if decision.get("operation") != request.get("operation"):
+            blockers.append({"code": "lifecycle-control-operation-lineage-mismatch", "surface": "decision"})
+    if isinstance(attestation, dict):
+        attestation_fields = (
+            "producerId",
+            "adapterId",
+            "hostVersion",
+            "operation",
+            "nonce",
+            "planDigest",
+            "lockDigest",
+            "stateRevision",
+            "actionDigest",
+        )
+        for field in attestation_fields:
+            if attestation.get(field) != request.get(field):
+                blockers.append(
+                    {
+                        "code": "lifecycle-control-attestation-lineage-mismatch",
+                        "surface": "attestation",
+                        "field": field,
+                    }
+                )
+    for index, event in enumerate(events):
+        if isinstance(event, dict) and event.get("requestDigest") != request_digest:
+            blockers.append({"code": "lifecycle-control-request-lineage-mismatch", "surface": "events", "index": index})
+
+
+def _validate_camel_case_sensitive_keys(
+    value: Any, surface: str, blockers: list[dict[str, Any]], path: str = ""
+) -> None:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            child_path = f"{path}.{key}".strip(".")
+            if isinstance(key, str):
+                normalized = re.sub(r"(?<!^)(?=[A-Z])", "_", key).lower()
+                if normalized != key and is_sensitive_key(normalized) and item != REDACTED_VALUE:
+                    blockers.append(
+                        {
+                            "code": "lifecycle-control-unredacted-sensitive-value",
+                            "surface": surface,
+                            "field": child_path,
+                        }
+                    )
+            _validate_camel_case_sensitive_keys(item, surface, blockers, child_path)
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            _validate_camel_case_sensitive_keys(item, surface, blockers, f"{path}[{index}]")
 
 
 def _required_string(value: Any, label: str) -> str:

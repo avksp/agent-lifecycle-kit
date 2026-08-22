@@ -7,16 +7,21 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
-from agent_lifecycle.contracts.implementation_audit_validation import validate_final_implementation_audit
 from agent_lifecycle.contracts.goal_validation import validate_goal_record
+from agent_lifecycle.contracts.implementation_audit_validation import validate_final_implementation_audit
+from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.followup import validate_followup_register
+from agent_lifecycle.host_protocol.lifecycle_gate import (
+    evaluate_stop_gate,
+    lifecycle_control_selection,
+    require_lifecycle_gate_pass,
+)
 from agent_lifecycle.specification import (
     require_completion_gate_finalization,
     validate_completion_check,
     validate_completion_check_receipt,
     validate_completion_signal,
 )
-from agent_lifecycle.contracts.paths import normalize_repo_path
-from agent_lifecycle.followup import validate_followup_register
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.final_proof_integrity import validate_final_proof_integrity
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
@@ -27,7 +32,10 @@ from agent_lifecycle.workflow.implementation_audit_gate import (
 )
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
-from agent_lifecycle.workflow.review_mesh_gate import require_review_mesh_quorum_gate_pass, validate_review_mesh_quorum_path
+from agent_lifecycle.workflow.review_mesh_gate import (
+    require_review_mesh_quorum_gate_pass,
+    validate_review_mesh_quorum_path,
+)
 from agent_lifecycle.workflow.state import now_iso
 
 
@@ -96,6 +104,25 @@ def finalize_run(
         review_mesh_quorum_paths or [],
     )
     proof_rel = normalize_repo_path(proof_path)
+    lifecycle_control_stop = _evaluate_lifecycle_control_stop(
+        state,
+        final_audit=final_audit,
+        final_proof=_proof_body(
+            state,
+            operation_id=operation_id,
+            final_audit=final_audit_identity,
+            completion_check_receipt=completion_check_receipt,
+            completion_gate=completion_gate,
+            goal_record=goal_record,
+            follow_up_register=follow_up_register,
+            proof_integrity=proof_integrity,
+            final_implementation_audit=final_implementation_audit,
+            finalization_gate_receipts=finalization_gate_receipts,
+            review_mesh_quorum=review_mesh_quorum,
+            lifecycle_control_stop=None,
+            reason=reason,
+        ),
+    )
     proof = _proof_body(
         state,
         operation_id=operation_id,
@@ -108,6 +135,7 @@ def finalize_run(
         final_implementation_audit=final_implementation_audit,
         finalization_gate_receipts=finalization_gate_receipts,
         review_mesh_quorum=review_mesh_quorum,
+        lifecycle_control_stop=lifecycle_control_stop,
         reason=reason,
     )
     write_json_create(root / proof_rel, proof)
@@ -128,6 +156,8 @@ def finalize_run(
         state["finalImplementationAudit"] = final_implementation_audit["audit"]
     if review_mesh_quorum is not None:
         state["reviewMeshFinalQuorum"] = review_mesh_quorum
+    if lifecycle_control_stop is not None:
+        state["lifecycleControlStop"] = lifecycle_control_stop
     state["phase"] = "COMPLETE"
     commit_state(
         state_path,
@@ -144,6 +174,7 @@ def finalize_run(
             "finalImplementationAudit": final_implementation_audit,
             "finalizationGateReceipts": finalization_gate_receipts,
             "reviewMeshQuorum": review_mesh_quorum,
+            "lifecycleControlStop": lifecycle_control_stop,
             "proof": state["finalProof"],
             "reason": reason,
         },
@@ -171,7 +202,12 @@ def _validate_final_audit(state: dict[str, Any], final_audit: dict[str, Any]) ->
             raise LifecycleError("final-audit-lineage-mismatch", f"final audit {key} mismatch")
     if final_audit.get("status") != "PASS" or final_audit.get("semanticStatus") != "READY_FOR_FINALIZATION":
         raise LifecycleError("final-audit-not-ready", "final audit is not ready for finalization")
-    completion_signal_validation = validate_completion_signal(final_audit.get("completionSignal"), state=state)
+    completion_signal = final_audit.get("completionSignal")
+    if completion_signal is None:
+        raise LifecycleError("completion-signal-required", "final audit completionSignal is required")
+    if not isinstance(completion_signal, dict):
+        raise LifecycleError("invalid-final-audit", "final audit completionSignal must be an object")
+    completion_signal_validation = validate_completion_signal(completion_signal, state=state)
     final_audit["completionSignalValidation"] = completion_signal_validation
     if final_audit.get("productionPromotionClaimed") is not False:
         raise LifecycleError("final-audit-production-claim", "final audit must not claim production promotion")
@@ -220,7 +256,33 @@ def _validate_finalization_gates(
     return receipts
 
 
-def _validate_review_mesh_final_quorum(root: Path, state: dict[str, Any], quorum_receipt_paths: list[str]) -> dict[str, Any] | None:
+def _evaluate_lifecycle_control_stop(
+    state: dict[str, Any],
+    *,
+    final_audit: dict[str, Any],
+    final_proof: dict[str, Any],
+) -> dict[str, Any] | None:
+    level, policy, evidence = lifecycle_control_selection(state)
+    if level == "OFF":
+        return None
+    pre_action = evidence.get("finalizePreAction") if isinstance(evidence.get("finalizePreAction"), dict) else None
+    post_action = evidence.get("finalizePostAction") if isinstance(evidence.get("finalizePostAction"), dict) else None
+    gate = evaluate_stop_gate(
+        state=state,
+        final_audit=final_audit,
+        final_proof=final_proof,
+        pre_action=pre_action,
+        post_action=post_action,
+        requested_level=level,
+        policy=policy,
+    )
+    require_lifecycle_gate_pass(gate, gate_type="stop")
+    return gate
+
+
+def _validate_review_mesh_final_quorum(
+    root: Path, state: dict[str, Any], quorum_receipt_paths: list[str]
+) -> dict[str, Any] | None:
     config = state.get("reviewMesh") if isinstance(state.get("reviewMesh"), dict) else None
     receipt_path = quorum_receipt_paths[0] if quorum_receipt_paths else None
     gate = validate_review_mesh_quorum_path(
@@ -264,7 +326,9 @@ def _validate_goal_record(state: dict[str, Any], root: Path, goal_record_path: s
     return {"record": identity, "validation": validation}
 
 
-def _validate_follow_up_register(state: dict[str, Any], root: Path, follow_up_register_path: str | None) -> dict[str, Any] | None:
+def _validate_follow_up_register(
+    state: dict[str, Any], root: Path, follow_up_register_path: str | None
+) -> dict[str, Any] | None:
     path = follow_up_register_path
     existing = state.get("followUpRegister")
     if path is None and isinstance(existing, dict) and existing.get("path"):
@@ -383,6 +447,7 @@ def _proof_body(
     final_implementation_audit: dict[str, Any] | None,
     finalization_gate_receipts: list[dict[str, Any]],
     review_mesh_quorum: dict[str, Any] | None,
+    lifecycle_control_stop: dict[str, Any] | None,
     reason: str,
 ) -> dict[str, Any]:
     accepted = [
@@ -415,6 +480,7 @@ def _proof_body(
         "finalImplementationAudit": final_implementation_audit,
         "finalizationGateReceipts": finalization_gate_receipts,
         "reviewMeshQuorum": review_mesh_quorum,
+        "lifecycleControlStop": lifecycle_control_stop,
         "reason": reason,
         "createdAt": now_iso(),
     }

@@ -10,6 +10,15 @@ from release_common import digest_value, load_json
 
 PLUGIN_NAME = "agent-lifecycle-kit"
 
+LIFECYCLE_CONTROL_DOCUMENTATION: dict[str, Any] = {
+    "id": "optional-adapter-lifecycle-control",
+    "status": "OPTIONAL",
+    "englishPath": "docs/adapters/lifecycle-control.md",
+    "russianPath": "docs/ru/adapters/lifecycle-control.md",
+    "bundledAdapterLevel": "GUIDANCE_ONLY",
+    "bundledQualificationStatus": "NO_RECOMMENDATION",
+}
+
 PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     {
         "id": "pyproject-version",
@@ -181,6 +190,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
         "targetRef": target_ref,
         "pluginName": PLUGIN_NAME,
         "entries": entries,
+        "documentedFeatures": [LIFECYCLE_CONTROL_DOCUMENTATION],
         "lastChannelPolicy": LAST_CHANNEL_POLICY,
         "productionPromotionClaimed": False,
     }

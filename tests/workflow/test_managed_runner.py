@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.contracts.lifecycle_control_schemas import build_default_lifecycle_control_policy
 from agent_lifecycle.workflow.managed_runner import run_managed_lifecycle_step
 
 
@@ -122,6 +124,28 @@ class ManagedRunnerTests(unittest.TestCase):
             self.assertEqual(receipt["status"], "FAIL")
             self.assertIn("source-revision-mismatch", {item["code"] for item in receipt["blockers"]})
 
+    def test_enforced_control_projects_launch_tasks_as_file_edit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path, state_path = _write_bundle(
+                root,
+                phase="RUNNING",
+                task_status="READY",
+                lifecycle_level="ENFORCED",
+            )
+
+            receipt = run_managed_lifecycle_step(
+                state_path=state_path,
+                manifest_path=manifest_path,
+                operation_id="managed-enforced-op",
+                expected_revision=1,
+                source_revision="source",
+            )
+
+            self.assertEqual(receipt["status"], "PASS")
+            self.assertEqual(receipt["lifecycleControl"]["operation"], "file-edit")
+            self.assertTrue(receipt["lifecycleControl"]["selected"])
+
 
 def _write_bundle(
     root: Path,
@@ -129,6 +153,7 @@ def _write_bundle(
     phase: str,
     task_status: str,
     plan_status: str = "FROZEN",
+    lifecycle_level: str | None = None,
 ) -> tuple[Path, Path]:
     manifest = {
         "status": plan_status,
@@ -175,6 +200,7 @@ def _write_bundle(
                 "status": task_status,
                 "attempt": 0 if task_status in {"READY", "PENDING"} else 1,
                 "dependsOn": [],
+                "writes": ["src/example.py"],
                 "required": True,
                 "artifactPaths": {
                     "result": "work/WS-01/attempt-{attempt}/task-result.json",
@@ -185,6 +211,25 @@ def _write_bundle(
         ],
         "eventLog": "events.jsonl",
     }
+    if lifecycle_level is not None:
+        state["lifecycleControl"] = {
+            "level": lifecycle_level,
+            "source": "frozen-plan",
+            "planDigest": digest,
+            "planRevision": 1,
+        }
+        if lifecycle_level != "OFF":
+            policy = deepcopy(build_default_lifecycle_control_policy())
+            policy["operations"]["file-edit"] = {
+                "declaredLevel": lifecycle_level,
+                "supported": True,
+                "qualified": True,
+                "effectiveLevel": lifecycle_level,
+                "qualificationStatus": "QUALIFIED",
+                "hostOwnedPreAction": True,
+            }
+            body = {key: value for key, value in policy.items() if key != "policyDigest"}
+            state["lifecycleControl"]["policy"] = {**body, "policyDigest": canonical_digest(body)}
     state_path = root / "run.state.json"
     state_path.write_text(json.dumps(state), encoding="utf-8")
     return manifest_path, state_path

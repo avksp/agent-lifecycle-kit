@@ -61,48 +61,52 @@ Review Mesh quorum.
 Inspect a declaration with `agent-lifecycle adapter thread-capability` and
 validate its receipt with `agent-lifecycle adapter thread-qualify`. Only a
 matching receipt projects `capability_support="supported"`. These commands are
-inspection-only; core
-does not launch or contact a host.
+inspection-only; core does not launch or contact a host.
 
-For a project-wide default adapter and bounded stage settings, initialize or
-check the consuming project's local profile with `agent-lifecycle project
-profile init/check`. When `.alk/project-profile.json` is present, `start` may
-omit `--adapter`; use `--project-profile <path>` for explicit selection and
-`--no-project-profile` for a run without local defaults. Treat the profile as a
-defaults layer only: the frozen plan and matching lock remain authoritative for
-risk, quality, write scope, gates and receipts.
+## Adapter lifecycle control
 
-When the operator adds `--launch` to raw `auto`, `research`, `plan` or `review`
-input, launch only an exact-version qualified planning-only profile. Resolve
-the default profile from `.alk/host-launch/<adapter>.json`, carry the task over
-bounded stdin, and end in `REVIEW_REQUIRED` or `BLOCKED`. A missing or stale
-profile must return preparation and preflight commands. Persist only digest
-lineage below `.alk/planning-sessions`; `--resume` may read that state but must
-not reattach or relaunch a native host conversation. Implementation remains a
-separate process using a reviewed frozen manifest, matching lock and complete
-workflow bindings.
+Inspect the operation declaration and capability manifest before an adapter
+action. The levels have different guarantees:
 
-When a frozen task requests risk-aware execution, keep the authorization split.
-Run `agent-lifecycle start --risk <auto|S0|S1|S2> --risk-profile-out <path>` to
-project the digest-bound route and caps without changing workflow state. Then
-pass that exact artifact to `workflow task-start --risk-profile <path>` with
-the same operation and lineage bindings. Do not claim a risk-aware attempt from
-raw intake or from `start` alone. Before accepting its result, require
-host-attested tokens, `usage.invocations`, and wall time within all bound caps.
+- `GUIDANCE_ONLY` gives instructions and does not block a host action.
+- `OBSERVED` records a result for later acceptance, but cannot prove prevention.
+- `ENFORCED` requires an exact host-owned pre-action boundary and matching live
+  qualification for that operation and host version.
+- `NO_RECOMMENDATION` means evidence is insufficient for promotion.
+
+Evidence cannot be promoted from a prompt, skill or fixture alone. The selected
+level must match adapter-owned evidence and the frozen plan.
+
+For every controlled action, check the frozen plan and lock, state revision,
+ownership-safe paths and the pre-action decision before the host call. Bind the
+post-action result and changed paths to the same operation, then run task-
+acceptance and stop gates. A missing, stale or mismatched receipt blocks the
+level selected by the plan.
+
+Project defaults use `agent-lifecycle project profile init/check`. A local
+`.alk/project-profile.json` may supply `--adapter`; use `--project-profile` for
+an explicit file or `--no-project-profile` to disable defaults. The frozen plan
+and lock remain authoritative for risk, quality, scope, gates and receipts.
+
+With `--launch` on raw planning input, use only an exact-version qualified
+planning profile from `.alk/host-launch/<adapter>.json`, bounded stdin, and a
+`REVIEW_REQUIRED` or `BLOCKED` result. Missing or stale profiles return
+preparation commands. Persist digest lineage only; `--resume` must not attach
+to a native host conversation. Implementation uses a reviewed frozen manifest,
+matching lock and complete workflow bindings.
+
+For risk-aware execution, project the digest-bound route with `start --risk`
+and pass that exact profile to `workflow task-start --risk-profile` with the
+same operation and lineage. Require host-attested tokens, invocation count and
+wall time within all caps before acceptance.
 
 For common requests, use `docs/guides/lifecycle-cookbook.md` for research-only,
 planning, Markdown plan review, code review, implementation audit and
 cross-review. Beginners start there; advanced users can use atomic commands.
 
-If a frozen plan opts into Review Mesh, prefer
-`agent-lifecycle review-mesh prepare` for common operator flows: it builds a
-local profile, reviewer packets and `agent-review-mesh-prepare-receipt.v1`
-without launching hosts. Advanced flows may still use atomic
-`review-mesh assign`; host adapters or operators run the reviewers, ALK imports
-their outputs with `review-mesh import-result`, synthesizes with
-`review-mesh synthesize`, and requires `review-mesh quorum` receipts only for
-the phases named by the plan. Do not treat Review Mesh as authority to inject
-prompts into hosts or bypass review/freeze.
+If a frozen plan opts into Review Mesh, use `review-mesh prepare`, then let
+adapters run reviewers and import, synthesize and quorum receipts. Review Mesh
+is not authority to inject prompts into hosts or bypass review/freeze.
 
 ## State rules
 

@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.79.0
+python -m pip install agent-lifecycle-kit==1.80.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -42,6 +42,19 @@ python -m pip install agent-lifecycle-kit==1.79.0
 [бюджеты производительности и ресурсов](performance-and-resource-budgets.md).
 Время является справочным, если план не установил иное; проверки безопасности,
 совместимости, ресурсов и отказа по умолчанию остаются обязательными.
+
+## Необязательный контроль жизненного цикла адаптера
+
+`agent-lifecycle adapter lifecycle-control-check` проверяет локальную политику
+или переданные запрос, решение, события и подтверждение контроля, не запуская
+хост. `agent-lifecycle adapter event-check` проверяет переносимый поток событий.
+Эти команды создают данные для проверки, но не повышают уровень адаптера и не
+меняют настройки хоста.
+
+Операционные поля называются `declaredLevel`, `supportedLevel`,
+`qualifiedLevel` и `qualificationStatus`. Комплектные адаптеры сейчас публикуют
+`GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск остаётся
+`WRAPPER_ONLY`. См. [необязательный контроль жизненного цикла адаптера](../adapters/lifecycle-control.md).
 
 ## Основа
 

@@ -62,72 +62,128 @@
     {
       "mapping": "openinterpreter-compatible-cli-install",
       "name": "install",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "openinterpreter-compatible-cli-discover",
       "name": "discover",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "core-schema-validation",
       "name": "validate-envelope",
-      "offlineConformance": "deterministic"
+      "offlineConformance": "deterministic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "openinterpreter-compatible-cli-launch",
       "name": "launch",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "attemptModelRoute-to-host-model",
       "name": "model-route-execution",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "openinterpreter-compatible-cli-wait",
       "name": "wait",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "openinterpreter-compatible-cli-cancel",
       "name": "cancel",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "openinterpreter-compatible-cli-resume",
       "name": "resume",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "openinterpreter-compatible-cli-tool-execution",
       "name": "tool-execution",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "agent-adapter-event.v1",
       "name": "adapter-event-stream",
-      "offlineConformance": "deterministic"
+      "offlineConformance": "deterministic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "task-result-artifact",
       "name": "result-collection",
-      "offlineConformance": "deterministic"
+      "offlineConformance": "deterministic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "openinterpreter-compatible-cli-usage-attestation",
       "name": "usage-attestation",
-      "offlineConformance": "synthetic"
+      "offlineConformance": "synthetic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "audit-plan-implementation",
       "name": "task-audit",
-      "offlineConformance": "deterministic"
+      "offlineConformance": "deterministic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     },
     {
       "mapping": "audit-plan-implementation",
       "name": "final-audit",
-      "offlineConformance": "deterministic"
+      "offlineConformance": "deterministic",
+      "declaredLevel": "GUIDANCE_ONLY",
+      "supportedLevel": "GUIDANCE_ONLY",
+      "qualifiedLevel": "GUIDANCE_ONLY",
+      "qualificationStatus": "NO_RECOMMENDATION"
     }
   ],
   "sandboxCapabilities": {

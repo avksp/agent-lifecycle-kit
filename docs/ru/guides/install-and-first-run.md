@@ -78,7 +78,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.79.0
+python -m pip install agent-lifecycle-kit==1.80.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -89,7 +89,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.79.0
+python -m pip install agent-lifecycle-kit==1.80.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -187,7 +187,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v1.79.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v1.80.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -208,6 +208,13 @@ claude plugin list
 После установки проверьте обнаружение пакета командой из раздела [проверка
 Agent Plugins в клиентах](../reference/agent-plugin-qualification.md). Это
 явная безопасная проверка, которая не заменяет жизненный цикл ALK.
+
+В релизе 1.80 также описан необязательный контроль жизненного цикла внутри
+адаптера. По умолчанию он не включён: комплектные адаптеры сейчас публикуют
+`GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск сохраняет статус
+`WRAPPER_ONLY`. Уровни операций, границы событий и правила квалификации точной
+версии приведены в разделе [необязательный контроль жизненного цикла
+адаптера](../adapters/lifecycle-control.md).
 
 ## Запрос внутри сессии хоста
 
