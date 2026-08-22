@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.79.0 - 2026-08-22
+
+- Added the canonical `agent-plan-manifest.v1` contract and deterministic
+  requirement, acceptance, evidence and final-gate traceability checks.
+- Added strict literal authority paths that reject glob-like, absolute,
+  traversal and URI-like ownership entries before state mutation.
+- Added read-only `agent-lifecycle plan verify` with lock-backed package
+  integrity, workflow-state requirements and structured handoff evidence.
+- Routed plan adoption, managed execution and imported planning inputs through
+  the same manifest and completeness checks before they can write state.
+- Added synchronized English and Russian documentation for plan verification,
+  reviewer handoff and the boundary between ALK, the host and the model.
+
 ## Unreleased
 
 - No changes yet.

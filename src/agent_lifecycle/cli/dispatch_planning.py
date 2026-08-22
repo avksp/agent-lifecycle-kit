@@ -28,6 +28,11 @@ from agent_lifecycle.planning import (
     validate_plan_manifest,
     validate_repository_references,
 )
+from agent_lifecycle.planning.verification import (
+    build_plan_verification,
+    load_verification_inputs,
+    require_plan_verification_pass,
+)
 from agent_lifecycle.specification import (
     build_completion_gate_receipt,
     validate_specification,
@@ -103,6 +108,28 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
+    if args.plan_command == "verify":
+        manifest_path = Path(args.manifest)
+        manifest, lock, acceptance_markdown, workflow_state, package_root = load_verification_inputs(
+            manifest_path=manifest_path,
+            lock_path=Path(args.lock) if args.lock else None,
+            acceptance_path=Path(args.acceptance) if args.acceptance else None,
+            state_path=Path(args.state) if args.state else None,
+            package_root=Path(args.package_root) if args.package_root else None,
+        )
+        payload = build_plan_verification(
+            manifest,
+            manifest_path=manifest_path,
+            lock=lock,
+            acceptance_markdown=acceptance_markdown,
+            workflow_state=workflow_state,
+            repository_root=Path(args.repository_root),
+            package_root=package_root,
+        )
+        output_path = args.out or args.evidence
+        if output_path:
+            write_json_create(Path(output_path), payload)
+        return require_plan_verification_pass(payload)
     if args.plan_command == "acceptance-check":
         manifest_path = Path(args.manifest)
         acceptance_path = Path(args.acceptance)

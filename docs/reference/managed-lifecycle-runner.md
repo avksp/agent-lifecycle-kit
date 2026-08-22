@@ -5,6 +5,12 @@ durable workflow state. It does not launch a model, start a host process or
 mutate the workflow state. It verifies the current frozen plan binding and
 returns the next host-owned action as a typed receipt.
 
+Before handing a package to the managed runner, use [`plan
+verify`](plan-verification.md). It checks the canonical manifest, authority
+paths, traceability, lock and package inventory without executing any command
+declared by the plan. A passing verification is a package-integrity
+precondition; it is not an implementation audit or a release decision.
+
 This closes the gap between the lifecycle skills and the CLI surface: a host
 can ask ALK what must happen next without reconstructing the process from chat.
 

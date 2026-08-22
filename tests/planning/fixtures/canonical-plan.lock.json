@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "agent-plan-lock.v2",
+  "packageId": "canonical-plan",
+  "planRevision": 1,
+  "manifestHash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "planFilesHash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "entries": []
+}

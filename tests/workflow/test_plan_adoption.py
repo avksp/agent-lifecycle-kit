@@ -14,6 +14,33 @@ except ImportError:
     from helpers import *  # noqa: F401,F403,E402
 
 class WorkflowPlanAdoptionTests(unittest.TestCase):
+    def test_adopt_plan_rejects_unknown_authority_before_state_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="BLOCKED", blocker={"code": "plan-drift", "reason": "x", "resumePhase": "RUNNING"})
+            _write_plan_bundle(root)
+            manifest_path = root / "plans/package/plan.manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["schemaVersion"] = "agent-plan-manifest.v1"
+            manifest["integrationSeams"] = ["controller"]
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            before = state_path.read_bytes()
+
+            with self.assertRaises(LifecycleError) as raised:
+                adopt_plan(
+                    state_path,
+                    manifest_path=manifest_path,
+                    operation_id="adopt-invalid-op",
+                    expected_revision=1,
+                    source_revision="source-2",
+                    reset_tasks=True,
+                    start_mode="auto-after-freeze",
+                    authorized_by="tester",
+                )
+
+            self.assertEqual(raised.exception.code, "plan-manifest-contract-failed")
+            self.assertEqual(state_path.read_bytes(), before)
+
     def test_adopt_plan_resets_changed_plan_and_starts_execution(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

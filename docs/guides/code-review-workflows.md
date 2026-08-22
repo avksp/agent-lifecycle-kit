@@ -101,6 +101,23 @@ ownership. Use `--report <path>` for each report when automatic discovery is
 not desired. A `PASS` result is the package-level handoff result; findings in a
 `FAIL` or `REVIEW_REQUIRED` result explain what must be reviewed or completed.
 
+For a plan-only handoff, verify the package before implementation:
+
+```bash
+agent-lifecycle plan verify \
+  --manifest tasks/release-1-79/plan.manifest.json \
+  --package-root tasks/release-1-79 \
+  --lock tasks/release-1-79/plan.lock.json \
+  --acceptance tasks/release-1-79/acceptance-criteria.md \
+  --out work/release-1-79/evidence/plan-verification.json
+```
+
+This is a read-only integrity check. It validates the closed manifest contract,
+literal authority paths, requirement-to-acceptance-to-evidence traceability and
+the lock-backed package inventory. It does not execute plan commands or grant
+implementation authority. A separate S2 or implementation audit remains
+required when the plan calls for it.
+
 ## Review a GitHub pull request
 
 If GitHub CLI is available:

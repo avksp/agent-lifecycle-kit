@@ -125,6 +125,12 @@ def _build_import_result(
     )
     if text and candidate is None and not blockers:
         blockers.append({"code": "planning-import-requirements-missing"})
+    if candidate is not None:
+        try:
+            validate_plan_manifest(candidate)
+        except LifecycleError as exc:
+            candidate = None
+            blockers.append({"code": "planning-import-candidate-invalid", "reason": exc.code})
     body: dict[str, Any] = {
         "schemaVersion": PLANNING_IMPORT_RESULT_SCHEMA,
         "status": "PASS",

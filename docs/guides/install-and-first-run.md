@@ -77,7 +77,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.78.0
+python -m pip install agent-lifecycle-kit==1.79.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -88,7 +88,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.78.0
+python -m pip install agent-lifecycle-kit==1.79.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -188,7 +188,7 @@ Choose one host and follow its adapter page. The common sequence is:
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v1.78.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v1.79.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -240,3 +240,5 @@ with the related artifact and reason.
   stages, models, prompts, timeouts, retries and multi-agent review.
 - [System architecture](../architecture/system-architecture.md) explains the
   roles of ALK, the host, the model and the repository.
+- [Plan verification and integrity](../reference/plan-verification.md) explains
+  how a reviewer checks a handed-off plan package before implementation.
