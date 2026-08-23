@@ -82,7 +82,8 @@ The lifecycle result is accepted through a sequence of linked artifacts:
 4. **Frozen manifest and lock** bind the reviewed plan to one immutable
    implementation identity.
 5. **Task and validation receipts** show the work performed, checks run,
-   changed files, resource usage and unresolved actions.
+   changed files, current Git-backed content snapshot, resource usage and
+   unresolved actions.
 6. **Implementation audit** compares the result with the frozen plan and its
    acceptance evidence.
 7. **Final proof** combines the accepted evidence and exposes the resulting
@@ -103,6 +104,13 @@ The guarantee boundary is explicit:
 | Contract and process | Schema shape, hashes, ownership, allowed paths, state transitions, required commands and receipt lineage. | Whether the selected requirements describe the right product outcome. |
 | Code and behavior | Test results, validation output, changed-file scope, resource limits and audit completeness. | Semantic correctness of research, design and implementation; the plan must require tests, review or domain evidence for it. |
 | Host and model | Adapter identity, declared capabilities, environment boundary and attested usage. | The quality of model reasoning and the behavior of tools supplied by the host. |
+
+For a task result, ALK does not treat a timestamp or model statement as proof
+of freshness. It resolves the frozen source revision, discovers the current
+Git file set, and hashes task-scoped baseline/current identities and content.
+The workflow and implementation audit recompute that evidence. Git proves
+which bytes were checked; tests and independent review still establish whether
+those bytes implement the intended behavior.
 
 ## Release 1.77 quality and packaging boundaries
 
@@ -795,7 +803,7 @@ sequenceDiagram
   participant Events as workflow/events.py
   participant State as workflow/state.py
 
-  CLI->>Transition: start_task / commit_task_result / accept_task
+  CLI->>Transition: start_task / commit_task_result / rework_task / accept_task
   Transition->>Kernel: load_for_update(operationId, expectedRevision)
   Kernel->>State: load_state()
   Kernel->>State: require expected revision and unused operation
@@ -808,6 +816,10 @@ sequenceDiagram
 Patterns: state machine, operation kernel, optimistic revision check,
 idempotency key and append-only event log. Mutating workflow commands fail
 closed on stale revisions, duplicate operation ids and missing required gates.
+When an independent review or audit returns `REWORK`, the same kernel validates
+open finding IDs and the frozen retry budget, archives immutable identities for
+the current attempt, and moves the task to `REMEDIATING`. The next start opens
+an unused attempt path; it does not replace the prior result, review or audit.
 
 ### Code review for GitHub or GitLab changes
 

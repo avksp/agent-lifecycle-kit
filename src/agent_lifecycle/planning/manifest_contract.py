@@ -221,7 +221,9 @@ def _validate_nested(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -
         for index, criterion in enumerate(criteria):
             _object_keys(criterion, _CRITERION, f"acceptanceCriteria[{index}]", blockers)
     _object_keys(manifest.get("validation"), _VALIDATION, "validation", blockers)
-    _object_keys(manifest.get("orchestration"), _ORCHESTRATION, "orchestration", blockers)
+    orchestration = manifest.get("orchestration")
+    _object_keys(orchestration, _ORCHESTRATION, "orchestration", blockers)
+    _validate_remediation_policy(orchestration, blockers)
     integrity = manifest.get("packageIntegrity")
     if integrity is not None:
         if not isinstance(integrity, dict):
@@ -254,6 +256,38 @@ def _validate_nested(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -
     if isinstance(workstreams, list):
         for index, workstream in enumerate(workstreams):
             _object_keys(workstream, _WORKSTREAM, f"workstreams[{index}]", blockers)
+
+
+def _validate_remediation_policy(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        return
+    mode = value.get("remediationMode", "off")
+    attempts = value.get("maxTaskAttempts", 1)
+    if mode not in {"off", "ask", "bounded-auto"}:
+        blockers.append(
+            _blocker(
+                "plan-remediation-mode-invalid",
+                "orchestration.remediationMode must be off, ask or bounded-auto",
+            )
+        )
+        return
+    if not isinstance(attempts, int) or isinstance(attempts, bool) or not 1 <= attempts <= 10:
+        blockers.append(
+            _blocker(
+                "plan-task-attempt-budget-invalid",
+                "orchestration.maxTaskAttempts must be an integer from 1 through 10",
+            )
+        )
+        return
+    if mode in {"ask", "bounded-auto"} and attempts < 2:
+        blockers.append(
+            _blocker(
+                "plan-remediation-attempt-budget-too-low",
+                "enabled remediation requires maxTaskAttempts of at least 2",
+            )
+        )
 
 
 def _object_keys(value: Any, allowed: set[str], path: str, blockers: list[dict[str, Any]]) -> None:

@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.80.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.81.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -69,8 +69,8 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 ### Plan and execute
 - Reviewed specification and plan flow before implementation starts.
 - Deterministic task packets for splitting work across agents.
-- Execution records capture completion checks, blockers, retries, and final
-  proof; missing required evidence fails the step.
+- Execution records capture completion checks, blockers, bounded retries and final
+  proof; rework archives prior evidence and requires a current Git snapshot.
 - Ready-made task templates cover bug fixes, idea-to-PR flow, PR review,
   merge-conflict repair, and release-readiness work.
 

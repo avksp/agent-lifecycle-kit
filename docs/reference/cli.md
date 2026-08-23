@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.80.0
+  python -m pip install agent-lifecycle-kit==1.81.0
 ```
 
 ## Error and resource contracts
@@ -178,7 +178,14 @@ JSON contracts.
   `--progress-hook receipt --progress-receipt <path>` to persist
   `agent-progress-hook-receipt.v1` while preserving JSON stdout.
 - `agent-lifecycle workflow task-start`: open a bounded task attempt.
+- `agent-lifecycle workflow task-snapshot`: compute the current task-scoped
+  Git file set and content digests without changing workflow state. Put the
+  returned `claim` object in the task result before `task-result`.
 - `agent-lifecycle workflow task-result`: submit implementation evidence.
+- `agent-lifecycle workflow task-rework`: after an independent review or
+  implementation audit returns `REWORK`, archive the current attempt and move
+  the task to `REMEDIATING`. Repeat `--finding-id` for each open finding being
+  addressed. The frozen plan must enable remediation and allow another attempt.
 - `agent-lifecycle workflow task-accept`: accept a completed task. Add
   `--implementation-audit <implementation-audit.json>` when the plan or task
   requires accepted implementation audit evidence.

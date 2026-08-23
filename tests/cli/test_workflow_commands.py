@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -172,6 +173,208 @@ class CliWorkflowCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(_task(payload)["status"], "ACCEPTED")
 
+    def test_workflow_task_rework_cli_runs_second_attempt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["budgets"] = {
+                "remediationMode": "ask",
+                "maxTaskAttempts": 2,
+                "maxParallelTasks": 1,
+                "maxTaskWallSeconds": 3600,
+            }
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            code, _ = _run_cli(
+                [
+                    "workflow",
+                    "task-start",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "start-1",
+                    "--expected-revision",
+                    "1",
+                    "--source-revision",
+                    "source",
+                    "--reason",
+                    "first attempt",
+                ]
+            )
+            self.assertEqual(code, 0)
+            result_1 = _result()
+            result_1_path = "work/WS-01/attempt-1/task-result.json"
+            write_json_create(root / result_1_path, result_1)
+            code, _ = _run_cli(
+                [
+                    "workflow",
+                    "task-result",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "result-1",
+                    "--expected-revision",
+                    "2",
+                    "--source-revision",
+                    "source",
+                    "--result",
+                    result_1_path,
+                    "--reason",
+                    "result",
+                ]
+            )
+            self.assertEqual(code, 0)
+            review_1 = _review(canonical_digest(result_1))
+            review_1["verdict"] = "REWORK"
+            review_1["findings"] = [{"id": "F-CLI-1", "severity": "MEDIUM", "status": "open", "message": "rework"}]
+            review_1_path = "work/WS-01/attempt-1/task-review.json"
+            write_json_create(root / review_1_path, review_1)
+            code, payload = _run_cli(
+                [
+                    "workflow",
+                    "task-rework",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "rework-1",
+                    "--expected-revision",
+                    "3",
+                    "--source-revision",
+                    "source",
+                    "--review",
+                    review_1_path,
+                    "--finding-id",
+                    "F-CLI-1",
+                    "--reason",
+                    "review requested rework",
+                ]
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(_task(payload)["status"], "REWORK")
+            code, payload = _run_cli(
+                [
+                    "workflow",
+                    "task-start",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "start-2",
+                    "--expected-revision",
+                    "4",
+                    "--source-revision",
+                    "source",
+                    "--reason",
+                    "second attempt",
+                ]
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(_task(payload)["attempt"], 2)
+            result_2 = _result()
+            result_2["attempt"] = 2
+            result_2_path = "work/WS-01/attempt-2/task-result.json"
+            write_json_create(root / result_2_path, result_2)
+            code, _ = _run_cli(
+                [
+                    "workflow",
+                    "task-result",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "result-2",
+                    "--expected-revision",
+                    "5",
+                    "--source-revision",
+                    "source",
+                    "--result",
+                    result_2_path,
+                    "--reason",
+                    "fixed",
+                ]
+            )
+            self.assertEqual(code, 0)
+            review_2 = _review(canonical_digest(result_2))
+            review_2["attempt"] = 2
+            review_2_path = "work/WS-01/attempt-2/task-review.json"
+            write_json_create(root / review_2_path, review_2)
+            code, payload = _run_cli(
+                [
+                    "workflow",
+                    "task-accept",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "accept-2",
+                    "--expected-revision",
+                    "6",
+                    "--review",
+                    review_2_path,
+                    "--reason",
+                    "accepted",
+                ]
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(_task(payload)["status"], "ACCEPTED")
+
+    def test_workflow_task_snapshot_cli_returns_embeddable_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "tests@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "ALK Tests"], cwd=root, check=True)
+            (root / ".gitignore").write_text("run.state.json\nevents.jsonl\nwork/\n", encoding="utf-8")
+            source = root / "src/example.py"
+            source.parent.mkdir(parents=True)
+            source.write_text("value = 1\n", encoding="utf-8")
+            subprocess.run(["git", "add", ".gitignore", "src/example.py"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "baseline"], cwd=root, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+            ).stdout.strip()
+            state_path = _write_state(root)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["sourceRevision"] = revision
+            state["tasks"][0]["writes"] = ["src"]
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            code, _ = _run_cli(
+                [
+                    "workflow",
+                    "task-start",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "start-op",
+                    "--expected-revision",
+                    "1",
+                    "--source-revision",
+                    revision,
+                    "--reason",
+                    "launch",
+                ]
+            )
+            self.assertEqual(code, 0)
+            source.write_text("value = 2\n", encoding="utf-8")
+
+            code, payload = _run_cli(["workflow", "task-snapshot", "--state", str(state_path), "--task", "WS-01"])
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["changedFiles"], ["src/example.py"])
+            self.assertEqual(payload["claim"]["schemaVersion"], "agent-task-change-set-claim.v1")
+            self.assertFalse(payload["stateWritten"])
+
     def test_workflow_task_start_cli_consumes_risk_profile(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -275,7 +478,11 @@ class CliWorkflowCommandTests(unittest.TestCase):
             state["proofIntegrityRequired"] = True
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {
+                "path": "work/WS-01/attempt-1/task-review.json",
+                "sha256": "3" * 64,
+                "bytes": 10,
+            }
             state_path.write_text(json.dumps(state), encoding="utf-8")
             finding, root_cause, fix_impact, integrity = _cli_proof_integrity_receipt()
             final_audit = _cli_final_audit()
@@ -494,7 +701,9 @@ class CliWorkflowCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(payload["phase"], "RUNNING")
             self.assertEqual(_task(payload)["status"], "READY")
-            applied = json.loads((root / "work/WS-01/attempt-1/budget-decision-applied.json").read_text(encoding="utf-8"))
+            applied = json.loads(
+                (root / "work/WS-01/attempt-1/budget-decision-applied.json").read_text(encoding="utf-8")
+            )
             self.assertEqual(applied["selectedAction"], "reroute-stronger")
             self.assertEqual(applied["nextRouteDecisionDigest"], "8" * 64)
 

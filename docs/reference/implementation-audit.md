@@ -66,6 +66,9 @@ The task report is a deterministic facade over existing lifecycle contracts:
 - frozen plan status and plan digest;
 - workflow state revision, task id, attempt and source revision;
 - task result identity and independent review identity;
+- current task-scoped Git file set and content digests, recomputed from the
+  frozen source revision; caller-supplied `--path` values cannot replace this
+  evidence;
 - worker self-certification;
 - write ownership, forbidden writes and read-only paths;
 - supplied evidence paths against required evidence ids;
@@ -76,6 +79,12 @@ The task report is a deterministic facade over existing lifecycle contracts:
 The report verdict is one of `ACCEPTED`, `REWORK`, `CONTRACT_CHANGE` or
 `BLOCKED`. A task can be accepted by the workflow gate only when the report has
 `status: PASS` and `verdict: ACCEPTED`.
+
+If the report returns `REWORK` for open findings inside the frozen scope, pass
+that report to `workflow task-rework --implementation-audit <path>` together
+with the selected finding IDs. ALK validates its lineage and independence,
+archives its identity with the current attempt, and requires a fresh result and
+audit for the next attempt.
 
 ## Workflow gates
 

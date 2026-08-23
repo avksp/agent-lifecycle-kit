@@ -7,7 +7,7 @@ from pathlib import Path
 
 from agent_lifecycle.audit import build_implementation_audit_report
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_json_create
-from agent_lifecycle.workflow import accept_task, commit_task_result, start_task
+from agent_lifecycle.workflow import accept_task, commit_task_result, rework_task, start_task
 from agent_lifecycle.workflow.managed_runner import run_managed_lifecycle_step
 
 
@@ -88,6 +88,61 @@ class TaskAcceptanceImplementationAuditGateTests(unittest.TestCase):
             self.assertEqual(receipt["nextAction"]["type"], "blocked")
             self.assertIn("implementation-audit-required", {item["code"] for item in receipt["blockers"]})
 
+    def test_task_rework_accepts_accepted_review_with_rework_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle = _write_bundle(root, phase="RUNNING", task_status="READY", audit_required=True)
+            state = json.loads(Path(bundle["statePath"]).read_text(encoding="utf-8"))
+            state["budgets"] = {"remediationMode": "ask", "maxTaskAttempts": 2, "maxParallelTasks": 1}
+            Path(bundle["statePath"]).write_text(json.dumps(state), encoding="utf-8")
+            start_task(
+                bundle["statePath"],
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path, review_path = _write_result_review(root, bundle)
+            commit_task_result(
+                bundle["statePath"],
+                task_id="WS-01",
+                operation_id="result-op",
+                expected_revision=2,
+                source_revision="source",
+                result_path=result_path,
+                reason="done",
+            )
+            report = build_implementation_audit_report(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                task_id="WS-01",
+                result_path=result_path,
+                review_path=review_path,
+                changed_paths=[],
+            )
+            self.assertEqual(report["verdict"], "REWORK")
+            finding_id = next(
+                item["id"] for item in report["findings"] if item["code"] == "implementation-changed-paths-stale"
+            )
+            audit_path = "work/WS-01/attempt-1/implementation-audit.json"
+            write_json_create(root / audit_path, report)
+
+            payload = rework_task(
+                bundle["statePath"],
+                task_id="WS-01",
+                operation_id="rework-op",
+                expected_revision=3,
+                source_revision="source",
+                review_path=review_path,
+                implementation_audit_path=audit_path,
+                finding_ids=[finding_id],
+                reason="audit requested rework",
+            )
+
+            task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(task["status"], "REWORK")
+
 
 def _write_bundle(
     root: Path,
@@ -159,7 +214,12 @@ def _write_bundle(
     return {"manifestPath": manifest_path, "statePath": state_path, "planDigest": digest}
 
 
-def _write_result_review(root: Path, bundle: dict[str, Path | str]) -> tuple[str, str]:
+def _write_result_review(
+    root: Path,
+    bundle: dict[str, Path | str],
+    *,
+    reviewer_id: str = "reviewer",
+) -> tuple[str, str]:
     result = {
         "schemaVersion": "agent-task-result.v2",
         "runId": "run",
@@ -208,7 +268,7 @@ def _write_result_review(root: Path, bundle: dict[str, Path | str]) -> tuple[str
         "resultHash": result_digest,
         "taskPacketHash": "1" * 64,
         "traceDigest": "4" * 64,
-        "reviewer": {"id": "reviewer", "independent": True, "surface": "test", "runId": "review-run"},
+        "reviewer": {"id": reviewer_id, "independent": True, "surface": "test", "runId": "review-run"},
         "reviewedAt": "2026-08-03T00:00:00Z",
         "verdict": "ACCEPTED",
         "itemReviews": [{"plannedItemId": "REQ-01", "verdict": "ACCEPTED", "findingIds": []}],

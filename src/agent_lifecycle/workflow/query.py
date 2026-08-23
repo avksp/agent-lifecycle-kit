@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.workflow.selectors import active_tasks, ready_tasks
+from agent_lifecycle.workflow.selectors import active_tasks, ready_tasks, rework_tasks
 from agent_lifecycle.workflow.state import (
     EXECUTION_PHASES,
     TERMINAL_PHASES,
@@ -40,6 +40,10 @@ def next_action(state: dict[str, Any]) -> dict[str, Any]:
     if phase == "READY":
         return {"type": "start-execution"}
     if phase in EXECUTION_PHASES:
+        if phase == "REMEDIATING":
+            rework = rework_tasks(state)
+            if rework:
+                return {"type": "launch-tasks", "taskIds": rework, "reason": "start-remediation-attempt"}
         ready = ready_tasks(state)
         if ready:
             return {"type": "launch-tasks", "taskIds": ready}

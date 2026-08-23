@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from agent_lifecycle.workflow import (  # noqa: E402
     finalize_run,
     pause_for_external_action,
     pause_for_budget_decision,
+    rework_task,
     resolve_blocker,
     resume_external_action,
     select_auto_budget_action,
@@ -24,6 +26,7 @@ from agent_lifecycle.workflow import (  # noqa: E402
     status,
     validate_budget_exceeded_policy,
 )
+
 
 def _write_state(
     root: Path,
@@ -84,6 +87,57 @@ def _write_state(
         encoding="utf-8",
     )
     return path
+
+
+def _initialize_managed_git_state(root: Path, state_path: Path, *, max_attempts: int = 2) -> str:
+    """Turn a lightweight workflow fixture into a managed Git-backed state."""
+
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.email", "tests@example.invalid"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "ALK Tests"], cwd=root, check=True)
+    (root / ".gitignore").write_text("run.state.json\nevents.jsonl\nwork/\n", encoding="utf-8")
+    source = root / "src/example.py"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("value = 1\n", encoding="utf-8")
+    subprocess.run(["git", "add", ".gitignore", "src/example.py"], cwd=root, check=True)
+    subprocess.run(["git", "commit", "-qm", "fixture baseline"], cwd=root, check=True)
+    revision = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["sourceRevision"] = revision
+    state["budgets"]["remediationMode"] = "ask"
+    state["budgets"]["maxTaskAttempts"] = max_attempts
+    state["packetSet"] = {
+        "manifestDigest": "0" * 64,
+        "packetSetHash": "a" * 64,
+        "planLockSha256": "b" * 64,
+    }
+    state["tasks"][0].setdefault("attemptHistory", [])
+    state["tasks"][0].setdefault("remediationFindingIds", [])
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+    return revision
+
+
+def _fresh_result(root: Path, state_path: Path, *, attempt: int) -> dict:
+    from agent_lifecycle.changesets import capture_task_change_set
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    task = state["tasks"][0]
+    evidence = capture_task_change_set(root, baseline=state["sourceRevision"], write_paths=task.get("writes", []))
+    result = _result(attempt=attempt)
+    result["sourceRevision"] = state["sourceRevision"]
+    result["changedFiles"] = evidence["changedFiles"]
+    result["changeSet"] = {
+        "schemaVersion": "agent-task-change-set-claim.v1",
+        **{key: evidence[key] for key in ("provider", "baselineSha", "fileSetHash", "diffHash", "snapshotHash")},
+    }
+    result["itemOutcomes"][0]["changedFiles"] = evidence["changedFiles"]
+    return result
 
 
 def _add_gate(state_path: Path, gate: dict) -> None:
@@ -162,6 +216,7 @@ try:
     from .plan_helpers import _plan_manifest, _plan_review_block, _write_plan_bundle
 except ImportError:
     from plan_helpers import _plan_manifest, _plan_review_block, _write_plan_bundle
+
 
 def _model_route() -> dict:
     return {
@@ -402,6 +457,7 @@ __all__ = [
     "finalize_run",
     "pause_for_budget_decision",
     "pause_for_external_action",
+    "rework_task",
     "resolve_blocker",
     "resume_external_action",
     "select_auto_budget_action",

@@ -57,6 +57,25 @@ class ManagedRunnerTests(unittest.TestCase):
             self.assertFalse(receipt["stateWritten"])
             self.assertFalse(receipt["hostLaunchStarted"])
 
+    def test_rework_task_routes_same_task_to_next_attempt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path, state_path = _write_bundle(root, phase="REMEDIATING", task_status="REWORK")
+
+            receipt = run_managed_lifecycle_step(
+                state_path=state_path,
+                manifest_path=manifest_path,
+                operation_id="managed-rework-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="continue remediation",
+            )
+
+            self.assertEqual(receipt["status"], "PASS")
+            self.assertEqual(receipt["nextAction"]["type"], "launch-tasks")
+            self.assertEqual(receipt["nextAction"]["taskIds"], ["WS-01"])
+            self.assertEqual(receipt["nextAction"]["projectedAction"]["reason"], "start-remediation-attempt")
+
     def test_final_audit_phase_returns_finalize_action(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

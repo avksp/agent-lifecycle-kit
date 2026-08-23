@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +12,7 @@ from agent_lifecycle.audit import (
     validate_final_implementation_audit,
     validate_implementation_audit_report,
 )
+from agent_lifecycle.changesets import capture_task_change_set
 from agent_lifecycle.contracts import canonical_digest, write_json_create
 from agent_lifecycle.planning.task_compatibility import (
     build_task_plan_compatibility_receipt,
@@ -42,7 +44,9 @@ class ImplementationAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             bundle = _write_bundle(root)
-            result_path, review_path = _write_result_review(root, bundle, reviewer_id="worker", reviewer_run_id="worker-run")
+            result_path, review_path = _write_result_review(
+                root, bundle, reviewer_id="worker", reviewer_run_id="worker-run"
+            )
 
             report = build_implementation_audit_report(
                 manifest_path=bundle["manifestPath"],
@@ -92,6 +96,97 @@ class ImplementationAuditTests(unittest.TestCase):
             self.assertEqual(report["status"], "FAIL")
             self.assertEqual(report["verdict"], "BLOCKED")
             self.assertIn("state-revision-mismatch", {item["code"] for item in report["blockers"]})
+
+    def test_task_implementation_audit_recomputes_current_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "tests@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "ALK Tests"], cwd=root, check=True)
+            (root / ".gitignore").write_text("plans/\nrun.state.json\nwork/\n", encoding="utf-8")
+            source = root / "src/example.py"
+            source.parent.mkdir(parents=True)
+            source.write_text("value = 1\n", encoding="utf-8")
+            subprocess.run(["git", "add", ".gitignore", "src/example.py"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "baseline"], cwd=root, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+            ).stdout.strip()
+            bundle = _write_bundle(root)
+            state = json.loads(Path(bundle["statePath"]).read_text(encoding="utf-8"))
+            state["sourceRevision"] = revision
+            Path(bundle["statePath"]).write_text(json.dumps(state), encoding="utf-8")
+            source.write_text("value = 2\n", encoding="utf-8")
+            evidence = capture_task_change_set(root, baseline=revision, write_paths=["src/example.py"])
+            result_path, review_path = _write_result_review(
+                root,
+                bundle,
+                source_revision=revision,
+                freshness=evidence,
+            )
+
+            fresh = build_implementation_audit_report(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                task_id="WS-01",
+                result_path=result_path,
+                review_path=review_path,
+            )
+            self.assertEqual(fresh["status"], "PASS")
+
+            source.write_text("value = 3\n", encoding="utf-8")
+            stale = build_implementation_audit_report(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                task_id="WS-01",
+                result_path=result_path,
+                review_path=review_path,
+            )
+            self.assertEqual(stale["verdict"], "REWORK")
+            self.assertIn("task-result-stale-snapshot", {item["code"] for item in stale["blockers"]})
+
+    def test_task_implementation_audit_requires_snapshot_for_adopted_packet_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "tests@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "ALK Tests"], cwd=root, check=True)
+            (root / ".gitignore").write_text("plans/\nrun.state.json\nwork/\n", encoding="utf-8")
+            source = root / "src/example.py"
+            source.parent.mkdir(parents=True)
+            source.write_text("value = 1\n", encoding="utf-8")
+            subprocess.run(["git", "add", ".gitignore", "src/example.py"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "baseline"], cwd=root, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+            ).stdout.strip()
+            bundle = _write_bundle(root)
+            state = json.loads(Path(bundle["statePath"]).read_text(encoding="utf-8"))
+            state["sourceRevision"] = revision
+            state["packetSet"] = {
+                "manifestDigest": "0" * 64,
+                "packetSetHash": "1" * 64,
+                "planLockSha256": "2" * 64,
+            }
+            Path(bundle["statePath"]).write_text(json.dumps(state), encoding="utf-8")
+            source.write_text("value = 2\n", encoding="utf-8")
+            result_path, review_path = _write_result_review(
+                root,
+                bundle,
+                source_revision=revision,
+                include_change_set=False,
+            )
+
+            report = build_implementation_audit_report(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                task_id="WS-01",
+                result_path=result_path,
+                review_path=review_path,
+            )
+
+            self.assertEqual(report["verdict"], "REWORK")
+            self.assertIn("task-result-change-set-missing", {item["code"] for item in report["blockers"]})
 
     def test_task_implementation_audit_validation_rejects_forged_pass_with_blockers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -306,6 +401,9 @@ def _write_result_review(
     changed_files: list[str] | None = None,
     reviewer_id: str = "reviewer",
     reviewer_run_id: str = "review-run",
+    source_revision: str = "source",
+    freshness: dict | None = None,
+    include_change_set: bool = True,
 ) -> tuple[str, str]:
     result = {
         "schemaVersion": "agent-task-result.v2",
@@ -313,7 +411,7 @@ def _write_result_review(
         "taskId": "WS-01",
         "attempt": 1,
         "planDigest": bundle["planDigest"],
-        "sourceRevision": "source",
+        "sourceRevision": source_revision,
         "actor": "worker",
         "actorRunId": "worker-run",
         "surface": "test",
@@ -329,12 +427,27 @@ def _write_result_review(
             "snapshotHash": "7" * 64,
         },
         "commands": [{"id": "unit", "status": "PASS", "exitCode": 0}],
-        "itemOutcomes": [{"plannedItemId": "REQ-01", "status": "COMPLETE", "changedFiles": ["src/example.py"], "commandIds": ["unit"]}],
+        "itemOutcomes": [
+            {
+                "plannedItemId": "REQ-01",
+                "status": "COMPLETE",
+                "changedFiles": ["src/example.py"],
+                "commandIds": ["unit"],
+            }
+        ],
         "summary": "done",
         "assumptions": [],
         "blocker": None,
         "contractChangeRequest": None,
     }
+    if freshness is not None:
+        result["changedFiles"] = freshness["changedFiles"]
+        result["changeSet"] = {
+            "schemaVersion": "agent-task-change-set-claim.v1",
+            **{key: freshness[key] for key in ("provider", "baselineSha", "fileSetHash", "diffHash", "snapshotHash")},
+        }
+    if not include_change_set:
+        result.pop("changeSet")
     result_path = "work/WS-01/attempt-1/task-result.json"
     write_json_create(root / result_path, result)
     digest = canonical_digest(result)
