@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from agent_lifecycle.contracts.redaction import REDACTED_VALUE, redact_text, redact_value
+from agent_lifecycle.contracts.redaction import REDACTED_VALUE, redact_text, redact_text_with_stats, redact_value
 
 
 class ReceiptRedactionTests(unittest.TestCase):
@@ -82,6 +82,35 @@ class ReceiptRedactionTests(unittest.TestCase):
         for value in values:
             self.assertNotIn(value, redacted)
         self.assertGreaterEqual(redacted.count(REDACTED_VALUE), len(values))
+
+    def test_redact_text_preserves_public_http_urls(self) -> None:
+        public_path = "/" + "Users/public"
+        value = "See https://github.com/avksp/agent-lifecycle-kit and http://example.com" + public_path
+
+        redacted, applied, stats = redact_text_with_stats(value)
+
+        self.assertFalse(applied)
+        self.assertEqual(redacted, value)
+        self.assertEqual(stats["secretLikeMarkersRedacted"], 0)
+        self.assertEqual(stats["localPathsRedacted"], 0)
+
+    def test_redact_text_redacts_url_credentials_and_sensitive_query_values(self) -> None:
+        value = "https://user:password@example.com/path?api_key=supersecret123&safe=1"
+
+        redacted, applied = redact_text(value)
+
+        self.assertTrue(applied)
+        self.assertEqual(redacted, "https://<redacted>@example.com/path?api_key=<redacted>&safe=1")
+        self.assertNotIn("password", redacted)
+        self.assertNotIn("supersecret123", redacted)
+
+    def test_redact_text_keeps_non_sensitive_url_query_values(self) -> None:
+        value = "https://example.com/path?search=public&redirect=https%3A%2F%2Fexample.com"
+
+        redacted, applied = redact_text(value)
+
+        self.assertFalse(applied)
+        self.assertEqual(redacted, value)
 
 
 if __name__ == "__main__":
