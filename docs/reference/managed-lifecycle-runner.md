@@ -83,8 +83,12 @@ network client imports such as `openai`, `anthropic`, `requests`, `httpx` and
    packets and later records `workflow task-result`.
 5. If the plan requires implementation audit, run `agent-lifecycle audit
    implementation` and pass the accepted report to `workflow task-accept`.
-6. If `nextAction.type` is `run-final-audit`, run the independent final audit.
-7. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
+6. If independent evidence returns `REWORK`, call `workflow task-rework` with
+   its open finding IDs. The run enters `REMEDIATING`; the next managed step
+   returns `launch-tasks` for the same task, and `task-start` opens the next
+   unused bounded attempt.
+7. If `nextAction.type` is `run-final-audit`, run the independent final audit.
+8. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
    accepted final audit and proof path.
 
 The loop remains deterministic because every state mutation still goes through

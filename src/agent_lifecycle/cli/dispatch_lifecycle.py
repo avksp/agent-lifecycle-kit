@@ -9,15 +9,18 @@ from typing import Any
 from agent_lifecycle.audit import (
     build_final_implementation_audit,
     build_implementation_audit_report,
-    build_package_audit,
     build_ownership_report,
+    build_package_audit,
     require_package_audit_pass,
     require_review_verdict_pass,
     validate_review_verdict,
 )
 from agent_lifecycle.audit.ownership import report_has_category
 from agent_lifecycle.changesets import changed_files
-from agent_lifecycle.cli.progress_hooks import maybe_emit_workflow_progress_hook, validate_workflow_progress_hook_request
+from agent_lifecycle.cli.progress_hooks import (
+    maybe_emit_workflow_progress_hook,
+    validate_workflow_progress_hook_request,
+)
 from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
 from agent_lifecycle.runner import (
     build_runner_snapshot,
@@ -40,12 +43,14 @@ from agent_lifecycle.workflow import (
     next_action,
     pause_for_budget_decision,
     resolve_blocker,
+    rework_task,
     run_managed_lifecycle_step,
     start_execution,
     start_task,
     status,
     validate_budget_exceeded_policy,
 )
+from agent_lifecycle.workflow.artifacts import build_current_task_change_set
 
 
 def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
@@ -125,6 +130,11 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
+    if args.workflow_command == "task-snapshot":
+        payload = build_current_task_change_set(state_path, task_id=args.task)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.workflow_command == "block":
         return block_run(
             state_path,
@@ -208,6 +218,18 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
         )
         maybe_emit_workflow_progress_hook(args, command="workflow task-accept", state_path=state_path)
         return payload
+    if args.workflow_command == "task-rework":
+        return rework_task(
+            state_path,
+            task_id=args.task,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            review_path=args.review,
+            implementation_audit_path=args.implementation_audit,
+            finding_ids=args.finding_id,
+            reason=args.reason,
+        )
     raise LifecycleError("command-not-implemented", "workflow command is not implemented")
 
 
@@ -303,13 +325,18 @@ def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
         return validate_runner_state(runner_state, workflow_state=workflow_state)
     runner_state = load_runner_state(runner_path)
     if args.runner_command == "status":
-        workflow_state = read_json_object(Path(args.state), label="workflow state") if args.state else None
+        status_workflow_state = read_json_object(Path(args.state), label="workflow state") if args.state else None
         if args.profile:
-            if workflow_state is None:
+            if status_workflow_state is None:
                 raise LifecycleError("missing-cli-argument", "runner status with --profile requires --state")
             profile = read_json_object(Path(args.profile), label="context profile")
-            return build_runner_snapshot(runner_state, workflow_state, profile=profile, window=args.target_window)
-        return validate_runner_state(runner_state, workflow_state=workflow_state)
+            return build_runner_snapshot(
+                runner_state,
+                status_workflow_state,
+                profile=profile,
+                window=args.target_window,
+            )
+        return validate_runner_state(runner_state, workflow_state=status_workflow_state)
     workflow_state = read_json_object(Path(args.state), label="workflow state")
     if args.runner_command == "transition":
         request = read_json_object(Path(args.request), label="runner transition request")

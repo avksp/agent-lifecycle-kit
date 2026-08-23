@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.80.0
+python -m pip install agent-lifecycle-kit==1.81.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -183,7 +183,17 @@ agent-lifecycle project preset render \
   показать прогресс в stderr, или `--progress-hook receipt --progress-receipt
   <path>`, чтобы сохранить `agent-progress-hook-receipt.v1` без изменения JSON
   в stdout.
-- `agent-lifecycle workflow`: переходы жизненного цикла, отчёты задач и
+- `agent-lifecycle workflow task-start`: открывает ограниченную попытку задачи.
+- `agent-lifecycle workflow task-snapshot`: без изменения состояния вычисляет
+  текущий набор файлов задачи и отпечатки их содержимого по Git. Объект `claim`
+  из результата нужно поместить в результат задачи перед `task-result`.
+- `agent-lifecycle workflow task-result`: сохраняет результат реализации.
+- `agent-lifecycle workflow task-rework`: после решения `REWORK` независимой
+  проверки сохраняет данные текущей попытки и переводит задачу в
+  `REMEDIATING`. Для каждой открытой находки укажите отдельный `--finding-id`;
+  зафиксированный план должен разрешать ещё одну попытку.
+- `agent-lifecycle workflow task-accept`: принимает проверенную задачу.
+- `agent-lifecycle workflow`: остальные переходы жизненного цикла, отчёты задач и
   финальное подтверждение. Для запусков с обязательной проверкой причинной
   цепочки `workflow finalize` принимает
   `--proof-integrity <proof-integrity.json>`; для обязательного решения

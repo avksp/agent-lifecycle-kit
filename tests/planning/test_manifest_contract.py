@@ -39,6 +39,22 @@ class ManifestContractTests(unittest.TestCase):
         result = validate_plan_manifest_contract(manifest)
         self.assertIn("plan-manifest-inventory-source-invalid", _codes(result))
 
+    def test_enabled_remediation_requires_two_bounded_attempts(self) -> None:
+        manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        manifest["orchestration"] = {"remediationMode": "ask", "maxTaskAttempts": 1}
+        result = validate_plan_manifest_contract(manifest)
+        self.assertIn("plan-remediation-attempt-budget-too-low", _codes(result))
+
+        manifest["orchestration"]["maxTaskAttempts"] = 2
+        self.assertEqual(validate_plan_manifest_contract(manifest)["status"], "PASS")
+
+    def test_attempt_budget_rejects_boolean_and_unbounded_values(self) -> None:
+        for attempts in (True, 0, 11):
+            manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+            manifest["orchestration"] = {"remediationMode": "off", "maxTaskAttempts": attempts}
+            result = validate_plan_manifest_contract(manifest)
+            self.assertIn("plan-task-attempt-budget-invalid", _codes(result))
+
 
 def _codes(result: dict) -> set[str]:
     return {item["code"] for item in result["blockers"]}

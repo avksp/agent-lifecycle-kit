@@ -88,9 +88,13 @@ start/status/transition/stop/resume`. Существующий runner управ
    пакеты задач и позже записывает `workflow task-result`.
 5. Если план требует аудит реализации, запустить `agent-lifecycle audit
    implementation` и передать принятый отчёт в `workflow task-accept`.
-6. Если `nextAction.type` равен `run-final-audit`, запускается независимая
+6. Если независимая проверка вернула `REWORK`, вызвать `workflow task-rework`
+   с идентификаторами открытых находок. Запуск перейдёт в `REMEDIATING`,
+   следующий управляемый шаг снова вернёт эту задачу в `launch-tasks`, а
+   `task-start` откроет следующую свободную ограниченную попытку.
+7. Если `nextAction.type` равен `run-final-audit`, запускается независимая
    финальная проверка.
-7. Если `nextAction.type` равен `finalize-run`, вызывается `workflow finalize`
+8. Если `nextAction.type` равен `finalize-run`, вызывается `workflow finalize`
    с принятым финальным аудитом и путём для итогового доказательства.
 
 Цикл остаётся детерминированным: каждое изменение состояния по-прежнему идёт
