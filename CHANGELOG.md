@@ -4,6 +4,15 @@
 
 - No changes yet.
 
+## 1.81.1 - 2026-08-24
+
+- Preserved ordinary HTTP(S) evidence URLs during shared redaction while
+  retaining local-path, file-URI, bearer and standalone-token protection.
+- Added redaction for URL userinfo credentials and sensitive query values with
+  substitution-accurate counters across research and receipt surfaces.
+- Updated package, plugin, marketplace and installation metadata for the
+  1.81.1 patch release.
+
 ## 1.81.0 - 2026-08-23
 
 - Added `workflow task-rework` for authorized, bounded remediation after an

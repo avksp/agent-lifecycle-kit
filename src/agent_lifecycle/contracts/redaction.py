@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
 REDACTED_VALUE = "<redacted>"
 LOCAL_PATH_REDACTION = "<local-path>"
@@ -55,6 +56,7 @@ _KEY_VALUE = re.compile(
     r"(?P<key>[\"']?[A-Za-z][A-Za-z0-9_.-]*[\"']?)(?P<separator>\s*[:=]\s*)(?P<value>Bearer\s+[^\s,;}\]]+|\"(?:\\.|[^\"])*\"|'(?:\\.|[^'])*'|[^\s,;}\]]+)",
     re.IGNORECASE,
 )
+_HTTP_URL = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
 _LOCAL_PATH = re.compile(
     r"(?<![A-Za-z0-9_.-])(?:"
     r"[A-Za-z]:[\\/](?:[A-Za-z0-9._~@+ -]+[\\/])*[A-Za-z0-9._~@+ -]+|"
@@ -77,16 +79,15 @@ def redact_text(value: str) -> tuple[str, bool]:
 def redact_text_with_stats(value: str) -> tuple[str, bool, dict[str, int]]:
     """Redact shared forms and expose coarse category counts to importers."""
 
-    redacted = _PRIVATE_KEY.sub(REDACTED_VALUE, value)
-    secret_count = len(_PRIVATE_KEY.findall(value))
-    redacted = _BEARER.sub(f"Bearer {REDACTED_VALUE}", redacted)
-    secret_count += len(_BEARER.findall(value))
-    redacted = _BARE_TOKEN.sub(REDACTED_VALUE, redacted)
-    secret_count += len(_BARE_TOKEN.findall(value))
-    redacted, assignment_count = _KEY_VALUE.subn(_replace_sensitive_assignment, redacted)
-    secret_count += assignment_count
+    redacted, urls, url_secret_count = _protect_http_urls(value)
+    redacted, private_key_count = _replace_matches(_PRIVATE_KEY, redacted, REDACTED_VALUE)
+    redacted, bearer_count = _replace_matches(_BEARER, redacted, f"Bearer {REDACTED_VALUE}")
+    redacted, token_count = _replace_matches(_BARE_TOKEN, redacted, REDACTED_VALUE)
+    redacted, assignment_count = _redact_sensitive_assignments(redacted)
+    secret_count = url_secret_count + private_key_count + bearer_count + token_count + assignment_count
     path_count = len(_LOCAL_PATH.findall(redacted))
     redacted = _LOCAL_PATH.sub(LOCAL_PATH_REDACTION, redacted)
+    redacted = _restore_http_urls(redacted, urls)
     return redacted, redacted != value, {
         "secretLikeMarkersRedacted": secret_count,
         "localPathsRedacted": path_count,
@@ -96,7 +97,8 @@ def redact_text_with_stats(value: str) -> tuple[str, bool, dict[str, int]]:
 def contains_local_absolute_path(value: str) -> bool:
     """Return whether text contains a local absolute path or file URI."""
 
-    return bool(_LOCAL_PATH.search(value))
+    protected = _HTTP_URL.sub("__alk_http_url__", value)
+    return bool(_LOCAL_PATH.search(protected))
 
 
 def redact_value(value: Any) -> tuple[Any, bool]:
@@ -141,6 +143,92 @@ def _replace_sensitive_assignment(match: re.Match[str]) -> str:
     value = match.group("value")
     replacement = _quoted_redaction(value)
     return f"{key}{match.group('separator')}{replacement}"
+
+
+def _replace_matches(pattern: re.Pattern[str], value: str, replacement: str) -> tuple[str, int]:
+    """Apply a fixed replacement and count only matches in the input."""
+
+    matches = list(pattern.finditer(value))
+    return pattern.sub(replacement, value), len(matches)
+
+
+def _redact_sensitive_assignments(value: str) -> tuple[str, int]:
+    """Redact sensitive assignments without counting safe key/value pairs."""
+
+    count = 0
+
+    def replace(match: re.Match[str]) -> str:
+        nonlocal count
+        replacement = _replace_sensitive_assignment(match)
+        if replacement != match.group(0):
+            count += 1
+        return replacement
+
+    return _KEY_VALUE.sub(replace, value), count
+
+
+def _protect_http_urls(value: str) -> tuple[str, list[str], int]:
+    """Redact secrets inside HTTP URLs while shielding their paths from path matching."""
+
+    urls: list[str] = []
+    secret_count = 0
+
+    def replace(match: re.Match[str]) -> str:
+        nonlocal secret_count
+        redacted, count = _redact_http_url(match.group(0))
+        urls.append(redacted)
+        secret_count += count
+        return f"__alk_http_url_{len(urls) - 1}__"
+
+    return _HTTP_URL.sub(replace, value), urls, secret_count
+
+
+def _restore_http_urls(value: str, urls: list[str]) -> str:
+    """Restore URL spans after non-URL path and assignment processing."""
+
+    for index, url in enumerate(urls):
+        value = value.replace(f"__alk_http_url_{index}__", url)
+    return value
+
+
+def _redact_http_url(value: str) -> tuple[str, int]:
+    """Redact URL credentials, sensitive query values and provider tokens."""
+
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return value, 0
+    netloc = parsed.netloc
+    secret_count = 0
+    if "@" in netloc:
+        _userinfo, host = netloc.rsplit("@", 1)
+        netloc = f"{REDACTED_VALUE}@{host}"
+        secret_count += 1
+    query, query_count = _redact_url_query(parsed.query)
+    fragment, fragment_count = _redact_url_query(parsed.fragment)
+    secret_count += query_count + fragment_count
+    redacted = urlunsplit((parsed.scheme, netloc, parsed.path, query, fragment))
+    redacted, private_key_count = _replace_matches(_PRIVATE_KEY, redacted, REDACTED_VALUE)
+    redacted, bearer_count = _replace_matches(_BEARER, redacted, f"Bearer {REDACTED_VALUE}")
+    redacted, token_count = _replace_matches(_BARE_TOKEN, redacted, REDACTED_VALUE)
+    return redacted, secret_count + private_key_count + bearer_count + token_count
+
+
+def _redact_url_query(value: str) -> tuple[str, int]:
+    """Redact values for sensitive URL query or fragment keys without normalizing safe text."""
+
+    if not value:
+        return value, 0
+    parts = value.split("&")
+    count = 0
+    for index, part in enumerate(parts):
+        if "=" not in part:
+            continue
+        key, _raw_value = part.split("=", 1)
+        if is_sensitive_key(unquote_plus(key).strip("\"'")):
+            parts[index] = f"{key}={REDACTED_VALUE}"
+            count += 1
+    return "&".join(parts), count
 
 
 def _quoted_redaction(value: str) -> str:
