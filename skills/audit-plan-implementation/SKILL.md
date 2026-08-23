@@ -60,6 +60,9 @@ For each planned item, verify:
 - architecture, security, performance, release, and adapter constraints;
 - task result identity bound to run, task, attempt, packet, plan, source, and
   reviewer.
+- task result file set and content digests recomputed from the current Git
+  worktree and frozen source revision; caller-provided path lists are comparison
+  inputs, not freshness authority.
 
 For adapter lifecycle control, also verify the operation-specific declared,
 supported and qualified levels in the descriptor and capability manifest.
@@ -79,6 +82,11 @@ alone is not enforcement.
 - `CONTRACT_CHANGE`: intent, architecture, ownership, write set, acceptance, or
   proof rules must be reopened and refrozen.
 - `BLOCKED`: external state prevents a safe verdict.
+
+For `REWORK`, return stable open finding IDs. The controller may pass those IDs
+and this audit to `workflow task-rework` only when the frozen retry policy has
+remaining attempts. The next attempt must produce a fresh result and audit;
+prior attempt artifacts stay unchanged.
 
 ## Final audit
 

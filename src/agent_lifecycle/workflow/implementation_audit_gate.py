@@ -26,7 +26,9 @@ def task_implementation_audit_required(
         return True
     for workstream in manifest.get("workstreams", []):
         if isinstance(workstream, dict) and workstream.get("id") == task.get("id"):
-            return workstream.get("implementationAuditRequired") is True or _required(workstream.get("implementationAudit"))
+            return workstream.get("implementationAuditRequired") is True or _required(
+                workstream.get("implementationAudit")
+            )
     return False
 
 
@@ -78,6 +80,51 @@ def validate_task_implementation_audit_artifact(
     }
 
 
+def validate_task_implementation_audit_for_rework(
+    state_path: Path,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    report_path: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Validate an independent audit without requiring an accepted verdict."""
+
+    root = package_root(state_path, state)
+    rel = normalize_repo_path(report_path, label="implementation audit report")
+    report = read_json_object(root / rel, label="implementation audit report")
+    from agent_lifecycle.contracts.implementation_audit_validation import (
+        require_implementation_audit_rework,
+        validate_implementation_audit_report,
+    )
+
+    identity = artifact_identity(root, rel, report)
+    validation = validate_implementation_audit_report(
+        report,
+        state=state,
+        task=task,
+        report_identity=identity,
+    )
+    if validation.get("status") != "PASS":
+        raise LifecycleError(
+            "implementation-audit-invalid",
+            "implementation audit report failed contract validation",
+            {"validation": validation},
+        )
+    if report.get("verdict") == "REWORK":
+        require_implementation_audit_rework(validation, report)
+    summary = {
+        **identity,
+        "taskId": report.get("taskId"),
+        "attempt": report.get("attempt"),
+        "verdict": report.get("verdict"),
+        "reportDigest": report.get("reportDigest"),
+        "validation": {
+            "status": validation["status"],
+            "validationDigest": validation["validationDigest"],
+        },
+    }
+    return summary, report
+
+
 def task_has_accepted_implementation_audit(task: dict[str, Any]) -> bool:
     audit = task.get("implementationAuditReport")
     return isinstance(audit, dict) and audit.get("verdict") == "ACCEPTED"
@@ -88,7 +135,9 @@ def missing_required_implementation_audits(state_path: Path, state: dict[str, An
     for task in state.get("tasks", []):
         if not isinstance(task, dict) or task.get("status") != "ACCEPTED":
             continue
-        if task_implementation_audit_required(state_path, state, task) and not task_has_accepted_implementation_audit(task):
+        if task_implementation_audit_required(state_path, state, task) and not task_has_accepted_implementation_audit(
+            task
+        ):
             missing.append(str(task.get("id")))
     return missing
 
@@ -112,7 +161,9 @@ def implementation_audit_blockers(state_path: Path, state: dict[str, Any]) -> li
             continue
         if task.get("status") not in {"VERIFYING", "ACCEPTED"}:
             continue
-        if task_implementation_audit_required(state_path, state, task) and not task_has_accepted_implementation_audit(task):
+        if task_implementation_audit_required(state_path, state, task) and not task_has_accepted_implementation_audit(
+            task
+        ):
             blockers.append({"code": "implementation-audit-required", "taskId": task.get("id")})
     return blockers
 

@@ -1,5 +1,15 @@
 """Durable workflow controller primitives."""
 
+from agent_lifecycle.workflow.bug_forensics_gates import (
+    bug_forensics_activated,
+    build_bug_forensics_gate_receipt,
+    require_bug_forensics_gate_pass,
+    validate_bug_forensics_gate_receipt,
+)
+from agent_lifecycle.workflow.checkpoint_gate import (
+    invoke_checkpoint_gate,
+    normalize_context_checkpoint_policy,
+)
 from agent_lifecycle.workflow.controller import (
     accept_task,
     adopt_plan,
@@ -13,18 +23,12 @@ from agent_lifecycle.workflow.controller import (
     pause_for_external_action,
     resolve_blocker,
     resume_external_action,
+    rework_task,
     select_auto_budget_action,
     start_execution,
     start_task,
     status,
     validate_budget_exceeded_policy,
-)
-from agent_lifecycle.workflow.managed_runner import run_managed_lifecycle_step
-from agent_lifecycle.workflow.bug_forensics_gates import (
-    build_bug_forensics_gate_receipt,
-    bug_forensics_activated,
-    require_bug_forensics_gate_pass,
-    validate_bug_forensics_gate_receipt,
 )
 from agent_lifecycle.workflow.final_proof_integrity import (
     proof_integrity_required,
@@ -36,20 +40,17 @@ from agent_lifecycle.workflow.leases import (
     require_worker_lease_receipt_pass,
     validate_worker_lease_receipt,
 )
-from agent_lifecycle.workflow.sandbox_policy import (
-    build_sandbox_requirement_policy,
-    require_task_sandbox_evidence_pass,
-    sandbox_evidence_required,
-    validate_task_sandbox_evidence,
-)
+from agent_lifecycle.workflow.managed_runner import run_managed_lifecycle_step
 from agent_lifecycle.workflow.risk_execution_gate import (
     clear_task_risk_profile,
     validate_attempt_risk_usage,
     validate_task_risk_profile,
 )
-from agent_lifecycle.workflow.checkpoint_gate import (
-    invoke_checkpoint_gate,
-    normalize_context_checkpoint_policy,
+from agent_lifecycle.workflow.sandbox_policy import (
+    build_sandbox_requirement_policy,
+    require_task_sandbox_evidence_pass,
+    sandbox_evidence_required,
+    validate_task_sandbox_evidence,
 )
 
 __all__ = [
@@ -57,16 +58,16 @@ __all__ = [
     "adopt_plan",
     "apply_budget_decision",
     "block_run",
-    "build_bug_forensics_gate_receipt",
-    "build_worker_lease_receipt",
-    "build_sandbox_requirement_policy",
     "bug_forensics_activated",
+    "build_bug_forensics_gate_receipt",
+    "build_sandbox_requirement_policy",
+    "build_worker_lease_receipt",
     "check_lineage",
     "classify_lease_status",
-    "commit_task_result",
     "clear_task_risk_profile",
-    "invoke_checkpoint_gate",
+    "commit_task_result",
     "finalize_run",
+    "invoke_checkpoint_gate",
     "next_action",
     "normalize_context_checkpoint_policy",
     "pause_for_budget_decision",
@@ -77,16 +78,17 @@ __all__ = [
     "require_worker_lease_receipt_pass",
     "resolve_blocker",
     "resume_external_action",
+    "rework_task",
     "run_managed_lifecycle_step",
     "sandbox_evidence_required",
     "select_auto_budget_action",
     "start_execution",
     "start_task",
     "status",
+    "validate_attempt_risk_usage",
     "validate_budget_exceeded_policy",
     "validate_bug_forensics_gate_receipt",
     "validate_final_proof_integrity",
-    "validate_attempt_risk_usage",
     "validate_task_risk_profile",
     "validate_task_sandbox_evidence",
     "validate_worker_lease_receipt",

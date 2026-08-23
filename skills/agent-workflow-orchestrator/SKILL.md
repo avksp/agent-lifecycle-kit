@@ -32,6 +32,11 @@ questions, approvals, tools, launch, waiting, cancellation and telemetry.
 12. After all required tasks are accepted, run final implementation audit and
     publish completion only from a reproducible proof.
 
+For remediation, require a frozen retry budget, independent `REWORK` evidence
+and open finding IDs. Use `workflow task-rework`; never edit state manually.
+Before each `task-result`, put a current `workflow task-snapshot` claim in the
+result. Later code changes require a new claim and result.
+
 Managed commands may show progress with `--progress-hook stderr` or write
 `agent-progress-hook-receipt.v1` with `--progress-hook receipt
 --progress-receipt <path>`. This is display/proof only; plugin or skill
@@ -51,12 +56,9 @@ it must never guess a native host conversation id. Use `adapter task start`,
 `adapter session start` only to record an interactive `WAITING_FOR_TASK`
 session. Native host launching remains descriptor-driven and host-owned.
 
-For optional host-thread coordination, prepare bounded `read`, `list`, `send`
-or `create` requests with `agent-lifecycle thread request`, then import the
-adapter-owned receipt with `agent-lifecycle thread import`. The bridge is off by
-default; `send` and `create` require approval and an idempotency key. Imported
-content is advisory and cannot replace a frozen plan, acceptance evidence or
-Review Mesh quorum.
+For optional host-thread coordination, use `thread request` and `thread
+import`. The bridge is off by default; `send` and `create` require approval and
+an idempotency key. Imported content remains advisory.
 
 Inspect a declaration with `agent-lifecycle adapter thread-capability` and
 validate its receipt with `agent-lifecycle adapter thread-qualify`. Only a

@@ -20,11 +20,14 @@ from agent_lifecycle.workflow.artifacts import (
     artifact_path,
     next_available_attempt,
     package_root,
+    require_artifact_identity,
+    validate_attempt_history,
 )
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
 from agent_lifecycle.workflow.implementation_audit_gate import (
     task_implementation_audit_required,
     validate_task_implementation_audit_artifact,
+    validate_task_implementation_audit_for_rework,
 )
 from agent_lifecycle.workflow.model_usage import (
     model_usage_receipt_required,
@@ -33,7 +36,13 @@ from agent_lifecycle.workflow.model_usage import (
 )
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
-from agent_lifecycle.workflow.reviews import validate_task_result, validate_task_review
+from agent_lifecycle.workflow.reviews import (
+    open_finding_ids,
+    task_result_freshness_required,
+    validate_task_result,
+    validate_task_review,
+    validate_task_rework_review,
+)
 from agent_lifecycle.workflow.risk_execution_gate import (
     apply_task_risk_profile,
     clear_task_risk_profile,
@@ -45,6 +54,9 @@ from agent_lifecycle.workflow.state import (
     deadline_after,
     now_iso,
 )
+
+MAX_REMEDIATION_FINDINGS = 128
+MAX_REMEDIATION_FINDING_ID_LENGTH = 256
 
 
 def start_task(
@@ -66,6 +78,7 @@ def start_task(
         raise LifecycleError("invalid-task-status", f"task {task_id} is not launchable")
     _require_dependencies_accepted(state, task)
     _require_parallel_capacity(state)
+    validate_attempt_history(state_path, state, task)
     _validate_task_authority_paths(state, task)
     if risk_profile_path is not None:
         profile, profile_identity = load_task_risk_profile(
@@ -120,6 +133,7 @@ def commit_task_result(
     task = find_task(state, task_id)
     if task.get("status") != "RUNNING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not RUNNING")
+    validate_attempt_history(state_path, state, task)
     gate_receipts = validate_controller_gates(
         state_path,
         state,
@@ -134,7 +148,14 @@ def commit_task_result(
     root = package_root(state_path, state)
     result = read_json_object(root / expected_path, label="task result")
     identity = artifact_identity(root, expected_path, result)
-    validate_task_result(state, task, result, identity)
+    freshness = validate_task_result(
+        state,
+        task,
+        result,
+        identity,
+        repository_root=root,
+        require_freshness=task_result_freshness_required(state),
+    )
     control_post_action = _validate_control_post_action(state, task, result, root)
     model_usage_identity = None
     if model_usage_receipt_required(task):
@@ -172,6 +193,8 @@ def commit_task_result(
             "task attempt does not require a model usage receipt",
         )
     task["result"] = identity
+    if freshness is not None:
+        task["resultChangeSetEvidence"] = freshness
     if control_post_action is not None:
         task["lifecycleControlPostAction"] = control_post_action
     task["status"] = "VERIFYING"
@@ -210,6 +233,7 @@ def accept_task(
     task = find_task(state, task_id)
     if task.get("status") != "VERIFYING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not VERIFYING")
+    validate_attempt_history(state_path, state, task)
     gate_receipts = validate_controller_gates(
         state_path,
         state,
@@ -224,9 +248,24 @@ def accept_task(
     root = package_root(state_path, state)
     review = read_json_object(root / expected_path, label="task review")
     identity = artifact_identity(root, expected_path, review)
-    validate_task_review(state, task, review)
     result = _read_committed_result(root, task)
-    ownership_receipt = _validate_task_write_scope(state, task, result)
+    validate_task_review(state, task, review, result=result)
+    freshness = validate_task_result(
+        state,
+        task,
+        result,
+        task["result"],
+        repository_root=root,
+        require_freshness=task_result_freshness_required(state),
+    )
+    ownership_paths = freshness["allChangedFiles"] if freshness is not None else result.get("changedFiles", [])
+    ownership_receipt = _validate_task_write_scope(
+        state,
+        task,
+        result,
+        changed_files=ownership_paths,
+        include_plan_scope=freshness is not None,
+    )
     implementation_audit = _validate_implementation_audit(
         state_path,
         state,
@@ -245,6 +284,120 @@ def accept_task(
         operation_id=operation_id,
         event_type="task-accepted",
         payload={"taskId": task_id, "attempt": task["attempt"], "review": task["review"], "reason": reason},
+    )
+    return status(state_path)
+
+
+def rework_task(
+    state_path: Path,
+    *,
+    task_id: str,
+    operation_id: str,
+    expected_revision: int,
+    source_revision: str,
+    review_path: str,
+    finding_ids: list[str],
+    implementation_audit_path: str | None = None,
+    reason: str,
+) -> dict[str, Any]:
+    """Archive a verified attempt and authorize its next remediation attempt."""
+
+    state = _mutable_state(state_path, operation_id, expected_revision)
+    if state.get("phase") != "STEP_REVIEW":
+        raise LifecycleError("invalid-phase", "task rework requires STEP_REVIEW phase")
+    _require_source_and_authorization(state, source_revision)
+    task = find_task(state, task_id)
+    if task.get("status") != "VERIFYING":
+        raise LifecycleError("invalid-task-status", f"task {task_id} is not VERIFYING")
+    _require_rework_budget(state, task)
+    _require_no_active_sibling(state, task_id)
+    validate_attempt_history(state_path, state, task)
+    root = package_root(state_path, state)
+    result = _read_committed_result(root, task)
+    validate_task_result(
+        state,
+        task,
+        result,
+        task["result"],
+        repository_root=root,
+        require_freshness=task_result_freshness_required(state),
+    )
+    expected_review_path = artifact_path(task, "review", int(task["attempt"]))
+    if normalize_repo_path(review_path) != expected_review_path:
+        raise LifecycleError("artifact-path-mismatch", "task review path does not match frozen template")
+    review = read_json_object(root / expected_review_path, label="task review")
+    review_identity = artifact_identity(root, expected_review_path, review)
+    validate_task_rework_review(state, task, review, result=result)
+    required_audit = task_implementation_audit_required(state_path, state, task)
+    audit_identity: dict[str, Any] | None = None
+    audit: dict[str, Any] | None = None
+    if implementation_audit_path is not None:
+        audit_identity, audit = validate_task_implementation_audit_for_rework(
+            state_path,
+            state,
+            task,
+            implementation_audit_path,
+        )
+    elif required_audit:
+        raise LifecycleError(
+            "implementation-audit-required",
+            "task rework requires the configured implementation audit report",
+            {"taskId": task_id},
+        )
+    if review.get("verdict") != "REWORK" and (audit is None or audit.get("verdict") != "REWORK"):
+        raise LifecycleError(
+            "task-rework-verdict-required",
+            "review or implementation audit must have a REWORK verdict",
+        )
+    requested = _normalize_finding_ids(finding_ids)
+    available = set()
+    if review.get("verdict") == "REWORK":
+        available.update(open_finding_ids(review))
+    if audit is not None and audit.get("verdict") == "REWORK":
+        available.update(open_finding_ids(audit))
+    missing = sorted(set(requested).difference(available))
+    omitted = sorted(available.difference(requested))
+    if missing or omitted:
+        raise LifecycleError(
+            "task-rework-finding-mismatch",
+            "finding IDs must exactly match the open findings in the REWORK evidence",
+            {"missing": missing, "omitted": omitted, "available": sorted(available)},
+        )
+    task.setdefault("attemptHistory", []).append(
+        {
+            "schemaVersion": "agent-task-attempt-history-entry.v1",
+            "runId": state.get("runId"),
+            "packageId": state.get("packageId"),
+            "taskId": task.get("id"),
+            "attempt": task["attempt"],
+            "planRevision": state.get("planRevision"),
+            "planDigest": state.get("planDigest"),
+            "sourceRevision": state.get("sourceRevision"),
+            "result": dict(task["result"]),
+            "review": review_identity,
+            "implementationAuditReport": audit_identity,
+            "findingIds": requested,
+            "archivedAt": now_iso(),
+        }
+    )
+    task["remediationFindingIds"] = requested
+    _clear_active_attempt_references(task)
+    task["status"] = "REWORK"
+    task["lastReason"] = reason
+    state["phase"] = "REMEDIATING"
+    commit_state(
+        state_path,
+        state,
+        operation_id=operation_id,
+        event_type="task-rework-requested",
+        payload={
+            "taskId": task_id,
+            "attempt": task["attempt"],
+            "findingIds": requested,
+            "review": review_identity,
+            "implementationAuditReport": audit_identity,
+            "reason": reason,
+        },
     )
     return status(state_path)
 
@@ -310,13 +463,7 @@ def _mark_task_running(
 ) -> None:
     task["attempt"] = attempt
     task["status"] = "RUNNING"
-    task["usageIterations"] = []
-    task["controllerGateReceipts"] = []
-    task.pop("result", None)
-    task.pop("review", None)
-    task.pop("modelUsageReceipt", None)
-    task.pop("attemptModelRoute", None)
-    task.pop("attemptRiskExecutionProfile", None)
+    _clear_active_attempt_references(task)
     task["attemptStartedAt"] = now_iso()
     task["attemptBaseRevision"] = state.get("sourceRevision")
     task["attemptDeadlineAt"] = deadline_after(
@@ -372,6 +519,7 @@ def _mark_task_accepted(
     task["lastReason"] = reason
     task.pop("attemptStartedAt", None)
     task.pop("attemptDeadlineAt", None)
+    task["remediationFindingIds"] = []
     unlock_ready_tasks(state)
     state["phase"] = "RUNNING" if ready_tasks(state) else "FINAL_AUDIT"
 
@@ -380,15 +528,18 @@ def _read_committed_result(root: Path, task: dict[str, Any]) -> dict[str, Any]:
     result_identity = task.get("result")
     if not isinstance(result_identity, dict) or not isinstance(result_identity.get("path"), str):
         raise LifecycleError("missing-task-result", "task acceptance requires committed result")
-    return read_json_object(root / normalize_repo_path(result_identity["path"]), label="task result")
+    return require_artifact_identity(root, result_identity, label="task result")
 
 
 def _validate_task_write_scope(
     state: dict[str, Any],
     task: dict[str, Any],
     result: dict[str, Any],
+    *,
+    changed_files: list[str] | None = None,
+    include_plan_scope: bool = False,
 ) -> dict[str, Any]:
-    changed_files = result.get("changedFiles")
+    changed_files = result.get("changedFiles") if changed_files is None else changed_files
     if not isinstance(changed_files, list) or not all(isinstance(path, str) for path in changed_files):
         raise LifecycleError("task-result-invalid", "task result changedFiles must be a list of strings")
     writes = [
@@ -396,6 +547,15 @@ def _validate_task_write_scope(
         for path in task.get("writes", [])
         if isinstance(path, str)
     ]
+    plan_writes = []
+    if include_plan_scope:
+        plan_writes = [
+            normalize_authority_path(path, label="plan write path")
+            for planned_task in state.get("tasks", [])
+            if isinstance(planned_task, dict) and planned_task.get("id") != task.get("id")
+            for path in planned_task.get("writes", [])
+            if isinstance(path, str)
+        ]
     if not writes:
         if changed_files and (state.get("manifestPath") or state.get("packetSet")):
             raise LifecycleError(
@@ -433,12 +593,15 @@ def _validate_task_write_scope(
         forbidden = [root for root in forbidden_roots if is_under_authority_path(path, root)]
         read_only = [root for root in read_only_roots if is_under_authority_path(path, root)]
         owned = [root for root in writes if is_under_authority_path(path, root)]
+        plan_owned = [root for root in plan_writes if is_under_authority_path(path, root)]
         if forbidden:
             entries.append({"path": path, "category": "forbidden", "matched": forbidden})
         elif read_only:
             entries.append({"path": path, "category": "read-only", "matched": read_only})
         elif owned:
             entries.append({"path": path, "category": "task-owned", "matched": owned})
+        elif plan_owned:
+            entries.append({"path": path, "category": "plan-owned", "matched": plan_owned})
         else:
             entries.append({"path": path, "category": "unowned"})
     blockers = [entry for entry in entries if entry["category"] in {"forbidden", "read-only", "unowned"}]
@@ -460,6 +623,76 @@ def _validate_task_write_scope(
             "task-ownership-violation", "task result changed files are outside task write scope", {"ownership": receipt}
         )
     return receipt
+
+
+def _require_rework_budget(state: dict[str, Any], task: dict[str, Any]) -> None:
+    budgets = state.get("budgets", {}) if isinstance(state.get("budgets"), dict) else {}
+    mode = budgets.get("remediationMode", "off")
+    max_attempts = budgets.get("maxTaskAttempts", 1)
+    if mode not in {"ask", "bounded-auto"}:
+        raise LifecycleError("task-remediation-disabled", "the frozen plan does not enable task remediation")
+    if not isinstance(max_attempts, int) or isinstance(max_attempts, bool) or not 2 <= max_attempts <= 10:
+        raise LifecycleError("task-attempt-budget-invalid", "enabled remediation requires 2-10 task attempts")
+    attempt = task.get("attempt")
+    if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt < 1:
+        raise LifecycleError("task-attempt-history-invalid", "task attempt number is invalid")
+    if attempt >= max_attempts:
+        raise LifecycleError(
+            "task-attempt-budget-exhausted",
+            "task has no remaining remediation attempt",
+            {"attempt": task.get("attempt"), "maxTaskAttempts": max_attempts},
+        )
+
+
+def _require_no_active_sibling(state: dict[str, Any], task_id: str) -> None:
+    active = [
+        task.get("id")
+        for task in state.get("tasks", [])
+        if task.get("id") != task_id
+        and task.get("status") in {"RUNNING", "VALIDATING", "VERIFYING", "ACCEPTANCE_PENDING"}
+    ]
+    if active:
+        raise LifecycleError(
+            "task-rework-active-sibling",
+            "task rework requires all sibling tasks to be inactive",
+            {"taskIds": active},
+        )
+
+
+def _normalize_finding_ids(finding_ids: list[str]) -> list[str]:
+    if not finding_ids or any(not isinstance(item, str) or not item.strip() for item in finding_ids):
+        raise LifecycleError("task-rework-findings-required", "at least one non-empty finding ID is required")
+    values = sorted(set(item.strip() for item in finding_ids))
+    if len(values) > MAX_REMEDIATION_FINDINGS or any(len(item) > MAX_REMEDIATION_FINDING_ID_LENGTH for item in values):
+        raise LifecycleError(
+            "task-rework-findings-limit",
+            "remediation finding IDs exceed the fixed contract limit",
+            {"maxFindings": MAX_REMEDIATION_FINDINGS, "maxIdLength": MAX_REMEDIATION_FINDING_ID_LENGTH},
+        )
+    return values
+
+
+def _clear_active_attempt_references(task: dict[str, Any]) -> None:
+    task["usageIterations"] = []
+    task["controllerGateReceipts"] = []
+    for key in (
+        "result",
+        "review",
+        "resultChangeSetEvidence",
+        "implementationAuditReport",
+        "ownershipReceipt",
+        "modelUsageReceipt",
+        "lifecycleControlPostAction",
+        "attemptModelRoute",
+        "attemptRiskExecutionProfile",
+        "attemptBaseRevision",
+        "attemptStartedAt",
+        "attemptDeadlineAt",
+        "budgetDecision",
+        "budgetDecisionApplied",
+        "lifecycleControlPreAction",
+    ):
+        task.pop(key, None)
 
 
 def _validate_task_authority_paths(state: dict[str, Any], task: dict[str, Any]) -> None:
