@@ -8,11 +8,7 @@ from agent_lifecycle.contracts import LifecycleError
 
 
 def ready_tasks(state: dict[str, Any]) -> list[str]:
-    accepted = {
-        task.get("id")
-        for task in state["tasks"]
-        if task.get("status") == "ACCEPTED"
-    }
+    accepted = {task.get("id") for task in state["tasks"] if task.get("status") == "ACCEPTED"}
     ready: list[str] = []
     for task in state["tasks"]:
         if task.get("status") != "READY":
@@ -27,11 +23,17 @@ def active_tasks(state: dict[str, Any]) -> list[str]:
     active_statuses = {"RUNNING", "VALIDATING", "VERIFYING", "ACCEPTANCE_PENDING"}
     return [
         task_id
-        for task_id in (
-            task.get("id")
-            for task in state["tasks"]
-            if task.get("status") in active_statuses
-        )
+        for task_id in (task.get("id") for task in state["tasks"] if task.get("status") in active_statuses)
+        if isinstance(task_id, str)
+    ]
+
+
+def rework_tasks(state: dict[str, Any]) -> list[str]:
+    """Return the one serialized task waiting for its next attempt."""
+
+    return [
+        task_id
+        for task_id in (task.get("id") for task in state["tasks"] if task.get("status") == "REWORK")
         if isinstance(task_id, str)
     ]
 
@@ -44,11 +46,7 @@ def find_task(state: dict[str, Any], task_id: str) -> dict[str, Any]:
 
 
 def unlock_ready_tasks(state: dict[str, Any]) -> None:
-    accepted = {
-        task.get("id")
-        for task in state["tasks"]
-        if task.get("status") == "ACCEPTED"
-    }
+    accepted = {task.get("id") for task in state["tasks"] if task.get("status") == "ACCEPTED"}
     for task in state["tasks"]:
         if task.get("status") != "PENDING":
             continue

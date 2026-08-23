@@ -13,7 +13,77 @@ try:
 except ImportError:
     from helpers import *  # noqa: F401,F403,E402
 
+
+def _prepare_rework_review(
+    root: Path,
+    *,
+    max_attempts: int = 2,
+    occupy_first: bool = False,
+    reviewer_id: str = "reviewer",
+    finding_ids: tuple[str, ...] = ("F-REWORK-1",),
+) -> tuple[Path, str]:
+    state_path = _write_state(root, phase="RUNNING", max_attempts=max_attempts)
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["budgets"]["remediationMode"] = "ask"
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+    if occupy_first:
+        occupied = root / "work/WS-01/attempt-1/task-result.json"
+        occupied.parent.mkdir(parents=True)
+        occupied.write_text("{}", encoding="utf-8")
+    start_task(
+        state_path,
+        task_id="WS-01",
+        operation_id="start-prepare",
+        expected_revision=1,
+        source_revision="source",
+        reason="prepare rework",
+    )
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    attempt = state["tasks"][0]["attempt"]
+    result_path = f"work/WS-01/attempt-{attempt}/task-result.json"
+    result = _result(attempt=attempt)
+    write_json_create(root / result_path, result)
+    commit_task_result(
+        state_path,
+        task_id="WS-01",
+        operation_id="result-prepare",
+        expected_revision=2,
+        source_revision="source",
+        result_path=result_path,
+        reason="prepare result",
+    )
+    review_path = f"work/WS-01/attempt-{attempt}/task-review.json"
+    review = _review(attempt=attempt, result_hash=canonical_digest(result))
+    review["verdict"] = "REWORK"
+    review["reviewer"]["id"] = reviewer_id
+    review["findings"] = [
+        {"id": finding_id, "severity": "HIGH", "status": "open", "message": "revise implementation"}
+        for finding_id in finding_ids
+    ]
+    write_json_create(root / review_path, review)
+    return state_path, review_path
+
+
 class WorkflowTaskExecutionTests(unittest.TestCase):
+    def test_start_task_rejects_non_integer_attempt_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = _write_state(Path(tmp), phase="RUNNING")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["budgets"]["maxTaskAttempts"] = "2"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-invalid-budget",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="launch",
+                )
+
+            self.assertEqual(raised.exception.code, "task-attempt-budget-invalid")
+
     def test_start_task_skips_occupied_attempt_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -517,6 +587,473 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 )
 
             self.assertEqual(raised.exception.code, "model-route-critical-downgrade")
+
+    def test_rework_opens_second_fresh_attempt_and_preserves_first_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING", max_attempts=2)
+            source_revision = _initialize_managed_git_state(root, state_path)
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-1",
+                expected_revision=1,
+                source_revision=source_revision,
+                reason="first attempt",
+            )
+            (root / "src/example.py").write_text("value = 2\n", encoding="utf-8")
+            result_1_path = "work/WS-01/attempt-1/task-result.json"
+            result_1 = _fresh_result(root, state_path, attempt=1)
+            write_json_create(root / result_1_path, result_1)
+            commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-1",
+                expected_revision=2,
+                source_revision=source_revision,
+                result_path=result_1_path,
+                reason="first result",
+            )
+            review_1_path = "work/WS-01/attempt-1/task-review.json"
+            review_1 = _review(attempt=1, result_hash=canonical_digest(result_1))
+            review_1["verdict"] = "REWORK"
+            review_1["findings"] = [
+                {"id": "F-REWORK-1", "severity": "HIGH", "status": "open", "message": "revise implementation"}
+            ]
+            write_json_create(root / review_1_path, review_1)
+            result_1_bytes = (root / result_1_path).read_bytes()
+            review_1_bytes = (root / review_1_path).read_bytes()
+
+            rework_payload = rework_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="rework-1",
+                expected_revision=3,
+                source_revision=source_revision,
+                review_path=review_1_path,
+                finding_ids=["F-REWORK-1"],
+                reason="independent review requested rework",
+            )
+            self.assertEqual(rework_payload["phase"], "REMEDIATING")
+            self.assertEqual(rework_payload["nextAction"]["type"], "launch-tasks")
+            with self.assertRaises(LifecycleError) as replayed:
+                rework_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="rework-1",
+                    expected_revision=4,
+                    source_revision=source_revision,
+                    review_path=review_1_path,
+                    finding_ids=["F-REWORK-1"],
+                    reason="duplicate",
+                )
+            self.assertEqual(replayed.exception.code, "duplicate-operation")
+            replay_state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(replay_state["tasks"][0]["attemptHistory"]), 1)
+
+            started = start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-2",
+                expected_revision=4,
+                source_revision=source_revision,
+                reason="second attempt",
+            )
+            self.assertEqual(next(item for item in started["tasks"] if item["id"] == "WS-01")["attempt"], 2)
+            self.assertEqual((root / result_1_path).read_bytes(), result_1_bytes)
+            self.assertEqual((root / review_1_path).read_bytes(), review_1_bytes)
+
+            (root / "src/example.py").write_text("value = 3\n", encoding="utf-8")
+            result_2_path = "work/WS-01/attempt-2/task-result.json"
+            result_2 = _fresh_result(root, state_path, attempt=2)
+            write_json_create(root / result_2_path, result_2)
+            commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-2",
+                expected_revision=5,
+                source_revision=source_revision,
+                result_path=result_2_path,
+                reason="fresh second result",
+            )
+            review_2_path = "work/WS-01/attempt-2/task-review.json"
+            review_2 = _review(attempt=2, result_hash=canonical_digest(result_2))
+            write_json_create(root / review_2_path, review_2)
+            accepted = accept_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="accept-2",
+                expected_revision=6,
+                review_path=review_2_path,
+                reason="accepted",
+            )
+
+            self.assertEqual(next(item for item in accepted["tasks"] if item["id"] == "WS-01")["status"], "ACCEPTED")
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(task["status"], "ACCEPTED")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(state["tasks"][0]["attemptHistory"]), 1)
+            history = state["tasks"][0]["attemptHistory"][0]
+            self.assertEqual(history["runId"], state["runId"])
+            self.assertEqual(history["taskId"], "WS-01")
+            self.assertEqual(history["planRevision"], state["planRevision"])
+            self.assertEqual(history["planDigest"], state["planDigest"])
+            self.assertEqual(history["sourceRevision"], state["sourceRevision"])
+            self.assertEqual(state["tasks"][0]["remediationFindingIds"], [])
+
+    def test_rework_rejects_unknown_finding_without_state_change(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root)
+            before_state = state_path.read_bytes()
+            before_events = (root / "events.jsonl").read_bytes()
+
+            with self.assertRaises(LifecycleError) as raised:
+                rework_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="rework-mismatch",
+                    expected_revision=3,
+                    source_revision="source",
+                    review_path=review_path,
+                    finding_ids=["F-UNKNOWN"],
+                    reason="invalid finding",
+                )
+
+            self.assertEqual(raised.exception.code, "task-rework-finding-mismatch")
+            self.assertEqual(state_path.read_bytes(), before_state)
+            self.assertEqual((root / "events.jsonl").read_bytes(), before_events)
+
+    def test_rework_requires_every_open_finding_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(
+                root,
+                finding_ids=("F-REWORK-1", "F-REWORK-2"),
+            )
+
+            with self.assertRaises(LifecycleError) as raised:
+                rework_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="rework-incomplete-findings",
+                    expected_revision=3,
+                    source_revision="source",
+                    review_path=review_path,
+                    finding_ids=["F-REWORK-1"],
+                    reason="incomplete finding set",
+                )
+
+            self.assertEqual(raised.exception.code, "task-rework-finding-mismatch")
+            self.assertEqual(raised.exception.details["omitted"], ["F-REWORK-2"])
+
+    def test_rework_rejects_worker_self_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root, reviewer_id="worker")
+
+            with self.assertRaises(LifecycleError) as raised:
+                rework_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="rework-self-review",
+                    expected_revision=3,
+                    source_revision="source",
+                    review_path=review_path,
+                    finding_ids=["F-REWORK-1"],
+                    reason="self review",
+                )
+
+            self.assertEqual(raised.exception.code, "task-review-self-certification")
+
+    def test_rework_rejects_non_integer_task_attempt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["attempt"] = "1"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                rework_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="rework-invalid-attempt",
+                    expected_revision=3,
+                    source_revision="source",
+                    review_path=review_path,
+                    finding_ids=["F-REWORK-1"],
+                    reason="invalid attempt",
+                )
+
+            self.assertEqual(raised.exception.code, "task-attempt-history-invalid")
+
+    def test_rework_rejects_exhausted_attempt_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root, occupy_first=True)
+
+            with self.assertRaises(LifecycleError) as raised:
+                rework_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="rework-exhausted",
+                    expected_revision=3,
+                    source_revision="source",
+                    review_path=review_path,
+                    finding_ids=["F-REWORK-1"],
+                    reason="no attempts remain",
+                )
+
+            self.assertEqual(raised.exception.code, "task-attempt-budget-exhausted")
+
+    def test_rework_rejects_active_sibling(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            sibling = {**state["tasks"][0], "id": "WS-02", "status": "RUNNING", "attemptHistory": []}
+            state["tasks"].append(sibling)
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                rework_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="rework-sibling",
+                    expected_revision=3,
+                    source_revision="source",
+                    review_path=review_path,
+                    finding_ids=["F-REWORK-1"],
+                    reason="sibling active",
+                )
+
+            self.assertEqual(raised.exception.code, "task-rework-active-sibling")
+
+    def test_start_rework_attempt_rejects_tampered_history_lineage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root)
+            rework_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="rework-history",
+                expected_revision=3,
+                source_revision="source",
+                review_path=review_path,
+                finding_ids=["F-REWORK-1"],
+                reason="rework",
+            )
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["attemptHistory"][0]["sourceRevision"] = "different-source"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-after-tamper",
+                    expected_revision=4,
+                    source_revision="source",
+                    reason="start",
+                )
+
+            self.assertEqual(raised.exception.code, "task-attempt-history-lineage-mismatch")
+
+    def test_start_rework_attempt_rejects_nonconsecutive_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root)
+            rework_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="rework-history-attempt",
+                expected_revision=3,
+                source_revision="source",
+                review_path=review_path,
+                finding_ids=["F-REWORK-1"],
+                reason="rework",
+            )
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["attemptHistory"][0]["attempt"] = 2
+            state["tasks"][0]["attempt"] = 2
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-after-history-gap",
+                    expected_revision=4,
+                    source_revision="source",
+                    reason="start",
+                )
+
+            self.assertEqual(raised.exception.code, "task-attempt-history-invalid")
+
+    def test_start_rework_attempt_rejects_changed_archived_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root)
+            rework_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="rework-artifact",
+                expected_revision=3,
+                source_revision="source",
+                review_path=review_path,
+                finding_ids=["F-REWORK-1"],
+                reason="rework",
+            )
+            with (root / review_path).open("ab") as stream:
+                stream.write(b" ")
+
+            with self.assertRaises(LifecycleError) as raised:
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-after-artifact-change",
+                    expected_revision=4,
+                    source_revision="source",
+                    reason="start",
+                )
+
+            self.assertEqual(raised.exception.code, "archived-artifact-changed")
+
+    def test_managed_task_result_rejects_snapshot_created_before_code_change(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING", max_attempts=2)
+            source_revision = _initialize_managed_git_state(root, state_path)
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision=source_revision,
+                reason="launch",
+            )
+            (root / "src/example.py").write_text("value = 2\n", encoding="utf-8")
+            stale = _fresh_result(root, state_path, attempt=1)
+            (root / "src/example.py").write_text("value = 3\n", encoding="utf-8")
+            result_path = "work/WS-01/attempt-1/task-result.json"
+            write_json_create(root / result_path, stale)
+
+            with self.assertRaises(LifecycleError) as raised:
+                commit_task_result(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="result-op",
+                    expected_revision=2,
+                    source_revision=source_revision,
+                    result_path=result_path,
+                    reason="stale result",
+                )
+
+            self.assertEqual(raised.exception.code, "task-result-stale-snapshot")
+
+    def test_managed_acceptance_allows_disjoint_changes_owned_by_another_plan_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING", max_attempts=2)
+            source_revision = _initialize_managed_git_state(root, state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"].append(
+                {
+                    **state["tasks"][0],
+                    "id": "WS-00",
+                    "status": "ACCEPTED",
+                    "attempt": 1,
+                    "writes": ["docs"],
+                    "attemptHistory": [],
+                }
+            )
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-owned",
+                expected_revision=1,
+                source_revision=source_revision,
+                reason="launch",
+            )
+            (root / "src/example.py").write_text("value = 2\n", encoding="utf-8")
+            prior = root / "docs/prior-task.md"
+            prior.parent.mkdir(parents=True)
+            prior.write_text("accepted prior task\n", encoding="utf-8")
+            result_path = "work/WS-01/attempt-1/task-result.json"
+            result = _fresh_result(root, state_path, attempt=1)
+            write_json_create(root / result_path, result)
+            commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-owned",
+                expected_revision=2,
+                source_revision=source_revision,
+                result_path=result_path,
+                reason="done",
+            )
+            review_path = "work/WS-01/attempt-1/task-review.json"
+            write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+
+            accepted = accept_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="accept-owned",
+                expected_revision=3,
+                review_path=review_path,
+                reason="accepted",
+            )
+
+            self.assertEqual(next(item for item in accepted["tasks"] if item["id"] == "WS-01")["status"], "ACCEPTED")
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
+            categories = {entry["path"]: entry["category"] for entry in task["ownershipReceipt"]["entries"]}
+            self.assertEqual(categories["src/example.py"], "task-owned")
+            self.assertEqual(categories["docs/prior-task.md"], "plan-owned")
+
+    def test_managed_acceptance_rejects_unowned_repository_change(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING", max_attempts=2)
+            source_revision = _initialize_managed_git_state(root, state_path)
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-unowned",
+                expected_revision=1,
+                source_revision=source_revision,
+                reason="launch",
+            )
+            (root / "src/example.py").write_text("value = 2\n", encoding="utf-8")
+            (root / "outside.txt").write_text("unowned\n", encoding="utf-8")
+            result_path = "work/WS-01/attempt-1/task-result.json"
+            result = _fresh_result(root, state_path, attempt=1)
+            write_json_create(root / result_path, result)
+            commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-unowned",
+                expected_revision=2,
+                source_revision=source_revision,
+                result_path=result_path,
+                reason="done",
+            )
+            review_path = "work/WS-01/attempt-1/task-review.json"
+            write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+
+            with self.assertRaises(LifecycleError) as raised:
+                accept_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="accept-unowned",
+                    expected_revision=3,
+                    review_path=review_path,
+                    reason="accepted",
+                )
+
+            self.assertEqual(raised.exception.code, "task-ownership-violation")
 
 
 if __name__ == "__main__":

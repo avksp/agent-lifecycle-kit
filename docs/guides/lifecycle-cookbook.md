@@ -14,6 +14,7 @@ execution.
 | Review several Markdown plan files | [Review a Markdown plan folder](#review-a-markdown-plan-folder) | Yes |
 | Review code or a PR/MR | [Review code changes](#review-code-changes) | Yes |
 | Audit completed ALK work | [Audit implementation evidence](#audit-implementation-evidence) | No, it audits completed work |
+| Continue after a review requests changes | [Open a remediation attempt](#open-a-remediation-attempt) | No, it continues a frozen task |
 | Find or fix a bug | [Bug Forensics repair](#bug-forensics-repair) | No, after a frozen plan authorizes repair |
 | Ask several reviewers | [Coordinate cross-review](#coordinate-cross-review) | Yes, unless a frozen plan requires quorum |
 | Inspect an active run | [View goal and progress](#view-goal-and-progress) | Yes |
@@ -181,6 +182,44 @@ agent-lifecycle audit implementation \
 
 Add `--review-mesh-quorum <path>` only when the frozen plan requires a quorum
 receipt for that phase.
+
+## Open a remediation attempt
+
+Use this when an independent task review or implementation audit returns
+`REWORK` for findings that remain inside the frozen task scope. The plan must
+use `remediationMode: ask` or `bounded-auto` and set `maxTaskAttempts` to at
+least 2.
+
+Before submitting each task result, calculate the current Git-backed claim:
+
+```bash
+agent-lifecycle workflow task-snapshot \
+  --state work/run.state.json \
+  --task WS-01 \
+  --out work/WS-01/attempt-1/task-snapshot.json
+```
+
+The worker places the returned `claim` object in the task result as
+`changeSet`. After `task-result` and independent review, request rework with
+the exact open finding IDs:
+
+```bash
+agent-lifecycle workflow task-rework \
+  --state work/run.state.json \
+  --task WS-01 \
+  --operation-id rework-WS-01-attempt-1 \
+  --expected-revision 7 \
+  --source-revision <source-sha> \
+  --review work/WS-01/attempt-1/task-review.json \
+  --finding-id F-101 \
+  --reason "address independent review findings"
+```
+
+Add `--implementation-audit <path>` when the plan requires implementation
+audit or when that audit is the artifact that returned `REWORK`. The command
+archives artifact identities, not duplicate bodies. `workflow run` then
+returns the same task for another `task-start`, which opens the first unused
+attempt path. Previous result, review and audit files remain immutable.
 
 ## View goal and progress
 

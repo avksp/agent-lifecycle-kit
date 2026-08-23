@@ -73,6 +73,7 @@ from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
 from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
 from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
+from agent_lifecycle.contracts.workflow_artifact_schemas import WORKFLOW_ARTIFACT_SCHEMAS
 
 SCHEMA_INDEX_VERSION = "agent-lifecycle-schema-index.v1"
 
@@ -710,6 +711,7 @@ _SCHEMA_GROUPS = (
     THREAD_BRIDGE_SCHEMAS,
     RUNNER_SCHEMAS,
     RUNNER_WORKTREE_SCHEMAS,
+    WORKFLOW_ARTIFACT_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
     CROSS_CHECK_SCHEMAS,
     REVIEW_MESH_SCHEMAS,

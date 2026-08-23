@@ -6,7 +6,6 @@ from typing import Any
 
 from agent_lifecycle.contracts.schema_builders import open_object_schema as _open_object_schema
 
-
 AUDIT_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-plan-package-audit-report.v1": _open_object_schema(
         "agent-plan-package-audit-report.v1",
@@ -78,6 +77,8 @@ AUDIT_SCHEMAS: dict[str, dict[str, Any]] = {
             "planDigest": {"type": "string", "minLength": 64, "maxLength": 64},
             "sourceRevision": {"type": "string", "minLength": 1},
             "auditor": {"type": "object"},
+            "result": {"type": "object"},
+            "review": {"type": "object"},
             "ownership": {"type": "object"},
             "coverage": {"type": "object"},
             "evidence": {"type": "object"},

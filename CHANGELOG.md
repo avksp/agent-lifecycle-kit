@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- No changes yet.
+
+## 1.81.0 - 2026-08-23
+
+- Added `workflow task-rework` for authorized, bounded remediation after an
+  independent review or implementation audit returns `REWORK`.
+- Added immutable attempt history that preserves prior result, review and audit
+  identities while the next `task-start` opens a new attempt.
+- Added Git-backed task snapshots and freshness checks for task results and
+  implementation audits, including full-worktree ownership validation.
+- Added explicit remediation policy validation and retry budgets from 2 through
+  10 attempts.
+- Added synchronized English and Russian documentation for the complete
+  result, review, rework, new-attempt and acceptance path.
+
 ## 1.80.0 - 2026-08-22
 
 - Added optional provider-neutral adapter lifecycle control with explicit
@@ -27,10 +44,6 @@
   the same manifest and completeness checks before they can write state.
 - Added synchronized English and Russian documentation for plan verification,
   reviewer handoff and the boundary between ALK, the host and the model.
-
-## Unreleased
-
-- No changes yet.
 
 ## 1.78.0 - 2026-08-22
 

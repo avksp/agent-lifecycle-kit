@@ -220,6 +220,20 @@ Implementation is deliberately separate from raw intake:
 7. Run independent implementation audit before task acceptance.
 8. Finalize only after all required tasks and final gates pass.
 
+When an independent review finds an implementation, test or evidence problem
+inside the frozen scope, ALK can open a bounded remediation attempt. The plan
+must set `remediationMode` to `ask` or `bounded-auto` and set
+`maxTaskAttempts` to at least 2. `workflow task-rework` checks the current
+result and review lineage, open finding IDs, authorization and remaining
+attempt budget. It then archives the current result, review and optional audit
+identities. The next `task-start` opens a new attempt; previous attempt files
+remain unchanged.
+
+Before `task-result`, use `workflow task-snapshot` to calculate the current
+task-scoped Git file set and content digests. Workflow and implementation audit
+recompute those values, so a result created before a later code change cannot
+be accepted as current.
+
 The public facade can delegate an already bound request:
 
 ```bash
