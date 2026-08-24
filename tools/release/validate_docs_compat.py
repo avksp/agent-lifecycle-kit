@@ -175,6 +175,36 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/project-domain-language.md",
+        (
+            "agent-project-domain-language.v1",
+            "agent-project-domain-language-validation.v1",
+            "agent-project-domain-language-delta.v1",
+            "agent-project-domain-language-audit.v1",
+            "project language check",
+            "project language audit",
+            "--language-before",
+            "read-only",
+            "qualification",
+            "does not grant write authority",
+        ),
+    ),
+    (
+        "docs/ru/reference/project-domain-language.md",
+        (
+            "agent-project-domain-language.v1",
+            "agent-project-domain-language-validation.v1",
+            "agent-project-domain-language-delta.v1",
+            "agent-project-domain-language-audit.v1",
+            "project language check",
+            "project language audit",
+            "--language-before",
+            "только для чтения",
+            "qualification",
+            "не выдаёт полномочия записи",
+        ),
+    ),
+    (
         "docs/architecture/system-architecture.md",
         (
             "project workflow profile",

@@ -29,6 +29,12 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertFalse(manifest["lastChannelPolicy"]["pluginVersionMayBeFloating"])
         self.assertEqual(manifest["lastChannelPolicy"]["allowedFloatingRef"], "source-ref-only")
 
+    def test_publication_manifest_exposes_optional_domain_language(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        features = {item["id"]: item for item in manifest["documentedFeatures"]}
+        self.assertEqual(features["optional-project-domain-language"]["status"], "OPTIONAL")
+        self.assertFalse(features["optional-project-domain-language"]["automaticRename"])
+
     def test_current_tree_publication_versions_match_target(self) -> None:
         result = validate_publication_tree(root=ROOT, target_version=TARGET_VERSION, target_ref=TARGET_REF)
         self.assertEqual(result["status"], "PASS", result["blockers"])

@@ -101,18 +101,27 @@ class LifecycleControlDocumentationTests(unittest.TestCase):
 
         version = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
         manifest = build_publication_manifest(target_version=version, target_ref=f"v{version}")
-        self.assertEqual(
+        self.assertIn(
+            {
+                "id": "optional-adapter-lifecycle-control",
+                "status": "OPTIONAL",
+                "englishPath": "docs/adapters/lifecycle-control.md",
+                "russianPath": "docs/ru/adapters/lifecycle-control.md",
+                "bundledAdapterLevel": "GUIDANCE_ONLY",
+                "bundledQualificationStatus": "NO_RECOMMENDATION",
+            },
             manifest["documentedFeatures"],
-            [
-                {
-                    "id": "optional-adapter-lifecycle-control",
-                    "status": "OPTIONAL",
-                    "englishPath": "docs/adapters/lifecycle-control.md",
-                    "russianPath": "docs/ru/adapters/lifecycle-control.md",
-                    "bundledAdapterLevel": "GUIDANCE_ONLY",
-                    "bundledQualificationStatus": "NO_RECOMMENDATION",
-                }
-            ],
+        )
+        self.assertIn(
+            {
+                "id": "optional-project-domain-language",
+                "status": "OPTIONAL",
+                "englishPath": "docs/reference/project-domain-language.md",
+                "russianPath": "docs/ru/reference/project-domain-language.md",
+                "activatedContexts": ["qualification"],
+                "automaticRename": False,
+            },
+            manifest["documentedFeatures"],
         )
 
 

@@ -10,6 +10,8 @@ DOMAIN_LANGUAGE_SCHEMA = "agent-project-domain-language.v1"
 DOMAIN_LANGUAGE_VALIDATION_SCHEMA = "agent-project-domain-language-validation.v1"
 DOMAIN_LANGUAGE_DELTA_SCHEMA = "agent-project-domain-language-delta.v1"
 DOMAIN_LANGUAGE_AUDIT_SCHEMA = "agent-project-domain-language-audit.v1"
+DOMAIN_LANGUAGE_CONTINUITY_SCHEMA = "agent-project-domain-language-continuity.v1"
+DOMAIN_LANGUAGE_CONTINUITY_VALIDATION_SCHEMA = "agent-project-domain-language-continuity-validation.v1"
 
 DOMAIN_LANGUAGE_LOCALES = ("en", "ru")
 DOMAIN_LANGUAGE_REFERENCE_KINDS = ("requirement", "api", "symbol", "test", "documentation")
@@ -17,6 +19,7 @@ DOMAIN_LANGUAGE_ALIAS_STATUSES = ("ACTIVE", "DEPRECATED")
 
 _DIGEST = {"type": "string", "minLength": 64, "maxLength": 64}
 _OPTIONAL_DIGEST = {"type": ["string", "null"], "minLength": 0, "maxLength": 64}
+_OPTIONAL_ID = {"type": ["string", "null"], "minLength": 0, "maxLength": 160}
 _BOUNDED_ID = {"type": "string", "minLength": 1, "maxLength": 160}
 _BOUNDED_TEXT = {"type": "string", "minLength": 1, "maxLength": 2048}
 _LOCALE = {"enum": list(DOMAIN_LANGUAGE_LOCALES)}
@@ -168,12 +171,56 @@ DOMAIN_LANGUAGE_SCHEMAS: dict[str, dict[str, Any]] = {
             "auditDigest": _DIGEST,
         },
     ),
+    DOMAIN_LANGUAGE_CONTINUITY_SCHEMA: open_object_schema(
+        DOMAIN_LANGUAGE_CONTINUITY_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "languageId",
+            "revision",
+            "languageDigest",
+            "planDigest",
+            "sourceRevision",
+            "blockers",
+            "productionPromotionClaimed",
+            "continuityDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "languageId": _OPTIONAL_ID,
+            "revision": {"type": ["integer", "null"], "minimum": 0, "maximum": 1_000_000},
+            "languageDigest": _OPTIONAL_DIGEST,
+            "planDigest": _OPTIONAL_DIGEST,
+            "sourceRevision": {"type": ["string", "null"], "minLength": 0, "maxLength": 128},
+            "blockers": {"type": "array", "items": {"type": "object"}, "maxItems": 256},
+            "productionPromotionClaimed": {"const": False},
+            "continuityDigest": _DIGEST,
+        },
+    ),
+    DOMAIN_LANGUAGE_CONTINUITY_VALIDATION_SCHEMA: open_object_schema(
+        DOMAIN_LANGUAGE_CONTINUITY_VALIDATION_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "blockers",
+            "productionPromotionClaimed",
+            "validationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "blockers": {"type": "array", "items": {"type": "object"}, "maxItems": 256},
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
+        },
+    ),
 }
 
 
 __all__ = [
     "DOMAIN_LANGUAGE_ALIAS_STATUSES",
     "DOMAIN_LANGUAGE_AUDIT_SCHEMA",
+    "DOMAIN_LANGUAGE_CONTINUITY_SCHEMA",
+    "DOMAIN_LANGUAGE_CONTINUITY_VALIDATION_SCHEMA",
     "DOMAIN_LANGUAGE_DELTA_SCHEMA",
     "DOMAIN_LANGUAGE_LOCALES",
     "DOMAIN_LANGUAGE_REFERENCE_KINDS",

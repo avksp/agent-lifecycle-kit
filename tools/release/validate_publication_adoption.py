@@ -80,6 +80,26 @@ ADOPTION_DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/project-domain-language.md",
+        (
+            "agent-project-domain-language.v1",
+            "project language check",
+            "project language audit",
+            "read-only",
+            "qualification",
+        ),
+    ),
+    (
+        "docs/ru/reference/project-domain-language.md",
+        (
+            "agent-project-domain-language.v1",
+            "project language check",
+            "project language audit",
+            "только для чтения",
+            "qualification",
+        ),
+    ),
+    (
         "docs/ru/reference/project-comparison.md",
         (
             "не кодовый агент",

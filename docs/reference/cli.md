@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.1.0
+  python -m pip install agent-lifecycle-kit==2.2.0
 ```
 
 ## Error and resource contracts
@@ -195,6 +195,18 @@ revisions with `agent-lifecycle plan delta --before <manifest> --after
 <manifest>` and validate the resulting report with `agent-lifecycle plan
 delta-check --delta <delta.json>`. Both paths are read-only and return stable
 JSON contracts.
+
+## Project domain language
+
+The optional vocabulary is checked with
+`agent-lifecycle project language check --file <path> --project-root .` and
+audited without edits with
+`agent-lifecycle project language audit --file <path> --term-id <id>
+--changed-path <path>`. Add both `--language-before <path>` and
+`--language-after <path>` to `plan delta` to bind terminology changes to the
+plan comparison. The vocabulary is read-only context; it cannot grant write
+authority or replace the specification and frozen plan. See [Project domain
+language](project-domain-language.md).
 
 ## Execution
 
