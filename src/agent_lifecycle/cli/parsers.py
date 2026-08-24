@@ -257,6 +257,21 @@ def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     bug_recipe_check = quality_sub.add_parser("bug-recipe-check")
     bug_recipe_check.add_argument("--recipe-id")
     bug_recipe_check.add_argument("--out")
+    external_check = quality_sub.add_parser("external-check")
+    external_check.add_argument(
+        "--check-id",
+        choices=["import-boundaries", "module-dependencies", "declared-dependencies"],
+        default="import-boundaries",
+    )
+    external_check.add_argument("--profile")
+    external_check.add_argument("--project-root", default=".")
+    external_check.add_argument("--config")
+    external_check.add_argument("--plan-digest", required=True)
+    external_check.add_argument("--plan-lock-digest", required=True)
+    external_check.add_argument("--source-revision")
+    external_check.add_argument("--operation-id", required=True)
+    external_check.add_argument("--blocking-required", action="store_true")
+    external_check.add_argument("--out")
 
 
 def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

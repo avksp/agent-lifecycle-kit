@@ -21,6 +21,9 @@ RESOURCE_PATHS = (
     "project-workflow-presets/feature-implementation.v1.json",
     "project-workflow-presets/quick-change.v1.json",
     "project-workflow-presets/research-review.v1.json",
+    "external-checks/import-boundaries.v1.json",
+    "external-checks/module-dependencies.v1.json",
+    "external-checks/declared-dependencies.v1.json",
 )
 PACKAGE_DATA_PATTERN = "data/profiles/**/*.json"
 

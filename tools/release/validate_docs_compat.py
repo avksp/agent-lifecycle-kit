@@ -866,6 +866,36 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/external-verification-checks.md",
+        (
+            "agent-lifecycle quality external-check",
+            "import-boundaries",
+            "module-dependencies",
+            "declared-dependencies",
+            "UNAVAILABLE",
+            "authorityClaimed",
+            "shell-free",
+            "Raw stdout and stderr are not persisted",
+            "source snapshot",
+            "frozen plan",
+        ),
+    ),
+    (
+        "docs/ru/reference/external-verification-checks.md",
+        (
+            "agent-lifecycle quality external-check",
+            "import-boundaries",
+            "module-dependencies",
+            "declared-dependencies",
+            "UNAVAILABLE",
+            "authorityClaimed",
+            "без оболочки",
+            "Сырые stdout и stderr не сохраняются",
+            "снимок исходного дерева",
+            "зафиксированный план",
+        ),
+    ),
+    (
         "docs/guides/lifecycle-cookbook.md",
         (
             "Research and planning only",

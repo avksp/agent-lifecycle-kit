@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from agent_lifecycle import __version__
 from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
@@ -104,7 +104,11 @@ def _dispatch_contract(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         return payload
     if args.contract_command == "check":
-        policy = read_json_object(Path(args.policy), label="public contract policy") if args.policy else build_contract_policy()
+        policy = (
+            read_json_object(Path(args.policy), label="public contract policy")
+            if args.policy
+            else build_contract_policy()
+        )
         return require_contract_policy_pass(validate_contract_policy(policy))
     raise LifecycleError("command-not-implemented", "contract command is not implemented")
 
@@ -189,7 +193,9 @@ def _dispatch_import(args: argparse.Namespace) -> dict[str, Any]:
         )
     if args.import_command == "external-check":
         return require_external_import_pass(
-            validate_external_import_result(read_json_object(Path(args.candidate), label="external dialect import result"))
+            validate_external_import_result(
+                read_json_object(Path(args.candidate), label="external dialect import result")
+            )
         )
     if args.import_command == "proposal-check":
         return require_skill_proposal_pass(
@@ -217,10 +223,18 @@ def _planning_import_profile(
 
 def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
     if args.quality_command == "pack-check":
-        manifest = read_json_object(Path(args.manifest), label="quality pack") if args.manifest else build_default_quality_pack()
+        manifest = (
+            read_json_object(Path(args.manifest), label="quality pack")
+            if args.manifest
+            else build_default_quality_pack()
+        )
         return require_quality_pack_pass(validate_quality_pack(manifest))
     if args.quality_command == "behavior-check":
-        manifest = read_json_object(Path(args.manifest), label="quality pack") if args.manifest else build_default_quality_pack()
+        manifest = (
+            read_json_object(Path(args.manifest), label="quality pack")
+            if args.manifest
+            else build_default_quality_pack()
+        )
         fixtures = [read_json_object(Path(item), label="behavior fixture") for item in args.fixture]
         return require_behavior_checks_pass(run_behavior_checks(manifest, fixtures))
     if args.quality_command == "template-list":
@@ -242,6 +256,23 @@ def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
     if args.quality_command == "bug-recipe-check":
         payload = validate_bug_forensics_recipe_library(recipe_id=args.recipe_id)
         require_bug_forensics_recipe_pass(payload)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.quality_command == "external-check":
+        from agent_lifecycle.adapter_sessions.external_check import run_external_check
+
+        payload = run_external_check(
+            project_root=Path(args.project_root),
+            plan_digest=args.plan_digest,
+            plan_lock_digest=args.plan_lock_digest,
+            operation_id=args.operation_id,
+            check_id=args.check_id,
+            profile_path=Path(args.profile) if args.profile else None,
+            config_path=args.config,
+            source_revision=args.source_revision,
+            blocking_required=args.blocking_required,
+        )
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
@@ -336,10 +367,14 @@ def _dispatch_review_mesh(args: argparse.Namespace) -> dict[str, Any]:
         return payload
     if args.review_mesh_command == "import-result":
         assignment_payload = read_json_object(Path(args.assignment), label="review mesh assignment")
-        assignment = assignment_payload.get("assignment") if isinstance(assignment_payload.get("assignment"), dict) else assignment_payload
+        assignment = (
+            assignment_payload.get("assignment")
+            if isinstance(assignment_payload.get("assignment"), dict)
+            else assignment_payload
+        )
         payload = import_review_mesh_result(
             profile=read_json_object(Path(args.profile), label="review mesh profile"),
-            assignment=assignment,
+            assignment=cast(dict[str, Any], assignment),
             reviewer_output=read_json_object(Path(args.reviewer_output), label="reviewer output"),
             allow_local_evidence_refs=args.allow_local_evidence_ref,
         )

@@ -26,7 +26,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.87.0
+  python -m pip install agent-lifecycle-kit==1.88.0
 ```
 
 ## Error and resource contracts
@@ -49,6 +49,28 @@ from an installed wheel outside the checkout. A same-named file in the current
 directory cannot shadow a built-in profile; an explicitly supplied path still
 takes precedence. The supported import surface is listed in the [Python API
 reference](python-api.md).
+
+## External verification checks
+
+Use the optional project-owned checks to record bounded architecture or
+dependency evidence:
+
+```bash
+agent-lifecycle quality external-check \
+  --check-id import-boundaries \
+  --plan-digest <64-hex-digest> \
+  --plan-lock-digest <64-hex-digest> \
+  --operation-id external-check-001 \
+  --out work/external-check.json
+```
+
+The available built-in profiles are `import-boundaries`,
+`module-dependencies` and `declared-dependencies`. Install the selected
+analyzer in the project; ALK does not add it as a runtime dependency. Results
+are source-, configuration- and plan-bound, raw output is not retained, and a
+missing or incomplete analyzer returns `UNAVAILABLE`. The result has no
+authority to accept, freeze or promote anything. See [External verification
+checks](external-verification-checks.md).
 
 ## Performance and resource evidence
 
