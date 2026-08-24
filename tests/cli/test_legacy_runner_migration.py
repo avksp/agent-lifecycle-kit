@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import stat
 import tempfile
 import unittest
@@ -39,7 +40,10 @@ class LegacyRunnerMigrationCliTests(unittest.TestCase):
             self.assertFalse(result["authorityClaimed"])
             self.assertFalse(result["stateWritten"])
             self.assertEqual(source.read_bytes(), before)
-            self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o600)
+            self.assertTrue(output.is_file())
+            if os.name != "nt":
+                # Windows does not expose POSIX mode bits as a portable check.
+                self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o600)
             self.assertEqual(json.loads(output.read_text(encoding="utf-8"))["source"]["sha256"], _sha256(before))
 
     def test_existing_output_is_not_replaced(self) -> None:
