@@ -25,7 +25,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.88.0
+python -m pip install agent-lifecycle-kit==1.89.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -312,6 +312,14 @@ agent-lifecycle project preset render \
 - `agent-lifecycle benchmark compare-routes --baseline ... --candidate ...`:
   сравнивает варианты выполнения, для которых набрано минимальное количество
   подтверждений, и явно показывает изменения среды и оценщика.
+
+Описание квалификации capability структурированного результата находится в
+[отдельном справочнике](structured-result-qualification.md). Используются
+существующие benchmark receipt и помощники Python-контрактов; в 1.89 не
+добавляется провайдерская команда для формата ответа. Квалификация остаётся
+рекомендательной и не может принять задачу или повысить уровень поддержки
+адаптера.
+
 - `agent-lifecycle audit`: проверка плана, реализации и вердиктов.
 - `agent-lifecycle audit implementation`: структурированный отчёт
   `agent-implementation-audit-report.v1` по результату задачи и независимой

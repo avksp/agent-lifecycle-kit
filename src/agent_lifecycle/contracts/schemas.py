@@ -73,6 +73,7 @@ from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SC
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
+from agent_lifecycle.contracts.structured_result_schemas import STRUCTURED_RESULT_SCHEMAS
 from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
 from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
@@ -749,6 +750,7 @@ _SCHEMA_GROUPS = (
     LIFECYCLE_START_SCHEMAS,
     RISK_EXECUTION_SCHEMAS,
     PLAN_INTEGRITY_SCHEMAS,
+    STRUCTURED_RESULT_SCHEMAS,
 )
 
 _SCHEMAS: dict[str, dict[str, Any]] = {}

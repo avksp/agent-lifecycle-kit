@@ -26,7 +26,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.88.0
+  python -m pip install agent-lifecycle-kit==1.89.0
 ```
 
 ## Error and resource contracts
@@ -303,6 +303,13 @@ JSON contracts.
 - `agent-lifecycle benchmark compare-routes --baseline ... --candidate ...`:
   compare execution setups that meet the minimum evidence requirements while
   keeping environment and scorer changes explicit.
+
+Structured-result capability qualification is documented in [Structured result
+qualification](structured-result-qualification.md). It uses the existing
+benchmark receipts and Python contract helpers; Release 1.89 does not add a
+provider-specific response-format command. Qualification remains advisory and
+cannot accept a workflow task or promote an adapter.
+
 - `agent-lifecycle audit review-check`: validate review verdicts.
 - `agent-lifecycle audit implementation`: emit
   `agent-implementation-audit-report.v1` for a task result and independent

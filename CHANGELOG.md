@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 1.89.0 - 2026-08-24
+
+- Added provider-neutral structured-result capability contracts bound to the
+  operation, adapter descriptor, host version, model class and capability
+  manifest.
+- Added fail-closed required-schema selection, deterministic output validation
+  and a separate two-attempt structured-result repair limit.
+- Added advisory 5x2x5x2 reference-task qualification with positive, boundary
+  and malformed-output evidence; qualification cannot accept workflow tasks or
+  adopt routes automatically.
+- Added bilingual documentation and synchronized package/plugin metadata.
+
 ## 1.88.0 - 2026-08-24
 
 - Added provider-neutral external verification contracts for bounded findings,

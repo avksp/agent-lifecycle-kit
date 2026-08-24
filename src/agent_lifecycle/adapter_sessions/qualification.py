@@ -8,10 +8,14 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.contracts.launch_qualification import (
-    QUALIFICATION_POLICY_SCHEMA,
     QUALIFICATION_RECEIPT_SCHEMA,
-    QUALIFIED_PROFILE_STATUS,
     validate_qualification_policy,
+)
+from agent_lifecycle.contracts.structured_result_schemas import (
+    STRUCTURED_RESULT_SELECTION_SCHEMA,
+    build_structured_result_capability,
+    select_structured_result_mode,
+    validate_structured_result_selection,
 )
 from agent_lifecycle.contracts.validation import load_bounded_literal_profile
 
@@ -43,7 +47,6 @@ def load_shipped_launch_profile(adapter_id: str, *, repository_root: Path | None
         raise LifecycleError("qualified-launch-adapter-invalid", "adapter id is invalid")
     root = (repository_root or Path.cwd()).resolve()
     adapter_root = root / "adapters" / adapter_id
-    path = adapter_root / "launch_profile.py"
     profile = load_bounded_literal_profile(
         Path("launch_profile.py"),
         root=adapter_root,
@@ -212,3 +215,122 @@ def require_planning_qualification_receipt(
             "local version receipt is not bound to qualified planning support",
         )
     return receipt
+
+
+def build_structured_result_qualification_receipt(
+    *,
+    operation_id: str,
+    adapter_id: str,
+    descriptor_digest: str,
+    host_version: str,
+    model_class: str,
+    required_mode: str,
+    required_schema_digest: str,
+    capability_manifest_digest: str,
+    capability_level: str,
+    evidence_digest: str,
+    measured_run_count: int,
+    plan_digest: str,
+    lock_digest: str,
+) -> dict[str, Any]:
+    """Build an advisory, operation-bound structured-result qualification receipt."""
+
+    capability = build_structured_result_capability(
+        operation_id=operation_id,
+        adapter_id=adapter_id,
+        descriptor_digest=descriptor_digest,
+        host_version=host_version,
+        model_class=model_class,
+        capability_level=capability_level,
+        qualification_status="QUALIFIED" if capability_level != "UNAVAILABLE" else "UNAVAILABLE",
+        capability_manifest_digest=capability_manifest_digest,
+        evidence_digest=evidence_digest,
+        measured_run_count=measured_run_count,
+    )
+    selection = select_structured_result_mode(
+        [capability],
+        operation_id=operation_id,
+        required_mode=required_mode,
+        adapter_id=adapter_id,
+        descriptor_digest=descriptor_digest,
+        host_version=host_version,
+        model_class=model_class,
+        capability_manifest_digest=capability_manifest_digest,
+        required_schema_digest=required_schema_digest,
+        lineage={"planDigest": plan_digest, "lockDigest": lock_digest},
+    )
+    body = {
+        "schemaVersion": "agent-structured-result-qualification-receipt.v1",
+        "status": "PASS" if selection["status"] == "PASS" else "UNAVAILABLE",
+        "qualificationStatus": "QUALIFIED" if selection["status"] == "PASS" else "UNAVAILABLE",
+        "operationId": operation_id,
+        "adapterId": adapter_id,
+        "descriptorDigest": descriptor_digest,
+        "hostVersion": host_version,
+        "modelClass": model_class,
+        "capabilityManifestDigest": capability_manifest_digest,
+        "requiredMode": required_mode,
+        "requiredSchemaDigest": required_schema_digest,
+        "planDigest": plan_digest,
+        "lockDigest": lock_digest,
+        "capability": capability,
+        "selection": selection,
+        "advisoryOnly": True,
+        "automaticRouteAdoptionEligible": False,
+        "modelCallsStarted": False,
+        "hostLaunchStarted": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def validate_structured_result_qualification_receipt(
+    receipt: dict[str, Any], *, expected: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Validate structured-result qualification without granting workflow authority."""
+
+    blockers: list[dict[str, Any]] = []
+    if receipt.get("schemaVersion") != "agent-structured-result-qualification-receipt.v1":
+        blockers.append({"code": "structured-result-qualification-schema"})
+    if receipt.get("advisoryOnly") is not True or receipt.get("automaticRouteAdoptionEligible") is not False:
+        blockers.append({"code": "structured-result-qualification-authority"})
+    if receipt.get("modelCallsStarted") is not False or receipt.get("hostLaunchStarted") is not False:
+        blockers.append({"code": "structured-result-qualification-side-effect"})
+    for key, value in (expected or {}).items():
+        if receipt.get(key) != value:
+            blockers.append({"code": "structured-result-qualification-lineage", "field": key})
+    selection = receipt.get("selection")
+    if not isinstance(selection, dict):
+        blockers.append({"code": "structured-result-qualification-selection"})
+    else:
+        selection_validation = validate_structured_result_selection(
+            selection,
+            expected={
+                key: receipt.get(key)
+                for key in (
+                    "operationId",
+                    "adapterId",
+                    "descriptorDigest",
+                    "hostVersion",
+                    "modelClass",
+                    "capabilityManifestDigest",
+                    "requiredSchemaDigest",
+                )
+                if receipt.get(key) is not None
+            },
+        )
+        if selection_validation["status"] != "PASS":
+            blockers.append({"code": "structured-result-qualification-selection-invalid"})
+        if receipt.get("status") == "PASS" and selection.get("schemaVersion") != STRUCTURED_RESULT_SELECTION_SCHEMA:
+            blockers.append({"code": "structured-result-qualification-selection-schema"})
+    expected_digest = canonical_digest({key: value for key, value in receipt.items() if key != "receiptDigest"})
+    if receipt.get("receiptDigest") != expected_digest:
+        blockers.append({"code": "structured-result-qualification-digest"})
+    body = {
+        "schemaVersion": "agent-structured-result-qualification-validation.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "qualificationStatus": receipt.get("qualificationStatus"),
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
