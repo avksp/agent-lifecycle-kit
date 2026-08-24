@@ -102,6 +102,31 @@ class ContextCheckpointStoreTests(unittest.TestCase):
             )
             self.assertEqual(stale["status"], "BLOCKED")
 
+    def test_store_retains_normalized_public_locator(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            checkpoint = _checkpoint(1)
+            checkpoint["summary"]["citation"] = "HTTPS://EXAMPLE.COM:443/store#Context"
+            checkpoint = build_context_checkpoint(
+                session_id=checkpoint["sessionId"],
+                run_id=checkpoint["runId"],
+                adapter_id=checkpoint["adapterId"],
+                package_id=checkpoint["packageId"],
+                plan_revision=checkpoint["planRevision"],
+                plan_digest=checkpoint["planDigest"],
+                state_revision=checkpoint["stateRevision"],
+                source_revision=checkpoint["sourceRevision"],
+                capture_mode=checkpoint["captureMode"],
+                reason=checkpoint["reason"],
+                summary=checkpoint["summary"],
+                created_at=checkpoint["createdAt"],
+            )
+
+            write_context_checkpoint(checkpoint, root=root)
+            stored = list_context_checkpoints(root=root, run_id="run-1")
+
+            self.assertEqual(stored[0]["summary"]["citation"], "https://example.com/store#Context")
+
 
 if __name__ == "__main__":
     unittest.main()

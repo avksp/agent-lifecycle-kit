@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import re
+from contextlib import suppress
 from typing import Any
 from urllib.parse import unquote_plus, urlsplit, urlunsplit
+
+from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.contracts.public_locators import normalize_public_locator
 
 REDACTED_VALUE = "<redacted>"
 LOCAL_PATH_REDACTION = "<local-path>"
@@ -88,10 +92,14 @@ def redact_text_with_stats(value: str) -> tuple[str, bool, dict[str, int]]:
     path_count = len(_LOCAL_PATH.findall(redacted))
     redacted = _LOCAL_PATH.sub(LOCAL_PATH_REDACTION, redacted)
     redacted = _restore_http_urls(redacted, urls)
-    return redacted, redacted != value, {
-        "secretLikeMarkersRedacted": secret_count,
-        "localPathsRedacted": path_count,
-    }
+    return (
+        redacted,
+        redacted != value,
+        {
+            "secretLikeMarkersRedacted": secret_count,
+            "localPathsRedacted": path_count,
+        },
+    )
 
 
 def contains_local_absolute_path(value: str) -> bool:
@@ -211,6 +219,9 @@ def _redact_http_url(value: str) -> tuple[str, int]:
     redacted, private_key_count = _replace_matches(_PRIVATE_KEY, redacted, REDACTED_VALUE)
     redacted, bearer_count = _replace_matches(_BEARER, redacted, f"Bearer {REDACTED_VALUE}")
     redacted, token_count = _replace_matches(_BARE_TOKEN, redacted, REDACTED_VALUE)
+    if "@" not in netloc:
+        with suppress(LifecycleError):
+            redacted = normalize_public_locator(redacted, label="redacted URL")
     return redacted, secret_count + private_key_count + bearer_count + token_count
 
 

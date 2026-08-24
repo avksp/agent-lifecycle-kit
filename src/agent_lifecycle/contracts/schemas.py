@@ -56,6 +56,7 @@ from agent_lifecycle.contracts.project_profile_preset_schemas import (
 )
 from agent_lifecycle.contracts.project_profile_schemas import PROJECT_PROFILE_SCHEMAS
 from agent_lifecycle.contracts.proof_integrity_schemas import PROOF_INTEGRITY_SCHEMAS
+from agent_lifecycle.contracts.public_locators import PUBLIC_LOCATOR_SCHEMAS
 from agent_lifecycle.contracts.release_contract_schemas import RELEASE_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.research_evidence_schemas import (
     RESEARCH_EVIDENCE_SCHEMAS,
@@ -728,6 +729,7 @@ _SCHEMA_GROUPS = (
     RESEARCH_EVIDENCE_SCHEMAS,
     PROGRESS_BRIDGE_SCHEMAS,
     PROGRESS_HOOK_SCHEMAS,
+    PUBLIC_LOCATOR_SCHEMAS,
     PROJECT_PROFILE_SCHEMAS,
     PROJECT_PROFILE_PRESET_SCHEMAS,
     ADAPTER_CONTRACT_SCHEMAS,

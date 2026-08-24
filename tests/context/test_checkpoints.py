@@ -96,6 +96,13 @@ class ContextCheckpointTests(unittest.TestCase):
         self.assertEqual(checkpoint["summary"]["paths"], ["<redacted>"] * len(paths))
         self.assertEqual(validate_context_checkpoint(checkpoint)["status"], "PASS")
 
+    def test_checkpoint_normalizes_public_url_without_storing_local_path(self) -> None:
+        checkpoint = _checkpoint(summary={"citation": "HTTPS://EXAMPLE.COM:443/checkpoint#Context"})
+
+        self.assertEqual(checkpoint["summary"]["citation"], "https://example.com/checkpoint#Context")
+        self.assertTrue(checkpoint["redactionStatus"]["applied"])
+        self.assertEqual(validate_context_checkpoint(checkpoint)["status"], "PASS")
+
     def test_authority_and_raw_transcript_are_rejected(self) -> None:
         with self.assertRaises(LifecycleError):
             _checkpoint(summary={"rawTranscript": "not stored"})

@@ -25,7 +25,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.84.0
+python -m pip install agent-lifecycle-kit==1.85.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -35,6 +35,13 @@ python -m pip install agent-lifecycle-kit==1.84.0
 ошибок. JSON очищается и не содержит трассировку или локальный абсолютный путь.
 Поведение библиотечных исключений и `KeyboardInterrupt`/`SystemExit` не
 меняется. См. [контракт ошибок CLI](cli-errors.md).
+
+## Публичные локаторы и редакция
+
+URL подтверждений проходят офлайн-контракт
+`agent-public-evidence-locator.v1`. Разрешены только HTTP(S); хосты
+нормализуются, а учётные данные, опасные схемы, секреты и локальные пути
+отклоняются или редактируются. См. [публичные локаторы и редакцию](public-locators-and-redaction.md).
 
 Встроенные профили загружаются через `importlib.resources`, поэтому команды
 работают из установленного wheel вне исходного дерева. Одноимённый файл в

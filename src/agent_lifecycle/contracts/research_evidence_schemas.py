@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_lifecycle.contracts.public_locators import MAX_PUBLIC_LOCATOR_BYTES
 from agent_lifecycle.contracts.schema_builders import open_object_schema
-
 
 RESEARCH_SOURCE_SCHEMA = "agent-research-source.v1"
 RESEARCH_CLAIM_SCHEMA = "agent-research-claim.v1"
@@ -27,6 +27,14 @@ _BLOCKERS = {"type": "array", "items": {"type": "object"}, "maxItems": 128}
 _BOUNDED_METADATA = {"type": "object", "maxProperties": 32}
 _BOUNDED_TEXT = {"type": "string", "minLength": 1, "maxLength": 4096}
 _BOUNDED_ID = {"type": "string", "minLength": 1, "maxLength": 160}
+_BOUNDED_LOCATOR = {
+    "type": "object",
+    "maxProperties": 8,
+    "properties": {
+        "kind": {"type": "string", "minLength": 1, "maxLength": 32},
+        "value": {"type": "string", "minLength": 1, "maxLength": MAX_PUBLIC_LOCATOR_BYTES},
+    },
+}
 
 
 RESEARCH_EVIDENCE_SCHEMAS: dict[str, dict[str, Any]] = {
@@ -50,7 +58,7 @@ RESEARCH_EVIDENCE_SCHEMAS: dict[str, dict[str, Any]] = {
         properties={
             "sourceId": _BOUNDED_ID,
             "kind": {"enum": list(RESEARCH_SOURCE_KINDS)},
-            "locator": {"type": "object", "maxProperties": 8},
+            "locator": _BOUNDED_LOCATOR,
             "title": _BOUNDED_TEXT,
             "status": {"enum": list(RESEARCH_EVIDENCE_STATUSES)},
             "sourceDigest": _DIGEST,
@@ -106,7 +114,7 @@ RESEARCH_EVIDENCE_SCHEMAS: dict[str, dict[str, Any]] = {
             "citationId": _BOUNDED_ID,
             "claimId": _BOUNDED_ID,
             "sourceId": _BOUNDED_ID,
-            "locator": {"type": "object", "maxProperties": 8},
+            "locator": _BOUNDED_LOCATOR,
             "quoteDigest": _DIGEST,
             "snapshotDigest": _OPTIONAL_DIGEST,
             "matchStatus": {"enum": list(RESEARCH_CITATION_MATCH_STATUSES)},
