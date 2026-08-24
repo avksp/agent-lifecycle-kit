@@ -25,6 +25,7 @@ from agent_lifecycle.contracts.evidence_import_schemas import EVIDENCE_IMPORT_SC
 from agent_lifecycle.contracts.execution_strategy_schemas import (
     EXECUTION_STRATEGY_SCHEMAS,
 )
+from agent_lifecycle.contracts.finding_check_schemas import FINDING_CHECK_SCHEMAS
 from agent_lifecycle.contracts.host_capability_schemas import HOST_CAPABILITY_SCHEMAS
 from agent_lifecycle.contracts.import_dialect_schemas import IMPORT_DIALECT_SCHEMAS
 from agent_lifecycle.contracts.lifecycle_control_definitions import (
@@ -707,6 +708,7 @@ _SCHEMA_GROUPS = (
     ADAPTER_EVENT_SCHEMAS,
     REVIEW_QUALITY_SCHEMAS,
     EVIDENCE_IMPORT_SCHEMAS,
+    FINDING_CHECK_SCHEMAS,
     EXECUTION_STRATEGY_SCHEMAS,
     IMPORT_DIALECT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,
