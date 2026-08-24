@@ -8,6 +8,7 @@ from agent_lifecycle.contracts.lifecycle_control_schemas import (
     CONTROL_LEVELS,
     CONTROL_OPERATIONS,
     LIFECYCLE_CONTROL_SCHEMAS,
+    build_adapter_action_evidence,
     build_default_lifecycle_control_policy,
     build_lifecycle_control_attestation,
     build_lifecycle_control_decision,
@@ -16,6 +17,7 @@ from agent_lifecycle.contracts.lifecycle_control_schemas import (
     build_lifecycle_control_request,
     lifecycle_control_limits,
     resolve_lifecycle_control,
+    validate_adapter_action_evidence,
     validate_lifecycle_control_attestation,
     validate_lifecycle_control_decision,
     validate_lifecycle_control_event,
@@ -48,6 +50,44 @@ def _request() -> dict:
 
 
 class LifecycleControlSchemaTests(unittest.TestCase):
+    def test_action_evidence_is_redacted_and_digest_bound(self) -> None:
+        evidence = build_adapter_action_evidence(
+            user_request_id="request-1",
+            operation_lineage={"runId": "run-1", "taskId": "WS80-01", "operationId": "op-1"},
+            profile_digest="a" * 64,
+            effective_config_digest="b" * 64,
+            capability_digest="c" * 64,
+            permission_decision={"status": "ALLOW", "source": "host"},
+            tool_category="filesystem",
+            result_link={"kind": "task-result", "ref": "/" + "Users/private/result.json", "digest": "d" * 64},
+        )
+
+        self.assertEqual(evidence["resultLink"]["ref"], "<redacted>")
+        self.assertEqual(validate_adapter_action_evidence(evidence)["status"], "PASS")
+
+    def test_action_evidence_rejects_lineage_and_result_drift(self) -> None:
+        evidence = build_adapter_action_evidence(
+            user_request_id="request-1",
+            operation_lineage={"runId": "run-1", "taskId": "WS80-01", "operationId": "op-1"},
+            profile_digest="a" * 64,
+            effective_config_digest="b" * 64,
+            capability_digest="c" * 64,
+            permission_decision="ALLOW",
+            tool_category="command",
+            result_link={"kind": "task-result", "ref": "work/result.json", "digest": "d" * 64},
+        )
+        evidence["operationLineage"]["taskId"] = "WS80-02"
+        evidence["resultLink"]["ref"] = "../outside.json"
+
+        validation = validate_adapter_action_evidence(
+            evidence,
+            expected_lineage={"runId": "run-1", "taskId": "WS80-01", "operationId": "op-1"},
+        )
+
+        self.assertEqual(validation["status"], "FAIL")
+        codes = {item["code"] for item in validation["blockers"]}
+        self.assertIn("adapter-action-evidence-lineage-mismatch", codes)
+        self.assertIn("adapter-action-evidence-result-ref-private", codes)
     def test_schema_group_is_registered_and_closed_at_request_boundary(self) -> None:
         schema_ids = {item["id"] for item in list_schemas()["schemas"]}
 

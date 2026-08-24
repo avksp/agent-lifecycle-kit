@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.lifecycle_control_schemas import (
+    ADAPTER_ACTION_EVIDENCE_VALIDATION_SCHEMA,
+    build_adapter_action_evidence,
+    validate_adapter_action_evidence,
     validate_lifecycle_control_attestation,
     validate_lifecycle_control_decision,
     validate_lifecycle_control_event_batch,
@@ -72,6 +75,7 @@ def build_adapter_event_stream(
     usage: dict[str, Any] | None = None,
     result_path: str | None = None,
     blocker: str | None = None,
+    action_evidence: dict[str, Any] | None = None,
     recorded_at: str = "2026-01-01T00:00:00Z",
 ) -> list[dict[str, Any]]:
     """Build a compact neutral stream from one bounded host operation."""
@@ -84,6 +88,10 @@ def build_adapter_event_stream(
     _required_string(command, "command")
     if not isinstance(exit_code, int) or isinstance(exit_code, bool):
         raise LifecycleError("invalid-adapter-event-producer-input", "exitCode must be an integer")
+    safe_action_evidence = _prepare_action_evidence(
+        action_evidence,
+        expected_lineage={"runId": run_id, "taskId": task_id, "operationId": operation_id},
+    )
     files = list(changed_files or [])
     stream = [
         _event(
@@ -185,6 +193,9 @@ def build_adapter_event_stream(
                 {"category": "lifecycle-transition", "blocker": blocker or f"command exited {exit_code}"},
             )
         )
+    if safe_action_evidence is not None:
+        for event in stream:
+            event["payload"] = {**event["payload"], "actionEvidence": safe_action_evidence}
     return stream
 
 
@@ -194,6 +205,7 @@ def build_event_stream_receipt(
     descriptor: dict[str, Any],
     producer_id: str,
     emitted_at: str | None = None,
+    require_observed: bool = False,
 ) -> dict[str, Any]:
     validation = validate_adapter_event_stream(events)
     if validation["status"] != "PASS":
@@ -205,6 +217,14 @@ def build_event_stream_receipt(
     adapter_id = _required_string(descriptor.get("adapterId"), "descriptor.adapterId")
     if validation["host"] != host or validation["adapterId"] != adapter_id:
         raise LifecycleError("adapter-event-receipt-lineage-mismatch", "event stream does not match adapter descriptor")
+    observed = validate_observed_action_trace(events, descriptor=descriptor)
+    if require_observed and observed["status"] != "PASS":
+        raise LifecycleError(
+            "adapter-action-evidence-incomplete",
+            "an observed event stream requires a complete action evidence chain",
+            {"validation": observed},
+        )
+    action_evidence = _common_action_evidence(events)
     body = {
         "schemaVersion": EVENT_STREAM_RECEIPT_SCHEMA,
         "status": "PASS",
@@ -226,6 +246,15 @@ def build_event_stream_receipt(
         "emittedAt": emitted_at or _now_iso(),
         "productionPromotionClaimed": False,
     }
+    if action_evidence is not None and observed["status"] == "PASS":
+        body.update(
+            {
+                "evidenceLevel": "OBSERVED",
+                "actionEvidenceDigest": action_evidence["actionEvidenceDigest"],
+            }
+        )
+    else:
+        body["evidenceLevel"] = "LEGACY"
     return {**body, "receiptDigest": canonical_digest(body)}
 
 
@@ -234,6 +263,7 @@ def validate_event_capture_receipt(
     events: list[dict[str, Any]],
     *,
     descriptor: dict[str, Any] | None = None,
+    require_observed: bool = False,
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     _validate_receipt_shape(receipt, blockers)
@@ -251,6 +281,13 @@ def validate_event_capture_receipt(
         )
     if receipt.get("eventCount") != len(events):
         blockers.append({"code": "adapter-event-count-mismatch", "message": "event count does not match receipt"})
+    observed = validate_observed_action_trace(events, descriptor=descriptor)
+    if require_observed or receipt.get("evidenceLevel") == "OBSERVED":
+        if observed["status"] == "FAIL":
+            blockers.extend(_tag_blockers(observed["blockers"], "action-evidence"))
+        action_evidence = _common_action_evidence(events)
+        if action_evidence is None or receipt.get("actionEvidenceDigest") != action_evidence.get("actionEvidenceDigest"):
+            blockers.append({"code": "adapter-action-evidence-receipt-lineage-mismatch"})
     if events:
         first = events[0]
         for key in ("adapterId", "host", "runId", "taskId", "operationId"):
@@ -277,6 +314,10 @@ def validate_event_capture_receipt(
         "eventCount": len(events),
         "streamValidation": stream_validation,
         "blockers": blockers,
+        "evidenceLevel": "OBSERVED" if observed["status"] == "PASS" else "LEGACY",
+        "actionEvidenceDigest": (
+            _common_action_evidence(events) or {}
+        ).get("actionEvidenceDigest"),
         "productionPromotionClaimed": False,
     }
     return {**body, "validationDigest": canonical_digest(body)}
@@ -289,6 +330,7 @@ def validate_event_capture_conformance(
     receipt: dict[str, Any] | None = None,
     projection: dict[str, Any] | None = None,
     capability_manifest: dict[str, Any] | None = None,
+    require_observed: bool = False,
 ) -> dict[str, Any]:
     declared = adapter_declares_event_capture(
         descriptor=descriptor,
@@ -312,7 +354,9 @@ def validate_event_capture_conformance(
             }
         )
     if declared and events is not None and receipt is not None:
-        receipt_validation = validate_event_capture_receipt(receipt, events, descriptor=descriptor)
+        receipt_validation = validate_event_capture_receipt(
+            receipt, events, descriptor=descriptor, require_observed=require_observed
+        )
         if receipt_validation["status"] == "FAIL":
             blockers.extend(_tag_blockers(receipt_validation["blockers"], "event-capture-receipt"))
     body = {
@@ -324,6 +368,8 @@ def validate_event_capture_conformance(
         "eventCount": len(events or []),
         "receiptValidation": receipt_validation,
         "blockers": blockers,
+        "evidenceLevel": receipt_validation.get("evidenceLevel") if receipt_validation else "LEGACY",
+        "actionEvidenceDigest": receipt_validation.get("actionEvidenceDigest") if receipt_validation else None,
         "productionPromotionClaimed": False,
     }
     return {**body, "validationDigest": canonical_digest(body)}
@@ -337,6 +383,121 @@ def require_event_capture_pass(payload: dict[str, Any]) -> dict[str, Any]:
             {"validation": payload},
         )
     return payload
+
+
+def _prepare_action_evidence(
+    value: dict[str, Any] | None, *, expected_lineage: dict[str, Any]
+) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise LifecycleError("adapter-action-evidence-invalid", "action evidence must be an object")
+    prepared = build_adapter_action_evidence(
+        user_request_id=cast(str, value.get("userRequestId")),
+        operation_lineage=cast(
+            dict[str, Any], value.get("operationLineage") if isinstance(value.get("operationLineage"), dict) else {}
+        ),
+        profile_digest=cast(str, value.get("profileDigest")),
+        effective_config_digest=cast(str, value.get("effectiveConfigDigest")),
+        capability_digest=cast(str, value.get("capabilityDigest")),
+        permission_decision=cast(
+            dict[str, Any] | str,
+            value.get("permissionDecision")
+            if isinstance(value.get("permissionDecision"), (dict, str))
+            else {},
+        ),
+        tool_category=cast(str, value.get("toolCategory")),
+        result_link=cast(
+            dict[str, Any], value.get("resultLink") if isinstance(value.get("resultLink"), dict) else {}
+        ),
+    )
+    validation = validate_adapter_action_evidence(prepared, expected_lineage=expected_lineage)
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "adapter-action-evidence-lineage-invalid",
+            "action evidence does not match the adapter operation",
+            {"validation": validation},
+        )
+    return prepared
+
+
+def _common_action_evidence(events: list[dict[str, Any]]) -> dict[str, Any] | None:
+    values = [
+        event.get("payload", {}).get("actionEvidence")
+        for event in events
+        if isinstance(event, dict) and isinstance(event.get("payload"), dict)
+    ]
+    if len(values) != len(events) or not values or not all(isinstance(value, dict) for value in values):
+        return None
+    digests = {_action_evidence_digest(value) for value in values if isinstance(value, dict)}
+    if len(digests) != 1:
+        return None
+    return values[0]
+
+
+def _action_evidence_digest(value: dict[str, Any]) -> str:
+    stored = value.get("actionEvidenceDigest")
+    if isinstance(stored, str) and stored:
+        return stored
+    return canonical_digest({key: item for key, item in value.items() if key != "actionEvidenceDigest"})
+
+
+def validate_observed_action_trace(
+    events: list[dict[str, Any]], *, descriptor: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Require one complete, ordered and redacted action-evidence chain."""
+
+    blockers: list[dict[str, Any]] = []
+    stream_validation = validate_adapter_event_stream(events)
+    if stream_validation["status"] == "FAIL":
+        blockers.extend(_tag_blockers(stream_validation["blockers"], "event-stream"))
+    expected_lineage = {
+        "runId": stream_validation.get("runId"),
+        "taskId": stream_validation.get("taskId"),
+        "operationId": events[0].get("operationId") if events and isinstance(events[0], dict) else None,
+    }
+    evidence_values: list[dict[str, Any]] = []
+    for index, event in enumerate(events):
+        payload = event.get("payload") if isinstance(event, dict) else None
+        evidence = payload.get("actionEvidence") if isinstance(payload, dict) else None
+        if not isinstance(evidence, dict):
+            blockers.append({"code": "adapter-action-evidence-missing", "index": index})
+            continue
+        evidence_values.append(evidence)
+        if not isinstance(evidence.get("actionEvidenceDigest"), str):
+            blockers.append({"code": "adapter-action-evidence-digest-missing", "index": index})
+        validation = validate_adapter_action_evidence(evidence, expected_lineage=expected_lineage)
+        if validation["status"] == "FAIL":
+            blockers.extend(_tag_blockers(validation["blockers"], f"event[{index}].actionEvidence"))
+    digests = {_action_evidence_digest(value) for value in evidence_values}
+    if len(digests) != 1:
+        blockers.append({"code": "adapter-action-evidence-chain-drift", "digests": sorted(digests)})
+    if evidence_values and stream_validation.get("terminalEvent") == "task.completed":
+        evidence = evidence_values[-1]
+        permission = evidence.get("permissionDecision")
+        if isinstance(permission, dict) and permission.get("status") != "ALLOW":
+            blockers.append({"code": "adapter-action-evidence-completed-without-permission"})
+        result_link = evidence.get("resultLink")
+        terminal_payload = events[-1].get("payload", {}) if isinstance(events[-1], dict) else {}
+        result_path = terminal_payload.get("resultPath") if isinstance(terminal_payload, dict) else None
+        reference = result_link.get("ref") if isinstance(result_link, dict) else None
+        if reference != "<redacted>" and isinstance(result_path, str) and reference != result_path:
+            blockers.append({"code": "adapter-action-evidence-result-lineage-mismatch"})
+    if descriptor is not None and events:
+        if stream_validation.get("host") != descriptor.get("host"):
+            blockers.append({"code": "adapter-action-evidence-descriptor-host-mismatch"})
+        if stream_validation.get("adapterId") != descriptor.get("adapterId"):
+            blockers.append({"code": "adapter-action-evidence-descriptor-adapter-mismatch"})
+    body = {
+        "schemaVersion": ADAPTER_ACTION_EVIDENCE_VALIDATION_SCHEMA,
+        "status": "PASS" if not blockers else "FAIL",
+        "evidenceLevel": "OBSERVED" if not blockers else "UNAVAILABLE",
+        "eventCount": len(events),
+        "actionEvidenceDigest": next(iter(digests), None) if len(digests) == 1 else None,
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
 
 
 def validate_lifecycle_control_bundle(

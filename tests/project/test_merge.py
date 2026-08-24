@@ -4,6 +4,7 @@ import unittest
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.project.merge import build_effective_project_profile, require_profile_digest
+from agent_lifecycle.project.presets import load_project_preset
 from tests.project.test_profile import _profile
 
 
@@ -89,6 +90,26 @@ class ProjectProfileMergeTests(unittest.TestCase):
         self.assertTrue(effective["threadBridge"]["operations"]["read"]["enabled"])
         self.assertFalse(effective["threadBridge"]["operations"]["send"]["enabled"])
         self.assertEqual(effective["threadBridge"]["limits"]["maxImportedTokens"], 512)
+
+    def test_effective_profile_reports_field_provenance(self) -> None:
+        preset = load_project_preset("feature-implementation")
+        plan = {"status": "FROZEN", "tierResolution": {"tier": "S1"}}
+        lock = {"manifestHash": canonical_digest(plan)}
+        effective = build_effective_project_profile(
+            _profile(defaultRisk="auto"),
+            preset=preset,
+            plan=plan,
+            lock=lock,
+            cli_overrides={"defaultMode": "plan"},
+        )
+
+        fields = {item["field"]: item for item in effective["fieldProvenance"]}
+        self.assertEqual(fields["defaultMode"]["value"], "plan")
+        self.assertEqual(fields["defaultMode"]["winningSource"], "command")
+        self.assertIn("preset", fields["defaultMode"]["overriddenSources"])
+        self.assertEqual(fields["defaultRisk"]["winningSource"], "preset")
+        self.assertEqual(fields["defaultRisk"]["planConstraint"], {"type": "minimum-risk", "tier": "S1"})
+        self.assertEqual(fields["stages.audit.risk"]["winningSource"], "preset")
 
 
 if __name__ == "__main__":

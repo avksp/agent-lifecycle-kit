@@ -16,6 +16,7 @@ PROJECT_PROFILE_SCHEMA = "agent-project-workflow-profile.v1"
 EFFECTIVE_PROJECT_PROFILE_SCHEMA = "agent-effective-project-workflow-profile.v1"
 GUIDED_ACTION_RECEIPT_SCHEMA = "agent-guided-action-receipt.v1"
 PROJECT_PROFILE_BOUNDARY_SCHEMA = "agent-project-profile-boundary-validation.v1"
+EFFECTIVE_CONFIGURATION_EXPLANATION_SCHEMA = "agent-effective-configuration-explanation.v1"
 
 PROJECT_PROFILE_MODES = ("auto", "research", "plan", "review", "implement")
 PROJECT_PROFILE_RISKS = ("auto", "S0", "S1", "S2")
@@ -63,6 +64,23 @@ STAGE_SETTING_KEYS = (
 
 _DIGEST = {"type": "string", "minLength": 64, "maxLength": 64}
 _BLOCKERS = {"type": "array", "items": {"type": "object"}}
+_FIELD_PROVENANCE = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["field", "value", "winningSource", "overriddenSources", "planConstraint", "enforceability"],
+    "properties": {
+        "field": {"type": "string", "minLength": 1, "maxLength": 128},
+        "value": {},
+        "winningSource": {"enum": ["defaults", "preset", "profile", "command", "plan"]},
+        "overriddenSources": {
+            "type": "array",
+            "items": {"enum": ["defaults", "preset", "profile", "command", "plan"]},
+            "maxItems": 5,
+        },
+        "planConstraint": {"type": ["object", "null"]},
+        "enforceability": {"enum": ["UNAVAILABLE", "GUIDANCE_ONLY", "OBSERVED", "ENFORCED"]},
+    },
+}
 _STAGE_SETTINGS = {
     "type": "object",
     "properties": {
@@ -187,6 +205,7 @@ PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
             "threadBridge": _THREAD_BRIDGE_POLICY,
             "preset": {"type": ["object", "null"]},
             "authority": {"type": "object"},
+            "fieldProvenance": {"type": "array", "items": _FIELD_PROVENANCE, "maxItems": 128},
             "blockers": _BLOCKERS,
             "productionPromotionClaimed": {"const": False},
             "effectiveProfileDigest": _DIGEST,
@@ -240,6 +259,30 @@ PROJECT_PROFILE_SCHEMAS: dict[str, dict[str, Any]] = {
             "blockers": _BLOCKERS,
             "productionPromotionClaimed": {"const": False},
             "validationDigest": _DIGEST,
+        },
+    ),
+    EFFECTIVE_CONFIGURATION_EXPLANATION_SCHEMA: open_object_schema(
+        EFFECTIVE_CONFIGURATION_EXPLANATION_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "effectiveProfile",
+            "fields",
+            "descriptorLineage",
+            "capabilityLineage",
+            "blockers",
+            "productionPromotionClaimed",
+            "explanationDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "effectiveProfile": {"type": ["object", "null"]},
+            "fields": {"type": "array", "items": _FIELD_PROVENANCE, "maxItems": 128},
+            "descriptorLineage": {"type": "object"},
+            "capabilityLineage": {"type": "object"},
+            "blockers": _BLOCKERS,
+            "productionPromotionClaimed": {"const": False},
+            "explanationDigest": _DIGEST,
         },
     ),
 }

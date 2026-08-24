@@ -25,7 +25,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.86.0
+python -m pip install agent-lifecycle-kit==1.87.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -130,6 +130,15 @@ URL подтверждений проходят офлайн-контракт
   связывает профиль с полномочиями плана и возвращает эффективный профиль.
   Для разового безопасного изменения можно добавить `--adapter`, `--mode` или
   `--risk`.
+- `agent-lifecycle project profile explain --profile <profile> --preset <id>
+  --manifest <plan> --lock <lock> --descriptor <descriptor>
+  --capability-manifest <manifest>`: возвращает только для чтения
+  `agent-effective-configuration-explanation.v1` с происхождением полей,
+  ограничениями зафиксированного плана и применимостью контроля для конкретной
+  операции. Можно добавить ограниченные `--adapter`, `--mode`, `--risk`,
+  `--stage-risk` или `--stage-mode`. Отсутствующая или устаревшая линия
+  capability возвращает `UNAVAILABLE` и не повышает заявление. См. [объяснение
+  эффективной конфигурации](effective-configuration.md).
 - `agent-lifecycle start --file <path>` или `--text <text>`: использует найденный
   профиль, если в нём задан адаптер по умолчанию. Флаг `--project-profile <path>`
   выбирает профиль явно, а `--no-project-profile` отключает автоматический поиск.
