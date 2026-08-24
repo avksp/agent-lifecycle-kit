@@ -36,7 +36,6 @@ from agent_lifecycle.audit.implementation import (
     validate_implementation_audit_report,
 )
 from agent_lifecycle.audit.package import (
-    build_finding_check_adoption_audit,
     build_package_audit,
     require_package_audit_pass,
     validate_package_audit,
@@ -48,7 +47,6 @@ __all__ = [
     "build_final_implementation_audit",
     "build_implementation_audit_report",
     "build_package_audit",
-    "build_finding_check_adoption_audit",
     "build_finding_identity",
     "build_fix_impact_receipt",
     "build_hash_chain_migration_policy",
