@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.contracts import (
     LifecycleError,
     canonical_digest,
@@ -26,6 +27,61 @@ from agent_lifecycle.project import (
     validate_project_preset,
     validate_project_principles,
 )
+
+
+def add_project_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Register project-local configuration commands on the root parser."""
+
+    project = subparsers.add_parser("project", help="project-local ALK configuration")
+    project_sub = project.add_subparsers(dest="project_command", required=True)
+    profile = project_sub.add_parser("profile", help="project workflow profile commands")
+    profile_sub = profile.add_subparsers(dest="profile_command", required=True)
+    init = profile_sub.add_parser("init", help="create a minimal local project profile")
+    init.add_argument("--project-root", default=".")
+    init.add_argument("--out", default=".alk/project-profile.json")
+    init.add_argument("--adapter", help="set the default adapter in the new profile")
+    check = profile_sub.add_parser("check", help="validate and resolve a project profile")
+    check.add_argument("--project-root", default=".")
+    check.add_argument("--profile")
+    check.add_argument("--manifest")
+    check.add_argument("--lock")
+    check.add_argument("--adapter")
+    check.add_argument("--mode", choices=list(START_MODES))
+    check.add_argument("--risk", choices=["auto", "S0", "S1", "S2"])
+    check.add_argument("--out")
+    explain = profile_sub.add_parser("explain", help="explain effective project configuration and evidence level")
+    explain.add_argument("--project-root", default=".")
+    explain.add_argument("--profile", required=True)
+    explain.add_argument("--preset")
+    explain.add_argument("--manifest", required=True)
+    explain.add_argument("--lock", required=True)
+    explain.add_argument("--descriptor", required=True)
+    explain.add_argument("--capability-manifest", required=True)
+    explain.add_argument("--adapter")
+    explain.add_argument("--mode", choices=list(START_MODES))
+    explain.add_argument("--risk", choices=["auto", "S0", "S1", "S2"])
+    explain.add_argument("--stage-risk", action="append", default=[])
+    explain.add_argument("--stage-mode", action="append", default=[])
+    explain.add_argument("--out")
+    principles = project_sub.add_parser("principles", help="check a bounded project-principles artifact")
+    principles_sub = principles.add_subparsers(dest="principles_command", required=True)
+    principles_check = principles_sub.add_parser("check", aliases=["validate"])
+    principles_check.add_argument("--file", "--path", dest="principles_path", required=True)
+    principles_check.add_argument("--project-root", default=".")
+    principles_check.add_argument("--out")
+    preset = project_sub.add_parser("preset", help="inspect and render built-in workflow presets")
+    preset_sub = preset.add_subparsers(dest="preset_command", required=True)
+    preset_sub.add_parser("list", help="list built-in workflow presets")
+    for command in ("inspect", "validate"):
+        child = preset_sub.add_parser(command, help=f"{command} a built-in workflow preset")
+        child.add_argument("--preset", required=True)
+        child.add_argument("--project-root", default=".")
+    render = preset_sub.add_parser("render", help="render a preset to an explicit profile path")
+    render.add_argument("--preset", required=True)
+    render.add_argument("--project-root", default=".")
+    render.add_argument("--profile-id")
+    render.add_argument("--adapter")
+    render.add_argument("--out", required=True)
 
 
 def dispatch_project(args: argparse.Namespace) -> dict[str, Any]:
@@ -62,7 +118,11 @@ def discover_project_profile(
         path = root / path
     if not path.exists():
         if explicit_path:
-            raise LifecycleError("project-profile-missing", "explicit project profile was not found", {"path": str(explicit_path)})
+            raise LifecycleError(
+                "project-profile-missing",
+                "explicit project profile was not found",
+                {"path": str(explicit_path)},
+            )
         return None, None
     return load_project_profile(path, project_root=root), path
 
@@ -154,7 +214,9 @@ def _explain_profile(args: argparse.Namespace) -> dict[str, Any]:
         capability_validation = validate_capability_manifest(capability_manifest, descriptor=descriptor)
         level_validation = validate_capability_level_claims(capability_manifest, descriptor=descriptor)
 
-    descriptor_status = "PASS" if descriptor_validation and descriptor_validation.get("status") == "PASS" else "UNAVAILABLE"
+    descriptor_status = (
+        "PASS" if descriptor_validation and descriptor_validation.get("status") == "PASS" else "UNAVAILABLE"
+    )
     capability_status = (
         "PASS"
         if capability_validation
@@ -329,7 +391,11 @@ def _check_principles(args: argparse.Namespace) -> dict[str, Any]:
     try:
         payload = read_json_object(source, label="project principles")
     except OSError as exc:
-        raise LifecycleError("project-principles-read-failed", "project principles cannot be read", {"path": str(args.principles_path)}) from exc
+        raise LifecycleError(
+            "project-principles-read-failed",
+            "project principles cannot be read",
+            {"path": str(args.principles_path)},
+        ) from exc
     result = validate_project_principles(payload, project_root=root, source_path=source)
     if args.out:
         write_json_create(Path(args.out), result)
