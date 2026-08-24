@@ -117,13 +117,13 @@ def redact_value(value: Any) -> tuple[Any, bool]:
             changed = changed or nested_changed
         return result, changed
     if isinstance(value, list):
-        result = []
+        result_list: list[Any] = []
         changed = False
         for item in value:
             nested, nested_changed = redact_value(item)
-            result.append(nested)
+            result_list.append(nested)
             changed = changed or nested_changed
-        return result, changed
+        return result_list, changed
     if isinstance(value, str):
         return redact_text(value)
     return value, False
