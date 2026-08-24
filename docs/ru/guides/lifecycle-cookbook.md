@@ -183,6 +183,48 @@ agent-lifecycle workflow task-rework \
 задачу, а `task-start` открывает первый свободный номер попытки. Результат,
 проверка и аудит прошлой попытки остаются неизменными.
 
+## Использование task-local workflow v4
+
+Для нового запуска сначала создайте проверенное состояние v4:
+
+```bash
+agent-lifecycle workflow init \
+  --state work/run.state.json \
+  --run-id run-001 \
+  --package-id release-x
+```
+
+Для legacy-состояния v3 используйте явную миграцию, связывая исходную
+ревизию и ожидаемую ревизию состояния с квитанцией миграции:
+
+```bash
+agent-lifecycle workflow state-migrate \
+  --state work/run.state.json \
+  --operation-id migrate-run-001 \
+  --expected-revision 1 \
+  --source-revision <source-sha>
+```
+
+После результата задачи и независимого ревью применяйте единый маршрут
+результата задачи. `ACCEPTED`, `REWORK`, `CONTRACT_CHANGE` и `BLOCKED` имеют
+локальный статус задачи; активный сосед продолжает работу, а артефакты
+предыдущей попытки остаются неизменными:
+
+```bash
+agent-lifecycle workflow task-review-apply \
+  --state work/run.state.json \
+  --task WS-01 \
+  --operation-id review-WS-01-attempt-1 \
+  --expected-revision 7 \
+  --source-revision <source-sha> \
+  --result work/WS-01/attempt-1/task-result.json \
+  --review work/WS-01/attempt-1/task-review.json
+```
+
+Состояние переходит в `FINAL_AUDIT` только после принятия всех обязательных
+задач. Старые команды `task-accept` и `task-rework` остаются совместимыми
+обёртками на один релиз и используют тот же сервис переходов.
+
 ## Цель и прогресс
 
 ```bash

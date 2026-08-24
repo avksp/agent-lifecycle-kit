@@ -14,6 +14,7 @@ from agent_lifecycle.workflow.controller import (
     accept_task,
     adopt_plan,
     apply_budget_decision,
+    apply_task_review_outcome,
     block_run,
     check_lineage,
     commit_task_result,
@@ -34,6 +35,7 @@ from agent_lifecycle.workflow.final_proof_integrity import (
     proof_integrity_required,
     validate_final_proof_integrity,
 )
+from agent_lifecycle.workflow.initialization import initialize_workflow_state, migrate_workflow_state
 from agent_lifecycle.workflow.leases import (
     build_worker_lease_receipt,
     classify_lease_status,
@@ -57,6 +59,7 @@ __all__ = [
     "accept_task",
     "adopt_plan",
     "apply_budget_decision",
+    "apply_task_review_outcome",
     "block_run",
     "bug_forensics_activated",
     "build_bug_forensics_gate_receipt",
@@ -67,7 +70,9 @@ __all__ = [
     "clear_task_risk_profile",
     "commit_task_result",
     "finalize_run",
+    "initialize_workflow_state",
     "invoke_checkpoint_gate",
+    "migrate_workflow_state",
     "next_action",
     "normalize_context_checkpoint_policy",
     "pause_for_budget_decision",

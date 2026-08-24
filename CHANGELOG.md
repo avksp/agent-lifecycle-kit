@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.82.0 - 2026-08-24
+
+- Added the `agent-workflow-state.v4` contract with explicit private state
+  initialization and fail-closed v3 migration.
+- Made task review, remediation and terminal outcomes task-local so parallel
+  tasks no longer change the run into an incompatible review phase.
+- Added the canonical `workflow task-review-apply` route for ACCEPTED,
+  REWORK, CONTRACT_CHANGE and BLOCKED outcomes while preserving attempt
+  evidence and operation idempotency.
+
 ## 1.81.1 - 2026-08-24
 
 - Preserved ordinary HTTP(S) evidence URLs during shared redaction while

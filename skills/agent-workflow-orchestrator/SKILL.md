@@ -32,15 +32,11 @@ questions, approvals, tools, launch, waiting, cancellation and telemetry.
 12. After all required tasks are accepted, run final implementation audit and
     publish completion only from a reproducible proof.
 
-For remediation, require a frozen retry budget, independent `REWORK` evidence
-and open finding IDs. Use `workflow task-rework`; never edit state manually.
+For remediation require a frozen retry budget, independent `REWORK` evidence
+and open finding IDs; in v4 use `workflow task-review-apply` (with
+`task-rework` as compatibility wrapper). Never edit state manually.
 Before each `task-result`, put a current `workflow task-snapshot` claim in the
 result. Later code changes require a new claim and result.
-
-Managed commands may show progress with `--progress-hook stderr` or write
-`agent-progress-hook-receipt.v1` with `--progress-hook receipt
---progress-receipt <path>`. This is display/proof only; plugin or skill
-installation is not lifecycle proof.
 
 For adapter-backed work, prefer `agent-lifecycle start --adapter <id>` as the
 operator-facing entrypoint. It requires exactly one task source or `--resume
@@ -56,14 +52,8 @@ it must never guess a native host conversation id. Use `adapter task start`,
 `adapter session start` only to record an interactive `WAITING_FOR_TASK`
 session. Native host launching remains descriptor-driven and host-owned.
 
-For optional host-thread coordination, use `thread request` and `thread
-import`. The bridge is off by default; `send` and `create` require approval and
-an idempotency key. Imported content remains advisory.
-
-Inspect a declaration with `agent-lifecycle adapter thread-capability` and
-validate its receipt with `agent-lifecycle adapter thread-qualify`. Only a
-matching receipt projects `capability_support="supported"`. These commands are
-inspection-only; core does not launch or contact a host.
+The optional thread bridge is off by default; imported content is advisory and
+only matching qualification evidence can project support.
 
 ## Adapter lifecycle control
 
@@ -117,6 +107,11 @@ is not authority to inject prompts into hosts or bypass review/freeze.
   evidence receipts, final audit.
 - Every mutation needs an operation id, expected revision, source revision, and
   reason.
+- New runs use `agent-workflow-state.v4` from `workflow init`; v3 is accepted
+  only through explicit fail-closed `workflow state-migrate`.
+- Review, remediation, `CONTRACT_CHANGE` and `BLOCKED` are task-local. The run
+  stays `RUNNING` until every required task is `ACCEPTED`, then enters
+  `FINAL_AUDIT`.
 - Bounded waits only. On timeout, request cancellation through the host adapter
   and record a conservative block.
 - Budget exhaustion, missing receipts, stale evidence, or unverifiable

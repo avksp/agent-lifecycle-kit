@@ -40,16 +40,41 @@ def next_action(state: dict[str, Any]) -> dict[str, Any]:
     if phase == "READY":
         return {"type": "start-execution"}
     if phase in EXECUTION_PHASES:
-        if phase == "REMEDIATING":
-            rework = rework_tasks(state)
-            if rework:
-                return {"type": "launch-tasks", "taskIds": rework, "reason": "start-remediation-attempt"}
+        rework = rework_tasks(state)
+        if rework:
+            return {"type": "launch-tasks", "taskIds": rework, "reason": "start-remediation-attempt"}
         ready = ready_tasks(state)
         if ready:
             return {"type": "launch-tasks", "taskIds": ready}
+        verifying = [
+            task.get("id")
+            for task in state.get("tasks", [])
+            if task.get("status") == "VERIFYING" and isinstance(task.get("id"), str)
+        ]
+        if verifying:
+            return {"type": "accept-task", "taskIds": verifying, "reason": "task-review-required"}
         active = active_tasks(state)
         if active:
             return {"type": "wait-for-active-tasks", "taskIds": active}
+        required = [task for task in state.get("tasks", []) if task.get("required", True)]
+        unresolved = [
+            task for task in required if task.get("status") in {"BLOCKED", "CONTRACT_CHANGE"}
+        ]
+        if unresolved:
+            return {
+                "type": "request-human-decision",
+                "reason": "required-task-outcome-needs-resolution",
+                "taskIds": [task.get("id") for task in unresolved],
+                "outcomes": [
+                    {"taskId": task.get("id"), "status": task.get("status"), "blocker": task.get("blocker")}
+                    for task in unresolved
+                ],
+            }
+        if any(task.get("status") != "ACCEPTED" for task in required):
+            return {
+                "type": "wait-for-task-outcome",
+                "taskIds": [task.get("id") for task in required if task.get("status") != "ACCEPTED"],
+            }
         return {"type": "run-final-audit"}
     if phase == "FINAL_AUDIT":
         return {"type": "finalize-run"}
