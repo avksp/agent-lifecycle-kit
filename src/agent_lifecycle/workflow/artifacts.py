@@ -7,6 +7,10 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.canonical import canonical_bytes
+from agent_lifecycle.contracts.finding_check_schemas import (
+    build_finding_check_evidence,
+    validate_finding_check_evidence,
+)
 from agent_lifecycle.contracts.paths import normalize_repo_path
 
 
@@ -36,6 +40,33 @@ def artifact_identity(root: Path, path: str, value: dict[str, Any]) -> dict[str,
             f"artifact is not canonical JSON: {path}",
         )
     return {"path": path, "sha256": canonical_digest(value), "bytes": len(actual)}
+
+
+def build_finding_check_evidence_artifact(
+    binding: dict[str, Any],
+    *,
+    result: str,
+    source_revision: str,
+    evidence_ids: list[str],
+) -> dict[str, Any]:
+    """Build read-only evidence that can advance a finding-check binding."""
+
+    return build_finding_check_evidence(
+        binding,
+        result=result,
+        source_revision=source_revision,
+        evidence_ids=evidence_ids,
+    )
+
+
+def validate_finding_check_evidence_artifact(
+    evidence: dict[str, Any],
+    *,
+    binding: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate finding-check evidence without executing the referenced check."""
+
+    return validate_finding_check_evidence(evidence, binding)
 
 
 def require_artifact_identity(root: Path, identity: dict[str, Any], *, label: str) -> dict[str, Any]:

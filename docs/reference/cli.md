@@ -26,7 +26,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.85.0
+  python -m pip install agent-lifecycle-kit==1.86.0
 ```
 
 ## Error and resource contracts
@@ -98,6 +98,10 @@ publish `GUIDANCE_ONLY` and `NO_RECOMMENDATION`, while managed launch remains
   `agent-plan-completeness-validation.v1` with actionable tier blockers.
 - `agent-lifecycle plan snapshot/reconcile/handoff`: maintain compact,
   reviewable plan state.
+- `agent-lifecycle plan finding-check propose|validate|accept|evidence|transition`:
+  bind an accepted finding to an existing deterministic check. Proposals remain
+  advisory, check identities contain no executable command text, and evidence
+  records read-only execution boundaries. See [Finding-to-check adoption](finding-check-adoption.md).
 - `agent-lifecycle import plan/check`: keep imported work draft-only until
   reviewed. `import plan --source <file-or-folder> --dialect
   openspec|spec-kit|bmad|spec-kitty` imports OpenSpec, Spec Kit, BMAD or Spec

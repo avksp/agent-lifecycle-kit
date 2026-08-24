@@ -8,6 +8,8 @@ from agent_lifecycle.policy.adaptive_lifecycle import (
     validate_adaptive_lifecycle_decision,
 )
 from agent_lifecycle.policy.proposals import (
+    accept_finding_check_proposal,
+    build_finding_check_proposal,
     build_policy_proposal,
     build_policy_summary,
     require_policy_proposal_pass,
@@ -20,8 +22,10 @@ from agent_lifecycle.policy.runtime_receipts import (
 )
 __all__ = [
     "apply_policy_proposal",
+    "accept_finding_check_proposal",
     "build_adaptive_lifecycle_decision",
     "build_policy_proposal",
+    "build_finding_check_proposal",
     "build_policy_summary",
     "build_runtime_policy_receipt",
     "build_tuned_policy",

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from agent_lifecycle.audit.implementation import (
     build_final_implementation_audit,
@@ -22,9 +23,9 @@ from agent_lifecycle.planning import (
     validate_plan_manifest,
     validate_repository_references,
 )
+from agent_lifecycle.planning.traceability import validate_finding_check_traceability
 from agent_lifecycle.workflow.artifacts import package_root
 from agent_lifecycle.workflow.state import load_state
-
 
 PACKAGE_AUDIT_SCHEMA = "agent-plan-package-audit-report.v1"
 _PLAN_FILES = (
@@ -186,6 +187,27 @@ def require_package_audit_pass(audit: dict[str, Any]) -> dict[str, Any]:
             {"audit": audit},
         )
     return audit
+
+
+def build_finding_check_adoption_audit(
+    *,
+    findings: list[dict[str, Any]],
+    bindings: list[dict[str, Any]],
+    plan_deltas: list[dict[str, Any]],
+    evidence: list[dict[str, Any]] | None = None,
+    active_binding_ids: list[str] | None = None,
+    source_revision: str | None = None,
+) -> dict[str, Any]:
+    """Audit finding/check adoption as a read-only package-level gate."""
+
+    return validate_finding_check_traceability(
+        findings=findings,
+        bindings=bindings,
+        plan_deltas=plan_deltas,
+        evidence=evidence,
+        active_binding_ids=active_binding_ids,
+        source_revision=source_revision,
+    )
 
 
 def validate_package_audit(audit: dict[str, Any]) -> dict[str, Any]:

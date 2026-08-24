@@ -16,7 +16,15 @@ from agent_lifecycle.contracts.audit_optimization_schemas import (
     AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA,
     AUDIT_OPTIMIZATION_RECOMMENDATION_SCHEMA,
 )
+from agent_lifecycle.contracts.finding_check_schemas import (
+    FINDING_CHECK_PROPOSAL_SCHEMA,
+    build_finding_check_binding,
+    transition_finding_check_binding,
+    validate_finding_check_proposal,
+)
+from agent_lifecycle.contracts.proof_validation import build_finding_identity
 from agent_lifecycle.metrics import summarize_regression_signals
+from agent_lifecycle.planning.deltas import finding_check_plan_lineage, validate_plan_delta
 from agent_lifecycle.policy.quality_floor import is_downgrade, protected_work
 
 PROPOSAL_SCHEMA = "agent-lifecycle-policy-proposal.v1"
@@ -31,6 +39,71 @@ _OPTIMIZATION_CHANGE_LIMITS = {
 }
 _OPTIMIZATION_CHANGE_FIELDS = set(_OPTIMIZATION_CHANGE_LIMITS) | {"routeClass"}
 _OPTIMIZATION_TARGETS = {"project-profile", "plan-revision"}
+
+
+def build_finding_check_proposal(
+    *,
+    finding: dict[str, Any],
+    plan_delta: dict[str, Any],
+    check_identity: dict[str, Any],
+    owner: str,
+    scope: dict[str, Any],
+    source_revision: str,
+    expected_result: str = "PASS",
+    proposal_id: str = "finding-check-adoption-proposal",
+) -> dict[str, Any]:
+    """Create an advisory binding proposal without granting adoption authority."""
+
+    blockers: list[dict[str, Any]] = []
+    try:
+        identity = build_finding_identity(finding)
+    except LifecycleError as exc:
+        identity = {}
+        blockers.append({"code": exc.code, "message": exc.message})
+    delta_validation = validate_plan_delta(plan_delta)
+    if delta_validation.get("status") != "PASS":
+        blockers.append({"code": "finding-check-plan-delta-invalid", "validation": delta_validation})
+    try:
+        lineage = finding_check_plan_lineage(plan_delta)
+        binding = build_finding_check_binding(
+            finding_id=identity.get("findingId", "invalid-finding"),
+            finding_digest=identity.get("findingDigest", "0" * 64),
+            plan_delta_digest=plan_delta.get("deltaDigest", "0" * 64),
+            plan_lineage=lineage,
+            check_identity=check_identity,
+            owner=owner,
+            scope=scope,
+            source_revision=source_revision,
+            expected_result=expected_result,
+        )
+    except LifecycleError as exc:
+        binding = {}
+        blockers.append({"code": exc.code, "message": exc.message})
+    body = {
+        "schemaVersion": FINDING_CHECK_PROPOSAL_SCHEMA,
+        "proposalId": proposal_id,
+        "status": "PASS" if not blockers else "FAIL",
+        "binding": binding,
+        "approvalRequired": True,
+        "applyAllowed": False,
+        "authorityClaimed": False,
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "proposalDigest": canonical_digest(body)}
+
+
+def accept_finding_check_proposal(proposal: dict[str, Any], authorization: dict[str, Any]) -> dict[str, Any]:
+    """Move a valid proposal to ACCEPTED only after explicit authorization."""
+
+    validation = validate_finding_check_proposal(proposal)
+    if validation.get("status") != "PASS" or proposal.get("status") != "PASS":
+        raise LifecycleError("finding-check-proposal-invalid", "proposal is not eligible for acceptance", validation)
+    return transition_finding_check_binding(
+        proposal["binding"],
+        "ACCEPTED",
+        authorization=authorization,
+    )
 
 
 def build_policy_proposal(

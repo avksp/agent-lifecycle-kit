@@ -140,6 +140,36 @@ def require_plan_delta_pass(validation: dict[str, Any]) -> dict[str, Any]:
     return validation
 
 
+def finding_check_plan_lineage(delta: dict[str, Any]) -> dict[str, Any]:
+    """Project an accepted plan delta into the lineage a check may bind to."""
+
+    validation = validate_plan_delta(delta)
+    if validation.get("status") != "PASS" or delta.get("status") != "PASS":
+        raise LifecycleError("finding-check-plan-delta-invalid", "a passing plan delta is required for finding adoption")
+    after = delta.get("after") if isinstance(delta.get("after"), dict) else {}
+    base = after.get("baseRevision") if isinstance(after.get("baseRevision"), dict) else {}
+    package_id = after.get("packageId")
+    plan_revision = after.get("planRevision")
+    plan_digest = after.get("planDigest")
+    source_revision = base.get("sha")
+    if (
+        not isinstance(package_id, str)
+        or not isinstance(plan_revision, int)
+        or isinstance(plan_revision, bool)
+        or not isinstance(plan_digest, str)
+        or not isinstance(source_revision, str)
+        or not package_id
+        or not source_revision
+    ):
+        raise LifecycleError("finding-check-plan-lineage-invalid", "plan delta does not contain complete after-lineage")
+    return {
+        "packageId": package_id,
+        "planRevision": plan_revision,
+        "planDigest": plan_digest,
+        "sourceRevision": source_revision,
+    }
+
+
 def _projections(before: dict[str, Any], after: dict[str, Any]) -> dict[str, tuple[Any, Any]]:
     return {
         "requirements": (_indexed(_object(before.get("specification")).get("requirements"), "id"), _indexed(_object(after.get("specification")).get("requirements"), "id")),
