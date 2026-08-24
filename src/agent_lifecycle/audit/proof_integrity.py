@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from agent_lifecycle.contracts.independent_evidence_schemas import (
+    require_independent_evidence_pass,
+    validate_independence_requirement,
+    validate_independent_evidence,
+)
 from agent_lifecycle.contracts.proof_validation import (
     DEFAULT_LEGACY_EXEMPTIONS,
     FINDING_SCHEMA,
@@ -46,11 +51,14 @@ __all__ = [
     "build_receipt_hash_chain",
     "build_root_cause_evidence",
     "finding_identity_fields",
+    "require_independent_evidence_pass",
     "require_proof_integrity_pass",
     "stable_finding_id",
     "validate_finding_identity",
     "validate_fix_impact_receipt",
     "validate_hash_chain_migration_policy",
+    "validate_independence_requirement",
+    "validate_independent_evidence",
     "validate_proof_integrity_receipt",
     "validate_receipt_hash_chain",
     "validate_root_cause_evidence",
