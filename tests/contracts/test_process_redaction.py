@@ -17,6 +17,23 @@ class ProcessRedactionContractTests(unittest.TestCase):
         self.assertNotIn(posix_path, redacted)
         self.assertNotIn("C:\\Users\\example", redacted)
 
+    def test_process_output_preserves_public_urls(self) -> None:
+        value = "See https://github.com/avksp/agent-lifecycle-kit/docs and http://example.com/public"
+
+        redacted, changed = redact_process_text(value)
+
+        self.assertFalse(changed)
+        self.assertEqual(redacted, value)
+
+    def test_process_output_redacts_url_secrets(self) -> None:
+        value = "https://user:password@example.com/path?api_key=topsecret"
+
+        redacted, changed = redact_process_text(value)
+
+        self.assertTrue(changed)
+        self.assertNotIn("password", redacted)
+        self.assertNotIn("topsecret", redacted)
+
 
 if __name__ == "__main__":
     unittest.main()
