@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.2.0
+python -m pip install agent-lifecycle-kit==2.3.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -505,10 +505,12 @@ agent-lifecycle project preset render \
   изменений без изменения состояния.
 - `agent-lifecycle followup`: учёт продолжений, которые не должны потеряться.
 - `agent-lifecycle evidence`: индекс подтверждающих артефактов.
-- `agent-lifecycle report status-view/event-feed/progress/change-summary`:
-  представления без записи для статуса, событий рабочего цикла, прогресса
-  жизненного цикла и счётчика изменений. Прогресс поддерживает ограниченный
-  режим `--watch` и явный текстовый вывод `--terminal`.
+- `agent-lifecycle report status-view/event-feed/multi-run/progress/change-summary`:
+  представления без записи для статуса, событий, ограниченного внимания по
+  нескольким запускам, прогресса жизненного цикла и счётчика изменений. Multi-run
+  читает только явно указанные корни и сообщает о пересечениях без изменения
+  полномочий. Прогресс поддерживает ограниченный режим `--watch` и явный
+  текстовый вывод `--terminal`.
 - `agent-lifecycle report progress-bridge`: создаёт
   `agent-progress-bridge-receipt.v1` для обёрток адаптеров, которым нужен
   стабильный JSON-артефакт и, при необходимости, текст для терминала.

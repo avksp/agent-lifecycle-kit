@@ -28,6 +28,15 @@ DOMAIN_LANGUAGE_DOCUMENTATION: dict[str, Any] = {
     "automaticRename": False,
 }
 
+MULTI_RUN_DOCUMENTATION: dict[str, Any] = {
+    "id": "optional-multi-run-attention-view",
+    "status": "OPTIONAL",
+    "englishPath": "docs/reference/multi-run-attention-view.md",
+    "russianPath": "docs/ru/reference/multi-run-attention-view.md",
+    "readOnly": True,
+    "automaticOverlapResolution": False,
+}
+
 PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     {
         "id": "pyproject-version",
@@ -199,7 +208,11 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
         "targetRef": target_ref,
         "pluginName": PLUGIN_NAME,
         "entries": entries,
-        "documentedFeatures": [LIFECYCLE_CONTROL_DOCUMENTATION, DOMAIN_LANGUAGE_DOCUMENTATION],
+        "documentedFeatures": [
+            LIFECYCLE_CONTROL_DOCUMENTATION,
+            DOMAIN_LANGUAGE_DOCUMENTATION,
+            MULTI_RUN_DOCUMENTATION,
+        ],
         "lastChannelPolicy": LAST_CHANNEL_POLICY,
         "productionPromotionClaimed": False,
     }
