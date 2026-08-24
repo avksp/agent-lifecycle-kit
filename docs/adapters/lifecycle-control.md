@@ -91,6 +91,23 @@ Qualification is operation-specific and exact-version. Offline fixtures prove
 contract behavior only. They cannot promote an adapter to `OBSERVED` or
 `ENFORCED`; unavailable live evidence remains `NO_RECOMMENDATION`.
 
+## Action evidence and effective configuration
+
+Release 1.87 attaches a bounded action-evidence envelope to the existing event
+stream. It binds the ALK request and operation to the profile, effective
+configuration, capability declaration, permission decision and safe result
+link. The envelope contains digests and bounded categories; it never stores raw
+prompts, model reasoning, credentials or local absolute paths.
+
+Use `agent-lifecycle project profile explain` to inspect the selected value and
+its `winningSource`, `overriddenSources`, `planConstraint` and enforceability.
+Frozen-plan authority constrains risk, mandatory review and thread bridge; it is
+not a generic last-write-wins configuration layer. Missing or stale capability
+lineage yields `UNAVAILABLE` and cannot promote an adapter claim.
+
+See [adapter action evidence](../reference/adapter-action-evidence.md) and
+[effective configuration](../reference/effective-configuration.md).
+
 See also [Adapter support matrix](support-matrix.md),
 [Adapter event capture](../reference/adapter-event-capture.md),
 [Managed lifecycle runner](../reference/managed-lifecycle-runner.md) and
