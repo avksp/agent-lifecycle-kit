@@ -86,6 +86,11 @@ with the selected finding IDs. ALK validates its lineage and independence,
 archives its identity with the current attempt, and requires a fresh result and
 audit for the next attempt.
 
+For v4 task-local outcomes, `workflow task-review-apply` is the canonical
+mutation. It consumes the current task result, independent review and, when
+required, implementation audit, then applies `ACCEPTED`, `REWORK`,
+`CONTRACT_CHANGE` or `BLOCKED` without rewriting sibling task state.
+
 ## Workflow gates
 
 Plans or tasks can declare implementation audit as mandatory with

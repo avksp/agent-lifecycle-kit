@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, read_json_object
 from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.persistence import replace_private_json as write_json_replace_private
+from agent_lifecycle.contracts.workflow_state_schemas import (
+    WORKFLOW_STATE_V3,
+    WORKFLOW_STATE_V4,
+    validate_workflow_state,
+)
 
 TERMINAL_PHASES = {"COMPLETE", "FAILED", "CANCELLED"}
 EXECUTION_PHASES = {"RUNNING", "STEP_REVIEW", "REMEDIATING"}
@@ -21,15 +25,9 @@ def now_iso() -> str:
 
 def load_state(path: Path) -> dict[str, Any]:
     state = read_json_object(path, label="workflow state")
-    if state.get("schemaVersion") != "agent-workflow-state.v3":
+    if state.get("schemaVersion") not in {WORKFLOW_STATE_V3, WORKFLOW_STATE_V4}:
         raise LifecycleError("unsupported-workflow-state", "workflow state schemaVersion is unsupported")
-    if not isinstance(state.get("stateRevision"), int) or state["stateRevision"] < 1:
-        raise LifecycleError("invalid-workflow-state", "stateRevision must be a positive integer")
-    if not isinstance(state.get("phase"), str) or not state["phase"]:
-        raise LifecycleError("invalid-workflow-state", "phase is required")
-    if not isinstance(state.get("tasks"), list):
-        raise LifecycleError("invalid-workflow-state", "tasks must be an array")
-    return state
+    return validate_workflow_state(state)
 
 
 def state_identity(path: Path, state: dict[str, Any]) -> dict[str, Any]:

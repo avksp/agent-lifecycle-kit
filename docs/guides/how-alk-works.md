@@ -220,6 +220,28 @@ Implementation is deliberately separate from raw intake:
 7. Run independent implementation audit before task acceptance.
 8. Finalize only after all required tasks and final gates pass.
 
+Release 1.82 stores this lifecycle in `agent-workflow-state.v4`. Create an
+unbound private state explicitly, then bind it to a frozen plan:
+
+```bash
+agent-lifecycle workflow init \
+  --state work/run.state.json \
+  --run-id run-001 \
+  --package-id release-package
+```
+
+If an older `agent-workflow-state.v3` file exists, use the explicit
+`workflow state-migrate` command with the expected state revision and source
+revision. Migration is fail-closed and preserves lineage, operation history
+and immutable attempt artifact identities.
+
+Task review is task-local in v4. A result moves only that task to `VERIFYING`;
+the run remains `RUNNING` while siblings continue. Use the canonical
+`workflow task-review-apply` route to apply `ACCEPTED`, `REWORK`,
+`CONTRACT_CHANGE` or `BLOCKED`. The compatibility `task-accept` and
+`task-rework` commands delegate to the same outcome rules. `FINAL_AUDIT` is
+projected only after every required task is `ACCEPTED`.
+
 When an independent review finds an implementation, test or evidence problem
 inside the frozen scope, ALK can open a bounded remediation attempt. The plan
 must set `remediationMode` to `ask` or `bounded-auto` and set

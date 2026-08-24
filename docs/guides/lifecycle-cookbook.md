@@ -221,6 +221,48 @@ archives artifact identities, not duplicate bodies. `workflow run` then
 returns the same task for another `task-start`, which opens the first unused
 attempt path. Previous result, review and audit files remain immutable.
 
+## Use the v4 task-local workflow
+
+For a new run, create the validated v4 state before adopting task artifacts:
+
+```bash
+agent-lifecycle workflow init \
+  --state work/run.state.json \
+  --run-id run-001 \
+  --package-id release-x
+```
+
+For a legacy v3 state, use the explicit migration command and keep the source
+revision and expected state revision bound to the migration receipt:
+
+```bash
+agent-lifecycle workflow state-migrate \
+  --state work/run.state.json \
+  --operation-id migrate-run-001 \
+  --expected-revision 1 \
+  --source-revision <source-sha>
+```
+
+After a task result and independent review exist, apply the single canonical
+task outcome. `ACCEPTED`, `REWORK`, `CONTRACT_CHANGE` and `BLOCKED` are
+task-local outcomes; an active sibling keeps running and earlier attempt
+artifacts remain immutable:
+
+```bash
+agent-lifecycle workflow task-review-apply \
+  --state work/run.state.json \
+  --task WS-01 \
+  --operation-id review-WS-01-attempt-1 \
+  --expected-revision 7 \
+  --source-revision <source-sha> \
+  --result work/WS-01/attempt-1/task-result.json \
+  --review work/WS-01/attempt-1/task-review.json
+```
+
+The run enters `FINAL_AUDIT` only after every required task is accepted. The
+legacy `task-accept` and `task-rework` commands remain compatibility wrappers
+for one release and use the same transition service.
+
 ## View goal and progress
 
 Use this when another adapter is working and you need a compact, read-only
