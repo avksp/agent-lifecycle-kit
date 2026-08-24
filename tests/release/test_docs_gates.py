@@ -39,6 +39,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/cli.md",
             "docs/reference/project-comparison.md",
             "docs/reference/project-workflow-profile.md",
+            "docs/reference/external-verification-checks.md",
             "docs/reference/public-locators-and-redaction.md",
             "docs/reference/source-of-truth.md",
         ):
@@ -47,6 +48,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("reference/project-comparison.md", russian)
         self.assertIn("reference/cli.md", russian)
         self.assertIn("reference/project-workflow-profile.md", russian)
+        self.assertIn("reference/external-verification-checks.md", russian)
+        self.assertIn("docs/reference/external-verification-checks.md", english)
         for adapter in ("Goose", "Grok Build", "OpenInterpreter", "Pi"):
             self.assertIn(adapter, english)
             self.assertIn(adapter, russian)
@@ -66,6 +69,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/guides/install-and-first-run.md",
             "docs/guides/commands-by-task.md",
             "docs/reference/project-workflow-profile.md",
+            "docs/reference/external-verification-checks.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
             "docs/ru/architecture/system-architecture.md",
@@ -77,6 +81,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/guides/install-and-first-run.md",
             "docs/ru/guides/commands-by-task.md",
             "docs/ru/reference/project-workflow-profile.md",
+            "docs/ru/reference/external-verification-checks.md",
             "docs/ru/reference/public-locators-and-redaction.md",
             "docs/ru/guides/production-resource-security.md",
             "docs/ru/guides/reference-task-evaluation.md",
@@ -474,6 +479,34 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                 package_pins.append(match.group(1))
         self.assertEqual(len(set(package_pins)), 1)
 
+    def test_external_verification_docs_preserve_trust_boundary(self) -> None:
+        english = (ROOT / "docs/reference/external-verification-checks.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/external-verification-checks.md").read_text(encoding="utf-8")
+        for required in (
+            "agent-lifecycle quality external-check",
+            "import-boundaries",
+            "module-dependencies",
+            "declared-dependencies",
+            "UNAVAILABLE",
+            "authorityClaimed",
+            "Raw stdout and stderr are not persisted",
+            "source snapshot",
+        ):
+            self.assertIn(required, english)
+        for required in (
+            "agent-lifecycle quality external-check",
+            "import-boundaries",
+            "module-dependencies",
+            "declared-dependencies",
+            "UNAVAILABLE",
+            "authorityClaimed",
+            "Сырые stdout и stderr не сохраняются",
+            "снимок исходного дерева",
+        ):
+            self.assertIn(required, russian)
+        self.assertNotIn("oracle", english.lower())
+        self.assertNotIn("oracle", russian.lower())
+
     def test_security_docs_describe_blocked_launch_and_fail_closed_receipts(self) -> None:
         managed_sessions = [
             ROOT / "docs/reference/managed-adapter-sessions.md",
@@ -831,6 +864,18 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/project-workflow-profile.md", project_profile)
     _write_text(root / "docs/ru/reference/project-workflow-profile.md", project_profile)
+    external_checks = (
+        "agent-lifecycle quality external-check. import-boundaries. module-dependencies. "
+        "declared-dependencies. UNAVAILABLE. authorityClaimed. shell-free. "
+        "Raw stdout and stderr are not persisted. source snapshot. frozen plan.\n"
+    )
+    _write_text(root / "docs/reference/external-verification-checks.md", external_checks)
+    _write_text(
+        root / "docs/ru/reference/external-verification-checks.md",
+        "agent-lifecycle quality external-check. import-boundaries. module-dependencies. "
+        "declared-dependencies. UNAVAILABLE. authorityClaimed. без оболочки. "
+        "Сырые stdout и stderr не сохраняются. снимок исходного дерева. зафиксированный план.\n",
+    )
     architecture = (
         "project workflow profile. project/profile.py. agent-guided-action-receipt.v1. "
         "Project workflow profile. профиль рабочего процесса проекта. Профиль рабочего процесса проекта.\n"

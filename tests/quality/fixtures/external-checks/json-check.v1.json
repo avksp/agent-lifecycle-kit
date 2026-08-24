@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "agent-external-check-profile.v1",
+  "profileId": "json-check",
+  "checkId": "import-boundaries",
+  "toolId": "fixture-json-tool",
+  "toolVersion": "fixture",
+  "executable": "/usr/bin/env",
+  "argv": ["/usr/bin/env", "python3", "-c", "print('not-used')"],
+  "configPath": "pyproject.toml",
+  "workingDirectory": null,
+  "timeoutSeconds": 5,
+  "maxOutputBytes": 65536,
+  "environment": {"allow": ["PATH"], "allowPatterns": []},
+  "outputFormat": "json"
+}
