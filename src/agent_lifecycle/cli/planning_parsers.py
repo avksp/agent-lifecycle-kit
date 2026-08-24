@@ -88,7 +88,9 @@ def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     evidence.add_argument("--out")
     transition = finding_check_sub.add_parser("transition")
     transition.add_argument("--binding", required=True)
-    transition.add_argument("--target-status", choices=["PROPOSED", "ACCEPTED", "IMPLEMENTED", "VERIFIED", "RETIRED"], required=True)
+    transition.add_argument(
+        "--target-status", choices=["PROPOSED", "ACCEPTED", "IMPLEMENTED", "VERIFIED", "RETIRED"], required=True
+    )
     transition.add_argument("--authorization", required=True)
     transition.add_argument("--evidence")
     transition.add_argument("--out")

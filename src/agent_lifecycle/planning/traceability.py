@@ -68,27 +68,57 @@ def validate_finding_check_traceability(
             continue
         validation = validate_finding_check_binding(binding)
         if validation.get("status") != "PASS":
-            blockers.append(_blocker("finding-check-binding-invalid", "binding failed contract validation", {"bindingId": binding.get("bindingId")}))
+            blockers.append(
+                _blocker(
+                    "finding-check-binding-invalid",
+                    "binding failed contract validation",
+                    {"bindingId": binding.get("bindingId")},
+                )
+            )
             continue
         binding_id = binding["bindingId"]
         finding = finding_map.get(binding["findingId"])
         if not isinstance(finding, dict) or finding.get("findingDigest") not in {None, binding["findingDigest"]}:
-            blockers.append(_blocker("finding-check-finding-orphan", "binding does not resolve to the accepted finding", {"bindingId": binding_id}))
+            blockers.append(
+                _blocker(
+                    "finding-check-finding-orphan",
+                    "binding does not resolve to the accepted finding",
+                    {"bindingId": binding_id},
+                )
+            )
         delta = delta_map.get(binding["planDeltaDigest"])
         if not isinstance(delta, dict) or delta.get("status") != "PASS":
-            blockers.append(_blocker("finding-check-plan-delta-unapproved", "binding does not resolve to a passing plan delta", {"bindingId": binding_id}))
-        lineage = binding.get("planLineage") if isinstance(binding.get("planLineage"), dict) else {}
-        delta_after = delta.get("after") if isinstance(delta, dict) and isinstance(delta.get("after"), dict) else {}
+            blockers.append(
+                _blocker(
+                    "finding-check-plan-delta-unapproved",
+                    "binding does not resolve to a passing plan delta",
+                    {"bindingId": binding_id},
+                )
+            )
+        lineage = _object(binding.get("planLineage"))
+        delta_after = _object(delta.get("after")) if isinstance(delta, dict) else {}
         if delta and (
             delta_after.get("planDigest") != lineage.get("planDigest")
             or delta_after.get("planRevision") != lineage.get("planRevision")
         ):
-            blockers.append(_blocker("finding-check-plan-lineage-mismatch", "binding plan lineage differs from the delta", {"bindingId": binding_id}))
+            blockers.append(
+                _blocker(
+                    "finding-check-plan-lineage-mismatch",
+                    "binding plan lineage differs from the delta",
+                    {"bindingId": binding_id},
+                )
+            )
         if source_revision is not None and binding.get("sourceRevision") != source_revision:
-            blockers.append(_blocker("finding-check-source-stale", "binding source revision is stale", {"bindingId": binding_id}))
-        matching_evidence = [item for item in evidence_values if isinstance(item, dict) and item.get("bindingId") == binding_id]
+            blockers.append(
+                _blocker("finding-check-source-stale", "binding source revision is stale", {"bindingId": binding_id})
+            )
+        matching_evidence = [
+            item for item in evidence_values if isinstance(item, dict) and item.get("bindingId") == binding_id
+        ]
         if binding["status"] in {"IMPLEMENTED", "VERIFIED"} and not matching_evidence:
-            blockers.append(_blocker("finding-check-evidence-missing", "active binding has no evidence", {"bindingId": binding_id}))
+            blockers.append(
+                _blocker("finding-check-evidence-missing", "active binding has no evidence", {"bindingId": binding_id})
+            )
         for item in matching_evidence:
             evidence_validation = validate_finding_check_evidence(item, binding)
             if evidence_validation.get("status") != "PASS":
@@ -100,11 +130,29 @@ def validate_finding_check_traceability(
                     )
                 )
             if item.get("checkIdentity") != binding.get("checkIdentity"):
-                blockers.append(_blocker("finding-check-identity-changed", "evidence check identity differs from binding", {"bindingId": binding_id}))
+                blockers.append(
+                    _blocker(
+                        "finding-check-identity-changed",
+                        "evidence check identity differs from binding",
+                        {"bindingId": binding_id},
+                    )
+                )
             if item.get("sourceRevision") != binding.get("sourceRevision"):
-                blockers.append(_blocker("finding-check-source-stale", "evidence source revision differs from binding", {"bindingId": binding_id}))
+                blockers.append(
+                    _blocker(
+                        "finding-check-source-stale",
+                        "evidence source revision differs from binding",
+                        {"bindingId": binding_id},
+                    )
+                )
         if binding["status"] == "RETIRED" and binding_id in active:
-            blockers.append(_blocker("finding-check-retired-active", "a retired binding is still claimed as active", {"bindingId": binding_id}))
+            blockers.append(
+                _blocker(
+                    "finding-check-retired-active",
+                    "a retired binding is still claimed as active",
+                    {"bindingId": binding_id},
+                )
+            )
     body = {
         "schemaVersion": FINDING_CHECK_TRACEABILITY_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
@@ -343,6 +391,10 @@ def _check_final_gates(
 def _package_id(manifest: dict[str, Any]) -> str | None:
     package = manifest.get("package")
     return package.get("id") if isinstance(package, dict) and isinstance(package.get("id"), str) else None
+
+
+def _object(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
 def _strings(value: Any) -> list[str]:

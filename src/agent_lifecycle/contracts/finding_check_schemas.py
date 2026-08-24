@@ -64,7 +64,15 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_BINDING_VALIDATION_SCHEMA: open_object_schema(
         FINDING_CHECK_BINDING_VALIDATION_SCHEMA,
-        required=["schemaVersion", "status", "bindingStatus", "bindingId", "blockers", "productionPromotionClaimed", "validationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "bindingStatus",
+            "bindingId",
+            "blockers",
+            "productionPromotionClaimed",
+            "validationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "bindingStatus": {"type": ["string", "null"]},
@@ -102,7 +110,14 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_PROPOSAL_VALIDATION_SCHEMA: open_object_schema(
         FINDING_CHECK_PROPOSAL_VALIDATION_SCHEMA,
-        required=["schemaVersion", "status", "proposalStatus", "blockers", "productionPromotionClaimed", "validationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "proposalStatus",
+            "blockers",
+            "productionPromotionClaimed",
+            "validationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "proposalStatus": {"type": ["string", "null"]},
@@ -145,7 +160,15 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_EVIDENCE_VALIDATION_SCHEMA: open_object_schema(
         FINDING_CHECK_EVIDENCE_VALIDATION_SCHEMA,
-        required=["schemaVersion", "status", "result", "bindingId", "blockers", "productionPromotionClaimed", "validationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "result",
+            "bindingId",
+            "blockers",
+            "productionPromotionClaimed",
+            "validationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "result": {"type": ["string", "null"]},
@@ -157,7 +180,16 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_TRANSITION_SCHEMA: open_object_schema(
         FINDING_CHECK_TRANSITION_SCHEMA,
-        required=["schemaVersion", "status", "binding", "targetStatus", "idempotent", "blockers", "productionPromotionClaimed", "transitionDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "binding",
+            "targetStatus",
+            "idempotent",
+            "blockers",
+            "productionPromotionClaimed",
+            "transitionDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "binding": {"type": "object"},
@@ -170,7 +202,14 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_TRACEABILITY_SCHEMA: open_object_schema(
         FINDING_CHECK_TRACEABILITY_SCHEMA,
-        required=["schemaVersion", "status", "bindingCount", "blockers", "productionPromotionClaimed", "validationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "bindingCount",
+            "blockers",
+            "productionPromotionClaimed",
+            "validationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "bindingCount": {"type": "integer", "minimum": 0, "maximum": 128},
@@ -333,7 +372,11 @@ def validate_finding_check_evidence(evidence: dict[str, Any], binding: dict[str,
         blockers.append({"code": "finding-check-evidence-result-invalid"})
     if not isinstance(evidence.get("evidenceIds"), list) or not evidence["evidenceIds"]:
         blockers.append({"code": "finding-check-evidence-ids-invalid"})
-    if evidence.get("readOnly") is not True or evidence.get("modelCallsStarted") is not False or evidence.get("hostLaunchStarted") is not False:
+    if (
+        evidence.get("readOnly") is not True
+        or evidence.get("modelCallsStarted") is not False
+        or evidence.get("hostLaunchStarted") is not False
+    ):
         blockers.append({"code": "finding-check-evidence-execution-boundary"})
     expected = canonical_digest({key: value for key, value in evidence.items() if key != "evidenceDigest"})
     if evidence.get("evidenceDigest") != expected:
@@ -344,7 +387,9 @@ def validate_finding_check_evidence(evidence: dict[str, Any], binding: dict[str,
         binding_validation = validate_finding_check_binding(binding)
         if binding_validation["status"] != "PASS":
             blockers.append({"code": "finding-check-binding-invalid"})
-        elif evidence.get("bindingId") != binding.get("bindingId") or evidence.get("findingId") != binding.get("findingId"):
+        elif evidence.get("bindingId") != binding.get("bindingId") or evidence.get("findingId") != binding.get(
+            "findingId"
+        ):
             blockers.append({"code": "finding-check-evidence-lineage-mismatch"})
         elif evidence.get("checkIdentity") != binding.get("checkIdentity"):
             blockers.append({"code": "finding-check-evidence-identity-mismatch"})
@@ -377,7 +422,9 @@ def transition_finding_check_binding(
     if target_status == current:
         if transitions and transitions[-1].get("operationId") == operation_id:
             return _transition_receipt(binding, target_status, True, [])
-        raise LifecycleError("finding-check-transition-not-idempotent", "repeated transition requires the original operationId")
+        raise LifecycleError(
+            "finding-check-transition-not-idempotent", "repeated transition requires the original operationId"
+        )
     if current == "RETIRED" or target_status == "PROPOSED" or _STATUS_INDEX[target_status] < _STATUS_INDEX[current]:
         raise LifecycleError("finding-check-transition-order", "binding status cannot move backwards")
     if _STATUS_INDEX[target_status] > _STATUS_INDEX[current] + 1 and target_status != "RETIRED":
@@ -387,7 +434,9 @@ def transition_finding_check_binding(
             raise LifecycleError("finding-check-evidence-required", "implementation and verification require evidence")
         evidence_validation = validate_finding_check_evidence(evidence, binding)
         if evidence_validation["status"] != "PASS":
-            raise LifecycleError("finding-check-evidence-invalid", "transition evidence failed validation", evidence_validation)
+            raise LifecycleError(
+                "finding-check-evidence-invalid", "transition evidence failed validation", evidence_validation
+            )
         if target_status == "VERIFIED" and evidence.get("result") != binding.get("expectedResult"):
             raise LifecycleError("finding-check-result-mismatch", "verification result does not match expected result")
     transition = {
@@ -399,7 +448,9 @@ def transition_finding_check_binding(
         "evidenceDigest": evidence.get("evidenceDigest") if isinstance(evidence, dict) else None,
     }
     updated = {**binding, "status": target_status, "transitions": [*transitions, transition]}
-    updated["bindingDigest"] = canonical_digest({key: value for key, value in updated.items() if key != "bindingDigest"})
+    updated["bindingDigest"] = canonical_digest(
+        {key: value for key, value in updated.items() if key != "bindingDigest"}
+    )
     return _transition_receipt(updated, target_status, False, [])
 
 
@@ -417,7 +468,11 @@ def validate_finding_check_proposal(proposal: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "finding-check-proposal-binding-invalid"})
     if proposal.get("status") not in {"PASS", "FAIL"}:
         blockers.append({"code": "finding-check-proposal-status-invalid"})
-    if proposal.get("approvalRequired") is not True or proposal.get("applyAllowed") is not False or proposal.get("authorityClaimed") is not False:
+    if (
+        proposal.get("approvalRequired") is not True
+        or proposal.get("applyAllowed") is not False
+        or proposal.get("authorityClaimed") is not False
+    ):
         blockers.append({"code": "finding-check-proposal-authority-boundary"})
     expected = canonical_digest({key: value for key, value in proposal.items() if key != "proposalDigest"})
     if proposal.get("proposalDigest") != expected:
@@ -431,7 +486,9 @@ def validate_finding_check_proposal(proposal: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-def _transition_receipt(binding: dict[str, Any], target_status: str, idempotent: bool, blockers: list[dict[str, Any]]) -> dict[str, Any]:
+def _transition_receipt(
+    binding: dict[str, Any], target_status: str, idempotent: bool, blockers: list[dict[str, Any]]
+) -> dict[str, Any]:
     body = {
         "schemaVersion": FINDING_CHECK_TRANSITION_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
@@ -448,9 +505,16 @@ def _validate_plan_lineage(lineage: Any) -> dict[str, Any]:
     if not isinstance(lineage, dict):
         raise LifecycleError("finding-check-plan-lineage-invalid", "planLineage must be an object")
     required = ("packageId", "planRevision", "planDigest", "sourceRevision")
-    if any(not isinstance(lineage.get(key), str) or not lineage[key] for key in ("packageId", "planDigest", "sourceRevision")):
+    if any(
+        not isinstance(lineage.get(key), str) or not lineage[key]
+        for key in ("packageId", "planDigest", "sourceRevision")
+    ):
         raise LifecycleError("finding-check-plan-lineage-invalid", "planLineage has missing identity fields")
-    if not isinstance(lineage.get("planRevision"), int) or isinstance(lineage["planRevision"], bool) or lineage["planRevision"] < 1:
+    if (
+        not isinstance(lineage.get("planRevision"), int)
+        or isinstance(lineage["planRevision"], bool)
+        or lineage["planRevision"] < 1
+    ):
         raise LifecycleError("finding-check-plan-lineage-invalid", "planLineage revision is invalid")
     if not _is_digest(lineage["planDigest"]):
         raise LifecycleError("finding-check-plan-lineage-invalid", "planLineage digest is invalid")
@@ -479,7 +543,11 @@ def _normalize_check_identity(identity: Any) -> dict[str, str]:
 def _validate_transitions(transitions: list[Any], status: Any, blockers: list[dict[str, Any]]) -> None:
     previous = "PROPOSED"
     for item in transitions:
-        if not isinstance(item, dict) or item.get("fromStatus") != previous or item.get("toStatus") not in FINDING_CHECK_STATUSES:
+        if (
+            not isinstance(item, dict)
+            or item.get("fromStatus") != previous
+            or item.get("toStatus") not in FINDING_CHECK_STATUSES
+        ):
             blockers.append({"code": "finding-check-transition-history-invalid"})
             return
         if _STATUS_INDEX[item["toStatus"]] < _STATUS_INDEX[previous] and item["toStatus"] != "RETIRED":
@@ -535,7 +603,11 @@ def _is_digest(value: Any) -> bool:
 
 
 def _string_list(values: Any, field: str) -> None:
-    if not isinstance(values, list) or not values or any(not isinstance(value, str) or not value or len(value) > 256 for value in values):
+    if (
+        not isinstance(values, list)
+        or not values
+        or any(not isinstance(value, str) or not value or len(value) > 256 for value in values)
+    ):
         raise LifecycleError("finding-check-list-invalid", f"{field} must be a non-empty list of bounded strings")
 
 

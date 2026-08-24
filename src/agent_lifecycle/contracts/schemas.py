@@ -22,10 +22,10 @@ from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMA
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.cross_check_schemas import CROSS_CHECK_SCHEMAS
 from agent_lifecycle.contracts.evidence_import_schemas import EVIDENCE_IMPORT_SCHEMAS
-from agent_lifecycle.contracts.finding_check_schemas import FINDING_CHECK_SCHEMAS
 from agent_lifecycle.contracts.execution_strategy_schemas import (
     EXECUTION_STRATEGY_SCHEMAS,
 )
+from agent_lifecycle.contracts.finding_check_schemas import FINDING_CHECK_SCHEMAS
 from agent_lifecycle.contracts.host_capability_schemas import HOST_CAPABILITY_SCHEMAS
 from agent_lifecycle.contracts.import_dialect_schemas import IMPORT_DIALECT_SCHEMAS
 from agent_lifecycle.contracts.lifecycle_control_definitions import (
