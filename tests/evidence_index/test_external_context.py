@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.evidence_index import (
     build_external_context_import_receipt,
     external_context_hints_from_receipts,
@@ -18,7 +19,9 @@ class ExternalContextImportTests(unittest.TestCase):
             source = Path(tmp) / "memory.md"
             source.write_text("Prior analysis says payment retries need idempotency keys.", encoding="utf-8")
 
-            receipt = build_external_context_import_receipt(source, citation="operator export", source_id="memory-export")
+            receipt = build_external_context_import_receipt(
+                source, citation="operator export", source_id="memory-export"
+            )
             validation = validate_external_context_import_receipt(receipt)
 
             self.assertEqual(require_external_context_import_pass(validation)["status"], "PASS")
@@ -49,6 +52,20 @@ class ExternalContextImportTests(unittest.TestCase):
             self.assertIn("[REDACTED]", receipt["hints"][0]["text"])
             self.assertIn("[LOCAL_PATH]", receipt["hints"][0]["text"])
 
+    def test_external_context_normalizes_public_url_citation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "memory.md"
+            source.write_text("Public reference", encoding="utf-8")
+
+            receipt = build_external_context_import_receipt(
+                source,
+                citation="HTTPS://EXAMPLE.COM:443/reference#Public",
+            )
+
+            self.assertEqual(receipt["source"]["citation"], "https://example.com/reference#Public")
+            self.assertEqual(receipt["hints"][0]["citation"], receipt["source"]["citation"])
+            self.assertEqual(validate_external_context_import_receipt(receipt)["status"], "PASS")
+
     def test_external_context_hints_require_valid_non_proof_receipts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "memory.md"
@@ -59,7 +76,7 @@ class ExternalContextImportTests(unittest.TestCase):
             invalid = {**receipt, "sourceOfTruth": True}
 
             self.assertEqual(hints[0]["contextRole"], "optional-external-context")
-            with self.assertRaises(Exception):
+            with self.assertRaises(LifecycleError):
                 external_context_hints_from_receipts([invalid])
 
 

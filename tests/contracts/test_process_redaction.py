@@ -25,6 +25,14 @@ class ProcessRedactionContractTests(unittest.TestCase):
         self.assertFalse(changed)
         self.assertEqual(redacted, value)
 
+    def test_process_output_normalizes_public_url_without_redacting_it(self) -> None:
+        value = "See HTTPS://EXAMPLE.COM:443/docs#Public"
+
+        redacted, changed = redact_process_text(value)
+
+        self.assertTrue(changed)
+        self.assertEqual(redacted, "See https://example.com/docs#Public")
+
     def test_process_output_redacts_url_secrets(self) -> None:
         value = "https://user:password@example.com/path?api_key=topsecret"
 

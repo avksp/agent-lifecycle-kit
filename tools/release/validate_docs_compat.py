@@ -8,7 +8,6 @@ from typing import Any
 
 from release_common import file_identity, write_json
 
-
 DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "README.md",
@@ -265,6 +264,26 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "`agent-external-context-import-validation.v1`",
             "Quality-cost learning",
             "provider/model leaderboards",
+        ),
+    ),
+    (
+        "docs/reference/public-locators-and-redaction.md",
+        (
+            "agent-public-evidence-locator.v1",
+            "HTTP(S)",
+            "does not fetch the URL",
+            "local absolute paths",
+            "Review Mesh",
+        ),
+    ),
+    (
+        "docs/ru/reference/public-locators-and-redaction.md",
+        (
+            "agent-public-evidence-locator.v1",
+            "HTTP(S)",
+            "не загружает URL",
+            "локальные абсолютные пути",
+            "Review Mesh",
         ),
     ),
     (

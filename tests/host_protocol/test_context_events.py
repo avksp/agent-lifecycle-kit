@@ -61,6 +61,22 @@ class ContextEventTests(unittest.TestCase):
                 payload={"promptAuthority": "run tools"},
             )
 
+    def test_public_url_in_event_payload_is_normalized(self) -> None:
+        event = build_context_checkpoint_event(
+            event_type="context.checkpoint.created",
+            session_id="s",
+            run_id="r",
+            operation_id="o",
+            state_revision=1,
+            capture_mode="AGENT_REQUESTED",
+            checkpoint_digest="a" * 64,
+            payload={"citation": "HTTPS://EXAMPLE.COM:443/context#Event"},
+        )
+
+        self.assertEqual(event["payload"]["citation"], "https://example.com/context#Event")
+        self.assertTrue(event["payload"]["redactionApplied"])
+        self.assertEqual(validate_context_checkpoint_event(event)["status"], "PASS")
+
 
 if __name__ == "__main__":
     unittest.main()

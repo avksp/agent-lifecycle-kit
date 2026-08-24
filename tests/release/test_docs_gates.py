@@ -39,6 +39,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/cli.md",
             "docs/reference/project-comparison.md",
             "docs/reference/project-workflow-profile.md",
+            "docs/reference/public-locators-and-redaction.md",
             "docs/reference/source-of-truth.md",
         ):
             self.assertIn(required, english)
@@ -76,6 +77,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/guides/install-and-first-run.md",
             "docs/ru/guides/commands-by-task.md",
             "docs/ru/reference/project-workflow-profile.md",
+            "docs/ru/reference/public-locators-and-redaction.md",
             "docs/ru/guides/production-resource-security.md",
             "docs/ru/guides/reference-task-evaluation.md",
             "docs/ru/adapters/install.md",
@@ -216,6 +218,16 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("--no-project-profile", text)
         self.assertIn("зафиксированный план", russian)
         self.assertIn("frozen plan", english)
+
+    def test_public_locator_docs_keep_offline_security_boundary(self) -> None:
+        english = (ROOT / "docs/reference/public-locators-and-redaction.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/public-locators-and-redaction.md").read_text(encoding="utf-8")
+        for text in (english, russian):
+            self.assertIn("agent-public-evidence-locator.v1", text)
+            self.assertIn("HTTP(S)", text)
+            self.assertIn("Review Mesh", text)
+        self.assertIn("does not fetch the URL", english)
+        self.assertIn("не загружает URL", russian)
 
     def test_every_adapter_page_explains_inside_host_and_command_routes(self) -> None:
         descriptors = {
@@ -790,6 +802,14 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         root / "docs/ru/reference/public-contracts.md",
         public_contracts
         + "Локальная статистика качества и расхода избегает рейтинги провайдеров.\n",
+    )
+    public_locators = (
+        "agent-public-evidence-locator.v1. HTTP(S). does not fetch the URL. local absolute paths. Review Mesh.\n"
+    )
+    _write_text(root / "docs/reference/public-locators-and-redaction.md", public_locators)
+    _write_text(
+        root / "docs/ru/reference/public-locators-and-redaction.md",
+        "agent-public-evidence-locator.v1. HTTP(S). не загружает URL. локальные абсолютные пути. Review Mesh.\n",
     )
     _write_text(
         root / "docs/reference/project-comparison.md",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from agent_lifecycle.contracts.public_locators import normalize_public_locator
 from agent_lifecycle.contracts.redaction import redact_text as _redact_text
 
 _POSIX_ABSOLUTE_PATH = re.compile(r"(?<![A-Za-z0-9_.:/-])/(?!/)[^\s\"'<>]+")
@@ -31,4 +32,4 @@ def redact_process_text(value: str) -> tuple[str, bool]:
     return redacted, changed or redacted != value
 
 
-__all__ = ["redact_env_names", "redact_process_text", "redact_text"]
+__all__ = ["normalize_public_locator", "redact_env_names", "redact_process_text", "redact_text"]
