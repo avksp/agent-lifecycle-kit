@@ -167,6 +167,8 @@ class ContractTests(unittest.TestCase):
         self.assertIn("agent-task-change-set-claim.v1", ids)
         self.assertIn("agent-task-attempt-history-entry.v1", ids)
         self.assertIn("agent-runner-policy.v1", ids)
+        self.assertIn("agent-workflow-next-action.v1", ids)
+        self.assertIn("agent-workflow-run-receipt.v1", ids)
         self.assertIn("agent-managed-lifecycle-next-action.v1", ids)
         self.assertIn("agent-managed-lifecycle-runner-receipt.v1", ids)
         self.assertIn("agent-no-model-call-scan.v1", ids)

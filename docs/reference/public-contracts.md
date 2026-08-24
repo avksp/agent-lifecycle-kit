@@ -29,7 +29,7 @@ stable.
 
 ## Core lifecycle controls
 
-The core lifecycle surface covers completion, goal continuity, runner state,
+The core lifecycle surface covers completion, goal continuity, workflow state,
 follow-up tracking, worktree isolation, adapter event capture, review verdicts
 and optional quality/reporting controls.
 
@@ -40,10 +40,9 @@ Stable schema ids:
 - `agent-completion-gate-validation.v1`
 - `agent-goal-record.v1`
 - `agent-objective-snapshot.v1`
-- `agent-runner-state.v1`
-- `agent-runner-snapshot.v1`
-- `agent-managed-lifecycle-next-action.v1`
-- `agent-managed-lifecycle-runner-receipt.v1`
+- `agent-workflow-state.v4`
+- `agent-workflow-next-action.v1`
+- `agent-workflow-run-receipt.v1`
 - `agent-lifecycle-start-receipt.v1`
 - `agent-task-plan-compatibility-receipt.v1`
 - `agent-task-plan-compatibility-receipt-validation.v1`
@@ -148,10 +147,9 @@ JSON stdout and keeping plugin installation separate from lifecycle proof. The
 execution strategy composes existing policy decisions and may appear as an
 optional compact projection in the lifecycle start receipt and task packets;
 it adds no workflow authority. Reference-task comparison validates quality
-before confidence-aware resource deltas and never mutates policy. The
-managed lifecycle runner adds a
-typed read-only `workflow run` projection that checks frozen plan/state lineage
-and returns the next host-owned action. Implementation audit reports bind task
+before confidence-aware resource deltas and never mutates policy. The workflow
+execution route uses a typed `workflow run` receipt that checks frozen plan/state
+lineage and returns the next host-owned action. Implementation audit reports bind task
 results, independent reviews, ownership, evidence and sandbox checks before a
 task or run can pass a mandatory audit gate.
 Managed adapter session receipts bind an adapter session to a workflow state
@@ -326,10 +324,12 @@ context export as optional retrieval hints. It requires `sourceOfTruth: false`,
 provider API calls. The receipt can guide context selection, but cannot satisfy
 evidence, review or final proof requirements.
 
-## Runner recovery, optional cross-check and Review Mesh
+## Historical runner recovery, optional cross-check and Review Mesh
 
-Runner recovery contracts are additive receipts for multi-attempt work. They do
-not replace workflow state or the controlled runner state.
+Historical runner recovery contracts are read-only compatibility receipts for
+old multi-attempt work. They do not replace current workflow state or provide a
+controlled execution authority. Use `workflow migrate-runner-artifact` for an
+explicit bounded conversion; the output is private and non-authoritative.
 
 Stable schema ids:
 

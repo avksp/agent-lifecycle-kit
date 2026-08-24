@@ -2,10 +2,12 @@
 
 ## Lifecycle command authority
 
-Use `workflow run` and the `workflow task-*` commands for new integrations.
-`runner start/status/transition/stop/resume` are deprecated compatibility
-journal commands. Their output is evidence only and cannot mutate workflow
-state or satisfy acceptance/finalization.
+Use `workflow run` and the `workflow task-*` commands for all integrations.
+The former controlled-runner command surface is removed in 2.0. Historical
+runner artifacts are handled only by the explicit read-only
+`workflow migrate-runner-artifact` command described in
+[Runner migration](../guides/runner-migration-2.md). A converted record is evidence only
+and cannot mutate workflow state or satisfy acceptance/finalization.
 
 The CLI prints JSON for machine-readable commands. Commands that mutate state
 record receipts or require explicit input files; diagnostic commands stay
@@ -26,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.89.0
+  python -m pip install agent-lifecycle-kit==2.0.0
 ```
 
 ## Error and resource contracts
@@ -272,8 +274,10 @@ JSON contracts.
   `workflow finalize` are the only workflow commands with managed progress
   hooks in this release. `ALK_PROGRESS_HOOK=stderr` is supported for wrappers;
   plugin installation alone is not lifecycle proof.
-- `agent-lifecycle runner start/status/transition/stop/resume`: control
-  bounded execution state.
+- `agent-lifecycle workflow run`: execute the current workflow route with
+  frozen plan and state lineage.
+- `agent-lifecycle workflow migrate-runner-artifact`: convert one bounded
+  historical runner artifact to a private, read-only, non-authoritative record.
 - `agent-lifecycle strategy resolve --manifest ... --lock ... --state ...
   --task ... --operation-id ... --expected-revision ... --source-revision ...
   --adapter ... --out ...`: write one provider-neutral, read-only execution

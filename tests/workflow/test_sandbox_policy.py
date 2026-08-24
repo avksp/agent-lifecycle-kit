@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from agent_lifecycle.contracts import LifecycleError
-from agent_lifecycle.runner import build_partial_process_boundary, build_sandbox_receipt
+from agent_lifecycle.workflow.sandbox_receipts import build_partial_process_boundary, build_sandbox_receipt
 from agent_lifecycle.workflow import (
     build_sandbox_requirement_policy,
     require_task_sandbox_evidence_pass,

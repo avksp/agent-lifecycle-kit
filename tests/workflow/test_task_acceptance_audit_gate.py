@@ -8,7 +8,7 @@ from pathlib import Path
 from agent_lifecycle.audit import build_implementation_audit_report
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_json_create
 from agent_lifecycle.workflow import accept_task, commit_task_result, rework_task, start_task
-from agent_lifecycle.workflow.managed_runner import run_managed_lifecycle_step
+from agent_lifecycle.workflow.run import run_workflow_step
 
 
 class TaskAcceptanceImplementationAuditGateTests(unittest.TestCase):
@@ -76,7 +76,7 @@ class TaskAcceptanceImplementationAuditGateTests(unittest.TestCase):
             root = Path(tmp)
             bundle = _write_bundle(root, phase="STEP_REVIEW", task_status="VERIFYING", audit_required=True)
 
-            receipt = run_managed_lifecycle_step(
+            receipt = run_workflow_step(
                 state_path=bundle["statePath"],
                 manifest_path=bundle["manifestPath"],
                 operation_id="managed-op",

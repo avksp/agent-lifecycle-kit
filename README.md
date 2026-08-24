@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==1.89.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.0.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -165,8 +165,9 @@ Adapter installation and support-level details live in [Adapter install](docs/ad
 - Public release claims use tracked source files and redacted evidence summaries.
 - External dialect imports and retrieved episodes enrich context, while reviewed
   ALK artifacts remain the source of truth.
-- Cross-check, Review Mesh and runner recovery receipts add evidence when a task
-  or plan enables them; the operator chooses the review depth.
+- Cross-check, Review Mesh and historical runner recovery receipts add evidence
+  when a task or plan enables them; legacy runner records are converted
+  read-only and the operator chooses the review depth.
 
 ## Documentation
 
@@ -174,7 +175,6 @@ Adapter installation and support-level details live in [Adapter install](docs/ad
 - Planning and adapters: [Issue to specification drafts](docs/guides/issue-to-spec.md), [Adapter install](docs/adapters/install.md), and [Adapter support matrix](docs/adapters/support-matrix.md).
 - Reference: [System architecture](docs/architecture/system-architecture.md), [workflow customization and execution controls](docs/reference/workflow-customization.md), [execution strategy](docs/reference/execution-strategy.md), [CLI reference](docs/reference/cli.md), [External verification checks](docs/reference/external-verification-checks.md), [Plan verification](docs/reference/plan-verification.md), [Research evidence](docs/reference/research-evidence.md), [Public locators and redaction](docs/reference/public-locators-and-redaction.md), [Finding-to-check adoption](docs/reference/finding-check-adoption.md), [Source of truth](docs/reference/source-of-truth.md), [Managed lifecycle runner](docs/reference/managed-lifecycle-runner.md), [Managed adapter sessions](docs/reference/managed-adapter-sessions.md), [Portable Agent Plugins](docs/reference/agent-plugins.md), [Plugin publication](docs/reference/plugin-publication.md), [Implementation audit](docs/reference/implementation-audit.md), [Plan completeness](docs/reference/plan-completeness.md), [Public contracts](docs/reference/public-contracts.md), and [Readiness diagnostics](docs/reference/readiness-diagnostics.md).
 - Quality and resources: [Reference-task evaluation](docs/reference/reference-task-evaluation.md), [model routing](docs/reference/model-routing.md), [quality-cost learning](docs/reference/quality-cost-learning.md), [performance and resource budgets](docs/reference/performance-and-resource-budgets.md), [lifecycle cost accounting](docs/reference/lifecycle-cost.md), [host-local token accounting](docs/reference/host-local-token-accounting.md), [process execution observability](docs/reference/process-execution-observability.md), [Usage export](docs/reference/usage-export.md), and [Evidence integrity](docs/reference/evidence-integrity.md).
-- Profiles and operations: [Project workflow presets](docs/reference/workflow-presets.md), [Project workflow profile](docs/reference/project-workflow-profile.md), [Read-only status views](docs/reference/read-only-status-view.md), [Adapter progress bridge](docs/reference/automatic-progress-bridge.md), [Sandbox boundaries](docs/reference/sandbox-boundaries.md), [Import mappers](docs/reference/import-mappers.md), [Episode retrieval](docs/reference/episode-retrieval.md), [Runner recovery](docs/reference/runner-recovery.md), [Cross-check profile](docs/reference/cross-check-profile.md), [Review Mesh](docs/reference/review-mesh.md), [Bug Forensics profile](docs/reference/bug-forensics.md), and [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md).
+- Profiles and operations: [Project workflow presets](docs/reference/workflow-presets.md), [Project workflow profile](docs/reference/project-workflow-profile.md), [Read-only status views](docs/reference/read-only-status-view.md), [Adapter progress bridge](docs/reference/automatic-progress-bridge.md), [Sandbox boundaries](docs/reference/sandbox-boundaries.md), [Import mappers](docs/reference/import-mappers.md), [Episode retrieval](docs/reference/episode-retrieval.md), [Runner migration](docs/guides/runner-migration-2.md), [Runner recovery records](docs/reference/runner-recovery.md), [Cross-check profile](docs/reference/cross-check-profile.md), [Review Mesh](docs/reference/review-mesh.md), [Bug Forensics profile](docs/reference/bug-forensics.md), and [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md).
 - Release assets: [Task templates](templates/tasks/README.md), [Neutrality scanning](docs/reference/neutrality.md), and [Release security](docs/security/release-security.md).
-
 Apache-2.0. See [LICENSE](LICENSE).

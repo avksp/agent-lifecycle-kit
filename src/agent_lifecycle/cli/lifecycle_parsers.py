@@ -7,7 +7,6 @@ import argparse
 from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
 from agent_lifecycle.cli.project import add_project_parser
-from agent_lifecycle.contracts.lifecycle_action_catalog import COMPATIBILITY_COMMANDS
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
 from agent_lifecycle.resources import builtin_profile_path
 from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
@@ -430,44 +429,6 @@ def _add_model_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     model_usage_check.add_argument("--budget-targets")
 
 
-def _add_runner_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    runner = subparsers.add_parser(
-        "runner",
-        help=(
-            f"deprecated compatibility journal commands ({len(COMPATIBILITY_COMMANDS)}); "
-            "use workflow commands for lifecycle authority"
-        ),
-    )
-    runner_sub = runner.add_subparsers(dest="runner_command", required=True)
-    runner_start = runner_sub.add_parser("start")
-    runner_start.add_argument("--state", required=True)
-    runner_start.add_argument("--runner", required=True)
-    runner_start.add_argument("--policy")
-    runner_start.add_argument("--operation-id", required=True)
-    runner_start.add_argument("--reason", required=True)
-    runner_status = runner_sub.add_parser("status")
-    runner_status.add_argument("--runner", required=True)
-    runner_status.add_argument("--state")
-    runner_status.add_argument("--profile")
-    runner_status.add_argument("--target-window")
-    runner_transition = runner_sub.add_parser("transition")
-    runner_transition.add_argument("--runner", required=True)
-    runner_transition.add_argument("--state", required=True)
-    runner_transition.add_argument("--request", required=True)
-    runner_stop = runner_sub.add_parser("stop")
-    runner_stop.add_argument("--runner", required=True)
-    runner_stop.add_argument("--state", required=True)
-    runner_stop.add_argument("--operation-id", required=True)
-    runner_stop.add_argument("--expected-runner-revision", required=True, type=int)
-    runner_stop.add_argument("--reason", required=True)
-    runner_resume = runner_sub.add_parser("resume")
-    runner_resume.add_argument("--runner", required=True)
-    runner_resume.add_argument("--state", required=True)
-    runner_resume.add_argument("--operation-id", required=True)
-    runner_resume.add_argument("--expected-runner-revision", required=True, type=int)
-    runner_resume.add_argument("--reason", required=True)
-
-
 def _add_tier_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     tier = subparsers.add_parser("tier", help="SDD tier commands")
     tier_sub = tier.add_subparsers(dest="tier_command", required=True)
@@ -564,6 +525,14 @@ def _add_workflow_state_parsers(
     workflow_migrate.add_argument("--operation-id", required=True)
     workflow_migrate.add_argument("--expected-revision", required=True, type=int)
     workflow_migrate.add_argument("--source-revision", required=True)
+    workflow_legacy = workflow_sub.add_parser(
+        "migrate-runner-artifact",
+        help="convert one legacy runner artifact into a non-authoritative archival record",
+    )
+    workflow_legacy.add_argument("--input", required=True)
+    workflow_legacy.add_argument("--output", "--out", dest="output", required=True)
+    workflow_legacy.add_argument("--expected-sha256")
+    workflow_legacy.add_argument("--max-input-bytes", type=int, default=1_048_576)
     workflow_status = workflow_sub.add_parser("status")
     workflow_status.add_argument("--state", required=True)
     workflow_status.add_argument("--full", action="store_true")

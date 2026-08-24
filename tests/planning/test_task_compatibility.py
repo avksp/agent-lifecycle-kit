@@ -78,6 +78,28 @@ class TaskPlanCompatibilityTests(unittest.TestCase):
         self.assertIn("task-plan-compatibility-artifact-mismatch", codes)
         self.assertIn("task-plan-compatibility-report-identity", codes)
 
+    def test_validation_accepts_report_from_earlier_compatible_plan_revision(self) -> None:
+        previous_state = _state(plan_revision=7, plan_digest="7" * 64, source_revision="old")
+        previous_task = _task()
+        current_task = copy.deepcopy(previous_task)
+        receipt = build_task_plan_compatibility_receipt(
+            previous_state=previous_state,
+            current_plan=_plan(plan_revision=8, plan_digest="8" * 64, source_revision="old"),
+            previous_task=previous_task,
+            current_task=current_task,
+        )
+        current_task["planCompatibilityReceipt"] = receipt
+
+        validation = validate_task_plan_compatibility_receipt(
+            receipt,
+            state=_state(plan_revision=8, plan_digest="8" * 64, source_revision="old"),
+            task=current_task,
+            report=_report(),
+            report_identity={"path": "audit.json", "sha256": "4" * 64, "bytes": 40},
+        )
+
+        self.assertEqual(validation["status"], "PASS")
+
     def test_contract_comparison_rejects_material_change(self) -> None:
         previous = _task()
         current = copy.deepcopy(previous)
@@ -121,7 +143,7 @@ def _task() -> dict:
         "taskId": "WS-01",
         "attempt": 1,
         "verdict": "ACCEPTED",
-        "reportDigest": "5" * 64,
+        "reportDigest": canonical_digest(_report_body()),
     }
     return {
         "id": "WS-01",
@@ -150,7 +172,12 @@ def _task() -> dict:
 
 
 def _report() -> dict:
-    body = {
+    body = _report_body()
+    return {**body, "reportDigest": canonical_digest(body)}
+
+
+def _report_body() -> dict:
+    return {
         "schemaVersion": "agent-implementation-audit-report.v1",
         "status": "PASS",
         "verdict": "ACCEPTED",
@@ -166,7 +193,6 @@ def _report() -> dict:
         "blockers": [],
         "productionPromotionClaimed": False,
     }
-    return {**body, "reportDigest": "5" * 64}
 
 
 if __name__ == "__main__":

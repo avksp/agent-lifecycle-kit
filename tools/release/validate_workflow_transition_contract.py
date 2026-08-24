@@ -9,7 +9,7 @@ from typing import Any
 
 from agent_lifecycle.contracts.lifecycle_action_catalog import (
     ACTION_TYPES,
-    COMPATIBILITY_COMMANDS,
+    REMOVED_RUNNER_COMMANDS,
     OPERATION_ACTION_TYPES,
     WORKFLOW_PHASE_ACTION_TYPES,
     validate_action_catalog,
@@ -24,11 +24,9 @@ except ModuleNotFoundError:
 CONSUMERS = {
     "src/agent_lifecycle/workflow/query.py": "transition_contract",
     "src/agent_lifecycle/workflow/next_action.py": "transition_contract",
-    "src/agent_lifecycle/workflow/managed_runner.py": "transition_contract",
+    "src/agent_lifecycle/workflow/run.py": "transition_contract",
     "src/agent_lifecycle/host_protocol/lifecycle_gate.py": "lifecycle_action_catalog",
     "src/agent_lifecycle/adapter_sessions/workflow_bridge.py": "transition_contract",
-    "src/agent_lifecycle/cli/lifecycle_parsers.py": "COMPATIBILITY_COMMANDS",
-    "src/agent_lifecycle/cli/dispatch_lifecycle.py": "COMPATIBILITY_COMMANDS",
 }
 
 
@@ -68,7 +66,7 @@ def validate_transition_contract(package_root: Path) -> dict[str, Any]:
         "actionTypes": sorted(ACTION_TYPES),
         "phaseCount": len(WORKFLOW_PHASE_ACTION_TYPES),
         "operationCount": len(OPERATION_ACTION_TYPES),
-        "compatibilityCommandCount": len(COMPATIBILITY_COMMANDS),
+        "removedRunnerCommandCount": len(REMOVED_RUNNER_COMMANDS),
         "sourceChecks": source_checks,
         "catalog": catalog,
         "blockers": blockers,

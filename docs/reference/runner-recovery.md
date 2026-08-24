@@ -1,52 +1,24 @@
-# Runner Recovery Receipts
+# Historical runner recovery records
 
-Runner recovery receipts are optional evidence for long-running or multi-attempt
-work. They do not replace workflow state; they record what happened around an
-attempt so a later reviewer can distinguish normal retry, restore, abandon and
-selected-attempt decisions.
+Runner recovery receipts are historical evidence, not an execution controller.
+Release 2.0 keeps their schemas readable so an existing archive can be
+converted without granting it authority.
 
-## Attempt Snapshots
+Use `workflow migrate-runner-artifact` for an explicit read-only conversion.
+The converter validates the bounded input, preserves the source digest, writes
+one private no-replace output, and records unmapped fields instead of guessing
+workflow state. The result is non-authoritative and cannot authorize a retry,
+resume or production action.
 
-`agent-runner-attempt-snapshot-receipt.v1` records one recovery action:
+Current recovery is owned by workflow state: task attempt history, task review,
+`REWORK`, external-action pause/resume, and final-audit routing. Start from the
+current workflow state and frozen plan rather than reconstructing authority from
+a historical runner snapshot.
 
-- `snapshot`: stores a digest-bound runner or attempt snapshot.
-- `restore`: points to the snapshot digest used as restore source.
-- `abandon`: records why an attempt is no longer selected.
-- `select`: records the attempt and digest selected as the surviving result.
+The compatibility path remains required throughout 2.x. A future removal needs
+a separate compatibility audit and a major-version decision no earlier than
+3.0.
 
-Validation recomputes the snapshot and receipt digests, checks lineage, and
-fails if a restore or selected attempt is claimed without the required digest.
-
-## Worker Leases
-
-`agent-worker-lease-receipt.v1` records worker lease and heartbeat state. The
-receipt classifies the lease as:
-
-- `active` when `observedAt` is not later than `expiresAt`;
-- `expired` when `observedAt` is later than `expiresAt`;
-- `completed` when `completedAt` is present.
-
-The classification is deterministic from timestamps and is rechecked during
-validation. This keeps recovery metadata narrow; it is not a second scheduler.
-
-## Phase Resources
-
-`agent-phase-resource-measurement.v1` records phase-level tokens, duration and
-resource counters using the Release 1.8 usage-export entry envelope. Phase
-measurements are token/resource based and reject monetary fields such as
-`cost_usd`; host-reported money remains outside this phase receipt.
-
-The receipt includes an embedded `agent-usage-export.v1` object so existing
-usage export totals and redaction checks can be reused.
-
-## Fresh Context Recipe
-
-Fresh-context recovery is recipe/evidence only. A controller may record that a
-worker resumed from a compact handoff, diagnostic bundle, status view, event
-feed or progress view, but that record does not replace workflow state and does
-not mutate lifecycle state by default.
-
-Use fresh-context evidence when an attempt was restarted in a new host session
-or a small model needed a compact reconstruction. The evidence should point to
-the source artifacts and their digests; the reviewed plan and workflow state
-remain authoritative.
+Fresh-context handoff is recipe/evidence only. It is evidence over historical
+artifacts and does not mutate lifecycle state by default; a normal workflow
+command must record any operation.

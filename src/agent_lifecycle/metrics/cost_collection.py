@@ -167,7 +167,7 @@ def _classify_artifact(path: str, payload: dict[str, Any]) -> str:
     if schema == "agent-lifecycle-model-usage-receipt.v1":
         return _classify_usage_receipt(payload)
     text = _classification_text(path, payload)
-    if schema in {"agent-workflow-state.v3", "agent-runner-state.v1"}:
+    if schema in {"agent-workflow-state.v3", "agent-workflow-state.v4", "agent-runner-state.v1"}:
         return "coordination"
     if schema == "agent-task-result.v2":
         return "implementation"

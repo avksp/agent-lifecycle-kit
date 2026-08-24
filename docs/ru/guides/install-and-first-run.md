@@ -78,7 +78,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.89.0
+python -m pip install agent-lifecycle-kit==2.0.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -89,7 +89,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.89.0
+python -m pip install agent-lifecycle-kit==2.0.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -187,7 +187,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v1.89.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.0.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -208,6 +208,10 @@ claude plugin list
 После установки проверьте обнаружение пакета командой из раздела [проверка
 Agent Plugins в клиентах](../reference/agent-plugin-qualification.md). Это
 явная безопасная проверка, которая не заменяет жизненный цикл ALK.
+
+В релизе 2.0 workflow стал единственным владельцем жизненного цикла.
+Исторические записи runner преобразуются по [руководству миграции 2.x](runner-migration-2.md)
+и остаются read-only неавторитетным evidence.
 
 В релизе 1.80 также описан необязательный контроль жизненного цикла внутри
 адаптера. По умолчанию он не включён: комплектные адаптеры сейчас публикуют

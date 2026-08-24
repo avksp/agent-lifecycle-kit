@@ -20,7 +20,6 @@ COMMAND_DISPATCH = {
     "review-mesh": ("agent_lifecycle.cli.dispatch_contracts", "dispatch_contracts", False),
     "workflow": ("agent_lifecycle.cli.dispatch_lifecycle", "dispatch_lifecycle", False),
     "audit": ("agent_lifecycle.cli.dispatch_lifecycle", "dispatch_lifecycle", False),
-    "runner": ("agent_lifecycle.cli.dispatch_lifecycle", "dispatch_lifecycle", False),
     "report": ("agent_lifecycle.cli.dispatch_observability", "dispatch_observability", False),
     "context": ("agent_lifecycle.cli.dispatch_observability", "dispatch_observability", False),
     "goal": ("agent_lifecycle.cli.dispatch_observability", "dispatch_observability", False),

@@ -2,9 +2,11 @@
 
 ## Полномочия команд рабочего цикла
 
-Для новых интеграций используйте `workflow run` и команды `workflow task-*`.
-`runner start/status/transition/stop/resume` - устаревшие совместимые команды
-журнала. Их вывод является только доказательством и не может менять состояние
+Для всех интеграций используйте `workflow run` и команды `workflow task-*`.
+Прежняя поверхность контролируемого runner удалена в 2.0. Исторические
+артефакты runner обрабатываются только явной read-only командой
+`workflow migrate-runner-artifact`, описанной в разделе [Миграция runner](../guides/runner-migration-2.md).
+Преобразованная запись является только evidence и не может менять состояние
 workflow или заменять приёмку/финализацию.
 
 Основная команда называется `agent-lifecycle`. Она возвращает структурированный
@@ -25,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.89.0
+python -m pip install agent-lifecycle-kit==2.0.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -282,7 +284,10 @@ agent-lifecycle project preset render \
   `workflow final-audit-outcome` и `workflow finalize`.
   `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка плагина
   сама по себе не доказывает полный жизненный цикл.
-- `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.
+- `agent-lifecycle workflow run`: текущий маршрут выполнения с привязкой к
+  замороженному плану и состоянию.
+- `agent-lifecycle workflow migrate-runner-artifact`: преобразование одного
+  исторического артефакта runner в приватную read-only неавторитетную запись.
 - `agent-lifecycle strategy resolve --manifest ... --lock ... --state ...
   --task ... --operation-id ... --expected-revision ... --source-revision ...
   --adapter ... --out ...`: записывает одну нейтральную стратегию выполнения

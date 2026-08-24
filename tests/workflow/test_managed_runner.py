@@ -48,7 +48,7 @@ class ManagedRunnerTests(unittest.TestCase):
                 reason="next step",
             )
 
-            self.assertEqual(receipt["schemaVersion"], "agent-managed-lifecycle-runner-receipt.v1")
+            self.assertEqual(receipt["schemaVersion"], "agent-workflow-run-receipt.v1")
             self.assertEqual(receipt["status"], "PASS")
             self.assertEqual(receipt["nextAction"]["type"], "launch-tasks")
             self.assertEqual(receipt["nextAction"]["taskIds"], ["WS-01"])

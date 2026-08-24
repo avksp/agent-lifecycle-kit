@@ -238,20 +238,19 @@ attempts within the frozen retry budget, `CONTRACT_CHANGE` waits for a new
 frozen plan, and `BLOCKED` waits for the declared external action. None of
 these transitions changes plan authority or invokes a model.
 
-## Release 1.84: one lifecycle authority
+## Release 2.0: one lifecycle authority
 
 Durable workflow state is the sole authority for phase, task status,
 authorization, acceptance, blockers and final proof. `workflow run` projects
-the next action from that state. The controlled runner remains readable for
-legacy integrations, but its state and receipts are a deprecated,
-journal-only compatibility layer: they cannot mutate workflow state or satisfy
-acceptance and finalization.
+the next action from that state. Pre-2.0 runner state and receipts are
+historical read-only inputs for the bounded migration converter; they cannot
+mutate workflow state or satisfy acceptance and finalization.
 
-Workflow projections, host lifecycle gates and runner compatibility commands use
-the closed `agent-lifecycle-action-catalog.v1`. The catalog is data-only and
-not configurable by a project profile. CI validates its consumers, phase/action
-coverage and standard-library-only runtime boundary without executing imported
-project code.
+Workflow projections and host lifecycle gates use the closed
+`agent-lifecycle-action-catalog.v1`. Removed runner actions are listed only as
+data in the compatibility catalog and are not dispatchable. CI validates the
+catalog consumers, phase/action coverage and standard-library-only runtime
+boundary without executing imported project code.
 
 ## C1: system context
 
@@ -417,7 +416,7 @@ flowchart LR
   strategy[execution strategy]
   benchmarks[reference task evaluation]
   neutrality[neutrality]
-  runner[runner]
+  legacy[legacy runner compatibility]
   worktree[worktree]
 
   cli --> planning
@@ -442,7 +441,6 @@ flowchart LR
   cli --> benchmarks
   cli --> strategy
   cli --> neutrality
-  cli --> runner
   cli --> worktree
   planning --> contracts
   compiler --> contracts
@@ -457,7 +455,6 @@ flowchart LR
   workflow --> policy
   workflow --> quality
   workflow --> review_mesh
-  workflow --> runner
   workflow --> specification
   adapter_sessions --> workflow
   adapter_sessions --> freeze
@@ -490,7 +487,6 @@ flowchart LR
   model_routing --> context
   model_routing --> quality
   host_protocol --> context
-  host_protocol --> runner
   context --> evidence_index
   diagnostics --> context
   diagnostics --> host_protocol
@@ -502,8 +498,6 @@ flowchart LR
   imports --> context
   imports --> planning
   specification --> followup
-  runner --> context
-  runner --> worktree
   benchmarks --> contracts
   context --> contracts
   research --> contracts
@@ -538,7 +532,7 @@ layer direction.
 | Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, external context imports, goal views and continuation records. |
 | Research evidence | `research/*`, `contracts/research_evidence_schemas.py`, `cli/research.py` | Local validation of `agent-research-evidence-package.v1` source, claim, citation and provenance bindings; bounded summary for draft planning input. |
 | Neutrality | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Git-index-bound release scanning, optional policy-limited local evidence, stable reads, authority checks and signed neutrality receipts. |
-| Runner | `runner/*` | Deprecated, bounded compatibility journal over workflow primitives; workflow state remains authoritative. |
+| Legacy conversion | `migration/legacy_runner.py`, `contracts/legacy_runner_schemas.py` | Bounded read-only conversion of historical runner artifacts; it has no workflow authority. |
 | Worktree | `worktree/*`, `cli/worktree.py` | Worktree isolation policies and attempt receipts. |
 
 ## C4: code-level call paths
@@ -809,16 +803,15 @@ sequenceDiagram
   participant User
   participant AdapterCLI as cli/adapter.py
   participant Bridge as adapter_sessions/workflow_bridge.py
-  participant Runner as workflow/managed_runner.py
+  participant Workflow as workflow/run.py
   participant Workflow as workflow/next_action.py
   participant Progress as reporting/progress_hooks.py
 
   User->>AdapterCLI: adapter run --state --manifest --task
   AdapterCLI->>Bridge: managed_adapter_run()
-  Bridge->>Runner: run_managed_lifecycle_step()
-  Runner->>Workflow: build_managed_next_action()
+  Bridge->>Workflow: run_workflow_step()
   AdapterCLI->>Progress: optional stderr or receipt hook
-  Runner-->>User: agent-adapter-session-receipt.v1
+  Workflow-->>User: agent-adapter-session-receipt.v1
 ```
 
 Called only when a frozen plan and workflow binding are supplied. ALK returns
@@ -1045,7 +1038,7 @@ their old enumeration behavior but carry a signed deprecation marker.
 | Contract-first design | `contracts/*`, `schemas.py`, public `.v1` receipts | Make every lifecycle claim machine-checkable and portable. |
 | Command dispatcher | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/dispatch_*.py` | Keep the root CLI thin and route each command group to its domain handler. |
 | Functional core, imperative shell | Builders and validators return dictionaries; CLI handles paths and output. | Improve testability and small-model readability. |
-| State machine | `workflow/state.py`, `workflow/task_transitions.py`, `runner/core.py` | Make lifecycle phases explicit and fail closed on invalid transitions. |
+| State machine | `workflow/state.py`, `workflow/task_transitions.py` | Make lifecycle phases explicit and fail closed on invalid transitions. |
 | Operation kernel | `workflow/operation_kernel.py` | Centralize expected revision checks, idempotency and state/event commits. |
 | Gate pipeline | `workflow/gates.py`, audit gates, completion gates, review quorum gates | Prevent acceptance or finalization when required evidence is missing. |
 | Strategy and policy | `policy/execution_strategy.py`, other `policy/*`, `model_routing/*`, `metrics/recommendations.py` | Compose safe lifecycle/model routes without duplicating lower-level authorities or hardcoding providers. |

@@ -5,9 +5,9 @@ from __future__ import annotations
 from agent_lifecycle.contracts.lifecycle_action_catalog import (
     ACTION_CATALOG,
     ACTION_TYPES,
-    COMPATIBILITY_COMMANDS,
     NON_MODEL_ACTION_TYPES,
     OPERATION_ACTION_TYPES,
+    REMOVED_RUNNER_COMMANDS,
     WORKFLOW_PHASE_ACTION_TYPES,
     action_requires_host,
     action_requires_state_mutation,
@@ -20,9 +20,9 @@ from agent_lifecycle.contracts.lifecycle_action_catalog import (
 __all__ = [
     "ACTION_CATALOG",
     "ACTION_TYPES",
-    "COMPATIBILITY_COMMANDS",
     "NON_MODEL_ACTION_TYPES",
     "OPERATION_ACTION_TYPES",
+    "REMOVED_RUNNER_COMMANDS",
     "WORKFLOW_PHASE_ACTION_TYPES",
     "action_requires_host",
     "action_requires_state_mutation",

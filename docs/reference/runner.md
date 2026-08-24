@@ -1,65 +1,53 @@
-# Controlled runner
+# Legacy runner artifacts
 
-The runner is a provider-neutral execution-loop controller. It records a narrow
-state for task attempts, validations, reviews, remediation, reroutes, splits,
-blocks, stops and resumes.
+Release 2.0 removes the controlled runner as an active execution authority.
+Durable workflow state and the `workflow` command family are the only current
+execution surface.
 
-The runner does not replace workflow state. Workflow state remains
-authoritative for lifecycle phase, task acceptance, blockers and final proof.
-Runner state only preserves the bounded loop around those workflow primitives.
+The old runner names remain only as read-only compatibility vocabulary for
+artifacts produced before 2.0. They do not start a process, mutate workflow
+state, authorize a task, or claim production promotion.
 
-## Commands
+## Current route
 
-```bash
-agent-lifecycle runner start --state <run.state.json> --runner <runner.state.json> --operation-id <id> --reason "<reason>"
-agent-lifecycle runner status --runner <runner.state.json> --state <run.state.json>
-agent-lifecycle runner status --runner <runner.state.json> --state <run.state.json> --profile profiles/small-context-profile.v1.json --target-window 4k-strict
-agent-lifecycle runner transition --runner <runner.state.json> --state <run.state.json> --request <runner-transition-request.json>
-agent-lifecycle runner stop --runner <runner.state.json> --state <run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
-agent-lifecycle runner resume --runner <runner.state.json> --state <run.state.json> --operation-id <id> --expected-runner-revision <n> --reason "<reason>"
+Use the workflow command and its frozen plan/state lineage:
+
+```text
+agent-lifecycle workflow run \
+  --state <run.state.json> \
+  --manifest <plan.manifest.json> \
+  --operation-id <id> \
+  --expected-revision <n> \
+  --source-revision <sha>
 ```
 
-## Transition request
+Task starts, results, reviews, remediation and finalization remain workflow
+operations. A legacy runner document cannot authorize any of them.
 
-Transitions are described by `agent-runner-transition-request.v1` documents.
+## Read-only migration
 
-```json
-{
-  "schemaVersion": "agent-runner-transition-request.v1",
-  "operationId": "attempt-1",
-  "expectedRunnerRevision": 1,
-  "action": "attempt",
-  "taskId": "WS-01",
-  "reason": "Start the next bounded attempt"
-}
+To preserve an old artifact for inspection, use the explicit converter:
+
+```text
+agent-lifecycle workflow migrate-runner-artifact \
+  --input <legacy-runner-artifact.json> \
+  --output <conversion.json>
 ```
 
-Supported actions are `attempt`, `validate`, `review`, `accept`, `remediate`,
-`reroute`, `split`, `block` and `abort`.
+The converter performs a bounded read, validates the historical schema and
+self-digest, preserves the source bytes, and writes a private no-replace
+conversion record. The conversion is non-authoritative: it sets
+`authorityClaimed` and `stateWritten` to `false`, does not launch a host, and
+does not call a model or network.
 
-## Resource guards
+Supported historical schema IDs are registered in
+`agent_lifecycle.contracts.legacy_runner_schemas`. Unknown, oversized,
+malformed, stale or symlink-backed inputs fail closed. The migration boundary
+fails closed for unsupported authority claims.
 
-`agent-runner-policy.v1` bounds attempts, reroutes, splits and billable tokens.
-The runner rejects transitions that would exceed these caps before writing
-state.
+## Compatibility boundary
 
-Remediation patch metadata is accepted only when the patch reports `PASS`, has
-a digest and every changed file is inside the task write scope from workflow
-state. The runner validates this metadata; it does not apply patches itself.
-
-Attempt transitions may include an `isolationReceipt`. When present, the
-runner validates `agent-worktree-attempt-receipt.v1` and records the receipt
-digest in transition history.
-
-## Small and large models
-
-`agent-runner-snapshot.v1` is a compact status view for continuation prompts.
-It fits the selected small-context profile or fails closed. Small local models
-can use it to continue without replaying long history. Larger models can still
-inspect full runner state, workflow state, evidence, reviews and audits for
-quality-sensitive decisions.
-
-`agent-small-model-task-packet.v1` is a separate execution packet for small
-implementation attempts. It carries exact write scope, a required output
-contract and a compact context receipt. It does not replace runner state,
-reviews, final audit or production promotion evidence.
+The compatibility converter is required throughout the 2.x line. It is not a
+second workflow engine and it must not be imported by ordinary workflow
+execution. Removing it requires a separate compatibility audit and is not
+permitted before a future 3.0 decision.
