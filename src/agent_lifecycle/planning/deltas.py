@@ -9,8 +9,9 @@ from agent_lifecycle.contracts.plan_delta_schemas import (
     PLAN_DELTA_SCHEMA,
     PLAN_DELTA_VALIDATION_SCHEMA,
 )
+from agent_lifecycle.project.domain_language import build_domain_language_delta
 
-_AUTHORITY_CATEGORIES = ("requirements", "writes", "acceptance", "evidence", "budgets", "risks", "gates")
+_AUTHORITY_CATEGORIES = ("requirements", "writes", "acceptance", "evidence", "budgets", "risks", "gates", "terms")
 _CATEGORIES = (*_AUTHORITY_CATEGORIES, "workstreams", "documentation")
 
 
@@ -23,6 +24,8 @@ def build_plan_delta(
     before_lock: dict[str, Any] | None = None,
     after_lock: dict[str, Any] | None = None,
     principles: dict[str, Any] | None = None,
+    language_before: dict[str, Any] | None = None,
+    language_after: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compare two plans without writing or applying either artifact."""
 
@@ -58,8 +61,15 @@ def build_plan_delta(
     _check_lock(after_lock, after_digest, "after", blockers)
     if principles is not None and not isinstance(principles, dict):
         blockers.append({"code": "plan-delta-principles-invalid"})
+    if (language_before is None) != (language_after is None):
+        blockers.append({"code": "plan-delta-language-pair-required"})
+    term_changes = None
+    if isinstance(language_before, dict) and isinstance(language_after, dict):
+        term_changes = build_domain_language_delta(language_before, language_after)
+        if term_changes.get("status") != "PASS":
+            blockers.append({"code": "plan-delta-language-invalid", "details": term_changes.get("blockers", [])})
 
-    projections = _projections(before, after)
+    projections = _projections(before, after, language_before=language_before, language_after=language_after)
     changes = {
         category: _compare(before_value, after_value) for category, (before_value, after_value) in projections.items()
     }
@@ -81,6 +91,8 @@ def build_plan_delta(
         "beforeLockDigest": canonical_digest(before_lock) if isinstance(before_lock, dict) else None,
         "afterLockDigest": canonical_digest(after_lock) if isinstance(after_lock, dict) else None,
         "principlesDigest": principles.get("principlesDigest") if isinstance(principles, dict) else None,
+        "domainLanguageBeforeDigest": term_changes.get("beforeDigest") if isinstance(term_changes, dict) else None,
+        "domainLanguageAfterDigest": term_changes.get("afterDigest") if isinstance(term_changes, dict) else None,
     }
     body = {
         "schemaVersion": PLAN_DELTA_SCHEMA,
@@ -98,6 +110,8 @@ def build_plan_delta(
         "hostLaunchStarted": False,
         "productionPromotionClaimed": False,
     }
+    if term_changes is not None:
+        body["termChanges"] = term_changes
     # Keep the report useful without exposing plan prose: categories and
     # digests are sufficient for a reviewer to locate the changed authority.
     lineage["changedCategories"] = changed_categories
@@ -126,6 +140,20 @@ def validate_plan_delta(delta: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "plan-delta-status-blocker-mismatch"})
     if delta.get("status") not in {"PASS", "BLOCKED"}:
         blockers.append({"code": "plan-delta-status-invalid"})
+    term_changes = delta.get("termChanges")
+    if term_changes is not None:
+        if not isinstance(term_changes, dict) or term_changes.get("readOnly") is not True:
+            blockers.append({"code": "plan-delta-language-boundary"})
+        if isinstance(term_changes, dict):
+            if term_changes.get("status") != "PASS":
+                blockers.append({"code": "plan-delta-language-status-invalid"})
+            if term_changes.get("productionPromotionClaimed") is not False:
+                blockers.append({"code": "plan-delta-language-production-claim"})
+            expected_term_digest = canonical_digest(
+                {key: value for key, value in term_changes.items() if key != "deltaDigest"}
+            )
+            if term_changes.get("deltaDigest") != expected_term_digest:
+                blockers.append({"code": "plan-delta-language-digest-mismatch"})
     report = {
         "schemaVersion": PLAN_DELTA_VALIDATION_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
@@ -177,7 +205,13 @@ def finding_check_plan_lineage(delta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _projections(before: dict[str, Any], after: dict[str, Any]) -> dict[str, tuple[Any, Any]]:
+def _projections(
+    before: dict[str, Any],
+    after: dict[str, Any],
+    *,
+    language_before: dict[str, Any] | None = None,
+    language_after: dict[str, Any] | None = None,
+) -> dict[str, tuple[Any, Any]]:
     return {
         "requirements": (
             _indexed(_object(before.get("specification")).get("requirements"), "id"),
@@ -194,6 +228,7 @@ def _projections(before: dict[str, Any], after: dict[str, Any]) -> dict[str, tup
         "gates": (_gate_projection(before), _gate_projection(after)),
         "workstreams": (_indexed(before.get("workstreams"), "id"), _indexed(after.get("workstreams"), "id")),
         "documentation": (_documentation_projection(before), _documentation_projection(after)),
+        "terms": (_language_projection(language_before), _language_projection(language_after)),
     }
 
 
@@ -263,6 +298,12 @@ def _documentation_projection(manifest: dict[str, Any]) -> dict[str, Any]:
         "developerOverview": manifest.get("developerOverview"),
         "source": _object(manifest.get("specification")).get("source"),
     }
+
+
+def _language_projection(language: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(language, dict):
+        return {}
+    return _indexed(language.get("terms"), "termId")
 
 
 def _bounded_object(value: Any) -> Any:
