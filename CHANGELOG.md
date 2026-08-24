@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.86.0 - 2026-08-24
+
+- Added a read-only finding-to-check binding with accepted plan-delta lineage,
+  bounded check identity and explicit owner and source revision.
+- Added authorized, idempotent `PROPOSED` to `VERIFIED` lifecycle transitions
+  with explicit retirement and fail-closed negative cases.
+- Added CLI routes and bilingual documentation for advisory proposals,
+  acceptance, read-only evidence and verification.
+- Added regression coverage proving that finding checks cannot claim execution,
+  production promotion or authority outside the existing lifecycle gates.
+
 ## 1.85.0 - 2026-08-24
 
 - Added a canonical, offline HTTP(S) public-locator contract with bounded
