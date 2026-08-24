@@ -7,6 +7,32 @@ from typing import Any
 from agent_lifecycle.contracts.schema_builders import open_object_schema as _open_object_schema
 
 RELEASE_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-workflow-blocker.v1": _open_object_schema(
+        "agent-workflow-blocker.v1",
+        required=["schemaVersion", "code", "reason", "scope", "recoveryRoute"],
+        properties={
+            "code": {"type": "string", "minLength": 1, "maxLength": 256},
+            "reason": {"type": "string", "minLength": 1, "maxLength": 4096},
+            "scope": {"enum": ["run", "task", "plan", "external"]},
+            "recoveryRoute": {
+                "enum": [
+                    "resolve-run",
+                    "task-review",
+                    "budget-decision",
+                    "replan-task",
+                    "adopt-plan",
+                    "external-action",
+                    "cancel-run",
+                ]
+            },
+            "taskId": {"type": "string", "minLength": 1, "maxLength": 256},
+            "attempt": {"type": "integer", "minimum": 1},
+            "resumePhase": {"type": "string", "minLength": 1, "maxLength": 64},
+            "decisionReceipt": {"type": "object"},
+            "externalAction": {"type": "object"},
+            "findingIds": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        },
+    ),
     "agent-release-candidate-inventory.v1": _open_object_schema(
         "agent-release-candidate-inventory.v1",
         required=[

@@ -10,7 +10,7 @@ from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
-from agent_lifecycle.workflow.state import TERMINAL_PHASES
+from agent_lifecycle.workflow.state import EXTERNAL_ACTION_PHASES, TERMINAL_PHASES, validate_typed_blocker
 
 
 def block_run(
@@ -24,9 +24,15 @@ def block_run(
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
     if state["phase"] in TERMINAL_PHASES:
         raise LifecycleError("terminal-run", "terminal workflow state cannot be blocked")
+    if state["phase"] == "BLOCKED":
+        raise LifecycleError("nested-blocker-forbidden", "a blocked workflow cannot be blocked again")
     previous = state["phase"]
     state["phase"] = "BLOCKED"
-    state["blocker"] = {"code": blocker_code, "reason": reason, "resumePhase": previous}
+    blocker = {"code": blocker_code, "reason": reason, "resumePhase": previous}
+    if state.get("schemaVersion") == "agent-workflow-state.v4":
+        blocker.update({"scope": "run", "recoveryRoute": "resolve-run"})
+        validate_typed_blocker(blocker)
+    state["blocker"] = blocker
     commit_state(
         state_path=state_path,
         state=state,
@@ -50,6 +56,13 @@ def resolve_blocker(
     blocker = state.get("blocker")
     if not isinstance(blocker, dict):
         raise LifecycleError("invalid-workflow-state", "blocked run has no blocker")
+    if "scope" in blocker:
+        validate_typed_blocker(blocker)
+        if blocker.get("scope") != "run" or blocker.get("recoveryRoute") != "resolve-run":
+            raise LifecycleError(
+                "typed-blocker-route-required",
+                "task, plan and external blockers require their named recovery route",
+            )
     resume_phase = blocker.get("resumePhase")
     if not isinstance(resume_phase, str) or resume_phase in TERMINAL_PHASES:
         raise LifecycleError("invalid-workflow-state", "blocker resumePhase is invalid")
@@ -76,8 +89,11 @@ def pause_for_external_action(
     reason: str,
 ) -> dict[str, Any]:
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
-    if state["phase"] in TERMINAL_PHASES:
-        raise LifecycleError("terminal-run", "terminal workflow state cannot wait for external action")
+    if state["phase"] not in EXTERNAL_ACTION_PHASES:
+        raise LifecycleError(
+            "invalid-phase",
+            "external action pause requires RUNNING, FINAL_AUDIT or a legacy execution phase",
+        )
     if not action_id:
         raise LifecycleError("invalid-external-action", "action_id is required")
     previous = state["phase"]
@@ -124,11 +140,13 @@ def resume_external_action(
     _validate_external_action_receipt(state, external_action, receipt)
     identity = artifact_identity(root, receipt_rel, receipt)
     resume_phase = external_action.get("resumePhase")
-    if not isinstance(resume_phase, str) or resume_phase in TERMINAL_PHASES:
+    if not isinstance(resume_phase, str) or resume_phase not in EXTERNAL_ACTION_PHASES:
         raise LifecycleError("invalid-workflow-state", "external action resumePhase is invalid")
     state["phase"] = resume_phase
     state["externalActionReceipt"] = identity
     state["externalAction"] = None
+    if isinstance(state.get("blocker"), dict) and state["blocker"].get("scope") == "external":
+        state["blocker"] = None
     commit_state(
         state_path=state_path,
         state=state,
@@ -159,5 +177,9 @@ def _validate_external_action_receipt(
         if receipt.get(key) != value:
             raise LifecycleError("external-action-receipt-lineage-mismatch", f"external action receipt {key} mismatch")
     evidence_ids = receipt.get("evidenceIds")
-    if not isinstance(evidence_ids, list) or not evidence_ids or not all(isinstance(item, str) and item for item in evidence_ids):
+    if (
+        not isinstance(evidence_ids, list)
+        or not evidence_ids
+        or not all(isinstance(item, str) and item for item in evidence_ids)
+    ):
         raise LifecycleError("invalid-external-action-receipt", "external action receipt evidenceIds are required")

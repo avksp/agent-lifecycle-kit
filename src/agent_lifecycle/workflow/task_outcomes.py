@@ -19,6 +19,7 @@ from agent_lifecycle.workflow.reviews import (
     validate_task_result,
 )
 from agent_lifecycle.workflow.selectors import find_task
+from agent_lifecycle.workflow.state import validate_typed_blocker
 from agent_lifecycle.workflow.task_transitions import accept_task, rework_task
 
 
@@ -105,9 +106,22 @@ def apply_task_review_outcome(
         "findingIds": sorted(open_finding_ids(review)),
     }
     if verdict == "CONTRACT_CHANGE":
-        task["contractChangeRequest"] = dict(review["contractChangeRequest"])
+        task["contractChangeRequest"] = {
+            **dict(review["contractChangeRequest"]),
+            "scope": "plan",
+            "recoveryRoute": "adopt-plan",
+            "taskId": task_id,
+        }
     else:
-        task["blocker"] = dict(review["blocker"])
+        blocker = {
+            **dict(review["blocker"]),
+            "scope": dict(review["blocker"]).get("scope", "task"),
+            "recoveryRoute": dict(review["blocker"]).get("recoveryRoute", "task-review"),
+            "taskId": task_id,
+            "attempt": task.get("attempt"),
+        }
+        validate_typed_blocker(blocker, expected_task_id=task_id)
+        task["blocker"] = blocker
     task["status"] = verdict
     commit_state(
         state_path,

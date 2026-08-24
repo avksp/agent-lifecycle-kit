@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from agent_lifecycle.workflow.authorization import authorize_execution
 from agent_lifecycle.workflow.budget_decisions import (
     apply_budget_decision,
     pause_for_budget_decision,
     select_auto_budget_action,
     validate_budget_exceeded_policy,
 )
-from agent_lifecycle.workflow.finalization import finalize_run
+from agent_lifecycle.workflow.finalization import apply_final_audit_outcome, finalize_run
 from agent_lifecycle.workflow.initialization import initialize_workflow_state, migrate_workflow_state
 from agent_lifecycle.workflow.lineage import check_lineage
 from agent_lifecycle.workflow.plan_adoption import adopt_plan, start_execution
@@ -31,7 +32,9 @@ __all__ = [
     "accept_task",
     "adopt_plan",
     "apply_budget_decision",
+    "apply_final_audit_outcome",
     "apply_task_review_outcome",
+    "authorize_execution",
     "block_run",
     "check_lineage",
     "commit_task_result",

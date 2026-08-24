@@ -96,6 +96,26 @@ requirement and acceptance criterion is covered exactly, external writers are
 quiescent, final validation passes, and the final proof binds plan, packets,
 state, results, reviews, evidence, source, and release inventory.
 
+Apply the independent final-audit decision through the workflow controller
+instead of editing `run.state.json`:
+
+```bash
+agent-lifecycle workflow final-audit-outcome \
+  --state run.state.json \
+  --operation-id final-audit-outcome-1 \
+  --expected-revision <n> \
+  --source-revision <sha> \
+  --final-audit final/final-audit.json \
+  --verdict ACCEPTED \
+  --reason "final audit accepted"
+```
+
+For `REWORK`, include every open finding ID and its task ID. The controller
+archives the accepted attempt and enforces the remaining retry budget. For
+`CONTRACT_CHANGE`, require a new frozen plan; for `BLOCKED`, require the
+declared external-action receipt. A final-audit verdict is evidence, not plan
+authority or release publication approval.
+
 ## Rules
 
 - Findings first, ordered by severity.

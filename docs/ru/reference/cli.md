@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.82.0
+python -m pip install agent-lifecycle-kit==1.83.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -189,6 +189,15 @@ agent-lifecycle project preset render \
 - `agent-lifecycle workflow state-migrate --state <путь> --operation-id <id>
   --expected-revision <n> --source-revision <sha>`: выполняет одну явную
   миграцию v3 в v4 с отказом при любой неоднозначности.
+- `agent-lifecycle workflow authorize`: принимает одно неистёкшее
+  подтверждение с точной связью запуска, плана и исходной ревизии и переводит
+  запуск из `AWAITING_AUTHORIZATION` в `READY`. Для `PLAN_ONLY` команда
+  отклоняется.
+- `agent-lifecycle workflow external-pause` и `external-resume`: ставят
+  поддерживаемый этап выполнения или финального аудита на ожидание одного
+  действия хоста и возобновляют его только по соответствующему подтверждению.
+  Обе операции проверяют связь запуска, плана и исходной ревизии, ожидаемую
+  ревизию состояния и идемпотентность.
 - `agent-lifecycle workflow task-start`: открывает ограниченную попытку задачи.
 - `agent-lifecycle workflow task-snapshot`: без изменения состояния вычисляет
   текущий набор файлов задачи и отпечатки их содержимого по Git. Объект `claim`
@@ -203,6 +212,12 @@ agent-lifecycle project preset render \
   независимой проверки. Это канонический маршрут для `ACCEPTED`, `REWORK`,
   `CONTRACT_CHANGE` и `BLOCKED`; для `REWORK` укажите отдельный
   `--finding-id` для каждой открытой находки.
+- `agent-lifecycle workflow final-audit-outcome`: применяет вердикт
+  независимого финального аудита. `ACCEPTED` разрешает финализацию, `REWORK`
+  архивирует только названные принятые задачи и открывает ограниченную
+  доработку, `CONTRACT_CHANGE` ждёт новый зафиксированный план, а `BLOCKED`
+  ждёт объявленное внешнее действие. План, бюджет повторов и полномочия не
+  изменяются автоматически.
 - `agent-lifecycle workflow`: остальные переходы жизненного цикла, отчёты задач и
   финальное подтверждение. Для запусков с обязательной проверкой причинной
   цепочки `workflow finalize` принимает
@@ -214,8 +229,8 @@ agent-lifecycle project preset render \
   Для плана с обязательной групповой проверкой на финальном аудите
   `workflow finalize` принимает `--review-mesh-quorum <path>`.
 - Управляемый вывод прогресса поддерживают только `workflow run`,
-  `workflow task-result`, `workflow task-accept`, `workflow task-review-apply`
-  и `workflow finalize`.
+  `workflow task-result`, `workflow task-accept`, `workflow task-review-apply`,
+  `workflow final-audit-outcome` и `workflow finalize`.
   `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка плагина
   сама по себе не доказывает полный жизненный цикл.
 - `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.

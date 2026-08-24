@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 1.83.0 - 2026-08-24
+
+- Added exact-lineage execution authorization and a distinct non-executable
+  `PLAN_ONLY` workflow phase.
+- Added public external-action pause/resume routes with receipt-bound replay
+  and source-lineage checks.
+- Added typed run, task, plan and external blockers with explicit recovery
+  routes and coherent budget split/abort transitions.
+- Added the canonical final-audit outcome route for `ACCEPTED`, `REWORK`,
+  `CONTRACT_CHANGE` and `BLOCKED`, preserving prior attempt evidence and
+  enforcing frozen retry budgets.
+- Updated bilingual workflow, CLI, architecture, skill and publication
+  documentation and synchronized package/plugin metadata.
+
 ## 1.82.0 - 2026-08-24
 
 - Added the `agent-workflow-state.v4` contract with explicit private state

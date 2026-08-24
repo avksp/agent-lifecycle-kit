@@ -8,7 +8,10 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.contracts.goal_validation import validate_goal_record
-from agent_lifecycle.contracts.implementation_audit_validation import validate_final_implementation_audit
+from agent_lifecycle.contracts.implementation_audit_validation import (
+    validate_final_audit_outcome_report,
+    validate_final_implementation_audit,
+)
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.followup import validate_followup_register
 from agent_lifecycle.host_protocol.lifecycle_gate import (
@@ -22,7 +25,12 @@ from agent_lifecycle.specification import (
     validate_completion_check_receipt,
     validate_completion_signal,
 )
-from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
+from agent_lifecycle.workflow.artifacts import (
+    artifact_identity,
+    next_available_attempt,
+    package_root,
+    validate_attempt_history,
+)
 from agent_lifecycle.workflow.final_proof_integrity import validate_final_proof_integrity
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
 from agent_lifecycle.workflow.implementation_audit_gate import (
@@ -36,7 +44,225 @@ from agent_lifecycle.workflow.review_mesh_gate import (
     require_review_mesh_quorum_gate_pass,
     validate_review_mesh_quorum_path,
 )
-from agent_lifecycle.workflow.state import now_iso
+from agent_lifecycle.workflow.selectors import find_task
+from agent_lifecycle.workflow.state import now_iso, validate_typed_blocker
+from agent_lifecycle.workflow.task_transitions import _clear_active_attempt_references
+
+
+def apply_final_audit_outcome(
+    state_path: Path,
+    *,
+    operation_id: str,
+    expected_revision: int,
+    source_revision: str,
+    final_audit_path: str,
+    verdict: str,
+    task_ids: list[str] | None = None,
+    finding_ids: list[str] | None = None,
+    reason: str,
+) -> dict[str, Any]:
+    """Apply one independent final-audit verdict without changing plan authority."""
+
+    state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
+    if state.get("phase") != "FINAL_AUDIT":
+        raise LifecycleError("invalid-phase", "final-audit outcome requires FINAL_AUDIT phase")
+    if state.get("sourceRevision") != source_revision:
+        raise LifecycleError("source-revision-mismatch", "source revision mismatch")
+    root = package_root(state_path, state)
+    audit_rel = normalize_repo_path(final_audit_path, label="final audit")
+    audit = read_json_object(root / audit_rel, label="final audit")
+    audit_identity = artifact_identity(root, audit_rel, audit)
+    selected_tasks = _sorted_unique(task_ids or [])
+    selected_findings = _sorted_unique(finding_ids or [])
+    validation = validate_final_audit_outcome_report(
+        audit,
+        state=state,
+        verdict=verdict,
+        task_ids=selected_tasks,
+        finding_ids=selected_findings,
+    )
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "final-audit-outcome-invalid",
+            "final audit outcome failed validation",
+            {"validation": validation},
+        )
+    blocker: dict[str, Any] | None = None
+    if verdict == "REWORK":
+        _apply_final_audit_rework(
+            state_path,
+            state,
+            audit,
+            task_ids=selected_tasks,
+            finding_ids=selected_findings,
+            reason=reason,
+        )
+    elif verdict == "CONTRACT_CHANGE":
+        blocker = {
+            "code": "FINAL_AUDIT_CONTRACT_CHANGE",
+            "reason": reason,
+            "scope": "plan",
+            "recoveryRoute": "adopt-plan",
+        }
+        validate_typed_blocker(blocker)
+        state["phase"] = "BLOCKED"
+        state["blocker"] = blocker
+    elif verdict == "BLOCKED":
+        external_action = _final_audit_external_action(audit)
+        blocker = {
+            "code": "FINAL_AUDIT_BLOCKED",
+            "reason": reason,
+            "scope": "external",
+            "recoveryRoute": "external-action",
+            "externalAction": external_action,
+        }
+        validate_typed_blocker(blocker)
+        state["phase"] = "WAITING_FOR_EXTERNAL_ACTION"
+        state["blocker"] = blocker
+        state["externalAction"] = external_action
+    outcome_body = {
+        "schemaVersion": "agent-final-audit-outcome.v1",
+        "status": "PASS",
+        "verdict": verdict,
+        "runId": state.get("runId"),
+        "packageId": state.get("packageId"),
+        "planRevision": state.get("planRevision"),
+        "planDigest": state.get("planDigest"),
+        "sourceRevision": state.get("sourceRevision"),
+        "finalAudit": audit_identity,
+        "taskIds": selected_tasks,
+        "findingIds": selected_findings,
+        "validation": validation,
+        "blocker": state.get("blocker") if verdict in {"CONTRACT_CHANGE", "BLOCKED"} else None,
+        "contractChangeRequest": audit.get("contractChangeRequest") if verdict == "CONTRACT_CHANGE" else None,
+        "productionPromotionClaimed": False,
+        "reason": reason,
+        "appliedAt": now_iso(),
+    }
+    outcome = {**outcome_body, "outcomeDigest": canonical_digest(outcome_body)}
+    state["finalAuditOutcome"] = outcome
+    commit_state(
+        state_path,
+        state,
+        operation_id=operation_id,
+        event_type="final-audit-outcome-applied",
+        payload={
+            "verdict": verdict,
+            "finalAudit": audit_identity,
+            "taskIds": selected_tasks,
+            "findingIds": selected_findings,
+            "reason": reason,
+        },
+    )
+    return status(state_path)
+
+
+def _apply_final_audit_rework(
+    state_path: Path,
+    state: dict[str, Any],
+    audit: dict[str, Any],
+    *,
+    task_ids: list[str],
+    finding_ids: list[str],
+    reason: str,
+) -> None:
+    findings_by_task: dict[str, list[str]] = {task_id: [] for task_id in task_ids}
+    for finding in audit.get("findings", []):
+        if not isinstance(finding, dict) or finding.get("status") != "open":
+            continue
+        finding_id = finding.get("id")
+        if finding_id not in finding_ids:
+            continue
+        raw_task_ids = finding.get("taskIds")
+        mapped = list(raw_task_ids) if isinstance(raw_task_ids, list) else [finding.get("taskId")]
+        mapped = [item for item in mapped if isinstance(item, str)]
+        if not mapped or not set(mapped).issubset(task_ids):
+            raise LifecycleError(
+                "final-audit-outcome-task-mapping",
+                "every rework finding must map to a named task",
+                {"findingId": finding_id, "taskIds": mapped},
+            )
+        for task_id in mapped:
+            findings_by_task[task_id].append(str(finding_id))
+    if any(not values for values in findings_by_task.values()):
+        raise LifecycleError(
+            "final-audit-outcome-task-mapping",
+            "every named rework task must have an open final-audit finding",
+            {"tasks": [task_id for task_id, values in findings_by_task.items() if not values]},
+        )
+    planned: list[tuple[dict[str, Any], int]] = []
+    for task_id in task_ids:
+        task = find_task(state, task_id)
+        if task.get("status") != "ACCEPTED":
+            raise LifecycleError("final-audit-outcome-task-status", f"task {task_id} is not ACCEPTED")
+        validate_attempt_history(state_path, state, task)
+        next_attempt = next_available_attempt(state_path, state, task)
+        for key in ("result", "review"):
+            if not isinstance(task.get(key), dict):
+                raise LifecycleError("final-audit-outcome-artifact-missing", f"accepted task {task_id} has no {key}")
+        planned.append((task, next_attempt))
+    for task, _next_attempt in planned:
+        task.setdefault("attemptHistory", []).append(
+            {
+                "schemaVersion": "agent-task-attempt-history-entry.v1",
+                "runId": state.get("runId"),
+                "packageId": state.get("packageId"),
+                "taskId": task.get("id"),
+                "attempt": task.get("attempt"),
+                "planRevision": state.get("planRevision"),
+                "planDigest": state.get("planDigest"),
+                "sourceRevision": state.get("sourceRevision"),
+                "result": dict(task["result"]),
+                "review": dict(task["review"]),
+                "implementationAuditReport": dict(task["implementationAuditReport"])
+                if isinstance(task.get("implementationAuditReport"), dict)
+                else None,
+                "findingIds": sorted(findings_by_task[str(task["id"])]),
+                "archivedAt": now_iso(),
+            }
+        )
+        _clear_active_attempt_references(task)
+        task.pop("blocker", None)
+        task.pop("contractChangeRequest", None)
+        task["remediationFindingIds"] = sorted(findings_by_task[str(task["id"])])
+        task["status"] = "REWORK"
+        task["lastReason"] = reason
+    state["phase"] = "REMEDIATING" if state.get("schemaVersion") == "agent-workflow-state.v3" else "RUNNING"
+    state["blocker"] = None
+
+
+def _final_audit_external_action(audit: dict[str, Any]) -> dict[str, Any]:
+    value = audit.get("externalAction")
+    if not isinstance(value, dict):
+        blocker = audit.get("blocker")
+        value = blocker.get("externalAction") if isinstance(blocker, dict) else None
+    if not isinstance(value, dict):
+        raise LifecycleError(
+            "final-audit-external-action-required",
+            "BLOCKED final audit requires external action metadata",
+        )
+    action_id = value.get("actionId")
+    receipt_path = value.get("expectedReceiptPath")
+    if not isinstance(action_id, str) or not action_id or not isinstance(receipt_path, str) or not receipt_path:
+        raise LifecycleError(
+            "final-audit-external-action-invalid",
+            "final audit external action metadata is incomplete",
+        )
+    return {
+        "actionId": action_id,
+        "reason": str(value.get("reason") or "final audit requires external action"),
+        "resumePhase": str(value.get("resumePhase") or "FINAL_AUDIT"),
+        "expectedReceiptPath": normalize_repo_path(receipt_path, label="external action receipt"),
+    }
+
+
+def _sorted_unique(values: list[str]) -> list[str]:
+    if any(not isinstance(value, str) or not value.strip() for value in values):
+        raise LifecycleError("invalid-final-audit-outcome", "task and finding IDs must be non-empty strings")
+    result = sorted(set(value.strip() for value in values))
+    if len(result) != len(values):
+        raise LifecycleError("invalid-final-audit-outcome", "task and finding IDs must not repeat")
+    return result
 
 
 def finalize_run(
@@ -60,6 +286,11 @@ def finalize_run(
         raise LifecycleError("invalid-phase", "run finalization requires FINAL_AUDIT phase")
     if state.get("sourceRevision") != source_revision:
         raise LifecycleError("source-revision-mismatch", "source revision mismatch")
+    outcome = state.get("finalAuditOutcome")
+    if state.get("schemaVersion") == "agent-workflow-state.v4" and not isinstance(outcome, dict):
+        raise LifecycleError("final-audit-outcome-required", "v4 finalization requires an applied final-audit outcome")
+    if isinstance(outcome, dict) and outcome.get("verdict") not in {None, "ACCEPTED"}:
+        raise LifecycleError("final-audit-outcome-not-accepted", "final audit outcome does not permit finalization")
     missing = _missing_required_acceptance(state)
     if missing:
         raise LifecycleError("finalization-precondition-failed", "required tasks are not accepted", {"tasks": missing})

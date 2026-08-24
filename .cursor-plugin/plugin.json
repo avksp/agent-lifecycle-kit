@@ -1,6 +1,6 @@
 {
   "name": "agent-lifecycle-kit",
-  "version": "1.82.0",
+  "version": "1.83.0",
   "description": "Provider-neutral lifecycle kit for reviewed SDD planning, budgeted execution, adapter conformance, independent audits, and final proof.",
   "author": {
     "name": "Agent Lifecycle Kit contributors"
