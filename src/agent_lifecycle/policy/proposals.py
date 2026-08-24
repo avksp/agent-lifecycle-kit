@@ -16,7 +16,15 @@ from agent_lifecycle.contracts.audit_optimization_schemas import (
     AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA,
     AUDIT_OPTIMIZATION_RECOMMENDATION_SCHEMA,
 )
+from agent_lifecycle.contracts.finding_check_schemas import (
+    FINDING_CHECK_PROPOSAL_SCHEMA,
+    build_finding_check_binding,
+    transition_finding_check_binding,
+    validate_finding_check_proposal,
+)
+from agent_lifecycle.contracts.proof_validation import build_finding_identity
 from agent_lifecycle.metrics import summarize_regression_signals
+from agent_lifecycle.planning.deltas import finding_check_plan_lineage, validate_plan_delta
 from agent_lifecycle.policy.quality_floor import is_downgrade, protected_work
 
 PROPOSAL_SCHEMA = "agent-lifecycle-policy-proposal.v1"
@@ -31,6 +39,71 @@ _OPTIMIZATION_CHANGE_LIMITS = {
 }
 _OPTIMIZATION_CHANGE_FIELDS = set(_OPTIMIZATION_CHANGE_LIMITS) | {"routeClass"}
 _OPTIMIZATION_TARGETS = {"project-profile", "plan-revision"}
+
+
+def build_finding_check_proposal(
+    *,
+    finding: dict[str, Any],
+    plan_delta: dict[str, Any],
+    check_identity: dict[str, Any],
+    owner: str,
+    scope: dict[str, Any],
+    source_revision: str,
+    expected_result: str = "PASS",
+    proposal_id: str = "finding-check-adoption-proposal",
+) -> dict[str, Any]:
+    """Create an advisory binding proposal without granting adoption authority."""
+
+    blockers: list[dict[str, Any]] = []
+    try:
+        identity = build_finding_identity(finding)
+    except LifecycleError as exc:
+        identity = {}
+        blockers.append({"code": exc.code, "message": exc.message})
+    delta_validation = validate_plan_delta(plan_delta)
+    if delta_validation.get("status") != "PASS":
+        blockers.append({"code": "finding-check-plan-delta-invalid", "validation": delta_validation})
+    try:
+        lineage = finding_check_plan_lineage(plan_delta)
+        binding = build_finding_check_binding(
+            finding_id=identity.get("findingId", "invalid-finding"),
+            finding_digest=identity.get("findingDigest", "0" * 64),
+            plan_delta_digest=plan_delta.get("deltaDigest", "0" * 64),
+            plan_lineage=lineage,
+            check_identity=check_identity,
+            owner=owner,
+            scope=scope,
+            source_revision=source_revision,
+            expected_result=expected_result,
+        )
+    except LifecycleError as exc:
+        binding = {}
+        blockers.append({"code": exc.code, "message": exc.message})
+    body = {
+        "schemaVersion": FINDING_CHECK_PROPOSAL_SCHEMA,
+        "proposalId": proposal_id,
+        "status": "PASS" if not blockers else "FAIL",
+        "binding": binding,
+        "approvalRequired": True,
+        "applyAllowed": False,
+        "authorityClaimed": False,
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "proposalDigest": canonical_digest(body)}
+
+
+def accept_finding_check_proposal(proposal: dict[str, Any], authorization: dict[str, Any]) -> dict[str, Any]:
+    """Move a valid proposal to ACCEPTED only after explicit authorization."""
+
+    validation = validate_finding_check_proposal(proposal)
+    if validation.get("status") != "PASS" or proposal.get("status") != "PASS":
+        raise LifecycleError("finding-check-proposal-invalid", "proposal is not eligible for acceptance", validation)
+    return transition_finding_check_binding(
+        proposal["binding"],
+        "ACCEPTED",
+        authorization=authorization,
+    )
 
 
 def build_policy_proposal(
@@ -141,11 +214,28 @@ def build_optimization_proposal(
         refusal_reasons.append({"code": "optimization-no-bounded-change"})
     body = {
         "schemaVersion": AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA,
-        "status": "PASS" if recommendation.get("status") == "PASS" and not any(item.get("code") in {"optimization-recommendation-schema", "optimization-recommendation-status", "optimization-advisory-boundary", "optimization-quality-floor", "optimization-target-invalid"} for item in refusal_reasons) else "FAIL",
+        "status": "PASS"
+        if recommendation.get("status") == "PASS"
+        and not any(
+            item.get("code")
+            in {
+                "optimization-recommendation-schema",
+                "optimization-recommendation-status",
+                "optimization-advisory-boundary",
+                "optimization-quality-floor",
+                "optimization-target-invalid",
+            }
+            for item in refusal_reasons
+        )
+        else "FAIL",
         "proposalId": proposal_id,
         "sourceRecommendationDigest": recommendation.get("recommendationDigest") or canonical_digest(recommendation),
         "approvalRequired": True,
-        "approval": {"status": "APPROVED" if approved else "PENDING", "recordedBy": "operator", "targetRevision": target_revision},
+        "approval": {
+            "status": "APPROVED" if approved else "PENDING",
+            "recordedBy": "operator",
+            "targetRevision": target_revision,
+        },
         "target": {"kind": target_kind, "revision": target_revision, "frozenPlan": frozen_plan},
         "applyAllowed": not refusal_reasons,
         "candidateChanges": candidate_changes if recommendation.get("status") == "PASS" else [],
@@ -164,17 +254,35 @@ def apply_optimization_proposal(proposal: dict[str, Any], output_path: Path) -> 
 
     expected_digest = canonical_digest({key: value for key, value in proposal.items() if key != "proposalDigest"})
     if proposal.get("proposalDigest") != expected_digest:
-        raise LifecycleError("optimization-proposal-digest", "optimization proposal digest does not match its contents", {"proposal": proposal})
+        raise LifecycleError(
+            "optimization-proposal-digest",
+            "optimization proposal digest does not match its contents",
+            {"proposal": proposal},
+        )
     if proposal.get("status") != "PASS" or proposal.get("applyAllowed") is not True:
-        raise LifecycleError("optimization-apply-not-allowed", "optimization proposal is not approved for application", {"proposal": proposal})
-    approval = proposal.get("approval") if isinstance(proposal.get("approval"), dict) else {}
+        raise LifecycleError(
+            "optimization-apply-not-allowed",
+            "optimization proposal is not approved for application",
+            {"proposal": proposal},
+        )
+    approval = _object(proposal.get("approval"))
     if proposal.get("approvalRequired") is not True or approval.get("status") != "APPROVED":
-        raise LifecycleError("optimization-approval-missing", "explicit operator approval is required", {"proposal": proposal})
-    target = proposal.get("target") if isinstance(proposal.get("target"), dict) else {}
+        raise LifecycleError(
+            "optimization-approval-missing", "explicit operator approval is required", {"proposal": proposal}
+        )
+    target = _object(proposal.get("target"))
     if target.get("frozenPlan") is True or target.get("kind") not in _OPTIMIZATION_TARGETS:
-        raise LifecycleError("optimization-target-not-writable", "optimization cannot mutate a frozen plan or unknown target", {"target": target})
+        raise LifecycleError(
+            "optimization-target-not-writable",
+            "optimization cannot mutate a frozen plan or unknown target",
+            {"target": target},
+        )
     if output_path.name in {"plan.manifest.json", "plan.lock.json"}:
-        raise LifecycleError("optimization-frozen-artifact", "optimization output cannot replace a plan artifact", {"path": output_path.as_posix()})
+        raise LifecycleError(
+            "optimization-frozen-artifact",
+            "optimization output cannot replace a plan artifact",
+            {"path": output_path.as_posix()},
+        )
     changes = _bounded_optimization_changes(proposal.get("candidateChanges"))
     if len(changes) != len(proposal.get("candidateChanges", [])):
         raise LifecycleError("optimization-change-invalid", "proposal contains an unbounded optimization change")
@@ -206,7 +314,9 @@ def apply_optimization_proposal(proposal: dict[str, Any], output_path: Path) -> 
 
 def require_optimization_proposal_pass(proposal: dict[str, Any]) -> dict[str, Any]:
     if proposal.get("status") != "PASS":
-        raise LifecycleError("optimization-proposal-failed", "audit optimization proposal failed validation", {"proposal": proposal})
+        raise LifecycleError(
+            "optimization-proposal-failed", "audit optimization proposal failed validation", {"proposal": proposal}
+        )
     return proposal
 
 
@@ -215,13 +325,27 @@ def _bounded_optimization_changes(changes: Any) -> list[dict[str, Any]]:
         return []
     bounded: list[dict[str, Any]] = []
     for item in changes:
-        if not isinstance(item, dict) or item.get("field") not in _OPTIMIZATION_CHANGE_FIELDS or item.get("bounded") is not True:
+        if (
+            not isinstance(item, dict)
+            or item.get("field") not in _OPTIMIZATION_CHANGE_FIELDS
+            or item.get("bounded") is not True
+        ):
             continue
         value = item.get("after")
         if item["field"] == "routeClass":
-            if not isinstance(value, str) or len(value) > 64 or any(token in value.lower() for token in ("openai", "anthropic", "google", "claude", "gpt", "gemini")):
+            if (
+                not isinstance(value, str)
+                or len(value) > 64
+                or any(token in value.lower() for token in ("openai", "anthropic", "google", "claude", "gpt", "gemini"))
+            ):
                 continue
-        elif not isinstance(value, int) or isinstance(value, bool) or not (_OPTIMIZATION_CHANGE_LIMITS[item["field"]][0] <= value <= _OPTIMIZATION_CHANGE_LIMITS[item["field"]][1]):
+        elif (
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or not (
+                _OPTIMIZATION_CHANGE_LIMITS[item["field"]][0] <= value <= _OPTIMIZATION_CHANGE_LIMITS[item["field"]][1]
+            )
+        ):
             continue
         bounded.append({"field": item["field"], "before": item.get("before"), "after": value, "bounded": True})
     return bounded
@@ -291,15 +415,16 @@ def _candidate_change(recommendation: dict[str, Any], *, before: str, after: str
 
 
 def _expected_benefit(recommendation: dict[str, Any], *, before: str, after: str) -> dict[str, Any]:
-    stats = recommendation.get("statistics") if isinstance(recommendation.get("statistics"), dict) else {}
-    selected_signal = stats.get("selectedSignal") if isinstance(stats.get("selectedSignal"), dict) else {}
-    totals = stats.get("totals") if isinstance(stats.get("totals"), dict) else {}
-    pipeline = totals.get("pipelineCompliance", {}) if isinstance(totals.get("pipelineCompliance"), dict) else {}
-    coordination = totals.get("coordination", {}) if isinstance(totals.get("coordination"), dict) else {}
+    stats = _object(recommendation.get("statistics"))
+    selected_signal = _object(stats.get("selectedSignal"))
+    totals = _object(stats.get("totals"))
+    pipeline = _object(totals.get("pipelineCompliance"))
+    coordination = _object(totals.get("coordination"))
+    ratios = _object(stats.get("ratios"))
     return {
         "kind": "reduce-process-overhead" if is_downgrade(before, after) else "preserve-or-increase-quality",
         "processOverheadTokens": int(pipeline.get("tokens", 0)) + int(coordination.get("tokens", 0)),
-        "pipelineTokenShare": (stats.get("ratios") or {}).get("pipelineTokenShare", 0.0),
+        "pipelineTokenShare": ratios.get("pipelineTokenShare", 0.0),
         "localAverageTokens": selected_signal.get("averageTokens"),
         "localSuccessRate": selected_signal.get("successRate"),
     }
@@ -331,3 +456,7 @@ def _rollback(changes: list[dict[str, Any]]) -> dict[str, Any]:
 def _with_summary_and_digest(body: dict[str, Any]) -> dict[str, Any]:
     body["compactSummary"] = build_policy_summary(body)
     return {**body, "proposalDigest": canonical_digest(body)}
+
+
+def _object(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}

@@ -12,6 +12,11 @@ from agent_lifecycle.contracts import (
     read_json_object,
     write_json_create,
 )
+from agent_lifecycle.contracts.finding_check_schemas import (
+    validate_finding_check_binding,
+    validate_finding_check_evidence,
+    validate_finding_check_proposal,
+)
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.planning import (
     build_plan_delta,
@@ -33,10 +38,12 @@ from agent_lifecycle.planning.verification import (
     load_verification_inputs,
     require_plan_verification_pass,
 )
+from agent_lifecycle.policy.proposals import accept_finding_check_proposal, build_finding_check_proposal
 from agent_lifecycle.specification import (
     build_completion_gate_receipt,
     validate_specification,
 )
+from agent_lifecycle.workflow.artifacts import build_finding_check_evidence_artifact
 
 
 def dispatch_planning(args: argparse.Namespace) -> dict[str, Any]:
@@ -194,7 +201,60 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
+    if args.plan_command == "finding-check":
+        return _dispatch_finding_check(args)
     raise LifecycleError("command-not-implemented", "plan command is not implemented")
+
+
+def _dispatch_finding_check(args: argparse.Namespace) -> dict[str, Any]:
+    def read(path: str, label: str) -> dict[str, Any]:
+        return read_json_object(Path(path), label=label)
+
+    if args.finding_check_command == "propose":
+        payload = build_finding_check_proposal(
+            finding=read(args.finding, "finding"),
+            plan_delta=read(args.delta, "plan delta"),
+            check_identity=read(args.check, "check identity"),
+            owner=args.owner,
+            scope=read(args.scope, "check scope"),
+            source_revision=args.source_revision,
+            expected_result=args.expected_result,
+            proposal_id=args.proposal_id,
+        )
+    elif args.finding_check_command == "validate":
+        if args.binding:
+            payload = validate_finding_check_binding(read(args.binding, "finding-check binding"))
+        elif args.proposal:
+            payload = validate_finding_check_proposal(read(args.proposal, "finding-check proposal"))
+        elif args.evidence:
+            payload = validate_finding_check_evidence(read(args.evidence, "finding-check evidence"))
+        else:
+            raise LifecycleError("finding-check-input-required", "binding, proposal or evidence is required")
+    elif args.finding_check_command == "accept":
+        payload = accept_finding_check_proposal(
+            read(args.proposal, "finding-check proposal"), read(args.authorization, "authorization")
+        )
+    elif args.finding_check_command == "evidence":
+        payload = build_finding_check_evidence_artifact(
+            read(args.binding, "finding-check binding"),
+            result=args.result,
+            source_revision=args.source_revision,
+            evidence_ids=args.evidence_id,
+        )
+    elif args.finding_check_command == "transition":
+        from agent_lifecycle.contracts.finding_check_schemas import transition_finding_check_binding
+
+        payload = transition_finding_check_binding(
+            read(args.binding, "finding-check binding"),
+            args.target_status,
+            authorization=read(args.authorization, "authorization"),
+            evidence=read(args.evidence, "finding-check evidence") if args.evidence else None,
+        )
+    else:
+        raise LifecycleError("command-not-implemented", "finding-check command is not implemented")
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
 
 
 def _dispatch_task(args: argparse.Namespace) -> dict[str, Any]:

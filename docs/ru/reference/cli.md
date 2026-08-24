@@ -25,7 +25,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.85.0
+python -m pip install agent-lifecycle-kit==1.86.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -97,6 +97,11 @@ URL подтверждений проходят офлайн-контракт
   уровню.
 - `agent-lifecycle plan acceptance-check`: проверка трассируемости критериев
   приёмки.
+- `agent-lifecycle plan finding-check propose|validate|accept|evidence|transition`:
+  связывает принятую находку с существующей детерминированной проверкой.
+  Предложения остаются рекомендательными, идентичность проверки не содержит
+  исполняемого текста, а подтверждение фиксирует только чтение. См. [связывание
+  находки с проверкой](finding-check-adoption.md).
 - `agent-lifecycle import plan/check`: перевод файла или папки Markdown в
   черновой план-кандидат. Флаг `--dialect openspec|spec-kit|bmad|spec-kitty`
   выбирает профиль OpenSpec, Spec Kit, BMAD или Spec Kitty; результат требует
