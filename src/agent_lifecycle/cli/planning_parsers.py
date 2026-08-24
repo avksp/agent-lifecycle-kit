@@ -55,6 +55,8 @@ def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     delta.add_argument("--before-lock")
     delta.add_argument("--after-lock")
     delta.add_argument("--principles")
+    delta.add_argument("--language-before", help="optional previous project domain language artifact")
+    delta.add_argument("--language-after", help="optional current project domain language artifact")
     delta.add_argument("--out")
     delta_check = plan_sub.add_parser("delta-check", aliases=["delta-validate"])
     delta_check.add_argument("--delta", required=True)

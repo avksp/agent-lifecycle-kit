@@ -128,6 +128,14 @@ def _write_minimum_docs(root: Path, *, target_version: str) -> None:
         "lifecycle controller\nnot a runtime\nnot a model broker\nSource of truth remains the frozen ALK plan\n",
     )
     _write_text(
+        root / "docs/reference/project-domain-language.md",
+        "agent-project-domain-language.v1\nproject language check\nproject language audit\nread-only\nqualification\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/project-domain-language.md",
+        "agent-project-domain-language.v1\nproject language check\nproject language audit\nтолько для чтения\nqualification\n",
+    )
+    _write_text(
         root / "docs/ru/reference/project-comparison.md",
         "не кодовый агент\nне платформа запуска моделей\nИсточником правды остаётся зафиксированный план ALK\n",
     )

@@ -81,11 +81,13 @@
     {
       "module": "agent_lifecycle.planning",
       "exports": [
+        "build_domain_language_continuity",
         "build_plan_snapshot",
         "build_plan_delta",
         "build_plan_completeness_profile",
         "build_task_template_library",
         "load_plan_completeness_profile",
+        "reconcile_domain_language_continuity",
         "reconcile_plan_snapshot",
         "render_task_template",
         "render_plan_handoff",
@@ -108,11 +110,15 @@
       "module": "agent_lifecycle.project",
       "exports": [
         "PROJECT_PROFILE_RELATIVE_PATH",
+        "build_domain_language_delta",
         "build_default_project_profile",
         "build_effective_project_profile",
         "build_preset_profile_draft",
+        "domain_language_digest",
         "inspect_project_preset",
+        "language_terms",
         "list_project_presets",
+        "load_domain_language",
         "load_project_preset",
         "load_project_principles",
         "load_project_profile",
@@ -123,6 +129,7 @@
         "project_principles_digest",
         "project_profile_digest",
         "render_project_preset",
+        "validate_domain_language",
         "validate_project_preset",
         "validate_project_principles",
         "validate_project_profile"

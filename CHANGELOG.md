@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 2.2.0 - 2026-08-25
+
+- Added an optional bilingual project domain-language artifact with stable term
+  IDs, aliases, deprecations and bounded repository references.
+- Added read-only terminology deltas and impact audits for renames, stale
+  aliases and missing governed references.
+- Bound terminology changes to plan deltas without granting workflow authority,
+  automatic rename capability or runtime/network dependencies.
+- Added English and Russian documentation plus publication and documentation
+  gates for the optional feature.
+
 ## 2.1.0 - 2026-08-25
 
 - Added criterion-scoped independent evidence for explicitly declared

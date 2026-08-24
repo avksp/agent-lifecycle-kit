@@ -39,6 +39,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/cli.md",
             "docs/reference/project-comparison.md",
             "docs/reference/project-workflow-profile.md",
+            "docs/reference/project-domain-language.md",
             "docs/reference/external-verification-checks.md",
             "docs/reference/public-locators-and-redaction.md",
             "docs/reference/source-of-truth.md",
@@ -69,6 +70,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/guides/install-and-first-run.md",
             "docs/guides/commands-by-task.md",
             "docs/reference/project-workflow-profile.md",
+            "docs/reference/project-domain-language.md",
             "docs/reference/external-verification-checks.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
@@ -81,6 +83,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/guides/install-and-first-run.md",
             "docs/ru/guides/commands-by-task.md",
             "docs/ru/reference/project-workflow-profile.md",
+            "docs/ru/reference/project-domain-language.md",
             "docs/ru/reference/external-verification-checks.md",
             "docs/ru/reference/public-locators-and-redaction.md",
             "docs/ru/guides/production-resource-security.md",
@@ -223,6 +226,20 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("--no-project-profile", text)
         self.assertIn("зафиксированный план", russian)
         self.assertIn("frozen plan", english)
+
+    def test_domain_language_docs_keep_optional_read_only_boundary(self) -> None:
+        english = (ROOT / "docs/reference/project-domain-language.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/project-domain-language.md").read_text(encoding="utf-8")
+        for text in (english, russian):
+            self.assertIn("agent-project-domain-language.v1", text)
+            self.assertIn("project language check", text)
+            self.assertIn("project language audit", text)
+            self.assertIn("qualification", text)
+            self.assertIn("--language-before", text)
+        self.assertIn("read-only", english)
+        self.assertIn("только для чтения", russian)
+        self.assertIn("does not grant write authority", english)
+        self.assertIn("не выдаёт полномочия записи", russian)
 
     def test_public_locator_docs_keep_offline_security_boundary(self) -> None:
         english = (ROOT / "docs/reference/public-locators-and-redaction.md").read_text(encoding="utf-8")
@@ -878,6 +895,14 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/project-workflow-profile.md", project_profile)
     _write_text(root / "docs/ru/reference/project-workflow-profile.md", project_profile)
+    domain_language = (
+        "agent-project-domain-language.v1. agent-project-domain-language-validation.v1. "
+        "agent-project-domain-language-delta.v1. agent-project-domain-language-audit.v1. "
+        "project language check. project language audit. --language-before. read-only. "
+        "qualification. does not grant write authority. read-only. только для чтения. не выдаёт полномочия записи.\n"
+    )
+    _write_text(root / "docs/reference/project-domain-language.md", domain_language)
+    _write_text(root / "docs/ru/reference/project-domain-language.md", domain_language)
     external_checks = (
         "agent-lifecycle quality external-check. import-boundaries. module-dependencies. "
         "declared-dependencies. UNAVAILABLE. authorityClaimed. shell-free. "
