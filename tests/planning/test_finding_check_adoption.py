@@ -6,7 +6,7 @@ from agent_lifecycle.contracts.finding_check_schemas import validate_finding_che
 from agent_lifecycle.contracts.proof_validation import build_finding_identity
 from agent_lifecycle.planning.deltas import build_plan_delta
 from agent_lifecycle.planning.traceability import validate_finding_check_traceability
-from agent_lifecycle.policy import build_finding_check_proposal
+from agent_lifecycle.policy.proposals import build_finding_check_proposal
 
 
 class FindingCheckAdoptionTests(unittest.TestCase):

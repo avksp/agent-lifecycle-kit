@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from agent_lifecycle.audit import build_finding_check_adoption_audit
+from agent_lifecycle.audit.package import build_finding_check_adoption_audit
 from agent_lifecycle.audit.proof_findings import build_finding_check_binding
 from agent_lifecycle.contracts.finding_check_schemas import validate_finding_check_binding
 from agent_lifecycle.contracts.proof_validation import build_finding_identity

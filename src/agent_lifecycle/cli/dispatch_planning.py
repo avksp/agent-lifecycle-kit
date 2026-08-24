@@ -38,7 +38,7 @@ from agent_lifecycle.planning.verification import (
     load_verification_inputs,
     require_plan_verification_pass,
 )
-from agent_lifecycle.policy import accept_finding_check_proposal, build_finding_check_proposal
+from agent_lifecycle.policy.proposals import accept_finding_check_proposal, build_finding_check_proposal
 from agent_lifecycle.specification import (
     build_completion_gate_receipt,
     validate_specification,
