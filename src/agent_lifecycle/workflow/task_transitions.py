@@ -21,7 +21,6 @@ from agent_lifecycle.workflow.artifacts import (
     artifact_path,
     next_available_attempt,
     package_root,
-    require_artifact_identity,
     validate_attempt_history,
 )
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
@@ -38,9 +37,9 @@ from agent_lifecycle.workflow.model_usage import (
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.reviews import (
+    _read_committed_result,
     open_finding_ids,
     task_result_freshness_required,
-    validate_task_outcome_review,
     validate_task_result,
     validate_task_review,
     validate_task_rework_review,
@@ -413,101 +412,6 @@ def rework_task(
     return status(state_path)
 
 
-def apply_task_review_outcome(
-    state_path: Path,
-    *,
-    task_id: str,
-    operation_id: str,
-    expected_revision: int,
-    source_revision: str,
-    review_path: str,
-    finding_ids: list[str] | None = None,
-    implementation_audit_path: str | None = None,
-    reason: str,
-) -> dict[str, Any]:
-    """Apply exactly one independently reviewed task outcome."""
-
-    state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
-    _require_source_and_authorization(state, source_revision)
-    task = find_task(state, task_id)
-    if task.get("status") != "VERIFYING":
-        raise LifecycleError("invalid-task-status", f"task {task_id} is not VERIFYING")
-    root = package_root(state_path, state)
-    expected_review_path = artifact_path(task, "review", int(task["attempt"]))
-    if normalize_repo_path(review_path) != expected_review_path:
-        raise LifecycleError("artifact-path-mismatch", "task review path does not match frozen template")
-    review = read_json_object(root / expected_review_path, label="task review")
-    result = _read_committed_result(root, task)
-    validate_task_result(
-        state,
-        task,
-        result,
-        task["result"],
-        repository_root=root,
-        require_freshness=task_result_freshness_required(state),
-        allow_non_accepting_outcome=True,
-    )
-    verdict = validate_task_outcome_review(state, task, review, result=result)
-    if verdict == "ACCEPTED":
-        return accept_task(
-            state_path,
-            task_id=task_id,
-            operation_id=operation_id,
-            expected_revision=expected_revision,
-            review_path=review_path,
-            implementation_audit_path=implementation_audit_path,
-            reason=reason,
-        )
-    if verdict == "REWORK":
-        return rework_task(
-            state_path,
-            task_id=task_id,
-            operation_id=operation_id,
-            expected_revision=expected_revision,
-            source_revision=source_revision,
-            review_path=review_path,
-            finding_ids=finding_ids or [],
-            implementation_audit_path=implementation_audit_path,
-            reason=reason,
-        )
-    if state.get("phase") != ("RUNNING" if state.get("schemaVersion") == WORKFLOW_STATE_V4 else "STEP_REVIEW"):
-        raise LifecycleError("invalid-phase", "task outcome requires a reviewable workflow phase")
-    review_identity = artifact_identity(root, expected_review_path, review)
-    task["review"] = {
-        **review_identity,
-        "reviewId": review.get("reviewId"),
-        "reviewer": review["reviewer"]["id"],
-        "reviewerRunId": review["reviewer"]["runId"],
-        "surface": review["reviewer"]["surface"],
-        "verdict": verdict,
-    }
-    task["lastReason"] = reason
-    task["outcome"] = {
-        "verdict": verdict,
-        "attempt": task.get("attempt"),
-        "findingIds": sorted(open_finding_ids(review)),
-    }
-    if verdict == "CONTRACT_CHANGE":
-        task["contractChangeRequest"] = dict(review["contractChangeRequest"])
-    else:
-        task["blocker"] = dict(review["blocker"])
-    task["status"] = verdict
-    commit_state(
-        state_path,
-        state,
-        operation_id=operation_id,
-        event_type="task-outcome-applied",
-        payload={
-            "taskId": task_id,
-            "attempt": task.get("attempt"),
-            "verdict": verdict,
-            "review": review_identity,
-            "reason": reason,
-        },
-    )
-    return status(state_path)
-
-
 def _validate_implementation_audit(
     state_path: Path,
     state: dict[str, Any],
@@ -632,13 +536,6 @@ def _mark_task_accepted(
         state["phase"] = "FINAL_AUDIT" if all(item.get("status") == "ACCEPTED" for item in required) else "RUNNING"
     else:
         state["phase"] = "RUNNING" if ready_tasks(state) else "FINAL_AUDIT"
-
-
-def _read_committed_result(root: Path, task: dict[str, Any]) -> dict[str, Any]:
-    result_identity = task.get("result")
-    if not isinstance(result_identity, dict) or not isinstance(result_identity.get("path"), str):
-        raise LifecycleError("missing-task-result", "task acceptance requires committed result")
-    return require_artifact_identity(root, result_identity, label="task result")
 
 
 def _validate_task_write_scope(

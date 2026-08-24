@@ -8,6 +8,14 @@ from typing import Any
 from agent_lifecycle.changesets import capture_task_change_set, require_current_task_change_set
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.review_verdict import validate_review_verdict
+from agent_lifecycle.workflow.artifacts import require_artifact_identity
+
+
+def _read_committed_result(root: Path, task: dict[str, Any]) -> dict[str, Any]:
+    result_identity = task.get("result")
+    if not isinstance(result_identity, dict) or not isinstance(result_identity.get("path"), str):
+        raise LifecycleError("missing-task-result", "task acceptance requires committed result")
+    return require_artifact_identity(root, result_identity, label="task result")
 
 
 def task_result_freshness_required(state: dict[str, Any]) -> bool:

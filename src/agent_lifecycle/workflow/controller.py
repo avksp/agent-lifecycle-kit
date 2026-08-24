@@ -19,9 +19,9 @@ from agent_lifecycle.workflow.run_transitions import (
     resolve_blocker,
     resume_external_action,
 )
+from agent_lifecycle.workflow.task_outcomes import apply_task_review_outcome
 from agent_lifecycle.workflow.task_transitions import (
     accept_task,
-    apply_task_review_outcome,
     commit_task_result,
     rework_task,
     start_task,
