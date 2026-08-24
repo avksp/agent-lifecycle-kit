@@ -106,7 +106,17 @@ _WORKSTREAM = {
     "qualityFloor",
 }
 _ACCEPTANCE = {"criteria", "evidence", "releaseGate", "qualityFloor"}
-_CRITERION = {"id", "requirementIds", "evidenceIds", "statement", "description", "source", "priority"}
+_CRITERION = {
+    "id",
+    "requirementIds",
+    "evidenceIds",
+    "independentEvidenceIds",
+    "independence",
+    "statement",
+    "description",
+    "source",
+    "priority",
+}
 _EVIDENCE = {"id", "description", "source", "validation", "artifactPath", "required"}
 _VALIDATION = {"commands", "extraEvidence"}
 _ORCHESTRATION = {

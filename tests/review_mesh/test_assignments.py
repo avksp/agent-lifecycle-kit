@@ -56,6 +56,20 @@ class ReviewMeshAssignmentTests(unittest.TestCase):
         self.assertTrue(packet["assignment"]["blocking"])
         self.assertTrue(packet["assignment"]["subject"]["reviewMeshBlockingOptIn"])
 
+    def test_manifest_source_carries_base_revision_lineage(self) -> None:
+        source = source_from_manifest(
+            {
+                "schemaVersion": "agent-plan-manifest.v1",
+                "status": "FROZEN",
+                "package": {"id": "release-x"},
+                "baseRevision": {"ref": "main", "sha": "a" * 40},
+            }
+        )
+
+        self.assertEqual(source["sourceRevision"], "a" * 40)
+        self.assertEqual(len(source["sourceLineageDigest"]), 64)
+        self.assertEqual(source["primaryProducerClass"], "plan-authority")
+
 
 if __name__ == "__main__":
     unittest.main()
