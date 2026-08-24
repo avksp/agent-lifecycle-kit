@@ -10,12 +10,12 @@ from typing import Any
 
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.domain_language import domain_language_digest, validate_domain_language
 from agent_lifecycle.contracts.domain_language_schemas import (
     DOMAIN_LANGUAGE_CONTINUITY_SCHEMA,
     DOMAIN_LANGUAGE_CONTINUITY_VALIDATION_SCHEMA,
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
-from agent_lifecycle.project.domain_language import domain_language_digest, validate_domain_language
 
 REFERENCE_VALIDATION_SCHEMA = "agent-plan-reference-validation.v1"
 SNAPSHOT_SCHEMA = "agent-plan-snapshot.v1"
