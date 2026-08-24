@@ -21,6 +21,7 @@ from agent_lifecycle.contracts.context_checkpoint_schemas import (
 from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.cross_check_schemas import CROSS_CHECK_SCHEMAS
+from agent_lifecycle.contracts.domain_language_schemas import DOMAIN_LANGUAGE_SCHEMAS
 from agent_lifecycle.contracts.evidence_import_schemas import EVIDENCE_IMPORT_SCHEMAS
 from agent_lifecycle.contracts.execution_strategy_schemas import (
     EXECUTION_STRATEGY_SCHEMAS,
@@ -728,6 +729,7 @@ _SCHEMA_GROUPS = (
     WORKFLOW_STATE_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
     CROSS_CHECK_SCHEMAS,
+    DOMAIN_LANGUAGE_SCHEMAS,
     REVIEW_MESH_SCHEMAS,
     REVIEW_MESH_RECOMMENDATION_SCHEMAS,
     SANDBOX_SCHEMAS,

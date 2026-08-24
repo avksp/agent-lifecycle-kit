@@ -19,6 +19,15 @@ LIFECYCLE_CONTROL_DOCUMENTATION: dict[str, Any] = {
     "bundledQualificationStatus": "NO_RECOMMENDATION",
 }
 
+DOMAIN_LANGUAGE_DOCUMENTATION: dict[str, Any] = {
+    "id": "optional-project-domain-language",
+    "status": "OPTIONAL",
+    "englishPath": "docs/reference/project-domain-language.md",
+    "russianPath": "docs/ru/reference/project-domain-language.md",
+    "activatedContexts": ["qualification"],
+    "automaticRename": False,
+}
+
 PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     {
         "id": "pyproject-version",
@@ -190,7 +199,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
         "targetRef": target_ref,
         "pluginName": PLUGIN_NAME,
         "entries": entries,
-        "documentedFeatures": [LIFECYCLE_CONTROL_DOCUMENTATION],
+        "documentedFeatures": [LIFECYCLE_CONTROL_DOCUMENTATION, DOMAIN_LANGUAGE_DOCUMENTATION],
         "lastChannelPolicy": LAST_CHANNEL_POLICY,
         "productionPromotionClaimed": False,
     }
