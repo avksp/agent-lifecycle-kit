@@ -53,6 +53,18 @@ def report_has_category(report: dict[str, Any], categories: set[str]) -> bool:
     return any(entry.get("category") in categories for entry in report.get("entries", []))
 
 
+def declared_ownership_paths(manifest: dict[str, Any]) -> list[str]:
+    """Return literal workstream ownership paths for read-only projections."""
+
+    classifiers = _classifiers(manifest, None)
+    paths = {
+        path
+        for roots in classifiers["workstreams"].values()
+        for path in roots
+    }
+    return sorted(paths)
+
+
 def _classifiers(manifest: dict[str, Any], manifest_path: Path | None) -> dict[str, Any]:
     package_value = manifest.get("package")
     package = package_value if isinstance(package_value, dict) else {}

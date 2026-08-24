@@ -78,6 +78,17 @@ ALK в первую очередь используется через кома�
   `LEGACY_NEUTRALITY_SCOPES`, `NEUTRALITY_SCOPE_CHOICES`,
   `NeutralityFinding`, `NeutralityReport`, `TRACKED_RELEASE_SCOPE`,
   `load_authority_bundle`, `scan_repository`.
+- `agent_lifecycle.reporting`: `build_change_summary_receipt`,
+  `build_attention_projection`, `build_lifecycle_progress_view`,
+  `build_lifecycle_progress_watch`, `build_multi_run_attention_view`,
+  `build_multi_run_overlap`, `build_multi_run_view`,
+  `build_progress_bridge_config`, `build_progress_bridge_receipt`,
+  `build_progress_hook_policy`, `build_progress_hook_receipt`,
+  `build_status_view`, `build_workflow_event_feed`,
+  `render_progress_bridge_terminal`, `render_goal_view_terminal`,
+  `render_progress_terminal`, `render_usage_export_json`,
+  `render_usage_export_table`, `require_status_view_pass`,
+  `write_progress_hook_receipt`.
 
 Каждая поддерживаемая функция имеет аннотации. Машиночитаемый источник этого
 перечня — `policy/python-public-api.json`; валидатор релиза импортирует каждый

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.cli.dispatch_metrics import _dispatch_execution_report
 from agent_lifecycle.context import check_context, load_context_profile, render_context
 from agent_lifecycle.context.checkpoint_store import (
     restore_context_checkpoint,
@@ -54,7 +56,6 @@ from agent_lifecycle.metrics.audit_optimization import (
     validate_audit_optimization_report,
 )
 from agent_lifecycle.metrics.audit_samples import build_audit_samples
-from agent_lifecycle.cli.dispatch_metrics import _dispatch_execution_report
 from agent_lifecycle.model_routing import (
     resolve_model_route,
     validate_host_model_profile,
@@ -70,6 +71,7 @@ from agent_lifecycle.reporting import (
     build_change_summary_receipt,
     build_lifecycle_progress_view,
     build_lifecycle_progress_watch,
+    build_multi_run_attention_view,
     build_progress_bridge_receipt,
     build_status_view,
     build_workflow_event_feed,
@@ -127,7 +129,8 @@ def _dispatch_thread(args: argparse.Namespace) -> dict[str, Any]:
                 "thread request and receipt lineage validation failed",
                 {"validation": validation},
             )
-        limits = request.get("limits") if isinstance(request.get("limits"), dict) else {}
+        raw_limits = request.get("limits")
+        limits: dict[str, Any] = raw_limits if isinstance(raw_limits, dict) else {}
         imported = prepare_thread_context_import(
             operation_id=request["operationId"],
             source_receipt_digest=receipt["receiptDigest"],
@@ -181,6 +184,18 @@ def _dispatch_report(args: argparse.Namespace) -> dict[str, Any] | str:
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload
+    if args.report_command in {"multi-run", "attention"}:
+        payload = build_multi_run_attention_view(
+            project_root=Path(args.project_root),
+            run_roots=[Path(item) for item in args.run_root],
+            max_runs=args.max_runs,
+            max_bytes_per_run=args.max_bytes_per_run,
+            stale_after_seconds=args.stale_after_seconds,
+            now=_parse_report_time(args.now),
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.report_command == "progress":
         if args.watch:
             payload = build_lifecycle_progress_watch(
@@ -213,6 +228,18 @@ def _dispatch_report(args: argparse.Namespace) -> dict[str, Any] | str:
             write_json_create(Path(args.out), payload)
         return payload
     raise LifecycleError("command-not-implemented", "report command is not implemented")
+
+
+def _parse_report_time(value: str | None) -> datetime | None:
+    if value is None:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise LifecycleError("multi-run-invalid-time", "--now must be an ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _dispatch_context(args: argparse.Namespace) -> dict[str, Any]:
@@ -328,7 +355,10 @@ def _dispatch_context_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
 def _require_checkpoint_output_root(root: Path) -> None:
     resolved = root.resolve()
     if ".alk" not in resolved.parts or not resolved.name == "checkpoints":
-        raise LifecycleError("context-checkpoint-output-root-invalid", "checkpoint output must remain in a .alk/context/checkpoints directory")
+        raise LifecycleError(
+            "context-checkpoint-output-root-invalid",
+            "checkpoint output must remain in a .alk/context/checkpoints directory",
+        )
 
 
 def _dispatch_goal(args: argparse.Namespace) -> dict[str, Any] | str:
@@ -383,12 +413,20 @@ def _dispatch_model(args: argparse.Namespace) -> dict[str, Any]:
         return validate_model_routing_profile(profile)
     if args.model_command == "route":
         routing_profile = read_json_object(Path(args.profile), label="model routing profile")
-        host_profile = read_json_object(Path(args.host_profile), label="host model profile") if args.host_profile else None
+        host_profile = (
+            read_json_object(Path(args.host_profile), label="host model profile")
+            if args.host_profile
+            else None
+        )
         request = read_json_object(Path(args.request), label="model route request")
         return resolve_model_route(request, routing_profile, host_profile=host_profile)
     if args.model_command == "usage-check":
         receipt = read_json_object(Path(args.receipt), label="model usage receipt")
-        decision = read_json_object(Path(args.route_decision), label="model route decision") if args.route_decision else None
+        decision = (
+            read_json_object(Path(args.route_decision), label="model route decision")
+            if args.route_decision
+            else None
+        )
         targets = read_json_object(Path(args.budget_targets), label="budget targets") if args.budget_targets else None
         result = validate_usage_receipt(receipt, budget_targets=targets, route_decision=decision)
         if result["status"] == "FAIL":
@@ -401,7 +439,7 @@ def _dispatch_model(args: argparse.Namespace) -> dict[str, Any]:
     raise LifecycleError("command-not-implemented", "model command is not implemented")
 
 
-def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
+def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any] | str:
     if args.metrics_command == "cost-check":
         report = read_json_object(Path(args.receipt), label="lifecycle cost report")
         return require_lifecycle_cost_pass(validate_lifecycle_cost_report(report))
@@ -509,7 +547,11 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
         candidates = _read_json_items(args.candidate_profile, label="candidate profile")
         references = _read_json_items(args.reference_task, label="reference task")
         holdouts = _read_json_items(args.holdout_task, label="holdout task")
-        current = read_json_object(Path(args.current_profile), label="current optimization profile") if args.current_profile else None
+        current = (
+            read_json_object(Path(args.current_profile), label="current optimization profile")
+            if args.current_profile
+            else None
+        )
         report = build_audit_optimization_report(
             samples,
             candidate_profiles=candidates,
@@ -521,16 +563,23 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any]:
         )
         validation = validate_audit_optimization_report(report)
         if validation["status"] != "PASS":
-            raise LifecycleError("audit-optimization-report-invalid", "audit optimization report validation failed", {"validation": validation})
+            raise LifecycleError(
+                "audit-optimization-report-invalid",
+                "audit optimization report validation failed",
+                {"validation": validation},
+            )
         write_json_create(Path(args.out), report)
         if args.terminal:
             return render_audit_optimization_terminal(report)
         return report
     if args.metrics_command == "audit-proposal":
         report = read_json_object(Path(args.report), label="audit optimization report")
-        recommendation = report.get("recommendation") if isinstance(report.get("recommendation"), dict) else {}
+        raw_recommendation = report.get("recommendation")
+        proposal_recommendation: dict[str, Any] = (
+            raw_recommendation if isinstance(raw_recommendation, dict) else {}
+        )
         proposal = build_optimization_proposal(
-            recommendation,
+            proposal_recommendation,
             approved=args.approved,
             target_kind=args.target_kind,
             target_revision=args.target_revision,
@@ -549,7 +598,8 @@ def _read_audit_samples(paths: list[str]) -> list[dict[str, Any]]:
     samples: list[dict[str, Any]] = []
     for item in paths:
         payload = read_json_object(Path(item), label="audit sample")
-        rows = payload.get("samples") if isinstance(payload.get("samples"), list) else [payload]
+        raw_samples = payload.get("samples")
+        rows = raw_samples if isinstance(raw_samples, list) else [payload]
         samples.extend(row for row in rows if isinstance(row, dict))
     return samples
 
@@ -558,7 +608,8 @@ def _read_json_items(paths: list[str], *, label: str) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for item in paths:
         payload = read_json_object(Path(item), label=label)
-        rows = payload if isinstance(payload, list) else payload.get("items") if isinstance(payload.get("items"), list) else [payload]
+        raw_items = payload.get("items")
+        rows = raw_items if isinstance(raw_items, list) else [payload]
         items.extend(row for row in rows if isinstance(row, dict))
     return items
 
