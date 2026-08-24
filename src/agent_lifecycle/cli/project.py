@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.adapter_sessions import START_MODES
+from agent_lifecycle.audit.domain_language import build_domain_language_impact_audit
 from agent_lifecycle.contracts import (
     LifecycleError,
     canonical_digest,
@@ -24,6 +25,7 @@ from agent_lifecycle.project import (
     load_project_preset,
     load_project_profile,
     render_project_preset,
+    validate_domain_language,
     validate_project_preset,
     validate_project_principles,
 )
@@ -69,6 +71,18 @@ def add_project_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     principles_check.add_argument("--file", "--path", dest="principles_path", required=True)
     principles_check.add_argument("--project-root", default=".")
     principles_check.add_argument("--out")
+    language = project_sub.add_parser("language", help="optional project domain language commands")
+    language_sub = language.add_subparsers(dest="language_command", required=True)
+    language_check = language_sub.add_parser("check", help="validate a project domain language artifact")
+    language_check.add_argument("--file", "--path", dest="language_path", required=True)
+    language_check.add_argument("--project-root", default=".")
+    language_check.add_argument("--out")
+    language_audit = language_sub.add_parser("audit", help="audit term impact and stale aliases without editing files")
+    language_audit.add_argument("--file", "--path", dest="language_path", required=True)
+    language_audit.add_argument("--project-root", default=".")
+    language_audit.add_argument("--term-id", action="append", default=[])
+    language_audit.add_argument("--changed-path", action="append", default=[])
+    language_audit.add_argument("--out")
     preset = project_sub.add_parser("preset", help="inspect and render built-in workflow presets")
     preset_sub = preset.add_subparsers(dest="preset_command", required=True)
     preset_sub.add_parser("list", help="list built-in workflow presets")
@@ -89,6 +103,8 @@ def dispatch_project(args: argparse.Namespace) -> dict[str, Any]:
         if args.principles_command not in {"check", "validate"}:
             raise LifecycleError("command-not-implemented", "project principles command is not implemented")
         return _check_principles(args)
+    if args.project_command == "language":
+        return _dispatch_domain_language(args)
     if args.project_command == "preset":
         return _dispatch_preset(args)
     if args.project_command != "profile":
@@ -243,9 +259,7 @@ def _explain_profile(args: argparse.Namespace) -> dict[str, Any]:
         blockers.append(
             {
                 "code": "project-profile-capability-unavailable",
-                "causes": _validation_codes(
-                    capability_validation, capability_error
-                )
+                "causes": _validation_codes(capability_validation, capability_error)
                 + _validation_codes(level_validation, None),
             }
         )
@@ -399,6 +413,59 @@ def _check_principles(args: argparse.Namespace) -> dict[str, Any]:
     result = validate_project_principles(payload, project_root=root, source_path=source)
     if args.out:
         write_json_create(Path(args.out), result)
+    return result
+
+
+def _dispatch_domain_language(args: argparse.Namespace) -> dict[str, Any]:
+    if args.language_command == "check":
+        return _check_domain_language(args)
+    if args.language_command == "audit":
+        return _audit_domain_language(args)
+    raise LifecycleError("command-not-implemented", "project language command is not implemented")
+
+
+def _read_domain_language_for_command(args: argparse.Namespace) -> tuple[Path, Path, dict[str, Any]]:
+    root = Path(args.project_root).resolve()
+    source = Path(args.language_path)
+    if not source.is_absolute():
+        source = root / source
+    try:
+        payload = read_json_object(source, label="project domain language")
+    except OSError as exc:
+        raise LifecycleError(
+            "domain-language-read-failed",
+            "project domain language cannot be read",
+            {"path": str(args.language_path)},
+        ) from exc
+    return root, source, payload
+
+
+def _check_domain_language(args: argparse.Namespace) -> dict[str, Any]:
+    root, source, payload = _read_domain_language_for_command(args)
+    result = validate_domain_language(payload, project_root=root, source_path=source)
+    if args.out:
+        output = Path(args.out)
+        if not output.is_absolute():
+            output = root / output
+        _ensure_output_contained(output, root)
+        write_json_create(output, result)
+    return result
+
+
+def _audit_domain_language(args: argparse.Namespace) -> dict[str, Any]:
+    root, _source, payload = _read_domain_language_for_command(args)
+    result = build_domain_language_impact_audit(
+        payload,
+        changed_term_ids=args.term_id,
+        changed_paths=args.changed_path,
+        project_root=root,
+    )
+    if args.out:
+        output = Path(args.out)
+        if not output.is_absolute():
+            output = root / output
+        _ensure_output_contained(output, root)
+        write_json_create(output, result)
     return result
 
 

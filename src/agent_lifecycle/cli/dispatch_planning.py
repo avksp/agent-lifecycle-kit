@@ -192,6 +192,8 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
             before_lock=read(args.before_lock, "before plan lock"),
             after_lock=read(args.after_lock, "after plan lock"),
             principles=read(args.principles, "project principles"),
+            language_before=read(args.language_before, "before project domain language"),
+            language_after=read(args.language_after, "after project domain language"),
         )
         if args.out:
             write_json_create(Path(args.out), payload)

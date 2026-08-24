@@ -11,6 +11,7 @@ from typing import Any
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.project.domain_language import domain_language_digest, validate_domain_language
 
 REFERENCE_VALIDATION_SCHEMA = "agent-plan-reference-validation.v1"
 SNAPSHOT_SCHEMA = "agent-plan-snapshot.v1"
@@ -49,18 +50,21 @@ def validate_repository_references(manifest: dict[str, Any]) -> dict[str, Any]:
             try:
                 normalize_repo_path(path)
             except LifecycleError as exc:
-                blockers.append({"code": "invalid-repository-reference-path", "index": index, "path": path, "reason": exc.code})
+                blockers.append(
+                    {"code": "invalid-repository-reference-path", "index": index, "path": path, "reason": exc.code}
+                )
         if access == "write-scoped" and not paths:
             blockers.append({"code": "write-reference-missing-paths", "index": index})
         if owner and _looks_like_local_absolute_path(owner):
             blockers.append({"code": "invalid-repository-owner", "index": index})
     status = "PASS" if not blockers else "FAIL"
+    repository_ids: set[str] = {item["repoId"] for item in references if isinstance(item.get("repoId"), str)}
     body = {
         "schemaVersion": REFERENCE_VALIDATION_SCHEMA,
         "status": status,
         "packageId": _package_id(manifest),
         "referenceCount": len(references),
-        "repositoryIds": sorted({item.get("repoId") for item in references if isinstance(item.get("repoId"), str)}),
+        "repositoryIds": sorted(repository_ids),
         "blockers": blockers,
     }
     return {**body, "validationDigest": canonical_digest(body)}
@@ -68,7 +72,9 @@ def validate_repository_references(manifest: dict[str, Any]) -> dict[str, Any]:
 
 def require_repository_references_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("plan-references-validation-failed", "repository references failed validation", {"validation": validation})
+        raise LifecycleError(
+            "plan-references-validation-failed", "repository references failed validation", {"validation": validation}
+        )
     return validation
 
 
@@ -98,6 +104,62 @@ def build_plan_snapshot(manifest: dict[str, Any]) -> dict[str, Any]:
     return {**body, "snapshotDigest": canonical_digest(body)}
 
 
+def build_domain_language_continuity(
+    language: dict[str, Any],
+    *,
+    plan_digest: str | None = None,
+    source_revision: str | None = None,
+) -> dict[str, Any]:
+    """Bind an optional vocabulary to its own revision and plan lineage."""
+
+    validation = validate_domain_language(language)
+    body = {
+        "schemaVersion": "agent-project-domain-language-continuity.v1",
+        "status": "PASS" if validation["status"] == "PASS" else "FAIL",
+        "languageId": language.get("languageId") if isinstance(language, dict) else None,
+        "revision": language.get("revision") if isinstance(language, dict) else None,
+        "languageDigest": domain_language_digest(language) if isinstance(language, dict) else None,
+        "planDigest": plan_digest,
+        "sourceRevision": source_revision,
+        "blockers": validation.get("blockers", []),
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "continuityDigest": canonical_digest(body)}
+
+
+def reconcile_domain_language_continuity(
+    snapshot: dict[str, Any],
+    language: dict[str, Any],
+    *,
+    plan_digest: str | None = None,
+    source_revision: str | None = None,
+) -> dict[str, Any]:
+    """Check that a vocabulary snapshot still names the same immutable inputs."""
+
+    current = build_domain_language_continuity(
+        language,
+        plan_digest=plan_digest,
+        source_revision=source_revision,
+    )
+    blockers: list[dict[str, Any]] = []
+    if not isinstance(snapshot, dict) or snapshot.get("schemaVersion") != current["schemaVersion"]:
+        blockers.append({"code": "domain-language-continuity-schema-invalid"})
+    for field in ("languageId", "revision", "languageDigest", "planDigest", "sourceRevision"):
+        if isinstance(snapshot, dict) and snapshot.get(field) != current.get(field):
+            blockers.append({"code": "domain-language-continuity-drift", "field": field})
+    if isinstance(snapshot, dict):
+        expected = canonical_digest({key: value for key, value in snapshot.items() if key != "continuityDigest"})
+        if snapshot.get("continuityDigest") != expected:
+            blockers.append({"code": "domain-language-continuity-digest-mismatch"})
+    body = {
+        "schemaVersion": "agent-project-domain-language-continuity-validation.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
+
+
 def reconcile_plan_snapshot(snapshot: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
     """Compare a saved plan snapshot with the current manifest."""
 
@@ -108,17 +170,27 @@ def reconcile_plan_snapshot(snapshot: dict[str, Any], manifest: dict[str, Any]) 
         blockers.append({"code": "mutable-plan-snapshot"})
     package_id = _package_id(manifest)
     if snapshot.get("packageId") != package_id:
-        blockers.append({"code": "plan-snapshot-package-drift", "expected": snapshot.get("packageId"), "actual": package_id})
+        blockers.append(
+            {"code": "plan-snapshot-package-drift", "expected": snapshot.get("packageId"), "actual": package_id}
+        )
     source_digest = canonical_digest(manifest)
     classification = DRIFT_MATCH
     if blockers:
         classification = DRIFT_BLOCKED
     elif snapshot.get("sourceDigest") != source_digest:
         classification = DRIFT_REQUIRES_NEW_PLAN
-        blockers.append({"code": "plan-snapshot-source-drift", "expected": snapshot.get("sourceDigest"), "actual": source_digest})
+        blockers.append(
+            {"code": "plan-snapshot-source-drift", "expected": snapshot.get("sourceDigest"), "actual": source_digest}
+        )
     elif snapshot.get("planRevision") != manifest.get("planRevision"):
         classification = DRIFT_REQUIRES_NEW_PLAN
-        blockers.append({"code": "plan-snapshot-revision-drift", "expected": snapshot.get("planRevision"), "actual": manifest.get("planRevision")})
+        blockers.append(
+            {
+                "code": "plan-snapshot-revision-drift",
+                "expected": snapshot.get("planRevision"),
+                "actual": manifest.get("planRevision"),
+            }
+        )
     status = "PASS" if classification == DRIFT_MATCH else "FAIL"
     body = {
         "schemaVersion": RECONCILIATION_SCHEMA,
@@ -134,7 +206,11 @@ def reconcile_plan_snapshot(snapshot: dict[str, Any], manifest: dict[str, Any]) 
 
 def require_reconciliation_pass(reconciliation: dict[str, Any]) -> dict[str, Any]:
     if reconciliation.get("status") != "PASS":
-        raise LifecycleError("plan-reconciliation-failed", "plan reconciliation blocked the current manifest", {"reconciliation": reconciliation})
+        raise LifecycleError(
+            "plan-reconciliation-failed",
+            "plan reconciliation blocked the current manifest",
+            {"reconciliation": reconciliation},
+        )
     return reconciliation
 
 
@@ -213,14 +289,16 @@ def _looks_like_local_absolute_path(value: str) -> bool:
 
 
 def _package_id(manifest: dict[str, Any]) -> str | None:
-    package = manifest.get("package") if isinstance(manifest.get("package"), dict) else {}
+    package_value = manifest.get("package")
+    package = package_value if isinstance(package_value, dict) else {}
     return package.get("id") if isinstance(package.get("id"), str) else None
 
 
 def _reference_projection(references: list[dict[str, Any]]) -> list[dict[str, Any]]:
     projected = []
     for item in references:
-        paths = item.get("paths") if isinstance(item.get("paths"), list) else []
+        raw_paths = item.get("paths")
+        paths = raw_paths if isinstance(raw_paths, list) else []
         projected.append(
             {
                 "id": item.get("id"),
@@ -240,8 +318,12 @@ def _workstream_projection(workstream: dict[str, Any]) -> dict[str, Any]:
         "owner": workstream.get("owner"),
         "dependsOn": list(workstream.get("dependsOn", [])) if isinstance(workstream.get("dependsOn"), list) else [],
         "writeCount": len(workstream.get("writes", [])) if isinstance(workstream.get("writes"), list) else 0,
-        "acceptanceIds": list(workstream.get("acceptanceIds", [])) if isinstance(workstream.get("acceptanceIds"), list) else [],
-        "evidenceIds": list(workstream.get("evidenceIds", [])) if isinstance(workstream.get("evidenceIds"), list) else [],
+        "acceptanceIds": list(workstream.get("acceptanceIds", []))
+        if isinstance(workstream.get("acceptanceIds"), list)
+        else [],
+        "evidenceIds": list(workstream.get("evidenceIds", []))
+        if isinstance(workstream.get("evidenceIds"), list)
+        else [],
     }
 
 
