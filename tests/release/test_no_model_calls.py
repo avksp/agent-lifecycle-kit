@@ -15,9 +15,10 @@ from validate_no_model_calls import validate_no_model_calls  # noqa: E402
 
 
 class NoModelCallScanTests(unittest.TestCase):
-    def test_managed_runner_sources_do_not_import_model_clients(self) -> None:
+    def test_workflow_run_sources_do_not_import_model_clients(self) -> None:
         payload = validate_no_model_calls(
             [
+                ROOT / "src/agent_lifecycle/workflow/run.py",
                 ROOT / "src/agent_lifecycle/workflow/managed_runner.py",
                 ROOT / "src/agent_lifecycle/workflow/next_action.py",
             ]

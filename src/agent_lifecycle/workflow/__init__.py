@@ -44,18 +44,22 @@ from agent_lifecycle.workflow.leases import (
     require_worker_lease_receipt_pass,
     validate_worker_lease_receipt,
 )
-from agent_lifecycle.workflow.managed_runner import run_managed_lifecycle_step
 from agent_lifecycle.workflow.risk_execution_gate import (
     clear_task_risk_profile,
     validate_attempt_risk_usage,
     validate_task_risk_profile,
 )
+from agent_lifecycle.workflow.run import run_workflow_step
 from agent_lifecycle.workflow.sandbox_policy import (
     build_sandbox_requirement_policy,
     require_task_sandbox_evidence_pass,
     sandbox_evidence_required,
     validate_task_sandbox_evidence,
 )
+
+# Transitional internal alias for the CLI dispatcher. WS200-03 removes the
+# old public runner command path and updates that dispatcher to this name.
+run_managed_lifecycle_step = run_workflow_step
 
 __all__ = [
     "accept_task",
@@ -89,6 +93,7 @@ __all__ = [
     "resume_external_action",
     "rework_task",
     "run_managed_lifecycle_step",
+    "run_workflow_step",
     "sandbox_evidence_required",
     "select_auto_budget_action",
     "start_execution",

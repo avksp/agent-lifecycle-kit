@@ -5,8 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.runner import validate_sandbox_receipt
-from agent_lifecycle.runner.sandbox_receipts import SANDBOX_STATUSES
+from agent_lifecycle.workflow.sandbox_receipts import SANDBOX_STATUSES, validate_sandbox_receipt
 
 SANDBOX_REQUIREMENT_SCHEMA = "agent-sandbox-requirement.v1"
 SANDBOX_REQUIREMENT_VALIDATION_SCHEMA = "agent-sandbox-requirement-validation.v1"
@@ -117,7 +116,9 @@ def validate_task_sandbox_evidence(
 
 def require_task_sandbox_evidence_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("sandbox-policy-validation-failed", "sandbox policy validation failed", {"validation": validation})
+        raise LifecycleError(
+            "sandbox-policy-validation-failed", "sandbox policy validation failed", {"validation": validation}
+        )
     return validation
 
 
@@ -183,10 +184,7 @@ def _accepted_sandbox_statuses(
 
 def _is_high_risk_task(task: dict[str, Any], policy: dict[str, Any]) -> bool:
     high_risk = {str(item) for item in policy.get("highRiskClasses", [])}
-    for value in _task_classifiers(task):
-        if value in high_risk:
-            return True
-    return False
+    return any(value in high_risk for value in _task_classifiers(task))
 
 
 def _task_classifiers(task: dict[str, Any]) -> set[str]:

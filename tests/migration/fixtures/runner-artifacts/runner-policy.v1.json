@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "agent-runner-policy.v1",
+  "maxAttemptsPerTask": 2,
+  "maxReroutesPerTask": 1,
+  "maxSplitsPerTask": 1,
+  "maxBillableTokens": 120000
+}

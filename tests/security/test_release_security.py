@@ -28,6 +28,8 @@ class ReleaseSecurityTests(unittest.TestCase):
         offenders: list[str] = []
         for rel_path in _git_ls_files():
             path = ROOT / rel_path
+            if not path.is_file():
+                continue
             if _is_binary(path):
                 continue
             text = path.read_text(encoding="utf-8", errors="ignore")
