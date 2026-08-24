@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "agent-external-check-profile.v1",
+  "profileId": "declared-dependencies",
+  "checkId": "declared-dependencies",
+  "toolId": "deptry",
+  "toolVersion": "declared-by-project",
+  "executable": "deptry",
+  "argv": ["deptry", "."],
+  "configPath": "pyproject.toml",
+  "workingDirectory": null,
+  "timeoutSeconds": 120,
+  "maxOutputBytes": 262144,
+  "environment": {"allow": ["PATH"], "allowPatterns": []},
+  "outputFormat": "text"
+}

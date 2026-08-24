@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.88.0 - 2026-08-24
+
+- Added provider-neutral external verification contracts for bounded findings,
+  tool/configuration identity, source snapshots and plan/lock lineage.
+- Added optional shell-free profiles for import boundaries, module dependencies
+  and declared dependencies without adding analyzer packages to runtime.
+- Added fail-closed handling for unavailable, incomplete or source-drifting
+  checks; external results remain non-authoritative review evidence.
+- Added bilingual documentation and synchronized package/plugin metadata.
+
 ## 1.87.0 - 2026-08-24
 
 - Added bounded adapter action evidence to the existing event stream, binding
