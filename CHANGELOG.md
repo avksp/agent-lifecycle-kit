@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 2.1.0 - 2026-08-25
+
+- Added criterion-scoped independent evidence for explicitly declared
+  high-risk acceptance criteria.
+- Bound evidence to its requirement, producer class, implementation digest
+  and source lineage without storing hidden reasoning or raw transcripts.
+- Kept the feature optional and advisory unless the frozen criterion requires
+  it; stale, unavailable or malformed required evidence fails closed.
+- Added English and Russian documentation and synchronized package/plugin
+  publication metadata.
+
 ## 2.0.0 - 2026-08-24
 
 - Made durable workflow state the only active lifecycle authority and removed

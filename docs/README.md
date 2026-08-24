@@ -19,7 +19,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==2.0.0` from
+  `python -m pip install agent-lifecycle-kit==2.1.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -119,6 +119,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Optional quality packs](reference/optional-quality-packs.md)
 - [Optional cross-check profile](reference/cross-check-profile.md)
 - [Review Mesh](reference/review-mesh.md)
+- [Risk-bound independent verification](reference/risk-bound-independent-verification.md)
 - [Review Mesh recommendation](reference/review-mesh.md#recommendation-advisor)
 - [Review Mesh prepare](reference/review-mesh.md#operator-templates-and-prepare)
 - [Review Mesh assignments and quorum](reference/review-mesh.md#assignments-results-synthesis-and-quorum)

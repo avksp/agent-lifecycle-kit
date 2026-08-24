@@ -29,6 +29,7 @@ from agent_lifecycle.contracts.external_check_schemas import EXTERNAL_CHECK_SCHE
 from agent_lifecycle.contracts.finding_check_schemas import FINDING_CHECK_SCHEMAS
 from agent_lifecycle.contracts.host_capability_schemas import HOST_CAPABILITY_SCHEMAS
 from agent_lifecycle.contracts.import_dialect_schemas import IMPORT_DIALECT_SCHEMAS
+from agent_lifecycle.contracts.independent_evidence_schemas import INDEPENDENT_EVIDENCE_SCHEMAS
 from agent_lifecycle.contracts.legacy_runner_schemas import LEGACY_RUNNER_SCHEMAS
 from agent_lifecycle.contracts.lifecycle_control_definitions import (
     CONTROL_EVENT_TYPES,
@@ -713,6 +714,7 @@ _SCHEMA_GROUPS = (
     EVIDENCE_IMPORT_SCHEMAS,
     EXTERNAL_CHECK_SCHEMAS,
     FINDING_CHECK_SCHEMAS,
+    INDEPENDENT_EVIDENCE_SCHEMAS,
     EXECUTION_STRATEGY_SCHEMAS,
     IMPORT_DIALECT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,

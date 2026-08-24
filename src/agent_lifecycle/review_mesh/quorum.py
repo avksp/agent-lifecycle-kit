@@ -17,6 +17,8 @@ def build_quorum_from_synthesis(
     synthesis: dict[str, Any],
     quorum_policy: dict[str, Any],
     reviewer_roles: list[str] | None = None,
+    independence_requirement: dict[str, Any] | None = None,
+    independent_evidence: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build and validate a quorum receipt from synthesized Review Mesh evidence."""
 
@@ -32,6 +34,8 @@ def build_quorum_from_synthesis(
         reviewer_count=result_count,
         required_roles_satisfied=roles_satisfied,
         blocking_findings_unresolved=bool(synthesis.get("unresolvedFindings")),
+        independence_requirement=independence_requirement,
+        independent_evidence=independent_evidence,
     )
     if receipt.get("status") == "PASS":
         require_review_mesh_quorum_pass(validate_review_mesh_quorum_receipt(receipt, profile=profile))
