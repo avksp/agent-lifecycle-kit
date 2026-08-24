@@ -444,6 +444,21 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("agent-lifecycle benchmark compare", text)
             self.assertIn("agent-reference-task-comparison.v1", text)
 
+    def test_structured_result_docs_preserve_qualification_boundaries(self) -> None:
+        for relative_path in (
+            "docs/reference/structured-result-qualification.md",
+            "docs/ru/reference/structured-result-qualification.md",
+        ):
+            with self.subTest(path=relative_path):
+                text = (ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn("agent-structured-result-capability.v1", text)
+                self.assertIn("agent-structured-result-selection.v1", text)
+                self.assertIn("agent-structured-result-validation.v1", text)
+                self.assertIn("agent-structured-result-measurement.v1", text)
+                self.assertIn("NO_RECOMMENDATION", text)
+                self.assertIn("advisoryOnly", text)
+                self.assertNotIn("response_format", text)
+
     def test_execution_strategy_docs_cover_simple_and_advanced_paths(self) -> None:
         for relative_path in (
             "docs/reference/execution-strategy.md",
@@ -1136,6 +1151,17 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(root / "docs/ru/reference/reference-task-evaluation.md", reference_task)
     _write_text(root / "docs/guides/reference-task-evaluation.md", reference_task)
     _write_text(root / "docs/ru/guides/reference-task-evaluation.md", reference_task)
+    structured_result = (
+        "agent-structured-result-capability.v1. "
+        "agent-structured-result-selection.v1. "
+        "agent-structured-result-validation.v1. "
+        "agent-structured-result-measurement.v1. "
+        "SCHEMA_ENFORCED. maximum of two attempts. NO_RECOMMENDATION. "
+        "advisory. cannot accept a workflow task. advisoryOnly. "
+        "рекомендательным. разрешены максимум. не может принять задачу."
+    )
+    _write_text(root / "docs/reference/structured-result-qualification.md", structured_result)
+    _write_text(root / "docs/ru/reference/structured-result-qualification.md", structured_result)
     _write_text(
         root / "docs/reference/lifecycle-cost.md",
         "agent-lifecycle metrics outcome-index.\n"

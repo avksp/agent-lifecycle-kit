@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
-from agent_lifecycle.benchmarks.contracts import LoadedSuite, validate_benchmark_run_receipt
+from agent_lifecycle.benchmarks.contracts import (
+    LoadedSuite,
+    validate_benchmark_run_receipt,
+    validate_structured_result_measurement,
+)
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.contracts.benchmark_schemas import (
     QUALIFICATION_SCHEMA,
     QUALIFICATION_VALIDATION_SCHEMA,
 )
-
 
 DEFAULT_MINIMUMS: dict[str, Any] = {
     "minDistinctTasksPerRoute": 5,
@@ -51,7 +55,10 @@ def qualify_benchmark_runs(
             continue
         groups[route_digest].append(receipt)
 
-    route_reports = [_route_report(route_digest, route_rows, limits) for route_digest, route_rows in sorted(groups.items())]
+    route_reports = [
+        _route_report(route_digest, route_rows, limits, require_structured=limits.get("requireStructuredResultEvidence") is True)
+        for route_digest, route_rows in sorted(groups.items())
+    ]
     insufficient = [
         {
             "code": "benchmark-qualification-insufficient-evidence",
@@ -92,6 +99,19 @@ def qualify_benchmark_runs(
     return {**body, "qualificationDigest": canonical_digest(body)}
 
 
+def qualify_structured_result_runs(
+    receipts: Iterable[dict[str, Any]],
+    *,
+    sample: dict[str, Any] | None = None,
+    suite: LoadedSuite | None = None,
+    minimums: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Qualify structured-result evidence with the mandatory 5x2x5x2 minimums."""
+
+    limits = {**DEFAULT_MINIMUMS, "requireStructuredResultEvidence": True, **(minimums or {})}
+    return qualify_benchmark_runs(receipts, sample=sample, suite=suite, minimums=limits)
+
+
 def validate_qualification_report(report: dict[str, Any]) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     if report.get("schemaVersion") != QUALIFICATION_SCHEMA:
@@ -125,7 +145,13 @@ def validate_qualification_report(report: dict[str, Any]) -> dict[str, Any]:
     return {**body, "validationDigest": canonical_digest(body)}
 
 
-def _route_report(route_digest: str, receipts: list[dict[str, Any]], minimums: dict[str, Any]) -> dict[str, Any]:
+def _route_report(
+    route_digest: str,
+    receipts: list[dict[str, Any]],
+    minimums: dict[str, Any],
+    *,
+    require_structured: bool = False,
+) -> dict[str, Any]:
     task_counts: dict[str, int] = defaultdict(int)
     stratum_counts: dict[str, int] = defaultdict(int)
     false_acceptances = 0
@@ -137,6 +163,10 @@ def _route_report(route_digest: str, receipts: list[dict[str, Any]], minimums: d
     usage_confidences: set[str] = set()
     resource_totals = {"tokens": 0, "elapsedMilliseconds": 0, "retries": 0, "remediations": 0}
     route_identity: dict[str, Any] = {}
+    structured_modes: set[str] = set()
+    structured_valid_runs = 0
+    structured_repair_attempts = 0
+    structured_measurement_count = 0
     for receipt in receipts:
         task_counts[receipt["taskId"]] += 1
         stratum_counts[_stratum_key(receipt)] += 1
@@ -150,6 +180,25 @@ def _route_report(route_digest: str, receipts: list[dict[str, Any]], minimums: d
         scorer_digests.add(receipt["scorer"]["scorerDigest"])
         route_identity = dict(receipt["route"])
         measurements = receipt.get("measurements", {})
+        structured = measurements.get("structuredResult") if isinstance(measurements, dict) else None
+        if require_structured:
+            if not isinstance(structured, dict):
+                quality_gaps.append("structured-result-evidence-missing")
+            else:
+                structured_measurement_count += 1
+                validation = validate_structured_result_measurement(structured)
+                if validation["status"] != "PASS":
+                    quality_gaps.append("structured-result-evidence-invalid")
+                else:
+                    structured_modes.add(str(structured.get("mode")))
+                    if structured.get("valid") is True:
+                        structured_valid_runs += 1
+                    structured_repair_attempts += int(structured.get("repairAttempts", 0))
+                    fixtures = structured.get("fixtureResults", {})
+                    if structured.get("evidenceComplete") is not True or not all(
+                        fixtures.get(key) is True for key in ("positive", "boundary", "malformed")
+                    ):
+                        quality_gaps.append("structured-result-fixture-gap")
         confidence = measurements.get("usageConfidence")
         if isinstance(confidence, str):
             usage_confidences.add(confidence)
@@ -205,6 +254,13 @@ def _route_report(route_digest: str, receipts: list[dict[str, Any]], minimums: d
             "criteriaPassed": criteria_passed,
             "falseAcceptanceCount": false_acceptances,
             "measurementGapCount": len(quality_gaps),
+        },
+        "structuredResult": {
+            "measurementCount": structured_measurement_count,
+            "validRunCount": structured_valid_runs,
+            "repairAttempts": structured_repair_attempts,
+            "modes": sorted(structured_modes),
+            "required": require_structured,
         },
         "resources": resource_totals if not gaps else None,
         "gaps": gaps,

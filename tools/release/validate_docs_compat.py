@@ -1477,6 +1477,34 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/structured-result-qualification.md",
+        (
+            "agent-structured-result-capability.v1",
+            "agent-structured-result-selection.v1",
+            "agent-structured-result-validation.v1",
+            "agent-structured-result-measurement.v1",
+            "SCHEMA_ENFORCED",
+            "maximum of two attempts",
+            "NO_RECOMMENDATION",
+            "advisory",
+            "cannot accept a workflow task",
+        ),
+    ),
+    (
+        "docs/ru/reference/structured-result-qualification.md",
+        (
+            "agent-structured-result-capability.v1",
+            "agent-structured-result-selection.v1",
+            "agent-structured-result-validation.v1",
+            "agent-structured-result-measurement.v1",
+            "SCHEMA_ENFORCED",
+            "разрешены максимум",
+            "NO_RECOMMENDATION",
+            "рекомендательным",
+            "не может принять задачу",
+        ),
+    ),
+    (
         "release/notes/v0.19.0.md",
         (
             "Status: source release.",

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-import re
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
 
@@ -24,6 +24,7 @@ _LEGACY_SHAPE_BY_FAMILY = {
 }
 RUN_RECEIPT_SCHEMA = "agent-benchmark-run-receipt.v1"
 RUN_RECEIPT_VALIDATION_SCHEMA = "agent-benchmark-run-receipt-validation.v1"
+STRUCTURED_RESULT_MEASUREMENT_SCHEMA = "agent-structured-result-measurement.v1"
 BUNDLED_SUITE_PATH = Path("benchmarks/reference-tasks/manifest.json")
 MAX_SUBMISSION_EVIDENCE_DEPTH = 64
 MAX_SUBMISSION_EVIDENCE_NODES = 100_000
@@ -228,6 +229,15 @@ def validate_benchmark_run_receipt(
     if not isinstance(quality.get("measurementGap"), list) or not all(isinstance(item, str) for item in quality["measurementGap"]):
         blockers.append({"code": "benchmark-receipt-quality-gap"})
     _check_portable_value(receipt, blockers)
+    measurements = receipt.get("measurements") if isinstance(receipt.get("measurements"), dict) else {}
+    structured_result = measurements.get("structuredResult")
+    if structured_result is not None:
+        validation = validate_structured_result_measurement(structured_result)
+        if validation["status"] != "PASS":
+            blockers.extend(
+                {"code": item.get("code", "structured-result-measurement-invalid"), "details": item}
+                for item in validation["blockers"]
+            )
     if suite is not None and not blockers:
         try:
             task = load_task(suite, receipt["taskId"])
@@ -262,9 +272,13 @@ def build_benchmark_run_receipt(
     completed: bool,
     quality: dict[str, Any],
     measurements: dict[str, Any],
+    structured_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a portable receipt from host-owned, already redacted facts."""
 
+    measurement_body = dict(measurements)
+    if structured_result is not None:
+        measurement_body["structuredResult"] = dict(structured_result)
     body = {
         "schemaVersion": RUN_RECEIPT_SCHEMA,
         "receiptId": receipt_id,
@@ -280,12 +294,98 @@ def build_benchmark_run_receipt(
         "source": dict(source),
         "completed": completed,
         "quality": dict(quality),
-        "measurements": dict(measurements),
+        "measurements": measurement_body,
         "modelCallsStarted": False,
         "hostLaunchStarted": False,
         "productionPromotionClaimed": False,
     }
     return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def build_structured_result_measurement(
+    *,
+    operation_id: str,
+    mode: str,
+    valid: bool,
+    repair_attempts: int,
+    selection_digest: str,
+    required_schema_digest: str,
+    validation_digest: str,
+    fixture_results: dict[str, bool],
+    evidence_complete: bool = True,
+) -> dict[str, Any]:
+    """Build portable structured-result measurements for one benchmark run."""
+
+    body = {
+        "schemaVersion": STRUCTURED_RESULT_MEASUREMENT_SCHEMA,
+        "operationId": operation_id,
+        "mode": mode,
+        "valid": valid,
+        "repairAttempts": repair_attempts,
+        "maxRepairAttempts": 2,
+        "selectionDigest": selection_digest,
+        "requiredSchemaDigest": required_schema_digest,
+        "validationDigest": validation_digest,
+        "fixtureResults": dict(fixture_results),
+        "evidenceComplete": evidence_complete,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "measurementDigest": canonical_digest(body)}
+
+
+def validate_structured_result_measurement(measurement: dict[str, Any]) -> dict[str, Any]:
+    """Validate structured-result measurements without treating them as authority."""
+
+    blockers: list[dict[str, Any]] = []
+    required = (
+        "operationId",
+        "mode",
+        "valid",
+        "repairAttempts",
+        "maxRepairAttempts",
+        "selectionDigest",
+        "requiredSchemaDigest",
+        "validationDigest",
+        "fixtureResults",
+        "evidenceComplete",
+        "measurementDigest",
+    )
+    for field in required:
+        if field not in measurement:
+            blockers.append({"code": "structured-result-measurement-field", "field": field})
+    if measurement.get("schemaVersion") != STRUCTURED_RESULT_MEASUREMENT_SCHEMA:
+        blockers.append({"code": "structured-result-measurement-schema"})
+    if measurement.get("mode") not in {"SCHEMA_ENFORCED", "JSON_ENFORCED", "VALIDATED_TEXT", "UNAVAILABLE"}:
+        blockers.append({"code": "structured-result-measurement-mode"})
+    if not isinstance(measurement.get("valid"), bool):
+        blockers.append({"code": "structured-result-measurement-validity"})
+    repair_attempts = measurement.get("repairAttempts")
+    max_repairs = measurement.get("maxRepairAttempts")
+    if not isinstance(repair_attempts, int) or isinstance(repair_attempts, bool) or not 0 <= repair_attempts <= 2:
+        blockers.append({"code": "structured-result-measurement-repair-attempts"})
+    if max_repairs != 2:
+        blockers.append({"code": "structured-result-measurement-repair-limit"})
+    for field in ("selectionDigest", "requiredSchemaDigest", "validationDigest", "measurementDigest"):
+        if not _is_digest(measurement.get(field)):
+            blockers.append({"code": "structured-result-measurement-digest", "field": field})
+    fixtures = measurement.get("fixtureResults")
+    if not isinstance(fixtures, dict) or any(
+        not isinstance(fixtures.get(key), bool) for key in ("positive", "boundary", "malformed")
+    ):
+        blockers.append({"code": "structured-result-measurement-fixtures"})
+    if not isinstance(measurement.get("evidenceComplete"), bool):
+        blockers.append({"code": "structured-result-measurement-completeness"})
+    expected_digest = canonical_digest({key: value for key, value in measurement.items() if key != "measurementDigest"})
+    if measurement.get("measurementDigest") != expected_digest:
+        blockers.append({"code": "structured-result-measurement-digest-mismatch"})
+    body = {
+        "schemaVersion": "agent-structured-result-measurement-validation.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "operationId": measurement.get("operationId"),
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
 
 
 def _load_json(path: Path, *, label: str) -> tuple[dict[str, Any], bytes]:
@@ -371,6 +471,10 @@ def _check_digest(value: dict[str, Any], field: str, blockers: list[dict[str, An
     digest = value.get(field)
     if not isinstance(digest, str) or len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest.lower()):
         blockers.append({"code": "benchmark-receipt-digest", "field": field})
+
+
+def _is_digest(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value.lower())
 
 
 def _check_portable_value(value: Any, blockers: list[dict[str, Any]], *, path: tuple[str, ...] = ()) -> None:
