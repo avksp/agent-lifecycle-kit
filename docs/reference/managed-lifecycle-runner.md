@@ -16,7 +16,7 @@ can ask ALK what must happen next without reconstructing the process from chat.
 
 ## Optional lifecycle control
 
-Release 1.80 does not change the runner's authority. Optional adapter control
+Release 1.82 does not change the runner's authority. Optional adapter control
 can add pre-action, post-action and stop evidence around the action returned by
 `nextAction`, but the runner still derives that action from the frozen plan,
 lock, state and accepted receipts. A plugin prompt or an adapter declaration
@@ -81,12 +81,13 @@ network client imports such as `openai`, `anthropic`, `requests`, `httpx` and
 3. If `status` is `FAIL`, surface the typed blocker.
 4. If `nextAction.type` is `launch-tasks`, the host launches the listed task
    packets and later records `workflow task-result`.
-5. If the plan requires implementation audit, run `agent-lifecycle audit
-   implementation` and pass the accepted report to `workflow task-accept`.
-6. If independent evidence returns `REWORK`, call `workflow task-rework` with
-   its open finding IDs. The run enters `REMEDIATING`; the next managed step
-   returns `launch-tasks` for the same task, and `task-start` opens the next
-   unused bounded attempt.
+5. If the next action is `accept-task`, run the independent review and call
+   `workflow task-review-apply` (or the compatible `task-accept` wrapper) with
+   the exact state and source revisions.
+6. If independent evidence returns `REWORK`, call the same canonical outcome
+   route with its open finding IDs. Only that task becomes `REWORK`; the run
+   remains `RUNNING`, and the next managed step returns `launch-tasks` for the
+   same task. `task-start` opens the next unused bounded attempt.
 7. If `nextAction.type` is `run-final-audit`, run the independent final audit.
 8. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
    accepted final audit and proof path.

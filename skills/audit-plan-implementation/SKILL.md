@@ -83,10 +83,11 @@ alone is not enforcement.
   proof rules must be reopened and refrozen.
 - `BLOCKED`: external state prevents a safe verdict.
 
-For `REWORK`, return stable open finding IDs. The controller may pass those IDs
-and this audit to `workflow task-rework` only when the frozen retry policy has
-remaining attempts. The next attempt must produce a fresh result and audit;
-prior attempt artifacts stay unchanged.
+For `REWORK`, return stable open finding IDs. In v4 the controller passes those
+IDs to the canonical `workflow task-review-apply` route; `workflow task-rework`
+is a compatibility wrapper. This is allowed only when the frozen retry policy
+has remaining attempts. The next attempt must produce a fresh result and
+audit; prior attempt artifacts stay unchanged.
 
 ## Final audit
 

@@ -8,6 +8,14 @@ from typing import Any
 from agent_lifecycle.changesets import capture_task_change_set, require_current_task_change_set
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.review_verdict import validate_review_verdict
+from agent_lifecycle.workflow.artifacts import require_artifact_identity
+
+
+def _read_committed_result(root: Path, task: dict[str, Any]) -> dict[str, Any]:
+    result_identity = task.get("result")
+    if not isinstance(result_identity, dict) or not isinstance(result_identity.get("path"), str):
+        raise LifecycleError("missing-task-result", "task acceptance requires committed result")
+    return require_artifact_identity(root, result_identity, label="task result")
 
 
 def task_result_freshness_required(state: dict[str, Any]) -> bool:
@@ -28,6 +36,7 @@ def validate_task_result(
     *,
     repository_root: Path | None = None,
     require_freshness: bool = False,
+    allow_non_accepting_outcome: bool = False,
 ) -> dict[str, Any] | None:
     expected = {
         "schemaVersion": "agent-task-result.v2",
@@ -49,7 +58,9 @@ def validate_task_result(
             "task-result-lineage-mismatch",
             "task result packet hash mismatch",
         )
-    if result.get("blocker") is not None or result.get("contractChangeRequest") is not None:
+    if not allow_non_accepting_outcome and (
+        result.get("blocker") is not None or result.get("contractChangeRequest") is not None
+    ):
         raise LifecycleError(
             "task-result-not-acceptable",
             "blocking task result cannot enter review acceptance path",
@@ -196,6 +207,33 @@ def validate_task_rework_review(
     findings = review.get("findings")
     if not isinstance(findings, list):
         raise LifecycleError("task-review-invalid", "task review findings must be an array")
+
+
+def validate_task_outcome_review(
+    state: dict[str, Any],
+    task: dict[str, Any],
+    review: dict[str, Any],
+    *,
+    result: dict[str, Any],
+) -> str:
+    """Validate the common lineage boundary for every task review outcome."""
+
+    _validate_review_lineage(state, task, review)
+    _require_reviewer_separate_from_worker(review, result)
+    verdict = review.get("verdict")
+    if verdict not in {"ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"}:
+        raise LifecycleError("task-review-verdict-invalid", "task review verdict is unsupported")
+    findings = review.get("findings")
+    if not isinstance(findings, list):
+        raise LifecycleError("task-review-invalid", "task review findings must be an array")
+    if verdict == "BLOCKED" and not isinstance(review.get("blocker"), dict):
+        raise LifecycleError("task-review-blocker-required", "BLOCKED review requires a typed blocker")
+    if verdict == "CONTRACT_CHANGE" and not isinstance(review.get("contractChangeRequest"), dict):
+        raise LifecycleError(
+            "task-review-contract-change-required",
+            "CONTRACT_CHANGE review requires a typed contract change request",
+        )
+    return verdict
 
 
 def open_finding_ids(value: dict[str, Any]) -> set[str]:

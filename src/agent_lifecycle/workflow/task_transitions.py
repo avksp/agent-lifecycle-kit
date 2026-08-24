@@ -8,6 +8,7 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.ownership_paths import is_under_authority_path, normalize_authority_path
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.workflow_state_schemas import WORKFLOW_STATE_V4
 from agent_lifecycle.freeze import verify_plan_lock_envelope
 from agent_lifecycle.host_protocol.lifecycle_gate import (
     evaluate_post_action_gate,
@@ -20,7 +21,6 @@ from agent_lifecycle.workflow.artifacts import (
     artifact_path,
     next_available_attempt,
     package_root,
-    require_artifact_identity,
     validate_attempt_history,
 )
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
@@ -37,6 +37,7 @@ from agent_lifecycle.workflow.model_usage import (
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.reviews import (
+    _read_committed_result,
     open_finding_ids,
     task_result_freshness_required,
     validate_task_result,
@@ -155,6 +156,7 @@ def commit_task_result(
         identity,
         repository_root=root,
         require_freshness=task_result_freshness_required(state),
+        allow_non_accepting_outcome=state.get("schemaVersion") == WORKFLOW_STATE_V4,
     )
     control_post_action = _validate_control_post_action(state, task, result, root)
     model_usage_identity = None
@@ -200,7 +202,8 @@ def commit_task_result(
     task["status"] = "VERIFYING"
     task["lastReason"] = reason
     record_gate_receipts(task, gate_receipts)
-    state["phase"] = "STEP_REVIEW"
+    if state.get("schemaVersion") != WORKFLOW_STATE_V4:
+        state["phase"] = "STEP_REVIEW"
     commit_state(
         state_path,
         state,
@@ -228,8 +231,12 @@ def accept_task(
     reason: str,
 ) -> dict[str, Any]:
     state = _mutable_state(state_path, operation_id, expected_revision)
-    if state["phase"] != "STEP_REVIEW":
+    expected_phase = "RUNNING" if state.get("schemaVersion") == WORKFLOW_STATE_V4 else "STEP_REVIEW"
+    if state["phase"] != expected_phase:
         raise LifecycleError("invalid-phase", "task acceptance requires STEP_REVIEW phase")
+    authorization = state.get("authorization")
+    if not isinstance(authorization, dict) or authorization.get("granted") is not True:
+        raise LifecycleError("authorization-required", "task acceptance requires execution authorization")
     task = find_task(state, task_id)
     if task.get("status") != "VERIFYING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not VERIFYING")
@@ -303,14 +310,16 @@ def rework_task(
     """Archive a verified attempt and authorize its next remediation attempt."""
 
     state = _mutable_state(state_path, operation_id, expected_revision)
-    if state.get("phase") != "STEP_REVIEW":
+    expected_phase = "RUNNING" if state.get("schemaVersion") == WORKFLOW_STATE_V4 else "STEP_REVIEW"
+    if state.get("phase") != expected_phase:
         raise LifecycleError("invalid-phase", "task rework requires STEP_REVIEW phase")
     _require_source_and_authorization(state, source_revision)
     task = find_task(state, task_id)
     if task.get("status") != "VERIFYING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not VERIFYING")
     _require_rework_budget(state, task)
-    _require_no_active_sibling(state, task_id)
+    if state.get("schemaVersion") != WORKFLOW_STATE_V4:
+        _require_no_active_sibling(state, task_id)
     validate_attempt_history(state_path, state, task)
     root = package_root(state_path, state)
     result = _read_committed_result(root, task)
@@ -384,7 +393,8 @@ def rework_task(
     _clear_active_attempt_references(task)
     task["status"] = "REWORK"
     task["lastReason"] = reason
-    state["phase"] = "REMEDIATING"
+    if state.get("schemaVersion") != WORKFLOW_STATE_V4:
+        state["phase"] = "REMEDIATING"
     commit_state(
         state_path,
         state,
@@ -521,14 +531,11 @@ def _mark_task_accepted(
     task.pop("attemptDeadlineAt", None)
     task["remediationFindingIds"] = []
     unlock_ready_tasks(state)
-    state["phase"] = "RUNNING" if ready_tasks(state) else "FINAL_AUDIT"
-
-
-def _read_committed_result(root: Path, task: dict[str, Any]) -> dict[str, Any]:
-    result_identity = task.get("result")
-    if not isinstance(result_identity, dict) or not isinstance(result_identity.get("path"), str):
-        raise LifecycleError("missing-task-result", "task acceptance requires committed result")
-    return require_artifact_identity(root, result_identity, label="task result")
+    if state.get("schemaVersion") == WORKFLOW_STATE_V4:
+        required = [item for item in state.get("tasks", []) if item.get("required", True)]
+        state["phase"] = "FINAL_AUDIT" if all(item.get("status") == "ACCEPTED" for item in required) else "RUNNING"
+    else:
+        state["phase"] = "RUNNING" if ready_tasks(state) else "FINAL_AUDIT"
 
 
 def _validate_task_write_scope(

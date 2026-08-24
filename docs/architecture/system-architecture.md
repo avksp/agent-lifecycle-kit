@@ -803,7 +803,7 @@ sequenceDiagram
   participant Events as workflow/events.py
   participant State as workflow/state.py
 
-  CLI->>Transition: start_task / commit_task_result / rework_task / accept_task
+  CLI->>Transition: workflow init / state-migrate / task-review-apply
   Transition->>Kernel: load_for_update(operationId, expectedRevision)
   Kernel->>State: load_state()
   Kernel->>State: require expected revision and unused operation
@@ -816,10 +816,15 @@ sequenceDiagram
 Patterns: state machine, operation kernel, optimistic revision check,
 idempotency key and append-only event log. Mutating workflow commands fail
 closed on stale revisions, duplicate operation ids and missing required gates.
-When an independent review or audit returns `REWORK`, the same kernel validates
-open finding IDs and the frozen retry budget, archives immutable identities for
-the current attempt, and moves the task to `REMEDIATING`. The next start opens
-an unused attempt path; it does not replace the prior result, review or audit.
+In workflow state v4, review outcomes are task-local. The canonical
+`task-review-apply` service validates the current result, independent review,
+lineage and freshness before applying `ACCEPTED`, `REWORK`,
+`CONTRACT_CHANGE` or `BLOCKED`. An active sibling is not moved into a global
+review phase. For `REWORK`, the same kernel validates open finding IDs and the
+frozen retry budget, archives immutable identities for the current attempt,
+and opens an unused attempt path; it does not replace the prior result, review
+or audit. The run enters `FINAL_AUDIT` only after every required task is
+accepted. Legacy v3 states require explicit fail-closed migration to v4.
 
 ### Code review for GitHub or GitLab changes
 
