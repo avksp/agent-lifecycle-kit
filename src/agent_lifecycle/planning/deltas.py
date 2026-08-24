@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.domain_language import build_domain_language_delta
 from agent_lifecycle.contracts.plan_delta_schemas import (
     PLAN_DELTA_SCHEMA,
     PLAN_DELTA_VALIDATION_SCHEMA,
 )
-from agent_lifecycle.project.domain_language import build_domain_language_delta
 
 _AUTHORITY_CATEGORIES = ("requirements", "writes", "acceptance", "evidence", "budgets", "risks", "gates", "terms")
 _CATEGORIES = (*_AUTHORITY_CATEGORIES, "workstreams", "documentation")

@@ -6,13 +6,13 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.domain_language_schemas import DOMAIN_LANGUAGE_AUDIT_SCHEMA
-from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
-from agent_lifecycle.project.domain_language import (
+from agent_lifecycle.contracts.domain_language import (
     domain_language_digest,
     language_terms,
     validate_domain_language,
 )
+from agent_lifecycle.contracts.domain_language_schemas import DOMAIN_LANGUAGE_AUDIT_SCHEMA
+from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
 
 MAX_AUDIT_FILE_BYTES = 131072
 
