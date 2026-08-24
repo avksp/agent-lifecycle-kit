@@ -286,7 +286,10 @@ def validate_event_capture_receipt(
         if observed["status"] == "FAIL":
             blockers.extend(_tag_blockers(observed["blockers"], "action-evidence"))
         action_evidence = _common_action_evidence(events)
-        if action_evidence is None or receipt.get("actionEvidenceDigest") != action_evidence.get("actionEvidenceDigest"):
+        if (
+            action_evidence is None
+            or receipt.get("actionEvidenceDigest") != action_evidence.get("actionEvidenceDigest")
+        ):
             blockers.append({"code": "adapter-action-evidence-receipt-lineage-mismatch"})
     if events:
         first = events[0]

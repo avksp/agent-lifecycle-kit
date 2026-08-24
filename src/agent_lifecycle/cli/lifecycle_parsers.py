@@ -6,10 +6,13 @@ import argparse
 
 from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
+from agent_lifecycle.cli.project import add_project_parser
 from agent_lifecycle.contracts.lifecycle_action_catalog import COMPATIBILITY_COMMANDS
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
 from agent_lifecycle.resources import builtin_profile_path
 from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
+
+_add_project_parser = add_project_parser
 
 _BASELINE_PROFILE = builtin_profile_path("lifecycle-baselines.v1.json")
 _MODEL_ROUTING_PROFILE = builtin_profile_path("model-routing-profile.v1.json")
@@ -59,59 +62,6 @@ def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
         "--preset",
         help="apply a built-in workflow preset below explicit project-profile settings",
     )
-
-
-def _add_project_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    project = subparsers.add_parser("project", help="project-local ALK configuration")
-    project_sub = project.add_subparsers(dest="project_command", required=True)
-    profile = project_sub.add_parser("profile", help="project workflow profile commands")
-    profile_sub = profile.add_subparsers(dest="profile_command", required=True)
-    init = profile_sub.add_parser("init", help="create a minimal local project profile")
-    init.add_argument("--project-root", default=".")
-    init.add_argument("--out", default=".alk/project-profile.json")
-    init.add_argument("--adapter", help="set the default adapter in the new profile")
-    check = profile_sub.add_parser("check", help="validate and resolve a project profile")
-    check.add_argument("--project-root", default=".")
-    check.add_argument("--profile")
-    check.add_argument("--manifest")
-    check.add_argument("--lock")
-    check.add_argument("--adapter")
-    check.add_argument("--mode", choices=list(START_MODES))
-    check.add_argument("--risk", choices=["auto", "S0", "S1", "S2"])
-    check.add_argument("--out")
-    explain = profile_sub.add_parser("explain", help="explain effective project configuration and evidence level")
-    explain.add_argument("--project-root", default=".")
-    explain.add_argument("--profile", required=True)
-    explain.add_argument("--preset")
-    explain.add_argument("--manifest", required=True)
-    explain.add_argument("--lock", required=True)
-    explain.add_argument("--descriptor", required=True)
-    explain.add_argument("--capability-manifest", required=True)
-    explain.add_argument("--adapter")
-    explain.add_argument("--mode", choices=list(START_MODES))
-    explain.add_argument("--risk", choices=["auto", "S0", "S1", "S2"])
-    explain.add_argument("--stage-risk", action="append", default=[])
-    explain.add_argument("--stage-mode", action="append", default=[])
-    explain.add_argument("--out")
-    principles = project_sub.add_parser("principles", help="check a bounded project-principles artifact")
-    principles_sub = principles.add_subparsers(dest="principles_command", required=True)
-    principles_check = principles_sub.add_parser("check", aliases=["validate"])
-    principles_check.add_argument("--file", "--path", dest="principles_path", required=True)
-    principles_check.add_argument("--project-root", default=".")
-    principles_check.add_argument("--out")
-    preset = project_sub.add_parser("preset", help="inspect and render built-in workflow presets")
-    preset_sub = preset.add_subparsers(dest="preset_command", required=True)
-    preset_sub.add_parser("list", help="list built-in workflow presets")
-    for command in ("inspect", "validate"):
-        child = preset_sub.add_parser(command, help=f"{command} a built-in workflow preset")
-        child.add_argument("--preset", required=True)
-        child.add_argument("--project-root", default=".")
-    render = preset_sub.add_parser("render", help="render a preset to an explicit profile path")
-    render.add_argument("--preset", required=True)
-    render.add_argument("--project-root", default=".")
-    render.add_argument("--profile-id")
-    render.add_argument("--adapter")
-    render.add_argument("--out", required=True)
 
 
 def _add_host_launch_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

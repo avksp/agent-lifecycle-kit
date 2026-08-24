@@ -57,7 +57,11 @@ def build_effective_project_profile(
         "defaultMode": normalized["defaultMode"],
         "defaultRisk": normalized["defaultRisk"],
     }
-    if preset is not None and authority.get("planTier") is not None and not profile_field_is_explicit(source_profile, "defaultRisk"):
+    if (
+        preset is not None
+        and authority.get("planTier") is not None
+        and not profile_field_is_explicit(source_profile, "defaultRisk")
+    ):
         defaults["defaultRisk"] = "auto"
     defaults.update({key: value for key, value in overrides.items() if key != "stages"})
     defaults["defaultRisk"] = _resolve_risk(defaults["defaultRisk"], authority)
@@ -204,7 +208,12 @@ def _build_field_provenance(
             preset_value = preset_settings.get(key, _MISSING) if isinstance(preset_settings, dict) else _MISSING
             command_settings = overrides.get("stages", {}).get(stage, {})
             command_value = command_settings.get(key, _MISSING) if isinstance(command_settings, dict) else _MISSING
-            candidates = [("defaults", _MISSING), ("preset", preset_value), ("profile", profile_value), ("command", command_value)]
+            candidates = [
+                ("defaults", _MISSING),
+                ("preset", preset_value),
+                ("profile", profile_value),
+                ("command", command_value),
+            ]
             plan_constraint = _risk_constraint(authority) if key == "risk" else None
             requested = _last_candidate(candidates)
             winner = None
@@ -323,7 +332,10 @@ def _plan_authority(plan: dict[str, Any] | None, lock: dict[str, Any] | None) ->
             )
     else:
         if plan.get("status") == "FROZEN":
-            raise LifecycleError("project-profile-lock-required", "a frozen plan requires its lock for profile composition")
+            raise LifecycleError(
+                "project-profile-lock-required",
+                "a frozen plan requires its lock for profile composition",
+            )
         plan_digest = canonical_digest(plan)
         lock_digest = None
     tier = _first_string(
@@ -357,9 +369,17 @@ def _validate_cli_overrides(overrides: dict[str, Any], *, project_root: Any) -> 
     allowed = {"defaultAdapter", "defaultMode", "defaultRisk", "stages"}
     unknown = sorted(set(overrides) - allowed)
     if unknown:
-        raise LifecycleError("project-profile-cli-field-unsupported", "unsupported CLI profile override", {"fields": unknown})
+        raise LifecycleError(
+            "project-profile-cli-field-unsupported",
+            "unsupported CLI profile override",
+            {"fields": unknown},
+        )
     checked = copy.deepcopy(overrides)
-    if "defaultAdapter" in checked and checked["defaultAdapter"] is not None and not isinstance(checked["defaultAdapter"], str):
+    if (
+        "defaultAdapter" in checked
+        and checked["defaultAdapter"] is not None
+        and not isinstance(checked["defaultAdapter"], str)
+    ):
         raise LifecycleError("project-profile-adapter-invalid", "CLI defaultAdapter must be a string or null")
     if "defaultMode" in checked and checked["defaultMode"] not in {"auto", "research", "plan", "review", "implement"}:
         raise LifecycleError("project-profile-value-invalid", "CLI defaultMode is unsupported")
