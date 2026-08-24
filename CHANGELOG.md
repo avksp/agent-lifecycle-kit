@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 2.3.0 - 2026-08-25
+
+- Added an optional, bounded read-only multi-run attention view over explicit
+  workflow roots, with stable blocker, review, stale-attempt and terminal-run
+  reason codes.
+- Added advisory declared-path overlap reporting without selecting an owner,
+  resolving conflicts or changing workflow state.
+- Added root, symlink, byte, event-count and redaction boundaries with
+  deterministic ordering and per-source fail-closed results.
+- Added English and Russian documentation plus schema, CLI and publication
+  regression gates.
+
 ## 2.2.0 - 2026-08-25
 
 - Added an optional bilingual project domain-language artifact with stable term

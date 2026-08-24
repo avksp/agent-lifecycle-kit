@@ -11,7 +11,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.audit import build_ownership_report  # noqa: E402
-from agent_lifecycle.audit.ownership import build_ownership_report_from_manifest  # noqa: E402
+from agent_lifecycle.audit.ownership import (  # noqa: E402
+    build_ownership_report_from_manifest,
+    declared_ownership_paths,
+)
 from agent_lifecycle.contracts import LifecycleError  # noqa: E402
 
 
@@ -70,6 +73,9 @@ class OwnershipTests(unittest.TestCase):
         self.assertEqual(by_path["src/package/core.py"]["owners"], ["WS-01"])
         self.assertEqual(by_path["runtime/state.json"]["category"], "lead-owned")
         self.assertEqual(by_path["LICENSE"]["category"], "forbidden")
+
+    def test_declared_ownership_paths_are_literal_and_deterministic(self) -> None:
+        self.assertEqual(declared_ownership_paths(_manifest()), ["src/package"])
 
 
 def _manifest() -> dict:
