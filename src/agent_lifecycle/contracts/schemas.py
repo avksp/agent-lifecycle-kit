@@ -49,6 +49,7 @@ from agent_lifecycle.contracts.lifecycle_control_definitions import (
     QUALIFICATION_STATUSES,
 )
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
+from agent_lifecycle.contracts.multi_run_view_schemas import MULTI_RUN_VIEW_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.plan_delta_schemas import PLAN_DELTA_SCHEMAS
 from agent_lifecycle.contracts.plan_manifest_schemas import PLAN_MANIFEST_SCHEMAS
@@ -752,6 +753,7 @@ _SCHEMA_GROUPS = (
     PLAN_DELTA_SCHEMAS,
     PLANNING_LAUNCH_SCHEMAS,
     METRIC_SCHEMAS,
+    MULTI_RUN_VIEW_SCHEMAS,
     POLICY_SCHEMAS,
     LIFECYCLE_START_SCHEMAS,
     RISK_EXECUTION_SCHEMAS,

@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.2.0
+  python -m pip install agent-lifecycle-kit==2.3.0
 ```
 
 ## Error and resource contracts
@@ -494,10 +494,11 @@ atomic interface for scripts and advanced operators.
 - `agent-lifecycle diagnose`: build one redacted checkout readiness report.
 - `agent-lifecycle diagnostics bundle`: collect selected evidence into a
   redacted bundle.
-- `agent-lifecycle report status-view/event-feed/progress/change-summary`:
-  render read-only status, workflow event, lifecycle progress and Git-style
-  change summary receipts. Progress supports bounded `--watch` and explicit
-  `--terminal` text output.
+- `agent-lifecycle report status-view/event-feed/multi-run/progress/change-summary`:
+  render read-only status, workflow events, a bounded multi-run attention view,
+  lifecycle progress and Git-style change summary receipts. Multi-run reads
+  only explicit run roots and reports overlaps without changing authority.
+  Progress supports bounded `--watch` and explicit `--terminal` text output.
 - `agent-lifecycle report progress-bridge`: build
   `agent-progress-bridge-receipt.v1` for adapter wrappers that need a stable
   JSON receipt and optional terminal text.
