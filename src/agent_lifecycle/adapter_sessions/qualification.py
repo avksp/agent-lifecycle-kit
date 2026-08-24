@@ -78,10 +78,7 @@ def build_qualification_receipt(
     policy = profile.get("qualification")
     if not isinstance(policy, dict):
         raise LifecycleError("qualified-launch-policy-missing", "profile does not require qualification")
-    combined = "\n".join(
-        str(probe_receipt.get(stream, {}).get("tail", ""))
-        for stream in ("stdout", "stderr")
-    )
+    combined = "\n".join(str(probe_receipt.get(stream, {}).get("tail", "")) for stream in ("stdout", "stderr"))
     match = _VERSION.search(combined)
     actual = match.group(1) if match else None
     expected = policy.get("expectedVersion")
@@ -91,7 +88,9 @@ def build_qualification_receipt(
     if actual is None:
         blockers.append({"code": "qualified-launch-version-missing"})
     elif actual != expected:
-        blockers.append({"code": "qualified-launch-version-mismatch", "expectedVersion": expected, "actualVersion": actual})
+        blockers.append(
+            {"code": "qualified-launch-version-mismatch", "expectedVersion": expected, "actualVersion": actual}
+        )
     body = {
         "schemaVersion": QUALIFICATION_RECEIPT_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
@@ -142,13 +141,17 @@ def require_qualification_receipt(
         return None
     blockers = validate_qualification_policy(profile)
     if blockers:
-        raise LifecycleError("qualified-launch-policy-invalid", "qualification policy is invalid", {"blockers": blockers})
+        raise LifecycleError(
+            "qualified-launch-policy-invalid", "qualification policy is invalid", {"blockers": blockers}
+        )
     path = project_root.resolve() / ".alk" / "host-launch" / policy["receiptFile"]
     try:
         resolved = path.resolve(strict=True)
         resolved.relative_to((project_root.resolve() / ".alk" / "host-launch").resolve(strict=True))
     except (OSError, ValueError) as exc:
-        raise LifecycleError("qualified-launch-receipt-missing", "run host-launch preflight before managed launch") from exc
+        raise LifecycleError(
+            "qualified-launch-receipt-missing", "run host-launch preflight before managed launch"
+        ) from exc
     if path.is_symlink() or not path.is_file():
         raise LifecycleError("qualified-launch-receipt-path", "qualification receipt must be a regular file")
     receipt = read_json_object(path, label="host launch qualification receipt")
@@ -163,10 +166,17 @@ def require_qualification_receipt(
         "modelCallsStarted": False,
         "productionPromotionClaimed": False,
     }
-    if any(receipt.get(key) != value for key, value in expected.items()) or receipt.get("receiptDigest") != canonical_digest({k: v for k, v in receipt.items() if k != "receiptDigest"}):
-        raise LifecycleError("qualified-launch-receipt-invalid", "qualification receipt does not bind this profile and version")
+    if any(receipt.get(key) != value for key, value in expected.items()) or receipt.get(
+        "receiptDigest"
+    ) != canonical_digest({k: v for k, v in receipt.items() if k != "receiptDigest"}):
+        raise LifecycleError(
+            "qualified-launch-receipt-invalid", "qualification receipt does not bind this profile and version"
+        )
     if executable_identity is not None and receipt.get("executableIdentity") != executable_identity:
-        raise LifecycleError("qualified-launch-executable-identity-mismatch", "qualification receipt does not bind the current executable identity")
+        raise LifecycleError(
+            "qualified-launch-executable-identity-mismatch",
+            "qualification receipt does not bind the current executable identity",
+        )
     if receipt.get("blockers") != []:
         raise LifecycleError("qualified-launch-receipt-invalid", "qualification receipt contains blockers")
     return receipt
@@ -201,7 +211,13 @@ def require_planning_qualification_receipt(
         raise LifecycleError(
             "planning-launch-qualification-required",
             "planning launch is unsupported until exact-version live qualification passes",
-            {"preparationCommand": f"agent-lifecycle adapter launch-profile --adapter {profile.get('adapterId')} --out .alk/host-launch/{profile.get('adapterId')}.json"},
+            {
+                "preparationCommand": (
+                    "agent-lifecycle adapter launch-profile "
+                    f"--adapter {profile.get('adapterId')} "
+                    f"--out .alk/host-launch/{profile.get('adapterId')}.json"
+                )
+            },
         )
     receipt = require_qualification_receipt(
         project_root=project_root,

@@ -119,7 +119,11 @@ def validate_structured_result_artifact(
     for field in ("runId", "packageId", "taskId", "planDigest", "sourceRevision", "operationId"):
         if not isinstance(artifact.get(field), str) or not artifact[field]:
             blockers.append({"code": "structured-result-artifact-lineage", "field": field})
-    if not isinstance(artifact.get("attempt"), int) or isinstance(artifact.get("attempt"), bool) or artifact["attempt"] < 1:
+    if (
+        not isinstance(artifact.get("attempt"), int)
+        or isinstance(artifact.get("attempt"), bool)
+        or artifact["attempt"] < 1
+    ):
         blockers.append({"code": "structured-result-artifact-attempt"})
     for key, value in (expected or {}).items():
         if artifact.get(key) != value:

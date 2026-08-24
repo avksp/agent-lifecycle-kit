@@ -83,7 +83,9 @@ def load_suite(path: Path) -> LoadedSuite:
     _require_text(payload, "suiteId", code="reference-suite-id")
     _require_text(payload, "suiteVersion", code="reference-suite-version")
     if payload.get("productionPromotionClaimed") is not False:
-        raise LifecycleError("reference-suite-production-claim", "reference task suites cannot claim production promotion")
+        raise LifecycleError(
+            "reference-suite-production-claim", "reference task suites cannot claim production promotion"
+        )
     tasks = payload.get("tasks")
     if not isinstance(tasks, list) or not tasks:
         raise LifecycleError("reference-suite-tasks", "reference task suite requires tasks")
@@ -93,14 +95,20 @@ def load_suite(path: Path) -> LoadedSuite:
             raise LifecycleError("reference-suite-task-row", "reference task rows must be objects")
         task_id = _require_text(row, "id", code="reference-suite-task-id")
         if task_id in seen:
-            raise LifecycleError("reference-suite-task-duplicate", "reference task ids must be unique", {"taskId": task_id})
+            raise LifecycleError(
+                "reference-suite-task-duplicate", "reference task ids must be unique", {"taskId": task_id}
+            )
         seen.add(task_id)
         if row.get("family") not in TASK_FAMILIES:
-            raise LifecycleError("reference-suite-task-family", "reference task family is unsupported", {"taskId": task_id})
+            raise LifecycleError(
+                "reference-suite-task-family", "reference task family is unsupported", {"taskId": task_id}
+            )
         if row.get("tier") not in {"S0", "S1", "S2"}:
             raise LifecycleError("reference-suite-task-tier", "reference task tier is unsupported", {"taskId": task_id})
         if row.get("shape") is not None and row.get("shape") not in TASK_SHAPES:
-            raise LifecycleError("reference-suite-task-shape", "reference task shape is unsupported", {"taskId": task_id})
+            raise LifecycleError(
+                "reference-suite-task-shape", "reference task shape is unsupported", {"taskId": task_id}
+            )
         _require_text(row, "version", code="reference-suite-task-version")
         _require_text(row, "taskPath", code="reference-suite-task-path")
         _require_text(row, "oraclePath", code="reference-suite-oracle-path")
@@ -127,14 +135,24 @@ def load_task(suite: LoadedSuite, task_id: str) -> LoadedTask:
     oracle, oracle_bytes = _load_json(oracle_path, label="reference task oracle")
     _require_schema(oracle, ORACLE_SCHEMA, code="reference-oracle-schema")
     if oracle.get("taskId") != row["id"] or oracle.get("taskVersion") != row["version"]:
-        raise LifecycleError("reference-oracle-lineage", "oracle task identity does not match suite manifest", {"taskId": row["id"]})
+        raise LifecycleError(
+            "reference-oracle-lineage", "oracle task identity does not match suite manifest", {"taskId": row["id"]}
+        )
     if oracle.get("oracleType") != row["family"]:
         raise LifecycleError("reference-oracle-type", "oracle type does not match task family", {"taskId": row["id"]})
     if oracle.get("productionPromotionClaimed") is not False:
-        raise LifecycleError("reference-oracle-production-claim", "reference task oracles cannot claim production promotion")
+        raise LifecycleError(
+            "reference-oracle-production-claim", "reference task oracles cannot claim production promotion"
+        )
     required = oracle.get("requiredEvidenceSchemas")
-    if not isinstance(required, list) or not required or any(not isinstance(item, str) or not item for item in required):
-        raise LifecycleError("reference-oracle-evidence-schemas", "oracle requiredEvidenceSchemas must be non-empty strings")
+    if (
+        not isinstance(required, list)
+        or not required
+        or any(not isinstance(item, str) or not item for item in required)
+    ):
+        raise LifecycleError(
+            "reference-oracle-evidence-schemas", "oracle requiredEvidenceSchemas must be non-empty strings"
+        )
     task_row = dict(row)
     task_row.setdefault("shape", _LEGACY_SHAPE_BY_FAMILY[task_row["family"]])
     return LoadedTask(
@@ -156,7 +174,9 @@ def load_submission(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         raise LifecycleError("reference-submission-evidence", "submission evidence must be an object")
     _validate_evidence_limits(payload["evidence"])
     if payload.get("productionPromotionClaimed") is not False:
-        raise LifecycleError("reference-submission-production-claim", "benchmark submissions cannot claim production promotion")
+        raise LifecycleError(
+            "reference-submission-production-claim", "benchmark submissions cannot claim production promotion"
+        )
     identity = {
         "sha256": sha256_hex(data),
         "bytes": len(data),
@@ -216,20 +236,27 @@ def validate_benchmark_run_receipt(
             blockers.append({"code": "benchmark-receipt-digest", "field": field})
         else:
             _check_digest(container, field, blockers)
-    route = receipt.get("route") if isinstance(receipt.get("route"), dict) else {}
+    route_value = receipt.get("route")
+    route: dict[str, Any] = route_value if isinstance(route_value, dict) else {}
     if not _non_empty_text(route.get("adapterClass")) or not _non_empty_text(route.get("routeClass")):
         blockers.append({"code": "benchmark-receipt-route-class"})
-    quality = receipt.get("quality") if isinstance(receipt.get("quality"), dict) else {}
+    quality_value = receipt.get("quality")
+    quality: dict[str, Any] = quality_value if isinstance(quality_value, dict) else {}
     total = quality.get("criteriaTotal")
     passed = quality.get("criteriaPassed")
-    if not _non_negative_int(total) or not _non_negative_int(passed) or passed > total:
+    total_value: int | None = total if isinstance(total, int) and not isinstance(total, bool) else None
+    passed_value: int | None = passed if isinstance(passed, int) and not isinstance(passed, bool) else None
+    if total_value is None or passed_value is None or total_value < 0 or passed_value < 0 or passed_value > total_value:
         blockers.append({"code": "benchmark-receipt-quality-counts"})
     if not isinstance(quality.get("falseAcceptance"), bool):
         blockers.append({"code": "benchmark-receipt-false-acceptance"})
-    if not isinstance(quality.get("measurementGap"), list) or not all(isinstance(item, str) for item in quality["measurementGap"]):
+    if not isinstance(quality.get("measurementGap"), list) or not all(
+        isinstance(item, str) for item in quality["measurementGap"]
+    ):
         blockers.append({"code": "benchmark-receipt-quality-gap"})
     _check_portable_value(receipt, blockers)
-    measurements = receipt.get("measurements") if isinstance(receipt.get("measurements"), dict) else {}
+    measurements_value = receipt.get("measurements")
+    measurements: dict[str, Any] = measurements_value if isinstance(measurements_value, dict) else {}
     structured_result = measurements.get("structuredResult")
     if structured_result is not None:
         validation = validate_structured_result_measurement(structured_result)
@@ -469,7 +496,11 @@ def _digest_container(receipt: dict[str, Any], field: str) -> dict[str, Any] | N
 
 def _check_digest(value: dict[str, Any], field: str, blockers: list[dict[str, Any]]) -> None:
     digest = value.get(field)
-    if not isinstance(digest, str) or len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest.lower()):
+    if (
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(char not in "0123456789abcdef" for char in digest.lower())
+    ):
         blockers.append({"code": "benchmark-receipt-digest", "field": field})
 
 
