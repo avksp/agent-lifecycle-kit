@@ -199,9 +199,83 @@ def validate_qualification_receipt(
     if receipt.get("status") == "QUALIFIED" and not live_evidence:
         blockers.append({"code": "control-qualification-qualified-needs-live"})
     status = receipt.get("status") if not blockers else "BLOCKED"
-    if status not in QUALIFICATION_STATUSES:
-        status = "UNAVAILABLE"
-    return _result(status, _deduplicate_blockers(blockers))
+    status_value = status if isinstance(status, str) and status in QUALIFICATION_STATUSES else "UNAVAILABLE"
+    return _result(status_value, _deduplicate_blockers(blockers))
+
+
+def validate_capability_level_claims(
+    capability_manifest: dict[str, Any],
+    *,
+    descriptor: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate operation-specific lifecycle levels before attribution."""
+
+    blockers: list[dict[str, Any]] = []
+    descriptor_operations = {
+        item.get("name"): item
+        for item in descriptor.get("operations", [])
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    }
+    capabilities = capability_manifest.get("capabilities")
+    levels: dict[str, str] = {}
+    if not isinstance(capabilities, list):
+        blockers.append({"code": "capability-levels-missing"})
+        capabilities = []
+    for item in capabilities:
+        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+            blockers.append({"code": "capability-level-entry-invalid"})
+            continue
+        name = item["name"]
+        descriptor_operation = descriptor_operations.get(name)
+        if not isinstance(descriptor_operation, dict):
+            blockers.append({"code": "capability-level-operation-unknown", "operation": name})
+            continue
+        operation_blockers: list[dict[str, Any]] = []
+        declared = item.get("declaredLevel")
+        supported = item.get("supportedLevel")
+        qualified = item.get("qualifiedLevel")
+        if any(level not in CONTROL_LEVELS for level in (declared, supported, qualified)):
+            operation_blockers.append({"code": "capability-level-invalid", "operation": name})
+        elif not (
+            QUALIFICATION_LEVEL_ORDER[str(declared)]
+            >= QUALIFICATION_LEVEL_ORDER[str(supported)]
+            >= QUALIFICATION_LEVEL_ORDER[str(qualified)]
+        ):
+            operation_blockers.append({"code": "capability-level-escalation", "operation": name})
+        for field in ("declaredLevel", "supportedLevel", "qualifiedLevel", "qualificationStatus"):
+            if field in descriptor_operation and item.get(field) != descriptor_operation.get(field):
+                operation_blockers.append(
+                    {
+                        "code": "capability-level-descriptor-drift",
+                        "operation": name,
+                        "field": field,
+                    }
+                )
+        if qualified in {"OBSERVED", "ENFORCED"} and item.get("qualificationStatus") != "QUALIFIED":
+            operation_blockers.append(
+                {"code": "capability-level-qualification-required", "operation": name}
+            )
+        if operation_blockers:
+            blockers.extend(operation_blockers)
+            levels[name] = "UNAVAILABLE"
+        else:
+            levels[name] = str(qualified)
+    return {
+        "schemaVersion": "agent-capability-level-validation.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "levels": levels,
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+        "validationDigest": canonical_digest(
+            {
+                "schemaVersion": "agent-capability-level-validation.v1",
+                "status": "PASS" if not blockers else "FAIL",
+                "levels": levels,
+                "blockers": blockers,
+                "productionPromotionClaimed": False,
+            }
+        ),
+    }
 
 
 def _matrix_blockers(
@@ -352,5 +426,6 @@ __all__ = [
     "QUALIFICATION_MATRIX_SCHEMA",
     "build_fixture_evidence",
     "build_qualification_receipt",
+    "validate_capability_level_claims",
     "validate_qualification_receipt",
 ]

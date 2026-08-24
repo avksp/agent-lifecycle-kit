@@ -26,7 +26,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.86.0
+  python -m pip install agent-lifecycle-kit==1.87.0
 ```
 
 ## Error and resource contracts
@@ -127,6 +127,14 @@ integrity](plan-verification.md) for the exact command and failure rules.
 - `agent-lifecycle project profile check --manifest <plan> --lock <lock>`:
   bind the profile to plan authority and emit the effective profile. Add
   `--adapter`, `--mode` or `--risk` for a safe one-command override.
+- `agent-lifecycle project profile explain --profile <profile> --preset <id>
+  --manifest <plan> --lock <lock> --descriptor <descriptor>
+  --capability-manifest <manifest>`: return the read-only
+  `agent-effective-configuration-explanation.v1` with field provenance,
+  frozen-plan constraints and operation-specific enforceability. Add bounded
+  `--adapter`, `--mode`, `--risk`, `--stage-risk` or `--stage-mode` overrides.
+  Missing or stale capability lineage returns `UNAVAILABLE` and never promotes
+  a claim. See [Effective configuration explanation](effective-configuration.md).
 - `agent-lifecycle start --file <path>` or `--text <text>`: use the discovered
   profile when it supplies a default adapter. `--project-profile <path>` selects
   a contained profile explicitly; `--no-project-profile` disables discovery.

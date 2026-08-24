@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import unittest
 from copy import deepcopy
+from pathlib import Path
 
 from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.host_protocol.capabilities import build_capability_manifest
 from agent_lifecycle.host_protocol.lifecycle_control_qualification import (
     NEGATIVE_SCENARIOS,
     build_fixture_evidence,
     build_qualification_receipt,
+    validate_capability_level_claims,
     validate_qualification_receipt,
 )
+from agent_lifecycle.host_protocol.validation import validate_adapter_descriptor
 
 
 class LifecycleControlQualificationTests(unittest.TestCase):
@@ -177,6 +181,40 @@ class LifecycleControlQualificationTests(unittest.TestCase):
             "control-qualification-evidence-scenario-unknown",
             {item["code"] for item in result["blockers"]},
         )
+
+    def test_capability_levels_are_operation_specific_and_bounded(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        descriptor = json_load(root / "adapters/claude/adapter.descriptor.json")
+        manifest = build_capability_manifest(descriptor)
+
+        validation = validate_capability_level_claims(manifest, descriptor=descriptor)
+
+        self.assertEqual(validate_adapter_descriptor(descriptor)["status"], "PASS")
+        self.assertEqual(validation["status"], "PASS")
+        self.assertEqual(validation["levels"]["adapter-event-stream"], "GUIDANCE_ONLY")
+
+    def test_capability_cannot_self_promote_enforced_without_qualification(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        descriptor = json_load(root / "adapters/claude/adapter.descriptor.json")
+        manifest = build_capability_manifest(descriptor)
+        promoted = deepcopy(manifest)
+        target = next(item for item in promoted["capabilities"] if item["name"] == "adapter-event-stream")
+        target["qualifiedLevel"] = "ENFORCED"
+        target["supportedLevel"] = "ENFORCED"
+
+        validation = validate_capability_level_claims(promoted, descriptor=descriptor)
+
+        codes = {item["code"] for item in validation["blockers"]}
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertEqual(validation["levels"]["adapter-event-stream"], "UNAVAILABLE")
+        self.assertIn("capability-level-descriptor-drift", codes)
+        self.assertIn("capability-level-qualification-required", codes)
+
+
+def json_load(path: Path) -> dict[str, object]:
+    import json
+
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

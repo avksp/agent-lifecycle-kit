@@ -19,6 +19,8 @@ from agent_lifecycle.project.profile import (
     validate_stage_settings,
 )
 
+_PROVENANCE_SOURCES = ("defaults", "preset", "profile", "command", "plan")
+
 
 def build_effective_project_profile(
     profile: dict[str, Any],
@@ -80,6 +82,18 @@ def build_effective_project_profile(
                 {"stage": stage},
             )
 
+    field_provenance = _build_field_provenance(
+        source_profile=source_profile,
+        preset=preset,
+        normalized=normalized,
+        effective_defaults=defaults,
+        stages=stages,
+        authority=authority,
+        overrides=overrides,
+        thread_bridge=thread_bridge,
+        principles=principles,
+    )
+
     body = {
         "schemaVersion": EFFECTIVE_PROJECT_PROFILE_SCHEMA,
         "status": "PASS",
@@ -93,10 +107,153 @@ def build_effective_project_profile(
         "threadBridge": thread_bridge,
         "preset": preset_metadata,
         "authority": authority,
+        "fieldProvenance": field_provenance,
         "blockers": [],
         "productionPromotionClaimed": False,
     }
     return {**body, "effectiveProfileDigest": canonical_digest(body)}
+
+
+def _build_field_provenance(
+    *,
+    source_profile: dict[str, Any],
+    preset: dict[str, Any] | None,
+    normalized: dict[str, Any],
+    effective_defaults: dict[str, Any],
+    stages: dict[str, Any],
+    authority: dict[str, Any],
+    overrides: dict[str, Any],
+    thread_bridge: dict[str, Any],
+    principles: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Explain effective values without turning provenance into authority."""
+
+    provenance: list[dict[str, Any]] = []
+    source_stages = source_profile.get("stages", {})
+    preset_stages = preset.get("stages", {}) if isinstance(preset, dict) else {}
+    source_policies = source_profile.get("policies", {})
+    preset_policies = preset.get("policies", {}) if isinstance(preset, dict) else {}
+
+    def add(
+        field: str,
+        value: Any,
+        candidates: list[tuple[str, Any]],
+        *,
+        plan_constraint: dict[str, Any] | None = None,
+        winning_source: str | None = None,
+    ) -> None:
+        available = [source for source, candidate in candidates if candidate is not _MISSING]
+        winner = winning_source or (available[-1] if available else "defaults")
+        overridden = [source for source in available if source != winner]
+        provenance.append(
+            {
+                "field": field,
+                "value": value,
+                "winningSource": winner,
+                "overriddenSources": overridden,
+                "planConstraint": plan_constraint,
+                "enforceability": "UNAVAILABLE",
+            }
+        )
+
+    for field in ("defaultAdapter", "defaultMode", "defaultRisk"):
+        profile_explicit = profile_field_is_explicit(source_profile, field)
+        preset_value = preset.get(field, _MISSING) if isinstance(preset, dict) else _MISSING
+        profile_value = source_profile.get(field, _MISSING) if profile_explicit else _MISSING
+        command_value = overrides.get(field, _MISSING)
+        candidates: list[tuple[str, Any]] = [
+            ("defaults", {"defaultAdapter": None, "defaultMode": "auto", "defaultRisk": "auto"}[field]),
+            ("preset", preset_value),
+            ("profile", profile_value),
+            ("command", command_value),
+        ]
+        plan_constraint = _risk_constraint(authority) if field == "defaultRisk" else None
+        requested = _last_candidate(candidates)
+        winner = None
+        if field == "defaultRisk" and plan_constraint is not None and requested in {None, "auto"}:
+            candidates.append(("plan", effective_defaults[field]))
+            winner = "plan"
+        add(field, effective_defaults[field], candidates, plan_constraint=plan_constraint, winning_source=winner)
+
+    for key, value in sorted(source_policies.items() if isinstance(source_policies, dict) else []):
+        candidates = [("defaults", _MISSING), ("preset", preset_policies.get(key, _MISSING)), ("profile", value)]
+        add(f"policies.{key}", normalized.get("policies", {}).get(key), candidates)
+    if isinstance(principles, dict):
+        add(
+            "principles",
+            principles,
+            [("defaults", _MISSING), ("profile", source_profile.get("principles", _MISSING))],
+        )
+    add(
+        "threadBridge",
+        thread_bridge,
+        [
+            ("defaults", _MISSING),
+            ("preset", _MISSING if preset is None else preset.get("threadBridge", _MISSING)),
+            ("profile", source_profile.get("threadBridge", _MISSING)),
+            ("plan", authority.get("threadBridgePolicy", _MISSING)),
+        ],
+        plan_constraint=_thread_bridge_constraint(authority),
+    )
+
+    for stage, settings in sorted(stages.items()):
+        profile_settings = source_stages.get(stage, {}) if isinstance(source_stages, dict) else {}
+        preset_settings = preset_stages.get(stage, {}) if isinstance(preset_stages, dict) else {}
+        for key, value in sorted(settings.items()):
+            profile_value = profile_settings.get(key, _MISSING) if isinstance(profile_settings, dict) else _MISSING
+            preset_value = preset_settings.get(key, _MISSING) if isinstance(preset_settings, dict) else _MISSING
+            command_settings = overrides.get("stages", {}).get(stage, {})
+            command_value = command_settings.get(key, _MISSING) if isinstance(command_settings, dict) else _MISSING
+            candidates = [("defaults", _MISSING), ("preset", preset_value), ("profile", profile_value), ("command", command_value)]
+            plan_constraint = _risk_constraint(authority) if key == "risk" else None
+            requested = _last_candidate(candidates)
+            winner = None
+            if key == "risk" and plan_constraint is not None and requested in {None, "auto"}:
+                candidates.append(("plan", value))
+                winner = "plan"
+            if key == "risk" and requested is _MISSING:
+                default_risk = next(
+                    (entry for entry in provenance if entry["field"] == "defaultRisk"), None
+                )
+                if isinstance(default_risk, dict):
+                    winner = default_risk["winningSource"]
+                    candidates.append((winner, value))
+            add(
+                f"stages.{stage}.{key}",
+                value,
+                candidates,
+                plan_constraint=plan_constraint,
+                winning_source=winner,
+            )
+    return provenance
+
+
+class _Missing:
+    pass
+
+
+_MISSING = _Missing()
+
+
+def _last_candidate(candidates: list[tuple[str, Any]]) -> Any:
+    for _source, value in reversed(candidates):
+        if value is not _MISSING:
+            return value
+    return _MISSING
+
+
+def _risk_constraint(authority: dict[str, Any]) -> dict[str, Any] | None:
+    tier = authority.get("planTier")
+    if not isinstance(tier, str) or not tier:
+        return None
+    return {"type": "minimum-risk", "tier": tier}
+
+
+def _thread_bridge_constraint(authority: dict[str, Any]) -> dict[str, Any] | None:
+    policy = authority.get("threadBridgePolicy")
+    if not isinstance(policy, dict):
+        return None
+    return {"type": "non-widening-thread-bridge", "policyDigest": canonical_digest(policy)}
 
 
 def merge_project_profile(

@@ -8,9 +8,12 @@ from typing import Any
 
 from agent_lifecycle.contracts import (
     LifecycleError,
+    canonical_digest,
     read_json_object,
     write_json_create,
 )
+from agent_lifecycle.contracts.project_profile_schemas import PROJECT_PROFILE_STAGES
+from agent_lifecycle.host_protocol.lifecycle_control_qualification import validate_capability_level_claims
 from agent_lifecycle.project import (
     PROJECT_PROFILE_RELATIVE_PATH,
     build_default_project_profile,
@@ -38,6 +41,8 @@ def dispatch_project(args: argparse.Namespace) -> dict[str, Any]:
         return _init_profile(args)
     if args.profile_command == "check":
         return _check_profile(args)
+    if args.profile_command == "explain":
+        return _explain_profile(args)
     raise LifecycleError("command-not-implemented", "project profile command is not implemented")
 
 
@@ -112,6 +117,208 @@ def _check_profile(args: argparse.Namespace) -> dict[str, Any]:
     if args.out:
         write_json_create(Path(args.out), effective)
     return effective
+
+
+def _explain_profile(args: argparse.Namespace) -> dict[str, Any]:
+    root = Path(args.project_root).resolve()
+    profile, _path = discover_project_profile(project_root=root, explicit_path=args.profile)
+    if profile is None:
+        raise LifecycleError("project-profile-missing", "explicit project profile was not found")
+    plan = _read_project_input(root, args.manifest, label="plan manifest")
+    lock = _read_project_input(root, args.lock, label="plan lock")
+    preset = load_project_preset(args.preset, project_root=root) if args.preset else None
+    overrides = _profile_overrides(args)
+    effective = build_effective_project_profile(
+        profile,
+        preset=preset,
+        plan=plan,
+        lock=lock,
+        cli_overrides=overrides,
+        project_root=root,
+    )
+
+    descriptor, descriptor_error = _try_read_project_input(root, args.descriptor, label="adapter descriptor")
+    capability_manifest, capability_error = _try_read_project_input(
+        root, args.capability_manifest, label="capability manifest"
+    )
+    descriptor_validation: dict[str, Any] | None = None
+    capability_validation: dict[str, Any] | None = None
+    level_validation: dict[str, Any] | None = None
+    if descriptor is not None:
+        from agent_lifecycle.host_protocol.validation import validate_adapter_descriptor
+
+        descriptor_validation = validate_adapter_descriptor(descriptor)
+    if descriptor is not None and capability_manifest is not None and descriptor_validation is not None:
+        from agent_lifecycle.host_protocol.capabilities import validate_capability_manifest
+
+        capability_validation = validate_capability_manifest(capability_manifest, descriptor=descriptor)
+        level_validation = validate_capability_level_claims(capability_manifest, descriptor=descriptor)
+
+    descriptor_status = "PASS" if descriptor_validation and descriptor_validation.get("status") == "PASS" else "UNAVAILABLE"
+    capability_status = (
+        "PASS"
+        if capability_validation
+        and capability_validation.get("status") == "PASS"
+        and level_validation
+        and level_validation.get("status") == "PASS"
+        else "UNAVAILABLE"
+    )
+    levels = level_validation.get("levels", {}) if capability_status == "PASS" and level_validation else {}
+    fields = _apply_enforceability(effective.get("fieldProvenance", []), levels, capability_status)
+    effective_body = {key: value for key, value in effective.items() if key != "effectiveProfileDigest"}
+    effective_body["fieldProvenance"] = fields
+    effective_profile = {**effective_body, "effectiveProfileDigest": canonical_digest(effective_body)}
+
+    blockers: list[dict[str, Any]] = []
+    if descriptor_status != "PASS":
+        blockers.append(
+            {
+                "code": "project-profile-descriptor-unavailable",
+                "causes": _validation_codes(descriptor_validation, descriptor_error),
+            }
+        )
+    if capability_status != "PASS":
+        blockers.append(
+            {
+                "code": "project-profile-capability-unavailable",
+                "causes": _validation_codes(
+                    capability_validation, capability_error
+                )
+                + _validation_codes(level_validation, None),
+            }
+        )
+    descriptor_lineage = {
+        "status": descriptor_status,
+        "adapterId": descriptor.get("adapterId") if descriptor else None,
+        "host": descriptor.get("host") if descriptor else None,
+        "descriptorDigest": canonical_digest(descriptor) if descriptor else None,
+        "validationDigest": canonical_digest(descriptor_validation) if descriptor_validation else None,
+    }
+    capability_lineage = {
+        "status": capability_status,
+        "adapterId": capability_manifest.get("adapterId") if capability_manifest else None,
+        "host": capability_manifest.get("host") if capability_manifest else None,
+        "descriptorDigest": capability_manifest.get("descriptorDigest") if capability_manifest else None,
+        "capabilityDigest": _capability_digest(capability_manifest),
+        "levelValidation": level_validation or {"status": "UNAVAILABLE", "levels": {}, "blockers": []},
+    }
+    body = {
+        "schemaVersion": "agent-effective-configuration-explanation.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "effectiveProfile": effective_profile,
+        "fields": fields,
+        "descriptorLineage": descriptor_lineage,
+        "capabilityLineage": capability_lineage,
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    result = {**body, "explanationDigest": canonical_digest(body)}
+    if args.out:
+        output = Path(args.out)
+        if not output.is_absolute():
+            output = root / output
+        _ensure_output_contained(output, root)
+        write_json_create(output, result)
+    return result
+
+
+def _profile_overrides(args: argparse.Namespace) -> dict[str, Any]:
+    overrides: dict[str, Any] = {}
+    if args.adapter is not None:
+        overrides["defaultAdapter"] = args.adapter
+    if args.mode is not None:
+        overrides["defaultMode"] = args.mode
+    if args.risk is not None:
+        overrides["defaultRisk"] = args.risk
+    stages: dict[str, dict[str, str]] = {}
+    for raw, field in [
+        *((value, "risk") for value in args.stage_risk),
+        *((value, "mode") for value in args.stage_mode),
+    ]:
+        if not isinstance(raw, str) or "=" not in raw:
+            raise LifecycleError("project-profile-stage-override-invalid", "stage override must use stage=value")
+        stage, value = raw.split("=", 1)
+        if stage not in PROJECT_PROFILE_STAGES or not value:
+            raise LifecycleError("project-profile-stage-override-invalid", "stage override is unsupported")
+        stages.setdefault(stage, {})[field] = value
+    if stages:
+        overrides["stages"] = stages
+    return overrides
+
+
+def _read_project_input(root: Path, raw_path: str, *, label: str) -> dict[str, Any]:
+    path = _contained_input_path(root, raw_path, label=label)
+    return read_json_object(path, label=label)
+
+
+def _try_read_project_input(
+    root: Path, raw_path: str, *, label: str
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    try:
+        return _read_project_input(root, raw_path, label=label), None
+    except LifecycleError as exc:
+        return None, {"code": exc.code}
+
+
+def _contained_input_path(root: Path, raw_path: str, *, label: str) -> Path:
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = root / path
+    resolved = path.resolve(strict=False)
+    if not _is_relative_to(resolved, root):
+        raise LifecycleError("project-profile-input-escape", f"{label} must stay inside the project root")
+    if path.is_symlink():
+        raise LifecycleError("project-profile-input-symlink", f"{label} must not be a symlink")
+    return path
+
+
+def _validation_codes(value: dict[str, Any] | None, error: dict[str, Any] | None) -> list[str]:
+    codes: list[str] = []
+    if error and isinstance(error.get("code"), str):
+        codes.append(error["code"])
+    if value:
+        for blocker in value.get("blockers", []):
+            if isinstance(blocker, dict) and isinstance(blocker.get("code"), str):
+                codes.append(blocker["code"])
+    return sorted(set(codes))
+
+
+def _capability_digest(value: dict[str, Any] | None) -> str | None:
+    if value is None:
+        return None
+    from agent_lifecycle.host_protocol.capabilities import capability_manifest_identity
+
+    return capability_manifest_identity(value)
+
+
+def _apply_enforceability(
+    fields: Any,
+    levels: dict[str, Any],
+    capability_status: str,
+) -> list[dict[str, Any]]:
+    if not isinstance(fields, list):
+        return []
+    result: list[dict[str, Any]] = []
+    for item in fields:
+        if not isinstance(item, dict):
+            continue
+        field = item.get("field")
+        operation = _operation_for_field(field) if isinstance(field, str) else None
+        enforceability = (
+            levels.get(operation, "UNAVAILABLE")
+            if capability_status == "PASS" and operation is not None
+            else "UNAVAILABLE"
+        )
+        result.append({**item, "enforceability": enforceability})
+    return result
+
+
+def _operation_for_field(field: str) -> str:
+    if field.startswith("stages.finalization"):
+        return "final-audit"
+    if field.startswith("stages.audit") or field.startswith("stages.review"):
+        return "task-audit"
+    return "adapter-event-stream"
 
 
 def _check_principles(args: argparse.Namespace) -> dict[str, Any]:
