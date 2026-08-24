@@ -43,7 +43,9 @@ def qualify_benchmark_runs(
     for index, receipt in enumerate(rows):
         validation = validate_benchmark_run_receipt(receipt, suite=suite)
         if validation["status"] != "PASS":
-            blockers.append({"code": "benchmark-run-receipt-invalid", "index": index, "details": validation["blockers"]})
+            blockers.append(
+                {"code": "benchmark-run-receipt-invalid", "index": index, "details": validation["blockers"]}
+            )
             continue
         if selected_ids and receipt["taskId"] not in selected_ids:
             blockers.append({"code": "benchmark-run-outside-sample", "taskId": receipt["taskId"]})
@@ -56,7 +58,9 @@ def qualify_benchmark_runs(
         groups[route_digest].append(receipt)
 
     route_reports = [
-        _route_report(route_digest, route_rows, limits, require_structured=limits.get("requireStructuredResultEvidence") is True)
+        _route_report(
+            route_digest, route_rows, limits, require_structured=limits.get("requireStructuredResultEvidence") is True
+        )
         for route_digest, route_rows in sorted(groups.items())
     ]
     insufficient = [
@@ -128,7 +132,8 @@ def validate_qualification_report(report: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "benchmark-qualification-routes"})
     if not isinstance(report.get("blockers"), list):
         blockers.append({"code": "benchmark-qualification-blockers"})
-    decision = report.get("decision") if isinstance(report.get("decision"), dict) else {}
+    decision_value = report.get("decision")
+    decision: dict[str, Any] = decision_value if isinstance(decision_value, dict) else {}
     if decision.get("automaticRouteAdoptionEligible") is True:
         blockers.append({"code": "benchmark-qualification-auto-adoption"})
     expected = canonical_digest({key: value for key, value in report.items() if key != "qualificationDigest"})
@@ -224,7 +229,10 @@ def _route_report(
         gaps.append({"code": "runs-per-task", "actual": dict(task_counts), "required": required_runs_per_task})
     if distinct_strata < required_strata:
         gaps.append({"code": "distinct-stratum-count", "actual": distinct_strata, "required": required_strata})
-    if any(count < required_runs_per_stratum for count in stratum_counts.values()) or len(stratum_counts) < required_strata:
+    if (
+        any(count < required_runs_per_stratum for count in stratum_counts.values())
+        or len(stratum_counts) < required_strata
+    ):
         gaps.append({"code": "runs-per-stratum", "actual": dict(stratum_counts), "required": required_runs_per_stratum})
     if quality_gaps:
         gaps.append({"code": "quality-measurement-gap", "fields": sorted(set(quality_gaps))})
