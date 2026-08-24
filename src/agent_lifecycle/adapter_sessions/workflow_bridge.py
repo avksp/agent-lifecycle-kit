@@ -11,7 +11,7 @@ from agent_lifecycle.adapter_sessions.session_store import create_session, load_
 from agent_lifecycle.contracts import canonical_digest, read_json_object
 from agent_lifecycle.policy.risk_execution import derive_risk_execution_profile
 from agent_lifecycle.resources import builtin_profile_path
-from agent_lifecycle.workflow import run_managed_lifecycle_step
+from agent_lifecycle.workflow import run_workflow_step
 from agent_lifecycle.workflow.transition_contract import validate_action_catalog
 
 
@@ -35,7 +35,7 @@ def managed_adapter_run(
 ) -> dict[str, Any]:
     _descriptor_path, descriptor = load_adapter_descriptor(adapter_id, descriptor_path)
     profile = managed_launch_profile(descriptor)
-    runner_receipt = run_managed_lifecycle_step(
+    workflow_receipt = run_workflow_step(
         state_path=state_path,
         manifest_path=manifest_path,
         lock_path=lock_path,
@@ -44,8 +44,8 @@ def managed_adapter_run(
         source_revision=source_revision,
         reason=f"managed adapter run for {task_id}",
     )
-    next_action = runner_receipt.get("nextAction")
-    if runner_receipt["status"] == "PASS" and requested_risk is not None:
+    next_action = workflow_receipt.get("nextAction")
+    if workflow_receipt["status"] == "PASS" and requested_risk is not None:
         risk_profile = derive_risk_execution_profile(
             manifest=read_json_object(manifest_path, label="frozen plan manifest"),
             state=read_json_object(state_path, label="workflow state"),
@@ -84,7 +84,7 @@ def managed_adapter_run(
     session = create_session(
         adapter_id=adapter_id,
         mode="MANAGED_TASK",
-        status="READY" if runner_receipt["status"] == "PASS" else "BLOCKED",
+        status="READY" if workflow_receipt["status"] == "PASS" else "BLOCKED",
         launch_profile=profile,
         session_root=session_root,
         state_identity=state_identity,
@@ -100,7 +100,7 @@ def managed_adapter_run(
         managed_workflow_proof=proof,
         progress_hook_default="stderr",
         host_launch_started=False,
-        blockers=runner_receipt.get("blockers", []),
+        blockers=workflow_receipt.get("blockers", []),
         next_action=next_action,
     )
 

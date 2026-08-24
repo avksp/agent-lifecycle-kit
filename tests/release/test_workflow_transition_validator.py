@@ -15,7 +15,7 @@ class WorkflowTransitionValidatorTests(unittest.TestCase):
         result = validate_transition_contract(ROOT / "src" / "agent_lifecycle")
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["blockers"], [])
-        self.assertGreater(result["compatibilityCommandCount"], 0)
+        self.assertGreater(result["removedRunnerCommandCount"], 0)
 
     def test_missing_consumer_is_blocking(self) -> None:
         with (

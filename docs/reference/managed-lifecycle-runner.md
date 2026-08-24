@@ -1,125 +1,49 @@
-# Managed lifecycle runner
+# Workflow execution
 
-`agent-lifecycle workflow run` is a bounded, read-only step-function over a
-durable workflow state. It does not launch a model, start a host process or
-mutate the workflow state. It verifies the current frozen plan binding and
-returns the next host-owned action as a typed receipt.
+Release 2.0 makes `workflow` the single lifecycle authority. The managed
+execution route is a workflow operation bound to the frozen plan, source
+revision, task packet and current state revision.
 
-Before handing a package to the managed runner, use [`plan
-verify`](plan-verification.md). It checks the canonical manifest, authority
-paths, traceability, lock and package inventory without executing any command
-declared by the plan. A passing verification is a package-integrity
-precondition; it is not an implementation audit or a release decision.
+## Current route
 
-This closes the gap between the lifecycle skills and the CLI surface: a host
-can ask ALK what must happen next without reconstructing the process from chat.
+The `plan-verification` gate checks the frozen manifest, lock and packet
+lineage before this route is allowed to execute.
 
-## Optional lifecycle control
-
-Release 1.84 does not change the runner's authority. Optional adapter control
-can add pre-action, post-action and stop evidence around the action returned by
-`nextAction`, but the runner still derives that action from the frozen plan,
-lock, state and accepted receipts. A plugin prompt or an adapter declaration
-cannot rewrite those inputs. Current bundled adapters publish
-`GUIDANCE_ONLY` and `NO_RECOMMENDATION`; `ENFORCED` is reserved for an
-exact-version host-owned producer with negative evidence.
-
-## Command
-
-```bash
+```text
 agent-lifecycle workflow run \
-  --state run.state.json \
-  --manifest plans/package/plan.manifest.json \
-  --lock plans/package/plan.lock.json \
-  --operation-id managed-step-1 \
-  --expected-revision 1 \
-  --source-revision <git-sha> \
-  --progress-hook stderr \
-  --out work/run/managed-step-1.json
+  --state <run.state.json> \
+  --manifest <plan.manifest.json> \
+  --operation-id <id> \
+  --expected-revision <n> \
+  --source-revision <sha>
 ```
 
-`--lock` is optional when `plan.lock.json` lives next to the manifest.
+The workflow owns authorization, task attempts, budgets, result freshness,
+review, remediation, external actions and final-audit outcomes. The active
+receipt is `agent-workflow-run-receipt.v1`; the next action is
+`agent-workflow-next-action.v1`.
 
-## Receipt
+## What changed in 2.0
 
-The command returns `agent-managed-lifecycle-runner-receipt.v1`.
+The former controlled-runner command surface is removed. Historical runner
+schemas and records are still accepted only by the explicit read-only
+`workflow migrate-runner-artifact` converter. They are not a fallback
+execution path and cannot write workflow state.
 
-Important fields:
+The converter is bounded, private and no-replace. It validates source schema,
+digest, size and file stability, emits `authorityClaimed: false` and
+`stateWritten: false`, and never starts a host or model call.
 
-- `status`: `PASS` when the plan/state binding is current; `FAIL` when the
-  runner blocks.
-- `nextAction`: `agent-managed-lifecycle-next-action.v1`, a compact action for
-  the host.
-- `modelCallsStarted: false`: the command never starts model work.
-- `stateWritten: false`: the command never mutates durable state.
-- `hostLaunchStarted: false`: adapters remain responsible for actual launches.
-- `blockers`: fail-closed reasons such as stale state revision, non-frozen
-  plan, lock mismatch, source revision mismatch, or missing mandatory
-  implementation audit reports.
+## Adapter boundary
 
-## Boundary with `runner`
+An adapter may help a host perform an operation, but it does not own lifecycle
+state. A host-facing receipt is evidence for the workflow operation; it cannot
+promote itself, bypass review or replace the frozen plan. Ordinary workflow
+imports do not load compatibility migration code.
 
-`workflow run` is the canonical lifecycle projection. The commands
-`agent-lifecycle runner start/status/transition/stop/resume` remain only as a
-deprecated compatibility journal for historical integrations. They never write
-workflow state, grant authorization, accept a task, or finalize a run. Their
-receipts carry `journalOnly: true` and point to the corresponding `workflow`
-transition. New integrations should call the workflow commands directly.
+## Compatibility policy
 
-Runner policies are checked against frozen workflow attempt, reroute, split,
-token and wall-time budgets. Missing authorization or a wider runner cap blocks
-the compatibility command; the runner cannot supply either authority itself.
-
-## Shared action vocabulary
-
-The workflow, managed runner, host lifecycle gate and compatibility CLI use the
-closed `agent-lifecycle-action-catalog.v1`. It is static, not project
-configurable, and is checked by
-`tools/release/validate_workflow_transition_contract.py`. This prevents a new
-phase, verdict or command from becoming reachable without a declared action.
-
-## No model-call gate
-
-Release validation scans the managed runner modules with
-`tools/release/validate_no_model_calls.py`. The gate rejects direct model or
-network client imports such as `openai`, `anthropic`, `requests`, `httpx` and
-`urllib`.
-
-## Typical host loop
-
-1. Call `workflow run`.
-2. For managed commands, add `--progress-hook stderr` for visible terminal
-   progress or `--progress-hook receipt --progress-receipt <path>` for a typed
-   hook receipt. For side terminals, call `report progress --terminal`,
-   `report progress --watch`, or `report progress-bridge`.
-3. If `status` is `FAIL`, surface the typed blocker.
-4. If `nextAction.type` is `launch-tasks`, the host launches the listed task
-   packets and later records `workflow task-result`.
-5. If the next action is `accept-task`, run the independent review and call
-   `workflow task-review-apply` (or the compatible `task-accept` wrapper) with
-   the exact state and source revisions.
-6. If independent evidence returns `REWORK`, call the same canonical outcome
-   route with its open finding IDs. Only that task becomes `REWORK`; the run
-   remains `RUNNING`, and the next managed step returns `launch-tasks` for the
-   same task. `task-start` opens the next unused bounded attempt.
-7. If the run requires approval, consume the exact authorization receipt with
-   `workflow authorize`; if an external action is needed, use
-   `external-pause`/`external-resume` with its matching receipt.
-8. If `nextAction.type` is `run-final-audit`, run the independent final audit
-   and apply it with `workflow final-audit-outcome`. Only `ACCEPTED` may proceed
-   to finalization; other verdicts select their typed recovery route.
-9. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
-   accepted final audit and proof path.
-
-The loop remains deterministic because every state mutation still goes through
-the existing workflow transition commands with `operation-id`,
-`expected-revision` and `source-revision`.
-
-Progress rendering is outside the state transition path. It reads workflow
-state, optional host-attested usage receipts and optional change-summary
-receipts, so it can be shown in Codex, Claude Code, OpenCode or another host
-without adding prompt context.
-
-Installing a plugin or skill does not prove that the task used the lifecycle.
-`AUTO` progress requires an ALK-managed workflow command or a shipped adapter
-wrapper that records managed workflow proof.
+Legacy conversion is part of every 2.x distribution. Existing historical
+artifacts remain readable through the converter, while new work must use
+workflow state and workflow receipts. Any future removal requires a separate
+compatibility audit and is prohibited before a 3.0 decision.

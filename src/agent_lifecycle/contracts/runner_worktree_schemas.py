@@ -387,3 +387,12 @@ RUNNER_WORKTREE_SCHEMAS: dict[str, dict[str, Any]] = {
         },
     ),
 }
+
+# Worktree, lease and reconciliation envelopes remain active workflow
+# support. Runner-prefixed entries are consumed only through the legacy
+# compatibility registry.
+WORKTREE_SUPPORT_SCHEMAS: dict[str, dict[str, Any]] = {
+    schema_id: schema
+    for schema_id, schema in RUNNER_WORKTREE_SCHEMAS.items()
+    if not schema_id.startswith("agent-runner-")
+}

@@ -17,6 +17,24 @@ DEPRECATED_COMPATIBLE_SCHEMAS: dict[str, dict[str, str]] = {
     },
 }
 
+_LEGACY_RUNNER_SCHEMA_REPLACEMENTS = {
+    "agent-managed-lifecycle-next-action.v1": "agent-workflow-next-action.v1",
+    "agent-managed-lifecycle-runner-receipt.v1": "agent-workflow-run-receipt.v1",
+    "agent-runner-policy.v1": "agent-workflow-state.v4",
+    "agent-runner-state.v1": "agent-workflow-state.v4",
+    "agent-runner-state-validation.v1": "agent-workflow-state.v4",
+    "agent-runner-transition-request.v1": "agent-workflow-run-receipt.v1",
+    "agent-runner-transition-result.v1": "agent-workflow-run-receipt.v1",
+    "agent-runner-snapshot.v1": "agent-workflow-run-receipt.v1",
+    "agent-runner-attempt-snapshot-receipt.v1": "agent-workflow-run-receipt.v1",
+    "agent-runner-attempt-snapshot-receipt-validation.v1": "agent-workflow-run-receipt.v1",
+}
+for _schema_id, _replacement in _LEGACY_RUNNER_SCHEMA_REPLACEMENTS.items():
+    DEPRECATED_COMPATIBLE_SCHEMAS[_schema_id] = {
+        "replacement": _replacement,
+        "behavior": "accepted-compatible",
+    }
+
 CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "version", "schemaVersion": "agent-lifecycle-version.v1", "compatibility": "stable-json"},
     {"command": "schema list", "schemaVersion": "agent-lifecycle-schema-index.v1", "compatibility": "stable-json"},
@@ -67,7 +85,7 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "context continuation", "schemaVersion": "agent-context-continuation.v1", "compatibility": "stable-json"},
     {
         "command": "workflow run",
-        "schemaVersion": "agent-managed-lifecycle-runner-receipt.v1",
+        "schemaVersion": "agent-workflow-run-receipt.v1",
         "compatibility": "stable-json",
     },
     {
@@ -122,7 +140,6 @@ REQUIRED_CORE_SCHEMAS: tuple[str, ...] = (
     "agent-completion-gate-receipt.v1",
     "agent-goal-record.v1",
     "agent-follow-up-register.v1",
-    "agent-runner-state.v1",
     "agent-adapter-event.v1",
     "agent-review-verdict.v1",
     "agent-task-plan-compatibility-receipt.v1",

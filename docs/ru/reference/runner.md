@@ -1,47 +1,50 @@
-# Контролируемый запуск
+# Исторические артефакты runner
 
-Runner — нейтральный контроллер цикла попыток. Он записывает узкое состояние
-для попыток задачи, проверок, ревью, исправлений, смены маршрута, разделения,
-блокировок, остановки и возобновления.
+В релизе 2.0 контролируемый runner удалён из активных полномочий. Текущее
+выполнение использует только долговечное состояние workflow и семейство
+команд `workflow`.
 
-Runner не заменяет состояние workflow. Workflow остаётся источником правды для
-фазы, приёмки задач, блокеров и финального подтверждения.
+Старые имена runner сохраняются только как read-only совместимость для
+артефактов, созданных до 2.0. Они не запускают процессы, не изменяют состояние
+workflow, не авторизуют задачу и не заявляют публикацию в production.
 
-```bash
-agent-lifecycle runner start \
+## Текущий маршрут
+
+Используйте команду workflow с привязкой к замороженному плану и состоянию:
+
+```text
+agent-lifecycle workflow run \
   --state <run.state.json> \
-  --runner <runner.state.json> \
+  --manifest <plan.manifest.json> \
   --operation-id <id> \
-  --reason "<reason>"
-
-agent-lifecycle runner status \
-  --runner <runner.state.json> \
-  --state <run.state.json>
-
-agent-lifecycle runner transition \
-  --runner <runner.state.json> \
-  --state <run.state.json> \
-  --request <runner-transition-request.json>
-
-agent-lifecycle runner stop \
-  --runner <runner.state.json> \
-  --state <run.state.json> \
-  --operation-id <id> \
-  --expected-runner-revision <n> \
-  --reason "<reason>"
-
-agent-lifecycle runner resume \
-  --runner <runner.state.json> \
-  --state <run.state.json> \
-  --operation-id <id> \
-  --expected-runner-revision <n> \
-  --reason "<reason>"
+  --expected-revision <n> \
+  --source-revision <sha>
 ```
 
-Переходы описываются `agent-runner-transition-request.v1`. Поддерживаются
-`attempt`, `validate`, `review`, `accept`, `remediate`, `reroute`, `split`,
-`block` и `abort`.
+Запуск задачи, результат, review, rework и финализация остаются операциями
+workflow. Исторический документ runner не может авторизовать ни одну из них.
 
-Политика `agent-runner-policy.v1` ограничивает попытки, смены маршрута,
-разделения и расход токенов. Если переход превысит лимит, состояние не
-записывается.
+## Read-only миграция
+
+Чтобы сохранить старый артефакт для просмотра, используйте явный конвертер:
+
+```text
+agent-lifecycle workflow migrate-runner-artifact \
+  --input <legacy-runner-artifact.json> \
+  --output <conversion.json>
+```
+
+Конвертер читает вход с ограничением размера, проверяет историческую схему и
+самодайджест, сохраняет исходные байты и создаёт приватную conversion-запись
+без замены существующего файла. Запись неавторитетна: поля `authorityClaimed`
+и `stateWritten` имеют значение `false`; host, модель и сеть не запускаются.
+
+Поддерживаемые старые идентификаторы схем зарегистрированы в
+`agent_lifecycle.contracts.legacy_runner_schemas`. Неизвестные, слишком большие,
+повреждённые, устаревшие или использующие симлинк входы отклоняются.
+
+## Граница совместимости
+
+Конвертер обязателен на всей ветке 2.x. Это не второй workflow-движок, и обычное
+выполнение workflow не должно его импортировать. Удаление требует отдельного
+аудита совместимости и не допускается до решения для будущей версии 3.0.

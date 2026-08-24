@@ -5,8 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.runner import validate_sandbox_receipt
-from agent_lifecycle.runner.sandbox_receipts import SANDBOX_STATUSES
+from agent_lifecycle.workflow.sandbox_receipts import SANDBOX_STATUSES, validate_sandbox_receipt
 
 SANDBOX_REQUIREMENT_SCHEMA = "agent-sandbox-requirement.v1"
 SANDBOX_REQUIREMENT_VALIDATION_SCHEMA = "agent-sandbox-requirement-validation.v1"

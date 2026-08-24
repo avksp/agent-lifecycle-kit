@@ -193,8 +193,13 @@ def _validate_prior_report(
     if not isinstance(previous_plan, dict):
         blockers.append({"code": "task-plan-compatibility-previous-plan"})
         return
-    for key in ("runId", "packageId", "planRevision", "planDigest", "sourceRevision"):
+    for key in ("runId", "packageId", "sourceRevision"):
         if report.get(key) != previous_plan.get(key):
+            blockers.append(
+                {"code": "task-plan-compatibility-report-lineage", "field": key}
+            )
+    if not _report_plan_lineage_is_compatible(report, previous_plan):
+        for key in ("planRevision", "planDigest"):
             blockers.append(
                 {"code": "task-plan-compatibility-report-lineage", "field": key}
             )
@@ -211,6 +216,36 @@ def _validate_prior_report(
             )
     if report.get("reportDigest") != expected_identity.get("reportDigest"):
         blockers.append({"code": "task-plan-compatibility-report-digest"})
+
+
+def _report_plan_lineage_is_compatible(
+    report: dict[str, Any], previous_plan: dict[str, Any]
+) -> bool:
+    """Allow an accepted report from any earlier compatible plan revision.
+
+    A run may adopt several compatible frozen plans before its final audit. The
+    accepted artifact remains bound to the revision that produced it, so the
+    immediate predecessor in a later compatibility receipt is not necessarily
+    the report's original revision.
+    """
+
+    if report.get("planRevision") == previous_plan.get("planRevision") and report.get(
+        "planDigest"
+    ) == previous_plan.get("planDigest"):
+        return True
+    report_revision = report.get("planRevision")
+    previous_revision = previous_plan.get("planRevision")
+    report_digest = report.get("planDigest")
+    return (
+        isinstance(report_revision, int)
+        and not isinstance(report_revision, bool)
+        and isinstance(previous_revision, int)
+        and not isinstance(previous_revision, bool)
+        and 1 <= report_revision < previous_revision
+        and isinstance(report_digest, str)
+        and len(report_digest) == 64
+        and all(character in "0123456789abcdef" for character in report_digest)
+    )
 
 
 def _plan_identity(source: dict[str, Any]) -> dict[str, Any]:

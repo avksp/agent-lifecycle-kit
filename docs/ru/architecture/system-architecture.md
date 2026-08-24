@@ -263,20 +263,20 @@ Forensics, отчёты о прогрессе и подтверждения ра
 `BLOCKED` ждёт объявленное внешнее действие. Ни один переход не меняет
 полномочия плана и не вызывает модель.
 
-## Релиз 1.84: одни полномочия рабочего цикла
+## Релиз 2.0: одни полномочия рабочего цикла
 
 Сохранённое состояние workflow является единственным источником полномочий
 для фазы, статуса задачи, авторизации, приёмки, блокеров и итогового
 доказательства. `workflow run` выводит следующий шаг из этого состояния.
-Управляемый runner остаётся читаемым для старых интеграций, но его состояние и
-подтверждения являются устаревшим совместимым слоем-журналом: они не меняют
-workflow и не могут заменить приёмку или финализацию.
+Состояние и подтверждения runner до 2.0 являются историческим read-only
+входом для ограниченного конвертера и не могут менять workflow или заменять
+приёмку и финализацию.
 
-Проекции workflow, гейты жизненного цикла хоста и совместимые команды runner
-используют закрытый `agent-lifecycle-action-catalog.v1`. Каталог содержит
-только данные и не настраивается профилем проекта. CI проверяет его потребителей,
-полноту связей фаз и действий и границу runtime только со стандартной
-библиотекой, не выполняя импортируемый код проекта.
+Проекции workflow и гейты жизненного цикла хоста используют закрытый
+`agent-lifecycle-action-catalog.v1`. Удалённые действия runner перечислены
+только в совместимом каталоге данных и не диспетчеризуются. CI проверяет его
+потребителей, полноту связей фаз и действий и границу runtime только со
+стандартной библиотекой, не выполняя импортируемый код проекта.
 
 ## C1: системный контекст
 
@@ -451,7 +451,7 @@ flowchart LR
   strategy[Стратегия выполнения]
   benchmarks[Оценка по эталонным задачам]
   neutrality[neutrality]
-  runner[Контроллер выполнения]
+  legacy[Совместимость исторического runner]
   worktree[worktree]
 
   cli --> planning
@@ -476,7 +476,6 @@ flowchart LR
   cli --> benchmarks
   cli --> strategy
   cli --> neutrality
-  cli --> runner
   cli --> worktree
   planning --> contracts
   compiler --> contracts
@@ -491,7 +490,6 @@ flowchart LR
   workflow --> policy
   workflow --> quality
   workflow --> review_mesh
-  workflow --> runner
   workflow --> specification
   adapter_sessions --> workflow
   adapter_sessions --> freeze
@@ -525,7 +523,6 @@ flowchart LR
   model_routing --> context
   model_routing --> quality
   host_protocol --> context
-  host_protocol --> runner
   context --> evidence_index
   diagnostics --> context
   diagnostics --> host_protocol
@@ -537,8 +534,6 @@ flowchart LR
   imports --> context
   imports --> planning
   specification --> followup
-  runner --> context
-  runner --> worktree
   context --> contracts
   research --> contracts
   neutrality --> contracts
@@ -572,7 +567,7 @@ flowchart LR
 | Контекст и подтверждения | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Компактные пакеты, поиск по эпизодам, импорт внешнего контекста, представление цели и продолжения. |
 | Исследовательские материалы | `research/*`, `contracts/research_evidence_schemas.py`, `cli/research.py` | Локальная проверка пакета `agent-research-evidence-package.v1`, связей источников, утверждений, цитат и происхождения; ограниченная сводка для чернового планирования. |
 | Нейтральность | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Привязанная к индексу Git проверка выпуска, явное включение локальных подтверждений из разрешённых корней, устойчивое чтение, проверка полномочий и подписанные квитанции. |
-| Контроллер выполнения | `runner/*` | Устаревший совместимый журнал поверх рабочего цикла; состояние workflow сохраняет полномочия. |
+| Историческое преобразование | `migration/legacy_runner.py`, `contracts/legacy_runner_schemas.py` | Ограниченное read-only преобразование старых артефактов runner без полномочий workflow. |
 | Рабочее дерево | `worktree/*`, `cli/worktree.py` | Правила изоляции рабочего дерева и подтверждения попыток. |
 
 ## C4: маршруты вызова на уровне кода
@@ -863,16 +858,15 @@ sequenceDiagram
   participant User as Пользователь
   participant AdapterCLI as cli/adapter.py
   participant Bridge as adapter_sessions/workflow_bridge.py
-  participant Runner as workflow/managed_runner.py
+  participant Workflow as workflow/run.py
   participant Workflow as workflow/next_action.py
   participant Progress as reporting/progress_hooks.py
 
   User->>AdapterCLI: adapter run --state --manifest --task
   AdapterCLI->>Bridge: managed_adapter_run()
-  Bridge->>Runner: run_managed_lifecycle_step()
-  Runner->>Workflow: build_managed_next_action()
+  Bridge->>Workflow: run_workflow_step()
   AdapterCLI->>Progress: stderr или подтверждение прогресса
-  Runner-->>User: agent-adapter-session-receipt.v1
+  Workflow-->>User: agent-adapter-session-receipt.v1
 ```
 
 Управляемый маршрут доступен только для зафиксированного плана, связанного с
@@ -1114,7 +1108,7 @@ Git, и по умолчанию не читает локальные матер�
 | Контракты сначала | `contracts/*`, `schemas.py`, публичные `.v1` подтверждения | Делать каждое заявление жизненного цикла машинно проверяемым и переносимым. |
 | Диспетчер команд | `cli/main.py`, `cli/parsers.py`, `cli/dispatch.py`, `cli/dispatch_*.py` | Оставлять корневой CLI тонким и направлять каждую группу команд в её доменный обработчик. |
 | Функциональное ядро и императивная оболочка | Функции создания и проверки возвращают словари; CLI работает с путями и выводом. | Упростить тестирование и чтение небольшими моделями. |
-| Конечный автомат | `workflow/state.py`, `workflow/task_transitions.py`, `runner/core.py` | Сделать фазы жизненного цикла явными и отказывать при недопустимых переходах. |
+| Конечный автомат | `workflow/state.py`, `workflow/task_transitions.py` | Сделать фазы жизненного цикла явными и отказывать при недопустимых переходах. |
 | Ядро операции | `workflow/operation_kernel.py` | Централизовать проверку ревизии, идемпотентность и запись состояния/событий. |
 | Цепочка контрольных точек | `workflow/gates.py`, контрольные точки аудита, завершения и кворума | Не принимать работу и не финализировать запуск без обязательных подтверждений. |
 | Стратегия и политика | `policy/execution_strategy.py`, остальные `policy/*`, `model_routing/*`, `metrics/recommendations.py` | Объединять безопасные маршруты без дублирования нижележащих правил и без привязки к поставщику. |

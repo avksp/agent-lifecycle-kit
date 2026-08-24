@@ -134,6 +134,8 @@ workflow proof.
 ## Authority boundary
 
 Treat controlled-runner artifacts as compatibility journal evidence only.
-Confirm that the durable workflow state, not a runner status, authorized the
+When an archive must be retained, require the bounded read-only
+`workflow migrate-runner-artifact` conversion and verify its non-authoritative
+flags. Confirm that durable workflow state, not a runner status, authorized the
 attempt, accepted the task, resolved blockers or finalized the run. A runner
 receipt with `journalOnly: true` cannot replace a workflow transition.

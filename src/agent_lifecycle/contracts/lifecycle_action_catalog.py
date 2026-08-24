@@ -69,12 +69,12 @@ WORKFLOW_PHASE_ACTION_TYPES: dict[str, frozenset[str]] = {
     "CANCELLED": frozenset({"none"}),
 }
 
-COMPATIBILITY_COMMANDS: dict[str, dict[str, str]] = {
-    "runner start": {"kind": "compatibility", "replacement": "workflow run"},
-    "runner status": {"kind": "compatibility", "replacement": "workflow status"},
-    "runner transition": {"kind": "compatibility", "replacement": "workflow task-*"},
-    "runner stop": {"kind": "compatibility", "replacement": "workflow pause"},
-    "runner resume": {"kind": "compatibility", "replacement": "workflow resume"},
+REMOVED_RUNNER_COMMANDS: dict[str, dict[str, str]] = {
+    "runner start": {"kind": "removed", "replacement": "workflow run"},
+    "runner status": {"kind": "removed", "replacement": "workflow status"},
+    "runner transition": {"kind": "removed", "replacement": "workflow task-*"},
+    "runner stop": {"kind": "removed", "replacement": "workflow pause"},
+    "runner resume": {"kind": "removed", "replacement": "workflow resume"},
 }
 
 
@@ -115,8 +115,8 @@ def validate_action_catalog() -> dict[str, Any]:
         unknown = sorted(set(actions).difference(ACTION_TYPES))
         if unknown:
             blockers.append({"code": "catalog-unknown-operation-action", "operation": operation, "actions": unknown})
-    for command, entry in COMPATIBILITY_COMMANDS.items():
-        if entry.get("kind") != "compatibility" or not entry.get("replacement"):
+    for command, entry in REMOVED_RUNNER_COMMANDS.items():
+        if entry.get("kind") != "removed" or not entry.get("replacement"):
             blockers.append({"code": "catalog-invalid-command-classification", "command": command})
     body = {
         "schemaVersion": "agent-lifecycle-action-catalog.v1",
@@ -124,7 +124,7 @@ def validate_action_catalog() -> dict[str, Any]:
         "actionTypes": sorted(ACTION_TYPES),
         "workflowPhaseActions": {key: sorted(value) for key, value in sorted(WORKFLOW_PHASE_ACTION_TYPES.items())},
         "operationActions": {key: sorted(value) for key, value in sorted(OPERATION_ACTION_TYPES.items())},
-        "compatibilityCommands": COMPATIBILITY_COMMANDS,
+        "removedRunnerCommands": REMOVED_RUNNER_COMMANDS,
         "blockers": blockers,
         "productionPromotionClaimed": False,
     }
@@ -134,7 +134,7 @@ def validate_action_catalog() -> dict[str, Any]:
 __all__ = [
     "ACTION_CATALOG",
     "ACTION_TYPES",
-    "COMPATIBILITY_COMMANDS",
+    "REMOVED_RUNNER_COMMANDS",
     "NON_MODEL_ACTION_TYPES",
     "OPERATION_ACTION_TYPES",
     "WORKFLOW_PHASE_ACTION_TYPES",
