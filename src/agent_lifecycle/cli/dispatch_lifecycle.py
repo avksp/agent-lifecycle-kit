@@ -37,7 +37,9 @@ from agent_lifecycle.workflow import (
     accept_task,
     adopt_plan,
     apply_budget_decision,
+    apply_final_audit_outcome,
     apply_task_review_outcome,
+    authorize_execution,
     block_run,
     commit_task_result,
     finalize_run,
@@ -45,7 +47,9 @@ from agent_lifecycle.workflow import (
     migrate_workflow_state,
     next_action,
     pause_for_budget_decision,
+    pause_for_external_action,
     resolve_blocker,
+    resume_external_action,
     rework_task,
     run_managed_lifecycle_step,
     start_execution,
@@ -125,6 +129,47 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             source_revision=args.source_revision,
             reason=args.reason,
         )
+    if args.workflow_command == "authorize":
+        return authorize_execution(
+            state_path,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            receipt_path=args.receipt,
+            reason=args.reason,
+        )
+    if args.workflow_command in {"external-pause", "pause-external"}:
+        return pause_for_external_action(
+            state_path,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            action_id=args.action_id,
+            receipt_path=args.receipt,
+            reason=args.reason,
+        )
+    if args.workflow_command in {"external-resume", "resume-external"}:
+        return resume_external_action(
+            state_path,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            receipt_path=args.receipt,
+            reason=args.reason,
+        )
+    if args.workflow_command == "final-audit-outcome":
+        validate_workflow_progress_hook_request(args, command="workflow final-audit-outcome")
+        payload = apply_final_audit_outcome(
+            state_path,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            final_audit_path=args.final_audit,
+            verdict=args.verdict,
+            task_ids=args.task_id,
+            finding_ids=args.finding_id,
+            reason=args.reason,
+        )
+        maybe_emit_workflow_progress_hook(args, command="workflow final-audit-outcome", state_path=state_path)
+        return payload
     if args.workflow_command == "finalize":
         validate_workflow_progress_hook_request(args, command="workflow finalize")
         payload = finalize_run(

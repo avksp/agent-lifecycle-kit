@@ -164,6 +164,14 @@ def _managed_control_gate(
         operation = "file-edit" if paths else "shell-command"
     elif action_type == "accept-task":
         operation = "task-accept"
+    elif action_type in {
+        "adopt-plan",
+        "final-audit-outcome",
+        "request-human-decision",
+        "record-budget-decision",
+        "record-external-action-receipt",
+    }:
+        return _non_model_control_action_projection(level, action_type, state)
     else:
         return _unsupported_control_action_projection(level, action_type)
     return evaluate_pre_action_gate(
@@ -198,6 +206,25 @@ def _unsupported_control_action_projection(level: str, action_type: Any) -> dict
         "operation": None,
         "actionType": action_type,
         "blockers": [{"code": "control-action-unsupported", "actionType": action_type}],
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "gateDigest": canonical_digest(body)}
+
+
+def _non_model_control_action_projection(level: str, action_type: Any, state: dict[str, Any]) -> dict[str, Any]:
+    """Keep host-owned recovery decisions outside model/file-edit enforcement."""
+
+    body = {
+        "schemaVersion": "agent-lifecycle-control-gate.v1",
+        "gateType": "pre-action",
+        "status": "PASS",
+        "blocking": False,
+        "selected": level in {"OBSERVED", "ENFORCED"},
+        "enforcementActive": False,
+        "operation": None,
+        "actionType": action_type,
+        "stateRevision": state.get("stateRevision"),
+        "blockers": [],
         "productionPromotionClaimed": False,
     }
     return {**body, "gateDigest": canonical_digest(body)}

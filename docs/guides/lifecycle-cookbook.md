@@ -263,6 +263,36 @@ The run enters `FINAL_AUDIT` only after every required task is accepted. The
 legacy `task-accept` and `task-rework` commands remain compatibility wrappers
 for one release and use the same transition service.
 
+## Recover a run without editing state
+
+Approval-required runs consume an exact-lineage receipt through
+`workflow authorize`; `PLAN_ONLY` runs never become executable. Pause a
+supported phase for one host-owned operation with `workflow external-pause`
+and resume it with `workflow external-resume` only after the matching receipt
+has been written. Typed blockers expose their legal route, so a generic
+`resolve-blocker` cannot clear a task or plan blocker.
+
+After the required tasks are accepted, apply the independent final-audit
+decision explicitly:
+
+```bash
+agent-lifecycle workflow final-audit-outcome \
+  --state work/run.state.json \
+  --operation-id final-audit-outcome-1 \
+  --expected-revision 12 \
+  --source-revision <source-sha> \
+  --final-audit final/final-audit.json \
+  --verdict REWORK \
+  --task-id WS-01 \
+  --finding-id F-001 \
+  --reason "address the independent finding"
+```
+
+`ACCEPTED` proceeds to the existing finalization gates. `REWORK` archives the
+named accepted attempts and preserves their files, `CONTRACT_CHANGE` requires
+a new frozen plan, and `BLOCKED` waits for the declared external action. None
+of these transitions changes a frozen plan or raises a retry budget.
+
 ## View goal and progress
 
 Use this when another adapter is working and you need a compact, read-only

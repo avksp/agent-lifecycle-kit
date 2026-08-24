@@ -13,6 +13,7 @@ WORKFLOW_STATE_MIGRATION_RECEIPT = "agent-workflow-state-migration-receipt.v1"
 
 RUN_PHASES = {
     "AWAITING_AUTHORIZATION",
+    "PLAN_ONLY",
     "READY",
     "RUNNING",
     "BLOCKED",

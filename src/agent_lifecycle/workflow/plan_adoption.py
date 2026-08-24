@@ -120,6 +120,8 @@ def start_execution(
     reason: str,
 ) -> dict[str, Any]:
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
+    if state.get("startMode") == "plan-only" or state.get("phase") == "PLAN_ONLY":
+        raise LifecycleError("plan-only-not-executable", "plan-only workflow cannot start execution")
     if state["phase"] != "READY":
         raise LifecycleError("invalid-phase", "execution can only start from READY")
     if state.get("sourceRevision") != source_revision:
@@ -397,7 +399,10 @@ def _replace_plan_state(
     state["blocker"] = None
     state["reconciliation"] = None
     state["authorization"] = _authorization(start_mode, authorized_by)
-    state["phase"] = "READY" if state["authorization"].get("granted") else "AWAITING_AUTHORIZATION"
+    if start_mode == "plan-only":
+        state["phase"] = "PLAN_ONLY"
+    else:
+        state["phase"] = "READY" if state["authorization"].get("granted") else "AWAITING_AUTHORIZATION"
     state["lastPlanReview"] = _last_plan_review(root, manifest)
 
 

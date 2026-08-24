@@ -30,13 +30,24 @@ def next_action(state: dict[str, Any]) -> dict[str, Any]:
     if phase in TERMINAL_PHASES:
         return {"type": "none", "reason": f"run is {phase}"}
     if phase == "BLOCKED":
-        return {"type": "request-human-decision", "blocker": state.get("blocker")}
+        blocker = state.get("blocker")
+        if isinstance(blocker, dict) and blocker.get("recoveryRoute") in {"adopt-plan", "replan-task"}:
+            return {
+                "type": "adopt-plan",
+                "reason": "frozen plan authority must be renewed",
+                "blocker": blocker,
+            }
+        if isinstance(blocker, dict) and blocker.get("recoveryRoute") == "cancel-run":
+            return {"type": "none", "reason": "run cancellation is already selected", "blocker": blocker}
+        return {"type": "request-human-decision", "blocker": blocker}
     if phase == "WAITING_FOR_BUDGET_DECISION":
         return {"type": "record-budget-decision", "blocker": state.get("blocker")}
     if phase == "WAITING_FOR_EXTERNAL_ACTION":
         return {"type": "record-external-action-receipt", "externalAction": state.get("externalAction")}
     if phase == "AWAITING_AUTHORIZATION":
         return {"type": "request-execution-authorization"}
+    if phase == "PLAN_ONLY":
+        return {"type": "none", "reason": "plan-only workflow is non-executable"}
     if phase == "READY":
         return {"type": "start-execution"}
     if phase in EXECUTION_PHASES:
@@ -77,5 +88,14 @@ def next_action(state: dict[str, Any]) -> dict[str, Any]:
             }
         return {"type": "run-final-audit"}
     if phase == "FINAL_AUDIT":
+        outcome = state.get("finalAuditOutcome")
+        if state.get("schemaVersion") == "agent-workflow-state.v4" and (
+            not isinstance(outcome, dict) or outcome.get("verdict") != "ACCEPTED"
+        ):
+            return {
+                "type": "final-audit-outcome",
+                "verdicts": ["ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"],
+                "reason": "independent final-audit verdict is required",
+            }
         return {"type": "finalize-run"}
-    return {"type": "continue-phase", "phase": phase}
+    return {"type": "none", "reason": f"unsupported workflow phase: {phase}"}

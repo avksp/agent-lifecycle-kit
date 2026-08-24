@@ -256,6 +256,20 @@ task-scoped Git file set and content digests. Workflow and implementation audit
 recompute those values, so a result created before a later code change cannot
 be accepted as current.
 
+Recovery remains explicit and host-owned. Approval-required runs consume one
+unexpired exact-lineage receipt through `workflow authorize`; plan-only runs
+stay non-executable and never request that receipt. Use `workflow
+external-pause`/`external-resume` for a declared external action, and resolve
+typed run, task, plan or external blockers only through their named route.
+Generic `resolve-blocker` cannot clear a task-bound or plan-bound blocker.
+
+After all required tasks are accepted, apply the independent final-audit
+decision with `workflow final-audit-outcome`. `ACCEPTED` leaves the existing
+finalization gates in force. `REWORK` requires open finding IDs, archives the
+named task attempts and preserves their files; `CONTRACT_CHANGE` requires a
+new frozen plan; `BLOCKED` requires the declared external receipt. None of
+these routes edits a frozen plan or silently increases a retry budget.
+
 The public facade can delegate an already bound request:
 
 ```bash

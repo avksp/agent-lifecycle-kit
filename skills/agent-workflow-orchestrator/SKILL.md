@@ -109,9 +109,13 @@ is not authority to inject prompts into hosts or bypass review/freeze.
   reason.
 - New runs use `agent-workflow-state.v4` from `workflow init`; v3 is accepted
   only through explicit fail-closed `workflow state-migrate`.
+- v4 uses exact-lineage authorize/pause-resume receipts and typed routes;
+  `PLAN_ONLY` never authorizes.
 - Review, remediation, `CONTRACT_CHANGE` and `BLOCKED` are task-local. The run
   stays `RUNNING` until every required task is `ACCEPTED`, then enters
   `FINAL_AUDIT`.
+- Apply `final-audit-outcome`: `ACCEPTED` finalizes, `REWORK` archives,
+  `CONTRACT_CHANGE` refreezes, and `BLOCKED` waits externally.
 - Bounded waits only. On timeout, request cancellation through the host adapter
   and record a conservative block.
 - Budget exhaustion, missing receipts, stale evidence, or unverifiable

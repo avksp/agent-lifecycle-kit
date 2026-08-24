@@ -579,9 +579,9 @@ def _add_task_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     small_compile.add_argument("--write", action="store_true")
 
 
-def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    workflow = subparsers.add_parser("workflow", help="workflow commands")
-    workflow_sub = workflow.add_subparsers(dest="workflow_command", required=True)
+def _add_workflow_state_parsers(
+    workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     workflow_init = workflow_sub.add_parser("init")
     workflow_init.add_argument("--state", required=True)
     workflow_init.add_argument("--run-id", required=True)
@@ -628,6 +628,31 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_run_start.add_argument("--expected-revision", required=True, type=int)
     workflow_run_start.add_argument("--source-revision", required=True)
     workflow_run_start.add_argument("--reason", required=True)
+
+
+def _add_workflow_control_parsers(
+    workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    workflow_authorize = workflow_sub.add_parser("authorize")
+    workflow_authorize.add_argument("--state", required=True)
+    workflow_authorize.add_argument("--operation-id", required=True)
+    workflow_authorize.add_argument("--expected-revision", required=True, type=int)
+    workflow_authorize.add_argument("--source-revision", required=True)
+    workflow_authorize.add_argument("--receipt", required=True)
+    workflow_authorize.add_argument("--reason", required=True)
+    workflow_external_pause = workflow_sub.add_parser("external-pause", aliases=["pause-external"])
+    workflow_external_pause.add_argument("--state", required=True)
+    workflow_external_pause.add_argument("--operation-id", required=True)
+    workflow_external_pause.add_argument("--expected-revision", required=True, type=int)
+    workflow_external_pause.add_argument("--action-id", required=True)
+    workflow_external_pause.add_argument("--receipt", required=True)
+    workflow_external_pause.add_argument("--reason", required=True)
+    workflow_external_resume = workflow_sub.add_parser("external-resume", aliases=["resume-external"])
+    workflow_external_resume.add_argument("--state", required=True)
+    workflow_external_resume.add_argument("--operation-id", required=True)
+    workflow_external_resume.add_argument("--expected-revision", required=True, type=int)
+    workflow_external_resume.add_argument("--receipt", required=True)
+    workflow_external_resume.add_argument("--reason", required=True)
     workflow_block = workflow_sub.add_parser("block")
     workflow_block.add_argument("--state", required=True)
     workflow_block.add_argument("--operation-id", required=True)
@@ -639,6 +664,11 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_resolve.add_argument("--operation-id", required=True)
     workflow_resolve.add_argument("--expected-revision", required=True, type=int)
     workflow_resolve.add_argument("--reason", required=True)
+
+
+def _add_workflow_task_parsers(
+    workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     workflow_task = workflow_sub.add_parser("task-start")
     workflow_task.add_argument("--state", required=True)
     workflow_task.add_argument("--task", required=True)
@@ -683,6 +713,11 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_budget.add_argument("--reason", required=True)
     workflow_budget_policy = workflow_sub.add_parser("budget-policy-check")
     workflow_budget_policy.add_argument("--policy", required=True)
+
+
+def _add_workflow_review_parsers(
+    workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     workflow_accept = workflow_sub.add_parser("task-accept")
     workflow_accept.add_argument("--state", required=True)
     workflow_accept.add_argument("--task", required=True)
@@ -714,6 +749,21 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_outcome.add_argument("--finding-id", action="append", default=[])
     workflow_outcome.add_argument("--reason", required=True)
     add_progress_hook_args(workflow_outcome)
+    workflow_final_outcome = workflow_sub.add_parser("final-audit-outcome")
+    workflow_final_outcome.add_argument("--state", required=True)
+    workflow_final_outcome.add_argument("--operation-id", required=True)
+    workflow_final_outcome.add_argument("--expected-revision", required=True, type=int)
+    workflow_final_outcome.add_argument("--source-revision", required=True)
+    workflow_final_outcome.add_argument("--final-audit", required=True)
+    workflow_final_outcome.add_argument(
+        "--verdict",
+        required=True,
+        choices=["ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"],
+    )
+    workflow_final_outcome.add_argument("--task-id", action="append", default=[])
+    workflow_final_outcome.add_argument("--finding-id", action="append", default=[])
+    workflow_final_outcome.add_argument("--reason", required=True)
+    add_progress_hook_args(workflow_final_outcome)
     workflow_finalize = workflow_sub.add_parser("finalize")
     workflow_finalize.add_argument("--state", required=True)
     workflow_finalize.add_argument("--operation-id", required=True)
@@ -729,3 +779,12 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_finalize.add_argument("--review-mesh-quorum", action="append", default=[])
     workflow_finalize.add_argument("--reason", required=True)
     add_progress_hook_args(workflow_finalize)
+
+
+def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    workflow = subparsers.add_parser("workflow", help="workflow commands")
+    workflow_sub = workflow.add_subparsers(dest="workflow_command", required=True)
+    _add_workflow_state_parsers(workflow_sub)
+    _add_workflow_control_parsers(workflow_sub)
+    _add_workflow_task_parsers(workflow_sub)
+    _add_workflow_review_parsers(workflow_sub)

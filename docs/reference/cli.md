@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.82.0
+  python -m pip install agent-lifecycle-kit==1.83.0
 ```
 
 ## Error and resource contracts
@@ -183,6 +183,13 @@ JSON contracts.
 - `agent-lifecycle workflow state-migrate --state <path> --operation-id <id>
   --expected-revision <n> --source-revision <sha>`: perform one explicit,
   fail-closed v3-to-v4 migration.
+- `agent-lifecycle workflow authorize`: consume one unexpired,
+  exact-lineage authorization receipt and move an approval-required run from
+  `AWAITING_AUTHORIZATION` to `READY`. It is rejected for `PLAN_ONLY`.
+- `agent-lifecycle workflow external-pause` and `external-resume`: pause a
+  supported execution or final-audit phase for one declared host-owned action,
+  then resume only after the matching receipt is present. Both operations bind
+  run, plan and source lineage and use the normal revision/idempotency checks.
 - `agent-lifecycle workflow task-start`: open a bounded task attempt.
 - `agent-lifecycle workflow task-snapshot`: compute the current task-scoped
   Git file set and content digests without changing workflow state. Put the
@@ -199,6 +206,11 @@ JSON contracts.
   reviewed task outcome. It is the canonical route for `ACCEPTED`, `REWORK`,
   `CONTRACT_CHANGE` and `BLOCKED`; repeat `--finding-id` for the open findings
   of a `REWORK` decision.
+- `agent-lifecycle workflow final-audit-outcome`: apply an independent final
+  audit verdict. `ACCEPTED` permits finalization; `REWORK` archives only the
+  named accepted tasks and opens bounded remediation; `CONTRACT_CHANGE` waits
+  for a new frozen plan; `BLOCKED` waits for the declared external action.
+  No verdict edits the plan or bypasses the retry and ownership boundaries.
 - `agent-lifecycle workflow block/resolve-blocker`: record external blockers.
 - `agent-lifecycle workflow finalize`: produce final lifecycle proof. Add
   `--proof-integrity <receipt.json>` when the run or final audit requires
@@ -208,7 +220,8 @@ JSON contracts.
   implementation audit is mandatory, and `--review-mesh-quorum <path>` when an
   opted-in plan requires final-audit quorum.
 - `workflow run`, `workflow task-result`, `workflow task-accept`,
-  `workflow task-review-apply` and `workflow finalize` are the only workflow commands with managed progress
+  `workflow task-review-apply`, `workflow final-audit-outcome` and
+  `workflow finalize` are the only workflow commands with managed progress
   hooks in this release. `ALK_PROGRESS_HOOK=stderr` is supported for wrappers;
   plugin installation alone is not lifecycle proof.
 - `agent-lifecycle runner start/status/transition/stop/resume`: control

@@ -7,7 +7,6 @@ from typing import Any
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.workflow.query import next_action as workflow_next_action
 
-
 MODEL_CALLS_STARTED = False
 
 
@@ -39,6 +38,8 @@ def _host_action_required(projected: dict[str, Any]) -> bool:
         "record-external-action-receipt",
         "request-execution-authorization",
         "start-execution",
+        "adopt-plan",
+        "final-audit-outcome",
         "run-final-audit",
         "finalize-run",
     }
@@ -51,6 +52,8 @@ def _state_mutation_required(projected: dict[str, Any]) -> bool:
         "record-budget-decision",
         "record-external-action-receipt",
         "request-execution-authorization",
+        "adopt-plan",
+        "final-audit-outcome",
         "finalize-run",
     }
 
