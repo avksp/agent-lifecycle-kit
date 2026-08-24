@@ -19,6 +19,14 @@ class ProjectProfileSchemaTests(unittest.TestCase):
                 self.assertIn(schema_id, ids)
                 self.assertEqual(get_schema(schema_id)["properties"]["schemaVersion"], {"const": schema_id})
 
+    def test_effective_configuration_explanation_exposes_field_provenance(self) -> None:
+        schema = get_schema("agent-effective-configuration-explanation.v1")
+
+        self.assertIn("fields", schema["required"])
+        provenance = schema["properties"]["fields"]["items"]
+        self.assertIn("winningSource", provenance["required"])
+        self.assertIn("enforceability", provenance["required"])
+
     def test_profile_schema_uses_canonical_stage_and_neutral_values(self) -> None:
         schema = get_schema("agent-project-workflow-profile.v1")
         self.assertEqual(

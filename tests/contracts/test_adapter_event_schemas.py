@@ -24,6 +24,18 @@ class AdapterEventSchemaTests(unittest.TestCase):
             ["schemaVersion", "status", "blockers", "productionPromotionClaimed"],
         )
 
+    def test_action_evidence_schema_binds_lineage_without_raw_content(self) -> None:
+        schema = get_schema("agent-adapter-action-evidence.v1")
+
+        self.assertFalse(schema["additionalProperties"])
+        self.assertIn("userRequestId", schema["required"])
+        self.assertIn("effectiveConfigDigest", schema["required"])
+        self.assertEqual(
+            schema["properties"]["toolCategory"]["enum"],
+            ["command", "filesystem", "process", "model", "review", "workflow", "other"],
+        )
+        self.assertNotIn("prompt", schema["properties"])
+
 
 if __name__ == "__main__":
     unittest.main()

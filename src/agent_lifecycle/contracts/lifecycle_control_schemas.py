@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import secrets
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -28,9 +29,39 @@ from agent_lifecycle.contracts.lifecycle_control_definitions import (
     MAX_CONTROL_STRING_LENGTH,
     QUALIFICATION_STATUSES,
 )
+from agent_lifecycle.contracts.redaction import REDACTED_VALUE, redact_value
 
 if TYPE_CHECKING:
     LIFECYCLE_CONTROL_SCHEMAS: dict[str, dict[str, Any]]
+
+
+ADAPTER_ACTION_EVIDENCE_SCHEMA = "agent-adapter-action-evidence.v1"
+ADAPTER_ACTION_EVIDENCE_VALIDATION_SCHEMA = "agent-adapter-action-evidence-validation.v1"
+ADAPTER_ACTION_TOOL_CATEGORIES = (
+    "command",
+    "filesystem",
+    "process",
+    "model",
+    "review",
+    "workflow",
+    "other",
+)
+ADAPTER_ACTION_PERMISSION_STATUSES = ("ALLOW", "DENY", "REVIEW_REQUIRED")
+_ACTION_EVIDENCE_FIELDS = {
+    "schemaVersion",
+    "userRequestId",
+    "operationLineage",
+    "profileDigest",
+    "effectiveConfigDigest",
+    "capabilityDigest",
+    "permissionDecision",
+    "toolCategory",
+    "resultLink",
+    "actionEvidenceDigest",
+}
+_ACTION_DIGEST = re.compile(r"^[0-9a-f]{64}$")
+_ACTION_ID = re.compile(r"^[^\x00\r\n]{1,128}$")
+_ACTION_REF = re.compile(r"^[^\x00\r\n]{1,512}$")
 
 
 def _validate_json_shape(value: Any, blockers: list[dict[str, Any]], code: str, *, depth: int = 0) -> None:
@@ -49,6 +80,163 @@ def _sanitize_control_value(value: Any, *, depth: int = 0) -> Any:
     from agent_lifecycle.contracts.lifecycle_control_validation import _sanitize_control_value as impl
 
     return impl(value, depth=depth)
+
+
+def build_adapter_action_evidence(
+    *,
+    user_request_id: str,
+    operation_lineage: dict[str, Any],
+    profile_digest: str,
+    effective_config_digest: str,
+    capability_digest: str,
+    permission_decision: dict[str, Any] | str,
+    tool_category: str,
+    result_link: dict[str, Any],
+) -> dict[str, Any]:
+    """Build bounded, redacted evidence that can be attached to adapter events."""
+
+    if isinstance(permission_decision, str):
+        permission_decision = {"status": permission_decision, "source": "host"}
+    safe_permission, _ = redact_value(permission_decision)
+    safe_result_link, _ = redact_value(result_link)
+    body = {
+        "schemaVersion": ADAPTER_ACTION_EVIDENCE_SCHEMA,
+        "userRequestId": user_request_id,
+        "operationLineage": dict(operation_lineage),
+        "profileDigest": profile_digest,
+        "effectiveConfigDigest": effective_config_digest,
+        "capabilityDigest": capability_digest,
+        "permissionDecision": safe_permission,
+        "toolCategory": tool_category,
+        "resultLink": safe_result_link,
+    }
+    validation = validate_adapter_action_evidence(body)
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "adapter-action-evidence-invalid",
+            "cannot build invalid adapter action evidence",
+            {"validation": validation},
+        )
+    if len(canonical_bytes(body)) > MAX_CONTROL_PAYLOAD_BYTES:
+        raise LifecycleError(
+            "adapter-action-evidence-too-large",
+            "adapter action evidence exceeds the configured byte limit",
+        )
+    return {**body, "actionEvidenceDigest": canonical_digest(body)}
+
+
+def validate_adapter_action_evidence(
+    evidence: dict[str, Any], *, expected_lineage: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Validate action evidence without granting host or workflow authority."""
+
+    blockers: list[dict[str, Any]] = []
+    if not isinstance(evidence, dict):
+        blockers.append({"code": "adapter-action-evidence-object-required"})
+        return _action_evidence_validation(evidence, blockers)
+    unknown = sorted(set(evidence) - _ACTION_EVIDENCE_FIELDS)
+    if unknown:
+        blockers.append({"code": "adapter-action-evidence-unknown-field", "fields": unknown})
+    if evidence.get("schemaVersion") != ADAPTER_ACTION_EVIDENCE_SCHEMA:
+        blockers.append({"code": "adapter-action-evidence-schema-invalid"})
+    for field in ("userRequestId",):
+        value = evidence.get(field)
+        if not isinstance(value, str) or not _ACTION_ID.fullmatch(value):
+            blockers.append({"code": "adapter-action-evidence-id-invalid", "field": field})
+    lineage = evidence.get("operationLineage")
+    if not isinstance(lineage, dict):
+        blockers.append({"code": "adapter-action-evidence-lineage-invalid"})
+    else:
+        required_lineage = ("runId", "taskId", "operationId")
+        missing = [field for field in required_lineage if not isinstance(lineage.get(field), str) or not lineage[field]]
+        if missing:
+            blockers.append({"code": "adapter-action-evidence-lineage-invalid", "fields": missing})
+        unknown_lineage = sorted(set(lineage) - set(required_lineage))
+        if unknown_lineage:
+            blockers.append({"code": "adapter-action-evidence-lineage-unknown-field", "fields": unknown_lineage})
+        if expected_lineage is not None:
+            drift = {
+                field: (expected_lineage.get(field), lineage.get(field))
+                for field in required_lineage
+                if expected_lineage.get(field) != lineage.get(field)
+            }
+            if drift:
+                blockers.append({"code": "adapter-action-evidence-lineage-mismatch", "drift": drift})
+    for field in ("profileDigest", "effectiveConfigDigest", "capabilityDigest"):
+        if not _ACTION_DIGEST.fullmatch(evidence.get(field, "")):
+            blockers.append({"code": "adapter-action-evidence-digest-invalid", "field": field})
+    _validate_permission_decision(evidence.get("permissionDecision"), blockers)
+    if evidence.get("toolCategory") not in ADAPTER_ACTION_TOOL_CATEGORIES:
+        blockers.append({"code": "adapter-action-evidence-tool-category-invalid"})
+    _validate_result_link(evidence.get("resultLink"), blockers)
+    stored_digest = evidence.get("actionEvidenceDigest")
+    if stored_digest is not None:
+        expected_digest = canonical_digest(
+            {key: value for key, value in evidence.items() if key != "actionEvidenceDigest"}
+        )
+        if stored_digest != expected_digest:
+            blockers.append({"code": "adapter-action-evidence-digest-mismatch"})
+    return _action_evidence_validation(evidence, blockers)
+
+
+def _action_evidence_validation(value: Any, blockers: list[dict[str, Any]]) -> dict[str, Any]:
+    body = {
+        "schemaVersion": ADAPTER_ACTION_EVIDENCE_VALIDATION_SCHEMA,
+        "status": "PASS" if not blockers else "FAIL",
+        "userRequestId": value.get("userRequestId") if isinstance(value, dict) else None,
+        "operationId": (
+            value.get("operationLineage", {}).get("operationId")
+            if isinstance(value, dict) and isinstance(value.get("operationLineage"), dict)
+            else None
+        ),
+        "blockers": blockers,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
+
+
+def _validate_permission_decision(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(value, dict):
+        blockers.append({"code": "adapter-action-evidence-permission-invalid"})
+        return
+    unknown = sorted(set(value) - {"status", "source", "decisionDigest"})
+    if unknown:
+        blockers.append({"code": "adapter-action-evidence-permission-unknown-field", "fields": unknown})
+    if value.get("status") not in ADAPTER_ACTION_PERMISSION_STATUSES:
+        blockers.append({"code": "adapter-action-evidence-permission-status-invalid"})
+    if not isinstance(value.get("source"), str) or value["source"] not in {
+        "host",
+        "frozen-plan",
+        "operator",
+    }:
+        blockers.append({"code": "adapter-action-evidence-permission-source-invalid"})
+    if "decisionDigest" in value and not _ACTION_DIGEST.fullmatch(value.get("decisionDigest", "")):
+        blockers.append({"code": "adapter-action-evidence-permission-digest-invalid"})
+
+
+def _validate_result_link(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(value, dict):
+        blockers.append({"code": "adapter-action-evidence-result-link-invalid"})
+        return
+    unknown = sorted(set(value) - {"kind", "ref", "digest"})
+    if unknown:
+        blockers.append({"code": "adapter-action-evidence-result-link-unknown-field", "fields": unknown})
+    if value.get("kind") not in {"task-result", "operation-result", "artifact"}:
+        blockers.append({"code": "adapter-action-evidence-result-kind-invalid"})
+    reference = value.get("ref")
+    if not isinstance(reference, str) or not _ACTION_REF.fullmatch(reference):
+        blockers.append({"code": "adapter-action-evidence-result-ref-invalid"})
+    elif reference != REDACTED_VALUE:
+        segments = reference.replace("\\", "/").split("/")
+        if (
+            reference.startswith(("/", "\\"))
+            or (len(reference) > 1 and reference[1] == ":")
+            or "://" in reference
+            or ".." in segments
+        ):
+            blockers.append({"code": "adapter-action-evidence-result-ref-private"})
+    if not _ACTION_DIGEST.fullmatch(value.get("digest", "")):
+        blockers.append({"code": "adapter-action-evidence-result-digest-invalid"})
 
 
 def build_default_lifecycle_control_policy() -> dict[str, Any]:
@@ -493,6 +681,10 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "ADAPTER_ACTION_EVIDENCE_SCHEMA",
+    "ADAPTER_ACTION_EVIDENCE_VALIDATION_SCHEMA",
+    "ADAPTER_ACTION_PERMISSION_STATUSES",
+    "ADAPTER_ACTION_TOOL_CATEGORIES",
     "CONTROL_EVENT_TYPES",
     "CONTROL_LEVELS",
     "CONTROL_OPERATIONS",
@@ -506,6 +698,7 @@ __all__ = [
     "MAX_CONTROL_REDACTION_STRING_LENGTH",
     "MAX_CONTROL_STRING_LENGTH",
     "QUALIFICATION_STATUSES",
+    "build_adapter_action_evidence",
     "build_default_lifecycle_control_policy",
     "build_lifecycle_control_attestation",
     "build_lifecycle_control_decision",
@@ -514,6 +707,7 @@ __all__ = [
     "build_lifecycle_control_request",
     "lifecycle_control_limits",
     "resolve_lifecycle_control",
+    "validate_adapter_action_evidence",
     "validate_lifecycle_control_attestation",
     "validate_lifecycle_control_decision",
     "validate_lifecycle_control_event",

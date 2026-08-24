@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.87.0 - 2026-08-24
+
+- Added bounded adapter action evidence to the existing event stream, binding
+  requests, operations, profiles, capabilities, permission decisions and safe
+  result links without storing prompts or model reasoning.
+- Added read-only `project profile explain` with field-level provenance,
+  frozen-plan constraints and fail-closed descriptor/capability lineage.
+- Added operation-specific capability-level validation and qualification
+  evidence that cannot self-promote synthetic fixtures to enforcement.
+- Added bilingual documentation and synchronized package/plugin metadata.
+
 ## 1.86.0 - 2026-08-24
 
 - Added a read-only finding-to-check binding with accepted plan-delta lineage,
