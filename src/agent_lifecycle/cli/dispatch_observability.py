@@ -543,35 +543,7 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any] | str:
         write_json_create(Path(args.out), payload)
         return payload
     if args.metrics_command == "audit-report":
-        samples = _read_audit_samples(args.sample)
-        candidates = _read_json_items(args.candidate_profile, label="candidate profile")
-        references = _read_json_items(args.reference_task, label="reference task")
-        holdouts = _read_json_items(args.holdout_task, label="holdout task")
-        current = (
-            read_json_object(Path(args.current_profile), label="current optimization profile")
-            if args.current_profile
-            else None
-        )
-        report = build_audit_optimization_report(
-            samples,
-            candidate_profiles=candidates,
-            reference_tasks=references,
-            holdout_tasks=holdouts,
-            task_shape=args.task_shape,
-            quality_floor=args.quality_floor,
-            current_profile=current,
-        )
-        validation = validate_audit_optimization_report(report)
-        if validation["status"] != "PASS":
-            raise LifecycleError(
-                "audit-optimization-report-invalid",
-                "audit optimization report validation failed",
-                {"validation": validation},
-            )
-        write_json_create(Path(args.out), report)
-        if args.terminal:
-            return render_audit_optimization_terminal(report)
-        return report
+        return _dispatch_audit_report(args)
     if args.metrics_command == "audit-proposal":
         report = read_json_object(Path(args.report), label="audit optimization report")
         raw_recommendation = report.get("recommendation")
@@ -592,6 +564,38 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any] | str:
         require_optimization_proposal_pass(proposal)
         return apply_optimization_proposal(proposal, Path(args.out))
     raise LifecycleError("command-not-implemented", "metrics command is not implemented")
+
+
+def _dispatch_audit_report(args: argparse.Namespace) -> dict[str, Any] | str:
+    samples = _read_audit_samples(args.sample)
+    candidates = _read_json_items(args.candidate_profile, label="candidate profile")
+    references = _read_json_items(args.reference_task, label="reference task")
+    holdouts = _read_json_items(args.holdout_task, label="holdout task")
+    current = (
+        read_json_object(Path(args.current_profile), label="current optimization profile")
+        if args.current_profile
+        else None
+    )
+    report = build_audit_optimization_report(
+        samples,
+        candidate_profiles=candidates,
+        reference_tasks=references,
+        holdout_tasks=holdouts,
+        task_shape=args.task_shape,
+        quality_floor=args.quality_floor,
+        current_profile=current,
+    )
+    validation = validate_audit_optimization_report(report)
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "audit-optimization-report-invalid",
+            "audit optimization report validation failed",
+            {"validation": validation},
+        )
+    write_json_create(Path(args.out), report)
+    if args.terminal:
+        return render_audit_optimization_terminal(report)
+    return report
 
 
 def _read_audit_samples(paths: list[str]) -> list[dict[str, Any]]:
