@@ -67,6 +67,13 @@ DEFAULT_POLICY = {
     "maxSplitsPerTask": 1,
     "maxBillableTokens": 120000,
 }
+RUNNER_AUTHORITY = {
+    "kind": "compatibility-journal",
+    "workflowStateIsAuthoritative": True,
+    "journalOnly": True,
+    "productionPromotionClaimed": False,
+}
+RUNNER_EXECUTION_ACTIONS = {"attempt", "validate", "review", "accept", "remediate", "reroute", "split"}
 
 
 def load_runner_policy(path: Path | None) -> dict[str, Any]:
@@ -81,7 +88,20 @@ def initialize_runner_state(
     operation_id: str,
     reason: str,
 ) -> dict[str, Any]:
-    policy = _validate_policy(dict(policy or DEFAULT_POLICY))
+    raw_policy = dict(policy or DEFAULT_POLICY)
+    if policy is None:
+        budgets = workflow_state.get("budgets")
+        if isinstance(budgets, dict):
+            for runner_key, workflow_key in {
+                "maxAttemptsPerTask": "maxTaskAttempts",
+                "maxReroutesPerTask": "maxReroutesPerTask",
+                "maxSplitsPerTask": "maxSplitsPerTask",
+                "maxBillableTokens": "maxBillableTokens",
+                "maxWallSeconds": "maxTaskWallSeconds",
+            }.items():
+                if isinstance(budgets.get(workflow_key), int) and not isinstance(budgets[workflow_key], bool):
+                    raw_policy[runner_key] = budgets[workflow_key]
+    policy = _policy_for_workflow(raw_policy, workflow_state)
     task_id = _first_ready_task(workflow_state)
     body = {
         "schemaVersion": "agent-runner-state.v1",
@@ -90,6 +110,7 @@ def initialize_runner_state(
         "currentTaskId": task_id,
         "lineage": _lineage_from_workflow(workflow_state),
         "policy": policy,
+        "authority": dict(RUNNER_AUTHORITY),
         "counters": {
             "attemptsByTask": {},
             "reroutesByTask": {},
@@ -131,7 +152,7 @@ def validate_runner_state(
     if status not in RUNNER_PHASES:
         raise LifecycleError("invalid-runner-state", "runner status is unsupported")
     lineage = _lineage(state.get("lineage"))
-    _validate_policy(state.get("policy"))
+    policy = _validate_policy(state.get("policy"))
     counters = _counters(state.get("counters"))
     history = state.get("history")
     if not isinstance(history, list) or not history:
@@ -145,6 +166,8 @@ def validate_runner_state(
         raise LifecycleError("runner-state-digest-mismatch", "runner stateDigest does not match runner state")
     if workflow_state is not None:
         _validate_workflow_binding(lineage, workflow_state)
+        _validate_runner_policy_bounds(policy, workflow_state)
+    _validate_authority(state.get("authority"))
     return {
         "schemaVersion": "agent-runner-state-validation.v1",
         "status": "PASS",
@@ -155,6 +178,7 @@ def validate_runner_state(
         "counters": counters,
         "historyCount": len(history),
         "stateDigest": _state_digest(state),
+        "authority": dict(RUNNER_AUTHORITY),
     }
 
 
@@ -182,6 +206,7 @@ def transition_runner(
         )
     task_id = _request_task_id(request, state)
     task = _workflow_task(workflow_state, task_id)
+    _require_workflow_authorization(workflow_state, action)
     isolation_validation = _validate_isolation_receipt(request, workflow_state=workflow_state, action=action)
     _apply_action_guards(state, task, action, request)
     updated = _copy_state(state)
@@ -203,7 +228,10 @@ def transition_runner(
         operation_id: {"action": action, "runnerRevision": updated["runnerRevision"]},
     }
     if action == "block":
-        updated["blocker"] = {"code": _required_string(request.get("blockerCode"), label="blockerCode"), "reason": request["reason"]}
+        updated["blocker"] = {
+            "code": _required_string(request.get("blockerCode"), label="blockerCode"),
+            "reason": request["reason"],
+        }
     else:
         updated.pop("blocker", None)
     updated.pop("stopRequest", None)
@@ -249,7 +277,10 @@ def request_runner_stop(
         operation_id: {"action": "stop", "runnerRevision": updated["runnerRevision"]},
     }
     validate_runner_state(updated, workflow_state=workflow_state)
-    return {"state": {**updated, "stateDigest": _state_digest(updated)}, "result": _transition_result(updated, event, action="stop")}
+    return {
+        "state": {**updated, "stateDigest": _state_digest(updated)},
+        "result": _transition_result(updated, event, action="stop"),
+    }
 
 
 def resume_runner(
@@ -292,7 +323,10 @@ def resume_runner(
         operation_id: {"action": "resume", "runnerRevision": updated["runnerRevision"]},
     }
     validate_runner_state(updated, workflow_state=workflow_state)
-    return {"state": {**updated, "stateDigest": _state_digest(updated)}, "result": _transition_result(updated, event, action="resume")}
+    return {
+        "state": {**updated, "stateDigest": _state_digest(updated)},
+        "result": _transition_result(updated, event, action="resume"),
+    }
 
 
 def build_runner_snapshot(
@@ -313,6 +347,7 @@ def build_runner_snapshot(
             "stateDigest": validation["stateDigest"],
             "currentTaskId": validation["currentTaskId"],
             "allowedNextActions": sorted(ALLOWED_TRANSITIONS.get(validation["runnerStatus"], set())),
+            "authority": dict(RUNNER_AUTHORITY),
         },
         "budget": validation["counters"],
         "lineage": validation["lineage"],
@@ -352,7 +387,9 @@ def write_runner_state_create(path: Path, state: dict[str, Any]) -> None:
 
 def _validate_request_header(request: dict[str, Any], *, expected_revision: int) -> None:
     if request.get("schemaVersion") != "agent-runner-transition-request.v1":
-        raise LifecycleError("invalid-runner-transition-request", "runner transition request schemaVersion is unsupported")
+        raise LifecycleError(
+            "invalid-runner-transition-request", "runner transition request schemaVersion is unsupported"
+        )
     _required_string(request.get("operationId"), label="operationId")
     if request.get("expectedRunnerRevision") != expected_revision:
         raise LifecycleError("runner-revision-mismatch", "runner revision mismatch")
@@ -390,7 +427,9 @@ def _validate_isolation_receipt(
     if receipt is None:
         return None
     if action != "attempt":
-        raise LifecycleError("runner-isolation-receipt-not-allowed", "isolationReceipt is only valid for attempt transitions")
+        raise LifecycleError(
+            "runner-isolation-receipt-not-allowed", "isolationReceipt is only valid for attempt transitions"
+        )
     policy = request.get("worktreePolicy")
     if policy is not None and not isinstance(policy, dict):
         raise LifecycleError("invalid-runner-transition-request", "worktreePolicy must be an object")
@@ -430,12 +469,19 @@ def _transition_result(state: dict[str, Any], event: dict[str, Any], *, action: 
         "transition": event,
         "allowedNextActions": sorted(ALLOWED_TRANSITIONS.get(str(state["status"]), set())),
         "stateDigest": _state_digest(state),
+        "authority": dict(RUNNER_AUTHORITY),
+        "workflowTransitionRequired": _workflow_transition_required(action),
+        "deprecation": {
+            "status": "DEPRECATED",
+            "replacement": "workflow state transitions",
+            "reason": "runner output is compatibility evidence only",
+        },
     }
     return {**body, "resultDigest": canonical_digest(body)}
 
 
 def _updated_counters(counters: dict[str, Any], action: str, task_id: str, request: dict[str, Any]) -> dict[str, Any]:
-    updated = {
+    updated: dict[str, Any] = {
         "attemptsByTask": dict(counters.get("attemptsByTask", {})),
         "reroutesByTask": dict(counters.get("reroutesByTask", {})),
         "splitsByTask": dict(counters.get("splitsByTask", {})),
@@ -523,18 +569,95 @@ def _validate_workflow_binding(lineage: dict[str, Any], workflow_state: dict[str
             raise LifecycleError("runner-lineage-mismatch", f"runner {key} mismatch")
 
 
+def _policy_for_workflow(policy: dict[str, Any], workflow_state: dict[str, Any]) -> dict[str, Any]:
+    normalized = _validate_policy(policy)
+    budgets = workflow_state.get("budgets")
+    if isinstance(budgets, dict):
+        wall = budgets.get("maxTaskWallSeconds")
+        if isinstance(wall, int) and not isinstance(wall, bool) and wall >= 0 and "maxWallSeconds" not in normalized:
+            normalized["maxWallSeconds"] = wall
+    return normalized
+
+
+def _validate_runner_policy_bounds(policy: dict[str, Any], workflow_state: dict[str, Any]) -> None:
+    budgets = workflow_state.get("budgets")
+    if not isinstance(budgets, dict):
+        return
+    pairs = {
+        "maxAttemptsPerTask": "maxTaskAttempts",
+        "maxReroutesPerTask": "maxReroutesPerTask",
+        "maxSplitsPerTask": "maxSplitsPerTask",
+        "maxBillableTokens": "maxBillableTokens",
+        "maxWallSeconds": "maxTaskWallSeconds",
+    }
+    for runner_key, workflow_key in pairs.items():
+        workflow_value = budgets.get(workflow_key)
+        if workflow_value is None:
+            continue
+        if not isinstance(workflow_value, int) or isinstance(workflow_value, bool) or workflow_value < 0:
+            raise LifecycleError("invalid-workflow-budget", f"workflow budget {workflow_key} is invalid")
+        runner_value = policy.get(runner_key)
+        if runner_value is None:
+            raise LifecycleError(
+                "runner-budget-cap-missing",
+                f"runner policy must declare {runner_key} when workflow declares {workflow_key}",
+            )
+        if runner_value > workflow_value:
+            raise LifecycleError(
+                "runner-budget-cap-exceeded",
+                f"runner {runner_key} exceeds workflow {workflow_key}",
+                {"runner": runner_value, "workflow": workflow_value},
+            )
+
+
+def _validate_authority(value: Any) -> None:
+    if value is None:
+        return
+    if value != RUNNER_AUTHORITY:
+        raise LifecycleError("runner-authority-invalid", "runner authority marker is invalid")
+
+
+def _require_workflow_authorization(workflow_state: dict[str, Any], action: str) -> None:
+    if action not in RUNNER_EXECUTION_ACTIONS:
+        return
+    authorization = workflow_state.get("authorization")
+    if not isinstance(authorization, dict):
+        if workflow_state.get("schemaVersion") == "agent-workflow-state.v4":
+            raise LifecycleError("runner-authorization-missing", "runner cannot provide missing workflow authorization")
+        return
+    if authorization.get("granted") is not True:
+        raise LifecycleError("runner-authorization-required", "workflow authorization is not granted")
+
+
+def _workflow_transition_required(action: str) -> str | None:
+    return {
+        "attempt": "task-start",
+        "validate": "task-result",
+        "review": "task-review",
+        "accept": "task-accept",
+        "remediate": "task-rework",
+        "reroute": "task-reroute",
+        "split": "task-split",
+        "block": "run-block",
+        "abort": "run-cancel",
+    }.get(action)
+
+
 def _validate_policy(policy: Any) -> dict[str, Any]:
     if not isinstance(policy, dict):
         raise LifecycleError("invalid-runner-policy", "runner policy must be an object")
     if policy.get("schemaVersion") != "agent-runner-policy.v1":
         raise LifecycleError("invalid-runner-policy", "runner policy schemaVersion is unsupported")
-    return {
+    result = {
         "schemaVersion": "agent-runner-policy.v1",
         "maxAttemptsPerTask": _non_negative_int(policy.get("maxAttemptsPerTask"), label="maxAttemptsPerTask"),
         "maxReroutesPerTask": _non_negative_int(policy.get("maxReroutesPerTask"), label="maxReroutesPerTask"),
         "maxSplitsPerTask": _non_negative_int(policy.get("maxSplitsPerTask"), label="maxSplitsPerTask"),
         "maxBillableTokens": _non_negative_int(policy.get("maxBillableTokens"), label="maxBillableTokens"),
     }
+    if "maxWallSeconds" in policy:
+        result["maxWallSeconds"] = _non_negative_int(policy.get("maxWallSeconds"), label="maxWallSeconds")
+    return result
 
 
 def _counters(value: Any) -> dict[str, Any]:
@@ -570,7 +693,9 @@ def _validate_history_and_operations(history: list[Any], operations: dict[str, A
         if operation.get("action") != action:
             raise LifecycleError("invalid-runner-state", "runner history operation action mismatches ledger")
         _positive_int(operation.get("runnerRevision"), label=f"operations.{operation_id}.runnerRevision")
-    extra = [operation_id for operation_id in operations if not isinstance(operation_id, str) or operation_id not in seen]
+    extra = [
+        operation_id for operation_id in operations if not isinstance(operation_id, str) or operation_id not in seen
+    ]
     if extra:
         raise LifecycleError("invalid-runner-state", "runner operations ledger contains entries missing from history")
     if history[-1].get("toStatus") != status:

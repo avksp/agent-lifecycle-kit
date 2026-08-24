@@ -12,6 +12,7 @@ from agent_lifecycle.workflow.state import (
     load_state,
     summarize_state,
 )
+from agent_lifecycle.workflow.transition_contract import build_action
 
 
 def status(state_path: Path, *, full: bool = False) -> dict[str, Any]:
@@ -26,6 +27,14 @@ def status(state_path: Path, *, full: bool = False) -> dict[str, Any]:
 
 
 def next_action(state: dict[str, Any]) -> dict[str, Any]:
+    """Return a projected action validated against the closed action catalog."""
+
+    projected = _next_action(state)
+    action_type = projected.pop("type", "none")
+    return build_action(action_type, **projected)
+
+
+def _next_action(state: dict[str, Any]) -> dict[str, Any]:
     phase = state["phase"]
     if phase in TERMINAL_PHASES:
         return {"type": "none", "reason": f"run is {phase}"}
@@ -68,9 +77,7 @@ def next_action(state: dict[str, Any]) -> dict[str, Any]:
         if active:
             return {"type": "wait-for-active-tasks", "taskIds": active}
         required = [task for task in state.get("tasks", []) if task.get("required", True)]
-        unresolved = [
-            task for task in required if task.get("status") in {"BLOCKED", "CONTRACT_CHANGE"}
-        ]
+        unresolved = [task for task in required if task.get("status") in {"BLOCKED", "CONTRACT_CHANGE"}]
         if unresolved:
             return {
                 "type": "request-human-decision",

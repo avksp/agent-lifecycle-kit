@@ -4,6 +4,16 @@
 
 - No changes yet.
 
+## 1.84.0 - 2026-08-24
+
+- Made durable workflow state the only lifecycle authority; controlled runner
+  output is retained as deprecated, journal-only compatibility evidence.
+- Added shared action catalog validation for workflow projections, host gates
+  and runner compatibility commands.
+- Added runner budget and authorization bounds, transition regression checks
+  and a standard-library-only runtime import gate.
+- Updated bilingual documentation and synchronized package/plugin metadata.
+
 ## 1.83.0 - 2026-08-24
 
 - Added exact-lineage execution authorization and a distinct non-executable

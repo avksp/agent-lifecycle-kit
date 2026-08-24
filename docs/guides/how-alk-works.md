@@ -26,6 +26,16 @@ to `start` as `agent-guided-action-receipt.v1`; a frozen plan and matching lock
 remain authoritative.
 The project workflow profile is a local defaults layer, not a second plan.
 
+## One lifecycle authority
+
+Durable workflow state is the only authority for phase, task status,
+authorization, acceptance, blockers and final proof. `workflow run` projects the
+next action from that state. The older `runner start/status/transition/stop/resume`
+commands remain deprecated compatibility journal commands; they can preserve
+historical execution evidence, but they cannot advance workflow state or make
+an acceptance decision. The closed action catalog and its release validator
+keep workflow, host gates and CLI projections aligned.
+
 ## The participants
 
 | Participant | Responsibility |

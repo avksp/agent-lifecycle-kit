@@ -16,7 +16,7 @@ can ask ALK what must happen next without reconstructing the process from chat.
 
 ## Optional lifecycle control
 
-Release 1.83 does not change the runner's authority. Optional adapter control
+Release 1.84 does not change the runner's authority. Optional adapter control
 can add pre-action, post-action and stop evidence around the action returned by
 `nextAction`, but the runner still derives that action from the frozen plan,
 lock, state and accepted receipts. A plugin prompt or an adapter declaration
@@ -59,10 +59,24 @@ Important fields:
 
 ## Boundary with `runner`
 
-`workflow run` is not a replacement for `agent-lifecycle runner
-start/status/transition/stop/resume`. The existing runner controls bounded
-execution state. The managed lifecycle runner only projects the next lifecycle
-step from an already durable workflow state and frozen plan contract.
+`workflow run` is the canonical lifecycle projection. The commands
+`agent-lifecycle runner start/status/transition/stop/resume` remain only as a
+deprecated compatibility journal for historical integrations. They never write
+workflow state, grant authorization, accept a task, or finalize a run. Their
+receipts carry `journalOnly: true` and point to the corresponding `workflow`
+transition. New integrations should call the workflow commands directly.
+
+Runner policies are checked against frozen workflow attempt, reroute, split,
+token and wall-time budgets. Missing authorization or a wider runner cap blocks
+the compatibility command; the runner cannot supply either authority itself.
+
+## Shared action vocabulary
+
+The workflow, managed runner, host lifecycle gate and compatibility CLI use the
+closed `agent-lifecycle-action-catalog.v1`. It is static, not project
+configurable, and is checked by
+`tools/release/validate_workflow_transition_contract.py`. This prevents a new
+phase, verdict or command from becoming reachable without a declared action.
 
 ## No model-call gate
 

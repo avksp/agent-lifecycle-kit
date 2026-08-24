@@ -39,6 +39,8 @@
   },
   "moduleLevels": {
     "agent_lifecycle.__main__": 10,
-    "agent_lifecycle._version": 0
+    "agent_lifecycle._version": 0,
+    "agent_lifecycle.contracts.lifecycle_action_catalog": 0,
+    "agent_lifecycle.workflow.transition_contract": 0
   }
 }

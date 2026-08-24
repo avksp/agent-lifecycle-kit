@@ -1,5 +1,12 @@
 # CLI reference
 
+## Lifecycle command authority
+
+Use `workflow run` and the `workflow task-*` commands for new integrations.
+`runner start/status/transition/stop/resume` are deprecated compatibility
+journal commands. Their output is evidence only and cannot mutate workflow
+state or satisfy acceptance/finalization.
+
 The CLI prints JSON for machine-readable commands. Commands that mutate state
 record receipts or require explicit input files; diagnostic commands stay
 read-only unless their own help says otherwise.
@@ -19,7 +26,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.83.0
+  python -m pip install agent-lifecycle-kit==1.84.0
 ```
 
 ## Error and resource contracts
