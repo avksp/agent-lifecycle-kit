@@ -27,6 +27,7 @@ HOST_CAPABILITY_SCHEMAS: dict[str, dict[str, Any]] = {
             "transport": {"enum": ["acp", "host-local", "rpc-json", "skills", "unknown"]},
             "evidencePolicy": {"enum": ["probe-required", "not-claimed", "unknown"]},
             "providerIdentityUsed": {"const": False},
+            "structuredResultOperations": {"type": "array", "items": {"type": "object"}},
             "probe": {"type": ["object", "null"]},
             "invocationContract": {"type": ["object", "null"]},
         },
