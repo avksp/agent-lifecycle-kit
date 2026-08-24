@@ -41,48 +41,164 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
     {"command": "schema show", "schemaVersion": "<requested-schema>", "compatibility": "stable-json"},
     {"command": "contract policy", "schemaVersion": POLICY_SCHEMA_VERSION, "compatibility": "stable-json"},
     {"command": "contract check", "schemaVersion": VALIDATION_SCHEMA_VERSION, "compatibility": "stable-json"},
-    {"command": "metrics cost-check", "schemaVersion": "agent-lifecycle-cost-validation.v1", "compatibility": "stable-json"},
-    {"command": "metrics cost-report", "schemaVersion": "agent-lifecycle-cost-generation.v1", "compatibility": "stable-json"},
-    {"command": "metrics outcome-index", "schemaVersion": "agent-task-outcome-index.v1", "compatibility": "stable-json"},
-    {"command": "metrics quality-signals", "schemaVersion": "agent-quality-cost-signals.v1", "compatibility": "stable-json"},
-    {"command": "metrics recommend", "schemaVersion": "agent-lifecycle-recommendation.v1", "compatibility": "stable-json"},
-    {"command": "metrics learn-recommend", "schemaVersion": "agent-lifecycle-recommendation.v1", "compatibility": "stable-json"},
-    {"command": "benchmark evaluate", "schemaVersion": "agent-reference-task-evaluation.v1", "compatibility": "stable-json"},
-    {"command": "benchmark compare", "schemaVersion": "agent-reference-task-comparison.v1", "compatibility": "stable-json"},
-    {"command": "benchmark sample", "schemaVersion": "agent-benchmark-stratified-sample.v1", "compatibility": "stable-json"},
-    {"command": "benchmark receipt-check", "schemaVersion": "agent-benchmark-run-receipt-validation.v1", "compatibility": "stable-json"},
-    {"command": "benchmark qualify", "schemaVersion": "agent-benchmark-qualification.v1", "compatibility": "stable-json"},
-    {"command": "benchmark compare-routes", "schemaVersion": "agent-benchmark-route-comparison.v1", "compatibility": "stable-json"},
+    {
+        "command": "metrics cost-check",
+        "schemaVersion": "agent-lifecycle-cost-validation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "metrics cost-report",
+        "schemaVersion": "agent-lifecycle-cost-generation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "metrics outcome-index",
+        "schemaVersion": "agent-task-outcome-index.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "metrics quality-signals",
+        "schemaVersion": "agent-quality-cost-signals.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "metrics recommend",
+        "schemaVersion": "agent-lifecycle-recommendation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "metrics learn-recommend",
+        "schemaVersion": "agent-lifecycle-recommendation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "benchmark evaluate",
+        "schemaVersion": "agent-reference-task-evaluation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "benchmark compare",
+        "schemaVersion": "agent-reference-task-comparison.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "benchmark sample",
+        "schemaVersion": "agent-benchmark-stratified-sample.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "benchmark receipt-check",
+        "schemaVersion": "agent-benchmark-run-receipt-validation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "benchmark qualify",
+        "schemaVersion": "agent-benchmark-qualification.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "benchmark compare-routes",
+        "schemaVersion": "agent-benchmark-route-comparison.v1",
+        "compatibility": "stable-json",
+    },
     {"command": "strategy resolve", "schemaVersion": "agent-execution-strategy.v1", "compatibility": "stable-json"},
-    {"command": "policy tune", "schemaVersion": "agent-lifecycle-policy-tune-result.v1", "compatibility": "stable-json"},
-    {"command": "policy runtime-receipt", "schemaVersion": "agent-runtime-policy-receipt.v1", "compatibility": "stable-json"},
-    {"command": "policy runtime-check", "schemaVersion": "agent-runtime-policy-receipt-validation.v1", "compatibility": "stable-json"},
-    {"command": "policy adaptive-decision", "schemaVersion": "agent-adaptive-lifecycle-policy-decision.v1", "compatibility": "stable-json"},
-    {"command": "policy adaptive-check", "schemaVersion": "agent-adaptive-lifecycle-policy-decision-validation.v1", "compatibility": "stable-json"},
+    {
+        "command": "policy tune",
+        "schemaVersion": "agent-lifecycle-policy-tune-result.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "policy runtime-receipt",
+        "schemaVersion": "agent-runtime-policy-receipt.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "policy runtime-check",
+        "schemaVersion": "agent-runtime-policy-receipt-validation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "policy adaptive-decision",
+        "schemaVersion": "agent-adaptive-lifecycle-policy-decision.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "policy adaptive-check",
+        "schemaVersion": "agent-adaptive-lifecycle-policy-decision-validation.v1",
+        "compatibility": "stable-json",
+    },
     {"command": "evidence index", "schemaVersion": "agent-evidence-index.v1", "compatibility": "stable-json"},
     {"command": "evidence search", "schemaVersion": "agent-evidence-search-summary.v1", "compatibility": "stable-json"},
     {"command": "import plan", "schemaVersion": "agent-planning-import-result.v1", "compatibility": "stable-json"},
     {"command": "import check", "schemaVersion": "agent-planning-import-validation.v1", "compatibility": "stable-json"},
-    {"command": "import proposal-check", "schemaVersion": "agent-skill-improvement-proposal-validation.v1", "compatibility": "stable-json"},
-    {"command": "plan completeness-check", "schemaVersion": "agent-plan-completeness-validation.v1", "compatibility": "stable-json"},
+    {
+        "command": "import proposal-check",
+        "schemaVersion": "agent-skill-improvement-proposal-validation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "plan completeness-check",
+        "schemaVersion": "agent-plan-completeness-validation.v1",
+        "compatibility": "stable-json",
+    },
     {"command": "plan delta", "schemaVersion": "agent-plan-delta.v1", "compatibility": "stable-json"},
     {"command": "plan delta-check", "schemaVersion": "agent-plan-delta-validation.v1", "compatibility": "stable-json"},
-    {"command": "quality template-list", "schemaVersion": "agent-task-template-library.v1", "compatibility": "stable-json"},
-    {"command": "quality template-check", "schemaVersion": "agent-task-template-library-validation.v1", "compatibility": "stable-json"},
-    {"command": "quality bug-recipe-list", "schemaVersion": "agent-bug-forensics-recipe-library.v1", "compatibility": "stable-json"},
-    {"command": "quality bug-recipe-check", "schemaVersion": "agent-bug-forensics-recipe-validation.v1", "compatibility": "stable-json"},
-    {"command": "audit implementation", "schemaVersion": "agent-implementation-audit-report.v1", "compatibility": "stable-json"},
-    {"command": "audit final-implementation", "schemaVersion": "agent-final-implementation-audit.v1", "compatibility": "stable-json"},
+    {
+        "command": "quality template-list",
+        "schemaVersion": "agent-task-template-library.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "quality template-check",
+        "schemaVersion": "agent-task-template-library-validation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "quality bug-recipe-list",
+        "schemaVersion": "agent-bug-forensics-recipe-library.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "quality bug-recipe-check",
+        "schemaVersion": "agent-bug-forensics-recipe-validation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "audit implementation",
+        "schemaVersion": "agent-implementation-audit-report.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "audit final-implementation",
+        "schemaVersion": "agent-final-implementation-audit.v1",
+        "compatibility": "stable-json",
+    },
     {"command": "audit package", "schemaVersion": "agent-plan-package-audit-report.v1", "compatibility": "stable-json"},
     {"command": "report status-view", "schemaVersion": "agent-readonly-status-view.v1", "compatibility": "stable-json"},
     {"command": "report event-feed", "schemaVersion": "agent-workflow-event-feed.v1", "compatibility": "stable-json"},
     {"command": "report progress", "schemaVersion": "agent-lifecycle-progress-view.v1", "compatibility": "stable-json"},
-    {"command": "report progress --watch", "schemaVersion": "agent-lifecycle-progress-watch.v1", "compatibility": "stable-json"},
-    {"command": "report progress-bridge", "schemaVersion": "agent-progress-bridge-receipt.v1", "compatibility": "stable-json"},
-    {"command": "report change-summary", "schemaVersion": "agent-change-summary-receipt.v1", "compatibility": "stable-json"},
+    {
+        "command": "report progress --watch",
+        "schemaVersion": "agent-lifecycle-progress-watch.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "report progress-bridge",
+        "schemaVersion": "agent-progress-bridge-receipt.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "report change-summary",
+        "schemaVersion": "agent-change-summary-receipt.v1",
+        "compatibility": "stable-json",
+    },
     {"command": "context checkpoint", "schemaVersion": "agent-context-checkpoint.v1", "compatibility": "stable-json"},
     {"command": "context restore", "schemaVersion": "agent-context-continuation.v1", "compatibility": "stable-json"},
-    {"command": "context continuation", "schemaVersion": "agent-context-continuation.v1", "compatibility": "stable-json"},
+    {
+        "command": "context continuation",
+        "schemaVersion": "agent-context-continuation.v1",
+        "compatibility": "stable-json",
+    },
     {
         "command": "workflow run",
         "schemaVersion": "agent-workflow-run-receipt.v1",
@@ -93,23 +209,75 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
         "schemaVersion": "agent-progress-hook-receipt.v1",
         "compatibility": "explicit-side-receipt-json",
     },
-    {"command": "adapter session start", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
-    {"command": "adapter session status", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
-    {"command": "adapter session promote", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
-    {"command": "adapter session resume", "schemaVersion": "agent-adapter-session-resume-receipt.v1", "compatibility": "stable-json"},
+    {
+        "command": "adapter session start",
+        "schemaVersion": "agent-adapter-session-receipt.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "adapter session status",
+        "schemaVersion": "agent-adapter-session-receipt.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "adapter session promote",
+        "schemaVersion": "agent-adapter-session-receipt.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "adapter session resume",
+        "schemaVersion": "agent-adapter-session-resume-receipt.v1",
+        "compatibility": "stable-json",
+    },
     {"command": "adapter run", "schemaVersion": "agent-adapter-session-receipt.v1", "compatibility": "stable-json"},
-    {"command": "adapter task start", "schemaVersion": "agent-adapter-task-start-receipt.v1", "compatibility": "stable-json"},
+    {
+        "command": "adapter task start",
+        "schemaVersion": "agent-adapter-task-start-receipt.v1",
+        "compatibility": "stable-json",
+    },
     {"command": "thread request", "schemaVersion": "agent-thread-operation-request.v1", "compatibility": "stable-json"},
     {"command": "thread import", "schemaVersion": "agent-thread-context-import.v1", "compatibility": "stable-json"},
-    {"command": "project profile check", "schemaVersion": "agent-effective-project-workflow-profile.v1", "compatibility": "stable-json"},
-    {"command": "project preset list", "schemaVersion": "agent-project-workflow-preset-list.v1", "compatibility": "stable-json"},
-    {"command": "project preset inspect", "schemaVersion": "agent-project-workflow-preset-operation.v1", "compatibility": "stable-json"},
-    {"command": "project preset validate", "schemaVersion": "agent-project-workflow-preset-validation.v1", "compatibility": "stable-json"},
-    {"command": "project preset render", "schemaVersion": "agent-project-workflow-preset-render-receipt.v1", "compatibility": "stable-json"},
+    {
+        "command": "project profile check",
+        "schemaVersion": "agent-effective-project-workflow-profile.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "project preset list",
+        "schemaVersion": "agent-project-workflow-preset-list.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "project preset inspect",
+        "schemaVersion": "agent-project-workflow-preset-operation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "project preset validate",
+        "schemaVersion": "agent-project-workflow-preset-validation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "project preset render",
+        "schemaVersion": "agent-project-workflow-preset-render-receipt.v1",
+        "compatibility": "stable-json",
+    },
     {"command": "start --preset", "schemaVersion": "agent-guided-action-receipt.v1", "compatibility": "stable-json"},
-    {"command": "project principles check", "schemaVersion": "agent-project-principles-validation.v1", "compatibility": "stable-json"},
-    {"command": "start --project-profile", "schemaVersion": "agent-guided-action-receipt.v1", "compatibility": "stable-json"},
-    {"command": "adapter launch-profile", "schemaVersion": "agent-qualified-launch-profile-generation.v1", "compatibility": "stable-json"},
+    {
+        "command": "project principles check",
+        "schemaVersion": "agent-project-principles-validation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "start --project-profile",
+        "schemaVersion": "agent-guided-action-receipt.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "adapter launch-profile",
+        "schemaVersion": "agent-qualified-launch-profile-generation.v1",
+        "compatibility": "stable-json",
+    },
     {"command": "start", "schemaVersion": "agent-lifecycle-start-receipt.v1", "compatibility": "stable-json"},
     {
         "command": "start --launch (planning)",
@@ -127,9 +295,21 @@ CLI_OUTPUTS: tuple[dict[str, str], ...] = (
         "compatibility": "stable-json",
     },
     {"command": "review-mesh profile", "schemaVersion": "agent-review-mesh-profile.v1", "compatibility": "stable-json"},
-    {"command": "review-mesh recommend", "schemaVersion": "agent-review-mesh-recommendation.v1", "compatibility": "stable-json"},
-    {"command": "specification completion-gate", "schemaVersion": "agent-completion-gate-receipt.v1", "compatibility": "stable-json"},
-    {"command": "task compile-small", "schemaVersion": "agent-small-model-packet-compile-result.v1", "compatibility": "stable-json"},
+    {
+        "command": "review-mesh recommend",
+        "schemaVersion": "agent-review-mesh-recommendation.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "specification completion-gate",
+        "schemaVersion": "agent-completion-gate-receipt.v1",
+        "compatibility": "stable-json",
+    },
+    {
+        "command": "task compile-small",
+        "schemaVersion": "agent-small-model-packet-compile-result.v1",
+        "compatibility": "stable-json",
+    },
 )
 
 REQUIRED_CORE_SCHEMAS: tuple[str, ...] = (
@@ -182,8 +362,12 @@ def build_contract_policy() -> dict[str, Any]:
         "schemaVersion": POLICY_SCHEMA_VERSION,
         "status": "PASS",
         "rules": {
-            "schemaChanges": "add optional fields or introduce a new schema id; do not change required meaning in-place",
-            "cliOutputChanges": "preserve schemaVersion and machine-readable fields; add fields only when older clients can ignore them",
+            "schemaChanges": (
+                "add optional fields or introduce a new schema id; do not change required meaning in-place"
+            ),
+            "cliOutputChanges": (
+                "preserve schemaVersion and machine-readable fields; add fields only when older clients can ignore them"
+            ),
             "deprecations": "keep accepted-compatible readers and document replacement before removal",
             "errors": "return agent-lifecycle-error.v1 with stable code and details",
         },
@@ -202,11 +386,15 @@ def validate_contract_policy(policy: dict[str, Any] | None = None) -> dict[str, 
     registry_ids = {item["id"] for item in list_schemas()["schemas"]}
     blockers: list[dict[str, Any]] = []
     if payload.get("schemaVersion") != POLICY_SCHEMA_VERSION:
-        blockers.append({"code": "contract-policy-schema", "message": "unsupported public contract policy schemaVersion"})
+        blockers.append(
+            {"code": "contract-policy-schema", "message": "unsupported public contract policy schemaVersion"}
+        )
     if payload.get("status") != "PASS":
         blockers.append({"code": "contract-policy-status", "message": "public contract policy status must be PASS"})
     if payload.get("productionPromotionClaimed") is not False:
-        blockers.append({"code": "contract-policy-production-claim", "message": "policy must not claim production promotion"})
+        blockers.append(
+            {"code": "contract-policy-production-claim", "message": "policy must not claim production promotion"}
+        )
     _check_policy_rules(payload.get("rules"), blockers)
     schema_rows = payload.get("schemas")
     if not isinstance(schema_rows, list) or not schema_rows:
@@ -251,7 +439,9 @@ def validate_contract_policy(policy: dict[str, Any] | None = None) -> dict[str, 
 
 def require_contract_policy_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") == "FAIL":
-        raise LifecycleError("contract-policy-validation-failed", "public contract policy validation failed", {"validation": validation})
+        raise LifecycleError(
+            "contract-policy-validation-failed", "public contract policy validation failed", {"validation": validation}
+        )
     return validation
 
 
@@ -295,7 +485,9 @@ def _check_schema_row(row: dict[str, Any], registry_ids: set[str], blockers: lis
     if status == "DEPRECATED_COMPATIBLE":
         replacement = row.get("replacement")
         if replacement not in registry_ids:
-            blockers.append({"code": "contract-policy-deprecation-replacement", "schema": row.get("id"), "replacement": replacement})
+            blockers.append(
+                {"code": "contract-policy-deprecation-replacement", "schema": row.get("id"), "replacement": replacement}
+            )
         if row.get("behavior") != "accepted-compatible":
             blockers.append({"code": "contract-policy-deprecation-behavior", "schema": row.get("id")})
 
@@ -303,6 +495,8 @@ def _check_schema_row(row: dict[str, Any], registry_ids: set[str], blockers: lis
 def _check_cli_row(row: dict[str, Any], registry_ids: set[str], blockers: list[dict[str, Any]]) -> None:
     schema_version = row.get("schemaVersion")
     if schema_version != "<requested-schema>" and schema_version not in registry_ids:
-        blockers.append({"code": "contract-policy-cli-schema", "command": row.get("command"), "schemaVersion": schema_version})
+        blockers.append(
+            {"code": "contract-policy-cli-schema", "command": row.get("command"), "schemaVersion": schema_version}
+        )
     if row.get("compatibility") not in {"stable-json", "explicit-side-receipt-json"}:
         blockers.append({"code": "contract-policy-cli-compatibility", "command": row.get("command")})

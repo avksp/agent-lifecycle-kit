@@ -20,43 +20,43 @@ def _removed(operation: str) -> NoReturn:
     )
 
 
-def load_runner_policy(*args: Any, **kwargs: Any) -> NoReturn:
+def load_runner_policy(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("load-policy")
 
 
-def initialize_runner_state(*args: Any, **kwargs: Any) -> NoReturn:
+def initialize_runner_state(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("initialize")
 
 
-def load_runner_state(*args: Any, **kwargs: Any) -> NoReturn:
+def load_runner_state(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("load-state")
 
 
-def validate_runner_state(*args: Any, **kwargs: Any) -> NoReturn:
+def validate_runner_state(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("validate")
 
 
-def transition_runner(*args: Any, **kwargs: Any) -> NoReturn:
+def transition_runner(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("transition")
 
 
-def request_runner_stop(*args: Any, **kwargs: Any) -> NoReturn:
+def request_runner_stop(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("stop")
 
 
-def resume_runner(*args: Any, **kwargs: Any) -> NoReturn:
+def resume_runner(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("resume")
 
 
-def build_runner_snapshot(*args: Any, **kwargs: Any) -> NoReturn:
+def build_runner_snapshot(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("snapshot")
 
 
-def write_runner_state(*args: Any, **kwargs: Any) -> NoReturn:
+def write_runner_state(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("write-state")
 
 
-def write_runner_state_create(*args: Any, **kwargs: Any) -> NoReturn:
+def write_runner_state_create(*_args: Any, **_kwargs: Any) -> NoReturn:
     _removed("write-state-create")
 
 
