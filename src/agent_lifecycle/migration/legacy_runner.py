@@ -234,7 +234,12 @@ def _validate_legacy_payload(payload: dict[str, Any], schema_id: str) -> None:
                 "legacy artifact field exceeds its contract limit",
                 {"schemaVersion": schema_id, "field": field},
             )
-        if isinstance(value, int) and not isinstance(value, bool) and "minimum" in rule and value < int(rule["minimum"]):
+        if (
+            isinstance(value, int)
+            and not isinstance(value, bool)
+            and "minimum" in rule
+            and value < int(rule["minimum"])
+        ):
             raise LifecycleError(
                 "legacy-artifact-schema-invalid",
                 "legacy artifact integer is below its contract limit",
@@ -308,7 +313,7 @@ def _read_stable_input(path: Path, *, max_bytes: int) -> bytes:
     absolute = path.absolute()
     _reject_symlink_components(absolute)
     try:
-        before_path = os.stat(absolute, follow_symlinks=False)
+        before_path = absolute.stat(follow_symlinks=False)
     except OSError as exc:
         raise LifecycleError("legacy-artifact-unavailable", "legacy artifact is unavailable") from exc
     if not stat.S_ISREG(before_path.st_mode):
@@ -334,7 +339,7 @@ def _read_stable_input(path: Path, *, max_bytes: int) -> bytes:
     if len(data) > max_bytes:
         raise LifecycleError("legacy-artifact-too-large", "legacy artifact exceeds the configured byte limit")
     try:
-        after_path = os.stat(absolute, follow_symlinks=False)
+        after_path = absolute.stat(follow_symlinks=False)
     except OSError as exc:
         raise LifecycleError("legacy-artifact-changed-during-read", "legacy artifact changed during read") from exc
     _require_same_file(before_path, after_path)
@@ -342,7 +347,7 @@ def _read_stable_input(path: Path, *, max_bytes: int) -> bytes:
 
 
 def _require_same_file(before: os.stat_result, after: os.stat_result) -> None:
-    fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
+    fields: tuple[str, ...] = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
     if os.name != "nt":
         fields += ("st_ctime_ns",)
     if any(getattr(before, field) != getattr(after, field) for field in fields):

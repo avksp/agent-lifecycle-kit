@@ -17,8 +17,8 @@ from agent_lifecycle.host_protocol.event_capture import (
     adapter_declares_event_capture,
     event_capture_declaration,
 )
-from agent_lifecycle.host_protocol.validation import REQUIRED_OPERATION_NAMES, validate_adapter_descriptor
 from agent_lifecycle.host_protocol.sandbox_receipts import validate_sandbox_capability
+from agent_lifecycle.host_protocol.validation import REQUIRED_OPERATION_NAMES, validate_adapter_descriptor
 
 CAPABILITY_MANIFEST_SCHEMA_VERSION = "agent-adapter-capability-manifest.v1"
 CAPABILITY_MANIFEST_VALIDATION_SCHEMA_VERSION = "agent-adapter-capability-manifest-validation.v1"

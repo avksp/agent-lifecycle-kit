@@ -19,7 +19,15 @@ RUNNER_WORKTREE_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-worktree-isolation-policy-validation.v1": _open_object_schema(
         "agent-worktree-isolation-policy-validation.v1",
-        required=["schemaVersion", "status", "worktreeRoot", "allowedWriteRoots", "preserveFailedAttempts", "cleanupRequiresOperator", "policyDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "worktreeRoot",
+            "allowedWriteRoots",
+            "preserveFailedAttempts",
+            "cleanupRequiresOperator",
+            "policyDigest",
+        ],
         properties={
             "status": {"const": "PASS"},
             "worktreeRoot": {"type": "string", "minLength": 1},
@@ -31,7 +39,18 @@ RUNNER_WORKTREE_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-worktree-attempt-receipt.v1": _open_object_schema(
         "agent-worktree-attempt-receipt.v1",
-        required=["schemaVersion", "status", "lineage", "taskId", "attempt", "policyDigest", "isolation", "outcome", "cleanup", "createdAt"],
+        required=[
+            "schemaVersion",
+            "status",
+            "lineage",
+            "taskId",
+            "attempt",
+            "policyDigest",
+            "isolation",
+            "outcome",
+            "cleanup",
+            "createdAt",
+        ],
         properties={
             "status": {"const": "PASS"},
             "lineage": {"type": "object"},
@@ -47,7 +66,16 @@ RUNNER_WORKTREE_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-worktree-attempt-receipt-validation.v1": _open_object_schema(
         "agent-worktree-attempt-receipt-validation.v1",
-        required=["schemaVersion", "status", "lineage", "taskId", "attempt", "outcome", "cleanupDecision", "receiptDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "lineage",
+            "taskId",
+            "attempt",
+            "outcome",
+            "cleanupDecision",
+            "receiptDigest",
+        ],
         properties={
             "status": {"const": "PASS"},
             "lineage": {"type": "object"},
@@ -175,7 +203,16 @@ RUNNER_WORKTREE_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-runner-state-validation.v1": _open_object_schema(
         "agent-runner-state-validation.v1",
-        required=["schemaVersion", "status", "runnerRevision", "runnerStatus", "lineage", "counters", "historyCount", "stateDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "runnerRevision",
+            "runnerStatus",
+            "lineage",
+            "counters",
+            "historyCount",
+            "stateDigest",
+        ],
         properties={
             "status": {"const": "PASS"},
             "runnerRevision": {"type": "integer", "minimum": 1},
@@ -218,7 +255,17 @@ RUNNER_WORKTREE_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-runner-transition-result.v1": _open_object_schema(
         "agent-runner-transition-result.v1",
-        required=["schemaVersion", "status", "action", "runnerRevision", "runnerStatus", "transition", "allowedNextActions", "stateDigest", "resultDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "action",
+            "runnerRevision",
+            "runnerStatus",
+            "transition",
+            "allowedNextActions",
+            "stateDigest",
+            "resultDigest",
+        ],
         properties={
             "status": {"const": "PASS"},
             "action": {"type": "string", "minLength": 1},
@@ -232,7 +279,16 @@ RUNNER_WORKTREE_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-runner-snapshot.v1": _open_object_schema(
         "agent-runner-snapshot.v1",
-        required=["schemaVersion", "status", "runner", "budget", "lineage", "recentTransitions", "estimatedTokens", "snapshotDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "runner",
+            "budget",
+            "lineage",
+            "recentTransitions",
+            "estimatedTokens",
+            "snapshotDigest",
+        ],
         properties={
             "status": {"const": "PASS"},
             "runner": {"type": "object"},
@@ -279,7 +335,17 @@ RUNNER_WORKTREE_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-runner-attempt-snapshot-receipt-validation.v1": _open_object_schema(
         "agent-runner-attempt-snapshot-receipt-validation.v1",
-        required=["schemaVersion", "status", "receiptStatus", "taskId", "attempt", "action", "blockers", "receiptDigest", "validationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "receiptStatus",
+            "taskId",
+            "attempt",
+            "action",
+            "blockers",
+            "receiptDigest",
+            "validationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "receiptStatus": {"type": ["string", "null"]},
@@ -329,7 +395,18 @@ RUNNER_WORKTREE_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-worker-lease-receipt-validation.v1": _open_object_schema(
         "agent-worker-lease-receipt-validation.v1",
-        required=["schemaVersion", "status", "receiptStatus", "workerId", "leaseId", "taskId", "leaseStatus", "blockers", "receiptDigest", "validationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "receiptStatus",
+            "workerId",
+            "leaseId",
+            "taskId",
+            "leaseStatus",
+            "blockers",
+            "receiptDigest",
+            "validationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "receiptStatus": {"type": ["string", "null"]},

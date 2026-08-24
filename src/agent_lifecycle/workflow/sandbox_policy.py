@@ -116,7 +116,9 @@ def validate_task_sandbox_evidence(
 
 def require_task_sandbox_evidence_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("sandbox-policy-validation-failed", "sandbox policy validation failed", {"validation": validation})
+        raise LifecycleError(
+            "sandbox-policy-validation-failed", "sandbox policy validation failed", {"validation": validation}
+        )
     return validation
 
 
@@ -182,10 +184,7 @@ def _accepted_sandbox_statuses(
 
 def _is_high_risk_task(task: dict[str, Any], policy: dict[str, Any]) -> bool:
     high_risk = {str(item) for item in policy.get("highRiskClasses", [])}
-    for value in _task_classifiers(task):
-        if value in high_risk:
-            return True
-    return False
+    return any(value in high_risk for value in _task_classifiers(task))
 
 
 def _task_classifiers(task: dict[str, Any]) -> set[str]:

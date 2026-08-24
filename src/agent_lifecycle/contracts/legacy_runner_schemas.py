@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_lifecycle.contracts.schema_builders import open_object_schema as _open_object_schema
 from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SCHEMAS
+from agent_lifecycle.contracts.schema_builders import open_object_schema as _open_object_schema
 
 LEGACY_RUNNER_CORE_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-managed-lifecycle-next-action.v1": _open_object_schema(

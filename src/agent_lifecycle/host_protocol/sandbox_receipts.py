@@ -23,7 +23,13 @@ LINEAGE_KEYS = ("runId", "packageId", "planRevision", "planDigest", "sourceRevis
 PARTIAL_CONTAINMENT_KEY = "partialContainment"
 CREDENTIAL_PROXY_KEY = "credentialProxy"
 CREDENTIAL_PROXY_PLACEHOLDERS = {"<redacted>", "<credential-proxy>", "<host-local>"}
-CREDENTIAL_PROXY_SOURCES = {"HOST_ENV", "HOST_CREDENTIAL_STORE", "HOST_APPROVED_ENV_FILE", "HOST_INTERACTIVE_LOGIN", "UNKNOWN"}
+CREDENTIAL_PROXY_SOURCES = {
+    "HOST_ENV",
+    "HOST_CREDENTIAL_STORE",
+    "HOST_APPROVED_ENV_FILE",
+    "HOST_INTERACTIVE_LOGIN",
+    "UNKNOWN",
+}
 SENSITIVE_VALUE_MARKERS = ("BEGIN " + "PRIVATE KEY", "sk-", "xai-", "gh" + "p_", "not-redacted-credential")
 
 
@@ -54,7 +60,9 @@ def build_sandbox_receipt(
         "boundaries": normalized_boundaries,
         "enforcement": normalized_enforcement,
         "writeScopeBoundary": _write_scope_boundary(),
-        "evidenceIds": _string_list(evidence_ids or [], label="evidenceIds", code="invalid-sandbox-receipt", allow_empty=True),
+        "evidenceIds": _string_list(
+            evidence_ids or [], label="evidenceIds", code="invalid-sandbox-receipt", allow_empty=True
+        ),
         "policyDigest": _optional_digest(policy_digest, label="policyDigest", code="invalid-sandbox-receipt"),
         "blockers": list(blockers or []),
         "verifier": _verifier(verifier, code="invalid-sandbox-receipt"),
@@ -84,10 +92,14 @@ def validate_sandbox_receipt(
     lineage = _checked_lineage(receipt.get("lineage"), blockers, code="sandbox-lineage")
     if expected_lineage is not None and lineage is not None:
         _compare_lineage(lineage, expected_lineage, blockers)
-    actual_task_id = _checked_required_string(receipt.get("taskId"), blockers, label="taskId", code="sandbox-task-id-missing")
+    actual_task_id = _checked_required_string(
+        receipt.get("taskId"), blockers, label="taskId", code="sandbox-task-id-missing"
+    )
     if task_id is not None and actual_task_id != task_id:
         blockers.append({"code": "sandbox-task-id-mismatch", "expected": task_id, "actual": actual_task_id})
-    actual_attempt = _checked_positive_int(receipt.get("attempt"), blockers, label="attempt", code="sandbox-attempt-invalid")
+    actual_attempt = _checked_positive_int(
+        receipt.get("attempt"), blockers, label="attempt", code="sandbox-attempt-invalid"
+    )
     if attempt is not None and actual_attempt != attempt:
         blockers.append({"code": "sandbox-attempt-mismatch", "expected": attempt, "actual": actual_attempt})
     boundaries, unknown_boundary_count = _checked_boundaries(receipt.get("boundaries"), blockers)
@@ -128,7 +140,9 @@ def require_sandbox_receipt_pass(validation: dict[str, Any]) -> dict[str, Any]:
     """Fail closed when a caller requires proven sandbox containment."""
 
     if validation.get("status") != "PASS" or validation.get("sandboxStatus") != "PASS":
-        raise LifecycleError("sandbox-validation-failed", "required sandbox receipt did not pass", {"validation": validation})
+        raise LifecycleError(
+            "sandbox-validation-failed", "required sandbox receipt did not pass", {"validation": validation}
+        )
     return validation
 
 
@@ -162,11 +176,15 @@ def build_partial_process_boundary(
     return {
         "mode": "DECLARED",
         "summary": summary,
-        "evidenceIds": _string_list(evidence_ids, label="boundary.evidenceIds", code="invalid-sandbox-receipt", allow_empty=False),
+        "evidenceIds": _string_list(
+            evidence_ids, label="boundary.evidenceIds", code="invalid-sandbox-receipt", allow_empty=False
+        ),
         "details": {
             PARTIAL_CONTAINMENT_KEY: {
                 "status": "PARTIAL",
-                "covered": _string_list(covered, label="partialContainment.covered", code="invalid-sandbox-receipt", allow_empty=False),
+                "covered": _string_list(
+                    covered, label="partialContainment.covered", code="invalid-sandbox-receipt", allow_empty=False
+                ),
                 "limitations": _string_list(
                     limitations,
                     label="partialContainment.limitations",
@@ -196,9 +214,15 @@ def build_credential_proxy_details(
 
     return {
         CREDENTIAL_PROXY_KEY: {
-            "source": _enum(source, CREDENTIAL_PROXY_SOURCES, label="credentialProxy.source", code="invalid-sandbox-receipt"),
-            "attachment": _required_string(attachment, label="credentialProxy.attachment", code="invalid-sandbox-receipt"),
-            "egressBoundary": _required_string(egress_boundary, label="credentialProxy.egressBoundary", code="invalid-sandbox-receipt"),
+            "source": _enum(
+                source, CREDENTIAL_PROXY_SOURCES, label="credentialProxy.source", code="invalid-sandbox-receipt"
+            ),
+            "attachment": _required_string(
+                attachment, label="credentialProxy.attachment", code="invalid-sandbox-receipt"
+            ),
+            "egressBoundary": _required_string(
+                egress_boundary, label="credentialProxy.egressBoundary", code="invalid-sandbox-receipt"
+            ),
             "allowedEnvNames": _string_list(
                 allowed_env_names or [],
                 label="credentialProxy.allowedEnvNames",
@@ -272,7 +296,9 @@ def _normalize_boundary(value: dict[str, Any], *, code: str) -> dict[str, Any]:
     return {
         "mode": mode,
         "summary": _optional_string(value.get("summary")),
-        "evidenceIds": _string_list(value.get("evidenceIds", []), label="boundary.evidenceIds", code=code, allow_empty=True),
+        "evidenceIds": _string_list(
+            value.get("evidenceIds", []), label="boundary.evidenceIds", code=code, allow_empty=True
+        ),
         "details": _optional_object(value.get("details")),
     }
 
@@ -283,7 +309,9 @@ def _normalize_enforcement(value: dict[str, Any], *, code: str) -> dict[str, Any
     return {
         "source": _enum(value.get("source"), ENFORCEMENT_SOURCES, label="enforcement.source", code=code),
         "verified": _required_bool(value.get("verified"), label="enforcement.verified", code=code),
-        "evidenceIds": _string_list(value.get("evidenceIds", []), label="enforcement.evidenceIds", code=code, allow_empty=True),
+        "evidenceIds": _string_list(
+            value.get("evidenceIds", []), label="enforcement.evidenceIds", code=code, allow_empty=True
+        ),
         "details": _optional_object(value.get("details")),
     }
 
@@ -295,7 +323,10 @@ def _derived_sandbox_status(
 ) -> str:
     if blockers:
         return "FAIL"
-    if any(boundary.get("mode") == "UNSUPPORTED" for boundary in boundaries.values()) or enforcement.get("source") == "UNSUPPORTED":
+    if (
+        any(boundary.get("mode") == "UNSUPPORTED" for boundary in boundaries.values())
+        or enforcement.get("source") == "UNSUPPORTED"
+    ):
         return "UNSUPPORTED"
     if any(boundary.get("mode") == "UNKNOWN" for boundary in boundaries.values()):
         return "UNKNOWN"
@@ -323,7 +354,9 @@ def _checked_boundaries(value: Any, blockers: list[dict[str, Any]]) -> tuple[dic
             blockers.append({"code": "sandbox-boundary-mode-invalid", "boundary": name, "mode": mode})
         elif mode in UNKNOWN_BOUNDARY_MODES:
             unknown_count += 1
-        _check_string_list(boundary.get("evidenceIds", []), f"sandbox-boundary-{name}-evidence-ids", blockers, allow_empty=True)
+        _check_string_list(
+            boundary.get("evidenceIds", []), f"sandbox-boundary-{name}-evidence-ids", blockers, allow_empty=True
+        )
         details = boundary.get("details", {})
         if details is not None and not isinstance(details, dict):
             blockers.append({"code": "sandbox-boundary-details-invalid", "boundary": name})
@@ -376,10 +409,16 @@ def _check_partial_boundaries(boundaries: dict[str, Any], blockers: list[dict[st
             continue
         if partial.get("status") != "PARTIAL":
             blockers.append({"code": "sandbox-partial-containment-status-invalid", "boundary": name})
-        _check_string_list(partial.get("covered"), "sandbox-partial-containment-covered-invalid", blockers, allow_empty=False)
-        _check_string_list(partial.get("limitations"), "sandbox-partial-containment-limitations-invalid", blockers, allow_empty=False)
+        _check_string_list(
+            partial.get("covered"), "sandbox-partial-containment-covered-invalid", blockers, allow_empty=False
+        )
+        _check_string_list(
+            partial.get("limitations"), "sandbox-partial-containment-limitations-invalid", blockers, allow_empty=False
+        )
         if "platforms" in partial:
-            _check_string_list(partial.get("platforms"), "sandbox-partial-containment-platforms-invalid", blockers, allow_empty=True)
+            _check_string_list(
+                partial.get("platforms"), "sandbox-partial-containment-platforms-invalid", blockers, allow_empty=True
+            )
     return count
 
 
@@ -407,12 +446,16 @@ def _check_credential_proxy_boundaries(
             blockers.append({"code": "sandbox-credential-proxy-source-invalid", "location": location})
         for field in ("attachment", "egressBoundary"):
             if not isinstance(proxy.get(field), str) or not proxy[field]:
-                blockers.append({"code": "sandbox-credential-proxy-field-missing", "location": location, "field": field})
+                blockers.append(
+                    {"code": "sandbox-credential-proxy-field-missing", "location": location, "field": field}
+                )
         if proxy.get("sandboxCredentialValue") not in CREDENTIAL_PROXY_PLACEHOLDERS:
             blockers.append({"code": "sandbox-credential-proxy-placeholder-invalid", "location": location})
         if proxy.get("secretValueStoredInReceipt") is not False:
             blockers.append({"code": "sandbox-credential-proxy-secret-stored", "location": location})
-        _check_string_list(proxy.get("allowedEnvNames", []), "sandbox-credential-proxy-env-names-invalid", blockers, allow_empty=True)
+        _check_string_list(
+            proxy.get("allowedEnvNames", []), "sandbox-credential-proxy-env-names-invalid", blockers, allow_empty=True
+        )
         if _contains_secret_value(proxy):
             blockers.append({"code": "sandbox-credential-proxy-secret-value", "location": location})
     return count
@@ -437,9 +480,7 @@ def _contains_secret_value(value: Any) -> bool:
 
 def _has_credential_proxy_redaction_blocker(blockers: list[dict[str, Any]]) -> bool:
     return any(
-        str(item.get("code", "")).startswith("sandbox-credential-proxy")
-        for item in blockers
-        if isinstance(item, dict)
+        str(item.get("code", "")).startswith("sandbox-credential-proxy") for item in blockers if isinstance(item, dict)
     )
 
 
@@ -458,7 +499,10 @@ def _write_scope_boundary() -> dict[str, Any]:
     return {
         "gitWriteScopeGovernedSeparately": True,
         "osSandboxContainmentGovernedBy": "agent-sandbox-receipt.v1",
-        "statement": "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, process and environment access.",
+        "statement": (
+            "Git write scope limits repository paths; sandbox containment limits runtime filesystem, network, "
+            "process and environment access."
+        ),
     }
 
 
@@ -504,7 +548,14 @@ def _checked_lineage(value: Any, blockers: list[dict[str, Any]], *, code: str) -
 def _compare_lineage(actual: dict[str, Any], expected: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     for key in LINEAGE_KEYS:
         if actual.get(key) != expected.get(key):
-            blockers.append({"code": "sandbox-lineage-mismatch", "field": key, "expected": expected.get(key), "actual": actual.get(key)})
+            blockers.append(
+                {
+                    "code": "sandbox-lineage-mismatch",
+                    "field": key,
+                    "expected": expected.get(key),
+                    "actual": actual.get(key),
+                }
+            )
 
 
 def _verifier(value: Any, *, code: str) -> dict[str, Any]:
@@ -576,9 +627,11 @@ def _string_list(value: Any, *, label: str, code: str, allow_empty: bool) -> lis
 
 
 def _check_string_list(value: Any, code: str, blockers: list[dict[str, Any]], *, allow_empty: bool) -> None:
-    if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
-        blockers.append({"code": code})
-    elif not value and not allow_empty:
+    if (
+        not isinstance(value, list)
+        or not all(isinstance(item, str) and item for item in value)
+        or (not value and not allow_empty)
+    ):
         blockers.append({"code": code})
 
 

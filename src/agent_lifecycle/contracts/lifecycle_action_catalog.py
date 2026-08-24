@@ -134,9 +134,9 @@ def validate_action_catalog() -> dict[str, Any]:
 __all__ = [
     "ACTION_CATALOG",
     "ACTION_TYPES",
-    "REMOVED_RUNNER_COMMANDS",
     "NON_MODEL_ACTION_TYPES",
     "OPERATION_ACTION_TYPES",
+    "REMOVED_RUNNER_COMMANDS",
     "WORKFLOW_PHASE_ACTION_TYPES",
     "action_requires_host",
     "action_requires_state_mutation",
