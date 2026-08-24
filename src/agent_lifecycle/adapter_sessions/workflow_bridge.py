@@ -12,6 +12,7 @@ from agent_lifecycle.contracts import canonical_digest, read_json_object
 from agent_lifecycle.policy.risk_execution import derive_risk_execution_profile
 from agent_lifecycle.resources import builtin_profile_path
 from agent_lifecycle.workflow import run_managed_lifecycle_step
+from agent_lifecycle.workflow.transition_contract import validate_action_catalog
 
 
 def managed_adapter_run(
@@ -72,7 +73,14 @@ def managed_adapter_run(
         )
         next_action = _risk_aware_next_action(next_action, risk_profile)
     state_identity = {**_state_identity(state_path), "taskId": task_id}
-    proof = _managed_proof("adapter run", adapter_id=adapter_id, task_id=task_id, state_identity=state_identity)
+    catalog = validate_action_catalog()
+    proof = _managed_proof(
+        "adapter run",
+        adapter_id=adapter_id,
+        task_id=task_id,
+        state_identity=state_identity,
+        action_catalog_digest=catalog["catalogDigest"],
+    )
     session = create_session(
         adapter_id=adapter_id,
         mode="MANAGED_TASK",
@@ -189,8 +197,15 @@ def _state_identity(state_path: Path) -> dict[str, Any]:
     }
 
 
-def _managed_proof(command: str, *, adapter_id: str, task_id: str, state_identity: dict[str, Any]) -> dict[str, Any]:
-    return {
+def _managed_proof(
+    command: str,
+    *,
+    adapter_id: str,
+    task_id: str,
+    state_identity: dict[str, Any],
+    action_catalog_digest: str | None = None,
+) -> dict[str, Any]:
+    proof = {
         "kind": "alk-managed-adapter-session",
         "status": "PASS",
         "command": command,
@@ -198,6 +213,9 @@ def _managed_proof(command: str, *, adapter_id: str, task_id: str, state_identit
         "taskId": task_id,
         "stateIdentity": state_identity,
     }
+    if action_catalog_digest is not None:
+        proof["actionCatalogDigest"] = action_catalog_digest
+    return proof
 
 
 def _risk_aware_next_action(next_action: Any, profile: dict[str, Any]) -> dict[str, Any]:

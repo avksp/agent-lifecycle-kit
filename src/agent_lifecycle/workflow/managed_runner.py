@@ -21,6 +21,7 @@ from agent_lifecycle.planning.validation import validate_plan_manifest
 from agent_lifecycle.workflow.implementation_audit_gate import implementation_audit_blockers
 from agent_lifecycle.workflow.next_action import MODEL_CALLS_STARTED, build_managed_next_action
 from agent_lifecycle.workflow.state import load_state, state_identity
+from agent_lifecycle.workflow.transition_contract import NON_MODEL_ACTION_TYPES
 
 
 def run_managed_lifecycle_step(
@@ -164,13 +165,7 @@ def _managed_control_gate(
         operation = "file-edit" if paths else "shell-command"
     elif action_type == "accept-task":
         operation = "task-accept"
-    elif action_type in {
-        "adopt-plan",
-        "final-audit-outcome",
-        "request-human-decision",
-        "record-budget-decision",
-        "record-external-action-receipt",
-    }:
+    elif action_type in NON_MODEL_ACTION_TYPES:
         return _non_model_control_action_projection(level, action_type, state)
     else:
         return _unsupported_control_action_projection(level, action_type)
