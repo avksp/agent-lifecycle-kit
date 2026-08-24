@@ -1,5 +1,14 @@
 # Lifecycle task scenarios
 
+## Canonical execution route
+
+For implementation work, use `workflow run` as the single next-action query and
+the `workflow task-*` commands as the state transition surface. The legacy
+`runner` commands are compatibility journals only; they are deprecated and
+cannot authorize, accept or finalize work. A runner receipt must be treated as
+evidence to attach to workflow state, never as a replacement for a workflow
+transition.
+
 Use these lifecycle task scenarios when you know the kind of work you want, but do not want to
 assemble the lower-level ALK commands from scratch. Every recipe keeps raw
 input draft-only until a reviewed plan or run request explicitly authorizes

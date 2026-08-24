@@ -35,6 +35,8 @@ def build_attempt_snapshot_receipt(
 
     normalized_action = _enum(action, ATTEMPT_ACTIONS, label="action", code="invalid-attempt-snapshot-receipt")
     snapshot_digest = canonical_digest(snapshot) if snapshot is not None else None
+    receipt_metadata = dict(metadata or {})
+    receipt_metadata.setdefault("authority", "workflow-state-only")
     body = {
         "schemaVersion": ATTEMPT_SNAPSHOT_RECEIPT_SCHEMA,
         "status": _enum(
@@ -62,7 +64,7 @@ def build_attempt_snapshot_receipt(
         "evidenceIds": _string_list(
             evidence_ids or [], label="evidenceIds", code="invalid-attempt-snapshot-receipt", allow_empty=True
         ),
-        "metadata": dict(metadata or {}),
+        "metadata": receipt_metadata,
         "blockers": list(blockers or []),
         "createdAt": _now_iso(),
         "productionPromotionClaimed": False,
@@ -141,6 +143,8 @@ def validate_attempt_snapshot_receipt(
     _check_string_list(receipt.get("evidenceIds", []), "attempt-snapshot-evidence-ids", blockers, allow_empty=True)
     if not isinstance(receipt.get("metadata", {}), dict):
         blockers.append({"code": "attempt-snapshot-metadata-invalid"})
+    elif receipt["metadata"].get("authority") not in {None, "workflow-state-only"}:
+        blockers.append({"code": "attempt-snapshot-authority-invalid"})
     _check_object_list(receipt.get("blockers", []), "attempt-snapshot-blockers-invalid", blockers)
     if receipt.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "attempt-snapshot-production-claim"})

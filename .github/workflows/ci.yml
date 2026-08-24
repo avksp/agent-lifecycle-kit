@@ -45,6 +45,16 @@ jobs:
           --require-acyclic-modules
           --require-acyclic-packages
           --evidence work/ci/module-dependencies.json
+      - name: Validate workflow transition contract
+        run: >-
+          python tools/release/validate_workflow_transition_contract.py
+          --package-root src/agent_lifecycle
+          --evidence work/ci/workflow-transition-contract.json
+      - name: Validate standard-library runtime boundary
+        run: >-
+          python tools/release/validate_stdlib_runtime_boundary.py
+          --package-root src/agent_lifecycle
+          --evidence work/ci/stdlib-runtime-boundary.json
       - name: Validate architecture complexity
         run: >-
           python tools/release/validate_architecture_complexity.py

@@ -21,7 +21,8 @@ from agent_lifecycle.cli.progress_hooks import (
     maybe_emit_workflow_progress_hook,
     validate_workflow_progress_hook_request,
 )
-from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
+from agent_lifecycle.contracts.lifecycle_action_catalog import COMPATIBILITY_COMMANDS
 from agent_lifecycle.runner import (
     build_runner_snapshot,
     initialize_runner_state,
@@ -404,7 +405,7 @@ def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
     runner_path = Path(args.runner)
     if args.runner_command == "start":
         workflow_state = read_json_object(Path(args.state), label="workflow state")
-        policy = load_runner_policy(Path(args.policy) if args.policy else None)
+        policy = load_runner_policy(Path(args.policy)) if args.policy else None
         runner_state = initialize_runner_state(
             workflow_state,
             policy=policy,
@@ -412,7 +413,10 @@ def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
             reason=args.reason,
         )
         write_runner_state_create(runner_path, runner_state)
-        return validate_runner_state(runner_state, workflow_state=workflow_state)
+        return _runner_compatibility_result(
+            validate_runner_state(runner_state, workflow_state=workflow_state),
+            command="runner start",
+        )
     runner_state = load_runner_state(runner_path)
     if args.runner_command == "status":
         status_workflow_state = read_json_object(Path(args.state), label="workflow state") if args.state else None
@@ -420,19 +424,25 @@ def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
             if status_workflow_state is None:
                 raise LifecycleError("missing-cli-argument", "runner status with --profile requires --state")
             profile = read_json_object(Path(args.profile), label="context profile")
-            return build_runner_snapshot(
-                runner_state,
-                status_workflow_state,
-                profile=profile,
-                window=args.target_window,
+            return _runner_compatibility_result(
+                build_runner_snapshot(
+                    runner_state,
+                    status_workflow_state,
+                    profile=profile,
+                    window=args.target_window,
+                ),
+                command="runner status",
             )
-        return validate_runner_state(runner_state, workflow_state=status_workflow_state)
+        return _runner_compatibility_result(
+            validate_runner_state(runner_state, workflow_state=status_workflow_state),
+            command="runner status",
+        )
     workflow_state = read_json_object(Path(args.state), label="workflow state")
     if args.runner_command == "transition":
         request = read_json_object(Path(args.request), label="runner transition request")
         payload = transition_runner(runner_state, workflow_state, request)
         write_runner_state(runner_path, payload["state"])
-        return payload["result"]
+        return _runner_compatibility_result(payload["result"], command="runner transition")
     if args.runner_command == "stop":
         payload = request_runner_stop(
             runner_state,
@@ -442,7 +452,7 @@ def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
             reason=args.reason,
         )
         write_runner_state(runner_path, payload["state"])
-        return payload["result"]
+        return _runner_compatibility_result(payload["result"], command="runner stop")
     if args.runner_command == "resume":
         payload = resume_runner(
             runner_state,
@@ -452,5 +462,23 @@ def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
             reason=args.reason,
         )
         write_runner_state(runner_path, payload["state"])
-        return payload["result"]
+        return _runner_compatibility_result(payload["result"], command="runner resume")
     raise LifecycleError("command-not-implemented", "runner command is not implemented")
+
+
+def _runner_compatibility_result(payload: dict[str, Any], *, command: str) -> dict[str, Any]:
+    """Mark legacy runner output without changing its historical meaning."""
+
+    classification = COMPATIBILITY_COMMANDS.get(command)
+    if classification is None:
+        raise LifecycleError("invalid-runner-command", "runner command is not in the compatibility catalog")
+    digest_keys = ("resultDigest", "snapshotDigest", "validationDigest")
+    digest_key = next((key for key in digest_keys if key in payload), "validationDigest")
+    body = {key: value for key, value in payload.items() if key not in digest_keys}
+    body["deprecation"] = {
+        "status": "DEPRECATED",
+        "command": command,
+        "replacement": classification["replacement"],
+        "workflowAuthority": "workflow-state-only",
+    }
+    return {**body, digest_key: canonical_digest(body)}

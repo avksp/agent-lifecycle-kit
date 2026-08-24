@@ -238,6 +238,21 @@ attempts within the frozen retry budget, `CONTRACT_CHANGE` waits for a new
 frozen plan, and `BLOCKED` waits for the declared external action. None of
 these transitions changes plan authority or invokes a model.
 
+## Release 1.84: one lifecycle authority
+
+Durable workflow state is the sole authority for phase, task status,
+authorization, acceptance, blockers and final proof. `workflow run` projects
+the next action from that state. The controlled runner remains readable for
+legacy integrations, but its state and receipts are a deprecated,
+journal-only compatibility layer: they cannot mutate workflow state or satisfy
+acceptance and finalization.
+
+Workflow projections, host lifecycle gates and runner compatibility commands use
+the closed `agent-lifecycle-action-catalog.v1`. The catalog is data-only and
+not configurable by a project profile. CI validates its consumers, phase/action
+coverage and standard-library-only runtime boundary without executing imported
+project code.
+
 ## C1: system context
 
 At system level ALK is a local CLI and Python package used inside a source
@@ -523,7 +538,7 @@ layer direction.
 | Context and evidence | `context/*`, `evidence_index/*`, `goal/*`, `followup/*` | Small packets, episode retrieval, external context imports, goal views and continuation records. |
 | Research evidence | `research/*`, `contracts/research_evidence_schemas.py`, `cli/research.py` | Local validation of `agent-research-evidence-package.v1` source, claim, citation and provenance bindings; bounded summary for draft planning input. |
 | Neutrality | `neutrality/scanner.py`, `neutrality/paths.py`, `neutrality/receipt.py`, `neutrality/gate.py` | Git-index-bound release scanning, optional policy-limited local evidence, stable reads, authority checks and signed neutrality receipts. |
-| Runner | `runner/*` | Bounded execution-loop state over existing workflow primitives. |
+| Runner | `runner/*` | Deprecated, bounded compatibility journal over workflow primitives; workflow state remains authoritative. |
 | Worktree | `worktree/*`, `cli/worktree.py` | Worktree isolation policies and attempt receipts. |
 
 ## C4: code-level call paths

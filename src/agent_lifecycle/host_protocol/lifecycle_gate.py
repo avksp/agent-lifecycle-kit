@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.lifecycle_action_catalog import action_types_for_operation
 from agent_lifecycle.contracts.lifecycle_control_schemas import (
     CONTROL_LEVELS,
     CONTROL_OPERATIONS,
@@ -27,12 +28,6 @@ from agent_lifecycle.freeze import verify_plan_lock_envelope
 LIFECYCLE_GATE_SCHEMA = "agent-lifecycle-control-gate.v1"
 _SELECTED_LEVELS = {"OBSERVED", "ENFORCED"}
 _ENFORCED_LEVEL = "ENFORCED"
-_OPERATION_ACTION_TYPES = {
-    "file-edit": {"launch-tasks"},
-    "shell-command": {"launch-tasks"},
-    "task-accept": {"accept-task"},
-    "run-finalize": {"finalize-run"},
-}
 
 
 def evaluate_pre_action_gate(
@@ -408,7 +403,7 @@ def _pre_action_invariants(
     else:
         raw_projected = next_action.get("projectedAction")
         projected: dict[str, Any] = raw_projected if isinstance(raw_projected, dict) else next_action
-        expected_types = _OPERATION_ACTION_TYPES.get(operation, set())
+        expected_types = action_types_for_operation(operation)
         if projected.get("type") not in expected_types:
             blockers.append({"code": "next-action-mismatch", "operation": operation, "actual": projected.get("type")})
         if (

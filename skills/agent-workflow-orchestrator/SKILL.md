@@ -141,15 +141,16 @@ the hook receipt as display evidence only.
 
 ## Context continuity
 
-When a host session is long or a compaction boundary is expected, use the
-context checkpoint contract instead of relying on memory in the chat. Prefer an
-ALK milestone checkpoint when the frozen plan opts into one. Use an explicit
-`agent-lifecycle context checkpoint` request when the operator needs to record
-decisions immediately. Treat `NATIVE_HOOK` as valid only when the adapter has
-supplied accepted event evidence; otherwise keep the support level explicit as
-`MILESTONE`, `AGENT_REQUESTED` or `UNAVAILABLE`.
+For long sessions or compaction, use the context checkpoint contract. Prefer
+an opted-in ALK milestone or an explicit `agent-lifecycle context checkpoint`.
+`NATIVE_HOOK` requires accepted adapter event evidence; otherwise label support
+`MILESTONE`, `AGENT_REQUESTED` or `UNAVAILABLE`. After compaction, restore one
+bounded packet and re-check lineage. It is advisory: the frozen plan, workflow
+state, ownership and accepted evidence govern execution and acceptance.
 
-After compaction, restore one bounded continuation packet and re-check its
-lineage against the current state. The packet is advisory context only: the
-frozen plan, workflow state, ownership rules and accepted evidence remain the
-authority for execution and acceptance.
+## Lifecycle authority
+
+`workflow run` and workflow transitions are authoritative. Legacy `runner`
+output is journal evidence only; its statuses never authorize attempts,
+acceptance, blockers or finalization. Require workflow state, authorization and
+final audit.

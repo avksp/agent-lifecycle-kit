@@ -1,5 +1,12 @@
 # Справочник команд
 
+## Полномочия команд рабочего цикла
+
+Для новых интеграций используйте `workflow run` и команды `workflow task-*`.
+`runner start/status/transition/stop/resume` - устаревшие совместимые команды
+журнала. Их вывод является только доказательством и не может менять состояние
+workflow или заменять приёмку/финализацию.
+
 Основная команда называется `agent-lifecycle`. Она возвращает структурированный
 JSON, чтобы результат можно было проверять автоматически.
 
@@ -18,7 +25,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.83.0
+python -m pip install agent-lifecycle-kit==1.84.0
 ```
 
 ## Контракты ошибок и ресурсов
