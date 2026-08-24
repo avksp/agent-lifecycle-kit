@@ -37,9 +37,12 @@ from agent_lifecycle.workflow import (
     accept_task,
     adopt_plan,
     apply_budget_decision,
+    apply_task_review_outcome,
     block_run,
     commit_task_result,
     finalize_run,
+    initialize_workflow_state,
+    migrate_workflow_state,
     next_action,
     pause_for_budget_decision,
     resolve_blocker,
@@ -67,6 +70,21 @@ def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
 def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
     if args.workflow_command == "budget-policy-check":
         return validate_budget_exceeded_policy(read_json_object(Path(args.policy), label="budget policy"))
+    if args.workflow_command == "init":
+        return initialize_workflow_state(
+            Path(args.state),
+            run_id=args.run_id,
+            package_id=args.package_id,
+            package_root=args.package_root,
+            event_log=args.event_log,
+        )
+    if args.workflow_command == "state-migrate":
+        return migrate_workflow_state(
+            Path(args.state),
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+        )
     state_path = Path(args.state)
     if args.workflow_command == "status":
         return status(state_path, full=args.full)
@@ -207,15 +225,27 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
         )
     if args.workflow_command == "task-accept":
         validate_workflow_progress_hook_request(args, command="workflow task-accept")
-        payload = accept_task(
-            state_path,
-            task_id=args.task,
-            operation_id=args.operation_id,
-            expected_revision=args.expected_revision,
-            review_path=args.review,
-            implementation_audit_path=args.implementation_audit,
-            reason=args.reason,
-        )
+        if args.source_revision:
+            payload = apply_task_review_outcome(
+                state_path,
+                task_id=args.task,
+                operation_id=args.operation_id,
+                expected_revision=args.expected_revision,
+                source_revision=args.source_revision,
+                review_path=args.review,
+                implementation_audit_path=args.implementation_audit,
+                reason=args.reason,
+            )
+        else:
+            payload = accept_task(
+                state_path,
+                task_id=args.task,
+                operation_id=args.operation_id,
+                expected_revision=args.expected_revision,
+                review_path=args.review,
+                implementation_audit_path=args.implementation_audit,
+                reason=args.reason,
+            )
         maybe_emit_workflow_progress_hook(args, command="workflow task-accept", state_path=state_path)
         return payload
     if args.workflow_command == "task-rework":
@@ -230,6 +260,21 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
             finding_ids=args.finding_id,
             reason=args.reason,
         )
+    if args.workflow_command == "task-review-apply":
+        validate_workflow_progress_hook_request(args, command="workflow task-review-apply")
+        payload = apply_task_review_outcome(
+            state_path,
+            task_id=args.task,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            review_path=args.review,
+            finding_ids=args.finding_id,
+            implementation_audit_path=args.implementation_audit,
+            reason=args.reason,
+        )
+        maybe_emit_workflow_progress_hook(args, command="workflow task-review-apply", state_path=state_path)
+        return payload
     raise LifecycleError("command-not-implemented", "workflow command is not implemented")
 
 

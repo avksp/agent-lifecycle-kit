@@ -18,7 +18,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.81.1
+python -m pip install agent-lifecycle-kit==1.82.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -183,6 +183,12 @@ agent-lifecycle project preset render \
   показать прогресс в stderr, или `--progress-hook receipt --progress-receipt
   <path>`, чтобы сохранить `agent-progress-hook-receipt.v1` без изменения JSON
   в stdout.
+- `agent-lifecycle workflow init --state <путь> --run-id <id> --package-id
+  <id>`: создаёт один приватный несвязанный файл
+  `agent-workflow-state.v4` и не заменяет существующее состояние.
+- `agent-lifecycle workflow state-migrate --state <путь> --operation-id <id>
+  --expected-revision <n> --source-revision <sha>`: выполняет одну явную
+  миграцию v3 в v4 с отказом при любой неоднозначности.
 - `agent-lifecycle workflow task-start`: открывает ограниченную попытку задачи.
 - `agent-lifecycle workflow task-snapshot`: без изменения состояния вычисляет
   текущий набор файлов задачи и отпечатки их содержимого по Git. Объект `claim`
@@ -193,6 +199,10 @@ agent-lifecycle project preset render \
   `REMEDIATING`. Для каждой открытой находки укажите отдельный `--finding-id`;
   зафиксированный план должен разрешать ещё одну попытку.
 - `agent-lifecycle workflow task-accept`: принимает проверенную задачу.
+- `agent-lifecycle workflow task-review-apply`: применяет один результат
+  независимой проверки. Это канонический маршрут для `ACCEPTED`, `REWORK`,
+  `CONTRACT_CHANGE` и `BLOCKED`; для `REWORK` укажите отдельный
+  `--finding-id` для каждой открытой находки.
 - `agent-lifecycle workflow`: остальные переходы жизненного цикла, отчёты задач и
   финальное подтверждение. Для запусков с обязательной проверкой причинной
   цепочки `workflow finalize` принимает
@@ -204,7 +214,8 @@ agent-lifecycle project preset render \
   Для плана с обязательной групповой проверкой на финальном аудите
   `workflow finalize` принимает `--review-mesh-quorum <path>`.
 - Управляемый вывод прогресса поддерживают только `workflow run`,
-  `workflow task-result`, `workflow task-accept` и `workflow finalize`.
+  `workflow task-result`, `workflow task-accept`, `workflow task-review-apply`
+  и `workflow finalize`.
   `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка плагина
   сама по себе не доказывает полный жизненный цикл.
 - `agent-lifecycle runner`: управляемое выполнение с ограничениями ресурсов.

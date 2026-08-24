@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts.workflow_state_schemas import validate_workflow_state
 from agent_lifecycle.workflow.checkpoint_gate import invoke_checkpoint_gate
 from agent_lifecycle.workflow.events import append_event, event_log_path
 from agent_lifecycle.workflow.state import (
@@ -86,6 +87,7 @@ def commit_state(
     event_type: str,
     payload: dict[str, Any],
 ) -> None:
+    validate_workflow_state(state)
     checkpoint_receipt = invoke_checkpoint_gate(
         state_path=state_path,
         state=state,
@@ -97,6 +99,7 @@ def commit_state(
     state["stateRevision"] += 1
     state["updatedAt"] = now_iso()
     record_operation(state, operation_id=operation_id, event_type=event_type)
+    validate_workflow_state(state)
     append_event(
         state_path=state_path,
         state=state,

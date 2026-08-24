@@ -19,7 +19,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.81.1
+  python -m pip install agent-lifecycle-kit==1.82.0
 ```
 
 ## Error and resource contracts
@@ -177,6 +177,12 @@ JSON contracts.
   work. Add `--progress-hook stderr` for opt-in terminal progress on stderr, or
   `--progress-hook receipt --progress-receipt <path>` to persist
   `agent-progress-hook-receipt.v1` while preserving JSON stdout.
+- `agent-lifecycle workflow init --state <path> --run-id <id> --package-id
+  <id>`: create one private, unbound `agent-workflow-state.v4` file without
+  replacing an existing state.
+- `agent-lifecycle workflow state-migrate --state <path> --operation-id <id>
+  --expected-revision <n> --source-revision <sha>`: perform one explicit,
+  fail-closed v3-to-v4 migration.
 - `agent-lifecycle workflow task-start`: open a bounded task attempt.
 - `agent-lifecycle workflow task-snapshot`: compute the current task-scoped
   Git file set and content digests without changing workflow state. Put the
@@ -189,6 +195,10 @@ JSON contracts.
 - `agent-lifecycle workflow task-accept`: accept a completed task. Add
   `--implementation-audit <implementation-audit.json>` when the plan or task
   requires accepted implementation audit evidence.
+- `agent-lifecycle workflow task-review-apply`: apply one independently
+  reviewed task outcome. It is the canonical route for `ACCEPTED`, `REWORK`,
+  `CONTRACT_CHANGE` and `BLOCKED`; repeat `--finding-id` for the open findings
+  of a `REWORK` decision.
 - `agent-lifecycle workflow block/resolve-blocker`: record external blockers.
 - `agent-lifecycle workflow finalize`: produce final lifecycle proof. Add
   `--proof-integrity <receipt.json>` when the run or final audit requires
@@ -197,8 +207,8 @@ JSON contracts.
   `--final-implementation-audit <final-implementation-audit.json>` when final
   implementation audit is mandatory, and `--review-mesh-quorum <path>` when an
   opted-in plan requires final-audit quorum.
-- `workflow run`, `workflow task-result`, `workflow task-accept` and
-  `workflow finalize` are the only workflow commands with managed progress
+- `workflow run`, `workflow task-result`, `workflow task-accept`,
+  `workflow task-review-apply` and `workflow finalize` are the only workflow commands with managed progress
   hooks in this release. `ALK_PROGRESS_HOOK=stderr` is supported for wrappers;
   plugin installation alone is not lifecycle proof.
 - `agent-lifecycle runner start/status/transition/stop/resume`: control
