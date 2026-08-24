@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import unittest
 
-from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 from agent_lifecycle.contracts.research_evidence_schemas import (
     RESEARCH_CITATION_MATCH_STATUSES,
     RESEARCH_EVIDENCE_SCHEMAS,
     RESEARCH_EVIDENCE_STATUSES,
     RESEARCH_PROVENANCE_RELATIONSHIPS,
 )
+from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 
 
 class ResearchEvidenceSchemaTests(unittest.TestCase):
@@ -41,6 +41,11 @@ class ResearchEvidenceSchemaTests(unittest.TestCase):
         self.assertEqual(provenance["properties"]["relationship"]["enum"], list(RESEARCH_PROVENANCE_RELATIONSHIPS))
         self.assertEqual(package["properties"]["sources"]["maxItems"], 128)
         self.assertEqual(package["properties"]["provenance"]["maxItems"], 512)
+
+    def test_locator_values_are_bounded_for_public_url_validation(self) -> None:
+        source = get_schema("agent-research-source.v1")
+
+        self.assertEqual(source["properties"]["locator"]["properties"]["value"]["maxLength"], 4096)
 
 
 if __name__ == "__main__":

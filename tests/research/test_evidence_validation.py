@@ -8,7 +8,6 @@ from agent_lifecycle.research.validation import build_evidence_summary, validate
 
 def _package(*, include_snapshot: bool = True) -> tuple[dict, dict[str, str]]:
     source_text = "Architecture decisions are recorded before implementation."
-    snapshot = source_text if include_snapshot else {}
     source_snapshot_digest = snapshot_digest(source_text) if include_snapshot else None
     citation_snapshot_digest = source_snapshot_digest
     package = {
@@ -110,6 +109,31 @@ class ResearchEvidenceValidationTests(unittest.TestCase):
         codes = {item["code"] for item in validation["blockers"]}
         self.assertIn("research-raw-content-field", codes)
         self.assertIn("research-locator-private-path", codes)
+
+    def test_web_locator_requires_canonical_public_http_url(self) -> None:
+        package, snapshots = _package()
+        canonical_url = "https://example.com/research#section"
+        package["sources"][0]["kind"] = "web"
+        package["sources"][0]["locator"] = {"kind": "url", "value": canonical_url}
+        package["citations"][0]["locator"] = {
+            "kind": "url",
+            "value": canonical_url,
+            "start": 0,
+            "end": len("Architecture decisions are recorded before implementation."),
+        }
+        package["packageDigest"] = package_digest(package)
+
+        validation = validate_evidence_package(package, snapshots=snapshots)
+
+        self.assertEqual(validation["status"], "PASS")
+
+        package["sources"][0]["locator"]["value"] = "ftp://example.com/research"
+        package["citations"][0]["locator"]["value"] = "ftp://example.com/research"
+        package["packageDigest"] = package_digest(package)
+        rejected = validate_evidence_package(package, snapshots=snapshots)
+
+        self.assertEqual(rejected["status"], "FAIL")
+        self.assertIn("public-locator-scheme-unsupported", {item["code"] for item in rejected["blockers"]})
 
 
 if __name__ == "__main__":

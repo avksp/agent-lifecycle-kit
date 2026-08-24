@@ -78,7 +78,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.84.0
+python -m pip install agent-lifecycle-kit==1.85.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -89,7 +89,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==1.84.0
+python -m pip install agent-lifecycle-kit==1.85.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -187,7 +187,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v1.84.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v1.85.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
