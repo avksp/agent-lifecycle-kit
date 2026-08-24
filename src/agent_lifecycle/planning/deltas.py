@@ -11,7 +11,7 @@ from agent_lifecycle.contracts.plan_delta_schemas import (
 )
 
 _AUTHORITY_CATEGORIES = ("requirements", "writes", "acceptance", "evidence", "budgets", "risks", "gates")
-_CATEGORIES = _AUTHORITY_CATEGORIES + ("workstreams", "documentation")
+_CATEGORIES = (*_AUTHORITY_CATEGORIES, "workstreams", "documentation")
 
 
 def build_plan_delta(
@@ -60,7 +60,9 @@ def build_plan_delta(
         blockers.append({"code": "plan-delta-principles-invalid"})
 
     projections = _projections(before, after)
-    changes = {category: _compare(before_value, after_value) for category, (before_value, after_value) in projections.items()}
+    changes = {
+        category: _compare(before_value, after_value) for category, (before_value, after_value) in projections.items()
+    }
     changed_categories = [category for category in _CATEGORIES if _has_changes(changes[category])]
     authority_categories = [category for category in _AUTHORITY_CATEGORIES if _has_changes(changes[category])]
     authority_impact = {
@@ -69,20 +71,23 @@ def build_plan_delta(
         "requiresReview": bool(authority_categories),
         "requiresNewLock": bool(authority_categories),
     }
+    lineage: dict[str, Any] = {
+        "packageId": after_id,
+        "revisionIncreased": isinstance(before_revision, int)
+        and isinstance(after_revision, int)
+        and after_revision > before_revision,
+        "beforeSnapshotDigest": before_snapshot.get("snapshotDigest") if isinstance(before_snapshot, dict) else None,
+        "afterSnapshotDigest": after_snapshot.get("snapshotDigest") if isinstance(after_snapshot, dict) else None,
+        "beforeLockDigest": canonical_digest(before_lock) if isinstance(before_lock, dict) else None,
+        "afterLockDigest": canonical_digest(after_lock) if isinstance(after_lock, dict) else None,
+        "principlesDigest": principles.get("principlesDigest") if isinstance(principles, dict) else None,
+    }
     body = {
         "schemaVersion": PLAN_DELTA_SCHEMA,
         "status": "PASS" if not blockers else "BLOCKED",
         "before": _identity(before, before_digest),
         "after": _identity(after, after_digest),
-        "lineage": {
-            "packageId": after_id,
-            "revisionIncreased": isinstance(before_revision, int) and isinstance(after_revision, int) and after_revision > before_revision,
-            "beforeSnapshotDigest": before_snapshot.get("snapshotDigest") if isinstance(before_snapshot, dict) else None,
-            "afterSnapshotDigest": after_snapshot.get("snapshotDigest") if isinstance(after_snapshot, dict) else None,
-            "beforeLockDigest": canonical_digest(before_lock) if isinstance(before_lock, dict) else None,
-            "afterLockDigest": canonical_digest(after_lock) if isinstance(after_lock, dict) else None,
-            "principlesDigest": principles.get("principlesDigest") if isinstance(principles, dict) else None,
-        },
+        "lineage": lineage,
         "changes": changes,
         "authorityImpact": authority_impact,
         "reviewRequired": bool(authority_categories),
@@ -95,7 +100,7 @@ def build_plan_delta(
     }
     # Keep the report useful without exposing plan prose: categories and
     # digests are sufficient for a reviewer to locate the changed authority.
-    body["lineage"]["changedCategories"] = changed_categories
+    lineage["changedCategories"] = changed_categories
     return {**body, "deltaDigest": canonical_digest(body)}
 
 
@@ -145,9 +150,11 @@ def finding_check_plan_lineage(delta: dict[str, Any]) -> dict[str, Any]:
 
     validation = validate_plan_delta(delta)
     if validation.get("status") != "PASS" or delta.get("status") != "PASS":
-        raise LifecycleError("finding-check-plan-delta-invalid", "a passing plan delta is required for finding adoption")
-    after = delta.get("after") if isinstance(delta.get("after"), dict) else {}
-    base = after.get("baseRevision") if isinstance(after.get("baseRevision"), dict) else {}
+        raise LifecycleError(
+            "finding-check-plan-delta-invalid", "a passing plan delta is required for finding adoption"
+        )
+    after = _object(delta.get("after"))
+    base = _object(after.get("baseRevision"))
     package_id = after.get("packageId")
     plan_revision = after.get("planRevision")
     plan_digest = after.get("planDigest")
@@ -172,9 +179,15 @@ def finding_check_plan_lineage(delta: dict[str, Any]) -> dict[str, Any]:
 
 def _projections(before: dict[str, Any], after: dict[str, Any]) -> dict[str, tuple[Any, Any]]:
     return {
-        "requirements": (_indexed(_object(before.get("specification")).get("requirements"), "id"), _indexed(_object(after.get("specification")).get("requirements"), "id")),
+        "requirements": (
+            _indexed(_object(before.get("specification")).get("requirements"), "id"),
+            _indexed(_object(after.get("specification")).get("requirements"), "id"),
+        ),
         "writes": (_writes(before), _writes(after)),
-        "acceptance": (_indexed(before.get("acceptance", {}).get("criteria"), "id"), _indexed(after.get("acceptance", {}).get("criteria"), "id")),
+        "acceptance": (
+            _indexed(before.get("acceptance", {}).get("criteria"), "id"),
+            _indexed(after.get("acceptance", {}).get("criteria"), "id"),
+        ),
         "evidence": (_evidence(before), _evidence(after)),
         "budgets": (_bounded_object(before.get("budgetPolicy")), _bounded_object(after.get("budgetPolicy"))),
         "risks": (_risk_projection(before), _risk_projection(after)),
@@ -227,17 +240,29 @@ def _evidence(manifest: dict[str, Any]) -> dict[str, Any]:
 
 
 def _risk_projection(manifest: dict[str, Any]) -> dict[str, Any]:
-    specification = manifest.get("specification") if isinstance(manifest.get("specification"), dict) else {}
-    return {"tier": specification.get("tier"), "tierResolutionRequest": specification.get("tierResolutionRequest"), "securityFlags": manifest.get("securityGates", [])}
+    specification = _object(manifest.get("specification"))
+    return {
+        "tier": specification.get("tier"),
+        "tierResolutionRequest": specification.get("tierResolutionRequest"),
+        "securityFlags": manifest.get("securityGates", []),
+    }
 
 
 def _gate_projection(manifest: dict[str, Any]) -> dict[str, Any]:
-    validation = manifest.get("validation") if isinstance(manifest.get("validation"), dict) else {}
-    return {"securityGates": manifest.get("securityGates", []), "finalAuditGates": manifest.get("finalAuditGates", []), "commands": validation.get("commands", [])}
+    validation = _object(manifest.get("validation"))
+    return {
+        "securityGates": manifest.get("securityGates", []),
+        "finalAuditGates": manifest.get("finalAuditGates", []),
+        "commands": validation.get("commands", []),
+    }
 
 
 def _documentation_projection(manifest: dict[str, Any]) -> dict[str, Any]:
-    return {"planFiles": manifest.get("planFiles", []), "developerOverview": manifest.get("developerOverview"), "source": _object(manifest.get("specification")).get("source")}
+    return {
+        "planFiles": manifest.get("planFiles", []),
+        "developerOverview": manifest.get("developerOverview"),
+        "source": _object(manifest.get("specification")).get("source"),
+    }
 
 
 def _bounded_object(value: Any) -> Any:
@@ -249,8 +274,14 @@ def _object(value: Any) -> dict[str, Any]:
 
 
 def _identity(manifest: dict[str, Any], digest: str) -> dict[str, Any]:
-    base = manifest.get("baseRevision") if isinstance(manifest.get("baseRevision"), dict) else {}
-    return {"packageId": _package_id(manifest), "planRevision": manifest.get("planRevision"), "status": manifest.get("status"), "planDigest": digest, "baseRevision": {"ref": base.get("ref"), "sha": base.get("sha")}}
+    base = _object(manifest.get("baseRevision"))
+    return {
+        "packageId": _package_id(manifest),
+        "planRevision": manifest.get("planRevision"),
+        "status": manifest.get("status"),
+        "planDigest": digest,
+        "baseRevision": {"ref": base.get("ref"), "sha": base.get("sha")},
+    }
 
 
 def _check_snapshot(snapshot: Any, expected_digest: str, side: str, blockers: list[dict[str, Any]]) -> None:
@@ -272,6 +303,6 @@ def _has_changes(change: dict[str, Any]) -> bool:
 
 
 def _package_id(manifest: dict[str, Any]) -> str | None:
-    package = manifest.get("package") if isinstance(manifest.get("package"), dict) else {}
+    package = _object(manifest.get("package"))
     value = package.get("id")
     return value if isinstance(value, str) and value else None

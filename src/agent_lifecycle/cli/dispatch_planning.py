@@ -231,7 +231,9 @@ def _dispatch_finding_check(args: argparse.Namespace) -> dict[str, Any]:
         else:
             raise LifecycleError("finding-check-input-required", "binding, proposal or evidence is required")
     elif args.finding_check_command == "accept":
-        payload = accept_finding_check_proposal(read(args.proposal, "finding-check proposal"), read(args.authorization, "authorization"))
+        payload = accept_finding_check_proposal(
+            read(args.proposal, "finding-check proposal"), read(args.authorization, "authorization")
+        )
     elif args.finding_check_command == "evidence":
         payload = build_finding_check_evidence_artifact(
             read(args.binding, "finding-check binding"),

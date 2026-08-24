@@ -67,7 +67,9 @@ def build_package_audit(
         raise LifecycleError("plan-directory-missing", "plan directory was not found", {"path": str(package_dir)})
     manifest_path = package_dir / "plan.manifest.json"
     if manifest_path.is_symlink():
-        raise LifecycleError("plan-manifest-symlink", "plan manifest must not be a symlink", {"path": str(manifest_path)})
+        raise LifecycleError(
+            "plan-manifest-symlink", "plan manifest must not be a symlink", {"path": str(manifest_path)}
+        )
     manifest = read_json_object(manifest_path, label="plan manifest")
     package_id = _package_id(manifest)
     findings: list[dict[str, Any]] = []
@@ -93,20 +95,24 @@ def build_package_audit(
     _capture_check_failure("lock", lock_check, findings, blockers)
 
     acceptance_path = package_dir / "acceptance-criteria.md"
-    acceptance_check = _run_check(
-        lambda: validate_acceptance_checklist(
-            manifest,
-            acceptance_path.read_text(encoding="utf-8"),
+    acceptance_check = (
+        _run_check(
+            lambda: validate_acceptance_checklist(
+                manifest,
+                acceptance_path.read_text(encoding="utf-8"),
+            )
         )
-    ) if acceptance_path.is_file() and not acceptance_path.is_symlink() else _missing_check(
-        "acceptance-checklist-symlink" if acceptance_path.is_symlink() else "acceptance-checklist-missing",
-        "acceptance checklist must not be a symlink" if acceptance_path.is_symlink() else "acceptance checklist was not found",
+        if acceptance_path.is_file() and not acceptance_path.is_symlink()
+        else _missing_check(
+            "acceptance-checklist-symlink" if acceptance_path.is_symlink() else "acceptance-checklist-missing",
+            "acceptance checklist must not be a symlink"
+            if acceptance_path.is_symlink()
+            else "acceptance checklist was not found",
+        )
     )
     _capture_check_failure("acceptance", acceptance_check, findings, blockers)
 
-    references_check = _run_check(
-        lambda: require_repository_references_pass(validate_repository_references(manifest))
-    )
+    references_check = _run_check(lambda: require_repository_references_pass(validate_repository_references(manifest)))
     _capture_check_failure("references", references_check, findings, blockers)
 
     plan_status = _plan_status(
@@ -222,12 +228,16 @@ def validate_package_audit(audit: dict[str, Any]) -> dict[str, Any]:
     if audit.get("status") not in {"PASS", "FAIL", "REVIEW_REQUIRED"}:
         blockers.append({"code": "package-audit-status", "message": "package audit status is unsupported"})
     if audit.get("productionPromotionClaimed") is not False:
-        blockers.append({"code": "package-audit-production-claim", "message": "package audit must not claim production promotion"})
+        blockers.append(
+            {"code": "package-audit-production-claim", "message": "package audit must not claim production promotion"}
+        )
     auditor = audit.get("auditor")
     if not isinstance(auditor, dict) or auditor.get("independent") is not True:
         blockers.append({"code": "package-audit-auditor", "message": "package auditor must be independent"})
     if audit.get("status") == "PASS" and audit.get("blockers"):
-        blockers.append({"code": "package-audit-open-blockers", "message": "PASS package audit must not contain blockers"})
+        blockers.append(
+            {"code": "package-audit-open-blockers", "message": "PASS package audit must not contain blockers"}
+        )
     result = {
         "schemaVersion": "agent-plan-package-audit-validation.v1",
         "status": "PASS" if not blockers else "FAIL",
@@ -323,10 +333,20 @@ def _build_implementation_section(
             final_audit = aggregate["result"]
             final_validation = validate_final_implementation_audit(final_audit, state=state)
             if final_validation.get("status") != "PASS":
-                _capture_check_failure("final-implementation-validation", {"status": "FAIL", "blockers": final_validation.get("blockers", []), "result": final_validation}, findings, blockers)
+                _capture_check_failure(
+                    "final-implementation-validation",
+                    {"status": "FAIL", "blockers": final_validation.get("blockers", []), "result": final_validation},
+                    findings,
+                    blockers,
+                )
                 report_status = "FAIL"
             elif final_audit.get("status") != "PASS":
-                _capture_check_failure("final-implementation", {"status": "FAIL", "blockers": final_audit.get("blockers", []), "result": final_audit}, findings, blockers)
+                _capture_check_failure(
+                    "final-implementation",
+                    {"status": "FAIL", "blockers": final_audit.get("blockers", []), "result": final_audit},
+                    findings,
+                    blockers,
+                )
                 report_status = "FAIL"
     elif require_implementation:
         _add_finding(
@@ -474,7 +494,9 @@ def _contained_relative_path(root: Path, raw: str) -> str:
             {"root": str(root), "path": str(resolved)},
         ) from exc
     if not resolved.is_file():
-        raise LifecycleError("implementation-report-missing", "implementation audit report was not found", {"path": str(resolved)})
+        raise LifecycleError(
+            "implementation-report-missing", "implementation audit report was not found", {"path": str(resolved)}
+        )
     return normalize_repo_path(relative.as_posix(), label="implementation audit report")
 
 
@@ -499,10 +521,7 @@ def _package_file_check(
             )
         except LifecycleError as exc:
             return {"status": "FAIL", "blockers": [_error(exc)]}
-        entries = [
-            {"path": item["path"], "status": "PASS", "bytes": item["bytes"]}
-            for item in verification["entries"]
-        ]
+        entries = [{"path": item["path"], "status": "PASS", "bytes": item["bytes"]} for item in verification["entries"]]
         body = {
             "schemaVersion": "agent-plan-package-files.v2",
             "status": "PASS",
@@ -519,8 +538,14 @@ def _package_file_check(
         exists = path.is_file()
         is_symlink = path.is_symlink()
         optional_draft_lock = name == "plan.lock.json" and not exists and not is_symlink
-        status = "SYMLINK" if is_symlink else ("PASS" if exists else ("REVIEW_REQUIRED" if optional_draft_lock else "MISSING"))
-        entries.append({"path": name, "status": status, "bytes": path.stat().st_size if exists and not is_symlink else 0})
+        status = (
+            "SYMLINK"
+            if is_symlink
+            else ("PASS" if exists else ("REVIEW_REQUIRED" if optional_draft_lock else "MISSING"))
+        )
+        entries.append(
+            {"path": name, "status": status, "bytes": path.stat().st_size if exists and not is_symlink else 0}
+        )
         if (not exists and not optional_draft_lock) or is_symlink:
             missing.append(name)
     body = {
@@ -574,29 +599,50 @@ def _missing_check(code: str, message: str) -> dict[str, Any]:
     return {"status": "FAIL", "blockers": [{"code": code, "message": message, "context": {}}]}
 
 
-def _capture_check_failure(category: str, check: dict[str, Any], findings: list[dict[str, Any]], blockers: list[dict[str, Any]]) -> None:
+def _capture_check_failure(
+    category: str, check: dict[str, Any], findings: list[dict[str, Any]], blockers: list[dict[str, Any]]
+) -> None:
     if check.get("status") != "FAIL":
         return
     for item in check.get("blockers", []):
         if not isinstance(item, dict):
             continue
+        context = item.get("context")
+        context_payload = context if isinstance(context, dict) else {}
         _add_finding(
             findings,
             blockers,
             code=str(item.get("code") or f"{category}-failed"),
-            severity="HIGH" if category in {"manifest", "completeness", "lock", "implementation-state", "implementation-reports"} else "MEDIUM",
+            severity="HIGH"
+            if category in {"manifest", "completeness", "lock", "implementation-state", "implementation-reports"}
+            else "MEDIUM",
             category=category,
             message=str(item.get("message") or f"{category} check failed"),
-            context=item.get("context") if isinstance(item.get("context"), dict) else item,
+            context=context_payload,
         )
 
 
 def _lineage_blockers(state: dict[str, Any], manifest: dict[str, Any], package_id: str) -> list[dict[str, Any]]:
     expected_digest = canonical_digest(manifest)
     checks = (
-        ("implementation-package-mismatch", "workflow state packageId does not match the plan package", state.get("packageId"), package_id),
-        ("implementation-revision-mismatch", "workflow state planRevision does not match the plan", state.get("planRevision"), manifest.get("planRevision")),
-        ("implementation-digest-mismatch", "workflow state planDigest does not match the plan", state.get("planDigest"), expected_digest),
+        (
+            "implementation-package-mismatch",
+            "workflow state packageId does not match the plan package",
+            state.get("packageId"),
+            package_id,
+        ),
+        (
+            "implementation-revision-mismatch",
+            "workflow state planRevision does not match the plan",
+            state.get("planRevision"),
+            manifest.get("planRevision"),
+        ),
+        (
+            "implementation-digest-mismatch",
+            "workflow state planDigest does not match the plan",
+            state.get("planDigest"),
+            expected_digest,
+        ),
     )
     return [
         {"code": code, "message": message, "context": {"actual": actual, "expected": expected}}
