@@ -13,6 +13,8 @@ from agent_lifecycle.contracts.finding_check_schemas import (
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
 
+STRUCTURED_RESULT_ARTIFACT_SCHEMA = "agent-workflow-structured-result-artifact.v1"
+
 
 def package_root(state_path: Path, state: dict[str, Any]) -> Path:
     raw = state.get("packageRoot")
@@ -67,6 +69,87 @@ def validate_finding_check_evidence_artifact(
     """Validate finding-check evidence without executing the referenced check."""
 
     return validate_finding_check_evidence(evidence, binding)
+
+
+def build_structured_result_artifact(
+    *,
+    run_id: str,
+    package_id: str,
+    task_id: str,
+    attempt: int,
+    plan_digest: str,
+    source_revision: str,
+    lock_digest: str | None,
+    operation_id: str,
+    selection: dict[str, Any],
+    validation: dict[str, Any],
+    output: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a portable result artifact that remains advisory to workflow acceptance."""
+
+    body = {
+        "schemaVersion": STRUCTURED_RESULT_ARTIFACT_SCHEMA,
+        "runId": run_id,
+        "packageId": package_id,
+        "taskId": task_id,
+        "attempt": attempt,
+        "planDigest": plan_digest,
+        "sourceRevision": source_revision,
+        "lockDigest": lock_digest,
+        "operationId": operation_id,
+        "selection": dict(selection),
+        "validation": dict(validation),
+        "output": dict(output),
+        "authorityClaimed": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "artifactDigest": canonical_digest(body)}
+
+
+def validate_structured_result_artifact(
+    artifact: dict[str, Any], *, expected: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Validate structured-result lineage without accepting the workflow task."""
+
+    blockers: list[dict[str, Any]] = []
+    if artifact.get("schemaVersion") != STRUCTURED_RESULT_ARTIFACT_SCHEMA:
+        blockers.append({"code": "structured-result-artifact-schema"})
+    if artifact.get("authorityClaimed") is not False or artifact.get("productionPromotionClaimed") is not False:
+        blockers.append({"code": "structured-result-artifact-authority"})
+    for field in ("runId", "packageId", "taskId", "planDigest", "sourceRevision", "operationId"):
+        if not isinstance(artifact.get(field), str) or not artifact[field]:
+            blockers.append({"code": "structured-result-artifact-lineage", "field": field})
+    if (
+        not isinstance(artifact.get("attempt"), int)
+        or isinstance(artifact.get("attempt"), bool)
+        or artifact["attempt"] < 1
+    ):
+        blockers.append({"code": "structured-result-artifact-attempt"})
+    for key, value in (expected or {}).items():
+        if artifact.get(key) != value:
+            blockers.append({"code": "structured-result-artifact-lineage-mismatch", "field": key})
+    selection = artifact.get("selection")
+    validation = artifact.get("validation")
+    output = artifact.get("output")
+    if not isinstance(selection, dict) or selection.get("status") != "PASS":
+        blockers.append({"code": "structured-result-artifact-selection"})
+    if not isinstance(validation, dict) or validation.get("status") != "PASS":
+        blockers.append({"code": "structured-result-artifact-validation"})
+    if not isinstance(output, dict):
+        blockers.append({"code": "structured-result-artifact-output"})
+    expected_digest = canonical_digest({key: value for key, value in artifact.items() if key != "artifactDigest"})
+    if artifact.get("artifactDigest") != expected_digest:
+        blockers.append({"code": "structured-result-artifact-digest"})
+    body = {
+        "schemaVersion": "agent-workflow-structured-result-validation.v1",
+        "status": "PASS" if not blockers else "FAIL",
+        "taskId": artifact.get("taskId"),
+        "operationId": artifact.get("operationId"),
+        "blockers": blockers,
+        "authorityClaimed": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "validationDigest": canonical_digest(body)}
 
 
 def require_artifact_identity(root: Path, identity: dict[str, Any], *, label: str) -> dict[str, Any]:

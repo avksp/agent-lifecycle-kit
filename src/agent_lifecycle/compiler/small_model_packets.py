@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.compiler.output_contract import build_output_contract, validate_output_contract
 from agent_lifecycle.compiler.task_packets import compile_task_packets
 from agent_lifecycle.context import render_context
 from agent_lifecycle.context.profiles import small_model_windows
@@ -190,39 +191,27 @@ def build_small_model_packet(
 
 def build_small_model_output_contract(source_packet: dict[str, Any], *, write_scope: dict[str, Any]) -> dict[str, Any]:
     task = source_packet.get("task", {})
-    body = {
-        "schemaVersion": SMALL_MODEL_OUTPUT_CONTRACT_SCHEMA,
-        "taskId": task.get("id"),
-        "requiredSchemaVersion": SMALL_MODEL_TASK_RESULT_SCHEMA,
-        "allowedStatuses": ["PASS", "FAIL", "BLOCKED"],
-        "requiredFields": list(REQUIRED_OUTPUT_FIELDS),
-        "writeScope": write_scope,
-        "writeScopeDigest": canonical_digest(write_scope),
-        "validation": _validation(source_packet),
-        "productionPromotionClaimed": False,
-    }
-    return {**body, "contractDigest": canonical_digest(body)}
+    return build_output_contract(
+        schema_version=SMALL_MODEL_OUTPUT_CONTRACT_SCHEMA,
+        task_id=task.get("id"),
+        result_schema_version=SMALL_MODEL_TASK_RESULT_SCHEMA,
+        allowed_statuses=["PASS", "FAIL", "BLOCKED"],
+        required_fields=list(REQUIRED_OUTPUT_FIELDS),
+        write_scope=write_scope,
+        validation=_validation(source_packet),
+    )
 
 
 def validate_small_model_output(output: dict[str, Any], contract: dict[str, Any]) -> dict[str, Any]:
-    blockers: list[dict[str, Any]] = []
-    if contract.get("schemaVersion") != SMALL_MODEL_OUTPUT_CONTRACT_SCHEMA:
-        blockers.append({"code": "small-model-output-contract-schema"})
-    if output.get("schemaVersion") != SMALL_MODEL_TASK_RESULT_SCHEMA:
-        blockers.append({"code": "small-model-output-schema"})
-    for field in contract.get("requiredFields", REQUIRED_OUTPUT_FIELDS):
-        if field not in output:
-            blockers.append({"code": "small-model-output-field-missing", "field": field})
-    if output.get("taskId") != contract.get("taskId"):
-        blockers.append({"code": "small-model-output-task-mismatch", "taskId": output.get("taskId")})
-    if output.get("status") not in contract.get("allowedStatuses", []):
-        blockers.append({"code": "small-model-output-status", "status": output.get("status")})
-    if output.get("productionPromotionClaimed") is not False:
-        blockers.append({"code": "small-model-output-production-claim"})
-    if output.get("writeScopeDigest") != contract.get("writeScopeDigest"):
-        blockers.append({"code": "small-model-output-write-scope-digest"})
-    if output.get("outputContractDigest") != contract.get("contractDigest"):
-        blockers.append({"code": "small-model-output-contract-digest"})
+    blockers = [
+        {"code": f"small-model-{item['code']}", **{key: value for key, value in item.items() if key != "code"}}
+        for item in validate_output_contract(
+            output,
+            contract,
+            contract_schema_version=SMALL_MODEL_OUTPUT_CONTRACT_SCHEMA,
+            output_schema_version=SMALL_MODEL_TASK_RESULT_SCHEMA,
+        )
+    ]
     if not isinstance(output.get("summary"), str) or not output.get("summary"):
         blockers.append({"code": "small-model-output-summary"})
     if not isinstance(output.get("validation"), list):
