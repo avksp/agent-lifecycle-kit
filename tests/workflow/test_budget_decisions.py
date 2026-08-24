@@ -95,6 +95,63 @@ class WorkflowBudgetDecisionTests(unittest.TestCase):
             self.assertEqual(applied["operatorIdentityHash"], "operator-hash")
             self.assertEqual(applied["capDeltas"], {"maxBillableTokens": 240000})
 
+    def test_budget_split_is_task_blocked_and_generic_resolve_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING", max_attempts=2)
+            _pause_budget_overrun(root, state_path)
+            write_json_create(root / "work/WS-01/attempt-1/split-packet.json", {"taskIds": ["WS-01"]})
+
+            payload = apply_budget_decision(
+                state_path,
+                task_id="WS-01",
+                operation_id="budget-split-op",
+                expected_revision=3,
+                source_revision="source",
+                decision_receipt_path="work/WS-01/attempt-1/budget-decision.json",
+                action="split-task",
+                applied_receipt_path="work/WS-01/attempt-1/budget-decision-applied.json",
+                split_packet_path="work/WS-01/attempt-1/split-packet.json",
+                operator_identity_hash="operator-hash",
+                reason="replan the oversized task",
+            )
+
+            self.assertEqual(payload["phase"], "BLOCKED")
+            self.assertEqual(payload["nextAction"]["type"], "adopt-plan")
+            self.assertEqual(payload["tasks"][0]["status"], "BLOCKED")
+            self.assertEqual(payload["blocker"]["recoveryRoute"], "replan-task")
+            with self.assertRaises(LifecycleError) as raised:
+                resolve_blocker(
+                    state_path,
+                    operation_id="wrong-generic-resolve",
+                    expected_revision=4,
+                    reason="must not restore blocked task",
+                )
+            self.assertEqual(raised.exception.code, "typed-blocker-route-required")
+
+    def test_budget_abort_cancels_run_instead_of_resuming_blocked_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            _pause_budget_overrun(root, state_path)
+
+            payload = apply_budget_decision(
+                state_path,
+                task_id="WS-01",
+                operation_id="budget-abort-op",
+                expected_revision=3,
+                source_revision="source",
+                decision_receipt_path="work/WS-01/attempt-1/budget-decision.json",
+                action="abort",
+                applied_receipt_path="work/WS-01/attempt-1/budget-decision-applied.json",
+                operator_identity_hash="operator-hash",
+                reason="cancel after budget exhaustion",
+            )
+
+            self.assertEqual(payload["phase"], "CANCELLED")
+            self.assertEqual(payload["tasks"][0]["status"], "BLOCKED")
+            self.assertEqual(payload["blocker"]["recoveryRoute"], "cancel-run")
+
     def test_budget_decision_apply_reroute_stronger_sets_task_ready(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

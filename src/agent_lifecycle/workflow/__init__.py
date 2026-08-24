@@ -1,5 +1,6 @@
 """Durable workflow controller primitives."""
 
+from agent_lifecycle.workflow.authorization import authorize_execution
 from agent_lifecycle.workflow.bug_forensics_gates import (
     bug_forensics_activated,
     build_bug_forensics_gate_receipt,
@@ -14,6 +15,7 @@ from agent_lifecycle.workflow.controller import (
     accept_task,
     adopt_plan,
     apply_budget_decision,
+    apply_final_audit_outcome,
     apply_task_review_outcome,
     block_run,
     check_lineage,
@@ -59,7 +61,9 @@ __all__ = [
     "accept_task",
     "adopt_plan",
     "apply_budget_decision",
+    "apply_final_audit_outcome",
     "apply_task_review_outcome",
+    "authorize_execution",
     "block_run",
     "bug_forensics_activated",
     "build_bug_forensics_gate_receipt",

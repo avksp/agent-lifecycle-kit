@@ -7,6 +7,52 @@ from typing import Any
 from agent_lifecycle.contracts.schema_builders import open_object_schema as _open_object_schema
 
 AUDIT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-final-audit-outcome.v1": _open_object_schema(
+        "agent-final-audit-outcome.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "verdict",
+            "runId",
+            "packageId",
+            "planRevision",
+            "planDigest",
+            "sourceRevision",
+            "finalAudit",
+            "taskIds",
+            "findingIds",
+            "productionPromotionClaimed",
+            "outcomeDigest",
+        ],
+        properties={
+            "status": {"const": "PASS"},
+            "verdict": {"enum": ["ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"]},
+            "runId": {"type": "string", "minLength": 1},
+            "packageId": {"type": "string", "minLength": 1},
+            "planRevision": {"type": "integer", "minimum": 1},
+            "planDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "sourceRevision": {"type": "string", "minLength": 1},
+            "finalAudit": {"type": "object"},
+            "taskIds": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "findingIds": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "blocker": {"type": "object"},
+            "contractChangeRequest": {"type": "object"},
+            "productionPromotionClaimed": {"const": False},
+            "outcomeDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-final-audit-outcome-validation.v1": _open_object_schema(
+        "agent-final-audit-outcome-validation.v1",
+        required=["schemaVersion", "status", "verdict", "taskIds", "findingIds", "blockers", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "verdict": {"enum": ["ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"]},
+            "taskIds": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "findingIds": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
     "agent-plan-package-audit-report.v1": _open_object_schema(
         "agent-plan-package-audit-report.v1",
         required=[

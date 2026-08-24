@@ -25,6 +25,8 @@ from agent_lifecycle.workflow.model_usage import (
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.selectors import find_task
+from agent_lifecycle.workflow.state import validate_typed_blocker
+
 
 def pause_for_budget_decision(
     state_path: Path,
@@ -61,7 +63,11 @@ def pause_for_budget_decision(
     policy_rel = normalize_repo_path(budget_policy_path, label="budget policy")
     policy = read_json_object(root / policy_rel, label="budget policy")
     policy_validation = validate_budget_exceeded_policy(policy)
-    action = "await-operator" if policy_validation["mode"] == "manual" else select_auto_budget_action(policy, task=task, route_decision=route)
+    action = (
+        "await-operator"
+        if policy_validation["mode"] == "manual"
+        else select_auto_budget_action(policy, task=task, route_decision=route)
+    )
 
     decision_rel = normalize_repo_path(decision_receipt_path, label="budget decision receipt")
     decision = build_budget_decision_receipt(
@@ -85,12 +91,11 @@ def pause_for_budget_decision(
         "usageReceipt": usage_identity,
         "usageValidation": validation,
     }
-    if policy_validation["mode"] == "auto":
-        task["budgetAutoReroutes"] = int(task.get("budgetAutoReroutes", 0)) + 1
-    state["phase"] = "WAITING_FOR_BUDGET_DECISION"
-    state["blocker"] = {
+    budget_blocker = {
         "code": "BUDGET_DECISION_REQUIRED",
         "reason": reason,
+        "scope": "task",
+        "recoveryRoute": "budget-decision",
         "resumePhase": "RUNNING",
         "taskId": task_id,
         "attempt": task.get("attempt"),
@@ -98,6 +103,12 @@ def pause_for_budget_decision(
         "decisionReceiptTarget": decision_rel,
         "decisionReceipt": decision_identity,
     }
+    validate_typed_blocker(budget_blocker, expected_task_id=task_id)
+    task["blocker"] = dict(budget_blocker)
+    if policy_validation["mode"] == "auto":
+        task["budgetAutoReroutes"] = int(task.get("budgetAutoReroutes", 0)) + 1
+    state["phase"] = "WAITING_FOR_BUDGET_DECISION"
+    state["blocker"] = budget_blocker
     commit_state(
         state_path,
         state,
@@ -218,6 +229,7 @@ def _apply_action(
         task["status"] = "RUNNING"
         state["phase"] = "RUNNING"
         state["blocker"] = None
+        task.pop("blocker", None)
         return
     if action in {"reroute-cheaper", "reroute-stronger"}:
         assert next_route is not None
@@ -226,20 +238,26 @@ def _apply_action(
         task["status"] = "READY"
         state["phase"] = "RUNNING"
         state["blocker"] = None
+        task.pop("blocker", None)
         return
     task["status"] = "BLOCKED"
-    state["phase"] = "BLOCKED"
     code = "BUDGET_SPLIT_REQUIRED" if action == "split-task" else "BUDGET_ABORTED"
-    state["blocker"] = {
+    recovery_route = "replan-task" if action == "split-task" else "cancel-run"
+    blocker = {
         "code": code,
         "reason": reason,
-        "resumePhase": "RUNNING",
+        "scope": "task",
+        "recoveryRoute": recovery_route,
         "taskId": task["id"],
         "attempt": task.get("attempt"),
         "selectedAction": action,
         "decisionReceipt": applied_identity,
         "splitPacketIdentity": split_identity,
     }
+    validate_typed_blocker(blocker, expected_task_id=str(task["id"]))
+    task["blocker"] = dict(blocker)
+    state["blocker"] = blocker
+    state["phase"] = "BLOCKED" if action == "split-task" else "CANCELLED"
 
 
 def _budget_blocker(state: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:

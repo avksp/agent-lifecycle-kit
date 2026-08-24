@@ -16,7 +16,7 @@ can ask ALK what must happen next without reconstructing the process from chat.
 
 ## Optional lifecycle control
 
-Release 1.82 does not change the runner's authority. Optional adapter control
+Release 1.83 does not change the runner's authority. Optional adapter control
 can add pre-action, post-action and stop evidence around the action returned by
 `nextAction`, but the runner still derives that action from the frozen plan,
 lock, state and accepted receipts. A plugin prompt or an adapter declaration
@@ -88,8 +88,13 @@ network client imports such as `openai`, `anthropic`, `requests`, `httpx` and
    route with its open finding IDs. Only that task becomes `REWORK`; the run
    remains `RUNNING`, and the next managed step returns `launch-tasks` for the
    same task. `task-start` opens the next unused bounded attempt.
-7. If `nextAction.type` is `run-final-audit`, run the independent final audit.
-8. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
+7. If the run requires approval, consume the exact authorization receipt with
+   `workflow authorize`; if an external action is needed, use
+   `external-pause`/`external-resume` with its matching receipt.
+8. If `nextAction.type` is `run-final-audit`, run the independent final audit
+   and apply it with `workflow final-audit-outcome`. Only `ACCEPTED` may proceed
+   to finalization; other verdicts select their typed recovery route.
+9. If `nextAction.type` is `finalize-run`, call `workflow finalize` with the
    accepted final audit and proof path.
 
 The loop remains deterministic because every state mutation still goes through

@@ -221,6 +221,23 @@ malformed output, disabled control and producer failure remain non-qualification
 evidence. See [optional adapter lifecycle control](../adapters/lifecycle-control.md)
 and [adapter event capture](../reference/adapter-event-capture.md).
 
+## Release 1.83: explicit recovery and final-audit routing
+
+Release 1.83 keeps the operation kernel as the only state writer while making
+recovery routes explicit. `workflow authorize` consumes a bounded,
+exact-lineage authorization receipt; `PLAN_ONLY` is a distinct non-executable
+phase and cannot be promoted by a receipt. External pauses and resumes carry a
+declared action identity and matching receipt.
+
+Blockers are typed by scope (`run`, `task`, `plan` or `external`) and expose a
+closed recovery route. The generic run resolver cannot clear task or plan
+blockers. Budget split and abort decisions update task and run state together,
+and final-audit outcomes are applied through one controller service:
+`ACCEPTED` permits existing finalization gates, `REWORK` archives named task
+attempts within the frozen retry budget, `CONTRACT_CHANGE` waits for a new
+frozen plan, and `BLOCKED` waits for the declared external action. None of
+these transitions changes plan authority or invokes a model.
+
 ## C1: system context
 
 At system level ALK is a local CLI and Python package used inside a source
@@ -825,6 +842,12 @@ frozen retry budget, archives immutable identities for the current attempt,
 and opens an unused attempt path; it does not replace the prior result, review
 or audit. The run enters `FINAL_AUDIT` only after every required task is
 accepted. Legacy v3 states require explicit fail-closed migration to v4.
+
+The same operation kernel also applies final-audit outcomes. It verifies the
+independent verifier, exact run/plan/source lineage and, for `REWORK`, the
+finding-to-task mapping before changing state. A failed validation leaves both
+state and the event log unchanged. The managed runner projects these host-owned
+recovery actions without treating them as model or file-edit operations.
 
 ### Code review for GitHub or GitLab changes
 
