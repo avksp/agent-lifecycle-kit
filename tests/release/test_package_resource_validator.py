@@ -18,7 +18,7 @@ class PackageResourceValidatorTests(unittest.TestCase):
         )
 
         self.assertEqual(result["status"], "PASS")
-        self.assertEqual(result["resourceCount"], 7)
+        self.assertEqual(result["resourceCount"], 10)
         self.assertEqual(result["blockers"], [])
 
     def test_drift_and_legacy_data_file_are_blocked(self) -> None:
@@ -34,6 +34,9 @@ class PackageResourceValidatorTests(unittest.TestCase):
                 "project-workflow-presets/feature-implementation.v1.json",
                 "project-workflow-presets/quick-change.v1.json",
                 "project-workflow-presets/research-review.v1.json",
+                "external-checks/import-boundaries.v1.json",
+                "external-checks/module-dependencies.v1.json",
+                "external-checks/declared-dependencies.v1.json",
             ):
                 source_path = source / relative
                 package_path = package / relative

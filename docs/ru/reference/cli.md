@@ -25,7 +25,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==1.87.0
+python -m pip install agent-lifecycle-kit==1.88.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -48,6 +48,27 @@ URL подтверждений проходят офлайн-контракт
 текущей папке не может подменить встроенный профиль, а явно переданный путь
 сохраняет приоритет. Поддерживаемая поверхность импорта перечислена в
 [справочнике API Python](python-api.md).
+
+## Внешние проверки проекта
+
+Необязательные проверки проекта позволяют записать ограниченное подтверждение
+архитектуры или зависимостей:
+
+```bash
+agent-lifecycle quality external-check \
+  --check-id import-boundaries \
+  --plan-digest <64-hex-digest> \
+  --plan-lock-digest <64-hex-digest> \
+  --operation-id external-check-001 \
+  --out work/external-check.json
+```
+
+Доступны встроенные профили `import-boundaries`, `module-dependencies` и
+`declared-dependencies`. Установите выбранный анализатор в проекте; ALK не
+добавляет его в runtime-зависимости. Результат связан с исходниками,
+конфигурацией и планом, сырой вывод не сохраняется, а отсутствующий или
+неполный анализатор возвращает `UNAVAILABLE`. Результат не может принять,
+заморозить или опубликовать что-либо. См. [внешние проверки проекта](external-verification-checks.md).
 
 ## Производительность и подтверждения ресурсов
 

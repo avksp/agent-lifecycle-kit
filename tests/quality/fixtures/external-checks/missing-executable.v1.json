@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "agent-external-check-profile.v1",
+  "profileId": "missing-executable",
+  "checkId": "import-boundaries",
+  "toolId": "fixture-missing-tool",
+  "toolVersion": "fixture",
+  "executable": "alk-no-such-external-check",
+  "argv": ["alk-no-such-external-check"],
+  "configPath": "pyproject.toml",
+  "workingDirectory": null,
+  "timeoutSeconds": 5,
+  "maxOutputBytes": 65536,
+  "environment": {"allow": ["PATH"], "allowPatterns": []},
+  "outputFormat": "json"
+}
