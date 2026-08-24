@@ -6,6 +6,7 @@ import argparse
 
 from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
+from agent_lifecycle.contracts.lifecycle_action_catalog import COMPATIBILITY_COMMANDS
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
 from agent_lifecycle.resources import builtin_profile_path
 from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
@@ -466,7 +467,13 @@ def _add_model_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
 
 
 def _add_runner_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    runner = subparsers.add_parser("runner", help="controlled execution-loop commands")
+    runner = subparsers.add_parser(
+        "runner",
+        help=(
+            f"deprecated compatibility journal commands ({len(COMPATIBILITY_COMMANDS)}); "
+            "use workflow commands for lifecycle authority"
+        ),
+    )
     runner_sub = runner.add_subparsers(dest="runner_command", required=True)
     runner_start = runner_sub.add_parser("start")
     runner_start.add_argument("--state", required=True)
