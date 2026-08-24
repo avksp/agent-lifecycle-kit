@@ -12,6 +12,8 @@ class DomainLanguageSchemaTests(unittest.TestCase):
         self.assertIn("agent-project-domain-language-validation.v1", ids)
         self.assertIn("agent-project-domain-language-delta.v1", ids)
         self.assertIn("agent-project-domain-language-audit.v1", ids)
+        self.assertIn("agent-project-domain-language-continuity.v1", ids)
+        self.assertIn("agent-project-domain-language-continuity-validation.v1", ids)
 
     def test_artifact_schema_requires_bilingual_terms_and_authority_boundary(self) -> None:
         schema = get_schema("agent-project-domain-language.v1")

@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.1.0
+python -m pip install agent-lifecycle-kit==2.2.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -199,6 +199,18 @@ agent-lifecycle project preset render \
 --before <manifest> --after <manifest>`, а созданный отчёт проверьте командой
 `agent-lifecycle plan delta-check --delta <delta.json>`. Обе операции только
 читают исходные файлы и возвращают устойчивые JSON-контракты.
+
+## Предметный язык проекта
+
+Необязательный словарь проверяется командой
+`agent-lifecycle project language check --file <path> --project-root .`, а
+аудит без изменений выполняется командой
+`agent-lifecycle project language audit --file <path> --term-id <id>
+--changed-path <path>`. Для связывания изменений терминов с дельтой плана
+добавьте к `plan delta` оба флага `--language-before <path>` и
+`--language-after <path>`. Словарь является контекстом только для чтения: он
+не выдаёт полномочия записи и не заменяет спецификацию или зафиксированный
+план. См. [предметный язык проекта](project-domain-language.md).
 
 ## Выполнение
 

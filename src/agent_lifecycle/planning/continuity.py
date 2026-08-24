@@ -10,6 +10,10 @@ from typing import Any
 
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.domain_language_schemas import (
+    DOMAIN_LANGUAGE_CONTINUITY_SCHEMA,
+    DOMAIN_LANGUAGE_CONTINUITY_VALIDATION_SCHEMA,
+)
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.project.domain_language import domain_language_digest, validate_domain_language
 
@@ -114,7 +118,7 @@ def build_domain_language_continuity(
 
     validation = validate_domain_language(language)
     body = {
-        "schemaVersion": "agent-project-domain-language-continuity.v1",
+        "schemaVersion": DOMAIN_LANGUAGE_CONTINUITY_SCHEMA,
         "status": "PASS" if validation["status"] == "PASS" else "FAIL",
         "languageId": language.get("languageId") if isinstance(language, dict) else None,
         "revision": language.get("revision") if isinstance(language, dict) else None,
@@ -152,7 +156,7 @@ def reconcile_domain_language_continuity(
         if snapshot.get("continuityDigest") != expected:
             blockers.append({"code": "domain-language-continuity-digest-mismatch"})
     body = {
-        "schemaVersion": "agent-project-domain-language-continuity-validation.v1",
+        "schemaVersion": DOMAIN_LANGUAGE_CONTINUITY_VALIDATION_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
         "blockers": blockers,
         "productionPromotionClaimed": False,
