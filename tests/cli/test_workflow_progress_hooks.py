@@ -45,7 +45,7 @@ class WorkflowProgressHookCommandTests(unittest.TestCase):
             )
 
         self.assertEqual(code, 0)
-        self.assertEqual(stdout_payload["schemaVersion"], "agent-managed-lifecycle-runner-receipt.v1")
+        self.assertEqual(stdout_payload["schemaVersion"], "agent-workflow-run-receipt.v1")
         self.assertNotIn("agent-progress-hook-receipt.v1", json.dumps(stdout_payload))
         self.assertIn("RUNNING", stderr_text)
         self.assertIn("TOTAL", stderr_text)
@@ -215,7 +215,7 @@ class WorkflowProgressHookCommandTests(unittest.TestCase):
                 )
 
         self.assertEqual(code, 0)
-        self.assertEqual(stdout_payload["schemaVersion"], "agent-managed-lifecycle-runner-receipt.v1")
+        self.assertEqual(stdout_payload["schemaVersion"], "agent-workflow-run-receipt.v1")
         self.assertIn("RUNNING", stderr_text)
 
 

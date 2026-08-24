@@ -788,10 +788,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-completion-gate-validation.v1`.\n"
         "`agent-goal-record.v1`.\n"
         "`agent-objective-snapshot.v1`.\n"
-        "`agent-runner-state.v1`.\n"
-        "`agent-runner-snapshot.v1`.\n"
-        "`agent-managed-lifecycle-next-action.v1`.\n"
-        "`agent-managed-lifecycle-runner-receipt.v1`.\n"
+        "`agent-workflow-state.v4`.\n"
+        "`agent-workflow-next-action.v1`.\n"
+        "`agent-workflow-run-receipt.v1`.\n"
         "`agent-lifecycle-start-receipt.v1`.\n"
         "`agent-adapter-session-receipt.v1`.\n"
         "`agent-managed-adapter-launch-receipt.v1`.\n"
@@ -1256,9 +1255,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/reference/runner.md",
-        "`agent-runner-policy.v1`.\n"
-        "`agent-runner-transition-request.v1`.\n"
-        "`agent-runner-snapshot.v1`.\n"
+        "workflow run.\n"
+        "migrate-runner-artifact.\n"
+        "authorityClaimed.\n"
         "fails closed.\n",
     )
     _write_text(
@@ -1273,7 +1272,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-worktree-isolation-policy.v1`.\n"
         "`agent-worktree-attempt-receipt.v1`.\n"
         "preserved unless.\n"
-        "`runner transition`.\n",
+        "`agent-worktree-writeback-receipt.v1`.\n",
     )
     _write_text(
         root / "docs/reference/adapter-event-capture.md",

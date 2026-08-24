@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.host_protocol import validate_capability_manifest
-from agent_lifecycle.runner import validate_sandbox_capability
+from agent_lifecycle.workflow.sandbox_receipts import validate_sandbox_capability
 
 ROOT = Path(__file__).resolve().parents[2]
 

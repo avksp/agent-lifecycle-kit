@@ -1,4 +1,4 @@
-"""Workflow, audit, and managed-runner CLI dispatch handlers."""
+"""Workflow and audit CLI dispatch handlers."""
 
 from __future__ import annotations
 
@@ -21,19 +21,7 @@ from agent_lifecycle.cli.progress_hooks import (
     maybe_emit_workflow_progress_hook,
     validate_workflow_progress_hook_request,
 )
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
-from agent_lifecycle.contracts.lifecycle_action_catalog import COMPATIBILITY_COMMANDS
-from agent_lifecycle.runner import (
-    build_runner_snapshot,
-    initialize_runner_state,
-    load_runner_policy,
-    load_runner_state,
-    request_runner_stop,
-    resume_runner,
-    transition_runner,
-    validate_runner_state,
-)
-from agent_lifecycle.runner.core import write_runner_state, write_runner_state_create
+from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
 from agent_lifecycle.workflow import (
     accept_task,
     adopt_plan,
@@ -52,7 +40,7 @@ from agent_lifecycle.workflow import (
     resolve_blocker,
     resume_external_action,
     rework_task,
-    run_managed_lifecycle_step,
+    run_workflow_step,
     start_execution,
     start_task,
     status,
@@ -62,13 +50,11 @@ from agent_lifecycle.workflow.artifacts import build_current_task_change_set
 
 
 def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
-    """Dispatch workflow, audit, and runner command groups."""
+    """Dispatch workflow and audit command groups."""
     if args.command == "workflow":
         return _dispatch_workflow(args)
     if args.command == "audit":
         return _dispatch_audit(args)
-    if args.command == "runner":
-        return _dispatch_runner(args)
     raise LifecycleError("command-not-implemented", "lifecycle command is not implemented")
 
 
@@ -90,6 +76,15 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             expected_revision=args.expected_revision,
             source_revision=args.source_revision,
         )
+    if args.workflow_command == "migrate-runner-artifact":
+        from agent_lifecycle.migration.legacy_runner import convert_legacy_runner_artifact
+
+        return convert_legacy_runner_artifact(
+            Path(args.input),
+            Path(args.output),
+            expected_sha256=args.expected_sha256,
+            max_input_bytes=args.max_input_bytes,
+        )
     state_path = Path(args.state)
     if args.workflow_command == "status":
         return status(state_path, full=args.full)
@@ -97,7 +92,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         return next_action(status(state_path, full=True)["state"])
     if args.workflow_command == "run":
         validate_workflow_progress_hook_request(args, command="workflow run")
-        payload = run_managed_lifecycle_step(
+        payload = run_workflow_step(
             state_path=state_path,
             manifest_path=Path(args.manifest),
             lock_path=Path(args.lock) if args.lock else None,
@@ -399,86 +394,3 @@ def _dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:
             report["summary"],
         )
     return report
-
-
-def _dispatch_runner(args: argparse.Namespace) -> dict[str, Any]:
-    runner_path = Path(args.runner)
-    if args.runner_command == "start":
-        workflow_state = read_json_object(Path(args.state), label="workflow state")
-        policy = load_runner_policy(Path(args.policy)) if args.policy else None
-        runner_state = initialize_runner_state(
-            workflow_state,
-            policy=policy,
-            operation_id=args.operation_id,
-            reason=args.reason,
-        )
-        write_runner_state_create(runner_path, runner_state)
-        return _runner_compatibility_result(
-            validate_runner_state(runner_state, workflow_state=workflow_state),
-            command="runner start",
-        )
-    runner_state = load_runner_state(runner_path)
-    if args.runner_command == "status":
-        status_workflow_state = read_json_object(Path(args.state), label="workflow state") if args.state else None
-        if args.profile:
-            if status_workflow_state is None:
-                raise LifecycleError("missing-cli-argument", "runner status with --profile requires --state")
-            profile = read_json_object(Path(args.profile), label="context profile")
-            return _runner_compatibility_result(
-                build_runner_snapshot(
-                    runner_state,
-                    status_workflow_state,
-                    profile=profile,
-                    window=args.target_window,
-                ),
-                command="runner status",
-            )
-        return _runner_compatibility_result(
-            validate_runner_state(runner_state, workflow_state=status_workflow_state),
-            command="runner status",
-        )
-    workflow_state = read_json_object(Path(args.state), label="workflow state")
-    if args.runner_command == "transition":
-        request = read_json_object(Path(args.request), label="runner transition request")
-        payload = transition_runner(runner_state, workflow_state, request)
-        write_runner_state(runner_path, payload["state"])
-        return _runner_compatibility_result(payload["result"], command="runner transition")
-    if args.runner_command == "stop":
-        payload = request_runner_stop(
-            runner_state,
-            workflow_state,
-            operation_id=args.operation_id,
-            expected_runner_revision=args.expected_runner_revision,
-            reason=args.reason,
-        )
-        write_runner_state(runner_path, payload["state"])
-        return _runner_compatibility_result(payload["result"], command="runner stop")
-    if args.runner_command == "resume":
-        payload = resume_runner(
-            runner_state,
-            workflow_state,
-            operation_id=args.operation_id,
-            expected_runner_revision=args.expected_runner_revision,
-            reason=args.reason,
-        )
-        write_runner_state(runner_path, payload["state"])
-        return _runner_compatibility_result(payload["result"], command="runner resume")
-    raise LifecycleError("command-not-implemented", "runner command is not implemented")
-
-
-def _runner_compatibility_result(payload: dict[str, Any], *, command: str) -> dict[str, Any]:
-    """Mark legacy runner output without changing its historical meaning."""
-
-    classification = COMPATIBILITY_COMMANDS.get(command)
-    if classification is None:
-        raise LifecycleError("invalid-runner-command", "runner command is not in the compatibility catalog")
-    digest_keys = ("resultDigest", "snapshotDigest", "validationDigest")
-    digest_key = next((key for key in digest_keys if key in payload), "validationDigest")
-    body = {key: value for key, value in payload.items() if key not in digest_keys}
-    body["deprecation"] = {
-        "status": "DEPRECATED",
-        "command": command,
-        "replacement": classification["replacement"],
-        "workflowAuthority": "workflow-state-only",
-    }
-    return {**body, digest_key: canonical_digest(body)}

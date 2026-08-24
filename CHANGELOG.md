@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 2.0.0 - 2026-08-24
+
+- Made durable workflow state the only active lifecycle authority and removed
+  the public controlled-runner command surface.
+- Kept historical runner schemas in a read-only compatibility registry and
+  added bounded `workflow migrate-runner-artifact` conversion with private,
+  no-replace, non-authoritative output.
+- Preserved sandbox validation at the workflow boundary and added regression
+  gates for removed commands, authority imports, legacy conversion and
+  workflow-only documentation.
+- Updated English and Russian documentation, skills, package metadata and
+  plugin publication metadata for the 2.0.0 major release.
+
 ## 1.89.0 - 2026-08-24
 
 - Added provider-neutral structured-result capability contracts bound to the

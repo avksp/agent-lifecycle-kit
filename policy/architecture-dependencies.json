@@ -11,6 +11,7 @@
     "changesets": 1,
     "evidence_index": 1,
     "freeze": 1,
+    "migration": 1,
     "neutrality": 1,
     "quality": 1,
     "research": 1,

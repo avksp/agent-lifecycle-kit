@@ -68,8 +68,8 @@ from agent_lifecycle.contracts.review_mesh_recommendation_schemas import (
 )
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_SCHEMAS
 from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHEMAS
-from agent_lifecycle.contracts.runner_schemas import RUNNER_SCHEMAS
-from agent_lifecycle.contracts.runner_worktree_schemas import RUNNER_WORKTREE_SCHEMAS
+from agent_lifecycle.contracts.legacy_runner_schemas import LEGACY_RUNNER_SCHEMAS
+from agent_lifecycle.contracts.runner_worktree_schemas import WORKTREE_SUPPORT_SCHEMAS
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
@@ -80,6 +80,7 @@ from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
 from agent_lifecycle.contracts.workflow_artifact_schemas import WORKFLOW_ARTIFACT_SCHEMAS
 from agent_lifecycle.contracts.workflow_authorization_schemas import WORKFLOW_AUTHORIZATION_SCHEMAS
 from agent_lifecycle.contracts.workflow_state_schemas import WORKFLOW_STATE_SCHEMAS
+from agent_lifecycle.contracts.workflow_run_schemas import WORKFLOW_RUN_SCHEMAS
 
 SCHEMA_INDEX_VERSION = "agent-lifecycle-schema-index.v1"
 
@@ -717,8 +718,9 @@ _SCHEMA_GROUPS = (
     STATUS_GOAL_SCHEMAS,
     TASK_TEMPLATE_SCHEMAS,
     THREAD_BRIDGE_SCHEMAS,
-    RUNNER_SCHEMAS,
-    RUNNER_WORKTREE_SCHEMAS,
+    WORKFLOW_RUN_SCHEMAS,
+    LEGACY_RUNNER_SCHEMAS,
+    WORKTREE_SUPPORT_SCHEMAS,
     WORKFLOW_ARTIFACT_SCHEMAS,
     WORKFLOW_AUTHORIZATION_SCHEMAS,
     WORKFLOW_STATE_SCHEMAS,

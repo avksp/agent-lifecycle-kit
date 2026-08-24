@@ -48,7 +48,7 @@ confirmation before treating multi-review as mandatory evidence. Only explicit
 `--mode implement` may consume a fully bound frozen request and delegate to the
 existing managed run path. `--resume` accepts only stored ALK session identity;
 it must never guess a native host conversation id. Use `adapter task start`,
-`adapter run` and `adapter session resume` as lower-level commands, and use
+`adapter run` and `adapter session resume` as lower-level atomic commands, and use
 `adapter session start` only to record an interactive `WAITING_FOR_TASK`
 session. Native host launching remains descriptor-driven and host-owned.
 
@@ -94,7 +94,7 @@ wall time within all caps before acceptance.
 
 For common requests, use `docs/guides/lifecycle-cookbook.md` for research-only,
 planning, Markdown plan review, code review, implementation audit and
-cross-review. Beginners start there; advanced users can use atomic commands.
+cross-review.
 
 If a frozen plan opts into Review Mesh, use `review-mesh prepare`, then let
 adapters run reviewers and import, synthesize and quorum receipts. Review Mesh
@@ -150,7 +150,8 @@ state, ownership and accepted evidence govern execution and acceptance.
 
 ## Lifecycle authority
 
-`workflow run` and workflow transitions are authoritative. Legacy `runner`
-output is journal evidence only; its statuses never authorize attempts,
-acceptance, blockers or finalization. Require workflow state, authorization and
-final audit.
+`workflow run` and workflow transitions are authoritative. Legacy runner
+artifacts are read-only journal evidence; convert them only through the
+explicit bounded `workflow migrate-runner-artifact` route. Their statuses never
+authorize attempts, acceptance, blockers or finalization. Require workflow
+state, authorization and final audit.
