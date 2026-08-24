@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 1.85.0 - 2026-08-24
+
+- Added a canonical, offline HTTP(S) public-locator contract with bounded
+  length, normalized hosts, and rejection of unsafe schemes and credentials.
+- Applied the shared locator normalization and redaction behavior across
+  research, evidence-index, adapter, Review Mesh, host receipt and context
+  evidence surfaces.
+- Added adversarial coverage for local paths, URL credentials, sensitive query
+  values, fragments, mixed encodings and overlong locators.
+- Added bilingual documentation and synchronized package/plugin metadata.
+
 ## 1.84.0 - 2026-08-24
 
 - Made durable workflow state the only lifecycle authority; controlled runner

@@ -8,6 +8,7 @@ from collections import Counter
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.public_locators import require_public_locator
 from agent_lifecycle.contracts.redaction import contains_local_absolute_path, redact_text
 from agent_lifecycle.contracts.research_evidence_schemas import (
     RESEARCH_CITATION_MATCH_STATUSES,
@@ -365,6 +366,22 @@ def _validate_locator(locator: Any, record_id: Any, blockers: list[dict[str, Any
                 blockers.append({"code": "research-locator-private-path", "id": record_id, "field": key})
             if value.startswith("file://"):
                 blockers.append({"code": "research-locator-file-uri", "id": record_id, "field": key})
+    if locator.get("kind") == "url":
+        value = locator.get("value")
+        try:
+            normalized = require_public_locator(value, label=f"locator.{record_id}.value")
+        except LifecycleError as exc:
+            blockers.append({"code": exc.code, "id": record_id, "field": "value"})
+        else:
+            if normalized != value:
+                blockers.append(
+                    {
+                        "code": "research-locator-not-canonical",
+                        "id": record_id,
+                        "field": "value",
+                        "canonicalValue": normalized,
+                    }
+                )
 
 
 def _security_report(package: dict[str, Any], *, max_bytes: int) -> dict[str, Any]:

@@ -26,7 +26,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==1.84.0
+  python -m pip install agent-lifecycle-kit==1.85.0
 ```
 
 ## Error and resource contracts
@@ -36,6 +36,13 @@ I/O, decoding, JSON-depth and unexpected failures. The JSON is redacted and
 does not contain a traceback or local absolute path. Library exceptions and
 `KeyboardInterrupt`/`SystemExit` behavior are unchanged. See the [CLI error
 contract](cli-errors.md).
+
+## Public locators and redaction
+
+Evidence URLs use the offline `agent-public-evidence-locator.v1` contract.
+Only HTTP(S) is accepted; hosts are normalized and credentials, unsafe schemes,
+secrets and local paths are rejected or redacted. See [Public locators and
+redaction](public-locators-and-redaction.md).
 
 Built-in profiles are loaded through `importlib.resources`, so commands work
 from an installed wheel outside the checkout. A same-named file in the current

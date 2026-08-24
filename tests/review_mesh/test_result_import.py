@@ -3,7 +3,11 @@ from __future__ import annotations
 import unittest
 
 from agent_lifecycle.contracts import LifecycleError
-from agent_lifecycle.review_mesh import build_review_mesh_assignment, build_review_mesh_profile, import_review_mesh_result
+from agent_lifecycle.review_mesh import (
+    build_review_mesh_assignment,
+    build_review_mesh_profile,
+    import_review_mesh_result,
+)
 
 
 class ReviewMeshResultImportTests(unittest.TestCase):
@@ -17,7 +21,14 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                 "schemaVersion": "reviewer-output.test",
                 "status": "FAIL",
                 "budgetUsage": {"invocations": 1, "inputTokens": 100, "outputTokens": 20, "wallSeconds": 3},
-                "findings": [{"id": "F1", "severity": "MEDIUM", "status": "open", "message": "token " + "sk-" + "abcdefghijklmnopqrstuv"}],
+                "findings": [
+                    {
+                        "id": "F1",
+                        "severity": "MEDIUM",
+                        "status": "open",
+                        "message": "token " + "sk-" + "abcdefghijklmnopqrstuv",
+                    }
+                ],
             },
         )
 
@@ -36,7 +47,9 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                 assignment=assignment,
                 reviewer_output={
                     "budgetUsage": {"invocations": 0, "inputTokens": 0, "outputTokens": 0, "wallSeconds": 0},
-                    "findings": [{"id": "F1", "severity": "LOW", "status": "open", "message": "/Us" + "ers/example/private.txt"}],
+                    "findings": [
+                        {"id": "F1", "severity": "LOW", "status": "open", "message": "/Us" + "ers/example/private.txt"}
+                    ],
                 },
             )
 
@@ -50,13 +63,37 @@ class ReviewMeshResultImportTests(unittest.TestCase):
             assignment=assignment,
             reviewer_output={
                 "budgetUsage": {"invocations": 0, "inputTokens": 0, "outputTokens": 0, "wallSeconds": 0},
-                "findings": [{"id": "F1", "severity": "LOW", "status": "open", "message": "/Vo" + "lumes/Work/evidence.json"}],
+                "findings": [
+                    {"id": "F1", "severity": "LOW", "status": "open", "message": "/Vo" + "lumes/Work/evidence.json"}
+                ],
             },
             allow_local_evidence_refs=True,
         )
 
         self.assertEqual(result["redaction"]["localPathsRedacted"], 1)
         self.assertIn("[LOCAL_PATH]", result["findings"][0]["message"])
+
+    def test_import_result_normalizes_public_locator_in_finding(self) -> None:
+        profile, assignment = _profile_and_assignment()
+
+        result = import_review_mesh_result(
+            profile=profile,
+            assignment=assignment,
+            reviewer_output={
+                "budgetUsage": {"invocations": 0, "inputTokens": 0, "outputTokens": 0, "wallSeconds": 0},
+                "findings": [
+                    {
+                        "id": "F1",
+                        "severity": "LOW",
+                        "status": "open",
+                        "message": "HTTPS://EXAMPLE.COM:443/review#Finding",
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(result["findings"][0]["message"], "https://example.com/review#Finding")
+        self.assertEqual(result["redaction"]["status"], "PASS")
 
 
 def _profile_and_assignment() -> tuple[dict, dict]:

@@ -10,9 +10,8 @@ class ReceiptRedactionTests(unittest.TestCase):
         local_path = "/" + "Users/operator/private.log"
         value = (
             "API_KEY=top-secret Authorization: Bearer token-value "
-            "{\"session-token\": \"session-secret\"} "
-            "-----BEGIN " + "PRIVATE KEY-----\nprivate-material\n-----END PRIVATE KEY----- "
-            + local_path
+            '{"session-token": "session-secret"} '
+            "-----BEGIN " + "PRIVATE KEY-----\nprivate-material\n-----END PRIVATE KEY----- " + local_path
         )
 
         redacted, applied = redact_text(value)
@@ -32,7 +31,9 @@ class ReceiptRedactionTests(unittest.TestCase):
         self.assertEqual(redacted, {"inputTokens": 12, "message": "safe", "items": ["ok"]})
 
     def test_redact_value_redacts_nested_sensitive_keys(self) -> None:
-        redacted, applied = redact_value({"nested": {"refresh_token": "secret"}, "path": "C:\\Users\\operator\\secret.txt"})
+        redacted, applied = redact_value(
+            {"nested": {"refresh_token": "secret"}, "path": "C:\\Users\\operator\\secret.txt"}
+        )
 
         self.assertTrue(applied)
         self.assertEqual(redacted["nested"]["refresh_token"], REDACTED_VALUE)
@@ -111,6 +112,14 @@ class ReceiptRedactionTests(unittest.TestCase):
 
         self.assertFalse(applied)
         self.assertEqual(redacted, value)
+
+    def test_redact_text_normalizes_safe_url_host_without_touching_path(self) -> None:
+        value = "See HTTPS://EXAMPLE.COM:443/docs/reference?section=one#intro"
+
+        redacted, applied = redact_text(value)
+
+        self.assertTrue(applied)
+        self.assertEqual(redacted, "See https://example.com/docs/reference?section=one#intro")
 
 
 if __name__ == "__main__":
