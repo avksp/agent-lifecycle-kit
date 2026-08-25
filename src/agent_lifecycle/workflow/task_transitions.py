@@ -16,6 +16,7 @@ from agent_lifecycle.host_protocol.lifecycle_gate import (
     lifecycle_control_selection_blockers,
     require_lifecycle_gate_pass,
 )
+from agent_lifecycle.quality.security_analysis import security_analysis_acceptance_blocker
 from agent_lifecycle.workflow.artifacts import (
     artifact_identity,
     artifact_path,
@@ -419,11 +420,11 @@ def _validate_implementation_audit(
     *,
     implementation_audit_path: str | None,
 ) -> dict[str, Any] | None:
-    required = task_implementation_audit_required(state_path, state, task)
     if implementation_audit_path is None:
-        if required:
+        if task_implementation_audit_required(state_path, state, task):
+            code = security_analysis_acceptance_blocker(task)
             raise LifecycleError(
-                "implementation-audit-required",
+                code,
                 "task acceptance requires an accepted implementation audit report",
                 {"taskId": task.get("id")},
             )

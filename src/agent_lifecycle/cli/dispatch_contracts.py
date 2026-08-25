@@ -37,6 +37,7 @@ from agent_lifecycle.imports import (
     validate_import_result,
     validate_skill_improvement_proposal,
 )
+from agent_lifecycle.imports.security_findings import import_security_findings, validate_security_finding_import
 from agent_lifecycle.planning import (
     build_task_template_library,
     require_task_template_validation_pass,
@@ -51,6 +52,10 @@ from agent_lifecycle.quality import (
     run_behavior_checks,
     validate_bug_forensics_recipe_library,
     validate_quality_pack,
+)
+from agent_lifecycle.quality.security_analysis import (
+    build_security_analysis_profile,
+    validate_security_finding,
 )
 from agent_lifecycle.review_mesh import (
     build_quorum_from_synthesis,
@@ -142,6 +147,17 @@ def _dispatch_evidence(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_import(args: argparse.Namespace) -> dict[str, Any]:
+    if args.import_command in {"security-findings", "security"}:
+        payload = import_security_findings(
+            Path(args.source),
+            source_revision=args.source_revision,
+            expected_source_revision=args.expected_source_revision,
+            source_lineage_digest=args.source_lineage_digest,
+            max_input_bytes=args.max_input_bytes,
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.import_command == "profile-list":
         payload = external_dialect_registry()
         if args.out:
@@ -222,6 +238,24 @@ def _planning_import_profile(
 
 
 def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
+    if args.quality_command in {"security-profile", "security-analysis-profile"}:
+        payload = build_security_analysis_profile()
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if args.quality_command in {"security-finding-check", "security-analysis-check"}:
+        candidate = read_json_object(Path(args.candidate), label="security finding import")
+        if candidate.get("schemaVersion") == "agent-security-finding-import.v1":
+            payload = validate_security_finding_import(
+                candidate, expected_source_revision=args.expected_source_revision
+            )
+        else:
+            payload = validate_security_finding(
+                candidate, expected_source_revision=args.expected_source_revision
+            )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.quality_command == "pack-check":
         manifest = (
             read_json_object(Path(args.manifest), label="quality pack")

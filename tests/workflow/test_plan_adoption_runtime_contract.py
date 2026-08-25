@@ -5,13 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.workflow.plan_adoption import (
     _build_tasks,
     _replace_plan_state,
     _task_contract_compatible,
     adopt_plan,
 )
-from agent_lifecycle.contracts import LifecycleError
 from tests.workflow.helpers import _write_state
 from tests.workflow.plan_helpers import _write_plan_bundle
 
@@ -36,6 +36,22 @@ class PlanAdoptionRuntimeContractTests(unittest.TestCase):
         tasks = _build_tasks(manifest, {})
 
         self.assertEqual(tasks[0]["acceptanceIds"], ["AC-01", "AC-02"])
+
+    def test_runtime_tasks_copy_optional_security_policy(self) -> None:
+        manifest = {
+            "package": {"artifactRoot": "tasks/package"},
+            "extensions": {
+                "securityAnalysis": {
+                    "profileId": "security-analysis.v1",
+                    "activation": "read-only-by-default",
+                    "implementationAudit": {"required": True, "independentVerificationRequired": True},
+                }
+            },
+            "workstreams": [{"id": "WS-01", "owner": "worker", "writes": [], "dependsOn": []}],
+        }
+        task = _build_tasks(manifest, {})[0]
+        self.assertEqual(task["securityAnalysis"]["profileId"], "security-analysis.v1")
+        self.assertTrue(task["implementationAudit"]["required"])
 
     def test_missing_legacy_acceptance_ids_match_an_empty_contract(self) -> None:
         current = {

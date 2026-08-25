@@ -77,7 +77,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.3.0
+python -m pip install agent-lifecycle-kit==2.4.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -88,7 +88,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.3.0
+python -m pip install agent-lifecycle-kit==2.4.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -188,7 +188,7 @@ Choose one host and follow its adapter page. The common sequence is:
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.3.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.4.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -214,6 +214,10 @@ explicit read-only check and does not replace the ALK lifecycle.
 Release 2.0 makes workflow the only lifecycle authority. Historical runner
 records use the [2.x migration guide](runner-migration-2.md) and remain
 read-only, non-authoritative evidence.
+
+Release 2.4 adds an optional [security analysis profile](../reference/security-analysis-profile.md).
+It is disabled by default; imported findings are read-only evidence and a
+high-severity remediation needs independent verification at task acceptance.
 
 Release 1.80 also documents optional lifecycle control inside an adapter. It is
 off by default: bundled adapters currently publish `GUIDANCE_ONLY` and
