@@ -39,6 +39,28 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/security-analysis-profile.md",
+        (
+            "agent-lifecycle quality security-profile",
+            "agent-lifecycle import security-findings",
+            "trusted: false",
+            "authorityClaimed: false",
+            "security-analysis-verification-required",
+            "host-process calls are disabled",
+        ),
+    ),
+    (
+        "docs/ru/reference/security-analysis-profile.md",
+        (
+            "agent-lifecycle quality security-profile",
+            "agent-lifecycle import security-findings",
+            "trusted: false",
+            "authorityClaimed: false",
+            "security-analysis-verification-required",
+            "вызовы модели, сети и процессов хоста по умолчанию запрещены",
+        ),
+    ),
+    (
         "docs/guides/install-and-first-run.md",
         (
             "git clone https://github.com/avksp/agent-lifecycle-kit.git",

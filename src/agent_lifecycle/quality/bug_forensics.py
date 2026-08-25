@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, normalize_repo_path
+from agent_lifecycle.quality.security_analysis import (
+    build_security_analysis_profile,
+    validate_security_analysis_profile,
+)
 
 BUG_FORENSICS_PROFILE_SCHEMA = "agent-bug-forensics-profile.v1"
 BUG_FORENSICS_PROFILE_VALIDATION_SCHEMA = "agent-bug-forensics-profile-validation.v1"
@@ -93,6 +97,10 @@ def build_bug_forensics_profile(
     return {**body, "profileDigest": canonical_digest(body)}
 
 
+build_security_profile = build_security_analysis_profile
+validate_security_profile = validate_security_analysis_profile
+
+
 def validate_bug_forensics_profile(profile: dict[str, Any]) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     if not isinstance(profile, dict):
@@ -149,17 +157,30 @@ def build_bug_reproduction_receipt(
     """Record that the bug reproduces before any patch is applied."""
 
     artifacts = _artifact_digests(artifact_digests or [], allow_empty=False)
-    status = "PASS" if before_modification and command_status in REPRODUCED_COMMAND_STATUSES and not live_calls_started else "FAIL"
+    status = (
+        "PASS"
+        if (before_modification and command_status in REPRODUCED_COMMAND_STATUSES and not live_calls_started)
+        else "FAIL"
+    )
     body = {
         "schemaVersion": BUG_REPRODUCTION_RECEIPT_SCHEMA,
         "status": status,
         "lineage": _object(lineage, "invalid-bug-reproduction-receipt", "lineage"),
         "symptom": _object(symptom, "invalid-bug-reproduction-receipt", "symptom"),
-        "reproductionCommand": _string_list(reproduction_command, label="reproductionCommand", code="invalid-bug-reproduction-receipt"),
-        "commandStatus": _enum(command_status, {"FAIL", "ERROR", "PASS", "NOT_RUN", "INCONCLUSIVE"}, label="commandStatus", code="invalid-bug-reproduction-receipt"),
+        "reproductionCommand": _string_list(
+            reproduction_command, label="reproductionCommand", code="invalid-bug-reproduction-receipt"
+        ),
+        "commandStatus": _enum(
+            command_status,
+            {"FAIL", "ERROR", "PASS", "NOT_RUN", "INCONCLUSIVE"},
+            label="commandStatus",
+            code="invalid-bug-reproduction-receipt",
+        ),
         "beforeModification": bool(before_modification),
         "artifactDigests": artifacts,
-        "evidenceIds": _string_list(evidence_ids or [], label="evidenceIds", code="invalid-bug-reproduction-receipt", allow_empty=True),
+        "evidenceIds": _string_list(
+            evidence_ids or [], label="evidenceIds", code="invalid-bug-reproduction-receipt", allow_empty=True
+        ),
         "liveCallsStarted": bool(live_calls_started),
         "productionPromotionClaimed": False,
     }
@@ -179,7 +200,9 @@ def validate_bug_reproduction_receipt(receipt: dict[str, Any]) -> dict[str, Any]
         blockers.append({"code": "bug-reproduction-lineage-invalid"})
     if not isinstance(receipt.get("symptom"), dict) or not receipt["symptom"]:
         blockers.append({"code": "bug-reproduction-symptom-invalid"})
-    _check_string_list(receipt.get("reproductionCommand"), "bug-reproduction-command-invalid", blockers, allow_empty=False)
+    _check_string_list(
+        receipt.get("reproductionCommand"), "bug-reproduction-command-invalid", blockers, allow_empty=False
+    )
     if receipt.get("commandStatus") not in {"FAIL", "ERROR", "PASS", "NOT_RUN", "INCONCLUSIVE"}:
         blockers.append({"code": "bug-reproduction-command-status-invalid", "status": receipt.get("commandStatus")})
     if receipt.get("beforeModification") is not True:
@@ -187,7 +210,9 @@ def validate_bug_reproduction_receipt(receipt: dict[str, Any]) -> dict[str, Any]
     if receipt.get("commandStatus") not in REPRODUCED_COMMAND_STATUSES:
         blockers.append({"code": "bug-reproduction-not-red", "commandStatus": receipt.get("commandStatus")})
     _check_artifact_digests(receipt.get("artifactDigests"), blockers, allow_empty=False)
-    _check_string_list(receipt.get("evidenceIds", []), "bug-reproduction-evidence-ids-invalid", blockers, allow_empty=True)
+    _check_string_list(
+        receipt.get("evidenceIds", []), "bug-reproduction-evidence-ids-invalid", blockers, allow_empty=True
+    )
     if receipt.get("liveCallsStarted") is not False:
         blockers.append({"code": "bug-reproduction-live-calls-started"})
     if receipt.get("productionPromotionClaimed") is not False:
@@ -231,10 +256,14 @@ def build_failure_fingerprint(
         "status": _enum(status, RECEIPT_STATUSES, label="status", code="invalid-failure-fingerprint"),
         "failure": dict(failure_fields),
         "fingerprintFields": fingerprint_fields,
-        "affectedSymbols": _string_list(affected_symbols or [], label="affectedSymbols", code="invalid-failure-fingerprint", allow_empty=True),
+        "affectedSymbols": _string_list(
+            affected_symbols or [], label="affectedSymbols", code="invalid-failure-fingerprint", allow_empty=True
+        ),
         "findingId": _optional_string(finding_id),
         "rootCauseDigest": _optional_digest(root_cause_digest, code="invalid-failure-fingerprint"),
-        "evidenceIds": _string_list(evidence_ids or [], label="evidenceIds", code="invalid-failure-fingerprint", allow_empty=True),
+        "evidenceIds": _string_list(
+            evidence_ids or [], label="evidenceIds", code="invalid-failure-fingerprint", allow_empty=True
+        ),
         "productionPromotionClaimed": False,
     }
     return {**body, "fingerprintDigest": canonical_digest(fingerprint_fields)}
@@ -252,15 +281,21 @@ def validate_failure_fingerprint(fingerprint: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "failure-fingerprint-failure-invalid"})
     if not isinstance(fingerprint.get("fingerprintFields"), dict) or not fingerprint["fingerprintFields"]:
         blockers.append({"code": "failure-fingerprint-fields-invalid"})
-    _check_string_list(fingerprint.get("affectedSymbols", []), "failure-fingerprint-symbols-invalid", blockers, allow_empty=True)
+    _check_string_list(
+        fingerprint.get("affectedSymbols", []), "failure-fingerprint-symbols-invalid", blockers, allow_empty=True
+    )
     if fingerprint.get("findingId") is not None and not isinstance(fingerprint.get("findingId"), str):
         blockers.append({"code": "failure-fingerprint-finding-id-invalid"})
     if fingerprint.get("rootCauseDigest") is not None:
         _check_digest(fingerprint.get("rootCauseDigest"), "failure-fingerprint-root-cause-digest-invalid", blockers)
-    _check_string_list(fingerprint.get("evidenceIds", []), "failure-fingerprint-evidence-ids-invalid", blockers, allow_empty=True)
+    _check_string_list(
+        fingerprint.get("evidenceIds", []), "failure-fingerprint-evidence-ids-invalid", blockers, allow_empty=True
+    )
     if fingerprint.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "failure-fingerprint-production-claim"})
-    expected_digest = canonical_digest(fingerprint.get("fingerprintFields") if isinstance(fingerprint.get("fingerprintFields"), dict) else {})
+    expected_digest = canonical_digest(
+        fingerprint.get("fingerprintFields") if isinstance(fingerprint.get("fingerprintFields"), dict) else {}
+    )
     if fingerprint.get("fingerprintDigest") != expected_digest:
         blockers.append({"code": "failure-fingerprint-digest-mismatch"})
     body = {
@@ -288,8 +323,15 @@ def build_hypothesis_ledger(
         "lineage": _object(lineage, "invalid-bug-hypothesis-ledger", "lineage"),
         "hypotheses": [_hypothesis(item) for item in hypotheses],
         "minimalPatch": _minimal_patch(minimal_patch),
-        "evidenceIds": _string_list(evidence_ids or [], label="evidenceIds", code="invalid-bug-hypothesis-ledger", allow_empty=True),
-        "phase2Deferred": _string_list(list(phase2_deferred or PHASE2_DEFERRED), label="phase2Deferred", code="invalid-bug-hypothesis-ledger", allow_empty=True),
+        "evidenceIds": _string_list(
+            evidence_ids or [], label="evidenceIds", code="invalid-bug-hypothesis-ledger", allow_empty=True
+        ),
+        "phase2Deferred": _string_list(
+            list(phase2_deferred or PHASE2_DEFERRED),
+            label="phase2Deferred",
+            code="invalid-bug-hypothesis-ledger",
+            allow_empty=True,
+        ),
         "productionPromotionClaimed": False,
     }
     return {**body, "ledgerDigest": canonical_digest(body)}
@@ -377,10 +419,14 @@ def build_regression_proof_receipt(
         "lineage": _object(lineage, "invalid-regression-proof-receipt", "lineage"),
         "before": dict(before),
         "after": dict(after),
-        "reproductionReceiptDigest": _digest(reproduction_receipt.get("receiptDigest"), code="invalid-regression-proof-receipt"),
+        "reproductionReceiptDigest": _digest(
+            reproduction_receipt.get("receiptDigest"), code="invalid-regression-proof-receipt"
+        ),
         "fixImpact": fix_impact,
         "crossCheck": cross_check,
-        "evidenceIds": _string_list(evidence_ids or [], label="evidenceIds", code="invalid-regression-proof-receipt", allow_empty=True),
+        "evidenceIds": _string_list(
+            evidence_ids or [], label="evidenceIds", code="invalid-regression-proof-receipt", allow_empty=True
+        ),
         "productionPromotionClaimed": False,
     }
     return {**body, "proofDigest": canonical_digest(body)}
@@ -417,7 +463,9 @@ def validate_regression_proof_receipt(receipt: dict[str, Any]) -> dict[str, Any]
             blockers.append({"code": "regression-proof-cross-check-schema-invalid"})
         elif cross_check.get("budgetUnits") != "tokens-and-resources":
             blockers.append({"code": "regression-proof-cross-check-budget-units-invalid"})
-    _check_string_list(receipt.get("evidenceIds", []), "regression-proof-evidence-ids-invalid", blockers, allow_empty=True)
+    _check_string_list(
+        receipt.get("evidenceIds", []), "regression-proof-evidence-ids-invalid", blockers, allow_empty=True
+    )
     if receipt.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "regression-proof-production-claim"})
     expected_digest = canonical_digest(_without_digest(receipt, "proofDigest"))
@@ -438,25 +486,35 @@ def validate_regression_proof_receipt(receipt: dict[str, Any]) -> dict[str, Any]
 
 def require_bug_forensics_profile_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("bug-forensics-profile-validation-failed", "bug-forensics profile validation failed", {"validation": validation})
+        raise LifecycleError(
+            "bug-forensics-profile-validation-failed",
+            "bug-forensics profile validation failed",
+            {"validation": validation},
+        )
     return validation
 
 
 def require_bug_reproduction_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("receiptStatus") != "PASS":
-        raise LifecycleError("bug-reproduction-validation-failed", "bug reproduction receipt did not pass", {"validation": validation})
+        raise LifecycleError(
+            "bug-reproduction-validation-failed", "bug reproduction receipt did not pass", {"validation": validation}
+        )
     return validation
 
 
 def require_hypothesis_ledger_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("ledgerStatus") != "PASS":
-        raise LifecycleError("bug-hypothesis-ledger-validation-failed", "bug hypothesis ledger did not pass", {"validation": validation})
+        raise LifecycleError(
+            "bug-hypothesis-ledger-validation-failed", "bug hypothesis ledger did not pass", {"validation": validation}
+        )
     return validation
 
 
 def require_regression_proof_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("proofStatus") != "PASS":
-        raise LifecycleError("regression-proof-validation-failed", "regression proof receipt did not pass", {"validation": validation})
+        raise LifecycleError(
+            "regression-proof-validation-failed", "regression proof receipt did not pass", {"validation": validation}
+        )
     return validation
 
 
@@ -465,8 +523,10 @@ def _same_fingerprint_red_green(before: dict[str, Any], after: dict[str, Any]) -
     return (
         _is_digest(digest)
         and after.get("fingerprintDigest") == digest
-        and before.get("commandStatus") in REPRODUCED_COMMAND_STATUSES
-        and after.get("commandStatus") in AFTER_FIX_COMMAND_STATUSES
+        and (
+            before.get("commandStatus") in REPRODUCED_COMMAND_STATUSES
+            and after.get("commandStatus") in AFTER_FIX_COMMAND_STATUSES
+        )
     )
 
 
@@ -480,10 +540,14 @@ def _hypothesis(value: dict[str, Any]) -> dict[str, Any]:
         raise LifecycleError("invalid-bug-hypothesis-ledger", "hypothesis must be an object")
     return {
         "id": _required_string(value.get("id"), label="hypothesis.id", code="invalid-bug-hypothesis-ledger"),
-        "status": _enum(value.get("status"), HYPOTHESIS_STATUSES, label="hypothesis.status", code="invalid-bug-hypothesis-ledger"),
+        "status": _enum(
+            value.get("status"), HYPOTHESIS_STATUSES, label="hypothesis.status", code="invalid-bug-hypothesis-ledger"
+        ),
         "cause": _required_string(value.get("cause"), label="hypothesis.cause", code="invalid-bug-hypothesis-ledger"),
         "check": _required_string(value.get("check"), label="hypothesis.check", code="invalid-bug-hypothesis-ledger"),
-        "result": _required_string(value.get("result"), label="hypothesis.result", code="invalid-bug-hypothesis-ledger"),
+        "result": _required_string(
+            value.get("result"), label="hypothesis.result", code="invalid-bug-hypothesis-ledger"
+        ),
     }
 
 
@@ -491,11 +555,39 @@ def _minimal_patch(value: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise LifecycleError("invalid-bug-hypothesis-ledger", "minimalPatch must be an object")
     return {
-        "status": _enum(value.get("status"), RECEIPT_STATUSES, label="minimalPatch.status", code="invalid-bug-hypothesis-ledger"),
-        "changedFiles": [normalize_repo_path(item, label="minimalPatch.changedFiles") for item in _string_list(value.get("changedFiles", []), label="minimalPatch.changedFiles", code="invalid-bug-hypothesis-ledger", allow_empty=True)],
-        "suspectScope": [normalize_repo_path(item, label="minimalPatch.suspectScope") for item in _string_list(value.get("suspectScope", []), label="minimalPatch.suspectScope", code="invalid-bug-hypothesis-ledger", allow_empty=True)],
-        "outsideSuspectScope": [normalize_repo_path(item, label="minimalPatch.outsideSuspectScope") for item in _string_list(value.get("outsideSuspectScope", []), label="minimalPatch.outsideSuspectScope", code="invalid-bug-hypothesis-ledger", allow_empty=True)],
-        "justifications": list(value.get("justifications", [])) if isinstance(value.get("justifications", []), list) else [],
+        "status": _enum(
+            value.get("status"), RECEIPT_STATUSES, label="minimalPatch.status", code="invalid-bug-hypothesis-ledger"
+        ),
+        "changedFiles": [
+            normalize_repo_path(item, label="minimalPatch.changedFiles")
+            for item in _string_list(
+                value.get("changedFiles", []),
+                label="minimalPatch.changedFiles",
+                code="invalid-bug-hypothesis-ledger",
+                allow_empty=True,
+            )
+        ],
+        "suspectScope": [
+            normalize_repo_path(item, label="minimalPatch.suspectScope")
+            for item in _string_list(
+                value.get("suspectScope", []),
+                label="minimalPatch.suspectScope",
+                code="invalid-bug-hypothesis-ledger",
+                allow_empty=True,
+            )
+        ],
+        "outsideSuspectScope": [
+            normalize_repo_path(item, label="minimalPatch.outsideSuspectScope")
+            for item in _string_list(
+                value.get("outsideSuspectScope", []),
+                label="minimalPatch.outsideSuspectScope",
+                code="invalid-bug-hypothesis-ledger",
+                allow_empty=True,
+            )
+        ],
+        "justifications": list(value.get("justifications", []))
+        if isinstance(value.get("justifications", []), list)
+        else [],
     }
 
 
@@ -614,7 +706,8 @@ def _check_artifact_digests(value: Any, blockers: list[dict[str, Any]], *, allow
         except LifecycleError as exc:
             blockers.append({"code": "bug-artifact-path-invalid", "index": index, "reason": exc.code})
         _check_digest(item.get("sha256"), "bug-artifact-digest-sha-invalid", blockers)
-        if not isinstance(item.get("bytes"), int) or isinstance(item.get("bytes"), bool) or item.get("bytes") < 0:
+        bytes_value = item.get("bytes")
+        if not isinstance(bytes_value, int) or isinstance(bytes_value, bool) or bytes_value < 0:
             blockers.append({"code": "bug-artifact-bytes-invalid", "index": index})
 
 
@@ -702,26 +795,3 @@ def _is_digest(value: Any) -> bool:
 
 def _without_digest(value: dict[str, Any], digest_key: str) -> dict[str, Any]:
     return {key: item for key, item in value.items() if key != digest_key}
-
-
-__all__ = [
-    "BUG_FORENSICS_PROFILE_SCHEMA",
-    "BUG_HYPOTHESIS_LEDGER_SCHEMA",
-    "BUG_REPRODUCTION_RECEIPT_SCHEMA",
-    "FAILURE_FINGERPRINT_SCHEMA",
-    "REGRESSION_PROOF_RECEIPT_SCHEMA",
-    "build_bug_forensics_profile",
-    "build_bug_reproduction_receipt",
-    "build_failure_fingerprint",
-    "build_hypothesis_ledger",
-    "build_regression_proof_receipt",
-    "require_bug_forensics_profile_pass",
-    "require_bug_reproduction_pass",
-    "require_hypothesis_ledger_pass",
-    "require_regression_proof_pass",
-    "validate_bug_forensics_profile",
-    "validate_bug_reproduction_receipt",
-    "validate_failure_fingerprint",
-    "validate_hypothesis_ledger",
-    "validate_regression_proof_receipt",
-]

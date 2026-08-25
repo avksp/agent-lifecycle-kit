@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 2.4.0 - 2026-08-25
+
+- Added an optional, provider-neutral security analysis profile with bounded
+  threat, finding, remediation and verification contracts.
+- Kept imported findings untrusted and read-only; source lineage, redacted
+  locators, sandbox prerequisites and execution budgets are validated before
+  any active reproduction.
+- Enforced independent verification for high-severity remediation at the real
+  task-acceptance boundary, including manifest-to-adopted-task policy
+  propagation and matching attempt lineage.
+- Added a deterministic no-live security fixture, CLI routes, bilingual
+  documentation and publication regression gates.
+
 ## 2.3.0 - 2026-08-25
 
 - Added an optional, bounded read-only multi-run attention view over explicit

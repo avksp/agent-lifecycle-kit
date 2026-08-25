@@ -235,6 +235,13 @@ def _add_import_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     external_check.add_argument("--candidate", required=True)
     proposal_check = import_sub.add_parser("proposal-check")
     proposal_check.add_argument("--proposal", required=True)
+    security_import = import_sub.add_parser("security-findings", aliases=["security"])
+    security_import.add_argument("--source", required=True)
+    security_import.add_argument("--source-revision")
+    security_import.add_argument("--expected-source-revision")
+    security_import.add_argument("--source-lineage-digest")
+    security_import.add_argument("--max-input-bytes", type=int, default=4 * 1024 * 1024)
+    security_import.add_argument("--out")
 
 
 def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -271,6 +278,12 @@ def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.Argument
     external_check.add_argument("--operation-id", required=True)
     external_check.add_argument("--blocking-required", action="store_true")
     external_check.add_argument("--out")
+    security_profile = quality_sub.add_parser("security-profile", aliases=["security-analysis-profile"])
+    security_profile.add_argument("--out")
+    security_check = quality_sub.add_parser("security-finding-check", aliases=["security-analysis-check"])
+    security_check.add_argument("--candidate", required=True)
+    security_check.add_argument("--expected-source-revision")
+    security_check.add_argument("--out")
 
 
 def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

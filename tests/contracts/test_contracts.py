@@ -119,6 +119,8 @@ class ContractTests(unittest.TestCase):
         self.assertIn("agent-adapter-event-stream-validation.v1", ids)
         self.assertIn("agent-adapter-event-stream-receipt.v1", ids)
         self.assertIn("agent-adapter-event-capture-validation.v1", ids)
+        self.assertIn("agent-security-analysis-profile.v1", ids)
+        self.assertIn("agent-security-finding.v1", ids)
         self.assertIn("agent-planning-launch-envelope.v1", ids)
         self.assertIn("agent-planning-result.v1", ids)
         self.assertIn("agent-planning-launch-receipt.v1", ids)

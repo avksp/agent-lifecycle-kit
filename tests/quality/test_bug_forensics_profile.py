@@ -15,16 +15,23 @@ from agent_lifecycle.quality import (
     build_failure_fingerprint,
     build_hypothesis_ledger,
     build_regression_proof_receipt,
+    build_security_profile,
     validate_bug_forensics_profile,
     validate_bug_reproduction_receipt,
     validate_failure_classification_receipt,
     validate_failure_fingerprint,
     validate_hypothesis_ledger,
     validate_regression_proof_receipt,
+    validate_security_profile,
 )
 
 
 class BugForensicsProfileTests(unittest.TestCase):
+    def test_security_profile_is_optional(self) -> None:
+        profile = build_security_profile()
+        self.assertEqual(validate_security_profile(profile)["status"], "PASS")
+        self.assertFalse(profile["enabledByDefault"])
+
     def test_profile_is_optional_and_resource_capped_without_money(self) -> None:
         profile = build_bug_forensics_profile()
 
