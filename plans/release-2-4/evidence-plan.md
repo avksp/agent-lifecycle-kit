@@ -37,8 +37,16 @@ A fresh assignment with matching run/task/plan/source revision, a distinct
 reviewer identity and a passing Review Mesh/implementation-audit receipt must
 pass through `apply_task_review_outcome` and `accept_task`. The fixture must
 assert that the required policy is present in the adopted task, not merely in
-the source manifest. Failed or disputed evidence remains immutable and
-addressable by digest.
+the source manifest. Write the machine-linked evidence to the paths declared
+in `extensions.securityAnalysis.verificationEvidence`:
+
+- `work/release-2-4/evidence/review/assignment.json`;
+- `work/release-2-4/evidence/review/verification-result.json`;
+- `work/release-2-4/evidence/review/implementation-audit.json`;
+- `work/release-2-4/evidence/review/task-acceptance.json`.
+
+Each artifact must carry the relevant digest and `independentEvidenceIds`;
+failed or disputed evidence remains immutable and addressable by digest.
 
 ## EV93-DOCUMENTATION
 

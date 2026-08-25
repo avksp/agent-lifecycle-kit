@@ -25,6 +25,8 @@
 - `src/agent_lifecycle/workflow/task_transitions.py`
 - `src/agent_lifecycle/review_mesh/assignments.py`
 - `src/agent_lifecycle/imports/security_findings.py`
+- `src/agent_lifecycle/cli/parsers.py`
+- `src/agent_lifecycle/cli/dispatch_contracts.py`
 - `src/agent_lifecycle/cli/observability_parsers.py`
 - `src/agent_lifecycle/cli/dispatch_observability.py`
 - `tests/workflow/test_security_analysis_profile.py`

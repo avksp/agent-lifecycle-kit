@@ -1,7 +1,7 @@
 {
   "schemaVersion": "agent-plan-manifest.v1",
   "status": "DRAFT",
-  "planRevision": 6,
+  "planRevision": 7,
   "package": {
     "id": "release-2-4",
     "title": "Optional security analysis profile",
@@ -196,6 +196,8 @@
         "src/agent_lifecycle/workflow/task_transitions.py",
         "src/agent_lifecycle/review_mesh/assignments.py",
         "src/agent_lifecycle/imports/security_findings.py",
+        "src/agent_lifecycle/cli/parsers.py",
+        "src/agent_lifecycle/cli/dispatch_contracts.py",
         "src/agent_lifecycle/cli/observability_parsers.py",
         "src/agent_lifecycle/cli/dispatch_observability.py",
         "tests/workflow/test_security_analysis_profile.py",
@@ -394,6 +396,15 @@
         "independentVerificationRequired": true,
         "enforcedAt": "task-acceptance",
         "propagation": "manifest-to-adopted-task"
+      },
+      "verificationEvidence": {
+        "independentEvidenceIds": [
+          "EV93-REVIEW"
+        ],
+        "assignmentPath": "work/release-2-4/evidence/review/assignment.json",
+        "verificationResultPath": "work/release-2-4/evidence/review/verification-result.json",
+        "implementationAuditPath": "work/release-2-4/evidence/review/implementation-audit.json",
+        "taskAcceptancePath": "work/release-2-4/evidence/review/task-acceptance.json"
       }
     }
   },

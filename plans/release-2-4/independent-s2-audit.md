@@ -209,12 +209,14 @@ authoritative value in `orchestration.maxTaskAttempts` and documents that
 
 ## Remediation status: revision 6
 
-The package revision is now `6`. The canonical package is under
+The package revision is now `7`. The canonical package is under
 `plans/release-2-4/`; the local `tasks/release-2-4/` copy is a compatibility
 mirror. The write-set includes plan-manifest schema/adoption/task-transition
 authority, direct acceptance regressions and deterministic conformance
-coverage. The acceptance and evidence documents require the manifest-to-task
-bridge and candidate-time execution of every activation fixture step.
+coverage, plus the existing CLI routing surfaces. The acceptance and evidence
+documents require the manifest-to-task bridge, declared review artifact paths
+with `independentEvidenceIds`, and candidate-time execution of every
+activation fixture step.
 
 Repeated completeness, acceptance, reference and package-path checks must pass
 on this revision. This entry is still a remediation record, not a final

@@ -16,6 +16,10 @@ Status: `CHANGES_REQUIRED / S2 REMEDIATION PENDING`.
   implementation-audit/Review Mesh boundary, not only a Bug Forensics receipt
 - the manifest-to-task propagation of the security implementation-audit policy
   is an explicit contract, and the policy is enforced by `accept_task`
+- the existing CLI routing surfaces (`parsers.py` and
+  `dispatch_contracts.py`) are explicitly owned where the profile is exposed
+- review evidence has declared assignment, verification, audit and acceptance
+  artifact paths with machine-readable `independentEvidenceIds`
 
 ## Independent review focus
 
