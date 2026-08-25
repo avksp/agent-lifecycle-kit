@@ -1,0 +1,10 @@
+# Acceptance criteria
+
+| ID | Requirement | Evidence | Deterministic acceptance |
+| --- | --- | --- | --- |
+| `AC93-PROFILE` | `R93-PROFILE` | `EV93-PROFILE` | The profile reuses existing workflow authority, remains read-only until an approved remediation task starts, and materializes `extensions.securityAnalysis.implementationAudit` into every adopted task. A task marked high severity cannot be accepted without the configured verification gate. |
+| `AC93-FINDINGS` | `R93-FINDINGS` | `EV93-FINDINGS` | Imported findings remain untrusted evidence until validated and linked to the current source. |
+| `AC93-EXECUTION` | `R93-EXECUTION` | `EV93-EXECUTION` | Potentially harmful execution cannot begin from an imported finding or profile alone; explicit plan opt-in, sandbox evidence and bounded authorization are required. |
+| `AC93-REVIEW` | `R93-REVIEW` | `EV93-REVIEW` | At the real `workflow.task_outcomes.apply_task_review_outcome` -> `workflow.task_transitions.accept_task` boundary, implementer-only evidence is rejected for high-severity remediation with `security-analysis-verification-required`; a fresh assignment with matching run/task/plan/source lineage and an independent reviewer identity is required. The negative and positive cases must exercise the adopted task, not only a helper gate. |
+| `AC93-DOCUMENTATION` | `R93-DOCUMENTATION` | `EV93-DOCUMENTATION` | Users can run investigation and remediation without confusing advisory findings with confirmed vulnerabilities. |
+| `AC93-ACTIVATION` | `R93-ACTIVATION` | `EV93-ACTIVATION` | The profile remains optional and has no effect on ordinary task routing. At the exact release candidate, `tests/conformance/test_synthetic_conformance.py` must execute every step in `fixtures/synthetic/s2-security-01.json` through the deterministic no-live runner and write `work/release-2-4/evidence/activation/complete-profile.json`; each step must match its expected fail-closed outcome, with zero model, network or host-process invocations. |

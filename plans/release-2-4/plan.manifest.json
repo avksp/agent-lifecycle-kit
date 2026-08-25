@@ -1,0 +1,408 @@
+{
+  "schemaVersion": "agent-plan-manifest.v1",
+  "status": "DRAFT",
+  "planRevision": 6,
+  "package": {
+    "id": "release-2-4",
+    "title": "Optional security analysis profile",
+    "workspaceRoot": ".",
+    "artifactRoot": "tasks/release-2-4",
+    "root": ".",
+    "planArtifactRoot": "plans/release-2-4"
+  },
+  "planFiles": [
+    "plans/release-2-4/00-developer-overview.md",
+    "plans/release-2-4/README.md",
+    "plans/release-2-4/acceptance-criteria.md",
+    "plans/release-2-4/evidence-plan.md",
+    "plans/release-2-4/activation-evidence.md",
+    "plans/release-2-4/plan-review.md",
+    "plans/release-2-4/plan.manifest.json",
+    "plans/release-2-4/release-notes.en.md",
+    "plans/release-2-4/write-set.md"
+  ],
+  "packageIntegrity": {
+    "required": true,
+    "lockSchemaVersion": "agent-plan-lock.v2",
+    "inventorySource": "planFiles",
+    "undeclaredTopLevelFiles": "reject",
+    "allowedUnlistedFiles": [
+      "plan.lock.json",
+      "independent-s2-audit.md",
+      "activation-evidence.md"
+    ]
+  },
+  "author": "codex-planner",
+  "baseRevision": {
+    "ref": "main",
+    "sha": "7d4eb79e53821d2bd2f3766f2d6fb3610e408149"
+  },
+  "dependsOn": [
+    "release-2-3"
+  ],
+  "releaseTarget": {
+    "targetVersion": "2.4.0",
+    "targetTag": "v2.4.0",
+    "requiresPublicationValidation": true
+  },
+  "developerOverview": "plans/release-2-4/00-developer-overview.md",
+  "specification": {
+    "tier": "S2",
+    "intent": "to-be",
+    "status": "DRAFT",
+    "source": "plans/release-2-4/README.md",
+    "requirements": [
+      {
+        "id": "R93-PROFILE",
+        "description": "Define an optional security analysis profile with threat model, suspected finding, exploitability evidence, deduplication, remediation and verification stages."
+      },
+      {
+        "id": "R93-FINDINGS",
+        "description": "Define normalized security finding and SARIF mapping with stable IDs, severity, confidence, source revision and redacted locations."
+      },
+      {
+        "id": "R93-EXECUTION",
+        "description": "Require explicit plan opt-in, sandbox and budgets for any active reproduction; safe static or synthetic evidence remains the default."
+      },
+      {
+        "id": "R93-REVIEW",
+        "description": "Require a separate verification assignment for accepted high-severity remediation and preserve failed or disputed evidence."
+      },
+      {
+        "id": "R93-DOCUMENTATION",
+        "description": "Document safe security analysis in English and Russian, including authorization and disclosure boundaries."
+      },
+      {
+        "id": "R93-ACTIVATION",
+        "description": "Preserve the accepted mandatory baseline through Release 2.0, reconcile any separately accepted candidate releases, and require a safe end-to-end security fixture before freeze."
+      }
+    ],
+    "tierResolutionRequest": {
+      "taskCount": 3,
+      "executableOwners": [
+        "contract-worker",
+        "integration-worker",
+        "release-worker"
+      ],
+      "capabilityHints": [],
+      "riskFlags": {
+        "architecture": true,
+        "security": true,
+        "performance": false,
+        "browser": false,
+        "externalEnvironment": true
+      },
+      "requirementsBytes": 15000,
+      "externalSpecification": true
+    }
+  },
+  "readOnly": [
+    "tasks/release-1-75",
+    "tasks/release-1-76",
+    "tasks/release-1-77",
+    "tasks/release-1-78",
+    "tasks/release-1-79",
+    "tasks/release-1-80",
+    "tasks/release-1-81",
+    "tasks/release-1-82",
+    "tasks/release-1-83",
+    "tasks/release-1-84",
+    "tasks/release-1-85",
+    "tasks/release-1-86",
+    "tasks/release-1-87",
+    "tasks/release-1-88",
+    "tasks/release-1-89",
+    "tasks/release-2-0",
+    "tasks/release-2-1",
+    "tasks/release-2-2",
+    "tasks/release-2-3"
+  ],
+  "forbiddenWrites": [
+    ".git",
+    ".alk",
+    ".claude/settings.local.json",
+    "LICENSE",
+    "NOTICE",
+    "tasks/analisys",
+    "tasks/analisys2",
+    "tasks/analisys3",
+    "tasks/analisys4",
+    "tasks/analisys5",
+    "tasks/analisys6",
+    "tasks/analisys7",
+    "tasks/analisys8",
+    "out"
+  ],
+  "leadOwned": [
+    {
+      "path": "plans/release-2-4",
+      "reason": "plan authority"
+    },
+    {
+      "path": "work/release-2-4",
+      "reason": "workflow, validation and audit evidence"
+    }
+  ],
+  "workstreams": [
+    {
+      "id": "WS93-01",
+      "title": "Core contracts and validation",
+      "owner": "contract-worker",
+      "dependsOn": [],
+      "acceptanceIds": [
+        "AC93-PROFILE",
+        "AC93-FINDINGS"
+      ],
+      "evidenceIds": [
+        "EV93-PROFILE",
+        "EV93-FINDINGS"
+      ],
+      "writes": [
+        "src/agent_lifecycle/contracts/security_analysis_schemas.py",
+        "src/agent_lifecycle/contracts/bug_forensics_schemas.py",
+        "src/agent_lifecycle/contracts/plan_manifest_schemas.py",
+        "src/agent_lifecycle/contracts/schemas.py",
+        "src/agent_lifecycle/quality/security_analysis.py",
+        "src/agent_lifecycle/audit/security_analysis.py",
+        "tests/contracts/test_security_analysis_schemas.py",
+        "tests/contracts/test_bug_forensics_schemas.py",
+        "tests/contracts/test_contracts.py",
+        "tests/contracts/test_plan_manifest_schemas.py",
+        "tests/quality/test_bug_forensics_profile.py",
+        "tests/quality/test_bug_forensics_recipes.py",
+        "tests/quality/test_security_analysis.py"
+      ]
+    },
+    {
+      "id": "WS93-02",
+      "title": "Integration and bounded scenarios",
+      "owner": "integration-worker",
+      "dependsOn": [
+        "WS93-01"
+      ],
+      "acceptanceIds": [
+        "AC93-EXECUTION",
+        "AC93-REVIEW"
+      ],
+      "evidenceIds": [
+        "EV93-EXECUTION",
+        "EV93-REVIEW"
+      ],
+      "writes": [
+        "src/agent_lifecycle/quality/bug_forensics.py",
+        "src/agent_lifecycle/workflow/bug_forensics_gates.py",
+        "src/agent_lifecycle/workflow/implementation_audit_gate.py",
+        "src/agent_lifecycle/workflow/plan_adoption.py",
+        "src/agent_lifecycle/workflow/task_transitions.py",
+        "src/agent_lifecycle/review_mesh/assignments.py",
+        "src/agent_lifecycle/imports/security_findings.py",
+        "src/agent_lifecycle/cli/observability_parsers.py",
+        "src/agent_lifecycle/cli/dispatch_observability.py",
+        "tests/workflow/test_security_analysis_profile.py",
+        "tests/workflow/test_bug_forensics_gates.py",
+        "tests/workflow/test_plan_adoption.py",
+        "tests/workflow/test_plan_adoption_runtime_contract.py",
+        "tests/workflow/test_task_acceptance_audit_gate.py",
+        "tests/review_mesh/test_assignments.py",
+        "tests/review_mesh/test_independent_evidence.py",
+        "tests/imports/test_security_findings.py",
+        "tests/cli/test_security_analysis_commands.py",
+        "tests/cli/test_quality_observability_commands.py"
+      ]
+    },
+    {
+      "id": "WS93-03",
+      "title": "Activation evidence, bilingual documentation and publication",
+      "owner": "release-worker",
+      "dependsOn": [
+        "WS93-02"
+      ],
+      "acceptanceIds": [
+        "AC93-DOCUMENTATION",
+        "AC93-ACTIVATION"
+      ],
+      "evidenceIds": [
+        "EV93-DOCUMENTATION",
+        "EV93-ACTIVATION"
+      ],
+      "writes": [
+        "docs/reference/security-analysis-profile.md",
+        "docs/ru/reference/security-analysis-profile.md",
+        "README.md",
+        "docs/README.md",
+        "docs/ru/README.md",
+        "docs/reference/cli.md",
+        "docs/ru/reference/cli.md",
+        "docs/guides/install-and-first-run.md",
+        "docs/ru/guides/install-and-first-run.md",
+        "CHANGELOG.md",
+        "tasks/release-roadmap.md",
+        "pyproject.toml",
+        "uv.lock",
+        "src/agent_lifecycle/_version.py",
+        ".agents/plugins/marketplace.json",
+        ".codex-plugin/plugin.json",
+        ".claude-plugin/plugin.json",
+        ".claude-plugin/marketplace.json",
+        ".cursor-plugin/plugin.json",
+        ".cursor-plugin/marketplace.json",
+        "adapters/claude/.claude-plugin/plugin.json",
+        "adapters/codex/.codex-plugin/plugin.json",
+        "adapters/cursor/.cursor-plugin/plugin.json",
+        "tools/release/validate_docs_compat.py",
+        "tests/release/test_docs_gates.py",
+        "tools/release/publication_contract.py",
+        "tests/release/test_publication_versions.py",
+        "tests/release/test_publication_adoption.py",
+        "tests/conformance/test_synthetic_conformance.py",
+        "fixtures/synthetic/s2-security-01.json",
+        "conformance/fixtures.index.json"
+      ]
+    }
+  ],
+  "acceptance": {
+    "criteria": [
+      {
+        "id": "AC93-PROFILE",
+        "requirementIds": [
+          "R93-PROFILE"
+        ],
+        "evidenceIds": [
+          "EV93-PROFILE"
+        ]
+      },
+      {
+        "id": "AC93-FINDINGS",
+        "requirementIds": [
+          "R93-FINDINGS"
+        ],
+        "evidenceIds": [
+          "EV93-FINDINGS"
+        ]
+      },
+      {
+        "id": "AC93-EXECUTION",
+        "requirementIds": [
+          "R93-EXECUTION"
+        ],
+        "evidenceIds": [
+          "EV93-EXECUTION"
+        ]
+      },
+      {
+        "id": "AC93-REVIEW",
+        "requirementIds": [
+          "R93-REVIEW"
+        ],
+        "evidenceIds": [
+          "EV93-REVIEW"
+        ]
+      },
+      {
+        "id": "AC93-DOCUMENTATION",
+        "requirementIds": [
+          "R93-DOCUMENTATION"
+        ],
+        "evidenceIds": [
+          "EV93-DOCUMENTATION"
+        ]
+      },
+      {
+        "id": "AC93-ACTIVATION",
+        "requirementIds": [
+          "R93-ACTIVATION"
+        ],
+        "evidenceIds": [
+          "EV93-ACTIVATION"
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "commands": [
+      "python3 -c 'import os; expected=os.environ.get(\"ALK_ACCEPTED_PREDECESSOR_SHA\"); actual=os.environ.get(\"ALK_RELEASE_BASE_SHA\"); raise SystemExit(0 if expected and actual == expected else \"set both SHAs to the latest accepted mandatory baseline rooted at Release 2.0 before freeze\")'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest tests.contracts.test_security_analysis_schemas tests.quality.test_security_analysis tests.workflow.test_security_analysis_profile tests.imports.test_security_findings tests.cli.test_security_analysis_commands -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -t . -v",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_module_dependencies.py --package-root src/agent_lifecycle --policy policy/architecture-dependencies.json --require-acyclic-modules --require-acyclic-packages --evidence work/release-2-4/evidence/module-dependencies.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_architecture_complexity.py --package-root src/agent_lifecycle --target-file-lines 800 --hard-file-lines 1200 --target-function-lines 80 --hard-function-lines 150 --hard-symbols 80 --evidence work/release-2-4/evidence/architecture-complexity.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_docs_compat.py --evidence work/release-2-4/evidence/docs-compat.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --report work/release-2-4/evidence/neutrality.json --require-zero-findings",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_versions.py --target-version 2.4.0 --target-ref v2.4.0 --evidence work/release-2-4/evidence/publication-versions.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_adoption.py --target-version 2.4.0 --evidence work/release-2-4/evidence/publication-adoption.json"
+    ],
+    "extraEvidence": [
+      "EV93-PROFILE",
+      "EV93-FINDINGS",
+      "EV93-EXECUTION",
+      "EV93-REVIEW",
+      "EV93-DOCUMENTATION",
+      "EV93-ACTIVATION"
+    ]
+  },
+  "orchestration": {
+    "startMode": "manual-after-freeze",
+    "remediationMode": "bounded-auto",
+    "maxPlanReviewRounds": 4,
+    "maxTaskAttempts": 3,
+    "maxParallelTasks": 1,
+    "maxValidationRunsPerTask": 10,
+    "maxToolCallsPerIteration": 18,
+    "maxUsageIterationsPerAttempt": 4,
+    "maxToolCallsPerTask": 130,
+    "maxToolCallsPerRun": 500,
+    "maxReportedTokensPerTask": 90000,
+    "maxReportedTokensPerRun": 300000,
+    "maxEvidenceArtifactBytes": 8388608,
+    "maxEvidenceBytesPerTask": 25165824,
+    "maxEvidenceBytesPerRun": 67108864,
+    "maxTaskWallSeconds": 10800,
+    "maxRunWallSeconds": 43200,
+    "maxContextBytes": 73728,
+    "maxRenderedPacketBytes": 106496,
+    "stateFile": "work/release-2-4/run.state.json",
+    "eventLog": "work/release-2-4/workflow-events.jsonl",
+    "stepReviewRequired": true,
+    "finalAuditRequired": true
+  },
+  "securityGates": [
+    "security investigation is read-only by default",
+    "active reproduction requires explicit frozen authorization and sandbox limits",
+    "imported findings cannot grant execution or write authority",
+    "high-severity remediation requires separate verification evidence"
+  ],
+  "budgetPolicy": {
+    "liveHostCallsAllowedByDefault": false,
+    "modelTokenBudgetForPlanValidation": 0,
+    "moneyFieldsCanonical": false,
+    "budgetUnits": "bounded-release-evidence",
+    "notes": "Optional functionality remains off unless the frozen plan activates it. No gate is weakened for acceptance. The sole maxTaskAttempts value is orchestration.maxTaskAttempts."
+  },
+  "contextLimits": {
+    "targetReviewerPacketTokens": 6000,
+    "maxReviewerPacketTokens": 12000,
+    "smallContextProfilesRequired": true,
+    "rawSourceFilesInReviewerPacket": false,
+    "notes": "Review packets contain bounded contracts, negative fixtures and activation evidence."
+  },
+  "extensions": {
+    "securityAnalysis": {
+      "profileId": "security-analysis.v1",
+      "activation": "read-only-by-default",
+      "implementationAudit": {
+        "required": true,
+        "minimumSeverity": "high",
+        "independentVerificationRequired": true,
+        "enforcedAt": "task-acceptance",
+        "propagation": "manifest-to-adopted-task"
+      }
+    }
+  },
+  "finalAuditGates": [
+    "[AC93-PROFILE|EV93-PROFILE] The profile reuses existing workflow authority, remains read-only until an approved remediation task starts, and cannot accept a high-severity remediation without the configured verification gate.",
+    "[AC93-FINDINGS|EV93-FINDINGS] Imported findings remain untrusted evidence until validated and linked to the current source.",
+    "[AC93-EXECUTION|EV93-EXECUTION] Potentially harmful execution cannot begin from an imported finding or profile alone; explicit plan opt-in, sandbox evidence and bounded authorization are required.",
+    "[AC93-REVIEW|EV93-REVIEW] At the real task-acceptance boundary, implementer-only evidence is rejected for high-severity remediation and a fresh, lineage-matched independent verification assignment is required.",
+    "[AC93-DOCUMENTATION|EV93-DOCUMENTATION] Users can run investigation and remediation without confusing advisory findings with confirmed vulnerabilities.",
+    "[AC93-ACTIVATION|EV93-ACTIVATION] The profile remains optional and has no effect on ordinary task routing."
+  ]
+}
