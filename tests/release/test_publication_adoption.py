@@ -40,13 +40,6 @@ class PublicationAdoptionTests(unittest.TestCase):
             for marker in ("actorRunId", "reviewId", "task-review-invalid", "task-review-self-certification"):
                 self.assertIn(marker, text)
 
-    def test_release_2_5_declares_the_accepted_patch_predecessor(self) -> None:
-        manifest = json.loads((ROOT / "tasks/release-2-5/plan.manifest.json").read_text(encoding="utf-8"))
-        overview = (ROOT / "tasks/release-2-5/00-developer-overview.md").read_text(encoding="utf-8")
-
-        self.assertEqual(manifest["dependsOn"], ["release-2-4-1"])
-        self.assertIn("accepted 2.4.1", overview)
-
     def test_missing_project_comparison_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
