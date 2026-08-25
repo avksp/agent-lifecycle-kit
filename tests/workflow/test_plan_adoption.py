@@ -13,7 +13,58 @@ try:
 except ImportError:
     from helpers import *  # noqa: F401,F403,E402
 
+from agent_lifecycle.workflow import run_workflow_step  # noqa: E402
+
+try:
+    from tests.planning.test_completeness import _manifest as _canonical_manifest
+except ImportError:
+    from planning.test_completeness import _manifest as _canonical_manifest
+
 class WorkflowPlanAdoptionTests(unittest.TestCase):
+    def test_run_and_adoption_share_traceability_completeness_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(
+                root,
+                phase="BLOCKED",
+                blocker={"code": "plan-drift", "reason": "x", "resumePhase": "RUNNING"},
+            )
+            manifest = _canonical_manifest()
+            manifest["workstreams"][0]["acceptanceIds"] = ["AC-02"]
+            manifest_path = root / "plan.manifest.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            before_state = state_path.read_bytes()
+
+            run_receipt = run_workflow_step(
+                state_path=state_path,
+                manifest_path=manifest_path,
+                operation_id="run-incomplete-plan",
+                expected_revision=1,
+                source_revision="source",
+            )
+            run_failure = next(
+                blocker for blocker in run_receipt["blockers"] if blocker["code"] == "plan-completeness-failed"
+            )
+
+            with self.assertRaises(LifecycleError) as raised:
+                adopt_plan(
+                    state_path,
+                    manifest_path=manifest_path,
+                    operation_id="adopt-incomplete-plan",
+                    expected_revision=1,
+                    source_revision="source-2",
+                    reset_tasks=True,
+                    start_mode="auto-after-freeze",
+                    authorized_by="tester",
+                )
+
+            run_codes = {item["code"] for item in run_failure["context"]["validation"]["blockers"]}
+            adoption_codes = {item["code"] for item in raised.exception.details["validation"]["blockers"]}
+            self.assertEqual(raised.exception.code, "plan-completeness-failed")
+            self.assertEqual(run_codes, adoption_codes)
+            self.assertEqual(run_codes, {"traceability-owner-count"})
+            self.assertEqual(state_path.read_bytes(), before_state)
+
     def test_adopt_plan_rejects_unknown_authority_before_state_write(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -24,7 +24,7 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertEqual(manifest["schemaVersion"], "agent-publication-manifest.v1")
         self.assertFalse(manifest["productionPromotionClaimed"])
         field_forms = {entry["fieldForm"] for entry in manifest["entries"]}
-        self.assertEqual(field_forms, {"version", "source.ref", "package.pin"})
+        self.assertEqual(field_forms, {"version", "source.ref", "package.pin", "changelog.version"})
         self.assertFalse(manifest["lastChannelPolicy"]["pluginVersionMayBeFloating"])
         self.assertEqual(manifest["lastChannelPolicy"]["allowedFloatingRef"], "source-ref-only")
 
@@ -47,6 +47,24 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertTrue(feature["readOnlyByDefault"])
         self.assertTrue(feature["independentHighSeverityVerification"])
         self.assertFalse(feature["automaticExecution"])
+
+    def test_publication_manifest_exposes_workflow_evidence_boundaries(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "workflow-evidence-validation"
+        ]
+        self.assertEqual(feature["status"], "REQUIRED")
+        self.assertTrue(feature["workerIdentityRequired"])
+        self.assertTrue(feature["reviewIdRequired"])
+        self.assertFalse(feature["historicalEvidenceRewritten"])
+
+    def test_publication_manifest_records_successor_adoption_boundary(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+
+        self.assertEqual(manifest["successorAdoption"]["packageId"], "release-2-5")
+        self.assertEqual(manifest["successorAdoption"]["requiredPredecessor"], "release-2-4-1")
+        self.assertFalse(manifest["successorAdoption"]["sourceTracked"])
+        self.assertTrue(manifest["successorAdoption"]["acceptedMergeRevisionRequiredBeforeFreeze"])
 
     def test_current_tree_publication_versions_match_target(self) -> None:
         result = validate_publication_tree(root=ROOT, target_version=TARGET_VERSION, target_ref=TARGET_REF)
@@ -98,6 +116,32 @@ class PublicationVersionTests(unittest.TestCase):
             result = validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)
             self.assertEqual(result["status"], "FAIL")
             self.assertIn("install-guide-package-pin", {item["entryId"] for item in result["blockers"]})
+
+    def test_secondary_stale_package_pin_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
+            path = root / "docs/guides/install-and-first-run.md"
+            path.write_text(
+                path.read_text(encoding="utf-8") + "agent-lifecycle-kit==1.29.1\n",
+                encoding="utf-8",
+            )
+
+            result = validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)
+
+            self.assertEqual(result["status"], "FAIL")
+            self.assertIn("install-guide-package-pin", {item["entryId"] for item in result["blockers"]})
+
+    def test_stale_changelog_release_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
+            (root / "CHANGELOG.md").write_text("## 1.29.1 - 2026-01-01\n", encoding="utf-8")
+
+            result = validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)
+
+            self.assertEqual(result["status"], "FAIL")
+            self.assertIn("changelog-release-version", {item["entryId"] for item in result["blockers"]})
 
     def test_publication_manifest_tracks_every_exact_package_pin(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
@@ -159,6 +203,7 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
         encoding="utf-8",
     )
     (root / "src/agent_lifecycle/_version.py").write_text(f'__version__ = "{version}"\n', encoding="utf-8")
+    (root / "CHANGELOG.md").write_text(f"## {version} - 2026-01-01\n", encoding="utf-8")
     for path in (
         ".codex-plugin/plugin.json",
         ".claude-plugin/plugin.json",
