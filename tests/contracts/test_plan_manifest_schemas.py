@@ -22,6 +22,16 @@ class PlanManifestSchemaTests(unittest.TestCase):
         self.assertFalse(schema["additionalProperties"])
         self.assertIn("validationDigest", schema["required"])
 
+    def test_plan_schema_required_arrays_are_valid_draft_2020_12_structure(self) -> None:
+        for schema_id in ("agent-plan-manifest.v1", "agent-plan-manifest-validation.v1"):
+            with self.subTest(schema_id=schema_id):
+                schema = get_schema(schema_id)
+                self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
+                self.assertEqual(schema["type"], "object")
+                self.assertEqual(len(schema["required"]), len(set(schema["required"])))
+                self.assertEqual(schema["required"].count("schemaVersion"), 1)
+                self.assertTrue(set(schema["required"]).issubset(schema["properties"]))
+
 
 if __name__ == "__main__":
     unittest.main()

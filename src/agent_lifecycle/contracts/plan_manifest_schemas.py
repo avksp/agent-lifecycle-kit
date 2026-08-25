@@ -35,7 +35,7 @@ _OBJECT = {"type": "object"}
 PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
     MANIFEST_SCHEMA: _closed_object_schema(
         MANIFEST_SCHEMA,
-        required=["schemaVersion", "status", "planRevision", "package"],
+        required=["status", "planRevision", "package"],
         properties={
             "status": {"enum": ["DRAFT", "REOPENED", "FROZEN"]},
             "planRevision": {"type": "integer", "minimum": 1},
@@ -80,7 +80,7 @@ PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     MANIFEST_VALIDATION_SCHEMA: _closed_object_schema(
         MANIFEST_VALIDATION_SCHEMA,
-        required=["schemaVersion", "status", "packageId", "planRevision", "blockers", "validationDigest"],
+        required=["status", "packageId", "planRevision", "blockers", "validationDigest"],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "packageId": {"type": ["string", "null"]},
