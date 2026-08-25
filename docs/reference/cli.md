@@ -28,8 +28,19 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.4.0
+  python -m pip install agent-lifecycle-kit==2.4.1
 ```
+
+## Task evidence identity
+
+Authoritative `workflow task-result`, `task-accept`, `task-rework` and
+`task-review-apply` routes fail closed unless the result declares non-empty
+`actor` and `actorRunId` values and the review declares a non-empty `reviewId`.
+The reviewer id and reviewer run id must remain distinct from the worker
+identity. Invalid evidence returns a typed `task-result-invalid`,
+`task-review-invalid` or `task-review-self-certification` error before workflow
+state or event-log bytes change. Historical evidence remains readable but
+cannot bypass current acceptance.
 
 ## Error and resource contracts
 

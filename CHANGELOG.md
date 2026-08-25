@@ -4,6 +4,17 @@
 
 - No changes yet.
 
+## 2.4.1 - 2026-08-26
+
+- Required non-empty task-result worker identity before every authoritative
+  acceptance, rework, contract-change or blocked review outcome.
+- Required `reviewId` before workflow mutation and kept worker/reviewer
+  separation fail closed at service and CLI boundaries.
+- Removed duplicate `schemaVersion` entries from both public plan-manifest
+  schema `required` arrays and added a registry-wide uniqueness regression.
+- Added shared completeness evidence for plan check, plan verification,
+  workflow run and plan adoption without weakening lock or quorum gates.
+
 ## 2.4.0 - 2026-08-25
 
 - Added an optional, provider-neutral security analysis profile with bounded
