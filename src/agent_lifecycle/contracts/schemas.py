@@ -75,6 +75,7 @@ from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHE
 from agent_lifecycle.contracts.runner_worktree_schemas import WORKTREE_SUPPORT_SCHEMAS
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.schema_builders import open_object_schema
+from agent_lifecycle.contracts.security_analysis_schemas import SECURITY_ANALYSIS_SCHEMAS
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
 from agent_lifecycle.contracts.structured_result_schemas import STRUCTURED_RESULT_SCHEMAS
 from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
@@ -729,6 +730,7 @@ _SCHEMA_GROUPS = (
     WORKFLOW_AUTHORIZATION_SCHEMAS,
     WORKFLOW_STATE_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
+    SECURITY_ANALYSIS_SCHEMAS,
     CROSS_CHECK_SCHEMAS,
     DOMAIN_LANGUAGE_SCHEMAS,
     REVIEW_MESH_SCHEMAS,

@@ -9,6 +9,7 @@ from agent_lifecycle.contracts.independent_evidence_schemas import (
 )
 from agent_lifecycle.review_mesh.assignments import (
     build_review_mesh_assignment_packet,
+    build_security_verification_assignment_packet,
     source_from_handoff,
     source_from_intake,
     source_from_manifest,
@@ -65,6 +66,7 @@ __all__ = [
     "build_review_mesh_recommendation",
     "build_review_mesh_result",
     "build_review_mesh_synthesis",
+    "build_security_verification_assignment_packet",
     "build_thread_context_review_input",
     "get_review_mesh_operator_template",
     "import_review_mesh_result",

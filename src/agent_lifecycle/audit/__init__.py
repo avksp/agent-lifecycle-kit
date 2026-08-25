@@ -44,6 +44,12 @@ from agent_lifecycle.audit.review_verdict import (
     require_review_verdict_pass,
     validate_review_verdict,
 )
+from agent_lifecycle.audit.security_analysis import (
+    build_security_analysis_audit,
+    build_security_verification_assignment,
+    validate_security_analysis_audit,
+    validate_security_verification_assignment,
+)
 
 __all__ = [
     "build_bug_forensics_audit",
@@ -58,6 +64,8 @@ __all__ = [
     "build_proof_integrity_receipt",
     "build_receipt_hash_chain",
     "build_root_cause_evidence",
+    "build_security_analysis_audit",
+    "build_security_verification_assignment",
     "compact_review_routing",
     "finding_identity_fields",
     "require_bug_forensics_audit_pass",
@@ -78,4 +86,6 @@ __all__ = [
     "validate_receipt_hash_chain",
     "validate_review_verdict",
     "validate_root_cause_evidence",
+    "validate_security_analysis_audit",
+    "validate_security_verification_assignment",
 ]

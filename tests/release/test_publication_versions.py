@@ -14,7 +14,6 @@ sys.path.insert(0, str(TOOLS_RELEASE))
 
 from publication_contract import build_publication_manifest, validate_publication_tree  # noqa: E402
 
-
 TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 TARGET_REF = f"v{TARGET_VERSION}"
 
@@ -40,6 +39,14 @@ class PublicationVersionTests(unittest.TestCase):
         features = {item["id"]: item for item in manifest["documentedFeatures"]}
         self.assertTrue(features["optional-multi-run-attention-view"]["readOnly"])
         self.assertFalse(features["optional-multi-run-attention-view"]["automaticOverlapResolution"])
+
+    def test_publication_manifest_exposes_security_analysis_boundaries(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}["optional-security-analysis-profile"]
+        self.assertEqual(feature["status"], "OPTIONAL")
+        self.assertTrue(feature["readOnlyByDefault"])
+        self.assertTrue(feature["independentHighSeverityVerification"])
+        self.assertFalse(feature["automaticExecution"])
 
     def test_current_tree_publication_versions_match_target(self) -> None:
         result = validate_publication_tree(root=ROOT, target_version=TARGET_VERSION, target_ref=TARGET_REF)

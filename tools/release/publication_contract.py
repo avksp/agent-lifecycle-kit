@@ -37,6 +37,16 @@ MULTI_RUN_DOCUMENTATION: dict[str, Any] = {
     "automaticOverlapResolution": False,
 }
 
+SECURITY_ANALYSIS_DOCUMENTATION: dict[str, Any] = {
+    "id": "optional-security-analysis-profile",
+    "status": "OPTIONAL",
+    "englishPath": "docs/reference/security-analysis-profile.md",
+    "russianPath": "docs/ru/reference/security-analysis-profile.md",
+    "readOnlyByDefault": True,
+    "independentHighSeverityVerification": True,
+    "automaticExecution": False,
+}
+
 PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     {
         "id": "pyproject-version",
@@ -212,6 +222,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             LIFECYCLE_CONTROL_DOCUMENTATION,
             DOMAIN_LANGUAGE_DOCUMENTATION,
             MULTI_RUN_DOCUMENTATION,
+            SECURITY_ANALYSIS_DOCUMENTATION,
         ],
         "lastChannelPolicy": LAST_CHANNEL_POLICY,
         "productionPromotionClaimed": False,

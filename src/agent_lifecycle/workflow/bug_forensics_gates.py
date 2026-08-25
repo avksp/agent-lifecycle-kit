@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_lifecycle.contracts.proof_validation import validate_fix_impact_receipt
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.proof_validation import validate_fix_impact_receipt
 from agent_lifecycle.quality.bug_forensics import (
     build_bug_forensics_profile,
     validate_bug_forensics_profile,
@@ -18,6 +18,13 @@ from agent_lifecycle.quality.cross_check import validate_cross_check_receipt
 from agent_lifecycle.quality.failure_classification import (
     HIGH_RISK_FAILURE_CLASSES,
     validate_failure_classification_receipt,
+)
+from agent_lifecycle.quality.security_analysis import (
+    build_security_analysis_profile,
+    build_security_execution_gate_receipt,
+    security_analysis_activated,
+    validate_security_analysis_profile,
+    validate_security_execution_gate_receipt,
 )
 
 BUG_FORENSICS_GATE_RECEIPT_SCHEMA = "agent-bug-forensics-gate-receipt.v1"
@@ -50,6 +57,8 @@ def build_bug_forensics_gate_receipt(
     regression_proof: dict[str, Any] | None = None,
     fix_impact_receipt: dict[str, Any] | None = None,
     cross_check_receipt: dict[str, Any] | None = None,
+    security_profile: dict[str, Any] | None = None,
+    security_execution_receipt: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a gate receipt for an optional bug-forensics run."""
 
@@ -78,6 +87,27 @@ def build_bug_forensics_gate_receipt(
         )
         status = "PASS" if not blockers else "FAIL"
 
+    security_evidence: dict[str, Any] | None = None
+    if security_analysis_activated(task):
+        selected_security_profile = security_profile or build_security_analysis_profile()
+        profile_validation = validate_security_analysis_profile(selected_security_profile)
+        security_evidence = {"profile": profile_validation}
+        if profile_validation.get("status") != "PASS":
+            blockers.append({"code": "security-analysis-profile-invalid", "validation": profile_validation})
+        if security_execution_receipt is not None:
+            execution_validation = validate_security_execution_gate_receipt(security_execution_receipt)
+            security_evidence["execution"] = execution_validation
+            if execution_validation.get("status") != "PASS":
+                blockers.append(
+                    {"code": "security-analysis-execution-gate-invalid", "validation": execution_validation}
+                )
+        elif isinstance(task.get("securityAnalysis"), dict) and task["securityAnalysis"].get("explicitOptIn") is True:
+            security_execution_receipt = build_security_execution_gate_receipt(task=task)
+            security_evidence["execution"] = validate_security_execution_gate_receipt(security_execution_receipt)
+            blockers.append({"code": "security-analysis-execution-authorization-required"})
+        if blockers:
+            status = "FAIL"
+
     evidence = {
         "reproduction": _digest_ref(reproduction_receipt, "receiptDigest"),
         "failureFingerprint": _digest_ref(failure_fingerprint, "fingerprintDigest"),
@@ -87,6 +117,7 @@ def build_bug_forensics_gate_receipt(
         "regressionProof": _digest_ref(regression_proof, "proofDigest"),
         "fixImpact": _digest_ref(fix_impact_receipt, "impactDigest"),
         "crossCheck": _digest_ref(cross_check_receipt, "receiptDigest"),
+        "securityAnalysis": security_evidence,
         "validations": validations,
     }
     body = {
@@ -125,7 +156,9 @@ def validate_bug_forensics_gate_receipt(receipt: dict[str, Any]) -> dict[str, An
         blockers.append({"code": "bug-forensics-gate-skipped-while-activated"})
     if not isinstance(receipt.get("evidence"), dict):
         blockers.append({"code": "bug-forensics-gate-evidence-invalid"})
-    if not isinstance(receipt.get("blockers"), list) or not all(isinstance(item, dict) for item in receipt.get("blockers", [])):
+    if not isinstance(receipt.get("blockers"), list) or not all(
+        isinstance(item, dict) for item in receipt.get("blockers", [])
+    ):
         blockers.append({"code": "bug-forensics-gate-blockers-invalid"})
     if receipt.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "bug-forensics-gate-production-claim"})
@@ -146,7 +179,9 @@ def validate_bug_forensics_gate_receipt(receipt: dict[str, Any]) -> dict[str, An
 
 def require_bug_forensics_gate_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("gateStatus") not in {"PASS", "SKIPPED"}:
-        raise LifecycleError("bug-forensics-gate-validation-failed", "bug-forensics gate did not pass", {"validation": validation})
+        raise LifecycleError(
+            "bug-forensics-gate-validation-failed", "bug-forensics gate did not pass", {"validation": validation}
+        )
     return validation
 
 
@@ -168,7 +203,12 @@ def _collect_active_gate_blockers(
         ("reproduction", reproduction_receipt, validate_bug_reproduction_receipt, "bug-forensics-reproduction-missing"),
         ("failureFingerprint", failure_fingerprint, validate_failure_fingerprint, "bug-forensics-fingerprint-missing"),
         ("hypothesisLedger", hypothesis_ledger, validate_hypothesis_ledger, "bug-forensics-hypothesis-ledger-missing"),
-        ("regressionProof", regression_proof, validate_regression_proof_receipt, "bug-forensics-regression-proof-missing"),
+        (
+            "regressionProof",
+            regression_proof,
+            validate_regression_proof_receipt,
+            "bug-forensics-regression-proof-missing",
+        ),
     ]:
         if value is None:
             blockers.append({"code": missing_code})
@@ -220,9 +260,7 @@ def _cross_check_required(task: dict[str, Any], failure_classification: dict[str
     config = task.get("bugForensics")
     if isinstance(config, dict) and config.get("crossCheckRequired") is True:
         return True
-    if _high_risk_classification(task, failure_classification):
-        return True
-    return False
+    return _high_risk_classification(task, failure_classification)
 
 
 def _classification_required(task: dict[str, Any]) -> bool:
@@ -238,7 +276,13 @@ def _high_risk_classification(task: dict[str, Any], failure_classification: dict
     if failure_classification.get("failureClass") not in HIGH_RISK_FAILURE_CLASSES:
         return False
     risks = task.get("riskFlags", {})
-    active_security = bool(risks.get("security")) if isinstance(risks, dict) else "security" in risks if isinstance(risks, list) else False
+    active_security = (
+        bool(risks.get("security"))
+        if isinstance(risks, dict)
+        else "security" in risks
+        if isinstance(risks, list)
+        else False
+    )
     return task.get("sddTier") == "S2" or active_security
 
 
@@ -277,8 +321,8 @@ def _validate_flake_signal(value: dict[str, Any]) -> dict[str, Any]:
 
 __all__ = [
     "BUG_FORENSICS_GATE_RECEIPT_SCHEMA",
-    "build_bug_forensics_gate_receipt",
     "bug_forensics_activated",
+    "build_bug_forensics_gate_receipt",
     "require_bug_forensics_gate_pass",
     "validate_bug_forensics_gate_receipt",
 ]

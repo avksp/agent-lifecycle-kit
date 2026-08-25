@@ -2,10 +2,34 @@ from __future__ import annotations
 
 import unittest
 
-from agent_lifecycle.review_mesh import build_review_mesh_assignment_packet, source_from_intake, source_from_manifest
+from agent_lifecycle.review_mesh import (
+    build_review_mesh_assignment_packet,
+    build_security_verification_assignment_packet,
+    source_from_intake,
+    source_from_manifest,
+)
 
 
 class ReviewMeshAssignmentTests(unittest.TestCase):
+    def test_security_assignment_is_blocking_and_independent(self) -> None:
+        packet = build_security_verification_assignment_packet(
+            source={
+                "kind": "TASK",
+                "label": "WS-01",
+                "digest": "a" * 64,
+                "sourceRevision": "source-1",
+                "sourceLineageDigest": "b" * 64,
+                "primaryProducerClass": "implementer",
+                "primaryImplementationDigest": "c" * 64,
+            },
+            assignment_id="SEC-VERIFY-1",
+            reviewer_id="security-reviewer",
+            evidence_ids=["EV93-REVIEW"],
+        )
+        self.assertTrue(packet["assignment"]["blocking"])
+        self.assertTrue(packet["assignment"]["independenceRequirement"]["required"])
+        self.assertEqual(packet["securityAnalysis"]["authorityClaimed"], False)
+
     def test_assignment_packet_from_intake_is_host_owned_and_non_executing(self) -> None:
         source = source_from_intake(
             {

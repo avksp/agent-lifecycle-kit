@@ -35,6 +35,7 @@ from agent_lifecycle.host_protocol.thread_bridge import (
     prepare_thread_request,
     validate_thread_exchange,
 )
+from agent_lifecycle.imports.security_findings import import_security_findings
 from agent_lifecycle.metrics import (
     build_lifecycle_cost_summary,
     build_lifecycle_recommendation_summary,
@@ -67,6 +68,7 @@ from agent_lifecycle.policy.proposals import (
     build_optimization_proposal,
     require_optimization_proposal_pass,
 )
+from agent_lifecycle.quality.security_analysis import build_security_analysis_profile
 from agent_lifecycle.reporting import (
     build_change_summary_receipt,
     build_lifecycle_progress_view,
@@ -151,6 +153,31 @@ def _dispatch_thread(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_report(args: argparse.Namespace) -> dict[str, Any] | str:
+    if args.report_command == "security-analysis":
+        findings = []
+        imports = []
+        for item in args.finding:
+            imported = import_security_findings(
+                Path(item),
+                source_revision=args.source_revision,
+                expected_source_revision=args.expected_source_revision,
+            )
+            imports.append(imported)
+            findings.extend(imported.get("findings", []))
+        payload = {
+            "schemaVersion": "agent-security-analysis-report.v1",
+            "status": "PASS" if all(item.get("status") == "PASS" for item in imports) else "FAIL",
+            "profile": build_security_analysis_profile() if args.profile else None,
+            "imports": imports,
+            "findings": findings,
+            "trusted": False,
+            "authorityClaimed": False,
+            "productionPromotionClaimed": False,
+        }
+        payload["reportDigest"] = canonical_digest(payload)
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.report_command == "status-view":
         payload = build_status_view(
             project_root=Path(args.project_root),

@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.independent_evidence_schemas import (
+    build_independence_requirement,
     validate_independence_requirement,
 )
 from agent_lifecycle.contracts.thread_bridge_schemas import validate_thread_context_import
@@ -89,6 +90,52 @@ def build_review_mesh_assignment_packet(
         "productionPromotionClaimed": False,
     }
     return {**packet_body, "packetDigest": canonical_digest(packet_body)}
+
+
+def build_security_verification_assignment_packet(
+    *,
+    source: dict[str, Any],
+    assignment_id: str,
+    phase: str = "implementation-verification",
+    reviewer_id: str,
+    reviewer_role: str = "security-verifier",
+    reviewer_model_class: str = DEFAULT_REVIEWER_MODEL_CLASS,
+    evidence_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Prepare a blocking security verification packet with explicit independence."""
+
+    requirement = build_independence_requirement(
+        required=True,
+        required_dimensions=["producer", "implementation", "source"],
+        allowed_methods=["deterministic-check", "human-review"],
+        prohibited_producer_classes=["implementer", "primary-implementer"],
+        source_policy="exact-revision",
+    )
+    packet = build_review_mesh_assignment_packet(
+        source=source,
+        mode="implementation-audit-panel",
+        phase=phase,
+        assignment_id=assignment_id,
+        reviewer_id=reviewer_id,
+        reviewer_role=reviewer_role,
+        reviewer_model_class=reviewer_model_class,
+        blocking=True,
+        evidence_ids=evidence_ids or [],
+        independence_requirement=requirement,
+        reviewer_producer_class="independent-reviewer",
+    )
+    body = {
+        **packet,
+        "securityAnalysis": {
+            "profileId": "security-analysis.v1",
+            "independentVerificationRequired": True,
+            "authorityClaimed": False,
+        },
+    }
+    return {
+        **body,
+        "packetDigest": canonical_digest({key: value for key, value in body.items() if key != "packetDigest"}),
+    }
 
 
 def source_from_manifest(manifest: dict[str, Any]) -> dict[str, Any]:

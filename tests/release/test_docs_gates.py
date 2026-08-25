@@ -41,6 +41,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/project-workflow-profile.md",
             "docs/reference/project-domain-language.md",
             "docs/reference/external-verification-checks.md",
+            "docs/reference/security-analysis-profile.md",
             "docs/reference/public-locators-and-redaction.md",
             "docs/reference/source-of-truth.md",
         ):
@@ -50,7 +51,9 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("reference/cli.md", russian)
         self.assertIn("reference/project-workflow-profile.md", russian)
         self.assertIn("reference/external-verification-checks.md", russian)
+        self.assertIn("reference/security-analysis-profile.md", russian)
         self.assertIn("docs/reference/external-verification-checks.md", english)
+        self.assertIn("docs/reference/security-analysis-profile.md", english)
         for adapter in ("Goose", "Grok Build", "OpenInterpreter", "Pi"):
             self.assertIn(adapter, english)
             self.assertIn(adapter, russian)
@@ -72,6 +75,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/project-workflow-profile.md",
             "docs/reference/project-domain-language.md",
             "docs/reference/external-verification-checks.md",
+            "docs/reference/security-analysis-profile.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
             "docs/ru/architecture/system-architecture.md",
@@ -85,6 +89,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/project-workflow-profile.md",
             "docs/ru/reference/project-domain-language.md",
             "docs/ru/reference/external-verification-checks.md",
+            "docs/ru/reference/security-analysis-profile.md",
             "docs/ru/reference/public-locators-and-redaction.md",
             "docs/ru/guides/production-resource-security.md",
             "docs/ru/guides/reference-task-evaluation.md",
@@ -539,6 +544,17 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertNotIn("oracle", english.lower())
         self.assertNotIn("oracle", russian.lower())
 
+    def test_security_analysis_docs_preserve_untrusted_and_independent_boundaries(self) -> None:
+        english = (ROOT / "docs/reference/security-analysis-profile.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/security-analysis-profile.md").read_text(encoding="utf-8")
+        for text in (english, russian):
+            self.assertIn("trusted: false", text)
+            self.assertIn("authorityClaimed: false", text)
+            self.assertIn("security-analysis-verification-required", text)
+            self.assertNotIn("oracle", text.lower())
+        self.assertIn("host-process calls are disabled", english)
+        self.assertIn("вызовы модели, сети и процессов хоста по умолчанию запрещены", russian)
+
     def test_security_docs_describe_blocked_launch_and_fail_closed_receipts(self) -> None:
         managed_sessions = [
             ROOT / "docs/reference/managed-adapter-sessions.md",
@@ -915,6 +931,13 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "declared-dependencies. UNAVAILABLE. authorityClaimed. без оболочки. "
         "Сырые stdout и stderr не сохраняются. снимок исходного дерева. зафиксированный план.\n",
     )
+    security_analysis = (
+        "agent-lifecycle quality security-profile. agent-lifecycle import security-findings. "
+        "trusted: false. authorityClaimed: false. security-analysis-verification-required. "
+        "host-process calls are disabled. вызовы модели, сети и процессов хоста по умолчанию запрещены.\n"
+    )
+    _write_text(root / "docs/reference/security-analysis-profile.md", security_analysis)
+    _write_text(root / "docs/ru/reference/security-analysis-profile.md", security_analysis)
     architecture = (
         "project workflow profile. project/profile.py. agent-guided-action-receipt.v1. "
         "Project workflow profile. профиль рабочего процесса проекта. Профиль рабочего процесса проекта.\n"
