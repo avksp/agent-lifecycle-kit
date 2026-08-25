@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "agent-plan-manifest.v1",
+  "status": "FROZEN",
+  "planRevision": 3,
+  "package": {
+    "id": "release-2-4-1",
+    "title": "Workflow evidence validation",
+    "workspaceRoot": ".",
+    "artifactRoot": "tasks/release-2-4/patches/2.4.1-workflow-evidence-validation",
+    "root": ".",
+    "planArtifactRoot": "plans/release-2-4-1"
+  },
+  "planFiles": [
+    "plans/release-2-4-1/00-developer-overview.md",
+    "plans/release-2-4-1/README.md",
+    "plans/release-2-4-1/acceptance-criteria.md",
+    "plans/release-2-4-1/evidence-plan.md",
+    "plans/release-2-4-1/plan-review.md",
+    "plans/release-2-4-1/plan.manifest.json",
+    "plans/release-2-4-1/release-notes.en.md",
+    "plans/release-2-4-1/write-set.md"
+  ],
+  "packageIntegrity": {
+    "required": true,
+    "lockSchemaVersion": "agent-plan-lock.v2",
+    "inventorySource": "planFiles",
+    "undeclaredTopLevelFiles": "reject",
+    "allowedUnlistedFiles": ["plan.lock.json", "independent-s2-audit.md"]
+  },
+  "author": "codex-planner",
+  "baseRevision": {"ref": "main", "sha": "0ee91734e988a086150f4368380a35ddac1ae4c8"},
+  "dependsOn": ["release-2-4"],
+  "releaseTarget": {"targetVersion": "2.4.1", "targetTag": "v2.4.1", "requiresPublicationValidation": true},
+  "developerOverview": "plans/release-2-4-1/00-developer-overview.md",
+  "specification": {
+    "tier": "S2",
+    "intent": "to-be",
+    "status": "FROZEN",
+    "source": "plans/release-2-4-1/README.md",
+    "requirements": [
+      {"id": "R241-IDENTITY", "description": "Require complete worker identity and fail closed for reviewer separation on every task outcome path."},
+      {"id": "R241-REVIEW", "description": "Require reviewId during validation before workflow state mutation."},
+      {"id": "R241-SCHEMAS", "description": "Restore valid plan-manifest schemas and prevent duplicate required entries registry-wide."},
+      {"id": "R241-CONSISTENCY", "description": "Preserve one plan completeness algorithm across plan and workflow surfaces."},
+      {"id": "R241-PUBLICATION", "description": "Publish 2.4.1 consistently and bind Release 2.5 to the accepted patch."}
+    ],
+    "tierResolutionRequest": {
+      "taskCount": 3,
+      "executableOwners": ["workflow-fix-worker", "schema-fix-worker", "patch-release-worker"],
+      "capabilityHints": [],
+      "riskFlags": {"architecture": false, "security": true, "performance": false, "browser": false, "externalEnvironment": false},
+      "requirementsBytes": 11000,
+      "externalSpecification": true
+    }
+  },
+  "readOnly": [
+    "tasks/release-1-75", "tasks/release-1-76", "tasks/release-1-77", "tasks/release-1-78", "tasks/release-1-79", "tasks/release-1-80",
+    "tasks/release-1-81", "tasks/release-1-82", "tasks/release-1-83", "tasks/release-1-84", "tasks/release-1-85", "tasks/release-1-86",
+    "tasks/release-1-87", "tasks/release-1-88", "tasks/release-1-89", "tasks/release-2-0", "tasks/release-2-1", "tasks/release-2-2",
+    "tasks/release-2-3", "tasks/release-2-4", "plans/release-2-4"
+  ],
+  "forbiddenWrites": [".git", ".alk", ".claude/settings.local.json", "LICENSE", "NOTICE", "tasks/analisys", "tasks/analisys8", "tasks/analisys9", "out"],
+  "leadOwned": [
+    {"path": "plans/release-2-4-1", "reason": "plan authority"},
+    {"path": "work/release-2-4-1", "reason": "workflow, validation and audit evidence"}
+  ],
+  "workstreams": [
+    {
+      "id": "WS241-01", "title": "Fail-closed workflow evidence", "owner": "workflow-fix-worker", "dependsOn": [],
+      "acceptanceIds": ["AC241-IDENTITY", "AC241-REVIEW"], "evidenceIds": ["EV241-IDENTITY", "EV241-REVIEW"],
+      "writes": [
+        "src/agent_lifecycle/workflow/reviews.py",
+        "tests/workflow/test_task_execution.py",
+        "tests/workflow/test_parallel_task_lifecycle.py",
+        "tests/workflow/test_task_acceptance_audit_gate.py"
+      ]
+    },
+    {
+      "id": "WS241-02", "title": "Plan schema and completeness regression", "owner": "schema-fix-worker", "dependsOn": [],
+      "acceptanceIds": ["AC241-SCHEMAS", "AC241-CONSISTENCY"], "evidenceIds": ["EV241-SCHEMAS", "EV241-CONSISTENCY"],
+      "writes": [
+        "src/agent_lifecycle/contracts/plan_manifest_schemas.py",
+        "tests/contracts/test_plan_manifest_schemas.py",
+        "tests/contracts/test_contracts.py",
+        "tests/cli/test_plan_completeness_commands.py",
+        "tests/workflow/test_plan_adoption.py"
+      ]
+    },
+    {
+      "id": "WS241-03", "title": "Publication and successor adoption", "owner": "patch-release-worker", "dependsOn": ["WS241-01", "WS241-02"],
+      "acceptanceIds": ["AC241-PUBLICATION"], "evidenceIds": ["EV241-PUBLICATION"],
+      "writes": [
+        "README.md", "docs/README.md", "docs/ru/README.md", "docs/reference/cli.md", "docs/ru/reference/cli.md",
+        "docs/guides/install-and-first-run.md", "docs/ru/guides/install-and-first-run.md", "CHANGELOG.md", "tasks/release-roadmap.md",
+        "tasks/release-2-5/README.md", "tasks/release-2-5/00-developer-overview.md", "tasks/release-2-5/plan-review.md", "tasks/release-2-5/plan.manifest.json",
+        "pyproject.toml", "uv.lock", "src/agent_lifecycle/_version.py", ".agents/plugins/marketplace.json", ".codex-plugin/plugin.json",
+        ".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", ".cursor-plugin/plugin.json", ".cursor-plugin/marketplace.json",
+        "adapters/claude/.claude-plugin/plugin.json", "adapters/codex/.codex-plugin/plugin.json", "adapters/cursor/.cursor-plugin/plugin.json",
+        "tools/release/validate_docs_compat.py", "tests/release/test_docs_gates.py", "tools/release/publication_contract.py",
+        "tests/release/test_publication_versions.py", "tests/release/test_publication_adoption.py"
+      ]
+    }
+  ],
+  "acceptance": {"criteria": [
+    {"id": "AC241-IDENTITY", "requirementIds": ["R241-IDENTITY"], "evidenceIds": ["EV241-IDENTITY"]},
+    {"id": "AC241-REVIEW", "requirementIds": ["R241-REVIEW"], "evidenceIds": ["EV241-REVIEW"]},
+    {"id": "AC241-SCHEMAS", "requirementIds": ["R241-SCHEMAS"], "evidenceIds": ["EV241-SCHEMAS"]},
+    {"id": "AC241-CONSISTENCY", "requirementIds": ["R241-CONSISTENCY"], "evidenceIds": ["EV241-CONSISTENCY"]},
+    {"id": "AC241-PUBLICATION", "requirementIds": ["R241-PUBLICATION"], "evidenceIds": ["EV241-PUBLICATION"]}
+  ]},
+  "validation": {
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest tests.workflow.test_task_execution tests.workflow.test_parallel_task_lifecycle tests.workflow.test_task_acceptance_audit_gate tests.contracts.test_plan_manifest_schemas tests.contracts.test_contracts tests.cli.test_plan_completeness_commands tests.workflow.test_plan_adoption -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -t . -v",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_module_dependencies.py --package-root src/agent_lifecycle --policy policy/architecture-dependencies.json --require-acyclic-modules --require-acyclic-packages --evidence work/release-2-4-1/evidence/module-dependencies.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_architecture_complexity.py --package-root src/agent_lifecycle --target-file-lines 800 --hard-file-lines 1200 --target-function-lines 80 --hard-function-lines 150 --hard-symbols 80 --evidence work/release-2-4-1/evidence/architecture-complexity.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_docs_compat.py --evidence work/release-2-4-1/evidence/docs-compat.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --report work/release-2-4-1/evidence/neutrality.json --require-zero-findings",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_versions.py --target-version 2.4.1 --target-ref v2.4.1 --evidence work/release-2-4-1/evidence/publication-versions.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_adoption.py --target-version 2.4.1 --evidence work/release-2-4-1/evidence/publication-adoption.json"
+    ],
+    "extraEvidence": ["EV241-IDENTITY", "EV241-REVIEW", "EV241-SCHEMAS", "EV241-CONSISTENCY", "EV241-PUBLICATION"]
+  },
+  "orchestration": {
+    "startMode": "manual-after-freeze", "remediationMode": "bounded-auto", "maxPlanReviewRounds": 4, "maxTaskAttempts": 3,
+    "maxParallelTasks": 2, "maxValidationRunsPerTask": 8, "maxToolCallsPerIteration": 16, "maxUsageIterationsPerAttempt": 3,
+    "maxToolCallsPerTask": 100, "maxToolCallsPerRun": 280, "maxReportedTokensPerTask": 70000, "maxReportedTokensPerRun": 180000,
+    "maxEvidenceArtifactBytes": 8388608, "maxEvidenceBytesPerTask": 16777216, "maxEvidenceBytesPerRun": 41943040,
+    "maxTaskWallSeconds": 7200, "maxRunWallSeconds": 21600, "maxContextBytes": 65536, "maxRenderedPacketBytes": 98304,
+    "stateFile": "work/release-2-4-1/run.state.json", "eventLog": "work/release-2-4-1/workflow-events.jsonl",
+    "stepReviewRequired": true, "finalAuditRequired": true
+  },
+  "securityGates": [
+    "missing worker identity fails closed before independent review",
+    "review validation completes before workflow state mutation",
+    "historical evidence remains read-only and cannot bypass current acceptance",
+    "no security, architecture or quality threshold is reduced"
+  ],
+  "budgetPolicy": {"liveHostCallsAllowedByDefault": false, "modelTokenBudgetForPlanValidation": 0, "moneyFieldsCanonical": false, "budgetUnits": "bounded-patch-evidence", "maxTaskAttempts": 8, "notes": "No gate may be weakened to obtain a passing result."},
+  "contextLimits": {"targetReviewerPacketTokens": 5000, "maxReviewerPacketTokens": 10000, "smallContextProfilesRequired": true, "rawSourceFilesInReviewerPacket": false, "notes": "Review packets contain bounded mutations and outcomes."},
+  "finalAuditGates": [
+    "[AC241-IDENTITY|EV241-IDENTITY] Worker identity and reviewer separation fail closed on every task outcome path.",
+    "[AC241-REVIEW|EV241-REVIEW] Missing reviewId is a typed pre-mutation failure.",
+    "[AC241-SCHEMAS|EV241-SCHEMAS] Every schema required array is unique.",
+    "[AC241-CONSISTENCY|EV241-CONSISTENCY] Plan and workflow surfaces share one completeness result.",
+    "[AC241-PUBLICATION|EV241-PUBLICATION] Patch metadata and the Release 2.5 predecessor are consistent."
+  ]
+}
