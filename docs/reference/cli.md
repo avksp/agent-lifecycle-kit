@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.3.0
+  python -m pip install agent-lifecycle-kit==2.4.0
 ```
 
 ## Error and resource contracts
@@ -73,6 +73,30 @@ are source-, configuration- and plan-bound, raw output is not retained, and a
 missing or incomplete analyzer returns `UNAVAILABLE`. The result has no
 authority to accept, freeze or promote anything. See [External verification
 checks](external-verification-checks.md).
+
+## Optional security analysis
+
+The security profile is disabled by default and keeps imported findings
+untrusted:
+
+```bash
+agent-lifecycle quality security-profile --out work/security-profile.json
+agent-lifecycle import security-findings \
+  --source findings.sarif \
+  --expected-source-revision <revision> \
+  --out work/security-findings.json
+agent-lifecycle quality security-finding-check \
+  --candidate work/security-findings.json \
+  --expected-source-revision <revision> \
+  --out work/security-findings-validation.json
+```
+
+Use `report security-analysis --finding <path> --profile` for a bounded
+read-only report. An imported finding or profile cannot start execution. A
+high-severity remediation requires a fresh independent verification assignment
+at task acceptance; implementer-only evidence is rejected with
+`security-analysis-verification-required`. See [Optional security analysis
+profile](security-analysis-profile.md).
 
 ## Performance and resource evidence
 

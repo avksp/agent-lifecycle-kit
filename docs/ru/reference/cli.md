@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.3.0
+python -m pip install agent-lifecycle-kit==2.4.0
 ```
 
 ## Контракты ошибок и ресурсов
@@ -71,6 +71,31 @@ agent-lifecycle quality external-check \
 конфигурацией и планом, сырой вывод не сохраняется, а отсутствующий или
 неполный анализатор возвращает `UNAVAILABLE`. Результат не может принять,
 заморозить или опубликовать что-либо. См. [внешние проверки проекта](external-verification-checks.md).
+
+## Необязательный анализ безопасности
+
+Профиль безопасности по умолчанию выключен, а импортированные находки остаются
+недоверенными:
+
+```bash
+agent-lifecycle quality security-profile --out work/security-profile.json
+agent-lifecycle import security-findings \
+  --source findings.sarif \
+  --expected-source-revision <revision> \
+  --out work/security-findings.json
+agent-lifecycle quality security-finding-check \
+  --candidate work/security-findings.json \
+  --expected-source-revision <revision> \
+  --out work/security-findings-validation.json
+```
+
+Для ограниченного отчёта только для чтения используйте `report
+security-analysis --finding <path> --profile`. Импортированная находка или
+профиль не могут начать выполнение. Для доработки высокой серьёзности на
+границе приёмки задачи требуется новое независимое назначение проверки;
+свидетельство только исполнителя отклоняется с кодом
+`security-analysis-verification-required`. См. [необязательный профиль анализа
+безопасности](security-analysis-profile.md).
 
 ## Производительность и подтверждения ресурсов
 

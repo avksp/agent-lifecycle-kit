@@ -13,6 +13,29 @@ except ImportError:
 
 
 class CliQualityObservabilityCommandTests(unittest.TestCase):
+    def test_security_profile_and_report_are_read_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "findings.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "sourceRevision": "source-1",
+                        "findings": [{"id": "SEC-1", "title": "issue", "severity": "LOW", "path": "src/a.py"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            code, profile = _run_cli(["quality", "security-profile"])
+            self.assertEqual(code, 0)
+            self.assertFalse(profile["enabledByDefault"])
+            code, report = _run_cli(
+                ["report", "security-analysis", "--finding", str(source), "--expected-source-revision", "source-1", "--profile"]
+            )
+            self.assertEqual(code, 0)
+            self.assertFalse(report["trusted"])
+            self.assertFalse(report["authorityClaimed"])
+
     def test_quality_pack_and_behavior_check_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

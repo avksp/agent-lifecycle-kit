@@ -227,3 +227,20 @@ network, host-process and out-of-evidence writes, the Git-visible plan root and
 the single retry budget.
 
 Independent verdict: `READY_FOR_FREEZE`.
+
+## Scope reconciliation: revision 9
+
+An implementation-to-write-set comparison found four required support surfaces
+that revision 8 had omitted: `src/agent_lifecycle/planning/manifest_contract.py`,
+`src/agent_lifecycle/audit/__init__.py`,
+`src/agent_lifecycle/quality/__init__.py` and
+`src/agent_lifecycle/review_mesh/__init__.py`. The additions do not introduce
+new authority or execution behavior; they validate the already declared
+`extensions.securityAnalysis` policy and expose the contracts used by the
+existing CLI and acceptance path. The manifest and write-set now assign these
+paths explicitly, and the lock must be regenerated at revision 9.
+
+The revision-9 package remains subject to the same independent S2 conditions:
+all declared files must be lock-bound, the adoption-to-acceptance bridge must
+remain fail-closed, and the complete activation fixture must stay offline with
+zero out-of-evidence writes.

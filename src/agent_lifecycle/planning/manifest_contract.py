@@ -329,7 +329,64 @@ def _validate_extensions(value: Any, blockers: list[dict[str, Any]]) -> None:
                 _blocker("plan-manifest-extension-namespace-invalid", "extensions keys must be advisory namespaces")
             )
             continue
+        if namespace == "securityAnalysis":
+            _validate_security_analysis_extension(payload, blockers)
         _reject_extension_authority(payload, f"extensions.{namespace}", blockers)
+
+
+def _validate_security_analysis_extension(value: Any, blockers: list[dict[str, Any]]) -> None:
+    """Validate the optional security policy without making it globally mandatory."""
+
+    path = "extensions.securityAnalysis"
+    if not isinstance(value, dict):
+        blockers.append(_blocker("security-analysis-extension-invalid", f"{path} must be an object"))
+        return
+    if value.get("profileId") != "security-analysis.v1":
+        blockers.append(
+            _blocker("security-analysis-extension-profile-invalid", "security analysis profileId is invalid")
+        )
+    if value.get("activation") not in {"read-only-by-default", "explicit-plan-opt-in"}:
+        blockers.append(
+            _blocker("security-analysis-extension-activation-invalid", "security analysis activation is invalid")
+        )
+    audit = value.get("implementationAudit")
+    if not isinstance(audit, dict):
+        blockers.append(_blocker("security-analysis-extension-audit-invalid", "implementationAudit is required"))
+    else:
+        if audit.get("required") is not True:
+            blockers.append(
+                _blocker("security-analysis-extension-audit-required", "implementationAudit.required must be true")
+            )
+        if str(audit.get("minimumSeverity", "")).upper() not in {"BLOCKER", "CRITICAL", "HIGH"}:
+            blockers.append(
+                _blocker(
+                    "security-analysis-extension-audit-threshold-invalid", "minimumSeverity must be high or stricter"
+                )
+            )
+        if audit.get("independentVerificationRequired") is not True:
+            blockers.append(
+                _blocker(
+                    "security-analysis-extension-independent-verification-required",
+                    "independent verification is required",
+                )
+            )
+        if audit.get("enforcedAt") != "task-acceptance":
+            blockers.append(
+                _blocker(
+                    "security-analysis-extension-boundary-invalid", "security audit must be enforced at task acceptance"
+                )
+            )
+        if audit.get("propagation") != "manifest-to-adopted-task":
+            blockers.append(
+                _blocker(
+                    "security-analysis-extension-propagation-invalid", "security policy must propagate to adopted tasks"
+                )
+            )
+    evidence = value.get("verificationEvidence")
+    if evidence is not None and not isinstance(evidence, dict):
+        blockers.append(
+            _blocker("security-analysis-extension-evidence-invalid", "verificationEvidence must be an object")
+        )
 
 
 def _reject_extension_authority(value: Any, path: str, blockers: list[dict[str, Any]]) -> None:

@@ -223,11 +223,11 @@ def _build_tasks(
 ) -> list[dict[str, Any]]:
     gates = manifest.get("controllerGates", {}).get("gates", [])
     tasks: list[dict[str, Any]] = []
+    security_analysis = _security_analysis_config(manifest)
     for workstream in manifest.get("workstreams", []):
         task_id = workstream["id"]
         depends_on = list(workstream.get("dependsOn", []))
-        tasks.append(
-            {
+        task = {
                 "id": task_id,
                 "title": workstream.get("title"),
                 "owner": workstream.get("owner"),
@@ -260,8 +260,31 @@ def _build_tasks(
                 "controllerGateReceipts": [],
                 "remediationFindingIds": [],
             }
-        )
+        if security_analysis is not None:
+            # Keep the extension advisory until the authoritative acceptance gate
+            # reads the copy materialized into this adopted task.
+            task["securityAnalysis"] = dict(security_analysis)
+            task["securityAnalysisProfile"] = security_analysis.get("profileId")
+            audit = security_analysis.get("implementationAudit")
+            if isinstance(audit, dict):
+                task["implementationAudit"] = dict(audit)
+        tasks.append(task)
     return tasks
+
+
+def _security_analysis_config(manifest: dict[str, Any]) -> dict[str, Any] | None:
+    extensions = manifest.get("extensions")
+    if not isinstance(extensions, dict):
+        return None
+    value = extensions.get("securityAnalysis")
+    if not isinstance(value, dict):
+        return None
+    return {
+        **value,
+        "enabled": True,
+        "authorityClaimed": False,
+        "trustedByDefault": False,
+    }
 
 
 def _preserve_accepted_tasks(

@@ -26,14 +26,14 @@
       "sha256": "94f406cbe5af9d1701512a2cbc254cad60463b70c9f784608cdec443d09b8fcc"
     },
     {
-      "bytes": 2522,
+      "bytes": 3306,
       "path": "plans/release-2-4/plan-review.md",
-      "sha256": "96f322de8e2ff8f47d760cb689e5536d237164b9806ed82e7e7ac1aecdb0b28c"
+      "sha256": "8b8d7ff64ac510da1655caf9297f579078969eb48609eca1e532542ad000492b"
     },
     {
-      "bytes": 15868,
+      "bytes": 16084,
       "path": "plans/release-2-4/plan.manifest.json",
-      "sha256": "d5a3db736f089d2c42feabfe454f6864611cb13060d7824cc834611198320524"
+      "sha256": "0c66a7ff0d04d39936e4e43017d66acdabc10366319c65429f4f92e2a996e32d"
     },
     {
       "bytes": 1027,
@@ -41,14 +41,14 @@
       "sha256": "423fd51540b2f651318e95ff4d3683b695a03a4d4b6d820b37f80b5c76d21d7c"
     },
     {
-      "bytes": 2999,
+      "bytes": 3187,
       "path": "plans/release-2-4/write-set.md",
-      "sha256": "0ee3f27c1a4274c24c10823f23e91380e5a735ba73783c984f01673c1f2ab73c"
+      "sha256": "970f3cc9921dee5387f6bf78226e4af05bac2cbfdda44f1952fce22e9e329c2f"
     }
   ],
-  "manifestHash": "c7a1a81d4df32db4bc05cfc1399ec1ea9d7e429fa88d7669068e6854f9a2255b",
+  "manifestHash": "bd5ebff377cd320f87a422d119b26b7312b9bd2f4661251fa62b952f11b3ac6b",
   "packageId": "release-2-4",
-  "planFilesHash": "224f18d71231ce265bd9196f18e969d488cee8dba916b88881c2ab0652beefe0",
-  "planRevision": 8,
+  "planFilesHash": "61dee80f3a265f96ac42414b3b500343ff54a1beda65fb1a83e429e17d78d5e7",
+  "planRevision": 9,
   "schemaVersion": "agent-plan-lock.v2"
 }

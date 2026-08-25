@@ -75,7 +75,7 @@ PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
             "tierResolution": _OBJECT,
             "taskTemplates": _OBJECT,
             "compatibility": _OBJECT,
-            "extensions": _OBJECT,
+            "extensions": {"$ref": "#/$defs/extensions"},
         },
     ),
     MANIFEST_VALIDATION_SCHEMA: _closed_object_schema(
@@ -134,6 +134,25 @@ PLAN_MANIFEST_SCHEMAS[MANIFEST_SCHEMA]["$defs"] = {
             "allowedUnlistedFiles": _STRING_LIST,
         },
     ),
+    "extensions": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agent-plan-extensions.v1",
+        "type": "object",
+        "additionalProperties": True,
+        "properties": {
+            "securityAnalysis": {
+                "type": "object",
+                "required": ["profileId", "activation", "implementationAudit"],
+                "additionalProperties": True,
+                "properties": {
+                    "profileId": {"const": "security-analysis.v1"},
+                    "activation": {"enum": ["read-only-by-default", "explicit-plan-opt-in"]},
+                    "implementationAudit": {"type": "object"},
+                    "verificationEvidence": {"type": "object"},
+                },
+            }
+        },
+    },
 }
 
 __all__ = ["MANIFEST_SCHEMA", "MANIFEST_VALIDATION_SCHEMA", "PLAN_MANIFEST_SCHEMAS"]

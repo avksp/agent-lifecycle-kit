@@ -1,6 +1,6 @@
 # Plan review
 
-Status: `FROZEN / IMPLEMENTATION READY`.
+Status: `FROZEN / IMPLEMENTATION READY (REVISION 9)`.
 
 ## Closed decisions
 
@@ -20,6 +20,9 @@ Status: `FROZEN / IMPLEMENTATION READY`.
   `dispatch_contracts.py`) are explicitly owned where the profile is exposed
 - review evidence has declared assignment, verification, audit and acceptance
   artifact paths with machine-readable `independentEvidenceIds`
+- the final implementation scope explicitly owns the runtime manifest-extension
+  validator and the public audit, quality and Review Mesh export facades used by
+  the security profile; these are integration surfaces, not unplanned writes
 
 ## Independent review focus
 
@@ -44,3 +47,13 @@ Status: `FROZEN / IMPLEMENTATION READY`.
 - close every independent S2 Medium or High finding;
 - use one authoritative `maxTaskAttempts` value (`orchestration.maxTaskAttempts`);
 - generate `agent-plan-lock.v2` only for the final audited revision.
+
+## Scope reconciliation for revision 9
+
+During implementation, a diff-to-write-set check found four required support
+surfaces that were already part of the 2.4 behavior but were omitted from the
+revision-8 list: `planning/manifest_contract.py` and the public `audit`,
+`quality` and `review_mesh` package facades. The scope is unchanged: these
+files only validate or expose the profile contracts already defined by the
+three workstreams. They are now assigned explicitly and the lock is regenerated
+for revision 9 before acceptance.

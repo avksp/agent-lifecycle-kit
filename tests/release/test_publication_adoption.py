@@ -14,7 +14,6 @@ sys.path.insert(0, str(TOOLS_RELEASE))
 
 from validate_publication_adoption import validate_publication_adoption  # noqa: E402
 
-
 TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 
 
@@ -25,6 +24,14 @@ class PublicationAdoptionTests(unittest.TestCase):
         self.assertEqual(result["schemaVersion"], "agent-publication-adoption-validation.v1")
         self.assertEqual(result["status"], "PASS", result["blockers"])
         self.assertFalse(result["productionPromotionClaimed"])
+
+    def test_security_analysis_documentation_is_present_and_bounded(self) -> None:
+        english = (ROOT / "docs/reference/security-analysis-profile.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/security-analysis-profile.md").read_text(encoding="utf-8")
+        for text in (english, russian):
+            self.assertIn("trusted: false", text)
+            self.assertIn("authorityClaimed: false", text)
+            self.assertIn("security-analysis-verification-required", text)
 
     def test_missing_project_comparison_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

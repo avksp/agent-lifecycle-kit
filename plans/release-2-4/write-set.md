@@ -2,10 +2,13 @@
 
 ## WS93-01 - Core contracts and validation
 
+- `src/agent_lifecycle/audit/__init__.py`
 - `src/agent_lifecycle/contracts/security_analysis_schemas.py`
 - `src/agent_lifecycle/contracts/bug_forensics_schemas.py`
 - `src/agent_lifecycle/contracts/plan_manifest_schemas.py`
 - `src/agent_lifecycle/contracts/schemas.py`
+- `src/agent_lifecycle/planning/manifest_contract.py`
+- `src/agent_lifecycle/quality/__init__.py`
 - `src/agent_lifecycle/quality/security_analysis.py`
 - `src/agent_lifecycle/audit/security_analysis.py`
 - `tests/contracts/test_security_analysis_schemas.py`
@@ -23,6 +26,7 @@
 - `src/agent_lifecycle/workflow/implementation_audit_gate.py`
 - `src/agent_lifecycle/workflow/plan_adoption.py`
 - `src/agent_lifecycle/workflow/task_transitions.py`
+- `src/agent_lifecycle/review_mesh/__init__.py`
 - `src/agent_lifecycle/review_mesh/assignments.py`
 - `src/agent_lifecycle/imports/security_findings.py`
 - `src/agent_lifecycle/cli/parsers.py`
