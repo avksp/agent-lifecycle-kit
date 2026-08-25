@@ -52,6 +52,7 @@ def validate_task_result(
                 "task-result-lineage-mismatch",
                 f"task result {key} mismatch",
             )
+    _require_worker_identity(result)
     packet = task.get("packet")
     if isinstance(packet, dict) and result.get("taskPacketHash") != packet.get("sha256"):
         raise LifecycleError(
@@ -154,6 +155,15 @@ def _validate_commands(result: dict[str, Any]) -> None:
         )
 
 
+def _require_worker_identity(result: dict[str, Any]) -> None:
+    for field in ("actor", "actorRunId"):
+        if not isinstance(result.get(field), str) or not result[field]:
+            raise LifecycleError(
+                "task-result-invalid",
+                f"task result {field} is required",
+            )
+
+
 def validate_task_review(
     state: dict[str, Any],
     task: dict[str, Any],
@@ -161,6 +171,8 @@ def validate_task_review(
     *,
     result: dict[str, Any] | None = None,
 ) -> None:
+    if result is not None:
+        _require_review_id(review)
     _validate_review_lineage(state, task, review)
     if result is not None:
         _require_reviewer_separate_from_worker(review, result)
@@ -200,6 +212,7 @@ def validate_task_rework_review(
 ) -> None:
     """Validate review lineage and independence for a remediation decision."""
 
+    _require_review_id(review)
     _validate_review_lineage(state, task, review)
     _require_reviewer_separate_from_worker(review, result)
     if review.get("verdict") not in {"ACCEPTED", "REWORK"}:
@@ -218,6 +231,7 @@ def validate_task_outcome_review(
 ) -> str:
     """Validate the common lineage boundary for every task review outcome."""
 
+    _require_review_id(review)
     _validate_review_lineage(state, task, review)
     _require_reviewer_separate_from_worker(review, result)
     verdict = review.get("verdict")
@@ -275,6 +289,11 @@ def _validate_review_lineage(
     reviewer = review.get("reviewer")
     if not isinstance(reviewer, dict) or reviewer.get("independent") is not True:
         raise LifecycleError("task-review-not-independent", "task review must be independent")
+
+
+def _require_review_id(review: dict[str, Any]) -> None:
+    if not isinstance(review.get("reviewId"), str) or not review["reviewId"]:
+        raise LifecycleError("task-review-invalid", "task review reviewId is required")
 
 
 def _require_reviewer_separate_from_worker(review: dict[str, Any], result: dict[str, Any]) -> None:

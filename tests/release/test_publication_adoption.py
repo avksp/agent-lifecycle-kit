@@ -33,6 +33,13 @@ class PublicationAdoptionTests(unittest.TestCase):
             self.assertIn("authorityClaimed: false", text)
             self.assertIn("security-analysis-verification-required", text)
 
+    def test_workflow_evidence_validation_is_documented_fail_closed(self) -> None:
+        english = (ROOT / "docs/reference/cli.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/cli.md").read_text(encoding="utf-8")
+        for text in (english, russian):
+            for marker in ("actorRunId", "reviewId", "task-review-invalid", "task-review-self-certification"):
+                self.assertIn(marker, text)
+
     def test_missing_project_comparison_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

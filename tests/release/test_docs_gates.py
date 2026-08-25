@@ -256,6 +256,22 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("does not fetch the URL", english)
         self.assertIn("не загружает URL", russian)
 
+    def test_cli_docs_keep_fail_closed_task_evidence_boundary(self) -> None:
+        english = (ROOT / "docs/reference/cli.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/cli.md").read_text(encoding="utf-8")
+        for text in (english, russian):
+            for marker in (
+                "actor",
+                "actorRunId",
+                "reviewId",
+                "task-result-invalid",
+                "task-review-invalid",
+                "task-review-self-certification",
+            ):
+                self.assertIn(marker, text)
+        self.assertIn("Historical evidence remains readable", english)
+        self.assertIn("Исторические подтверждения остаются", russian)
+
     def test_every_adapter_page_explains_inside_host_and_command_routes(self) -> None:
         descriptors = {
             payload["adapterId"]: payload
@@ -961,6 +977,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "agent-lifecycle tier resolve --request <request.json>.\n"
         "reserved compatibility selector.\n"
         "зарезервированный раздел совместимости.\n"
+        "actor. actorRunId. reviewId. task-result-invalid. task-review-invalid. "
+        "task-review-self-certification.\n"
+        "Historical evidence remains readable. Исторические подтверждения остаются.\n"
     )
     _write_text(root / "docs/reference/cli.md", cli)
     _write_text(root / "docs/ru/reference/cli.md", cli)

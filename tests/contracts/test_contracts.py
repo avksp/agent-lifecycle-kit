@@ -191,6 +191,7 @@ class ContractTests(unittest.TestCase):
         self.assertIn("agent-cursor-compat-evidence.v1", ids)
         self.assertIn("agent-lifecycle-model-route-request.v1", ids)
         self.assertIn("agent-lifecycle-model-usage-receipt.v1", ids)
+
         for schema_id in [
             "agent-adapter-capability-manifest.v1",
             "agent-adapter-capability-manifest-validation.v1",
@@ -383,6 +384,24 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-bug-forensics-recipe-library.v1")["properties"]["budgetUnits"], {"const": "tokens-and-resources"})
         with self.assertRaises(LifecycleError):
             get_schema("missing.v1")
+
+    def test_every_registered_schema_has_unique_required_entries(self) -> None:
+        def walk(value: object, path: str) -> None:
+            if isinstance(value, dict):
+                required = value.get("required")
+                if isinstance(required, list):
+                    self.assertTrue(all(isinstance(item, str) for item in required), path)
+                    self.assertEqual(len(required), len(set(required)), path)
+                for key, item in value.items():
+                    walk(item, f"{path}/{key}")
+            elif isinstance(value, list):
+                for index, item in enumerate(value):
+                    walk(item, f"{path}/{index}")
+
+        for item in list_schemas()["schemas"]:
+            schema_id = item["id"]
+            with self.subTest(schema_id=schema_id):
+                walk(get_schema(schema_id), schema_id)
 
     def test_json_object_loader_rejects_arrays(self) -> None:
         with self.assertRaises(LifecycleError):

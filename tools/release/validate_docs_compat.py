@@ -895,6 +895,10 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "python -m pip install agent-lifecycle-kit==",
             "agent-lifecycle tier resolve --request <request.json>",
             "reserved compatibility selector",
+            "actorRunId",
+            "reviewId",
+            "task-review-invalid",
+            "Historical evidence remains readable",
         ),
     ),
     (
@@ -913,6 +917,10 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "python -m pip install agent-lifecycle-kit==",
             "agent-lifecycle tier resolve --request <request.json>",
             "зарезервированный раздел совместимости",
+            "actorRunId",
+            "reviewId",
+            "task-review-invalid",
+            "Исторические подтверждения остаются",
         ),
     ),
     (

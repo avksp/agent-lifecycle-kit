@@ -47,6 +47,23 @@ SECURITY_ANALYSIS_DOCUMENTATION: dict[str, Any] = {
     "automaticExecution": False,
 }
 
+WORKFLOW_EVIDENCE_DOCUMENTATION: dict[str, Any] = {
+    "id": "workflow-evidence-validation",
+    "status": "REQUIRED",
+    "englishPath": "docs/reference/cli.md",
+    "russianPath": "docs/ru/reference/cli.md",
+    "workerIdentityRequired": True,
+    "reviewIdRequired": True,
+    "historicalEvidenceRewritten": False,
+}
+
+SUCCESSOR_ADOPTION: dict[str, Any] = {
+    "packageId": "release-2-5",
+    "requiredPredecessor": "release-2-4-1",
+    "sourceTracked": False,
+    "acceptedMergeRevisionRequiredBeforeFreeze": True,
+}
+
 PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     {
         "id": "pyproject-version",
@@ -65,6 +82,12 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
         "path": "src/agent_lifecycle/_version.py",
         "kind": "python-version-assignment",
         "fieldForm": "version",
+    },
+    {
+        "id": "changelog-release-version",
+        "path": "CHANGELOG.md",
+        "kind": "text-changelog-version",
+        "fieldForm": "changelog.version",
     },
     {
         "id": "codex-root-plugin",
@@ -223,7 +246,9 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             DOMAIN_LANGUAGE_DOCUMENTATION,
             MULTI_RUN_DOCUMENTATION,
             SECURITY_ANALYSIS_DOCUMENTATION,
+            WORKFLOW_EVIDENCE_DOCUMENTATION,
         ],
+        "successorAdoption": SUCCESSOR_ADOPTION,
         "lastChannelPolicy": LAST_CHANNEL_POLICY,
         "productionPromotionClaimed": False,
     }
@@ -297,11 +322,21 @@ def _read_entry_value(*, path: Path, entry: dict[str, Any]) -> str | None:
         match = re.search(r'^__version__\s*=\s*"([^"]+)"', path.read_text(encoding="utf-8"), re.MULTILINE)
         return match.group(1) if match else None
     if kind == "text-package-pin":
-        match = re.search(
+        matches = re.findall(
             rf"{re.escape(PLUGIN_NAME)}==([0-9]+(?:\.[0-9]+){{2}})",
             path.read_text(encoding="utf-8"),
         )
-        return match.group(0) if match else None
+        if not matches:
+            return None
+        pins = [f"{PLUGIN_NAME}=={version}" for version in matches]
+        return pins[0] if len(set(pins)) == 1 else ";".join(pins)
+    if kind == "text-changelog-version":
+        match = re.search(
+            r"^##\s+([0-9]+(?:\.[0-9]+){2})(?:\s+-|$)",
+            path.read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
+        return match.group(1) if match else None
     raise ValueError(f"unsupported publication entry kind: {kind}")
 
 
