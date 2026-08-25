@@ -4,6 +4,8 @@ import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -12,6 +14,8 @@ try:
     from .helpers import *  # noqa: F401,F403,E402
 except ImportError:
     from helpers import *  # noqa: F401,F403,E402
+
+from agent_lifecycle.cli import main  # noqa: E402
 
 
 def _prepare_rework_review(
@@ -234,6 +238,66 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 self.assertEqual(raised.exception.code, "task-result-invalid")
                 self.assertEqual(state_path.read_bytes(), before_state)
                 self.assertEqual((root / "events.jsonl").read_bytes(), before_events)
+
+    def test_task_accept_cli_rejects_missing_review_id_without_traceback_or_state_change(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-cli-review-id",
+                expected_revision=1,
+                source_revision="source",
+                reason="prepare CLI review",
+            )
+            result = _result(attempt=1)
+            result_path = "work/WS-01/attempt-1/task-result.json"
+            write_json_create(root / result_path, result)
+            commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-cli-review-id",
+                expected_revision=2,
+                source_revision="source",
+                result_path=result_path,
+                reason="prepare CLI review",
+            )
+            review = _review(attempt=1, result_hash=canonical_digest(result))
+            review.pop("reviewId")
+            review_path = "work/WS-01/attempt-1/task-review.json"
+            write_json_create(root / review_path, review)
+            before_state = state_path.read_bytes()
+            before_events = (root / "events.jsonl").read_bytes()
+            stdout = StringIO()
+
+            with redirect_stdout(stdout):
+                code = main(
+                    [
+                        "workflow",
+                        "task-accept",
+                        "--state",
+                        str(state_path),
+                        "--task",
+                        "WS-01",
+                        "--operation-id",
+                        "accept-cli-review-id",
+                        "--expected-revision",
+                        "3",
+                        "--review",
+                        review_path,
+                        "--reason",
+                        "reject incomplete review identity",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "task-review-invalid")
+            self.assertNotIn("traceback", stdout.getvalue().lower())
+            self.assertNotEqual(payload["code"], "cli-unexpected-error")
+            self.assertEqual(state_path.read_bytes(), before_state)
+            self.assertEqual((root / "events.jsonl").read_bytes(), before_events)
 
     def test_commit_result_and_accept_review_unlocks_next_phase(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
