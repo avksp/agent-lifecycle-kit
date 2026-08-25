@@ -1,0 +1,54 @@
+{
+  "entries": [
+    {
+      "bytes": 1368,
+      "path": "plans/release-2-4/00-developer-overview.md",
+      "sha256": "5b61594678381779877be62e19b03e4e544c5dcd77f7b8490e3839f43039c383"
+    },
+    {
+      "bytes": 2923,
+      "path": "plans/release-2-4/README.md",
+      "sha256": "da2e7128e9a07dbc204bba22b0313e8d5a8310db13b266ae4a55583fb09efaa6"
+    },
+    {
+      "bytes": 2003,
+      "path": "plans/release-2-4/acceptance-criteria.md",
+      "sha256": "2c33a385c010a29f425d50b47590cb3fab6a44d0b2cbfd0c33f430e4158457b4"
+    },
+    {
+      "bytes": 4244,
+      "path": "plans/release-2-4/activation-evidence.md",
+      "sha256": "943ee590b302f1c87d3f3d0daa56ae81d62038aa9763e0ffa0a869c12d80e215"
+    },
+    {
+      "bytes": 3304,
+      "path": "plans/release-2-4/evidence-plan.md",
+      "sha256": "94f406cbe5af9d1701512a2cbc254cad60463b70c9f784608cdec443d09b8fcc"
+    },
+    {
+      "bytes": 2522,
+      "path": "plans/release-2-4/plan-review.md",
+      "sha256": "96f322de8e2ff8f47d760cb689e5536d237164b9806ed82e7e7ac1aecdb0b28c"
+    },
+    {
+      "bytes": 15868,
+      "path": "plans/release-2-4/plan.manifest.json",
+      "sha256": "d5a3db736f089d2c42feabfe454f6864611cb13060d7824cc834611198320524"
+    },
+    {
+      "bytes": 1027,
+      "path": "plans/release-2-4/release-notes.en.md",
+      "sha256": "423fd51540b2f651318e95ff4d3683b695a03a4d4b6d820b37f80b5c76d21d7c"
+    },
+    {
+      "bytes": 2999,
+      "path": "plans/release-2-4/write-set.md",
+      "sha256": "0ee3f27c1a4274c24c10823f23e91380e5a735ba73783c984f01673c1f2ab73c"
+    }
+  ],
+  "manifestHash": "c7a1a81d4df32db4bc05cfc1399ec1ea9d7e429fa88d7669068e6854f9a2255b",
+  "packageId": "release-2-4",
+  "planFilesHash": "224f18d71231ce265bd9196f18e969d488cee8dba916b88881c2ab0652beefe0",
+  "planRevision": 8,
+  "schemaVersion": "agent-plan-lock.v2"
+}

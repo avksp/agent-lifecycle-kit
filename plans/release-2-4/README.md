@@ -1,6 +1,6 @@
 # Release 2.4: Optional security analysis profile
 
-Status: `CHANGES_REQUIRED / S2 REMEDIATION PENDING`  
+Status: `FROZEN / READY_FOR_IMPLEMENTATION`  
 Tier: `S2`  
 Depends on: accepted Release 2.3 merge, rooted in the mandatory Release 2.0 baseline
 

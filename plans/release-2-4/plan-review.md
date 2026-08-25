@@ -1,6 +1,6 @@
 # Plan review
 
-Status: `CHANGES_REQUIRED / S2 REMEDIATION PENDING`.
+Status: `FROZEN / IMPLEMENTATION READY`.
 
 ## Closed decisions
 

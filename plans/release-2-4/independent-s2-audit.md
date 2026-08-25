@@ -207,9 +207,9 @@ The independent review found `orchestration.maxTaskAttempts = 3` and
 authoritative value in `orchestration.maxTaskAttempts` and documents that
 `budgetPolicy` must not redefine it.
 
-## Remediation status: revision 6
+## Remediation status: revision 8
 
-The package revision is now `7`. The canonical package is under
+The package revision is now `8`. The canonical package is under
 `plans/release-2-4/`; the local `tasks/release-2-4/` copy is a compatibility
 mirror. The write-set includes plan-manifest schema/adoption/task-transition
 authority, direct acceptance regressions and deterministic conformance
@@ -218,7 +218,12 @@ documents require the manifest-to-task bridge, declared review artifact paths
 with `independentEvidenceIds`, and candidate-time execution of every
 activation fixture step.
 
-Repeated completeness, acceptance, reference and package-path checks must pass
-on this revision. This entry is still a remediation record, not a final
-independent S2 approval. A fresh independent S2 confirmation is required
-before `plan.lock.json` and implementation.
+Repeated completeness, acceptance, reference and package-path checks passed on
+this revision. A fresh independent reviewer then confirmed valid JSON,
+lexicographically sorted `planFiles`, successful v2 lock dry-build and
+filesystem verification, the authority bridge through `accept_task`, the real
+acceptance evidence paths, all four activation fixture steps with zero model,
+network, host-process and out-of-evidence writes, the Git-visible plan root and
+the single retry budget.
+
+Independent verdict: `READY_FOR_FREEZE`.
