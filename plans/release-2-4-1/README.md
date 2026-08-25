@@ -1,6 +1,6 @@
 # Release 2.4.1: Workflow evidence validation
 
-Status: `FROZEN / S2 ACCEPTED / READY_FOR_WORKER_PACKET_COMPILATION`  
+Status: `FROZEN / REVISION 5 / S2 ACCEPTED / READY_FOR_EXECUTION`  
 Tier: `S2`  
 Depends on: accepted Release 2.4
 

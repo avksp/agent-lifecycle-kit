@@ -1,7 +1,7 @@
 {
   "schemaVersion": "agent-plan-manifest.v1",
   "status": "FROZEN",
-  "planRevision": 3,
+  "planRevision": 5,
   "package": {
     "id": "release-2-4-1",
     "title": "Workflow evidence validation",
@@ -15,6 +15,7 @@
     "plans/release-2-4-1/README.md",
     "plans/release-2-4-1/acceptance-criteria.md",
     "plans/release-2-4-1/evidence-plan.md",
+    "plans/release-2-4-1/plan-review-r5.json",
     "plans/release-2-4-1/plan-review.md",
     "plans/release-2-4-1/plan.manifest.json",
     "plans/release-2-4-1/release-notes.en.md",
@@ -52,6 +53,12 @@
       "requirementsBytes": 11000,
       "externalSpecification": true
     }
+  },
+  "planReview": {
+    "required": true,
+    "verdict": "READY_TO_FREEZE",
+    "reviewedRevision": 5,
+    "report": "plans/release-2-4-1/plan-review-r5.json"
   },
   "readOnly": [
     "tasks/release-1-75", "tasks/release-1-76", "tasks/release-1-77", "tasks/release-1-78", "tasks/release-1-79", "tasks/release-1-80",

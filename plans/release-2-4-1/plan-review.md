@@ -1,6 +1,15 @@
 # Plan review
 
-Status: `FROZEN / FINAL REVISION 3 / PRE_IMPLEMENTATION`.
+Status: `FROZEN / FINAL REVISION 5 / PRE_IMPLEMENTATION`.
+
+Revision 3 passed structural and independent S2 review, but the first
+`workflow adopt-plan` precondition check proved that the package lacked the
+machine-readable `agent-plan-review.v1` identity required by the runtime.
+Revision 4 adds that evidence to the declared package inventory; product
+scope, workstreams, acceptance criteria and write authority are unchanged.
+Its independent audit then found that the inserted path made `planFiles`
+non-lexicographic. Revision 5 resolves that execution-contract finding and
+remints the review lineage without changing product scope.
 
 ## Closed decisions
 
