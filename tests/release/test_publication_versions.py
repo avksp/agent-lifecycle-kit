@@ -48,6 +48,16 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertTrue(feature["independentHighSeverityVerification"])
         self.assertFalse(feature["automaticExecution"])
 
+    def test_publication_manifest_exposes_workflow_evidence_boundaries(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "workflow-evidence-validation"
+        ]
+        self.assertEqual(feature["status"], "REQUIRED")
+        self.assertTrue(feature["workerIdentityRequired"])
+        self.assertTrue(feature["reviewIdRequired"])
+        self.assertFalse(feature["historicalEvidenceRewritten"])
+
     def test_current_tree_publication_versions_match_target(self) -> None:
         result = validate_publication_tree(root=ROOT, target_version=TARGET_VERSION, target_ref=TARGET_REF)
         self.assertEqual(result["status"], "PASS", result["blockers"])

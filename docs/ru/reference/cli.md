@@ -27,8 +27,19 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.4.0
+python -m pip install agent-lifecycle-kit==2.4.1
 ```
+
+## Идентичность подтверждений задачи
+
+Полномочные маршруты `workflow task-result`, `task-accept`, `task-rework` и
+`task-review-apply` закрываются с отказом, если результат не содержит непустые
+`actor` и `actorRunId`, а ревью не содержит непустой `reviewId`. Идентификатор
+и запуск рецензента должны отличаться от идентичности исполнителя. Некорректное
+подтверждение возвращает типизированную ошибку `task-result-invalid`,
+`task-review-invalid` или `task-review-self-certification` до изменения байтов
+состояния workflow или журнала событий. Исторические подтверждения остаются
+читаемыми, но не обходят текущую приёмку.
 
 ## Контракты ошибок и ресурсов
 

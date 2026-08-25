@@ -47,6 +47,16 @@ SECURITY_ANALYSIS_DOCUMENTATION: dict[str, Any] = {
     "automaticExecution": False,
 }
 
+WORKFLOW_EVIDENCE_DOCUMENTATION: dict[str, Any] = {
+    "id": "workflow-evidence-validation",
+    "status": "REQUIRED",
+    "englishPath": "docs/reference/cli.md",
+    "russianPath": "docs/ru/reference/cli.md",
+    "workerIdentityRequired": True,
+    "reviewIdRequired": True,
+    "historicalEvidenceRewritten": False,
+}
+
 PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     {
         "id": "pyproject-version",
@@ -223,6 +233,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             DOMAIN_LANGUAGE_DOCUMENTATION,
             MULTI_RUN_DOCUMENTATION,
             SECURITY_ANALYSIS_DOCUMENTATION,
+            WORKFLOW_EVIDENCE_DOCUMENTATION,
         ],
         "lastChannelPolicy": LAST_CHANNEL_POLICY,
         "productionPromotionClaimed": False,
