@@ -191,6 +191,50 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                     reason="done",
                 )
 
+    def test_commit_result_requires_complete_worker_identity_before_state_change(self) -> None:
+        mutations = (
+            ("actor", None),
+            ("actor", ""),
+            ("actorRunId", None),
+            ("actorRunId", ""),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field, value=value), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                state_path = _write_state(root, phase="RUNNING")
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="launch",
+                )
+                result = _result(attempt=1)
+                if value is None:
+                    result.pop(field)
+                else:
+                    result[field] = value
+                result_path = "work/WS-01/attempt-1/task-result.json"
+                write_json_create(root / result_path, result)
+                before_state = state_path.read_bytes()
+                before_events = (root / "events.jsonl").read_bytes()
+
+                with self.assertRaises(LifecycleError) as raised:
+                    commit_task_result(
+                        state_path,
+                        task_id="WS-01",
+                        operation_id=f"result-{field}-{value!r}",
+                        expected_revision=2,
+                        source_revision="source",
+                        result_path=result_path,
+                        reason="done",
+                    )
+
+                self.assertEqual(raised.exception.code, "task-result-invalid")
+                self.assertEqual(state_path.read_bytes(), before_state)
+                self.assertEqual((root / "events.jsonl").read_bytes(), before_events)
+
     def test_commit_result_and_accept_review_unlocks_next_phase(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

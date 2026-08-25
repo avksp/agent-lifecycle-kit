@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agent_lifecycle.contracts import canonical_digest, write_json_create
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_json_create
 from agent_lifecycle.workflow import apply_task_review_outcome, commit_task_result, start_task
 from agent_lifecycle.workflow.query import next_action
 from agent_lifecycle.workflow.state import load_state
@@ -121,6 +121,109 @@ class ParallelTaskLifecycleTests(unittest.TestCase):
             )
             self.assertEqual(payload["phase"], "FINAL_AUDIT")
             self.assertEqual(payload["tasks"][0]["status"], "ACCEPTED")
+
+    def test_all_review_outcomes_fail_closed_for_incomplete_or_matching_identity(self) -> None:
+        verdicts = ("ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED")
+        mutations = (
+            ("missing-actor", "task-result-invalid"),
+            ("empty-actor", "task-result-invalid"),
+            ("missing-actor-run", "task-result-invalid"),
+            ("empty-actor-run", "task-result-invalid"),
+            ("same-actor", "task-review-self-certification"),
+            ("same-run", "task-review-self-certification"),
+            ("missing-review-id", "task-review-invalid"),
+            ("empty-review-id", "task-review-invalid"),
+        )
+        for verdict in verdicts:
+            for mutation, expected_code in mutations:
+                with self.subTest(verdict=verdict, mutation=mutation), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    state_path, review_path = _review_outcome_fixture(root, verdict=verdict, mutation=mutation)
+                    before_state = state_path.read_bytes()
+
+                    with self.assertRaises(LifecycleError) as raised:
+                        apply_task_review_outcome(
+                            state_path,
+                            task_id="WS-01",
+                            operation_id=f"review-{verdict.lower()}-{mutation}",
+                            expected_revision=1,
+                            source_revision="source",
+                            review_path=review_path,
+                            finding_ids=["F-1"] if verdict == "REWORK" else None,
+                            reason="identity regression",
+                        )
+
+                    self.assertEqual(raised.exception.code, expected_code)
+                    self.assertEqual(state_path.read_bytes(), before_state)
+                    self.assertFalse((root / "events.jsonl").exists())
+
+
+def _review_outcome_fixture(root: Path, *, verdict: str, mutation: str) -> tuple[Path, str]:
+    state_path = root / "run.state.json"
+    _parallel_state(state_path)
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["tasks"] = [state["tasks"][0]]
+    task = state["tasks"][0]
+    task["status"] = "VERIFYING"
+    task["attempt"] = 1
+
+    result = {
+        "schemaVersion": "agent-task-result.v2",
+        "runId": "run",
+        "taskId": "WS-01",
+        "attempt": 1,
+        "planDigest": "0" * 64,
+        "sourceRevision": "source",
+        "actor": "worker",
+        "actorRunId": "worker-run",
+        "itemOutcomes": [{"status": "COMPLETE"}],
+        "changeSet": {"provider": "git-worktree-v1", "baselineSha": "source"},
+        "commands": [],
+    }
+    if mutation == "missing-actor":
+        result.pop("actor")
+    elif mutation == "empty-actor":
+        result["actor"] = ""
+    elif mutation == "missing-actor-run":
+        result.pop("actorRunId")
+    elif mutation == "empty-actor-run":
+        result["actorRunId"] = ""
+    result_path = "work/WS-01/attempt-1/task-result.json"
+    write_json_create(root / result_path, result)
+    task["result"] = {
+        "path": result_path,
+        "sha256": canonical_digest(result),
+        "bytes": (root / result_path).stat().st_size,
+    }
+
+    review = {
+        "schemaVersion": "agent-task-review.v2",
+        "reviewId": "review-1",
+        "runId": "run",
+        "taskId": "WS-01",
+        "attempt": 1,
+        "planDigest": "0" * 64,
+        "resultHash": canonical_digest(result),
+        "reviewer": {"id": "reviewer", "runId": "review-run", "surface": "test", "independent": True},
+        "verdict": verdict,
+        "findings": ([{"id": "F-1", "severity": "HIGH", "status": "open"}] if verdict == "REWORK" else []),
+    }
+    if verdict == "CONTRACT_CHANGE":
+        review["contractChangeRequest"] = {"reason": "contract changed"}
+    elif verdict == "BLOCKED":
+        review["blocker"] = {"code": "external-blocker", "reason": "blocked"}
+    if mutation == "same-actor":
+        review["reviewer"]["id"] = "worker"
+    elif mutation == "same-run":
+        review["reviewer"]["runId"] = "worker-run"
+    elif mutation == "missing-review-id":
+        review.pop("reviewId")
+    elif mutation == "empty-review-id":
+        review["reviewId"] = ""
+    review_path = "work/WS-01/attempt-1/task-review.json"
+    write_json_create(root / review_path, review)
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+    return state_path, review_path
 
 
 if __name__ == "__main__":
