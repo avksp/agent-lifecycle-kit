@@ -1,12 +1,12 @@
 {
   "schemaVersion": "agent-plan-manifest.v1",
   "status": "FROZEN",
-  "planRevision": 6,
+  "planRevision": 7,
   "package": {
     "id": "release-2-6",
     "title": "Operator CLI and release accounting",
     "workspaceRoot": ".",
-    "artifactRoot": "plans/release-2-6",
+    "artifactRoot": "work/release-2-6",
     "root": ".",
     "planArtifactRoot": "plans/release-2-6"
   },
@@ -17,6 +17,7 @@
     "plans/release-2-6/evidence-plan.md",
     "plans/release-2-6/independent-s2-audit.md",
     "plans/release-2-6/plan-review-r6.json",
+    "plans/release-2-6/plan-review-r7.json",
     "plans/release-2-6/plan-review.md",
     "plans/release-2-6/plan.manifest.json",
     "plans/release-2-6/release-notes.en.md",
@@ -47,8 +48,8 @@
   "planReview": {
     "required": true,
     "verdict": "READY_TO_FREEZE",
-    "reviewedRevision": 6,
-    "report": "plans/release-2-6/plan-review-r6.json"
+    "reviewedRevision": 7,
+    "report": "plans/release-2-6/plan-review-r7.json"
   },
   "developerOverview": "plans/release-2-6/00-developer-overview.md",
   "specification": {

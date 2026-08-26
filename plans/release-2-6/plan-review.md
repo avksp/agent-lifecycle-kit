@@ -1,6 +1,6 @@
 # Plan review
 
-Status: `REVISION 6 FINAL BYTES / INDEPENDENT S2 ACCEPTED / LOCK PENDING`.
+Status: `REVISION 7 FINAL BYTES / INDEPENDENT S2 ACCEPTED / LOCK PENDING`.
 
 ## Closed decisions
 
@@ -19,6 +19,7 @@ Status: `REVISION 6 FINAL BYTES / INDEPENDENT S2 ACCEPTED / LOCK PENDING`.
 - the accepted Release 2.5 schemas, CLI and publication surfaces are mandatory rebase inputs;
 - both install guides required by the 2.6.0 package-pin gates belong to WS26-03;
 - the phase-count limit is exactly 256, the lock CLI uses a dedicated helper, and handoff evidence names its tracked continuity test.
+- runtime `artifactRoot` is `work/release-2-6`, distinct from canonical `planArtifactRoot`, so compilation cannot write generated packets into the tracked plan package.
 
 ## Independent review focus
 
@@ -33,8 +34,8 @@ Status: `REVISION 6 FINAL BYTES / INDEPENDENT S2 ACCEPTED / LOCK PENDING`.
 
 ## Freeze sequence
 
-1. Keep these revision-6 manifest bytes unchanged: accepted 2.5 base, `status: FROZEN`, `planReview.report` and `plan-review-r6.json` already declared.
-2. Obtain fresh independent S2 verdicts over revision 6 and close every Medium/High finding. Any manifest change increments revision and repeats S2.
-3. Write the machine-readable accepted review to the pre-declared `plan-review-r6.json`; require its `reviewedPlanHash` to equal the unchanged revision-6 manifest digest.
+1. Keep these revision-7 manifest bytes unchanged: accepted 2.5 base, `status: FROZEN`, `planReview.report` and `plan-review-r7.json` already declared.
+2. Obtain fresh independent S2 verdicts over revision 7 and close every Medium/High finding. Any manifest change increments revision and repeats S2.
+3. Write the machine-readable accepted review to the pre-declared `plan-review-r7.json`; require its `reviewedPlanHash` to equal the unchanged revision-7 manifest digest.
 4. Update narrative S2 chronology only; it is inventory-bound by the later lock but does not alter manifest bytes.
 5. Pass structural, review-binding and package checks, then generate the v2 lock last.

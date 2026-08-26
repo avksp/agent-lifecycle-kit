@@ -1,6 +1,6 @@
 # Release 2.6: Operator CLI and release accounting
 
-Status: `FROZEN / REVISION 6 / S2 ACCEPTED / LOCK PENDING`  
+Status: `FROZEN / REVISION 7 / S2 ACCEPTED / LOCK PENDING`  
 Tier: `S2`  
 Depends on: accepted Release 2.5
 
@@ -34,14 +34,16 @@ Operators can create and verify a final reviewed plan lock, build a phase-resour
 
 ## Freeze ordering
 
-Revision 6 retains the review self-reference solution and closes the revision-5 publication ownership and evidence-precision findings:
+Revision 7 retains the review self-reference solution, closes the revision-5 publication ownership and evidence-precision findings, and separates runtime artifacts from the canonical tracked plan package:
 
 1. finalize the manifest bytes with `status: FROZEN`, `planReview.report` and the review path already present in `planFiles`;
 2. keep the declared review file absent while independent S2 reviews those exact manifest bytes;
-3. write the accepted review into the pre-declared `plan-review-r6.json` path with `reviewedPlanHash` equal to the unchanged manifest digest;
+3. write the accepted review into the pre-declared `plan-review-r7.json` path with `reviewedPlanHash` equal to the unchanged manifest digest;
 4. re-run structural and review-binding checks;
 5. create `plan.lock.json` last and verify the complete filesystem inventory.
 
 The missing review and lock keep the candidate non-executable during steps 1-2. No review-neutral digest normalization is permitted.
 
 Revision 6 also gives WS26-03 ownership of both install guides required by the 2.6.0 publication pins, fixes the exact phase bound at 256, requires a dedicated lock-command helper to preserve the dispatch complexity gate, and names `tests/planning/test_continuity.py` as the tracked handoff fixture.
+
+Revision 7 changes `package.artifactRoot` to `work/release-2-6` while keeping `package.planArtifactRoot` at `plans/release-2-6`. Task packets and workflow artifacts therefore remain runtime evidence under the ignored lead-owned work root and cannot silently expand the tracked frozen package.
