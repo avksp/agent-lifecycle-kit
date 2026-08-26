@@ -575,6 +575,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                 "NO_FINAL_VERDICT",
                 "authorityClaimed: false",
                 "productionPromotionClaimed: false",
+                "ALK_EXTERNAL_JOB_ARTIFACT_DIR",
+                "cancelGraceSeconds * 3",
             ):
                 self.assertIn(marker, text)
             self.assertNotIn("oracle", text.lower())
