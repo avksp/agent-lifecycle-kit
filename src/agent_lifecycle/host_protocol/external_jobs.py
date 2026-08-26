@@ -8,6 +8,7 @@ from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.contracts.external_job_schemas import (
     EXTERNAL_JOB_TRANSITION_VALIDATION_SCHEMA,
     TERMINAL_JOB_STATES,
+    validate_external_job_request,
     validate_external_job_status,
 )
 
@@ -23,6 +24,7 @@ def validate_external_job_transition(
     *,
     request: dict[str, Any],
     child_statuses: list[dict[str, Any]] | None = None,
+    child_requests: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Validate one idempotent transition without executing adapter work."""
 
@@ -58,7 +60,7 @@ def validate_external_job_transition(
             blockers.append({"code": "external-job-terminal-cleanup-incomplete"})
         if current.get("postTerminalWriteDetected") is not False:
             blockers.append({"code": "external-job-terminal-post-write"})
-        _check_terminal_children(current, child_statuses or [], blockers)
+        _check_terminal_children(current, child_statuses or [], child_requests or [], blockers)
     body = {
         "schemaVersion": EXTERNAL_JOB_TRANSITION_VALIDATION_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
@@ -74,6 +76,7 @@ def validate_external_job_transition(
 def _check_terminal_children(
     parent: dict[str, Any],
     child_statuses: list[dict[str, Any]],
+    child_requests: list[dict[str, Any]],
     blockers: list[dict[str, Any]],
 ) -> None:
     declared = {
@@ -86,14 +89,36 @@ def _check_terminal_children(
         for item in child_statuses
         if isinstance(item, dict)
     }
+    requests = {
+        (item.get("jobId"), item.get("attempt")): item
+        for item in child_requests
+        if isinstance(item, dict)
+    }
     if set(observed).difference(declared):
         blockers.append({"code": "external-job-terminal-child-unexpected"})
+    if set(requests).difference(declared):
+        blockers.append({"code": "external-job-terminal-child-request-unexpected"})
     for identity, reference in declared.items():
+        child_request = requests.get(identity)
+        if child_request is None:
+            blockers.append({"code": "external-job-terminal-child-request-missing", "child": reference})
+            continue
+        if validate_external_job_request(child_request)["status"] != "PASS":
+            blockers.append({"code": "external-job-terminal-child-request-invalid", "child": reference})
+            continue
+        if (
+            child_request.get("requestDigest") != reference.get("requestDigest")
+            or child_request.get("parentJobId") != parent.get("jobId")
+            or child_request.get("parentAttempt") != parent.get("attempt")
+            or child_request.get("parentRequestDigest") != parent.get("requestDigest")
+        ):
+            blockers.append({"code": "external-job-terminal-child-parent-lineage-mismatch", "child": reference})
+            continue
         child = observed.get(identity)
         if child is None:
             blockers.append({"code": "external-job-terminal-child-status-missing", "child": reference})
             continue
-        if validate_external_job_status(child)["status"] != "PASS":
+        if validate_external_job_status(child, request=child_request)["status"] != "PASS":
             blockers.append({"code": "external-job-terminal-child-status-invalid", "child": reference})
             continue
         if child.get("requestDigest") != reference.get("requestDigest"):
