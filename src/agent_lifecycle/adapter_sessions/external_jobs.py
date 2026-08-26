@@ -228,6 +228,10 @@ def _finalize_external_job(
     )
 
     blockers = [*process.get("blockers", []), *child_blockers, *artifact_blockers]
+    elapsed_ms = _elapsed_ms(process)
+    wall_limit_ms = int(limits["maxWallSeconds"]) * 1000
+    if elapsed_ms > wall_limit_ms:
+        blockers.append({"code": "external-job-wall-limit-exceeded"})
     if local_cancel.is_set() and not process.get("cancelled"):
         blockers.append({"code": "external-job-cancelled-after-process-exit"})
     if post_terminal_write:
@@ -239,7 +243,10 @@ def _finalize_external_job(
     if child_blockers:
         cleanup_status = "FAIL"
     usage = {
-        "wallMilliseconds": _elapsed_ms(process),
+        # The process receipt retains cleanup-inclusive elapsed time. Portable job
+        # usage is bounded to the execution budget so timeout cleanup can still
+        # produce immutable terminal evidence instead of failing finalization.
+        "wallMilliseconds": min(elapsed_ms, wall_limit_ms),
         "outputBytes": int(process.get("outputBytes", 0)),
         "artifactBytes": sum(item["bytes"] for item in artifacts),
         "costMicros": cost_micros,
@@ -527,6 +534,8 @@ def _collect_artifacts(
             if path.is_symlink():
                 raise LifecycleError("external-job-artifact-symlink", "artifact namespace must not contain symlinks")
             if path.is_dir():
+                if os.name != "nt" and stat.S_IMODE(path.stat().st_mode) != 0o700:
+                    path.chmod(0o700)
                 directory_stat = path.stat()
                 snapshot.append(
                     {
