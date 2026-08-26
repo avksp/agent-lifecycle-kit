@@ -117,9 +117,10 @@ success.
 
 A child request must name the exact parent job, parent attempt and parent
 request digest. When a parent finishes, ALK sends cancellation to every
-declared child and waits only for the bounded cancellation grace period. A
-missing child, a child still running, failed cleanup or a post-terminal child
-write blocks parent success.
+declared child and waits within a bounded settlement window of
+`max(0.15, cancelGraceSeconds * 3)` seconds. The window covers termination,
+verification and possible escalation. A missing child, a child still running,
+failed cleanup or a post-terminal child write blocks parent success.
 
 The process boundary owns the whole process group. Timeout, cancellation and
 output-limit paths retain cleanup evidence and do not report success while a
@@ -127,10 +128,11 @@ declared process remains live.
 
 ## Artifact evidence
 
-The adapter writes files only below the attempt's `artifacts/` directory. ALK
-stores portable records containing controlled locator, media type, byte count
-and SHA-256 digest. Raw artifact bytes, stdout, argv and local absolute paths
-are not portable lifecycle evidence.
+ALK exposes the attempt's `artifacts/` directory to the child process through
+`ALK_EXTERNAL_JOB_ARTIFACT_DIR`; the adapter writes files only below that
+directory. ALK stores portable records containing controlled locator, media
+type, byte count and SHA-256 digest. Raw artifact bytes, stdout, argv and local
+absolute paths are not portable lifecycle evidence.
 
 Collection is bounded by count and total bytes. Stable reads reject files that
 change while hashing. Symlinks, special files, path escape, oversized content
