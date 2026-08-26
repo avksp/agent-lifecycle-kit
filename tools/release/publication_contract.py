@@ -57,9 +57,21 @@ WORKFLOW_EVIDENCE_DOCUMENTATION: dict[str, Any] = {
     "historicalEvidenceRewritten": False,
 }
 
+EXTERNAL_TOOL_JOBS_DOCUMENTATION: dict[str, Any] = {
+    "id": "optional-bounded-external-tool-jobs",
+    "status": "OPTIONAL",
+    "englishPath": "docs/reference/external-tool-jobs.md",
+    "russianPath": "docs/ru/reference/external-tool-jobs.md",
+    "adapterOwned": True,
+    "immutableAttempts": True,
+    "coreNetworkCalls": False,
+    "ordinaryWorkflowStateAllocated": False,
+    "lifecycleAuthority": False,
+}
+
 SUCCESSOR_ADOPTION: dict[str, Any] = {
-    "packageId": "release-2-5",
-    "requiredPredecessor": "release-2-4-1",
+    "packageId": "release-2-6",
+    "requiredPredecessor": "release-2-5",
     "sourceTracked": False,
     "acceptedMergeRevisionRequiredBeforeFreeze": True,
 }
@@ -247,6 +259,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             MULTI_RUN_DOCUMENTATION,
             SECURITY_ANALYSIS_DOCUMENTATION,
             WORKFLOW_EVIDENCE_DOCUMENTATION,
+            EXTERNAL_TOOL_JOBS_DOCUMENTATION,
         ],
         "successorAdoption": SUCCESSOR_ADOPTION,
         "lastChannelPolicy": LAST_CHANNEL_POLICY,

@@ -78,7 +78,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.4.1
+python -m pip install agent-lifecycle-kit==2.5.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -89,7 +89,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.4.1
+python -m pip install agent-lifecycle-kit==2.5.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -187,7 +187,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.4.1
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.5.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -217,6 +217,12 @@ Agent Plugins в клиентах](../reference/agent-plugin-qualification.md). 
 По умолчанию он выключен: импортированные находки являются свидетельствами
 только для чтения, а доработка высокой серьёзности требует независимой проверки
 на границе приёмки задачи.
+
+В релизе 2.5 появились необязательные [ограниченные задания внешних
+инструментов](../reference/external-tool-jobs.md) для принадлежащей адаптеру
+работы, которой нужны отмена, очистка дочерних процессов или хэшированные
+артефакты. Обычный workflow не создаёт состояние задания, а возможность не
+добавляет клиент провайдера или вторые полномочия жизненного цикла.
 
 В релизе 1.80 также описан необязательный контроль жизненного цикла внутри
 адаптера. По умолчанию он не включён: комплектные адаптеры сейчас публикуют

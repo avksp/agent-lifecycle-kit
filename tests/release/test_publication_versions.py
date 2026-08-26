@@ -58,11 +58,23 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertTrue(feature["reviewIdRequired"])
         self.assertFalse(feature["historicalEvidenceRewritten"])
 
+    def test_publication_manifest_exposes_bounded_external_tool_jobs(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "optional-bounded-external-tool-jobs"
+        ]
+        self.assertEqual(feature["status"], "OPTIONAL")
+        self.assertTrue(feature["adapterOwned"])
+        self.assertTrue(feature["immutableAttempts"])
+        self.assertFalse(feature["coreNetworkCalls"])
+        self.assertFalse(feature["ordinaryWorkflowStateAllocated"])
+        self.assertFalse(feature["lifecycleAuthority"])
+
     def test_publication_manifest_records_successor_adoption_boundary(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
 
-        self.assertEqual(manifest["successorAdoption"]["packageId"], "release-2-5")
-        self.assertEqual(manifest["successorAdoption"]["requiredPredecessor"], "release-2-4-1")
+        self.assertEqual(manifest["successorAdoption"]["packageId"], "release-2-6")
+        self.assertEqual(manifest["successorAdoption"]["requiredPredecessor"], "release-2-5")
         self.assertFalse(manifest["successorAdoption"]["sourceTracked"])
         self.assertTrue(manifest["successorAdoption"]["acceptedMergeRevisionRequiredBeforeFreeze"])
 
