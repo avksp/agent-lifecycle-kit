@@ -5,10 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.metrics.usage_export import usage_export_totals, validate_usage_export
 
 PHASE_RESOURCE_MEASUREMENT_SCHEMA = "agent-phase-resource-measurement.v1"
 PHASE_RESOURCE_MEASUREMENT_VALIDATION_SCHEMA = "agent-phase-resource-measurement-validation.v1"
+MAX_PHASE_RESOURCE_ENTRIES = 256
+MAX_PHASE_SOURCE_ARTIFACTS = 64
 
 TOKEN_KEYS = ("input", "output", "total")
 RESOURCE_KEYS = {"contextBytes", "filesChanged", "toolCalls", "validationRuns", "cpuMs", "memoryMb"}
@@ -25,12 +28,19 @@ def build_phase_resource_measurement(
 
     if not isinstance(phases, list) or not phases:
         raise LifecycleError("invalid-phase-resource-measurement", "phases must be a non-empty list")
+    if len(phases) > MAX_PHASE_RESOURCE_ENTRIES:
+        raise LifecycleError(
+            "phase-resource-entry-limit",
+            "phase count exceeds the bounded measurement limit",
+            {"phaseCount": len(phases), "maxPhases": MAX_PHASE_RESOURCE_ENTRIES},
+        )
     entries = [_phase_entry(index, phase) for index, phase in enumerate(phases)]
+    normalized_source_artifacts = _source_artifacts(source_artifacts or [])
     usage_export = {
         "schemaVersion": "agent-usage-export.v1",
         "status": "PASS",
         "generatedBy": "agent-lifecycle metrics phase-resources",
-        "sourceArtifacts": list(source_artifacts or []),
+        "sourceArtifacts": normalized_source_artifacts,
         "lineage": dict(lineage or {}),
         "entries": entries,
         "totals": usage_export_totals(entries),
@@ -64,6 +74,14 @@ def validate_phase_resource_measurement(measurement: dict[str, Any]) -> dict[str
     if not isinstance(phases, list) or not phases:
         blockers.append({"code": "phase-resource-phases-invalid"})
         phases = []
+    if len(phases) > MAX_PHASE_RESOURCE_ENTRIES:
+        blockers.append(
+            {
+                "code": "phase-resource-entry-limit",
+                "phaseCount": len(phases),
+                "maxPhases": MAX_PHASE_RESOURCE_ENTRIES,
+            }
+        )
     for index, phase in enumerate(phases):
         _validate_phase_entry(index, phase, blockers)
     if measurement.get("phaseCount") != len(phases):
@@ -79,6 +97,7 @@ def validate_phase_resource_measurement(measurement: dict[str, Any]) -> dict[str
             blockers.append({"code": "phase-resource-usage-export-entry-mismatch"})
         if measurement.get("totals") != usage_export.get("totals"):
             blockers.append({"code": "phase-resource-total-mismatch"})
+        _check_source_artifacts(usage_export.get("sourceArtifacts"), blockers)
     if measurement.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "phase-resource-production-claim"})
     _check_object_list(measurement.get("blockers", []), "phase-resource-blockers-invalid", blockers)
@@ -99,7 +118,11 @@ def validate_phase_resource_measurement(measurement: dict[str, Any]) -> dict[str
 
 def require_phase_resource_measurement_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("measurementStatus") != "PASS":
-        raise LifecycleError("phase-resource-validation-failed", "phase resource measurement did not pass", {"validation": validation})
+        raise LifecycleError(
+            "phase-resource-validation-failed",
+            "phase resource measurement did not pass",
+            {"validation": validation},
+        )
     return validation
 
 
@@ -206,3 +229,47 @@ def _check_digest_list(value: Any, code: str, blockers: list[dict[str, Any]]) ->
 def _check_object_list(value: Any, code: str, blockers: list[dict[str, Any]]) -> None:
     if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
         blockers.append({"code": code})
+
+
+def _source_artifacts(value: Any) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    _check_source_artifacts(value, blockers)
+    if blockers:
+        raise LifecycleError(
+            "invalid-phase-resource-measurement",
+            "sourceArtifacts must contain bounded canonical artifact descriptors",
+            {"blockers": blockers},
+        )
+    return [dict(item) for item in value]
+
+
+def _check_source_artifacts(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(value, list) or len(value) > MAX_PHASE_SOURCE_ARTIFACTS:
+        blockers.append({"code": "phase-resource-source-artifacts-invalid"})
+        return
+    required = {"path", "sha256", "bytes", "schemaVersion", "payloadDigest"}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict) or set(item) != required:
+            blockers.append({"code": "phase-resource-source-artifact-shape-invalid", "index": index})
+            continue
+        if not isinstance(item.get("path"), str) or not item["path"]:
+            blockers.append({"code": "phase-resource-source-artifact-path-invalid", "index": index})
+        else:
+            try:
+                normalize_repo_path(item["path"], label="phase resource source artifact")
+            except LifecycleError:
+                blockers.append({"code": "phase-resource-source-artifact-path-invalid", "index": index})
+        if not isinstance(item.get("bytes"), int) or isinstance(item.get("bytes"), bool) or item["bytes"] < 0:
+            blockers.append({"code": "phase-resource-source-artifact-bytes-invalid", "index": index})
+        for field in ("sha256", "payloadDigest"):
+            digest = item.get(field)
+            if (
+                not isinstance(digest, str)
+                or len(digest) != 64
+                or any(char not in "0123456789abcdef" for char in digest)
+            ):
+                blockers.append(
+                    {"code": "phase-resource-source-artifact-digest-invalid", "index": index, "field": field}
+                )
+        if item.get("schemaVersion") is not None and not isinstance(item.get("schemaVersion"), str):
+            blockers.append({"code": "phase-resource-source-artifact-schema-invalid", "index": index})

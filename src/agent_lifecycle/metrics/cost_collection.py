@@ -13,6 +13,11 @@ from agent_lifecycle.metrics.costs import (
     cost_ratios,
     summarize_usage_confidence,
 )
+from agent_lifecycle.metrics.phase_resources import (
+    PHASE_RESOURCE_MEASUREMENT_SCHEMA,
+    require_phase_resource_measurement_pass,
+    validate_phase_resource_measurement,
+)
 
 
 def generate_lifecycle_cost_report(
@@ -139,6 +144,22 @@ def _entry_from_artifact(index: int, source: dict[str, Any], payload: dict[str, 
 
 
 def _usage_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if payload.get("schemaVersion") == PHASE_RESOURCE_MEASUREMENT_SCHEMA:
+        require_phase_resource_measurement_pass(validate_phase_resource_measurement(payload))
+        totals = payload.get("totals")
+        if not isinstance(totals, dict):
+            raise LifecycleError("phase-resource-totals-invalid", "phase resource totals must be an object")
+        tokens = totals.get("tokens")
+        if not isinstance(tokens, dict):
+            raise LifecycleError("phase-resource-totals-invalid", "phase resource token totals must be an object")
+        total_tokens = _int_value(tokens.get("total"))
+        total_steps = _int_value(totals.get("steps"))
+        if total_tokens is None or total_steps is None:
+            raise LifecycleError(
+                "phase-resource-totals-invalid",
+                "phase resource token and step totals must be non-negative integers",
+            )
+        return {"tokens": total_tokens, "steps": max(1, total_steps), "confidence": "ESTIMATED"}
     usage = payload.get("usage")
     if isinstance(usage, dict):
         billable = _int_value(usage.get("billableTokens"))
