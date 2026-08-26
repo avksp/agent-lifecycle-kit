@@ -44,7 +44,7 @@ def validate_external_job_transition(
     if previous_state in TERMINAL_JOB_STATES:
         if not idempotent:
             blockers.append({"code": "external-job-terminal-status-immutable"})
-    elif current_state not in _ALLOWED_TRANSITIONS.get(previous_state, set()):
+    elif not isinstance(previous_state, str) or current_state not in _ALLOWED_TRANSITIONS.get(previous_state, set()):
         blockers.append({"code": "external-job-transition-invalid"})
     if not idempotent:
         previous_sequence = previous.get("sequence")
@@ -134,8 +134,16 @@ def _check_terminal_children(
 def _child_refs_removed(previous: Any, current: Any) -> bool:
     if not isinstance(previous, list) or not isinstance(current, list):
         return False
-    previous_refs = {(item.get("jobId"), item.get("attempt"), item.get("requestDigest")) for item in previous if isinstance(item, dict)}
-    current_refs = {(item.get("jobId"), item.get("attempt"), item.get("requestDigest")) for item in current if isinstance(item, dict)}
+    previous_refs = {
+        (item.get("jobId"), item.get("attempt"), item.get("requestDigest"))
+        for item in previous
+        if isinstance(item, dict)
+    }
+    current_refs = {
+        (item.get("jobId"), item.get("attempt"), item.get("requestDigest"))
+        for item in current
+        if isinstance(item, dict)
+    }
     return not previous_refs.issubset(current_refs)
 
 

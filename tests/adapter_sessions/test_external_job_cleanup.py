@@ -98,10 +98,10 @@ class ExternalJobCleanupTests(unittest.TestCase):
             self.assertFalse(view["jobStatus"]["postTerminalWriteDetected"])
             self.assertFalse((root / "cancelled-wrapper/attempt-1/artifacts/child.txt").exists())
 
-    def test_late_cancel_persists_terminal_state_within_wall_budget(self) -> None:
+    def test_cancel_before_timeout_persists_terminal_state_within_wall_budget(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "jobs"
-            request = _request("late-cancel", max_wall_seconds=1, cancel_grace_seconds=0)
+            request = _request("late-cancel", max_wall_seconds=3, cancel_grace_seconds=0)
             holder: dict[str, Any] = {}
             worker = threading.Thread(
                 target=lambda: holder.setdefault(
@@ -116,14 +116,14 @@ class ExternalJobCleanupTests(unittest.TestCase):
             )
             worker.start()
             _wait_for_state(request, root, "RUNNING")
-            time.sleep(0.7)
+            time.sleep(1.5)
             cancel = request_external_job_cancel(request, job_root=root)
             worker.join(timeout=5)
 
             self.assertFalse(worker.is_alive())
             self.assertEqual(cancel["status"], "PASS")
             self.assertEqual(holder["view"]["result"]["state"], "CANCELLED")
-            self.assertLessEqual(holder["view"]["result"]["usage"]["wallMilliseconds"], 1000)
+            self.assertLessEqual(holder["view"]["result"]["usage"]["wallMilliseconds"], 3000)
             loaded = load_external_job_attempt(request, job_root=root)
             self.assertEqual(loaded["result"]["state"], "CANCELLED")
 

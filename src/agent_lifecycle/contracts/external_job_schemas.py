@@ -64,7 +64,8 @@ _CHILD_REF = {
 }
 
 _REQUEST_FIELDS = [
-    "schemaVersion", "jobId", "attempt", "parentJobId", "parentAttempt", "parentRequestDigest", "adapterId", "operation",
+    "schemaVersion", "jobId", "attempt", "parentJobId", "parentAttempt", "parentRequestDigest",
+    "adapterId", "operation",
     "executionKind", "descriptorDigest", "planDigest", "planLockDigest", "sourceRevision",
     "sourceSnapshotDigest", "limits", "shell", "secretsWritten", "authorityClaimed",
     "productionPromotionClaimed", "requestDigest",
@@ -75,7 +76,8 @@ _STATUS_FIELDS = [
     "authorityClaimed", "productionPromotionClaimed", "statusDigest",
 ]
 _ARTIFACT_FIELDS = [
-    "schemaVersion", "artifactId", "jobId", "attempt", "requestDigest", "mediaType", "bytes", "sha256", "locator", "sensitiveContentStored",
+    "schemaVersion", "artifactId", "jobId", "attempt", "requestDigest", "mediaType", "bytes", "sha256",
+    "locator", "sensitiveContentStored",
     "productionPromotionClaimed", "artifactDigest",
 ]
 _RESULT_FIELDS = [
@@ -291,7 +293,10 @@ def validate_external_job_artifact(
     _check_int(value.get("bytes"), 0, MAX_ARTIFACT_BYTES, "external-job-artifact-bytes-invalid", blockers)
     _check_digest(value.get("sha256"), "external-job-artifact-sha256-invalid", blockers)
     try:
-        locator = normalize_repo_path(value.get("locator"), label="artifact locator")
+        locator_value = value.get("locator")
+        if not isinstance(locator_value, str):
+            raise LifecycleError("external-job-artifact-locator-invalid", "artifact locator must be text")
+        locator = normalize_repo_path(locator_value, label="artifact locator")
         if not locator.startswith("artifacts/"):
             raise LifecycleError("external-job-artifact-locator-invalid", "artifact locator must be below artifacts/")
     except LifecycleError:
@@ -456,7 +461,8 @@ def validate_external_job_result(
     for field in ("requestDigest", "statusDigest"):
         _check_digest(value.get(field), f"external-job-{_label(field)}-invalid", blockers)
     state = value.get("state")
-    verdict = value.get("verdict")
+    verdict_value = value.get("verdict")
+    verdict = verdict_value if isinstance(verdict_value, str) else None
     if state not in TERMINAL_JOB_STATES:
         blockers.append({"code": "external-job-result-not-terminal"})
     if verdict not in JOB_VERDICTS:
@@ -465,7 +471,11 @@ def validate_external_job_result(
         blockers.append({"code": "external-job-result-flags-invalid"})
     _check_optional_digest(value.get("outputDigest"), "external-job-output-digest-invalid", blockers)
     _check_int(value.get("outputBytes"), 0, MAX_OUTPUT_BYTES, "external-job-output-bytes-invalid", blockers)
-    if isinstance(value.get("outputBytes"), int) and value.get("outputBytes", 0) > 0 and value.get("outputDigest") is None:
+    if (
+        isinstance(value.get("outputBytes"), int)
+        and value.get("outputBytes", 0) > 0
+        and value.get("outputDigest") is None
+    ):
         blockers.append({"code": "external-job-output-digest-required"})
     artifacts = value.get("artifacts")
     if not isinstance(artifacts, list) or len(artifacts) > MAX_ARTIFACTS:
@@ -508,7 +518,12 @@ def validate_external_job_result(
             blockers.append({"code": "external-job-status-invalid"})
         elif any(
             value.get(key) != status.get(source)
-            for key, source in (("jobId", "jobId"), ("attempt", "attempt"), ("statusDigest", "statusDigest"), ("state", "state"))
+            for key, source in (
+                ("jobId", "jobId"),
+                ("attempt", "attempt"),
+                ("statusDigest", "statusDigest"),
+                ("state", "state"),
+            )
         ):
             blockers.append({"code": "external-job-result-status-mismatch"})
         elif value.get("usage") != status.get("usage"):
@@ -522,10 +537,20 @@ def validate_external_job_result(
 
 def require_external_job_pass(validation: dict[str, Any], label: str) -> None:
     if validation.get("status") != "PASS":
-        raise LifecycleError("external-job-invalid", f"external job {label} is invalid", {"blockers": validation.get("blockers")})
+        raise LifecycleError(
+            "external-job-invalid",
+            f"external job {label} is invalid",
+            {"blockers": validation.get("blockers")},
+        )
 
 
-def _validation(subject: str, state: str | None, blockers: list[dict[str, Any]], *, blocking_eligible: bool) -> dict[str, Any]:
+def _validation(
+    subject: str,
+    state: str | None,
+    blockers: list[dict[str, Any]],
+    *,
+    blocking_eligible: bool,
+) -> dict[str, Any]:
     body = {
         "schemaVersion": EXTERNAL_JOB_VALIDATION_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
@@ -564,13 +589,15 @@ def _children(value: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for child in value:
         if not isinstance(child, dict) or set(child) != {"jobId", "attempt", "requestDigest", "parentRequestDigest"}:
             raise LifecycleError("external-job-child-invalid", "child reference is invalid")
+        child_job_id = _identity(child["jobId"], "child.jobId")
+        child_attempt = _attempt(child["attempt"], "child.attempt")
         item = {
-            "jobId": _identity(child["jobId"], "child.jobId"),
-            "attempt": _attempt(child["attempt"], "child.attempt"),
+            "jobId": child_job_id,
+            "attempt": child_attempt,
             "requestDigest": _digest(child["requestDigest"], "child.requestDigest"),
             "parentRequestDigest": _digest(child["parentRequestDigest"], "child.parentRequestDigest"),
         }
-        identity = (item["jobId"], item["attempt"])
+        identity = (child_job_id, child_attempt)
         if identity in seen:
             raise LifecycleError("external-job-child-duplicate", "child reference is duplicated")
         seen.add(identity)
@@ -578,7 +605,7 @@ def _children(value: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result
 
 
-def _blocking_eligible(status: dict[str, Any], verdict: str, complete: bool) -> bool:
+def _blocking_eligible(status: dict[str, Any], verdict: str | None, complete: bool) -> bool:
     return bool(
         status.get("state") == "SUCCEEDED"
         and verdict in {"PASS", "FAIL"}
@@ -772,7 +799,12 @@ def _is_digest(value: Any) -> bool:
 
 
 def _is_text(value: Any) -> bool:
-    return isinstance(value, str) and bool(value) and "\x00" not in value and len(value.encode("utf-8")) <= MAX_TEXT_BYTES
+    return (
+        isinstance(value, str)
+        and bool(value)
+        and "\x00" not in value
+        and len(value.encode("utf-8")) <= MAX_TEXT_BYTES
+    )
 
 
 def _label(value: str) -> str:
