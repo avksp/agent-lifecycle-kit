@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.4.1
+python -m pip install agent-lifecycle-kit==2.5.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -82,6 +82,25 @@ agent-lifecycle quality external-check \
 конфигурацией и планом, сырой вывод не сохраняется, а отсутствующий или
 неполный анализатор возвращает `UNAVAILABLE`. Результат не может принять,
 заморозить или опубликовать что-либо. См. [внешние проверки проекта](external-verification-checks.md).
+
+## Ограниченные задания внешних инструментов
+
+Используйте `adapter external-job` только для необязательной работы адаптера,
+которой нужны адресуемая попытка, ограниченная отмена или артефакты только с
+метаданными и дайджестами:
+
+```bash
+agent-lifecycle adapter external-job run --request job-request.json --out work/job.json -- <argv...>
+agent-lifecycle adapter external-job status --request job-request.json --out work/job-status.json
+agent-lifecycle adapter external-job cancel --request job-request.json --out work/job-cancel.json
+```
+
+По умолчанию попытки используют приватное создаваемое один раз состояние в
+`.alk/external-jobs`. Тайм-аут, отмена, ошибка очистки, живые дочерние процессы,
+запись после завершения, `NO_FINAL_VERDICT` и превышенные лимиты не дают эффекта
+приёмки. ALK не добавляет клиент провайдера, сетевой вызов, daemon или новые
+полномочия workflow. См. [ограниченные задания внешних
+инструментов](external-tool-jobs.md).
 
 ## Необязательный анализ безопасности
 

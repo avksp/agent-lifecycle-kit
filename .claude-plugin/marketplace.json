@@ -9,10 +9,10 @@
       "source": {
         "source": "github",
         "repo": "avksp/agent-lifecycle-kit",
-        "ref": "v2.4.1"
+        "ref": "v2.5.0"
       },
       "description": "Reviewed SDD planning, budgeted execution, adapter conformance, implementation audit, and final proof.",
-      "version": "2.4.1",
+      "version": "2.5.0",
       "author": {
         "name": "Agent Lifecycle Kit contributors"
       },
