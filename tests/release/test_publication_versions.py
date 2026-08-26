@@ -50,9 +50,7 @@ class PublicationVersionTests(unittest.TestCase):
 
     def test_publication_manifest_exposes_workflow_evidence_boundaries(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
-        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
-            "workflow-evidence-validation"
-        ]
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}["workflow-evidence-validation"]
         self.assertEqual(feature["status"], "REQUIRED")
         self.assertTrue(feature["workerIdentityRequired"])
         self.assertTrue(feature["reviewIdRequired"])
@@ -60,15 +58,24 @@ class PublicationVersionTests(unittest.TestCase):
 
     def test_publication_manifest_exposes_bounded_external_tool_jobs(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
-        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
-            "optional-bounded-external-tool-jobs"
-        ]
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}["optional-bounded-external-tool-jobs"]
         self.assertEqual(feature["status"], "OPTIONAL")
         self.assertTrue(feature["adapterOwned"])
         self.assertTrue(feature["immutableAttempts"])
         self.assertFalse(feature["coreNetworkCalls"])
         self.assertFalse(feature["ordinaryWorkflowStateAllocated"])
         self.assertFalse(feature["lifecycleAuthority"])
+
+    def test_publication_manifest_exposes_release_accounting_boundaries(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "release-accounting-and-session-handoff"
+        ]
+
+        self.assertEqual(feature["status"], "ADVISORY")
+        self.assertFalse(feature["missingTelemetryIsZero"])
+        self.assertFalse(feature["workflowAuthority"])
+        self.assertFalse(feature["rawTranscriptRequired"])
 
     def test_publication_manifest_records_successor_adoption_boundary(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
@@ -157,11 +164,7 @@ class PublicationVersionTests(unittest.TestCase):
 
     def test_publication_manifest_tracks_every_exact_package_pin(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
-        pin_paths = {
-            entry["path"]
-            for entry in manifest["entries"]
-            if entry["fieldForm"] == "package.pin"
-        }
+        pin_paths = {entry["path"] for entry in manifest["entries"] if entry["fieldForm"] == "package.pin"}
         self.assertEqual(
             pin_paths,
             {

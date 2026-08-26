@@ -61,6 +61,68 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/release-accounting.md",
+        (
+            "agent-phase-resource-input.v1",
+            "agent-phase-resource-measurement.v1",
+            "agent-release-accounting.v1",
+            "metrics phase-resources",
+            "metrics release-accounting",
+            "UNAVAILABLE",
+            "elapsedWallMs",
+            "computeMs",
+            "NON_ADDITIVE_SCOPE",
+            "never becomes `ATTESTED`",
+            "cannot accept a task",
+        ),
+    ),
+    (
+        "docs/ru/reference/release-accounting.md",
+        (
+            "agent-phase-resource-input.v1",
+            "agent-phase-resource-measurement.v1",
+            "agent-release-accounting.v1",
+            "metrics phase-resources",
+            "metrics release-accounting",
+            "UNAVAILABLE",
+            "elapsedWallMs",
+            "computeMs",
+            "NON_ADDITIVE_SCOPE",
+            "не превращается в `ATTESTED`",
+            "не принимает задачу",
+        ),
+    ),
+    (
+        "docs/guides/phase-session-handoff.md",
+        (
+            "plan snapshot",
+            "plan handoff",
+            "context checkpoint",
+            "context restore",
+            "workflow task-snapshot",
+            "workflow task-result",
+            "implementationAuthorized: false",
+            "proofAuthority",
+            "raw transcript",
+            "Do not reduce review, security, architecture or quality gates",
+        ),
+    ),
+    (
+        "docs/ru/guides/phase-session-handoff.md",
+        (
+            "plan snapshot",
+            "plan handoff",
+            "context checkpoint",
+            "context restore",
+            "workflow task-snapshot",
+            "workflow task-result",
+            "implementationAuthorized: false",
+            "proofAuthority",
+            "полный transcript",
+            "Не снижайте review, security, architecture или quality gates",  # noqa: RUF001
+        ),
+    ),
+    (
         "docs/guides/install-and-first-run.md",
         (
             "git clone https://github.com/avksp/agent-lifecycle-kit.git",
@@ -895,6 +957,10 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "python -m pip install agent-lifecycle-kit==",
             "agent-lifecycle tier resolve --request <request.json>",
             "reserved compatibility selector",
+            "agent-lifecycle plan lock-create",
+            "--review <path>",
+            "--repository-root <path>",
+            "fails rather than replacing",
             "actorRunId",
             "reviewId",
             "task-review-invalid",
@@ -917,6 +983,10 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "python -m pip install agent-lifecycle-kit==",
             "agent-lifecycle tier resolve --request <request.json>",
             "зарезервированный раздел совместимости",
+            "agent-lifecycle plan lock-create",
+            "--review <путь>",
+            "--repository-root <путь>",
+            "вместо замены существующего",
             "actorRunId",
             "reviewId",
             "task-review-invalid",
@@ -1699,7 +1769,10 @@ def main() -> int:
         if relative in OPTIONAL_DOC_RULE_PATHS and not (root / relative).is_file():
             checks.append({"path": relative, "status": "SKIPPED", "required": list(required), "identity": None})
             continue
-        if relative in {"docs/reference/public-contracts.md", "docs/ru/reference/public-contracts.md"} and not review_mesh_docs_available:
+        if (
+            relative in {"docs/reference/public-contracts.md", "docs/ru/reference/public-contracts.md"}
+            and not review_mesh_docs_available
+        ):
             required = tuple(item for item in required if "agent-review-mesh" not in item)
         if relative == "docs/adapters/support-matrix.md" and not host_local_token_docs_available:
             required = tuple(
@@ -1740,14 +1813,18 @@ def _check_doc(
     check["identity"] = file_identity(path)
     missing = [phrase for phrase in required if phrase not in text]
     if missing:
-        blockers.append({"code": "docs-compat-required-text-missing", "message": f"{relative} missing: {', '.join(missing)}"})
+        blockers.append(
+            {"code": "docs-compat-required-text-missing", "message": f"{relative} missing: {', '.join(missing)}"}
+        )
         check["status"] = "FAIL"
     if _contains_overclaim(relative, text, blockers, verified_doc_hosts):
         check["status"] = "FAIL"
     return check
 
 
-def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]], verified_doc_hosts: set[str]) -> dict[str, Any]:
+def _check_adapter_doc(
+    root: Path, relative: str, blockers: list[dict[str, Any]], verified_doc_hosts: set[str]
+) -> dict[str, Any]:
     path = root / relative
     adapter_id = path.stem
     if relative == "docs/adapters/claude.md":
@@ -1801,7 +1878,12 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
             and "until live" not in text
             and "not `VERIFIED`" not in text
         ):
-            blockers.append({"code": "docs-compat-adapter-verified-overclaim", "message": f"{relative} mentions VERIFIED without live-evidence qualifier"})
+            blockers.append(
+                {
+                    "code": "docs-compat-adapter-verified-overclaim",
+                    "message": f"{relative} mentions VERIFIED without live-evidence qualifier",
+                }
+            )
             check["status"] = "FAIL"
     return check
 
@@ -1809,15 +1891,20 @@ def _check_adapter_doc(root: Path, relative: str, blockers: list[dict[str, Any]]
 def _contains_overclaim(relative: str, text: str, blockers: list[dict[str, Any]], verified_doc_hosts: set[str]) -> bool:
     failed = False
     invalid_verified_rows = [
-        row
-        for row in VERIFIED_ROW.findall(text)
-        if _verified_row_host(row) not in verified_doc_hosts
+        row for row in VERIFIED_ROW.findall(text) if _verified_row_host(row) not in verified_doc_hosts
     ]
     if invalid_verified_rows:
-        blockers.append({"code": "docs-compat-verified-row", "message": f"{relative} contains a VERIFIED current-maturity row"})
+        blockers.append(
+            {"code": "docs-compat-verified-row", "message": f"{relative} contains a VERIFIED current-maturity row"}
+        )
         failed = True
     if "offline source release" in text.lower() and PRODUCTION_READY_CLAIM.search(text):
-        blockers.append({"code": "docs-compat-production-ready-overclaim", "message": f"{relative} overclaims offline source release readiness"})
+        blockers.append(
+            {
+                "code": "docs-compat-production-ready-overclaim",
+                "message": f"{relative} overclaims offline source release readiness",
+            }
+        )
         failed = True
     return failed
 

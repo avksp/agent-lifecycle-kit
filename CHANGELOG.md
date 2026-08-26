@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 2.6.0 - 2026-08-26
+
+- Added reviewed `plan lock-create`, bounded `metrics phase-resources` and
+  deterministic `metrics release-accounting` CLI routes with create-only
+  canonical output.
+- Added explicit ALK-process, implementation, audit and post-audit-remediation
+  accounting views with separate wall/compute time, non-additive exclusions
+  and `UNAVAILABLE` rather than inferred zero values.
+- Added digest-bound controller, core, plugin, skill, run, source and
+  measurement provenance; mismatches remain visible and non-authoritative.
+- Added a bilingual phase-to-session handoff recipe and no-model continuity
+  regression using existing packets, snapshots, checkpoints and reviews.
+
 ## 2.5.0 - 2026-08-26
 
 - Added provider-neutral external-tool request, status, artifact and result
