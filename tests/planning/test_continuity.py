@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
+from agent_lifecycle.context import build_context_checkpoint, restore_context_checkpoint, write_context_checkpoint
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.planning import (
     build_plan_snapshot,
@@ -86,7 +89,9 @@ class PlanContinuityTests(unittest.TestCase):
 
     def test_handoff_is_compact_and_omits_extra_workstreams(self) -> None:
         manifest = _manifest()
-        manifest["workstreams"].append({"id": "WS-02", "title": "Follow-up", "owner": "reviewer", "writes": ["tests/team"]})
+        manifest["workstreams"].append(
+            {"id": "WS-02", "title": "Follow-up", "owner": "reviewer", "writes": ["tests/team"]}
+        )
         snapshot = build_plan_snapshot(manifest)
 
         handoff = render_plan_handoff(manifest, snapshot=snapshot, max_workstreams=1, target_tokens=4096)
@@ -96,6 +101,68 @@ class PlanContinuityTests(unittest.TestCase):
         self.assertEqual(len(handoff["workstreams"]), 1)
         self.assertEqual(handoff["omitted"]["workstreamCount"], 1)
         self.assertLessEqual(handoff["estimatedTokens"], 4096)
+
+    def test_four_sessions_resume_from_bounded_artifacts_without_model_state(self) -> None:
+        manifest = _manifest()
+        snapshot = build_plan_snapshot(manifest)
+        handoff = render_plan_handoff(manifest, snapshot=snapshot, target_tokens=4096)
+        phases = (
+            ("planning", "work/release/plan-handoff.json"),
+            ("implementation", "work/release/task-packet.json"),
+            ("audit", "work/release/task-review.json"),
+            ("acceptance", "work/release/final-audit.json"),
+        )
+
+        self.assertEqual(handoff["status"], "PASS")
+        self.assertLessEqual(handoff["estimatedTokens"], 4096)
+        with tempfile.TemporaryDirectory() as tmp:
+            checkpoint_root = Path(tmp) / "checkpoints"
+            for state_revision, (phase, artifact_path) in enumerate(phases, start=1):
+                session_id = f"{phase}-session"
+                state = {
+                    "runId": "release-run-1",
+                    "packageId": "team-plan",
+                    "planRevision": 2,
+                    "planDigest": "b" * 64,
+                    "stateRevision": state_revision,
+                    "sourceRevision": "a" * 40,
+                }
+                checkpoint = build_context_checkpoint(
+                    session_id=session_id,
+                    run_id=state["runId"],
+                    adapter_id="no-model-fixture",
+                    package_id=state["packageId"],
+                    plan_revision=state["planRevision"],
+                    plan_digest=state["planDigest"],
+                    state_revision=state_revision,
+                    source_revision=state["sourceRevision"],
+                    capture_mode="MILESTONE",
+                    reason=f"{phase}-handoff",
+                    summary={
+                        "latestUserIntent": "Complete the reviewed release without weakening gates.",
+                        "acceptedDecisions": [f"{phase} uses current ALK artifacts"],
+                        "openBlockers": [],
+                        "nextRequiredAction": f"continue-{phase}",
+                    },
+                    referenced_artifacts=[{"path": artifact_path, "digest": f"{state_revision:x}" * 64}],
+                    created_at=f"2026-08-26T00:00:0{state_revision}Z",
+                    target_tokens=2048,
+                )
+                receipt = write_context_checkpoint(checkpoint, root=checkpoint_root)
+                continuation = restore_context_checkpoint(
+                    Path(receipt["path"]),
+                    state=state,
+                    session_id=session_id,
+                    target_tokens=2048,
+                )
+
+                self.assertEqual(continuation["status"], "PASS")
+                self.assertFalse(continuation["implementationAuthorized"])
+                self.assertEqual(continuation["proofAuthority"], "none")
+                self.assertEqual(continuation["referencedArtifacts"], checkpoint["referencedArtifacts"])
+                serialized = repr(continuation)
+                for forbidden in ("rawTranscript", "messages", "systemPrompt", "developerPrompt"):
+                    self.assertNotIn(forbidden, serialized)
 
 
 def _manifest(*, repository_references: list[dict] | None = None) -> dict:

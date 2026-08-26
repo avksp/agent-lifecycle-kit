@@ -69,6 +69,18 @@ EXTERNAL_TOOL_JOBS_DOCUMENTATION: dict[str, Any] = {
     "lifecycleAuthority": False,
 }
 
+RELEASE_ACCOUNTING_DOCUMENTATION: dict[str, Any] = {
+    "id": "release-accounting-and-session-handoff",
+    "status": "ADVISORY",
+    "englishPath": "docs/reference/release-accounting.md",
+    "russianPath": "docs/ru/reference/release-accounting.md",
+    "englishHandoffPath": "docs/guides/phase-session-handoff.md",
+    "russianHandoffPath": "docs/ru/guides/phase-session-handoff.md",
+    "missingTelemetryIsZero": False,
+    "workflowAuthority": False,
+    "rawTranscriptRequired": False,
+}
+
 SUCCESSOR_ADOPTION: dict[str, Any] = {
     "packageId": "release-2-6",
     "requiredPredecessor": "release-2-5",
@@ -260,6 +272,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             SECURITY_ANALYSIS_DOCUMENTATION,
             WORKFLOW_EVIDENCE_DOCUMENTATION,
             EXTERNAL_TOOL_JOBS_DOCUMENTATION,
+            RELEASE_ACCOUNTING_DOCUMENTATION,
         ],
         "successorAdoption": SUCCESSOR_ADOPTION,
         "lastChannelPolicy": LAST_CHANNEL_POLICY,

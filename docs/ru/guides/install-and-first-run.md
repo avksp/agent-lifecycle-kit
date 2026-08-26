@@ -78,7 +78,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.5.0
+python -m pip install agent-lifecycle-kit==2.6.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -89,7 +89,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.5.0
+python -m pip install agent-lifecycle-kit==2.6.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -187,7 +187,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.5.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.6.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -223,6 +223,15 @@ Agent Plugins в клиентах](../reference/agent-plugin-qualification.md). 
 работы, которой нужны отмена, очистка дочерних процессов или хэшированные
 артефакты. Обычный workflow не создаёт состояние задания, а возможность не
 добавляет клиент провайдера или вторые полномочия жизненного цикла.
+
+В релизе 2.6 появились [учёт ресурсов релиза](../reference/release-accounting.md)
+и ограниченный [рецепт передачи фаз между сессиями](phase-session-handoff.md).
+Отсутствующая телеметрия остаётся недоступной, а handoff-артефакты не заменяют
+полномочия workflow.
+Перед выполнением создайте финальный рассмотренный lock командой
+`agent-lifecycle plan lock-create --manifest <путь> --review <путь>`: она
+завершается отказом вместо замены существующего `plan.lock.json`. См.
+[справочник CLI](../reference/cli.md).
 
 В релизе 1.80 также описан необязательный контроль жизненного цикла внутри
 адаптера. По умолчанию он не включён: комплектные адаптеры сейчас публикуют
