@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.cli.plan_lock_commands import create_reviewed_plan_lock
 from agent_lifecycle.compiler import compile_small_model_packets, compile_task_packets
 from agent_lifecycle.contracts import (
     LifecycleError,
@@ -93,6 +94,12 @@ def _dispatch_specification(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
+    if args.plan_command == "lock-create":
+        return create_reviewed_plan_lock(
+            manifest_path=args.manifest,
+            review_path=args.review,
+            repository_root=Path(args.repository_root),
+        )
     if args.plan_command == "check":
         manifest = read_json_object(Path(args.manifest), label="plan manifest")
         lock = read_json_object(Path(args.lock), label="plan lock") if args.lock else None
