@@ -291,7 +291,7 @@ METRIC_SCHEMAS: dict[str, dict[str, Any]] = {
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "phaseCount": {"type": "integer", "minimum": 1},
-            "phases": {"type": "array", "items": {"type": "object"}},
+            "phases": {"type": "array", "minItems": 1, "maxItems": 256, "items": {"type": "object"}},
             "usageExport": {"type": "object"},
             "totals": {"type": "object"},
             "blockers": {"type": "array", "items": {"type": "object"}},
@@ -301,7 +301,16 @@ METRIC_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     "agent-phase-resource-measurement-validation.v1": open_object_schema(
         "agent-phase-resource-measurement-validation.v1",
-        required=["schemaVersion", "status", "measurementStatus", "phaseCount", "totals", "blockers", "measurementDigest", "validationDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "measurementStatus",
+            "phaseCount",
+            "totals",
+            "blockers",
+            "measurementDigest",
+            "validationDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "measurementStatus": {"type": ["string", "null"]},
@@ -310,6 +319,39 @@ METRIC_SCHEMAS: dict[str, dict[str, Any]] = {
             "blockers": {"type": "array", "items": {"type": "object"}},
             "measurementDigest": {"type": ["string", "null"], "minLength": 64, "maxLength": 64},
             "validationDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    "agent-phase-resource-input.v1": open_object_schema(
+        "agent-phase-resource-input.v1",
+        required=["schemaVersion", "phases"],
+        properties={
+            "phases": {"type": "array", "minItems": 1, "maxItems": 256, "items": {"type": "object"}},
+            "lineage": {"type": "object"},
+            "sourceArtifacts": {"type": "array", "items": {"type": "object"}},
+        },
+    ),
+    "agent-phase-resource-generation.v1": open_object_schema(
+        "agent-phase-resource-generation.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "outputPath",
+            "outputBytes",
+            "measurementDigest",
+            "validation",
+            "liveCallsStarted",
+            "productionPromotionClaimed",
+            "receiptDigest",
+        ],
+        properties={
+            "status": {"const": "PASS"},
+            "outputPath": {"type": "string", "minLength": 1},
+            "outputBytes": {"type": "integer", "minimum": 1},
+            "measurementDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "validation": {"type": "object"},
+            "liveCallsStarted": {"const": False},
+            "productionPromotionClaimed": {"const": False},
+            "receiptDigest": {"type": "string", "minLength": 64, "maxLength": 64},
         },
     ),
 }

@@ -7,7 +7,6 @@ from pathlib import Path
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.freeze import build_plan_lock_v2, verify_plan_lock
 
-
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "tests/freeze/fixtures/canonical-v2-plan-package"
 

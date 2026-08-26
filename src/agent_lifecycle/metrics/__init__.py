@@ -16,6 +16,7 @@ from agent_lifecycle.metrics.outcome_index import (
     build_task_outcome_index,
 )
 from agent_lifecycle.metrics.phase_resources import (
+    MAX_PHASE_RESOURCE_ENTRIES,
     build_phase_resource_measurement,
     require_phase_resource_measurement_pass,
     validate_phase_resource_measurement,
@@ -29,6 +30,17 @@ from agent_lifecycle.metrics.recommendations import (
     validate_lifecycle_baselines,
 )
 from agent_lifecycle.metrics.regression_signals import summarize_regression_signals
+from agent_lifecycle.metrics.release_accounting import (
+    ACCOUNTING_VIEWS,
+    MAX_RELEASE_ACCOUNTING_ARTIFACTS,
+    MAX_RELEASE_ACCOUNTING_ENTRIES,
+    PROVENANCE_FIELDS,
+    build_release_accounting,
+    build_release_accounting_source,
+    require_release_accounting_pass,
+    validate_release_accounting,
+    validate_release_accounting_source,
+)
 from agent_lifecycle.metrics.usage_export import (
     build_usage_export,
     require_usage_export_pass,
@@ -37,8 +49,13 @@ from agent_lifecycle.metrics.usage_export import (
 )
 
 __all__ = [
+    "ACCOUNTING_VIEWS",
     "COST_CATEGORIES",
     "DEFAULT_MODE_LIMITS",
+    "MAX_PHASE_RESOURCE_ENTRIES",
+    "MAX_RELEASE_ACCOUNTING_ARTIFACTS",
+    "MAX_RELEASE_ACCOUNTING_ENTRIES",
+    "PROVENANCE_FIELDS",
     "build_audit_optimization_report",
     "build_audit_sample",
     "build_audit_samples",
@@ -48,6 +65,8 @@ __all__ = [
     "build_phase_resource_measurement",
     "build_quality_cost_signal_summary",
     "build_quality_cost_signals",
+    "build_release_accounting",
+    "build_release_accounting_source",
     "build_task_outcome_index",
     "build_usage_export",
     "evaluate_candidate_profiles",
@@ -59,6 +78,7 @@ __all__ = [
     "require_lifecycle_cost_pass",
     "require_lifecycle_recommendation_pass",
     "require_phase_resource_measurement_pass",
+    "require_release_accounting_pass",
     "require_usage_export_pass",
     "summarize_lifecycle_overhead",
     "summarize_regression_signals",
@@ -68,6 +88,8 @@ __all__ = [
     "validate_lifecycle_baselines",
     "validate_lifecycle_cost_report",
     "validate_phase_resource_measurement",
+    "validate_release_accounting",
+    "validate_release_accounting_source",
     "validate_usage_export",
 ]
 
