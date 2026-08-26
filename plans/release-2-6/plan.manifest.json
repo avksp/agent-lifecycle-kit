@@ -1,0 +1,397 @@
+{
+  "schemaVersion": "agent-plan-manifest.v1",
+  "status": "FROZEN",
+  "planRevision": 6,
+  "package": {
+    "id": "release-2-6",
+    "title": "Operator CLI and release accounting",
+    "workspaceRoot": ".",
+    "artifactRoot": "plans/release-2-6",
+    "root": ".",
+    "planArtifactRoot": "plans/release-2-6"
+  },
+  "planFiles": [
+    "plans/release-2-6/00-developer-overview.md",
+    "plans/release-2-6/README.md",
+    "plans/release-2-6/acceptance-criteria.md",
+    "plans/release-2-6/evidence-plan.md",
+    "plans/release-2-6/independent-s2-audit.md",
+    "plans/release-2-6/plan-review-r6.json",
+    "plans/release-2-6/plan-review.md",
+    "plans/release-2-6/plan.manifest.json",
+    "plans/release-2-6/release-notes.en.md",
+    "plans/release-2-6/write-set.md"
+  ],
+  "packageIntegrity": {
+    "required": true,
+    "lockSchemaVersion": "agent-plan-lock.v2",
+    "inventorySource": "planFiles",
+    "undeclaredTopLevelFiles": "reject",
+    "allowedUnlistedFiles": [
+      "plan.lock.json"
+    ]
+  },
+  "author": "codex-planner",
+  "baseRevision": {
+    "ref": "main",
+    "sha": "a3abc26296bb9f4535910beaaf09a78e1bd8cac2"
+  },
+  "dependsOn": [
+    "release-2-5"
+  ],
+  "releaseTarget": {
+    "targetVersion": "2.6.0",
+    "targetTag": "v2.6.0",
+    "requiresPublicationValidation": true
+  },
+  "planReview": {
+    "required": true,
+    "verdict": "READY_TO_FREEZE",
+    "reviewedRevision": 6,
+    "report": "plans/release-2-6/plan-review-r6.json"
+  },
+  "developerOverview": "plans/release-2-6/00-developer-overview.md",
+  "specification": {
+    "tier": "S2",
+    "intent": "to-be",
+    "status": "FROZEN",
+    "source": "plans/release-2-6/README.md",
+    "requirements": [
+      {
+        "id": "R26-LOCK",
+        "description": "Expose reviewed final plan-lock v2 creation and verification through a no-replace canonical CLI boundary."
+      },
+      {
+        "id": "R26-PHASES",
+        "description": "Expose bounded phase-resource measurement building and validation from explicit input."
+      },
+      {
+        "id": "R26-ACCOUNTING",
+        "description": "Produce comparable release accounting through CLI and Python API with explicit wall, compute, additivity and availability semantics."
+      },
+      {
+        "id": "R26-PROVENANCE",
+        "description": "Record distinct controller, core, plugin, skill, run, source and measurement provenance."
+      },
+      {
+        "id": "R26-HANDOFF",
+        "description": "Document low-context phase separation using existing ALK packet, snapshot, checkpoint and handoff primitives."
+      },
+      {
+        "id": "R26-PUBLICATION",
+        "description": "Publish schemas, documentation and version 2.6.0 consistently without reducing predecessor gates."
+      }
+    ],
+    "tierResolutionRequest": {
+      "taskCount": 3,
+      "executableOwners": [
+        "lock-cli-worker",
+        "accounting-worker",
+        "release-worker"
+      ],
+      "capabilityHints": [],
+      "riskFlags": {
+        "architecture": true,
+        "security": true,
+        "performance": true,
+        "browser": false,
+        "externalEnvironment": false
+      },
+      "requirementsBytes": 18000,
+      "externalSpecification": true
+    }
+  },
+  "readOnly": [
+    "plans/release-2-4",
+    "plans/release-2-4-1",
+    "plans/release-2-5",
+    "tasks/release-1-75",
+    "tasks/release-1-76",
+    "tasks/release-1-77",
+    "tasks/release-1-78",
+    "tasks/release-1-79",
+    "tasks/release-1-80",
+    "tasks/release-1-81",
+    "tasks/release-1-82",
+    "tasks/release-1-83",
+    "tasks/release-1-84",
+    "tasks/release-1-85",
+    "tasks/release-1-86",
+    "tasks/release-1-87",
+    "tasks/release-1-88",
+    "tasks/release-1-89",
+    "tasks/release-2-0",
+    "tasks/release-2-1",
+    "tasks/release-2-2",
+    "tasks/release-2-3",
+    "tasks/release-2-4",
+    "tasks/release-2-5",
+    "tasks/release-2-6"
+  ],
+  "forbiddenWrites": [
+    ".git",
+    ".alk",
+    ".claude/settings.local.json",
+    "LICENSE",
+    "NOTICE",
+    "tasks/analisys",
+    "tasks/analisys8",
+    "tasks/analisys9",
+    "out"
+  ],
+  "leadOwned": [
+    {
+      "path": "plans/release-2-6",
+      "reason": "canonical tracked plan authority"
+    },
+    {
+      "path": "work/release-2-6",
+      "reason": "workflow, validation, audit and accounting evidence"
+    }
+  ],
+  "workstreams": [
+    {
+      "id": "WS26-01",
+      "title": "Reviewed plan-lock CLI",
+      "owner": "lock-cli-worker",
+      "dependsOn": [],
+      "acceptanceIds": [
+        "AC26-LOCK"
+      ],
+      "evidenceIds": [
+        "EV26-LOCK"
+      ],
+      "writes": [
+        "src/agent_lifecycle/cli/planning_parsers.py",
+        "src/agent_lifecycle/cli/dispatch_planning.py",
+        "src/agent_lifecycle/cli/plan_lock_commands.py",
+        "src/agent_lifecycle/freeze/package_integrity.py",
+        "tests/cli/test_plan_lock_commands.py",
+        "tests/freeze/test_locks.py",
+        "tests/freeze/test_plan_package_integrity.py"
+      ]
+    },
+    {
+      "id": "WS26-02",
+      "title": "Phase resources, release accounting and provenance",
+      "owner": "accounting-worker",
+      "dependsOn": [
+        "WS26-01"
+      ],
+      "acceptanceIds": [
+        "AC26-PHASES",
+        "AC26-ACCOUNTING",
+        "AC26-PROVENANCE"
+      ],
+      "evidenceIds": [
+        "EV26-PHASES",
+        "EV26-ACCOUNTING",
+        "EV26-PROVENANCE"
+      ],
+      "writes": [
+        "src/agent_lifecycle/cli/metrics_parser.py",
+        "src/agent_lifecycle/cli/dispatch_observability.py",
+        "src/agent_lifecycle/contracts/release_accounting_schemas.py",
+        "src/agent_lifecycle/contracts/metric_schemas.py",
+        "src/agent_lifecycle/contracts/schemas.py",
+        "src/agent_lifecycle/metrics/release_accounting.py",
+        "src/agent_lifecycle/metrics/cost_collection.py",
+        "src/agent_lifecycle/metrics/phase_resources.py",
+        "src/agent_lifecycle/metrics/__init__.py",
+        "tests/cli/test_phase_resource_commands.py",
+        "tests/cli/test_release_accounting_commands.py",
+        "tests/contracts/test_release_accounting_schemas.py",
+        "tests/contracts/test_contracts.py",
+        "tests/metrics/test_phase_resources.py",
+        "tests/metrics/test_release_accounting.py",
+        "tests/metrics/test_lifecycle_costs.py"
+      ]
+    },
+    {
+      "id": "WS26-03",
+      "title": "Session recipe, documentation and publication",
+      "owner": "release-worker",
+      "dependsOn": [
+        "WS26-02"
+      ],
+      "acceptanceIds": [
+        "AC26-HANDOFF",
+        "AC26-PUBLICATION"
+      ],
+      "evidenceIds": [
+        "EV26-HANDOFF",
+        "EV26-PUBLICATION"
+      ],
+      "writes": [
+        "docs/reference/release-accounting.md",
+        "docs/ru/reference/release-accounting.md",
+        "docs/guides/phase-session-handoff.md",
+        "docs/ru/guides/phase-session-handoff.md",
+        "docs/guides/install-and-first-run.md",
+        "docs/ru/guides/install-and-first-run.md",
+        "README.md",
+        "docs/README.md",
+        "docs/ru/README.md",
+        "docs/reference/cli.md",
+        "docs/ru/reference/cli.md",
+        "CHANGELOG.md",
+        "tasks/release-roadmap.md",
+        "pyproject.toml",
+        "uv.lock",
+        "src/agent_lifecycle/_version.py",
+        ".agents/plugins/marketplace.json",
+        ".codex-plugin/plugin.json",
+        ".claude-plugin/plugin.json",
+        ".claude-plugin/marketplace.json",
+        ".cursor-plugin/plugin.json",
+        ".cursor-plugin/marketplace.json",
+        "adapters/claude/.claude-plugin/plugin.json",
+        "adapters/codex/.codex-plugin/plugin.json",
+        "adapters/cursor/.cursor-plugin/plugin.json",
+        "tools/release/validate_docs_compat.py",
+        "tests/release/test_docs_gates.py",
+        "tools/release/publication_contract.py",
+        "tests/release/test_publication_versions.py",
+        "tests/release/test_publication_adoption.py",
+        "tests/planning/test_continuity.py"
+      ]
+    }
+  ],
+  "acceptance": {
+    "criteria": [
+      {
+        "id": "AC26-LOCK",
+        "requirementIds": [
+          "R26-LOCK"
+        ],
+        "evidenceIds": [
+          "EV26-LOCK"
+        ]
+      },
+      {
+        "id": "AC26-PHASES",
+        "requirementIds": [
+          "R26-PHASES"
+        ],
+        "evidenceIds": [
+          "EV26-PHASES"
+        ]
+      },
+      {
+        "id": "AC26-ACCOUNTING",
+        "requirementIds": [
+          "R26-ACCOUNTING"
+        ],
+        "evidenceIds": [
+          "EV26-ACCOUNTING"
+        ]
+      },
+      {
+        "id": "AC26-PROVENANCE",
+        "requirementIds": [
+          "R26-PROVENANCE"
+        ],
+        "evidenceIds": [
+          "EV26-PROVENANCE"
+        ]
+      },
+      {
+        "id": "AC26-HANDOFF",
+        "requirementIds": [
+          "R26-HANDOFF"
+        ],
+        "evidenceIds": [
+          "EV26-HANDOFF"
+        ]
+      },
+      {
+        "id": "AC26-PUBLICATION",
+        "requirementIds": [
+          "R26-PUBLICATION"
+        ],
+        "evidenceIds": [
+          "EV26-PUBLICATION"
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "commands": [
+      "python3 -c 'import json,os; from pathlib import Path; manifest=json.loads(Path(\"plans/release-2-6/plan.manifest.json\").read_text(encoding=\"utf-8\")); recorded=manifest.get(\"baseRevision\",{}).get(\"sha\"); expected=os.environ.get(\"ALK_ACCEPTED_PREDECESSOR_SHA\"); actual=os.environ.get(\"ALK_RELEASE_BASE_SHA\"); raise SystemExit(0 if expected and actual and expected == actual == recorded else \"accepted predecessor and release base must equal manifest baseRevision.sha\")'",
+    "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest tests.cli.test_plan_lock_commands tests.freeze.test_locks tests.freeze.test_plan_package_integrity tests.cli.test_phase_resource_commands tests.cli.test_release_accounting_commands tests.metrics.test_phase_resources tests.contracts.test_release_accounting_schemas tests.contracts.test_contracts tests.metrics.test_release_accounting tests.metrics.test_lifecycle_costs tests.planning.test_continuity -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -t . -v",
+      "python3 -c 'import tomllib; from pathlib import Path; dependencies=tomllib.loads(Path(\"pyproject.toml\").read_text(encoding=\"utf-8\"))[\"project\"].get(\"dependencies\"); raise SystemExit(0 if dependencies == [] else \"runtime dependencies must remain empty\")'",
+      "uv run --frozen --group quality python tools/release/run_python_quality.py --policy policy/python-quality.json --package-root src/agent_lifecycle --tests-root tests --test-top-level . --base-sha a3abc26296bb9f4535910beaaf09a78e1bd8cac2 --work-root work/release-2-6/python-quality/raw --evidence work/release-2-6/python-quality/run.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src uv run --frozen --group quality python tools/release/validate_python_quality.py --policy policy/python-quality.json --run-receipt work/release-2-6/python-quality/run.json --work-root work/release-2-6/python-quality/raw --evidence work/release-2-6/python-quality/validation.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_module_dependencies.py --package-root src/agent_lifecycle --policy policy/architecture-dependencies.json --require-acyclic-modules --require-acyclic-packages --evidence work/release-2-6/evidence/module-dependencies.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_architecture_complexity.py --package-root src/agent_lifecycle --target-file-lines 800 --hard-file-lines 1200 --target-function-lines 80 --hard-function-lines 150 --hard-symbols 80 --evidence work/release-2-6/evidence/architecture-complexity.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_docs_compat.py --evidence work/release-2-6/evidence/docs-compat.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --report work/release-2-6/evidence/neutrality.json --require-zero-findings",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_versions.py --target-version 2.6.0 --target-ref v2.6.0 --evidence work/release-2-6/evidence/publication-versions.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_adoption.py --target-version 2.6.0 --evidence work/release-2-6/evidence/publication-adoption.json"
+    ],
+    "extraEvidence": [
+      "EV26-LOCK",
+      "EV26-PHASES",
+      "EV26-ACCOUNTING",
+      "EV26-PROVENANCE",
+      "EV26-HANDOFF",
+      "EV26-PUBLICATION"
+    ]
+  },
+  "orchestration": {
+    "startMode": "manual-after-freeze",
+    "remediationMode": "bounded-auto",
+    "maxPlanReviewRounds": 4,
+    "maxTaskAttempts": 3,
+    "maxParallelTasks": 1,
+    "maxValidationRunsPerTask": 10,
+    "maxToolCallsPerIteration": 18,
+    "maxUsageIterationsPerAttempt": 4,
+    "maxToolCallsPerTask": 130,
+    "maxToolCallsPerRun": 420,
+    "maxReportedTokensPerTask": 90000,
+    "maxReportedTokensPerRun": 280000,
+    "maxEvidenceArtifactBytes": 8388608,
+    "maxEvidenceBytesPerTask": 25165824,
+    "maxEvidenceBytesPerRun": 67108864,
+    "maxTaskWallSeconds": 10800,
+    "maxRunWallSeconds": 43200,
+    "maxContextBytes": 73728,
+    "maxRenderedPacketBytes": 106496,
+    "stateFile": "work/release-2-6/run.state.json",
+    "eventLog": "work/release-2-6/workflow-events.jsonl",
+    "stepReviewRequired": true,
+    "finalAuditRequired": true
+  },
+  "securityGates": [
+    "lock creation requires independent digest-bound READY_TO_FREEZE review and cannot approve or freeze a plan",
+    "lock output is canonical, no-replace and package-inventory verified",
+    "missing telemetry remains unavailable",
+    "accounting never starts hosts or models",
+    "no required security, architecture, quality or audit gate is reduced for a ratio"
+  ],
+  "budgetPolicy": {
+    "liveHostCallsAllowedByDefault": false,
+    "modelTokenBudgetForPlanValidation": 0,
+    "moneyFieldsCanonical": false,
+    "budgetUnits": "bounded-release-evidence",
+    "maxTaskAttempts": 10,
+    "notes": "Accounting records facts and cannot lower quality floors. Optimization targets follow measured Release 2.6 baselines."
+  },
+  "contextLimits": {
+    "targetReviewerPacketTokens": 6000,
+    "maxReviewerPacketTokens": 12000,
+    "smallContextProfilesRequired": true,
+    "rawSourceFilesInReviewerPacket": false,
+    "notes": "Cross-project fixtures are synthetic and contain no raw transcripts."
+  },
+  "finalAuditGates": [
+    "[AC26-LOCK|EV26-LOCK] Final lock creation requires an independent digest-bound review, is canonical no-replace, verifies exact inventory and cannot self-freeze.",
+    "[AC26-PHASES|EV26-PHASES] CLI and Python phase measurements are digest-equivalent and bounded.",
+    "[AC26-ACCOUNTING|EV26-ACCOUNTING] CLI and Python release accounting are digest-equivalent; wall, compute, availability and additivity remain correct.",
+    "[AC26-PROVENANCE|EV26-PROVENANCE] Core, plugin, skill, run, source and measurement identities are independently visible and digest-bound.",
+    "[AC26-HANDOFF|EV26-HANDOFF] Existing artifacts support bounded phase-separated sessions without a second authority.",
+    "[AC26-PUBLICATION|EV26-PUBLICATION] Version and documentation are consistent and predecessor gates pass unchanged."
+  ]
+}
