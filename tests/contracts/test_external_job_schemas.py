@@ -38,6 +38,7 @@ class ExternalJobContractTests(unittest.TestCase):
         request = self._request()
         status = self._status(request)
         artifact = build_external_job_artifact(
+            request=request,
             artifact_id="summary",
             media_type="application/json",
             bytes_count=42,
@@ -74,18 +75,21 @@ class ExternalJobContractTests(unittest.TestCase):
         self.assertIn("external-job-job-id-invalid", self._codes(validate_external_job_request(request)))
 
     def test_artifact_locator_is_relative_and_attempt_scoped_by_caller(self) -> None:
+        request = self._request()
         artifact = build_external_job_artifact(
+            request=request,
             artifact_id="summary",
             media_type="text/plain",
             bytes_count=4,
             sha256="6" * 64,
             locator="artifacts/attempt-1/summary.txt",
         )
-        self.assertEqual(validate_external_job_artifact(artifact)["status"], "PASS")
+        self.assertEqual(validate_external_job_artifact(artifact, request=request)["status"], "PASS")
 
         for locator in ("../summary.txt", "/tmp/summary.txt", "outputs/summary.txt"):
             with self.subTest(locator=locator), self.assertRaises(LifecycleError):
                 build_external_job_artifact(
+                    request=request,
                     artifact_id="summary",
                     media_type="text/plain",
                     bytes_count=4,
@@ -124,6 +128,7 @@ class ExternalJobContractTests(unittest.TestCase):
 
         clean_status = self._status(request)
         artifact = build_external_job_artifact(
+            request=request,
             artifact_id="large",
             media_type="application/octet-stream",
             bytes_count=request["limits"]["maxArtifactBytes"] + 1,
@@ -169,13 +174,62 @@ class ExternalJobContractTests(unittest.TestCase):
             self._codes(validate_external_job_result(result, request=request, status=status)),
         )
 
+    def test_attempt_limit_and_artifact_request_binding_are_enforced(self) -> None:
+        with self.assertRaises(LifecycleError):
+            self._request(attempt=4, max_attempts=3)
+        request = self._request()
+        artifact = build_external_job_artifact(
+            request=request,
+            artifact_id="bound",
+            media_type="text/plain",
+            bytes_count=1,
+            sha256="6" * 64,
+            locator="artifacts/bound.txt",
+        )
+        other = self._request(job_id="other")
+        validation = validate_external_job_artifact(artifact, request=other)
+        self.assertIn("external-job-artifact-lineage-mismatch", self._codes(validation))
+
+    def test_acceptance_effect_requires_source_context_and_clean_status(self) -> None:
+        request = self._request()
+        clean = self._status(request)
+        result = build_external_job_result(
+            result_id="result-context",
+            request=request,
+            status=clean,
+            verdict="PASS",
+            complete=True,
+            artifacts=[],
+            output_digest=None,
+            output_bytes=0,
+        )
+        context_free = validate_external_job_result(result)
+        self.assertIn("external-job-result-source-context-required", self._codes(context_free))
+        self.assertFalse(validate_external_job_status(clean)["blockingEligible"])
+        unclean = self._status(request, cleanup="FAIL")
+        validation = validate_external_job_status(unclean, request=request)
+        self.assertEqual(validation["status"], "PASS")
+        self.assertFalse(validation["blockingEligible"])
+
+    def test_registered_schema_bounds_cover_builder_output(self) -> None:
+        status = get_schema(EXTERNAL_JOB_STATUS_SCHEMA)["properties"]
+        request = get_schema(EXTERNAL_JOB_REQUEST_SCHEMA)["properties"]
+        child = status["children"]["items"]["properties"]
+        self.assertEqual(status["startedAt"]["maxLength"], 8192)
+        self.assertEqual(status["sequence"]["maximum"], 10**9)
+        self.assertEqual(request["parentJobId"]["maxLength"], 8192)
+        self.assertEqual(child["attempt"]["maximum"], 1000)
+
     @staticmethod
-    def _request(*, job_id: str = "job-1", parent: tuple[str, int] | None = None) -> dict:
+    def _request(
+        *, job_id: str = "job-1", attempt: int = 1, max_attempts: int = 3, parent: dict | None = None
+    ) -> dict:
         return build_external_job_request(
             job_id=job_id,
-            attempt=1,
-            parent_job_id=parent[0] if parent else None,
-            parent_attempt=parent[1] if parent else None,
+            attempt=attempt,
+            parent_job_id=parent["jobId"] if parent else None,
+            parent_attempt=parent["attempt"] if parent else None,
+            parent_request_digest=parent["requestDigest"] if parent else None,
             adapter_id="synthetic",
             operation="review",
             execution_kind="PROCESS",
@@ -186,6 +240,7 @@ class ExternalJobContractTests(unittest.TestCase):
             source_snapshot_digest="4" * 64,
             limits={
                 "maxWallSeconds": 60,
+                "maxAttempts": max_attempts,
                 "maxOutputBytes": 1024,
                 "maxArtifactBytes": 1024,
                 "maxArtifacts": 4,
