@@ -560,6 +560,32 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertNotIn("oracle", english.lower())
         self.assertNotIn("oracle", russian.lower())
 
+    def test_external_tool_job_docs_preserve_optional_bounded_authority(self) -> None:
+        english = (ROOT / "docs/reference/external-tool-jobs.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/external-tool-jobs.md").read_text(encoding="utf-8")
+        for text in (english, russian):
+            for marker in (
+                "agent-external-job-request.v1",
+                "adapter external-job run",
+                "CANCELLED",
+                "EXPIRED",
+                ".alk/external-jobs",
+                "0700",
+                "0600",
+                "NO_FINAL_VERDICT",
+                "authorityClaimed: false",
+                "productionPromotionClaimed: false",
+                "ALK_EXTERNAL_JOB_ARTIFACT_DIR",
+                "cancelGraceSeconds * 3",
+            ):
+                self.assertIn(marker, text)
+            self.assertNotIn("oracle", text.lower())
+        self.assertIn("not a task queue, daemon, model runtime or workflow controller", english)
+        self.assertIn(  # noqa: RUF001 - exact Russian documentation marker
+            "не является очередью задач, daemon, средой выполнения модели",
+            russian,
+        )
+
     def test_security_analysis_docs_preserve_untrusted_and_independent_boundaries(self) -> None:
         english = (ROOT / "docs/reference/security-analysis-profile.md").read_text(encoding="utf-8")
         russian = (ROOT / "docs/ru/reference/security-analysis-profile.md").read_text(encoding="utf-8")
@@ -1457,6 +1483,14 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "не вычисляет токены.\n"
         "Адаптеры хостов отвечают.\n",
     )
+    for relative_path in (
+        "docs/reference/external-tool-jobs.md",
+        "docs/ru/reference/external-tool-jobs.md",
+    ):
+        _write_text(
+            root / relative_path,
+            (ROOT / relative_path).read_text(encoding="utf-8"),
+        )
     _write_text(
         root / "docs/reference/managed-adapter-sessions.md",
         "`agent-adapter-session-receipt.v1`.\n"

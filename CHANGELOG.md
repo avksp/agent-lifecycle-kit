@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 2.5.0 - 2026-08-26
+
+- Added provider-neutral external-tool request, status, artifact and result
+  contracts with source-bound parent-child lineage and immutable attempts.
+- Added adapter-owned bounded execution with addressed cancellation, process-
+  group cleanup, timeout states and no acceptance effect for partial or
+  `NO_FINAL_VERDICT` output.
+- Added private per-attempt artifact namespaces with stable hashing, controlled
+  locators, byte/count limits, post-terminal-write rejection and 0700/0600
+  permissions.
+- Added `adapter external-job run/status/cancel`, bilingual documentation and
+  incident-based regression coverage while keeping ordinary workflows and the
+  synchronous external-check path unchanged.
+
 ## 2.4.1 - 2026-08-26
 
 - Required non-empty task-result worker identity before every authoritative

@@ -1,0 +1,378 @@
+{
+  "schemaVersion": "agent-plan-manifest.v1",
+  "status": "FROZEN",
+  "planRevision": 10,
+  "package": {
+    "id": "release-2-5",
+    "title": "Bounded external tool jobs",
+    "workspaceRoot": ".",
+    "artifactRoot": "tasks/release-2-5",
+    "root": ".",
+    "planArtifactRoot": "plans/release-2-5"
+  },
+  "planFiles": [
+    "plans/release-2-5/00-developer-overview.md",
+    "plans/release-2-5/README.md",
+    "plans/release-2-5/acceptance-criteria.md",
+    "plans/release-2-5/activation-evidence.md",
+    "plans/release-2-5/evidence-plan.md",
+    "plans/release-2-5/plan-review-r10.json",
+    "plans/release-2-5/plan-review.md",
+    "plans/release-2-5/plan.manifest.json",
+    "plans/release-2-5/release-notes.en.md",
+    "plans/release-2-5/write-set.md"
+  ],
+  "packageIntegrity": {
+    "required": true,
+    "lockSchemaVersion": "agent-plan-lock.v2",
+    "inventorySource": "planFiles",
+    "undeclaredTopLevelFiles": "reject",
+    "allowedUnlistedFiles": [
+      "plan.lock.json",
+      "independent-s2-audit.md"
+    ]
+  },
+  "author": "codex-planner",
+  "baseRevision": {
+    "ref": "main",
+    "sha": "dd5f08617a35b88b04f7e735906333c069029a1e"
+  },
+  "dependsOn": [
+    "release-2-4-1"
+  ],
+  "releaseTarget": {
+    "targetVersion": "2.5.0",
+    "targetTag": "v2.5.0",
+    "requiresPublicationValidation": true
+  },
+  "developerOverview": "plans/release-2-5/00-developer-overview.md",
+  "planReview": {
+    "required": true,
+    "verdict": "READY_TO_FREEZE",
+    "reviewedRevision": 10,
+    "report": "plans/release-2-5/plan-review-r10.json"
+  },
+  "specification": {
+    "tier": "S2",
+    "intent": "to-be",
+    "status": "DRAFT",
+    "source": "plans/release-2-5/README.md",
+    "requirements": [
+      {
+        "id": "R25-CONTRACT",
+        "description": "Define external-tool job request, status and result contracts with QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED and EXPIRED states."
+      },
+      {
+        "id": "R25-LIMITS",
+        "description": "Require adapter-owned process or network execution with explicit time, attempt, output, artifact, cost and cancellation limits; terminal parents cancel and account for every declared child."
+      },
+      {
+        "id": "R25-ARTIFACTS",
+        "description": "Store only bounded metadata, media type, size, digest and controlled locator for generated artifacts."
+      },
+      {
+        "id": "R25-QUALIFICATION",
+        "description": "Qualify each adapter operation with success, timeout, cancellation, process-group cleanup, parent-terminal child cancellation, post-cancel write rejection, replay, stale result, oversized artifact and no-final-verdict scenarios."
+      },
+      {
+        "id": "R25-DOCUMENTATION",
+        "description": "Document bounded external-tool jobs in English and Russian with one neutral adapter example."
+      },
+      {
+        "id": "R25-ACTIVATION",
+        "description": "Bind the two activated incident shapes, preserve synchronous Release 1.88 checks and keep ordinary workflows free of job state."
+      }
+    ],
+    "tierResolutionRequest": {
+      "taskCount": 3,
+      "executableOwners": [
+        "contract-worker",
+        "integration-worker",
+        "release-worker"
+      ],
+      "capabilityHints": [],
+      "riskFlags": {
+        "architecture": true,
+        "security": true,
+        "performance": false,
+        "browser": false,
+        "externalEnvironment": true
+      },
+      "requirementsBytes": 15000,
+      "externalSpecification": true
+    }
+  },
+  "readOnly": [
+    "plans",
+    "src/agent_lifecycle/adapter_sessions/process.py",
+    "src/agent_lifecycle/adapter_sessions/process_groups.py",
+    "tests/adapter_sessions/test_process_cleanup.py",
+    "tests/release/test_process_boundary_validator.py"
+  ],
+  "forbiddenWrites": [
+    ".git",
+    ".alk",
+    ".claude/settings.local.json",
+    "LICENSE",
+    "NOTICE",
+    "tasks/analisys",
+    "tasks/analisys2",
+    "tasks/analisys3",
+    "tasks/analisys4",
+    "tasks/analisys5",
+    "tasks/analisys6",
+    "tasks/analisys7",
+    "tasks/analisys8",
+    "out"
+  ],
+  "leadOwned": [
+    {
+      "path": "plans/release-2-5",
+      "reason": "plan authority"
+    },
+    {
+      "path": "work/release-2-5",
+      "reason": "workflow, validation and audit evidence"
+    }
+  ],
+  "workstreams": [
+    {
+      "id": "WS25-01",
+      "title": "Core contracts and validation",
+      "owner": "contract-worker",
+      "dependsOn": [],
+      "acceptanceIds": [
+        "AC25-CONTRACT"
+      ],
+      "evidenceIds": [
+        "EV25-CONTRACT"
+      ],
+      "writes": [
+        "src/agent_lifecycle/contracts/external_job_schemas.py",
+        "src/agent_lifecycle/contracts/schemas.py",
+        "src/agent_lifecycle/host_protocol/external_jobs.py",
+        "tests/contracts/test_external_job_schemas.py",
+        "tests/host_protocol/test_external_jobs.py"
+      ]
+    },
+    {
+      "id": "WS25-02",
+      "title": "Integration and bounded scenarios",
+      "owner": "integration-worker",
+      "dependsOn": [
+        "WS25-01"
+      ],
+      "acceptanceIds": [
+        "AC25-LIMITS",
+        "AC25-ARTIFACTS",
+        "AC25-QUALIFICATION",
+        "AC25-INCIDENTS"
+      ],
+      "evidenceIds": [
+        "EV25-LIMITS",
+        "EV25-ARTIFACTS",
+        "EV25-QUALIFICATION",
+        "EV25-INCIDENTS"
+      ],
+      "writes": [
+        "src/agent_lifecycle/adapter_sessions/external_jobs.py",
+        "src/agent_lifecycle/cli/adapter.py",
+        "src/agent_lifecycle/cli/dispatch_adapters.py",
+        "tests/adapter_sessions/test_external_jobs.py",
+        "tests/adapter_sessions/test_external_job_cleanup.py",
+        "tests/cli/test_external_job_commands.py"
+      ]
+    },
+    {
+      "id": "WS25-03",
+      "title": "Activation evidence, bilingual documentation and publication",
+      "owner": "release-worker",
+      "dependsOn": [
+        "WS25-02"
+      ],
+      "acceptanceIds": [
+        "AC25-DOCUMENTATION",
+        "AC25-ACTIVATION"
+      ],
+      "evidenceIds": [
+        "EV25-DOCUMENTATION",
+        "EV25-ACTIVATION"
+      ],
+      "writes": [
+        "docs/reference/external-tool-jobs.md",
+        "docs/ru/reference/external-tool-jobs.md",
+        "README.md",
+        "docs/README.md",
+        "docs/ru/README.md",
+        "docs/reference/cli.md",
+        "docs/ru/reference/cli.md",
+        "docs/guides/install-and-first-run.md",
+        "docs/ru/guides/install-and-first-run.md",
+        "CHANGELOG.md",
+        "tasks/release-roadmap.md",
+        "pyproject.toml",
+        "uv.lock",
+        "src/agent_lifecycle/_version.py",
+        ".agents/plugins/marketplace.json",
+        ".codex-plugin/plugin.json",
+        ".claude-plugin/plugin.json",
+        ".claude-plugin/marketplace.json",
+        ".cursor-plugin/plugin.json",
+        ".cursor-plugin/marketplace.json",
+        "adapters/claude/.claude-plugin/plugin.json",
+        "adapters/codex/.codex-plugin/plugin.json",
+        "adapters/cursor/.cursor-plugin/plugin.json",
+        "tools/release/validate_docs_compat.py",
+        "tests/release/test_docs_gates.py",
+        "tools/release/publication_contract.py",
+        "tests/release/test_publication_versions.py",
+        "tests/release/test_publication_adoption.py"
+      ]
+    }
+  ],
+  "acceptance": {
+    "criteria": [
+      {
+        "id": "AC25-CONTRACT",
+        "requirementIds": [
+          "R25-CONTRACT"
+        ],
+        "evidenceIds": [
+          "EV25-CONTRACT"
+        ]
+      },
+      {
+        "id": "AC25-LIMITS",
+        "requirementIds": [
+          "R25-LIMITS"
+        ],
+        "evidenceIds": [
+          "EV25-LIMITS"
+        ]
+      },
+      {
+        "id": "AC25-ARTIFACTS",
+        "requirementIds": [
+          "R25-ARTIFACTS"
+        ],
+        "evidenceIds": [
+          "EV25-ARTIFACTS"
+        ]
+      },
+      {
+        "id": "AC25-QUALIFICATION",
+        "requirementIds": [
+          "R25-QUALIFICATION"
+        ],
+        "evidenceIds": [
+          "EV25-QUALIFICATION"
+        ]
+      },
+      {
+        "id": "AC25-DOCUMENTATION",
+        "requirementIds": [
+          "R25-DOCUMENTATION"
+        ],
+        "evidenceIds": [
+          "EV25-DOCUMENTATION"
+        ]
+      },
+      {
+        "id": "AC25-ACTIVATION",
+        "requirementIds": [
+          "R25-ACTIVATION"
+        ],
+        "evidenceIds": [
+          "EV25-ACTIVATION"
+        ]
+      },
+      {
+        "id": "AC25-INCIDENTS",
+        "requirementIds": [
+          "R25-ACTIVATION"
+        ],
+        "evidenceIds": [
+          "EV25-INCIDENTS"
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "commands": [
+      "python3 -c 'import json,os; from pathlib import Path; paths=(Path(\"plans/release-2-5/plan.manifest.json\"),Path(\"tasks/release-2-5/plan.manifest.json\")); path=next((p for p in paths if p.is_file()),None); manifest=json.loads(path.read_text(encoding=\"utf-8\")) if path else {}; recorded=manifest.get(\"baseRevision\",{}).get(\"sha\"); expected=os.environ.get(\"ALK_ACCEPTED_PREDECESSOR_SHA\"); actual=os.environ.get(\"ALK_RELEASE_BASE_SHA\"); raise SystemExit(0 if expected and actual and expected == actual == recorded else \"accepted predecessor and release base must equal manifest baseRevision.sha\")'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest tests.contracts.test_external_job_schemas tests.host_protocol.test_external_jobs tests.adapter_sessions.test_external_jobs tests.adapter_sessions.test_external_job_cleanup tests.cli.test_external_job_commands tests.adapter_sessions.test_process_cleanup tests.release.test_process_boundary_validator -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -t . -v",
+      "python3 -c 'import tomllib; from pathlib import Path; dependencies=tomllib.loads(Path(\"pyproject.toml\").read_text(encoding=\"utf-8\"))[\"project\"].get(\"dependencies\"); raise SystemExit(0 if dependencies == [] else \"runtime dependencies must remain empty\")'",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_module_dependencies.py --package-root src/agent_lifecycle --policy policy/architecture-dependencies.json --require-acyclic-modules --require-acyclic-packages --evidence work/release-2-5/evidence/module-dependencies.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_architecture_complexity.py --package-root src/agent_lifecycle --target-file-lines 800 --hard-file-lines 1200 --target-function-lines 80 --hard-function-lines 150 --hard-symbols 80 --evidence work/release-2-5/evidence/architecture-complexity.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_docs_compat.py --evidence work/release-2-5/evidence/docs-compat.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --report work/release-2-5/evidence/neutrality.json --require-zero-findings",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_versions.py --target-version 2.5.0 --target-ref v2.5.0 --evidence work/release-2-5/evidence/publication-versions.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_adoption.py --target-version 2.5.0 --evidence work/release-2-5/evidence/publication-adoption.json"
+    ],
+    "extraEvidence": [
+      "EV25-CONTRACT",
+      "EV25-LIMITS",
+      "EV25-ARTIFACTS",
+      "EV25-QUALIFICATION",
+      "EV25-INCIDENTS",
+      "EV25-DOCUMENTATION",
+      "EV25-ACTIVATION"
+    ]
+  },
+  "orchestration": {
+    "startMode": "manual-after-freeze",
+    "remediationMode": "bounded-auto",
+    "maxPlanReviewRounds": 4,
+    "maxTaskAttempts": 3,
+    "maxParallelTasks": 1,
+    "maxValidationRunsPerTask": 10,
+    "maxToolCallsPerIteration": 18,
+    "maxUsageIterationsPerAttempt": 4,
+    "maxToolCallsPerTask": 130,
+    "maxToolCallsPerRun": 500,
+    "maxReportedTokensPerTask": 90000,
+    "maxReportedTokensPerRun": 300000,
+    "maxEvidenceArtifactBytes": 8388608,
+    "maxEvidenceBytesPerTask": 25165824,
+    "maxEvidenceBytesPerRun": 67108864,
+    "maxTaskWallSeconds": 10800,
+    "maxRunWallSeconds": 43200,
+    "maxContextBytes": 73728,
+    "maxRenderedPacketBytes": 106496,
+    "stateFile": "work/release-2-5/run.state.json",
+    "eventLog": "work/release-2-5/workflow-events.jsonl",
+    "stepReviewRequired": true,
+    "finalAuditRequired": true
+  },
+  "securityGates": [
+    "external jobs never grant workflow authority",
+    "network and provider execution remain adapter-owned and opt-in",
+    "job artifacts are content-addressed, bounded and redacted",
+    "timeouts, cancellation and process cleanup fail closed"
+  ],
+  "budgetPolicy": {
+    "liveHostCallsAllowedByDefault": false,
+    "modelTokenBudgetForPlanValidation": 0,
+    "moneyFieldsCanonical": false,
+    "budgetUnits": "bounded-release-evidence",
+    "maxTaskAttempts": 10,
+    "notes": "Optional functionality remains off unless the frozen plan activates it. No gate is weakened for acceptance."
+  },
+  "contextLimits": {
+    "targetReviewerPacketTokens": 6000,
+    "maxReviewerPacketTokens": 12000,
+    "smallContextProfilesRequired": true,
+    "rawSourceFilesInReviewerPacket": false,
+    "notes": "Review packets contain bounded contracts, negative fixtures and activation evidence."
+  },
+  "finalAuditGates": [
+    "[AC25-CONTRACT|EV25-CONTRACT] State, parent-child lineage and per-attempt artifact namespaces are immutable and source-bound.",
+    "[AC25-LIMITS|EV25-LIMITS] Cancellation and timeout clean the process group, terminal parents cancel every declared child and post-terminal writes fail closed without core network calls.",
+    "[AC25-ARTIFACTS|EV25-ARTIFACTS] Large or sensitive payloads remain outside portable lifecycle evidence.",
+    "[AC25-QUALIFICATION|EV25-QUALIFICATION] Partial, stale, replayed and no-final-verdict outputs have no acceptance effect; live children block parent terminal success.",
+    "[AC25-INCIDENTS|EV25-INCIDENTS] WS25-02 reproduces both activated incident shapes and proves an ordinary workflow creates no external-job state.",
+    "[AC25-DOCUMENTATION|EV25-DOCUMENTATION] Users can add a specialized tool without treating it as a model runtime or workflow controller.",
+    "[AC25-ACTIVATION|EV25-ACTIVATION] All incident source digests remain bound, dependencies stay empty and the synchronous Release 1.88 path remains unchanged."
+  ]
+}
