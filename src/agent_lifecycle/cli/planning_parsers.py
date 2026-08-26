@@ -17,6 +17,13 @@ def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     plan_check.add_argument("--lock")
     plan_check.add_argument("--require-completeness", action="store_true")
     plan_check.add_argument("--completeness-profile")
+    lock_create = plan_sub.add_parser(
+        "lock-create",
+        help="create the canonical lock for an independently reviewed plan",
+    )
+    lock_create.add_argument("--manifest", required=True)
+    lock_create.add_argument("--review", required=True)
+    lock_create.add_argument("--repository-root", default=".")
     verify = plan_sub.add_parser("verify", help="compose read-only plan checks")
     verify.add_argument("--manifest", required=True)
     verify.add_argument("--package-root")
