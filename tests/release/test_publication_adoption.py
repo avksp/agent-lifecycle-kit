@@ -40,6 +40,25 @@ class PublicationAdoptionTests(unittest.TestCase):
             for marker in ("actorRunId", "reviewId", "task-review-invalid", "task-review-self-certification"):
                 self.assertIn(marker, text)
 
+    def test_external_tool_jobs_are_documented_as_optional_adapter_work(self) -> None:
+        english = (ROOT / "docs/reference/external-tool-jobs.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/external-tool-jobs.md").read_text(encoding="utf-8")
+        for text in (english, russian):
+            for marker in (
+                "agent-external-job-request.v1",
+                "adapter external-job run",
+                ".alk/external-jobs",
+                "NO_FINAL_VERDICT",
+                "authorityClaimed: false",
+                "productionPromotionClaimed: false",
+            ):
+                self.assertIn(marker, text)
+        self.assertIn("ALK core contains no provider client", english)
+        self.assertIn(  # noqa: RUF001 - exact Russian documentation marker
+            "В ядре ALK нет клиента провайдера",
+            russian,
+        )
+
     def test_missing_project_comparison_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

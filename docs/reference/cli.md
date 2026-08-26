@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.4.1
+  python -m pip install agent-lifecycle-kit==2.5.0
 ```
 
 ## Task evidence identity
@@ -84,6 +84,23 @@ are source-, configuration- and plan-bound, raw output is not retained, and a
 missing or incomplete analyzer returns `UNAVAILABLE`. The result has no
 authority to accept, freeze or promote anything. See [External verification
 checks](external-verification-checks.md).
+
+## Bounded external tool jobs
+
+Use `adapter external-job` only for optional adapter-owned work that needs an
+addressable attempt, bounded cancellation or digest-only artifacts:
+
+```bash
+agent-lifecycle adapter external-job run --request job-request.json --out work/job.json -- <argv...>
+agent-lifecycle adapter external-job status --request job-request.json --out work/job-status.json
+agent-lifecycle adapter external-job cancel --request job-request.json --out work/job-cancel.json
+```
+
+Attempts use private create-only state under `.alk/external-jobs` by default.
+Timeout, cancellation, failed cleanup, live children, post-terminal writes,
+`NO_FINAL_VERDICT` and exceeded limits have no acceptance effect. ALK adds no
+provider client, network call, daemon or workflow authority. See [Bounded
+external tool jobs](external-tool-jobs.md).
 
 ## Optional security analysis
 

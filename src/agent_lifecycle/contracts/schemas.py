@@ -27,6 +27,7 @@ from agent_lifecycle.contracts.execution_strategy_schemas import (
     EXECUTION_STRATEGY_SCHEMAS,
 )
 from agent_lifecycle.contracts.external_check_schemas import EXTERNAL_CHECK_SCHEMAS
+from agent_lifecycle.contracts.external_job_schemas import EXTERNAL_JOB_SCHEMAS
 from agent_lifecycle.contracts.finding_check_schemas import FINDING_CHECK_SCHEMAS
 from agent_lifecycle.contracts.host_capability_schemas import HOST_CAPABILITY_SCHEMAS
 from agent_lifecycle.contracts.import_dialect_schemas import IMPORT_DIALECT_SCHEMAS
@@ -716,6 +717,7 @@ _SCHEMA_GROUPS = (
     REVIEW_QUALITY_SCHEMAS,
     EVIDENCE_IMPORT_SCHEMAS,
     EXTERNAL_CHECK_SCHEMAS,
+    EXTERNAL_JOB_SCHEMAS,
     FINDING_CHECK_SCHEMAS,
     INDEPENDENT_EVIDENCE_SCHEMAS,
     EXECUTION_STRATEGY_SCHEMAS,
