@@ -18,7 +18,13 @@ from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.external_job_schemas import build_external_job_request
 
 
-def _request(job_id: str, *, parent: dict[str, Any] | None = None) -> dict[str, Any]:
+def _request(
+    job_id: str,
+    *,
+    parent: dict[str, Any] | None = None,
+    max_wall_seconds: int = 10,
+    cancel_grace_seconds: int = 1,
+) -> dict[str, Any]:
     return build_external_job_request(
         job_id=job_id,
         attempt=1,
@@ -31,14 +37,14 @@ def _request(job_id: str, *, parent: dict[str, Any] | None = None) -> dict[str, 
         source_revision="source-revision",
         source_snapshot_digest="8" * 64,
         limits={
-            "maxWallSeconds": 10,
+            "maxWallSeconds": max_wall_seconds,
             "maxAttempts": 2,
             "maxOutputBytes": 8192,
             "maxArtifactBytes": 8192,
             "maxArtifacts": 4,
             "maxCostMicros": 1000,
             "maxReportedTokens": 1000,
-            "cancelGraceSeconds": 1,
+            "cancelGraceSeconds": cancel_grace_seconds,
         },
         parent_job_id=parent["jobId"] if parent else None,
         parent_attempt=parent["attempt"] if parent else None,
@@ -91,6 +97,35 @@ class ExternalJobCleanupTests(unittest.TestCase):
             self.assertEqual(view["jobStatus"]["processCleanupStatus"], "PASS")
             self.assertFalse(view["jobStatus"]["postTerminalWriteDetected"])
             self.assertFalse((root / "cancelled-wrapper/attempt-1/artifacts/child.txt").exists())
+
+    def test_late_cancel_persists_terminal_state_within_wall_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "jobs"
+            request = _request("late-cancel", max_wall_seconds=1, cancel_grace_seconds=0)
+            holder: dict[str, Any] = {}
+            worker = threading.Thread(
+                target=lambda: holder.setdefault(
+                    "view",
+                    run_external_job(
+                        request,
+                        [sys.executable, "-c", "import time; time.sleep(10)"],
+                        env=dict(os.environ),
+                        job_root=root,
+                    ),
+                )
+            )
+            worker.start()
+            _wait_for_state(request, root, "RUNNING")
+            time.sleep(0.7)
+            cancel = request_external_job_cancel(request, job_root=root)
+            worker.join(timeout=5)
+
+            self.assertFalse(worker.is_alive())
+            self.assertEqual(cancel["status"], "PASS")
+            self.assertEqual(holder["view"]["result"]["state"], "CANCELLED")
+            self.assertLessEqual(holder["view"]["result"]["usage"]["wallMilliseconds"], 1000)
+            loaded = load_external_job_attempt(request, job_root=root)
+            self.assertEqual(loaded["result"]["state"], "CANCELLED")
 
     def test_terminal_parent_cancels_declared_live_child(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

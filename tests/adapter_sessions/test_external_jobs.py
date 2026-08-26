@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -21,6 +22,8 @@ def _request(
     attempt: int = 1,
     parent: dict[str, object] | None = None,
     operation: str = "bounded-audit",
+    max_wall_seconds: int = 5,
+    cancel_grace_seconds: int = 1,
 ) -> dict[str, object]:
     return build_external_job_request(
         job_id=job_id,
@@ -34,14 +37,14 @@ def _request(
         source_revision="source-revision",
         source_snapshot_digest="4" * 64,
         limits={
-            "maxWallSeconds": 5,
+            "maxWallSeconds": max_wall_seconds,
             "maxAttempts": 3,
             "maxOutputBytes": 4096,
             "maxArtifactBytes": 4096,
             "maxArtifacts": 4,
             "maxCostMicros": 1000,
             "maxReportedTokens": 1000,
-            "cancelGraceSeconds": 1,
+            "cancelGraceSeconds": cancel_grace_seconds,
         },
         parent_job_id=str(parent["jobId"]) if parent else None,
         parent_attempt=int(parent["attempt"]) if parent else None,
@@ -128,6 +131,44 @@ class ExternalJobRuntimeTests(unittest.TestCase):
         self.assertIn("external-job-artifact-byte-limit", {item["code"] for item in view["result"]["blockers"]})
         self.assertFalse(view["result"]["blockingEligible"])
 
+    def test_real_timeout_persists_expired_terminal_state(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "jobs"
+            request = _request("timeout-job", max_wall_seconds=1, cancel_grace_seconds=0)
+            view = run_external_job(
+                request,
+                [sys.executable, "-c", "import time; time.sleep(10)"],
+                env=dict(os.environ),
+                job_root=root,
+            )
+
+            self.assertEqual(view["result"]["state"], "EXPIRED")
+            self.assertFalse(view["result"]["blockingEligible"])
+            self.assertLessEqual(view["result"]["usage"]["wallMilliseconds"], 1000)
+            self.assertGreaterEqual(view["processReceipt"]["timing"]["elapsedMs"], 1000)
+            self.assertEqual(load_external_job_attempt(request, job_root=root)["result"]["state"], "EXPIRED")
+            attempt_root = external_job_attempt_path(request, job_root=root)
+            self.assertTrue((attempt_root / "status-000002.json").is_file())
+            self.assertTrue((attempt_root / "process-receipt.json").is_file())
+            self.assertTrue((attempt_root / "result.json").is_file())
+
+    def test_nested_artifact_directories_are_private(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "jobs"
+            request = _request("nested-artifact-job")
+            script = (
+                "import os,pathlib; "
+                "p=pathlib.Path(os.environ['ALK_EXTERNAL_JOB_ARTIFACT_DIR'])/'private'/'nested'/'report.txt'; "
+                "p.parent.mkdir(parents=True); p.write_text('result', encoding='utf-8')"
+            )
+            view = run_external_job(request, [sys.executable, "-c", script], env=dict(os.environ), job_root=root)
+
+            self.assertEqual(view["result"]["state"], "SUCCEEDED")
+            if os.name != "nt":
+                artifact_root = external_job_attempt_path(request, job_root=root) / "artifacts"
+                self.assertEqual((artifact_root / "private").stat().st_mode & 0o777, 0o700)
+                self.assertEqual((artifact_root / "private/nested").stat().st_mode & 0o777, 0o700)
+
     def test_sensitive_request_metadata_is_rejected_before_state_allocation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "jobs"
@@ -141,9 +182,22 @@ class ExternalJobRuntimeTests(unittest.TestCase):
 
     def test_ordinary_code_path_allocates_no_external_job_state(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / ".alk" / "external-jobs"
-            _ = canonical_digest({"ordinaryWorkflow": True})
-            self.assertFalse(root.exists())
+            root = Path(directory)
+            repository_root = Path(__file__).resolve().parents[2]
+            env = dict(os.environ)
+            env["PYTHONPATH"] = str(repository_root / "src")
+            completed = subprocess.run(
+                [sys.executable, "-m", "agent_lifecycle", "workflow", "status", "--state", "missing-state.json"],
+                cwd=root,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                check=False,
+                timeout=10,
+            )
+
+            self.assertEqual(completed.returncode, 2)
+            self.assertFalse((root / ".alk" / "external-jobs").exists())
 
 
 if __name__ == "__main__":
