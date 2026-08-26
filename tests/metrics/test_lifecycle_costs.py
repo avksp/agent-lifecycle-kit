@@ -9,7 +9,11 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.contracts import canonical_digest  # noqa: E402
-from agent_lifecycle.metrics import generate_lifecycle_cost_report, validate_lifecycle_cost_report  # noqa: E402
+from agent_lifecycle.metrics import (  # noqa: E402
+    build_phase_resource_measurement,
+    generate_lifecycle_cost_report,
+    validate_lifecycle_cost_report,
+)
 
 
 class LifecycleCostTests(unittest.TestCase):
@@ -132,6 +136,29 @@ class LifecycleCostTests(unittest.TestCase):
 
         self.assertEqual(validation["status"], "PASS")
         self.assertEqual(validation["usageConfidence"]["unspecifiedEntries"], 4)
+
+    def test_phase_measurement_uses_declared_totals_instead_of_json_size(self) -> None:
+        phase = build_phase_resource_measurement(
+            [
+                {
+                    "phaseId": "audit",
+                    "phaseKind": "AUDIT",
+                    "tokens": {"input": 700, "output": 300, "total": 1000},
+                    "steps": 7,
+                    "resources": {},
+                    "durationMs": 500,
+                    "receiptDigests": [],
+                }
+            ]
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact = _write_json(root / "phase.json", phase)
+            report = generate_lifecycle_cost_report(artifact_paths=[artifact], root=root)
+
+        self.assertEqual(report["entries"][0]["tokens"], 1000)
+        self.assertEqual(report["entries"][0]["steps"], 7)
+        self.assertEqual(report["entries"][0]["usageConfidence"], "ESTIMATED")
 
 
 def _write_json(path: Path, payload: dict) -> Path:
