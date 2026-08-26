@@ -62,29 +62,26 @@ _CHILD_REF = {
         "requestDigest": _DIGEST, "parentRequestDigest": _DIGEST,
     },
 }
-
-_REQUEST_FIELDS = [
-    "schemaVersion", "jobId", "attempt", "parentJobId", "parentAttempt", "parentRequestDigest",
-    "adapterId", "operation",
-    "executionKind", "descriptorDigest", "planDigest", "planLockDigest", "sourceRevision",
-    "sourceSnapshotDigest", "limits", "shell", "secretsWritten", "authorityClaimed",
-    "productionPromotionClaimed", "requestDigest",
-]
-_STATUS_FIELDS = [
-    "schemaVersion", "jobId", "attempt", "requestDigest", "state", "sequence", "observedAt", "startedAt",
-    "endedAt", "children", "usage", "cancelRequested", "processCleanupStatus", "postTerminalWriteDetected",
-    "authorityClaimed", "productionPromotionClaimed", "statusDigest",
-]
-_ARTIFACT_FIELDS = [
-    "schemaVersion", "artifactId", "jobId", "attempt", "requestDigest", "mediaType", "bytes", "sha256",
-    "locator", "sensitiveContentStored",
-    "productionPromotionClaimed", "artifactDigest",
-]
-_RESULT_FIELDS = [
-    "schemaVersion", "resultId", "jobId", "attempt", "requestDigest", "statusDigest", "state", "verdict",
-    "complete", "blockingEligible", "outputDigest", "outputBytes", "artifacts", "usage", "blockers",
-    "authorityClaimed", "productionPromotionClaimed", "resultDigest",
-]
+_REQUEST_FIELDS = (
+    "schemaVersion", "jobId", "attempt", "parentJobId", "parentAttempt", "parentRequestDigest", "adapterId",
+    "operation", "executionKind", "descriptorDigest", "planDigest", "planLockDigest", "sourceRevision",
+    "sourceSnapshotDigest", "limits", "shell", "secretsWritten", "authorityClaimed", "productionPromotionClaimed",
+    "requestDigest",
+)
+_STATUS_FIELDS = (
+    "schemaVersion", "jobId", "attempt", "requestDigest", "state", "sequence", "observedAt", "startedAt", "endedAt",
+    "children", "usage", "cancelRequested", "processCleanupStatus", "postTerminalWriteDetected", "authorityClaimed",
+    "productionPromotionClaimed", "statusDigest",
+)
+_ARTIFACT_FIELDS = (
+    "schemaVersion", "artifactId", "jobId", "attempt", "requestDigest", "mediaType", "bytes", "sha256", "locator",
+    "sensitiveContentStored", "productionPromotionClaimed", "artifactDigest",
+)
+_RESULT_FIELDS = (
+    "schemaVersion", "resultId", "jobId", "attempt", "requestDigest", "statusDigest", "state", "verdict", "complete",
+    "blockingEligible", "outputDigest", "outputBytes", "artifacts", "usage", "blockers", "authorityClaimed",
+    "productionPromotionClaimed", "resultDigest",
+)
 _VALIDATION_FIELDS = (
     "schemaVersion", "status", "subject", "subjectState", "blockingEligible", "blockers",
     "productionPromotionClaimed", "validationDigest",
@@ -293,10 +290,9 @@ def validate_external_job_artifact(
     _check_int(value.get("bytes"), 0, MAX_ARTIFACT_BYTES, "external-job-artifact-bytes-invalid", blockers)
     _check_digest(value.get("sha256"), "external-job-artifact-sha256-invalid", blockers)
     try:
-        locator_value = value.get("locator")
-        if not isinstance(locator_value, str):
-            raise LifecycleError("external-job-artifact-locator-invalid", "artifact locator must be text")
-        locator = normalize_repo_path(locator_value, label="artifact locator")
+        locator = normalize_repo_path(
+            _text(value.get("locator"), "artifact locator"), label="artifact locator"
+        )
         if not locator.startswith("artifacts/"):
             raise LifecycleError("external-job-artifact-locator-invalid", "artifact locator must be below artifacts/")
     except LifecycleError:
@@ -461,8 +457,7 @@ def validate_external_job_result(
     for field in ("requestDigest", "statusDigest"):
         _check_digest(value.get(field), f"external-job-{_label(field)}-invalid", blockers)
     state = value.get("state")
-    verdict_value = value.get("verdict")
-    verdict = verdict_value if isinstance(verdict_value, str) else None
+    verdict = value.get("verdict") if isinstance(value.get("verdict"), str) else None
     if state not in TERMINAL_JOB_STATES:
         blockers.append({"code": "external-job-result-not-terminal"})
     if verdict not in JOB_VERDICTS:
@@ -470,12 +465,9 @@ def validate_external_job_result(
     if not isinstance(value.get("complete"), bool) or not isinstance(value.get("blockingEligible"), bool):
         blockers.append({"code": "external-job-result-flags-invalid"})
     _check_optional_digest(value.get("outputDigest"), "external-job-output-digest-invalid", blockers)
-    _check_int(value.get("outputBytes"), 0, MAX_OUTPUT_BYTES, "external-job-output-bytes-invalid", blockers)
-    if (
-        isinstance(value.get("outputBytes"), int)
-        and value.get("outputBytes", 0) > 0
-        and value.get("outputDigest") is None
-    ):
+    output_bytes = value.get("outputBytes")
+    _check_int(output_bytes, 0, MAX_OUTPUT_BYTES, "external-job-output-bytes-invalid", blockers)
+    if isinstance(output_bytes, int) and output_bytes > 0 and value.get("outputDigest") is None:
         blockers.append({"code": "external-job-output-digest-required"})
     artifacts = value.get("artifacts")
     if not isinstance(artifacts, list) or len(artifacts) > MAX_ARTIFACTS:
@@ -517,13 +509,7 @@ def validate_external_job_result(
         if validate_external_job_status(status, request=request)["status"] != "PASS":
             blockers.append({"code": "external-job-status-invalid"})
         elif any(
-            value.get(key) != status.get(source)
-            for key, source in (
-                ("jobId", "jobId"),
-                ("attempt", "attempt"),
-                ("statusDigest", "statusDigest"),
-                ("state", "state"),
-            )
+            value.get(key) != status.get(key) for key in ("jobId", "attempt", "statusDigest", "state")
         ):
             blockers.append({"code": "external-job-result-status-mismatch"})
         elif value.get("usage") != status.get("usage"):
@@ -537,19 +523,12 @@ def validate_external_job_result(
 
 def require_external_job_pass(validation: dict[str, Any], label: str) -> None:
     if validation.get("status") != "PASS":
-        raise LifecycleError(
-            "external-job-invalid",
-            f"external job {label} is invalid",
-            {"blockers": validation.get("blockers")},
-        )
+        details = {"blockers": validation.get("blockers")}
+        raise LifecycleError("external-job-invalid", f"external job {label} is invalid", details)
 
 
 def _validation(
-    subject: str,
-    state: str | None,
-    blockers: list[dict[str, Any]],
-    *,
-    blocking_eligible: bool,
+    subject: str, state: str | None, blockers: list[dict[str, Any]], *, blocking_eligible: bool
 ) -> dict[str, Any]:
     body = {
         "schemaVersion": EXTERNAL_JOB_VALIDATION_SCHEMA,
@@ -799,12 +778,9 @@ def _is_digest(value: Any) -> bool:
 
 
 def _is_text(value: Any) -> bool:
-    return (
-        isinstance(value, str)
-        and bool(value)
-        and "\x00" not in value
-        and len(value.encode("utf-8")) <= MAX_TEXT_BYTES
-    )
+    if not isinstance(value, str) or not value or "\x00" in value:
+        return False
+    return len(value.encode("utf-8")) <= MAX_TEXT_BYTES
 
 
 def _label(value: str) -> str:
