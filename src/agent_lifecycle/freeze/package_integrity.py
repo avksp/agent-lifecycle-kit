@@ -6,8 +6,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex
-from agent_lifecycle.contracts.paths import read_stable_repository_file
-from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file
+from agent_lifecycle.review.validation import validate_independent_review
 
 PLAN_FILE_INVENTORY_SCHEMA = "agent-plan-file-inventory.v1"
 PLAN_LOCK_V1_SCHEMA = "agent-plan-lock.v1"
@@ -39,7 +39,7 @@ def verify_plan_lock_envelope(manifest: dict[str, Any], lock: dict[str, Any]) ->
             raise LifecycleError("plan-lock-v2-required", "manifest requires an agent-plan-lock.v2 inventory binding")
         return {
             "schemaVersion": "agent-plan-lock-verification.v1",
-            "packageId": lock.get("packageId") or manifest.get("package", {}).get("id"),
+            "packageId": lock.get("packageId") or _object(manifest.get("package")).get("id"),
             "planRevision": lock.get("planRevision"),
             "manifestHash": digest,
             "filesystemVerified": False,
@@ -48,7 +48,7 @@ def verify_plan_lock_envelope(manifest: dict[str, Any], lock: dict[str, Any]) ->
     if schema != PLAN_LOCK_V2_SCHEMA:
         raise LifecycleError("invalid-plan-lock", "plan lock schemaVersion is unsupported")
     digest = canonical_digest(manifest)
-    package = manifest.get("package") if isinstance(manifest.get("package"), dict) else {}
+    package = _object(manifest.get("package"))
     if lock.get("manifestHash") != digest:
         raise LifecycleError("plan-lock-mismatch", "plan lock manifestHash mismatch")
     if lock.get("planRevision") != manifest.get("planRevision"):
@@ -77,7 +77,7 @@ def build_plan_lock_v2(manifest: dict[str, Any], *, repository_root: Path) -> di
     if not plan_integrity_required(manifest):
         raise LifecycleError("plan-lock-v2-not-required", "manifest must require v2 package integrity")
     entries = _inventory_entries(manifest, repository_root)
-    package = manifest.get("package") if isinstance(manifest.get("package"), dict) else {}
+    package = _object(manifest.get("package"))
     body = {
         "schemaVersion": PLAN_LOCK_V2_SCHEMA,
         "packageId": package.get("id"),
@@ -88,6 +88,69 @@ def build_plan_lock_v2(manifest: dict[str, Any], *, repository_root: Path) -> di
     }
     verify_plan_lock_envelope(manifest, body)
     return body
+
+
+def build_reviewed_plan_lock_v2(
+    manifest: dict[str, Any],
+    review: dict[str, Any],
+    *,
+    review_path: str,
+    review_sha256: str,
+    repository_root: Path,
+) -> dict[str, Any]:
+    """Build a v2 lock only after validating an exact independent review."""
+
+    if manifest.get("status") != "FROZEN":
+        raise LifecycleError("plan-not-frozen", "reviewed plan lock creation requires a FROZEN manifest")
+    plan_review = manifest.get("planReview")
+    if not isinstance(plan_review, dict) or plan_review.get("required") is not True:
+        raise LifecycleError("plan-review-required", "manifest must require an independent plan review")
+    normalized_review_path = normalize_repo_path(review_path, label="plan review path")
+    if plan_review.get("report") != normalized_review_path:
+        raise LifecycleError("plan-review-path-mismatch", "review path does not match manifest planReview.report")
+    plan_files = manifest.get("planFiles")
+    if not isinstance(plan_files, list) or normalized_review_path not in plan_files:
+        raise LifecycleError("plan-review-unbound", "review path must be declared in planFiles")
+    revision = manifest.get("planRevision")
+    if plan_review.get("reviewedRevision") != revision:
+        raise LifecycleError("plan-review-revision-mismatch", "manifest review revision does not match planRevision")
+    if review.get("schemaVersion") != "agent-plan-review.v1":
+        raise LifecycleError("invalid-review", "plan review schemaVersion is unsupported")
+    validate_independent_review(review)
+    if review.get("fullReview") is not True:
+        raise LifecycleError("plan-review-incomplete", "plan lock creation requires a full independent review")
+    if review.get("verdict") != "READY_TO_FREEZE":
+        raise LifecycleError("plan-review-verdict-invalid", "plan review verdict must be READY_TO_FREEZE")
+    if plan_review.get("verdict") != review.get("verdict"):
+        raise LifecycleError("plan-review-verdict-mismatch", "manifest and report review verdicts differ")
+    package = _object(manifest.get("package"))
+    if review.get("packageId") != package.get("id"):
+        raise LifecycleError("plan-review-package-mismatch", "review packageId does not match the manifest")
+    if review.get("planRevision") != revision:
+        raise LifecycleError("plan-review-revision-mismatch", "review planRevision does not match the manifest")
+    digest = canonical_digest(manifest)
+    if review.get("reviewedPlanHash") != digest:
+        raise LifecycleError("plan-review-digest-mismatch", "reviewedPlanHash does not match the manifest")
+    if not isinstance(review.get("reviewId"), str) or not review["reviewId"]:
+        raise LifecycleError("invalid-review", "reviewId is required")
+    reviewer = _object(review.get("reviewer"))
+    for field in ("id", "runId", "surface"):
+        if not isinstance(reviewer.get(field), str) or not reviewer[field]:
+            raise LifecycleError("invalid-review", f"reviewer.{field} is required")
+    if _open_blocking_review_findings(review):
+        raise LifecycleError("review-open-findings", "review has unresolved Medium-or-higher findings")
+
+    lock = build_plan_lock_v2(manifest, repository_root=repository_root)
+    lock_entries = lock.get("entries")
+    if not isinstance(lock_entries, list):
+        raise LifecycleError("plan-lock-inventory-invalid", "reviewed plan lock has no entries")
+    review_entry = next(
+        (entry for entry in lock_entries if isinstance(entry, dict) and entry.get("path") == normalized_review_path),
+        None,
+    )
+    if not isinstance(review_entry, dict) or review_entry.get("sha256") != review_sha256:
+        raise LifecycleError("plan-review-file-changed", "review file changed while the lock was being built")
+    return lock
 
 
 def verify_plan_package_integrity(
@@ -121,7 +184,7 @@ def verify_plan_package_integrity(
             "plan lock entries do not match the current declared package files",
             {"expected": expected_entries, "actual": actual_entries},
         )
-    package = manifest.get("package") if isinstance(manifest.get("package"), dict) else {}
+    package = _object(manifest.get("package"))
     package_root = _package_root(repository_root, package.get("planArtifactRoot"))
     _reject_undeclared_top_level_files(manifest, package_root, expected_entries, repository_root=repository_root)
     body = {
@@ -142,7 +205,7 @@ def _inventory_entries(manifest: dict[str, Any], repository_root: Path) -> list[
     plan_files = manifest.get("planFiles")
     if not isinstance(plan_files, list) or not plan_files:
         raise LifecycleError("plan-files-missing", "v2 plan package must declare a non-empty planFiles inventory")
-    package = manifest.get("package") if isinstance(manifest.get("package"), dict) else {}
+    package = _object(manifest.get("package"))
     package_root = _package_root(repository_root, package.get("planArtifactRoot"))
     normalized: list[str] = []
     seen: set[str] = set()
@@ -192,7 +255,10 @@ def _validate_entries(value: Any) -> list[dict[str, Any]]:
     for index, entry in enumerate(value):
         if not isinstance(entry, dict) or set(entry) != {"path", "bytes", "sha256"}:
             raise LifecycleError("plan-lock-inventory-invalid", "v2 lock entry shape is invalid", {"index": index})
-        path = normalize_repo_path(entry.get("path"), label="plan lock entry")
+        raw_path = entry.get("path")
+        if not isinstance(raw_path, str):
+            raise LifecycleError("plan-lock-inventory-invalid", "v2 lock entry path is invalid", {"index": index})
+        path = normalize_repo_path(raw_path, label="plan lock entry")
         size = entry.get("bytes")
         digest = entry.get("sha256")
         if not isinstance(size, int) or isinstance(size, bool) or size < 0:
@@ -200,10 +266,31 @@ def _validate_entries(value: Any) -> list[dict[str, Any]]:
         if not isinstance(digest, str) or len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
             raise LifecycleError("plan-lock-inventory-invalid", "v2 lock entry digest is invalid", {"path": path})
         if previous is not None and path <= previous:
-            raise LifecycleError("plan-lock-inventory-order", "v2 lock entries must be unique and sorted", {"path": path})
+            raise LifecycleError(
+                "plan-lock-inventory-order",
+                "v2 lock entries must be unique and sorted",
+                {"path": path},
+            )
         previous = path
         result.append({"path": path, "bytes": size, "sha256": digest})
     return result
+
+
+def _open_blocking_review_findings(review: dict[str, Any]) -> list[str]:
+    findings = review.get("findings")
+    if not isinstance(findings, list):
+        raise LifecycleError("invalid-review", "findings must be an array")
+    return [
+        str(item.get("id") or "unknown")
+        for item in findings
+        if isinstance(item, dict)
+        and str(item.get("status", "")).strip().lower() == "open"
+        and str(item.get("severity", "")).strip().upper() in {"BLOCKER", "HIGH", "MEDIUM"}
+    ]
+
+
+def _object(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
 def _package_root(repository_root: Path, raw: Any) -> Path:
@@ -230,7 +317,11 @@ def _resolve_declared_path(repository_root: Path, package_root: Path, path: str)
     try:
         candidate.relative_to(package_root)
     except ValueError as exc:
-        raise LifecycleError("plan-file-outside-package", "declared plan file escapes package root", {"path": path}) from exc
+        raise LifecycleError(
+            "plan-file-outside-package",
+            "declared plan file escapes package root",
+            {"path": path},
+        ) from exc
     return candidate
 
 
@@ -248,12 +339,13 @@ def _reject_undeclared_top_level_files(
     *,
     repository_root: Path,
 ) -> None:
-    integrity = manifest.get("packageIntegrity") if isinstance(manifest.get("packageIntegrity"), dict) else {}
+    integrity = _object(manifest.get("packageIntegrity"))
     allowed = integrity.get("allowedUnlistedFiles", ["plan.lock.json"])
     if not isinstance(allowed, list) or not all(isinstance(item, str) and item for item in allowed):
         raise LifecycleError("plan-integrity-policy-invalid", "allowedUnlistedFiles must be a list of names")
     package_relative = package_root.relative_to(repository_root.resolve()).as_posix()
     declared_top_level: set[str] = set()
+    declared_directories: set[str] = set()
     for entry in entries:
         path = PurePosixPath(entry["path"])
         try:
@@ -262,12 +354,28 @@ def _reject_undeclared_top_level_files(
             continue
         if len(relative.parts) == 1:
             declared_top_level.add(relative.as_posix())
+        elif relative.parts:
+            declared_directories.add(relative.parts[0])
     for child in sorted(package_root.iterdir(), key=lambda item: item.name):
-        if child.is_dir() and not child.is_symlink():
+        if child.is_symlink():
+            raise LifecycleError(
+                "plan-file-symlink",
+                "package top-level entries must not be symlinks",
+                {"path": child.name},
+            )
+        if child.is_dir():
+            if child.name not in declared_directories:
+                raise LifecycleError(
+                    "plan-directory-undeclared",
+                    "package contains an undeclared top-level directory",
+                    {"path": child.name},
+                )
             continue
         if child.name in allowed:
-            if child.is_symlink():
-                raise LifecycleError("plan-file-symlink", "unlisted control files must not be symlinks", {"path": child.name})
             continue
         if child.name not in declared_top_level:
-            raise LifecycleError("plan-file-undeclared", "package contains an undeclared top-level file", {"path": child.name})
+            raise LifecycleError(
+                "plan-file-undeclared",
+                "package contains an undeclared top-level file",
+                {"path": child.name},
+            )

@@ -44,6 +44,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/security-analysis-profile.md",
             "docs/reference/public-locators-and-redaction.md",
             "docs/reference/source-of-truth.md",
+            "docs/reference/release-accounting.md",
+            "docs/guides/phase-session-handoff.md",
         ):
             self.assertIn(required, english)
         self.assertIn("quickstart.md", russian)
@@ -54,6 +56,10 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("reference/security-analysis-profile.md", russian)
         self.assertIn("docs/reference/external-verification-checks.md", english)
         self.assertIn("docs/reference/security-analysis-profile.md", english)
+        self.assertIn("docs/reference/release-accounting.md", english)
+        self.assertIn("docs/guides/phase-session-handoff.md", english)
+        self.assertIn("reference/release-accounting.md", russian)
+        self.assertIn("guides/phase-session-handoff.md", russian)
         for adapter in ("Goose", "Grok Build", "OpenInterpreter", "Pi"):
             self.assertIn(adapter, english)
             self.assertIn(adapter, russian)
@@ -76,6 +82,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/project-domain-language.md",
             "docs/reference/external-verification-checks.md",
             "docs/reference/security-analysis-profile.md",
+            "docs/reference/release-accounting.md",
+            "docs/guides/phase-session-handoff.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
             "docs/ru/architecture/system-architecture.md",
@@ -90,6 +98,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/project-domain-language.md",
             "docs/ru/reference/external-verification-checks.md",
             "docs/ru/reference/security-analysis-profile.md",
+            "docs/ru/reference/release-accounting.md",
+            "docs/ru/guides/phase-session-handoff.md",
             "docs/ru/reference/public-locators-and-redaction.md",
             "docs/ru/guides/production-resource-security.md",
             "docs/ru/guides/reference-task-evaluation.md",
@@ -148,7 +158,9 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             json.loads(path.read_text(encoding="utf-8"))["adapterId"]
             for path in sorted((ROOT / "adapters").glob("*/adapter.descriptor.json"))
         }
-        index = json.loads((ROOT / "docs/adapters/evidence/adapter-evidence-summary.v1.json").read_text(encoding="utf-8"))
+        index = json.loads(
+            (ROOT / "docs/adapters/evidence/adapter-evidence-summary.v1.json").read_text(encoding="utf-8")
+        )
         indexed_ids = {item["adapterId"] for item in index["adapters"]}
 
         self.assertEqual(indexed_ids, descriptor_ids)
@@ -203,6 +215,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertIn("agent-lifecycle version", text)
             self.assertIn("PYTHONPATH=src python -m agent_lifecycle version", text)
             self.assertIn("agent-workflow-orchestrator", text)
+            self.assertIn("agent-lifecycle plan lock-create", text)
             self.assertIn("plugin", text.lower())
 
         for command in (
@@ -348,8 +361,12 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                 self.assertIn(version, russian_launch)
 
         self.assertEqual(len(descriptors), 12)
-        self.assertIn("## Verified profiles", (ROOT / "docs/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
-        self.assertIn("## Проверенные профили", (ROOT / "docs/ru/reference/qualified-host-launch.md").read_text(encoding="utf-8"))
+        self.assertIn(
+            "## Verified profiles", (ROOT / "docs/reference/qualified-host-launch.md").read_text(encoding="utf-8")
+        )
+        self.assertIn(
+            "## Проверенные профили", (ROOT / "docs/ru/reference/qualified-host-launch.md").read_text(encoding="utf-8")
+        )
 
     def test_task_flow_docs_define_completion_and_cost_boundaries(self) -> None:
         english = (ROOT / "docs/guides/how-alk-works.md").read_text(encoding="utf-8")
@@ -430,7 +447,11 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
 
         comparisons = (
             ("docs/reference/project-comparison.md", "provider-neutral execution strategy", "false acceptances"),
-            ("docs/ru/reference/project-comparison.md", "нейтральная к провайдеру стратегия выполнения", "ложной приёмке"),
+            (
+                "docs/ru/reference/project-comparison.md",
+                "нейтральная к провайдеру стратегия выполнения",
+                "ложной приёмке",
+            ),
         )
         for relative_path, strategy_text, quality_text in comparisons:
             with self.subTest(path=relative_path):
@@ -824,10 +845,37 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     onboarding = (
         "git clone https://github.com/avksp/agent-lifecycle-kit.git. python3 -m venv .venv. "
         "python -m agent_lifecycle version. agent-lifecycle version. agent-lifecycle diagnose --no-install-plans. "
-        "agent-lifecycle start. codex plugin. claude plugin. agent-workflow-orchestrator. PASS. REVIEW_REQUIRED. BLOCKED.\n"
+        "agent-lifecycle start. agent-lifecycle plan lock-create. codex plugin. claude plugin. "
+        "agent-workflow-orchestrator. PASS. REVIEW_REQUIRED. BLOCKED.\n"
     )
     _write_text(root / "docs/guides/install-and-first-run.md", onboarding)
     _write_text(root / "docs/ru/guides/install-and-first-run.md", onboarding)
+    accounting = (
+        "agent-phase-resource-input.v1. agent-phase-resource-measurement.v1. "
+        "agent-release-accounting.v1. metrics phase-resources. metrics release-accounting. "
+        "UNAVAILABLE. elapsedWallMs. computeMs. NON_ADDITIVE_SCOPE. "
+    )
+    _write_text(
+        root / "docs/reference/release-accounting.md",
+        accounting + "never becomes `ATTESTED`. cannot accept a task.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/release-accounting.md",
+        accounting + "не превращается в `ATTESTED`. не принимает задачу.\n",
+    )
+    handoff = (
+        "plan snapshot. plan handoff. context checkpoint. context restore. "
+        "workflow task-snapshot. workflow task-result. implementationAuthorized: false. proofAuthority. "
+    )
+    _write_text(
+        root / "docs/guides/phase-session-handoff.md",
+        handoff + "raw transcript. Do not reduce review, security, architecture or quality gates.\n",
+    )
+    _write_text(
+        root / "docs/ru/guides/phase-session-handoff.md",
+        handoff
+        + "полный transcript. Не снижайте review, security, architecture или quality gates.\n",  # noqa: RUF001
+    )
     commands = (
         "agent-lifecycle start --adapter <adapter-id>. agent-lifecycle plan check. "
         "agent-lifecycle audit package. agent-lifecycle review-mesh recommend. "
@@ -922,8 +970,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(root / "docs/reference/public-contracts.md", public_contracts)
     _write_text(
         root / "docs/ru/reference/public-contracts.md",
-        public_contracts
-        + "Локальная статистика качества и расхода избегает рейтинги провайдеров.\n",
+        public_contracts + "Локальная статистика качества и расхода избегает рейтинги провайдеров.\n",
     )
     public_locators = (
         "agent-public-evidence-locator.v1. HTTP(S). does not fetch the URL. local absolute paths. Review Mesh.\n"
@@ -1003,6 +1050,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "agent-lifecycle tier resolve --request <request.json>.\n"
         "reserved compatibility selector.\n"
         "зарезервированный раздел совместимости.\n"
+        "agent-lifecycle plan lock-create. --review <path>. --repository-root <path>. "
+        "fails rather than replacing.\n"
+        "--review <путь>. --repository-root <путь>. вместо замены существующего.\n"
         "actor. actorRunId. reviewId. task-result-invalid. task-review-invalid. "
         "task-review-self-certification.\n"
         "Historical evidence remains readable. Исторические подтверждения остаются.\n"
@@ -1341,24 +1391,15 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/reference/goal-continuity.md",
-        "`agent-goal-record.v1`.\n"
-        "`agent-objective-snapshot.v1`.\n"
-        "fails closed.\n"
-        "`workflow finalize`.\n",
+        "`agent-goal-record.v1`.\n`agent-objective-snapshot.v1`.\nfails closed.\n`workflow finalize`.\n",
     )
     _write_text(
         root / "docs/reference/runner.md",
-        "workflow run.\n"
-        "migrate-runner-artifact.\n"
-        "authorityClaimed.\n"
-        "fails closed.\n",
+        "workflow run.\nmigrate-runner-artifact.\nauthorityClaimed.\nfails closed.\n",
     )
     _write_text(
         root / "docs/reference/follow-up-register.md",
-        "`agent-follow-up-register.v1`.\n"
-        "`agent-follow-up-summary.v1`.\n"
-        "fails closed.\n"
-        "`workflow finalize`.\n",
+        "`agent-follow-up-register.v1`.\n`agent-follow-up-summary.v1`.\nfails closed.\n`workflow finalize`.\n",
     )
     _write_text(
         root / "docs/reference/worktree-isolation.md",
@@ -1602,23 +1643,15 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/ru/reference/readiness-diagnostics.md",
-        "`agent-adapter-install-plan.v1`.\n"
-        "argv-массивы.\n"
-        "Диагностика не трактует argv-массивы как строку shell.\n",
+        "`agent-adapter-install-plan.v1`.\nargv-массивы.\nДиагностика не трактует argv-массивы как строку shell.\n",
     )
     _write_text(
         root / "docs/security/neutrality-contract.md",
-        "Completeness counters.\n"
-        "`readRaces`.\n"
-        "`pathAliasConflicts`.\n"
-        "fail closed.\n",
+        "Completeness counters.\n`readRaces`.\n`pathAliasConflicts`.\nfail closed.\n",
     )
     _write_text(
         root / "docs/ru/security/neutrality-contract.md",
-        "Счётчики полноты.\n"
-        "`readRaces`.\n"
-        "`pathAliasConflicts`.\n"
-        "ненулевое значение приводит к отказу.\n",
+        "Счётчики полноты.\n`readRaces`.\n`pathAliasConflicts`.\nненулевое значение приводит к отказу.\n",
     )
     _write_text(
         root / "docs/adapters/progress-bridge-matrix.md",

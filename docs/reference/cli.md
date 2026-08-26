@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.5.0
+  python -m pip install agent-lifecycle-kit==2.6.0
 ```
 
 ## Task evidence identity
@@ -134,6 +134,16 @@ and resource budgets](performance-and-resource-budgets.md). Timing is advisory
 unless a plan says otherwise; security, compatibility, resource and
 fail-closed checks remain mandatory.
 
+`agent-lifecycle metrics phase-resources --input <path> --out <path>` converts
+an explicit `agent-phase-resource-input.v1` into a bounded
+`agent-phase-resource-measurement.v1`. `agent-lifecycle metrics
+release-accounting --release-id <id> --artifact <path> --project-root <path>
+--out <path>` composes unique local measurements into
+`agent-release-accounting.v1`. Both routes use create-only output and make no
+model, network or host-process call. Missing telemetry remains `UNAVAILABLE`
+with a null value; `elapsedWallMs` and `computeMs` are never conflated. See
+[release accounting](release-accounting.md).
+
 ## Optional adapter lifecycle control
 
 `agent-lifecycle adapter lifecycle-control-check` validates the optional local
@@ -167,6 +177,10 @@ publish `GUIDANCE_ONLY` and `NO_RECOMMENDATION`, while managed launch remains
 - `agent-lifecycle plan check`: validate a plan manifest and optional lock. Add
   `--require-completeness` to enforce structural completeness for the selected
   SDD tier.
+- `agent-lifecycle plan lock-create --manifest <path> --review <path>
+  [--repository-root <path>]`: validate the reviewed final package and create
+  its canonical `agent-plan-lock.v2`. The command writes only after all package
+  checks pass and fails rather than replacing an existing `plan.lock.json`.
 - `agent-lifecycle plan verify`: compose a read-only verification receipt for a
   plan package, including manifest, traceability, lock and package integrity.
   It does not execute the plan's validation commands or authorize changes.
@@ -395,7 +409,16 @@ cannot accept a workflow task or promote an adapter.
   Bug Forensics recipes that reuse existing receipts.
 - `agent-lifecycle metrics cost-check`: validate lifecycle cost receipts.
 - `agent-lifecycle metrics cost-report`: generate and validate a lifecycle
-  cost report from explicit JSON artifact paths.
+  cost report from explicit JSON artifact paths. Phase-resource inputs use
+  their declared token and step totals rather than a JSON-size estimate.
+- `agent-lifecycle metrics phase-resources --input <path> --out <path>`:
+  validate and persist a bounded phase measurement without replacing an
+  existing artifact.
+- `agent-lifecycle metrics release-accounting --release-id <id> --artifact
+  <path> --project-root <path> --out <path>`: aggregate up to 64 unique local
+  source artifacts into fixed ALK-process, implementation, audit and
+  post-audit-remediation views. Repeat `--artifact`; add `--provenance` to
+  compare declared and observed identities without claiming attestation.
 - `agent-lifecycle metrics usage-export`: export sessions, receipt digests,
   tokens, resources, durations, budget decisions, and optional host-reported
   `cost_usd` from explicit JSON artifact paths.

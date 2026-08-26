@@ -39,7 +39,9 @@ from agent_lifecycle.imports.security_findings import import_security_findings
 from agent_lifecycle.metrics import (
     build_lifecycle_cost_summary,
     build_lifecycle_recommendation_summary,
+    build_phase_resource_measurement,
     build_quality_cost_signals,
+    build_release_accounting,
     build_task_outcome_index,
     build_usage_export,
     generate_lifecycle_cost_report,
@@ -47,8 +49,12 @@ from agent_lifecycle.metrics import (
     recommend_lifecycle_mode,
     require_lifecycle_cost_pass,
     require_lifecycle_recommendation_pass,
+    require_phase_resource_measurement_pass,
+    require_release_accounting_pass,
     require_usage_export_pass,
     validate_lifecycle_cost_report,
+    validate_phase_resource_measurement,
+    validate_release_accounting,
     validate_usage_export,
 )
 from agent_lifecycle.metrics.audit_optimization import (
@@ -497,6 +503,10 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any] | str:
             "liveCallsStarted": False,
             "productionPromotionClaimed": False,
         }
+    if args.metrics_command == "phase-resources":
+        return _dispatch_phase_resources(args)
+    if args.metrics_command == "release-accounting":
+        return _dispatch_release_accounting(args)
     if args.metrics_command == "usage-export":
         export = build_usage_export(
             artifact_paths=[Path(item) for item in args.artifact],
@@ -591,6 +601,69 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any] | str:
         require_optimization_proposal_pass(proposal)
         return apply_optimization_proposal(proposal, Path(args.out))
     raise LifecycleError("command-not-implemented", "metrics command is not implemented")
+
+
+def _dispatch_phase_resources(args: argparse.Namespace) -> dict[str, Any]:
+    source = read_json_object(Path(args.input), label="phase resource input")
+    if source.get("schemaVersion") != "agent-phase-resource-input.v1":
+        raise LifecycleError("phase-resource-input-schema-invalid", "unsupported phase resource input schema")
+    raw_phases = source.get("phases")
+    if not isinstance(raw_phases, list) or not all(isinstance(item, dict) for item in raw_phases):
+        raise LifecycleError("invalid-phase-resource-measurement", "phases must be an array of objects")
+    phases: list[dict[str, Any]] = raw_phases
+    raw_lineage = source.get("lineage")
+    if raw_lineage is not None and not isinstance(raw_lineage, dict):
+        raise LifecycleError("invalid-phase-resource-measurement", "lineage must be an object")
+    raw_artifacts = source.get("sourceArtifacts")
+    if raw_artifacts is not None and (
+        not isinstance(raw_artifacts, list) or not all(isinstance(item, dict) for item in raw_artifacts)
+    ):
+        raise LifecycleError("invalid-phase-resource-measurement", "sourceArtifacts must be an array of objects")
+    measurement = build_phase_resource_measurement(
+        phases,
+        lineage=raw_lineage,
+        source_artifacts=raw_artifacts,
+    )
+    validation = require_phase_resource_measurement_pass(validate_phase_resource_measurement(measurement))
+    output_bytes = write_json_create(Path(args.out), measurement)
+    body = {
+        "schemaVersion": "agent-phase-resource-generation.v1",
+        "status": "PASS",
+        "outputPath": args.out,
+        "outputBytes": len(output_bytes),
+        "measurementDigest": measurement["measurementDigest"],
+        "validation": validation,
+        "liveCallsStarted": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
+
+
+def _dispatch_release_accounting(args: argparse.Namespace) -> dict[str, Any]:
+    declared_provenance = (
+        read_json_object(Path(args.provenance), label="release accounting provenance")
+        if args.provenance
+        else None
+    )
+    accounting = build_release_accounting(
+        args.release_id,
+        [Path(item) for item in args.artifact],
+        project_root=Path(args.project_root),
+        declared_provenance=declared_provenance,
+    )
+    validation = require_release_accounting_pass(validate_release_accounting(accounting))
+    output_bytes = write_json_create(Path(args.out), accounting)
+    body = {
+        "schemaVersion": "agent-release-accounting-generation.v1",
+        "status": "PASS",
+        "outputPath": args.out,
+        "outputBytes": len(output_bytes),
+        "accountingDigest": accounting["accountingDigest"],
+        "validation": validation,
+        "liveCallsStarted": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "receiptDigest": canonical_digest(body)}
 
 
 def _dispatch_audit_report(args: argparse.Namespace) -> dict[str, Any] | str:

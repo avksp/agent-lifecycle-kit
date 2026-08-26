@@ -77,7 +77,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.5.0
+python -m pip install agent-lifecycle-kit==2.6.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -88,7 +88,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.5.0
+python -m pip install agent-lifecycle-kit==2.6.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -188,7 +188,7 @@ Choose one host and follow its adapter page. The common sequence is:
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.5.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.6.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -223,6 +223,14 @@ Release 2.5 adds optional [bounded external tool jobs](../reference/external-too
 for adapter-owned work that needs cancellation, child cleanup or hashed
 artifacts. Ordinary workflows do not allocate job state, and the feature adds
 no provider client or second lifecycle authority.
+
+Release 2.6 adds [release accounting](../reference/release-accounting.md) and a
+bounded [phase-to-session handoff](phase-session-handoff.md). Missing telemetry
+stays unavailable, and handoff artifacts do not replace workflow authority.
+Before execution, create a reviewed final lock with
+`agent-lifecycle plan lock-create --manifest <path> --review <path>`; it fails
+rather than replacing an existing `plan.lock.json`. See the [CLI
+reference](../reference/cli.md).
 
 Release 1.80 also documents optional lifecycle control inside an adapter. It is
 off by default: bundled adapters currently publish `GUIDANCE_ONLY` and

@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.5.0
+python -m pip install agent-lifecycle-kit==2.6.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -135,6 +135,16 @@ security-analysis --finding <path> --profile`. Импортированная н
 Время является справочным, если план не установил иное; проверки безопасности,
 совместимости, ресурсов и отказа по умолчанию остаются обязательными.
 
+`agent-lifecycle metrics phase-resources --input <путь> --out <путь>`
+преобразует явный `agent-phase-resource-input.v1` в ограниченный
+`agent-phase-resource-measurement.v1`. Команда `agent-lifecycle metrics
+release-accounting --release-id <id> --artifact <путь> --project-root <путь>
+--out <путь>` объединяет уникальные локальные измерения в
+`agent-release-accounting.v1`. Обе команды только создают выходной файл и не
+вызывают модель, сеть или процесс хоста. Отсутствующая телеметрия остаётся
+`UNAVAILABLE` с null-значением; `elapsedWallMs` и `computeMs` не смешиваются.
+Подробности приведены в разделе [учёт ресурсов релиза](release-accounting.md).
+
 ## Необязательный контроль жизненного цикла адаптера
 
 `agent-lifecycle adapter lifecycle-control-check` проверяет локальную политику
@@ -167,6 +177,11 @@ security-analysis --finding <path> --profile`. Импортированная н
 - `agent-lifecycle plan check`: проверка плана и файла блокировки. Флаг
   `--require-completeness` включает структурную проверку полноты выбранного SDD
   уровня.
+- `agent-lifecycle plan lock-create --manifest <путь> --review <путь>
+  [--repository-root <путь>]`: проверяет финальный рассмотренный пакет и создаёт
+  канонический `agent-plan-lock.v2`. Команда записывает файл только после всех
+  проверок пакета и завершается отказом вместо замены существующего
+  `plan.lock.json`.
 - `agent-lifecycle plan verify`: формирует безопасный отчёт проверки пакета
   плана: манифеста, трассируемости, lock-файла и целостности пакета. Команда не
   выполняет команды из плана и не даёт полномочий на изменения.
@@ -414,6 +429,17 @@ agent-lifecycle project preset render \
 
 - `agent-lifecycle metrics`: отчёты о расходе, экспорт использования и
   рекомендации по режиму.
+- `agent-lifecycle metrics cost-report`: формирует отчёт затрат по явным
+  JSON-артефактам. Для измерения фаз используются объявленные итоги токенов и
+  шагов, а не оценка по размеру JSON.
+- `agent-lifecycle metrics phase-resources --input <путь> --out <путь>`:
+  проверяет и сохраняет ограниченное измерение фаз без замены существующего
+  артефакта.
+- `agent-lifecycle metrics release-accounting --release-id <id> --artifact
+  <путь> --project-root <путь> --out <путь>`: объединяет не более 64 уникальных
+  локальных источников в представления процесса ALK, реализации, аудита и
+  исправлений после аудита. `--artifact` можно повторять; `--provenance`
+  сравнивает объявленные и наблюдаемые идентичности без заявления аттестации.
 - `agent-lifecycle metrics outcome-index/quality-signals/learn-recommend`:
   рекомендательное обучение по локальным артефактам без автоматического
   применения.

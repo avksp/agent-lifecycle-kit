@@ -9,7 +9,6 @@ from pathlib import Path
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.freeze import build_plan_lock_v2, verify_plan_package_integrity
 
-
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "tests/freeze/fixtures/canonical-v2-plan-package"
 
@@ -55,6 +54,16 @@ class PlanPackageIntegrityTests(unittest.TestCase):
                 verify_plan_package_integrity(manifest, lock, repository_root=root)
 
         self.assertEqual(raised.exception.code, "plan-file-undeclared")
+
+    def test_undeclared_top_level_directory_is_rejected(self) -> None:
+        with _temporary_fixture() as (root, package):
+            manifest, lock = _fixture_payload(root=root, package=package)
+            (package / "workflow/task-packets").mkdir(parents=True)
+
+            with self.assertRaises(LifecycleError) as raised:
+                verify_plan_package_integrity(manifest, lock, repository_root=root)
+
+        self.assertEqual(raised.exception.code, "plan-directory-undeclared")
 
     def test_duplicate_manifest_path_is_rejected(self) -> None:
         manifest, _lock = _fixture_payload()

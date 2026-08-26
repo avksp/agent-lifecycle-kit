@@ -59,6 +59,53 @@ class PublicationAdoptionTests(unittest.TestCase):
             russian,
         )
 
+    def test_release_accounting_and_handoff_are_documented_without_authority(self) -> None:
+        accounting = (
+            (ROOT / "docs/reference/release-accounting.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/release-accounting.md").read_text(encoding="utf-8"),
+        )
+        handoff = (
+            (ROOT / "docs/guides/phase-session-handoff.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/guides/phase-session-handoff.md").read_text(encoding="utf-8"),
+        )
+        for text in accounting:
+            for marker in (
+                "agent-phase-resource-input.v1",
+                "agent-release-accounting.v1",
+                "UNAVAILABLE",
+                "elapsedWallMs",
+                "computeMs",
+                "ATTESTED",
+            ):
+                self.assertIn(marker, text)
+        for text in handoff:
+            for marker in (
+                "plan snapshot",
+                "plan handoff",
+                "context checkpoint",
+                "context restore",
+                "workflow task-snapshot",
+                "workflow task-result",
+                "implementationAuthorized: false",
+                "proofAuthority",
+            ):
+                self.assertIn(marker, text)
+
+        cli = (
+            (ROOT / "docs/reference/cli.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/cli.md").read_text(encoding="utf-8"),
+        )
+        for text in cli:
+            for marker in (
+                "agent-lifecycle plan lock-create",
+                "--manifest",
+                "--review",
+                "--repository-root",
+                "agent-plan-lock.v2",
+                "plan.lock.json",
+            ):
+                self.assertIn(marker, text)
+
     def test_missing_project_comparison_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

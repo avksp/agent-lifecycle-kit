@@ -1,0 +1,10 @@
+# Acceptance criteria
+
+| ID | Requirement | Evidence | Deterministic acceptance |
+| --- | --- | --- | --- |
+| `AC26-LOCK` | `R26-LOCK` | `EV26-LOCK` | The finalized FROZEN manifest pre-declares the review path before review. `plan lock-create` rejects DRAFT/REOPENED input, missing/non-independent/non-ready/stale review, open Medium+, package/revision/exact-manifest-digest mismatch, symlink or non-canonical output, replacement and manifest drift; a reviewed package writes exactly `<planArtifactRoot>/plan.lock.json`, verifies the v2 lock and exact inventory, and does not approve, freeze or authorize anything. |
+| `AC26-PHASES` | `R26-PHASES` | `EV26-PHASES` | `metrics phase-resources` reproduces the existing Python API bytes/digest from bounded explicit input, rejects canonical JSON input above 1 MiB and more than `MAX_PHASE_RESOURCE_ENTRIES = 256` phases in build and validation paths, and reports the real CLI route in `generatedBy`. |
+| `AC26-ACCOUNTING` | `R26-ACCOUNTING` | `EV26-ACCOUNTING` | `metrics release-accounting` writes and validates one no-replace artifact; missing categories remain `UNAVAILABLE`, parallel compute is not added to elapsed wall, non-additive goal scope is excluded from release totals, and phase JSON uses declared token totals rather than byte-size estimates. |
+| `AC26-PROVENANCE` | `R26-PROVENANCE` | `EV26-PROVENANCE` | Controller/core, plugin/skill package, run, source and measurement identities are separate fields; mismatches remain visible, never promote confidence, and are covered by the output digest. |
+| `AC26-HANDOFF` | `R26-HANDOFF` | `EV26-HANDOFF` | The no-model continuity fixture in `tests/planning/test_continuity.py` proves that planning, implementation, audit and acceptance sessions resume from bounded existing ALK artifacts without raw transcript or plan-wide source context. |
+| `AC26-PUBLICATION` | `R26-PUBLICATION` | `EV26-PUBLICATION` | Documentation, schemas, package and plugins consistently identify `2.6.0`; all accepted 2.5 security, architecture, quality, neutrality and publication gates remain unchanged and pass. |
