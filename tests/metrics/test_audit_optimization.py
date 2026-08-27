@@ -27,6 +27,7 @@ class AuditOptimizationTests(unittest.TestCase):
         self.assertEqual(statistics["signals"]["quality"]["successRate"], 1.0)
         self.assertEqual(statistics["signals"]["tokens"]["count"], 3)
         self.assertEqual(statistics["signals"]["resources"]["cpuMs"]["availability"], "ATTESTED")
+        self.assertEqual(statistics["signals"]["efficiency"]["noAcceptanceEffectShare"], 0.0)
 
     def test_insufficient_evidence_does_not_recommend(self) -> None:
         samples = [build_audit_sample(_receipt(1))]
@@ -74,6 +75,25 @@ class AuditOptimizationTests(unittest.TestCase):
 
         self.assertEqual(evaluation["status"], "FAIL")
         self.assertIn("holdout-task-cap-exceeded", {item["code"] for item in evaluation["blockers"]})
+
+    def test_candidate_cannot_override_measured_holdout_quality(self) -> None:
+        candidate = _candidate("unsafe", quality=False)
+        candidate["qualityRate"] = 1.0
+        candidate["falseAcceptanceRate"] = 0.0
+
+        evaluation = evaluate_candidate_profiles([candidate])
+
+        self.assertEqual(evaluation["status"], "NO_RECOMMENDATION")
+        self.assertEqual(evaluation["candidates"][0]["qualityRate"], 0.0)
+        self.assertFalse(evaluation["candidates"][0]["eligible"])
+
+    def test_provider_like_candidate_route_is_neutralized(self) -> None:
+        candidate = _candidate("safe")
+        candidate["routeClass"] = "provider-code-model"
+
+        evaluation = evaluate_candidate_profiles([candidate])
+
+        self.assertEqual(evaluation["candidates"][0]["routeClass"], "external-neutral")
 
 
 def _candidate(profile_id: str, *, quality: bool = True, task_count: int = 3) -> dict[str, object]:

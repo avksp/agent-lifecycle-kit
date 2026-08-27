@@ -56,10 +56,6 @@ __all__ = [
     "MAX_RELEASE_ACCOUNTING_ARTIFACTS",
     "MAX_RELEASE_ACCOUNTING_ENTRIES",
     "PROVENANCE_FIELDS",
-    "build_audit_optimization_report",
-    "build_audit_sample",
-    "build_audit_samples",
-    "build_audit_statistics",
     "build_lifecycle_cost_summary",
     "build_lifecycle_recommendation_summary",
     "build_phase_resource_measurement",
@@ -69,12 +65,9 @@ __all__ = [
     "build_release_accounting_source",
     "build_task_outcome_index",
     "build_usage_export",
-    "evaluate_candidate_profiles",
     "generate_lifecycle_cost_report",
-    "recommend_audit_optimization",
     "recommend_from_quality_cost_signals",
     "recommend_lifecycle_mode",
-    "require_audit_sample_pass",
     "require_lifecycle_cost_pass",
     "require_lifecycle_recommendation_pass",
     "require_phase_resource_measurement_pass",
@@ -83,8 +76,6 @@ __all__ = [
     "summarize_lifecycle_overhead",
     "summarize_regression_signals",
     "usage_export_totals",
-    "validate_audit_optimization_report",
-    "validate_audit_sample",
     "validate_lifecycle_baselines",
     "validate_lifecycle_cost_report",
     "validate_phase_resource_measurement",
@@ -94,6 +85,8 @@ __all__ = [
 ]
 
 _LAZY_AUDIT_OPTIMIZATION_EXPORTS = {
+    "build_audit_efficiency_input",
+    "build_audit_efficiency_report",
     "build_audit_optimization_report",
     "build_audit_sample",
     "build_audit_samples",
@@ -102,14 +95,25 @@ _LAZY_AUDIT_OPTIMIZATION_EXPORTS = {
     "recommend_audit_optimization",
     "require_audit_sample_pass",
     "validate_audit_optimization_report",
+    "validate_audit_efficiency_input",
+    "validate_audit_efficiency_report",
     "validate_audit_sample",
 }
 
-__all__.extend(_LAZY_AUDIT_OPTIMIZATION_EXPORTS)
+__all__.extend(sorted(_LAZY_AUDIT_OPTIMIZATION_EXPORTS))
 
 
 def __getattr__(name: str):
     if name in _LAZY_AUDIT_OPTIMIZATION_EXPORTS:
+        if name in {
+            "build_audit_efficiency_input",
+            "build_audit_efficiency_report",
+            "validate_audit_efficiency_input",
+            "validate_audit_efficiency_report",
+        }:
+            from agent_lifecycle.metrics import audit_efficiency
+
+            return getattr(audit_efficiency, name)
         if name in {"build_audit_sample", "build_audit_samples", "require_audit_sample_pass", "validate_audit_sample"}:
             from agent_lifecycle.metrics import audit_samples
 

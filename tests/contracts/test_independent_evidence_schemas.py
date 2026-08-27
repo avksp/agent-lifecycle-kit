@@ -38,6 +38,25 @@ class IndependentEvidenceSchemaTests(unittest.TestCase):
         self.assertEqual(validation["status"], "PASS")
         self.assertEqual(validation["independenceStatus"], "REQUIRED_PASS")
 
+    def test_statistical_check_is_an_explicit_independence_method(self) -> None:
+        requirement = build_independence_requirement(allowed_methods=["statistical-check"])
+        evidence = build_independent_evidence(
+            evidence_id="EV-STAT-1",
+            criterion_id="AC-STAT-1",
+            requirement=requirement,
+            source_revision="source-revision-1",
+            source_lineage_digest="a" * 64,
+            method="statistical-check",
+            producer_class="independent-holdout-evaluator",
+            producer_identity_hash="b" * 64,
+            implementation_digest="c" * 64,
+        )
+
+        self.assertEqual(
+            validate_independent_evidence(evidence, requirement=requirement)["status"],
+            "PASS",
+        )
+
     def test_shared_producer_and_stale_source_fail_closed(self) -> None:
         requirement = build_independence_requirement(prohibited_producer_classes=["implementation-worker"])
         evidence = build_independent_evidence(
@@ -107,6 +126,15 @@ class IndependentEvidenceSchemaTests(unittest.TestCase):
 
         self.assertEqual(validation["status"], "FAIL")
         self.assertIn("independent-evidence-requirement-invalid", {item["code"] for item in validation["blockers"]})
+
+    def test_non_object_requirement_fails_closed_without_attribute_error(self) -> None:
+        validation = validate_independent_evidence({}, requirement=[])  # type: ignore[arg-type]
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn(
+            "independent-evidence-requirement-invalid",
+            {item["code"] for item in validation["blockers"]},
+        )
 
 
 if __name__ == "__main__":

@@ -25,6 +25,21 @@ _SECTION_MARKERS = {
     "evidence": re.compile(r"(^|\n)\s*(evidence|доказательства)\s*[:#]", re.IGNORECASE),
 }
 _FORBIDDEN_KEYS = {"prompt", "transcript", "provider", "providerName", "model", "modelName", "secret", "token", "password", "path", "cwd", "environment"}
+_ROUTE_CLASSES = {
+    "code",
+    "code-review",
+    "general",
+    "local",
+    "reasoning",
+    "release",
+    "research",
+    "review",
+    "small",
+    "standard",
+    "strong",
+    "strong-reasoning",
+    "unknown",
+}
 
 
 def build_audit_sample(
@@ -46,16 +61,31 @@ def build_audit_sample(
     lineage = _lineage(receipt, sources)
     request = _request_projection(receipt, sources)
     review_projection = project_review_result_for_optimization(review) if review else _empty_review()
+    review_projection["modelRouteClass"] = _route_class(
+        review_projection.get("modelRouteClass")
+        if isinstance(review_projection.get("modelRouteClass"), str)
+        else None
+    )
     usage_projection = _usage_projection(usage)
     process_projection = _process_projection(process)
     quality = _quality_projection(receipt, outcome, review_projection)
     attempts = _attempt_projection(receipt, sources, process)
     attestation = _attestation_projection(review_projection, usage_projection, process_projection)
     source_digests = sorted({canonical_digest(item) for item in sources})
+    resolved_sample_id = sample_id or canonical_digest({"lineage": lineage, "sourceDigests": source_digests})
+    statistical_provenance = _statistical_provenance(
+        receipt,
+        sources,
+        review_projection,
+        lineage,
+        source_digests,
+        resolved_sample_id,
+    )
     body = {
         "schemaVersion": AUDIT_OPTIMIZATION_SAMPLE_SCHEMA,
-        "sampleId": sample_id or canonical_digest({"lineage": lineage, "sourceDigests": source_digests}),
+        "sampleId": resolved_sample_id,
         "lineage": lineage,
+        "statisticalProvenance": statistical_provenance,
         "request": request,
         "review": review_projection,
         "attempts": attempts,
@@ -119,6 +149,16 @@ def validate_audit_sample(sample: dict[str, Any]) -> dict[str, Any]:
             expected = canonical_digest({key: value for key, value in sample.items() if key != "sampleDigest"})
             if sample.get("sampleDigest") != expected:
                 blockers.append({"code": "audit-sample-digest-mismatch"})
+        provenance = sample.get("statisticalProvenance")
+        if isinstance(provenance, dict):
+            if not _DIGEST_RE.fullmatch(str(provenance.get("sampleIdentity", ""))):
+                blockers.append({"code": "audit-sample-identity-invalid"})
+            for field in ("sourceLineageDigest", "producerIdentityHash"):
+                if not _DIGEST_RE.fullmatch(str(provenance.get(field, ""))):
+                    blockers.append({"code": "audit-sample-provenance-digest-invalid", "field": field})
+            for field in ("sourceClass", "derivation", "sourceRevision", "producerClass"):
+                if not isinstance(provenance.get(field), str) or not provenance[field]:
+                    blockers.append({"code": "audit-sample-provenance-field-missing", "field": field})
         try:
             _assert_private_projection(sample)
         except LifecycleError as exc:
@@ -162,6 +202,59 @@ def _lineage(bundle: dict[str, Any], sources: list[dict[str, Any]]) -> dict[str,
         "runId": _first_string(bundle, sources, "runId", "lineage.runId") or "run-unknown",
         "packageId": _first_string(bundle, sources, "packageId", "lineage.packageId") or "package-unknown",
         "taskId": _first_string(bundle, sources, "taskId", "task.id") or "task-unknown",
+    }
+
+
+def _statistical_provenance(
+    bundle: dict[str, Any],
+    sources: list[dict[str, Any]],
+    review: dict[str, Any],
+    lineage: dict[str, Any],
+    source_digests: list[str],
+    sample_identity: str,
+) -> dict[str, Any]:
+    source_class = _first_string(bundle, sources, "sourceClass", "statistical.sourceClass") or "UNDECLARED"
+    derivation = _first_string(bundle, sources, "derivation", "statistical.derivation") or "receipt-projection"
+    source_revision = _first_string(bundle, sources, "sourceRevision", "lineage.sourceRevision") or "UNAVAILABLE"
+    source_lineage_digest = _first_digest(
+        bundle,
+        sources,
+        "sourceLineageDigest",
+        "lineage.sourceLineageDigest",
+    ) or canonical_digest(lineage)
+    producer_class = (
+        _first_string(bundle, sources, "producerClass", "statistical.producerClass")
+        or str(review.get("reviewerRole") or "UNDECLARED")
+    )
+    producer_identity_hash = _first_digest(
+        bundle,
+        sources,
+        "producerIdentityHash",
+        "reviewer.modelIdentityHash",
+        "reviewer.hostIdentityHash",
+    )
+    identity_status = "DECLARED" if producer_identity_hash else "DERIVED_NON_AUTHORITATIVE"
+    if not producer_identity_hash:
+        producer_identity_hash = canonical_digest(
+            {"producerClass": producer_class, "sourceDigests": source_digests}
+        )
+    statistical_identity = (
+        sample_identity
+        if _DIGEST_RE.fullmatch(sample_identity)
+        else canonical_digest(
+            {"sampleId": sample_identity, "lineage": lineage, "sourceDigests": source_digests}
+        )
+    )
+    return {
+        "sampleIdentity": statistical_identity,
+        "sourceClass": source_class,
+        "derivation": derivation,
+        "sourceRevision": source_revision,
+        "sourceLineageDigest": source_lineage_digest,
+        "producerClass": producer_class,
+        "producerIdentityHash": producer_identity_hash,
+        "producerIdentityStatus": identity_status,
+        "independenceClaimed": source_class == "INDEPENDENT_HOLDOUT" and identity_status == "DECLARED",
     }
 
 
@@ -309,9 +402,8 @@ def _safe_status(value: Any, fallback: str) -> str:
 def _route_class(value: str | None) -> str:
     if not value:
         return "unknown"
-    normalized = value.lower()
-    allowed = ("local", "small", "standard", "strong", "reasoning", "code", "review", "research", "release", "general", "unknown")
-    return value if any(marker in normalized for marker in allowed) else "external-neutral"
+    normalized = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return normalized if normalized in _ROUTE_CLASSES else "external-neutral"
 
 
 def _assert_private_projection(value: Any) -> None:

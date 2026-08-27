@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from statistics import mean
 from typing import Any
 
@@ -26,6 +27,21 @@ MAX_REVIEWERS = 8
 MAX_RETRIES = 4
 MAX_TIMEOUT_SECONDS = 14400
 MAX_PACKET_TOKENS = 100000
+_ROUTE_CLASSES = {
+    "code",
+    "code-review",
+    "general",
+    "local",
+    "reasoning",
+    "release",
+    "research",
+    "review",
+    "small",
+    "standard",
+    "strong",
+    "strong-reasoning",
+    "unknown",
+}
 
 
 def build_audit_statistics(
@@ -54,6 +70,7 @@ def build_audit_statistics(
     attestation_counts = _attestation_counts(valid)
     signals = {
         "quality": quality,
+        "efficiency": _sample_efficiency(valid),
         "latency": _numeric_summary(usage_values, unit="seconds"),
         "tokens": _numeric_summary(token_values, unit="tokens"),
         "resources": {
@@ -118,8 +135,8 @@ def evaluate_candidate_profiles(
         false_acceptances = sum(1 for item in rows if item.get("falseAcceptance") is True or item.get("acceptedThenCorrected") is True)
         tokens = [_number(item.get("billableTokens", item.get("tokens"))) for item in rows]
         wall = [_number(item.get("wallSeconds")) for item in rows]
-        quality_rate = float(profile.get("qualityRate")) if _number_or_none(profile.get("qualityRate")) is not None else _rate(quality_pass, len(rows))
-        false_rate = float(profile.get("falseAcceptanceRate")) if _number_or_none(profile.get("falseAcceptanceRate")) is not None else _rate(false_acceptances, len(rows))
+        quality_rate = _rate(quality_pass, len(rows))
+        false_rate = _rate(false_acceptances, len(rows))
         profile_quality_floor = _string(profile.get("qualityFloor"), "standard")
         row = {
             "profileId": profile_id,
@@ -328,10 +345,7 @@ def render_audit_optimization_terminal(report: dict[str, Any]) -> str:
 
 
 def _sample_rows(samples: list[dict[str, Any]] | dict[str, Any]) -> list[dict[str, Any]]:
-    if isinstance(samples, dict):
-        rows = samples.get("samples")
-    else:
-        rows = samples
+    rows = samples.get("samples") if isinstance(samples, dict) else samples
     return [item for item in rows if isinstance(item, dict)] if isinstance(rows, list) else []
 
 
@@ -366,6 +380,35 @@ def _available_metric_values(samples: list[dict[str, Any]], field: str) -> list[
         if isinstance(value, (int, float)) and not isinstance(value, bool) and availability == "ATTESTED":
             values.append(float(value))
     return values
+
+
+def _sample_efficiency(samples: list[dict[str, Any]]) -> dict[str, Any]:
+    confirmed = sum(int(_number(_value_at(sample, "review.acceptedCount"))) for sample in samples)
+    rejected = sum(int(_number(_value_at(sample, "review.rejectedCount"))) for sample in samples)
+    no_verdict = sum(
+        1
+        for sample in samples
+        if _value_at(sample, "review.status") not in {"PASS", "FAIL"}
+    )
+    remediation = sum(
+        1
+        for sample in samples
+        if _number(_value_at(sample, "quality.correctionCount")) > 0
+    )
+    tokens = sum(_number(_value_at(sample, "usage.billableTokens")) for sample in samples)
+    wall = sum(_number(_value_at(sample, "usage.wallSeconds")) for sample in samples)
+    decided = confirmed + rejected
+    return {
+        "confirmedFindingCount": confirmed,
+        "rejectedFindingCount": rejected,
+        "noVerdictSampleCount": no_verdict,
+        "remediationSampleCount": remediation,
+        "tokensPerConfirmedFinding": round(tokens / confirmed, 6) if confirmed else None,
+        "wallSecondsPerConfirmedFinding": round(wall / confirmed, 6) if confirmed else None,
+        "noAcceptanceEffectShare": _rate(no_verdict, len(samples)),
+        "rejectedFindingShare": _rate(rejected, decided),
+        "postAuditRemediationShare": _rate(remediation, len(samples)),
+    }
 
 
 def _numeric_summary(values: list[float], *, unit: str) -> dict[str, Any]:
@@ -481,9 +524,8 @@ def _bounded_int(value: Any, minimum: int, maximum: int) -> int | None:
 def _safe_route_class(value: Any) -> str:
     if not isinstance(value, str) or not value:
         return "unknown"
-    normalized = value.lower()
-    allowed = ("local", "small", "standard", "strong", "reasoning", "code", "review", "research", "release", "general", "unknown")
-    return value if any(item in normalized for item in allowed) else "external-neutral"
+    normalized = "-".join(part for part in re.split(r"[^a-z0-9]+", value.lower()) if part)
+    return normalized if normalized in _ROUTE_CLASSES else "external-neutral"
 
 
 def _string(value: Any, fallback: str) -> str:

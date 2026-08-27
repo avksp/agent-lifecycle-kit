@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from agent_lifecycle.contracts.independent_evidence_schemas import build_independence_requirement
+from agent_lifecycle.contracts.statistical_evidence_schemas import build_statistical_evidence_requirement
 from agent_lifecycle.planning.completeness import validate_plan_completeness
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -41,6 +42,42 @@ class PlanIndependenceRequirementCompletenessTests(unittest.TestCase):
         validation = validate_plan_completeness(copy.deepcopy(manifest))
 
         self.assertEqual(validation["status"], "PASS")
+
+    def test_required_statistical_evidence_must_have_an_explicit_route(self) -> None:
+        manifest = self._manifest()
+        criterion = manifest["acceptance"]["criteria"][0]
+        criterion["statisticalEvidence"] = build_statistical_evidence_requirement()
+
+        validation = validate_plan_completeness(manifest)
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn(
+            "missing-statistical-evidence-route",
+            {item["code"] for item in validation["blockers"]},
+        )
+
+    def test_statistical_evidence_route_passes_completeness(self) -> None:
+        manifest = self._manifest()
+        criterion = manifest["acceptance"]["criteria"][0]
+        criterion["statisticalEvidence"] = build_statistical_evidence_requirement()
+        criterion["statisticalEvidenceIds"] = ["EV-STATISTICAL"]
+        manifest["acceptance"]["evidence"].append(
+            {"id": "EV-STATISTICAL", "description": "adequate independent holdout"}
+        )
+        manifest["workstreams"][0]["evidenceIds"].append("EV-STATISTICAL")
+
+        self.assertEqual(validate_plan_completeness(manifest)["status"], "PASS")
+
+    def test_dangling_statistical_evidence_route_fails_completeness(self) -> None:
+        manifest = self._manifest()
+        criterion = manifest["acceptance"]["criteria"][0]
+        criterion["statisticalEvidence"] = build_statistical_evidence_requirement()
+        criterion["statisticalEvidenceIds"] = ["EV-STATISTICAL-MISSING"]
+
+        validation = validate_plan_completeness(manifest)
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn("missing-evidence-route", {item["code"] for item in validation["blockers"]})
 
 
 if __name__ == "__main__":
