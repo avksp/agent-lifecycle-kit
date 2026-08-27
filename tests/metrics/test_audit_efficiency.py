@@ -79,6 +79,72 @@ class AuditEfficiencyTests(unittest.TestCase):
         self.assertEqual(report["comparison"]["wallReductionPercent"]["value"], 20.0)
         self.assertFalse(report["autoApply"])
 
+    def test_current_input_reused_as_comparison_fails_before_reduction(self) -> None:
+        current = _measurement()
+
+        report = build_audit_efficiency_report(current, comparison_measurements=[deepcopy(current)])
+
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["comparison"]["sampleCount"], 1)
+        self.assertEqual(report["comparison"]["tokenReductionPercent"]["status"], "UNAVAILABLE")
+        self.assertEqual(
+            _duplicate_axes(report),
+            {"contentDigest", "releaseId", "sourceLineageDigest", "sourceRevision"},
+        )
+
+    def test_repeated_comparison_does_not_inflate_sample_count(self) -> None:
+        current = _measurement(release_id="2.7.0", audit_tokens=800, audit_wall=8000)
+        baseline = _measurement(release_id="2.6.0", audit_tokens=1000, audit_wall=10000)
+
+        report = build_audit_efficiency_report(
+            current,
+            comparison_measurements=[baseline, deepcopy(baseline)],
+        )
+
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["comparison"]["sampleCount"], 2)
+        self.assertEqual(
+            _duplicate_axes(report, index=1),
+            {"contentDigest", "releaseId", "sourceLineageDigest", "sourceRevision"},
+        )
+
+    def test_repeated_release_id_fails_with_distinct_content_and_lineage(self) -> None:
+        current = _measurement(release_id="2.7.0", audit_tokens=800, audit_wall=8000)
+        baseline = _measurement(release_id="2.6.0", audit_tokens=1000, audit_wall=10000)
+        baseline["releaseId"] = current["releaseId"]
+        _refresh_input_digest(baseline)
+
+        report = build_audit_efficiency_report(current, comparison_measurements=[baseline])
+
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(_duplicate_axes(report), {"releaseId"})
+
+    def test_release_label_only_copy_fails_on_content_and_lineage(self) -> None:
+        current = _measurement(release_id="2.7.0")
+        relabelled = deepcopy(current)
+        relabelled["releaseId"] = "2.6.0-relabelled"
+        _refresh_input_digest(relabelled)
+
+        report = build_audit_efficiency_report(current, comparison_measurements=[relabelled])
+
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(
+            _duplicate_axes(report),
+            {"contentDigest", "sourceLineageDigest", "sourceRevision"},
+        )
+
+    def test_retained_source_lineage_fails_even_when_metrics_change(self) -> None:
+        current = _measurement(release_id="2.7.0", audit_tokens=800, audit_wall=8000)
+        baseline = _measurement(release_id="2.6.0", audit_tokens=1000, audit_wall=10000)
+        baseline["sourceRevision"] = current["sourceRevision"]
+        baseline["sourceLineageDigest"] = current["sourceLineageDigest"]
+        _refresh_input_digest(baseline)
+
+        report = build_audit_efficiency_report(current, comparison_measurements=[baseline])
+
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(_duplicate_axes(report), {"sourceLineageDigest", "sourceRevision"})
+
     def test_missing_controller_or_implementation_telemetry_blocks_comparison(self) -> None:
         baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
         current = deepcopy(baseline)
@@ -179,6 +245,19 @@ def _metric(value: int) -> dict:
 
 def _unavailable() -> dict:
     return {"status": "UNAVAILABLE", "value": None}
+
+
+def _refresh_input_digest(value: dict) -> None:
+    value["inputDigest"] = canonical_digest({key: item for key, item in value.items() if key != "inputDigest"})
+
+
+def _duplicate_axes(report: dict, *, index: int = 0) -> set[str]:
+    return {
+        item["axis"]
+        for item in report["blockers"]
+        if item.get("code") == "audit-efficiency-comparison-duplicate-identity"
+        and item.get("index") == index
+    }
 
 
 if __name__ == "__main__":
