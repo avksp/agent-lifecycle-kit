@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "agent-plan-manifest.v1",
+  "status": "FROZEN",
+  "planRevision": 2,
+  "package": {
+    "id": "release-2-7-quality-remediation",
+    "title": "Release 2.7 pre-publication quality remediation",
+    "workspaceRoot": ".",
+    "artifactRoot": "work/release-2-7-quality-remediation",
+    "root": ".",
+    "planArtifactRoot": "plans/release-2-7-quality-remediation"
+  },
+  "planFiles": [
+    "plans/release-2-7-quality-remediation/00-developer-overview.md",
+    "plans/release-2-7-quality-remediation/README.md",
+    "plans/release-2-7-quality-remediation/acceptance-criteria.md",
+    "plans/release-2-7-quality-remediation/baseline-ci-failure.md",
+    "plans/release-2-7-quality-remediation/evidence-plan.md",
+    "plans/release-2-7-quality-remediation/independent-s2-audit.md",
+    "plans/release-2-7-quality-remediation/plan-review-r1.json",
+    "plans/release-2-7-quality-remediation/plan-review-r2.json",
+    "plans/release-2-7-quality-remediation/plan-review.md",
+    "plans/release-2-7-quality-remediation/plan.manifest.json",
+    "plans/release-2-7-quality-remediation/write-set.md"
+  ],
+  "packageIntegrity": {
+    "required": true,
+    "lockSchemaVersion": "agent-plan-lock.v2",
+    "inventorySource": "planFiles",
+    "undeclaredTopLevelFiles": "reject",
+    "allowedUnlistedFiles": ["plan.lock.json"]
+  },
+  "author": "codex-planner",
+  "baseRevision": {"ref": "release/2.7-work", "sha": "5ca88f8fade33171ce9890730a3c95dbdff91bd6"},
+  "dependsOn": ["release-2-7"],
+  "releaseTarget": {"targetVersion": "2.7.0", "targetTag": "v2.7.0", "requiresPublicationValidation": true},
+  "developerOverview": "plans/release-2-7-quality-remediation/00-developer-overview.md",
+  "specification": {
+    "tier": "S2",
+    "intent": "to-be",
+    "status": "FROZEN",
+    "source": "plans/release-2-7-quality-remediation/README.md",
+    "requirements": [
+      {"id": "R27Q-QUALITY", "description": "Resolve every changed-path or new Python quality finding in the Release 2.7 candidate without changing policy or baseline."},
+      {"id": "R27Q-BEHAVIOR", "description": "Preserve all Release 2.7 behavior, canonical outputs, schemas, authority and stable failures."},
+      {"id": "R27Q-BOUNDARY", "description": "Limit remediation to wrapping expressions and explicit type narrowing inside the exact affected paths."},
+      {"id": "R27Q-REGRESSION", "description": "Require local quality, tests, architecture and neutrality plus the remote four-version quality matrix before release."}
+    ],
+    "tierResolutionRequest": {
+      "taskCount": 1,
+      "executableOwners": ["quality-remediation-worker"],
+      "capabilityHints": [],
+      "riskFlags": {"architecture": true, "security": true, "performance": false, "browser": false, "externalEnvironment": true},
+      "requirementsBytes": 7000,
+      "externalSpecification": true
+    }
+  },
+  "planReview": {"required": true, "verdict": "READY_TO_FREEZE", "reviewedRevision": 2, "report": "plans/release-2-7-quality-remediation/plan-review-r2.json"},
+  "readOnly": ["plans/release-2-7", "work/release-2-7"],
+  "forbiddenWrites": [
+    ".git", ".alk", ".claude/settings.local.json", "LICENSE", "NOTICE", "out",
+    "policy", "tasks", "pyproject.toml", "uv.lock", "src/agent_lifecycle/_version.py",
+    ".agents", ".claude-plugin", ".codex-plugin", ".cursor-plugin", "adapters"
+  ],
+  "leadOwned": [
+    {"path": "plans/release-2-7-quality-remediation", "reason": "corrective plan authority"},
+    {"path": "work/release-2-7-quality-remediation", "reason": "corrective workflow and evidence"}
+  ],
+  "workstreams": [
+    {
+      "id": "WS27Q-01",
+      "title": "Behavior-preserving Python quality remediation",
+      "owner": "quality-remediation-worker",
+      "dependsOn": [],
+      "acceptanceIds": ["AC27Q-QUALITY", "AC27Q-BEHAVIOR", "AC27Q-BOUNDARY", "AC27Q-REGRESSION"],
+      "evidenceIds": ["EV27Q-QUALITY", "EV27Q-BEHAVIOR", "EV27Q-BOUNDARY", "EV27Q-REGRESSION"],
+      "writes": [
+        "src/agent_lifecycle/contracts/audit_optimization_schemas.py",
+        "src/agent_lifecycle/contracts/finding_check_schemas.py",
+        "src/agent_lifecycle/contracts/review_round_schemas.py",
+        "src/agent_lifecycle/contracts/review_verdict.py",
+        "src/agent_lifecycle/contracts/statistical_evidence_schemas.py",
+        "src/agent_lifecycle/metrics/audit_efficiency.py",
+        "src/agent_lifecycle/metrics/audit_optimization.py",
+        "src/agent_lifecycle/metrics/audit_samples.py",
+        "src/agent_lifecycle/review_mesh/results.py",
+        "src/agent_lifecycle/review_mesh/synthesis.py",
+        "src/agent_lifecycle/specification/completion_gate.py",
+        "tests/contracts/test_finding_check_schemas.py",
+        "tests/contracts/test_review_round_schemas.py",
+        "tests/contracts/test_review_verdict.py",
+        "tests/contracts/test_statistical_evidence_schemas.py",
+        "tests/metrics/test_audit_efficiency.py",
+        "tests/metrics/test_audit_optimization.py",
+        "tests/metrics/test_audit_samples.py",
+        "tests/review_mesh/test_result_import.py",
+        "tests/review_mesh/test_synthesis.py",
+        "tests/specification/test_completion_gate.py"
+      ]
+    }
+  ],
+  "acceptance": {"criteria": [
+    {"id": "AC27Q-QUALITY", "requirementIds": ["R27Q-QUALITY"], "evidenceIds": ["EV27Q-QUALITY"]},
+    {"id": "AC27Q-BEHAVIOR", "requirementIds": ["R27Q-BEHAVIOR"], "evidenceIds": ["EV27Q-BEHAVIOR"]},
+    {"id": "AC27Q-BOUNDARY", "requirementIds": ["R27Q-BOUNDARY"], "evidenceIds": ["EV27Q-BOUNDARY"]},
+    {"id": "AC27Q-REGRESSION", "requirementIds": ["R27Q-REGRESSION"], "evidenceIds": ["EV27Q-REGRESSION"]}
+  ]},
+  "validation": {
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src uv run --frozen --group quality python tools/release/run_python_quality.py --policy policy/python-quality.json --package-root src/agent_lifecycle --tests-root tests --test-top-level . --base-sha 30e2f2a55a2b8d959fa22b884e122952a2711ff7 --work-root work/release-2-7-quality-remediation/quality/raw --evidence work/release-2-7-quality-remediation/quality/run.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src uv run --frozen --group quality python tools/release/validate_python_quality.py --policy policy/python-quality.json --run-receipt work/release-2-7-quality-remediation/quality/run.json --work-root work/release-2-7-quality-remediation/quality/raw --evidence work/release-2-7-quality-remediation/quality/validation.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest tests.contracts.test_audit_optimization_schemas tests.contracts.test_finding_check_schemas tests.contracts.test_review_round_schemas tests.contracts.test_review_verdict tests.contracts.test_statistical_evidence_schemas tests.metrics.test_audit_efficiency tests.metrics.test_audit_optimization tests.metrics.test_audit_samples tests.review_mesh.test_result_import tests.review_mesh.test_synthesis tests.specification.test_completion_gate -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -t . -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_module_dependencies.py --package-root src/agent_lifecycle --policy policy/architecture-dependencies.json --require-acyclic-modules --require-acyclic-packages --evidence work/release-2-7-quality-remediation/evidence/module-dependencies.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_architecture_complexity.py --package-root src/agent_lifecycle --target-file-lines 800 --hard-file-lines 1200 --target-function-lines 80 --hard-function-lines 150 --hard-symbols 80 --evidence work/release-2-7-quality-remediation/evidence/architecture-complexity.json",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --report work/release-2-7-quality-remediation/evidence/neutrality.json --require-zero-findings"
+    ],
+    "extraEvidence": ["EV27Q-QUALITY", "EV27Q-BEHAVIOR", "EV27Q-BOUNDARY", "EV27Q-REGRESSION"]
+  },
+  "orchestration": {
+    "startMode": "manual-after-freeze", "remediationMode": "bounded-auto", "maxPlanReviewRounds": 3, "maxTaskAttempts": 3,
+    "maxParallelTasks": 1, "maxValidationRunsPerTask": 8, "maxToolCallsPerIteration": 16, "maxUsageIterationsPerAttempt": 3,
+    "maxToolCallsPerTask": 100, "maxToolCallsPerRun": 160, "maxReportedTokensPerTask": 70000, "maxReportedTokensPerRun": 90000,
+    "maxEvidenceArtifactBytes": 8388608, "maxEvidenceBytesPerTask": 16777216, "maxEvidenceBytesPerRun": 33554432,
+    "maxTaskWallSeconds": 7200, "maxRunWallSeconds": 14400, "maxContextBytes": 65536, "maxRenderedPacketBytes": 98304,
+    "stateFile": "work/release-2-7-quality-remediation/run.state.json",
+    "eventLog": "work/release-2-7-quality-remediation/workflow-events.jsonl",
+    "stepReviewRequired": true, "finalAuditRequired": true
+  },
+  "securityGates": [
+    "quality policy and baselines are immutable",
+    "review and workflow authority remain unchanged",
+    "runtime validation remains fail closed",
+    "no architecture, security or quality threshold is reduced"
+  ],
+  "budgetPolicy": {"liveHostCallsAllowedByDefault": false, "modelTokenBudgetForPlanValidation": 0, "moneyFieldsCanonical": false, "budgetUnits": "bounded-corrective-evidence", "maxTaskAttempts": 3, "notes": "No gate or baseline may be changed to obtain PASS."},
+  "contextLimits": {"targetReviewerPacketTokens": 4500, "maxReviewerPacketTokens": 9000, "smallContextProfilesRequired": true, "rawSourceFilesInReviewerPacket": false, "notes": "Review only the reported paths, exact blockers and bounded diff."},
+  "finalAuditGates": [
+    "[AC27Q-QUALITY|EV27Q-QUALITY] Exact local Python quality producer and validator pass with zero blockers against the Release 2.6 base.",
+    "[AC27Q-BEHAVIOR|EV27Q-BEHAVIOR] Focused and full tests pass with unchanged canonical behavior.",
+    "[AC27Q-BOUNDARY|EV27Q-BOUNDARY] The diff is behavior-preserving, owned and does not modify policy, baseline, schemas, authority or thresholds.",
+    "[AC27Q-REGRESSION|EV27Q-REGRESSION] Architecture, neutrality and the remote four-version Python quality matrix pass."
+  ]
+}
