@@ -78,6 +78,7 @@ class PublicationAdoptionTests(unittest.TestCase):
                 "ATTESTED",
             ):
                 self.assertIn(marker, text)
+
         for text in handoff:
             for marker in (
                 "plan snapshot",
@@ -106,6 +107,38 @@ class PublicationAdoptionTests(unittest.TestCase):
             ):
                 self.assertIn(marker, text)
 
+    def test_review_efficiency_and_independence_are_documented_fail_closed(self) -> None:
+        efficiency = (
+            (ROOT / "docs/reference/review-efficiency.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/review-efficiency.md").read_text(encoding="utf-8"),
+        )
+        independence = (
+            (ROOT / "docs/reference/evidence-independence.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/evidence-independence.md").read_text(encoding="utf-8"),
+        )
+        for text in efficiency:
+            for marker in (
+                "metrics audit-efficiency",
+                "agent-audit-efficiency-input.v1",
+                "agent-audit-efficiency-report.v1",
+                "qualityFloorPreserved: true",
+                "advisoryOnly: true",
+                "autoApply: false",
+                "UNAVAILABLE",
+                "NO_COMPARISON",
+            ):
+                self.assertIn(marker, text)
+        for text in independence:
+            for marker in (
+                "agent-statistical-evidence-requirement.v1",
+                "agent-statistical-evidence-set.v1",
+                "agent-statistical-evidence-validation.v1",
+                "statistical-check",
+                "150",
+                "300",
+                "10,000" if "# Evidence independence" in text else "10 000",
+            ):
+                self.assertIn(marker, text)
     def test_missing_project_comparison_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

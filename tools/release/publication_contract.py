@@ -7,7 +7,6 @@ from typing import Any
 
 from release_common import digest_value, load_json
 
-
 PLUGIN_NAME = "agent-lifecycle-kit"
 
 LIFECYCLE_CONTROL_DOCUMENTATION: dict[str, Any] = {
@@ -81,9 +80,22 @@ RELEASE_ACCOUNTING_DOCUMENTATION: dict[str, Any] = {
     "rawTranscriptRequired": False,
 }
 
+REVIEW_EFFICIENCY_DOCUMENTATION: dict[str, Any] = {
+    "id": "review-efficiency-and-evidence-independence",
+    "status": "ADVISORY",
+    "englishPath": "docs/reference/review-efficiency.md",
+    "russianPath": "docs/ru/reference/review-efficiency.md",
+    "englishIndependencePath": "docs/reference/evidence-independence.md",
+    "russianIndependencePath": "docs/ru/reference/evidence-independence.md",
+    "qualityFloorPreserved": True,
+    "missingTelemetryIsZero": False,
+    "automaticApply": False,
+    "reviewerTextExecutable": False,
+}
+
 SUCCESSOR_ADOPTION: dict[str, Any] = {
-    "packageId": "release-2-6",
-    "requiredPredecessor": "release-2-5",
+    "packageId": "release-2-7",
+    "requiredPredecessor": "release-2-6",
     "sourceTracked": False,
     "acceptedMergeRevisionRequiredBeforeFreeze": True,
 }
@@ -273,6 +285,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             WORKFLOW_EVIDENCE_DOCUMENTATION,
             EXTERNAL_TOOL_JOBS_DOCUMENTATION,
             RELEASE_ACCOUNTING_DOCUMENTATION,
+            REVIEW_EFFICIENCY_DOCUMENTATION,
         ],
         "successorAdoption": SUCCESSOR_ADOPTION,
         "lastChannelPolicy": LAST_CHANNEL_POLICY,
@@ -337,7 +350,7 @@ def _read_entry_value(*, path: Path, entry: dict[str, Any]) -> str | None:
         return _json_path(load_json(path), entry["jsonPath"])
     if kind == "toml-project-version":
         payload = tomllib.loads(path.read_text(encoding="utf-8"))
-        return _string(((payload.get("project") or {}).get("version")))
+        return _string((payload.get("project") or {}).get("version"))
     if kind == "toml-uv-package-version":
         payload = tomllib.loads(path.read_text(encoding="utf-8"))
         for package in payload.get("package", []):

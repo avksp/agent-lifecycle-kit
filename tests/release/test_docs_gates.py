@@ -45,6 +45,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/public-locators-and-redaction.md",
             "docs/reference/source-of-truth.md",
             "docs/reference/release-accounting.md",
+            "docs/reference/review-efficiency.md",
+            "docs/reference/evidence-independence.md",
             "docs/guides/phase-session-handoff.md",
         ):
             self.assertIn(required, english)
@@ -57,8 +59,12 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("docs/reference/external-verification-checks.md", english)
         self.assertIn("docs/reference/security-analysis-profile.md", english)
         self.assertIn("docs/reference/release-accounting.md", english)
+        self.assertIn("docs/reference/review-efficiency.md", english)
+        self.assertIn("docs/reference/evidence-independence.md", english)
         self.assertIn("docs/guides/phase-session-handoff.md", english)
         self.assertIn("reference/release-accounting.md", russian)
+        self.assertIn("reference/review-efficiency.md", russian)
+        self.assertIn("reference/evidence-independence.md", russian)
         self.assertIn("guides/phase-session-handoff.md", russian)
         for adapter in ("Goose", "Grok Build", "OpenInterpreter", "Pi"):
             self.assertIn(adapter, english)
@@ -83,6 +89,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/external-verification-checks.md",
             "docs/reference/security-analysis-profile.md",
             "docs/reference/release-accounting.md",
+            "docs/reference/review-efficiency.md",
+            "docs/reference/evidence-independence.md",
             "docs/guides/phase-session-handoff.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
@@ -99,6 +107,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/external-verification-checks.md",
             "docs/ru/reference/security-analysis-profile.md",
             "docs/ru/reference/release-accounting.md",
+            "docs/ru/reference/review-efficiency.md",
+            "docs/ru/reference/evidence-independence.md",
             "docs/ru/guides/phase-session-handoff.md",
             "docs/ru/reference/public-locators-and-redaction.md",
             "docs/ru/guides/production-resource-security.md",
@@ -618,6 +628,43 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("host-process calls are disabled", english)
         self.assertIn("вызовы модели, сети и процессов хоста по умолчанию запрещены", russian)
 
+    def test_review_efficiency_docs_preserve_quality_and_authority_boundaries(self) -> None:
+        efficiency = (
+            (ROOT / "docs/reference/review-efficiency.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/review-efficiency.md").read_text(encoding="utf-8"),
+        )
+        independence = (
+            (ROOT / "docs/reference/evidence-independence.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/evidence-independence.md").read_text(encoding="utf-8"),
+        )
+        review_mesh = (
+            (ROOT / "docs/reference/review-mesh.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/review-mesh.md").read_text(encoding="utf-8"),
+        )
+        for text in efficiency:
+            for marker in (
+                "metrics audit-efficiency",
+                "qualityFloorPreserved: true",
+                "advisoryOnly: true",
+                "autoApply: false",
+                "UNAVAILABLE",
+                "NO_COMPARISON",
+            ):
+                self.assertIn(marker, text)
+        for text in independence:
+            for marker in ("statistical-check", "150", "300", "agent-statistical-evidence-set.v1"):
+                self.assertIn(marker, text)
+        for text in review_mesh:
+            for marker in (
+                "maxPlanReviewRounds",
+                "maxTaskAttempts",
+                "CRITICAL",
+                "agent-finding-disposition.v1",
+                "NO_FINAL_VERDICT",
+                "never becomes argv" if "# Review Mesh" in text else "никогда не становится argv",
+            ):
+                self.assertIn(marker, text)
+
     def test_security_docs_describe_blocked_launch_and_fail_closed_receipts(self) -> None:
         managed_sessions = [
             ROOT / "docs/reference/managed-adapter-sessions.md",
@@ -862,6 +909,26 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "docs/ru/reference/release-accounting.md",
         accounting + "не превращается в `ATTESTED`. не принимает задачу.\n",
+    )
+    efficiency = (
+        "agent-lifecycle metrics audit-efficiency. agent-audit-efficiency-input.v1. "
+        "agent-audit-efficiency-report.v1. qualityFloorPreserved: true. advisoryOnly: true. "
+        "autoApply: false. UNAVAILABLE. NO_COMPARISON. 29,195,208. "
+    )
+    _write_text(root / "docs/reference/review-efficiency.md", efficiency)
+    _write_text(root / "docs/ru/reference/review-efficiency.md", efficiency)
+    independence = (
+        "agent-independence-requirement.v1. agent-independent-evidence.v1. "
+        "agent-statistical-evidence-requirement.v1. agent-statistical-evidence-set.v1. "
+        "agent-statistical-evidence-validation.v1. statistical-check. "
+    )
+    _write_text(
+        root / "docs/reference/evidence-independence.md",
+        independence + "150 samples. 300 samples. 10,000.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/evidence-independence.md",
+        independence + "150 примеров. 300 примеров. 10 000.\n",
     )
     handoff = (
         "plan snapshot. plan handoff. context checkpoint. context restore. "

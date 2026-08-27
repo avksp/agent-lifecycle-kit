@@ -57,6 +57,11 @@ from agent_lifecycle.metrics import (
     validate_release_accounting,
     validate_usage_export,
 )
+from agent_lifecycle.metrics.audit_efficiency import (
+    build_audit_efficiency_report,
+    validate_audit_efficiency_input,
+    validate_audit_efficiency_report,
+)
 from agent_lifecycle.metrics.audit_optimization import (
     build_audit_optimization_report,
     render_audit_optimization_terminal,
@@ -581,6 +586,8 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any] | str:
         return payload
     if args.metrics_command == "audit-report":
         return _dispatch_audit_report(args)
+    if args.metrics_command == "audit-efficiency":
+        return _dispatch_audit_efficiency(args)
     if args.metrics_command == "audit-proposal":
         report = read_json_object(Path(args.report), label="audit optimization report")
         raw_recommendation = report.get("recommendation")
@@ -695,6 +702,40 @@ def _dispatch_audit_report(args: argparse.Namespace) -> dict[str, Any] | str:
     write_json_create(Path(args.out), report)
     if args.terminal:
         return render_audit_optimization_terminal(report)
+    return report
+
+
+def _dispatch_audit_efficiency(args: argparse.Namespace) -> dict[str, Any]:
+    measurement = read_json_object(Path(args.input), label="audit efficiency input")
+    validation = validate_audit_efficiency_input(measurement)
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "audit-efficiency-input-invalid",
+            "audit efficiency input validation failed",
+            {"validation": validation},
+        )
+
+    comparisons: list[dict[str, Any]] = []
+    for index, path in enumerate(args.comparison):
+        comparison = read_json_object(Path(path), label="audit efficiency comparison")
+        comparison_validation = validate_audit_efficiency_input(comparison)
+        if comparison_validation["status"] != "PASS":
+            raise LifecycleError(
+                "audit-efficiency-comparison-invalid",
+                "audit efficiency comparison validation failed",
+                {"index": index, "validation": comparison_validation},
+            )
+        comparisons.append(comparison)
+
+    report = build_audit_efficiency_report(measurement, comparison_measurements=comparisons)
+    report_validation = validate_audit_efficiency_report(report)
+    if report_validation["status"] != "PASS":
+        raise LifecycleError(
+            "audit-efficiency-report-invalid",
+            "audit efficiency report validation failed",
+            {"validation": report_validation},
+        )
+    write_json_create(Path(args.out), report)
     return report
 
 

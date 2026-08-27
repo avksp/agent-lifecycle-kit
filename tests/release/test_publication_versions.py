@@ -77,11 +77,23 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertFalse(feature["workflowAuthority"])
         self.assertFalse(feature["rawTranscriptRequired"])
 
+    def test_publication_manifest_exposes_review_efficiency_boundaries(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "review-efficiency-and-evidence-independence"
+        ]
+
+        self.assertEqual(feature["status"], "ADVISORY")
+        self.assertTrue(feature["qualityFloorPreserved"])
+        self.assertFalse(feature["missingTelemetryIsZero"])
+        self.assertFalse(feature["automaticApply"])
+        self.assertFalse(feature["reviewerTextExecutable"])
+
     def test_publication_manifest_records_successor_adoption_boundary(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
 
-        self.assertEqual(manifest["successorAdoption"]["packageId"], "release-2-6")
-        self.assertEqual(manifest["successorAdoption"]["requiredPredecessor"], "release-2-5")
+        self.assertEqual(manifest["successorAdoption"]["packageId"], "release-2-7")
+        self.assertEqual(manifest["successorAdoption"]["requiredPredecessor"], "release-2-6")
         self.assertFalse(manifest["successorAdoption"]["sourceTracked"])
         self.assertTrue(manifest["successorAdoption"]["acceptedMergeRevisionRequiredBeforeFreeze"])
 
