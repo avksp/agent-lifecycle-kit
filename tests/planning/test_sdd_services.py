@@ -68,13 +68,14 @@ class SddServiceTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, "acceptance-checklist-mismatch")
         self.assertEqual(caught.exception.details["duplicateMarkdownIds"], ["AC-2"])
 
-    def test_review_validation_rejects_open_medium_finding(self) -> None:
-        with self.assertRaises(LifecycleError):
-            validate_independent_review({
-                "verdict": "READY_TO_FREEZE",
-                "reviewer": {"independent": True},
-                "findings": [{"id": "F-1", "status": "open", "severity": "MEDIUM"}],
-            })
+    def test_review_validation_rejects_open_medium_plus_findings(self) -> None:
+        for severity in ("BLOCKER", "CRITICAL", "HIGH", "MEDIUM"):
+            with self.subTest(severity=severity), self.assertRaises(LifecycleError):
+                validate_independent_review({
+                    "verdict": "READY_TO_FREEZE",
+                    "reviewer": {"independent": True},
+                    "findings": [{"id": "F-1", "status": "open", "severity": severity}],
+                })
 
     def test_verify_plan_lock_binds_manifest_digest(self) -> None:
         manifest = _manifest(overlap=False)

@@ -7,6 +7,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex
 from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file
+from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
 from agent_lifecycle.review.validation import validate_independent_review
 
 PLAN_FILE_INVENTORY_SCHEMA = "agent-plan-file-inventory.v1"
@@ -280,13 +281,7 @@ def _open_blocking_review_findings(review: dict[str, Any]) -> list[str]:
     findings = review.get("findings")
     if not isinstance(findings, list):
         raise LifecycleError("invalid-review", "findings must be an array")
-    return [
-        str(item.get("id") or "unknown")
-        for item in findings
-        if isinstance(item, dict)
-        and str(item.get("status", "")).strip().lower() == "open"
-        and str(item.get("severity", "")).strip().upper() in {"BLOCKER", "HIGH", "MEDIUM"}
-    ]
+    return open_blocking_finding_ids(findings)
 
 
 def _object(value: Any) -> dict[str, Any]:

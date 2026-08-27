@@ -13,6 +13,7 @@ from agent_lifecycle.contracts.implementation_audit_validation import (
     validate_final_implementation_audit,
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
 from agent_lifecycle.followup import validate_followup_register
 from agent_lifecycle.host_protocol.lifecycle_gate import (
     evaluate_stop_gate,
@@ -449,13 +450,7 @@ def _validate_final_audit(state: dict[str, Any], final_audit: dict[str, Any]) ->
     findings = final_audit.get("findings", [])
     if not isinstance(findings, list):
         raise LifecycleError("invalid-final-audit", "final audit findings must be an array")
-    open_blocking = [
-        item.get("id")
-        for item in findings
-        if isinstance(item, dict)
-        and item.get("status") == "open"
-        and item.get("severity") in {"BLOCKER", "HIGH", "MEDIUM"}
-    ]
+    open_blocking = open_blocking_finding_ids(findings)
     if open_blocking:
         raise LifecycleError(
             "final-audit-open-findings",

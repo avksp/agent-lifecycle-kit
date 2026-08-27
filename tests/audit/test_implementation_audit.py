@@ -209,6 +209,46 @@ class ImplementationAuditTests(unittest.TestCase):
             self.assertEqual(validation["status"], "FAIL")
             self.assertIn("implementation-audit-open-blockers", {item["code"] for item in validation["blockers"]})
 
+    def test_implementation_audit_validators_reject_open_medium_plus_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle = _write_bundle(root, phase="FINAL_AUDIT", task_status="ACCEPTED")
+            result_path, review_path = _write_result_review(root, bundle)
+            report = build_implementation_audit_report(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                task_id="WS-01",
+                result_path=result_path,
+                review_path=review_path,
+            )
+            write_json_create(root / "work/WS-01/attempt-1/implementation-audit.json", report)
+            final_audit = build_final_implementation_audit(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                report_paths=["work/WS-01/attempt-1/implementation-audit.json"],
+            )
+            for severity in ("BLOCKER", "CRITICAL", "HIGH", "MEDIUM"):
+                finding = {"id": severity, "status": "open", "severity": severity}
+                forged_report = {**report, "findings": [finding]}
+                forged_report["reportDigest"] = canonical_digest(
+                    {key: value for key, value in forged_report.items() if key != "reportDigest"}
+                )
+                report_validation = validate_implementation_audit_report(forged_report)
+                forged_final = {**final_audit, "findings": [finding]}
+                forged_final["auditDigest"] = canonical_digest(
+                    {key: value for key, value in forged_final.items() if key != "auditDigest"}
+                )
+                final_validation = validate_final_implementation_audit(forged_final)
+                with self.subTest(severity=severity):
+                    self.assertIn(
+                        "implementation-audit-open-findings",
+                        {item["code"] for item in report_validation["blockers"]},
+                    )
+                    self.assertIn(
+                        "final-implementation-audit-open-findings",
+                        {item["code"] for item in final_validation["blockers"]},
+                    )
+
     def test_final_implementation_audit_aggregates_task_reports(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

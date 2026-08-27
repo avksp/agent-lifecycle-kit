@@ -19,6 +19,7 @@ from agent_lifecycle.review_mesh.contracts import (
     validate_review_mesh_result,
 )
 
+
 def import_review_mesh_result(
     *,
     profile: dict[str, Any],
@@ -46,6 +47,10 @@ def import_review_mesh_result(
     )
     body = {
         **{key: value for key, value in result.items() if key != "resultDigest"},
+        "roundParticipation": {
+            "eligible": False,
+            "reasonCode": "review-verdict-and-terminal-job-required",
+        },
         "redaction": redaction,
         "import": {
             "schemaVersion": str(reviewer_output.get("schemaVersion") or "reviewer-output.unknown"),

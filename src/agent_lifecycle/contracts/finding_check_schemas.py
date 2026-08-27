@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
@@ -23,6 +24,7 @@ _DIGEST = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
 _ID = {"type": "string", "minLength": 1, "maxLength": 256}
 _TEXT = {"type": "string", "minLength": 1, "maxLength": 2048}
 _BLOCKERS = {"type": "array", "items": {"type": "object"}, "maxItems": 128}
+_CHECK_ROUTE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$")
 
 
 FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
@@ -100,6 +102,7 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
             "proposalId": _ID,
             "status": {"enum": ["PASS", "FAIL"]},
             "binding": {"type": "object"},
+            "reviewerReproduction": {"type": "object", "maxProperties": 4},
             "approvalRequired": {"const": True},
             "applyAllowed": {"const": False},
             "authorityClaimed": {"const": False},
@@ -468,6 +471,15 @@ def validate_finding_check_proposal(proposal: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "finding-check-proposal-binding-invalid"})
     if proposal.get("status") not in {"PASS", "FAIL"}:
         blockers.append({"code": "finding-check-proposal-status-invalid"})
+    reproduction = proposal.get("reviewerReproduction")
+    if reproduction is not None and (
+        not isinstance(reproduction, dict)
+        or not isinstance(reproduction.get("text"), str)
+        or not reproduction["text"]
+        or reproduction.get("parsedAsCommand") is not False
+        or reproduction.get("executionAuthorityGranted") is not False
+    ):
+        blockers.append({"code": "finding-check-proposal-reproduction-invalid"})
     if (
         proposal.get("approvalRequired") is not True
         or proposal.get("applyAllowed") is not False
@@ -484,6 +496,32 @@ def validate_finding_check_proposal(proposal: dict[str, Any]) -> dict[str, Any]:
         blockers,
         proposalStatus=proposal.get("status") if isinstance(proposal.get("status"), str) else None,
     )
+
+
+def build_finding_check_proposal(binding: dict[str, Any], *, reproduction: str) -> dict[str, Any]:
+    """Preserve reviewer reproduction text as advisory data only."""
+
+    validation = validate_finding_check_binding(binding)
+    if validation["status"] != "PASS":
+        raise LifecycleError("finding-check-proposal-binding-invalid", "proposal binding failed validation")
+    _required_text(reproduction, "reproduction")
+    body = {
+        "schemaVersion": FINDING_CHECK_PROPOSAL_SCHEMA,
+        "proposalId": f"finding-check-proposal-{canonical_digest({'binding': binding['bindingDigest'], 'text': reproduction})[:32]}",
+        "status": "PASS",
+        "binding": dict(binding),
+        "reviewerReproduction": {
+            "text": reproduction,
+            "parsedAsCommand": False,
+            "executionAuthorityGranted": False,
+        },
+        "approvalRequired": True,
+        "applyAllowed": False,
+        "authorityClaimed": False,
+        "blockers": [],
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "proposalDigest": canonical_digest(body)}
 
 
 def _transition_receipt(
@@ -530,7 +568,13 @@ def _normalize_check_identity(identity: Any) -> dict[str, str]:
     route = identity.get("route")
     if not isinstance(check_id, str) or not check_id or not isinstance(route, str) or not route:
         raise LifecycleError("finding-check-identity-invalid", "checkIdentity requires id and route")
-    if any(char.isspace() for char in route) or any(char in route for char in ";&|$`\\"):
+    route_parts = route.split("/")
+    if (
+        _CHECK_ROUTE.fullmatch(route) is None
+        or route.startswith("/")
+        or "//" in route
+        or any(part in {".", ".."} for part in route_parts)
+    ):
         raise LifecycleError("finding-check-identity-authority", "check route contains unsafe command text")
     normalized = {"id": check_id, "route": route}
     expected = canonical_digest(normalized)
@@ -625,6 +669,7 @@ __all__ = [
     "FINDING_CHECK_TRANSITION_SCHEMA",
     "build_finding_check_binding",
     "build_finding_check_evidence",
+    "build_finding_check_proposal",
     "transition_finding_check_binding",
     "validate_finding_check_binding",
     "validate_finding_check_evidence",
