@@ -225,8 +225,16 @@ def _comparison(
     comparisons: list[dict[str, Any]],
     blockers: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    sample_count = 1 + len(comparisons)
+    sample_count = 1
     unavailable = _unavailable("comparison-sample-required")
+    if blockers:
+        return {
+            "sampleCount": sample_count,
+            "tokenReductionPercent": unavailable,
+            "wallReductionPercent": unavailable,
+            "qualityFloorPreserved": True,
+        }
+    sample_count = _distinct_comparison_sample_count(measurement, comparisons, blockers)
     if sample_count < 2 or blockers:
         return {
             "sampleCount": sample_count,
@@ -267,6 +275,43 @@ def _comparison(
             measurement["views"]["audit"]["elapsedWallMs"],
         ),
         "qualityFloorPreserved": True,
+    }
+
+
+def _distinct_comparison_sample_count(
+    measurement: dict[str, Any],
+    comparisons: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
+) -> int:
+    axes = ("releaseId", "sourceRevision", "sourceLineageDigest", "contentDigest")
+    seen = {axis: set() for axis in axes}
+    sample_count = 0
+    for position, item in enumerate([measurement, *comparisons]):
+        identity = _comparison_identity(item)
+        duplicate_axes = [axis for axis in axes if identity[axis] in seen[axis]]
+        if position > 0:
+            for axis in duplicate_axes:
+                blockers.append(
+                    {
+                        "code": "audit-efficiency-comparison-duplicate-identity",
+                        "axis": axis,
+                        "index": position - 1,
+                    }
+                )
+        for axis in axes:
+            seen[axis].add(identity[axis])
+        if not duplicate_axes:
+            sample_count += 1
+    return sample_count
+
+
+def _comparison_identity(value: dict[str, Any]) -> dict[str, str]:
+    content = {key: item for key, item in value.items() if key not in {"releaseId", "inputDigest"}}
+    return {
+        "releaseId": value["releaseId"],
+        "sourceRevision": value["sourceRevision"],
+        "sourceLineageDigest": value["sourceLineageDigest"],
+        "contentDigest": canonical_digest(content),
     }
 
 
