@@ -275,6 +275,18 @@ def _validate_remediation_policy(value: Any, blockers: list[dict[str, Any]]) -> 
         return
     mode = value.get("remediationMode", "off")
     attempts = value.get("maxTaskAttempts", 1)
+    review_rounds = value.get("maxPlanReviewRounds", 1)
+    if (
+        not isinstance(review_rounds, int)
+        or isinstance(review_rounds, bool)
+        or not 1 <= review_rounds <= 10
+    ):
+        blockers.append(
+            _blocker(
+                "plan-review-round-budget-invalid",
+                "orchestration.maxPlanReviewRounds must be an integer from 1 through 10",
+            )
+        )
     if mode not in {"off", "ask", "bounded-auto"}:
         blockers.append(
             _blocker(

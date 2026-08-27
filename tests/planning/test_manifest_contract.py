@@ -11,6 +11,20 @@ FIXTURE = ROOT / "tests/planning/fixtures/canonical-plan-manifest.v1.json"
 
 
 class ManifestContractTests(unittest.TestCase):
+    def test_plan_review_round_budget_is_bounded_and_boolean_safe(self) -> None:
+        for value in (True, False, 0, -1, 11):
+            with self.subTest(value=value):
+                manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+                manifest["orchestration"] = {"maxPlanReviewRounds": value}
+                self.assertIn("plan-review-round-budget-invalid", _codes(validate_plan_manifest_contract(manifest)))
+        for value in (1, 10):
+            with self.subTest(value=value):
+                manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+                manifest["orchestration"] = {"maxPlanReviewRounds": value}
+                self.assertNotIn(
+                    "plan-review-round-budget-invalid", _codes(validate_plan_manifest_contract(manifest))
+                )
+
     def test_canonical_fixture_passes(self) -> None:
         result = validate_plan_manifest_contract(json.loads(FIXTURE.read_text(encoding="utf-8")))
         self.assertEqual(result["status"], "PASS")

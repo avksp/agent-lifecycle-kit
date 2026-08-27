@@ -86,28 +86,33 @@ class WorkflowFinalizationTests(unittest.TestCase):
             self.assertEqual(raised.exception.code, "duplicate-operation")
 
     def test_finalize_run_rejects_final_audit_with_open_findings(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            state_path = _write_state(root, phase="FINAL_AUDIT")
-            state = json.loads(state_path.read_text(encoding="utf-8"))
-            state["tasks"][0]["status"] = "ACCEPTED"
-            state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
-            state_path.write_text(json.dumps(state), encoding="utf-8")
-            audit = _final_audit()
-            audit["findings"] = [{"id": "F-1", "status": "open", "severity": "MEDIUM"}]
-            write_json_create(root / "final/final-audit.json", audit)
+        for severity in ("BLOCKER", "CRITICAL", "HIGH", "MEDIUM"):
+            with self.subTest(severity=severity), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                state_path = _write_state(root, phase="FINAL_AUDIT")
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+                state["tasks"][0]["status"] = "ACCEPTED"
+                state["tasks"][0]["attempt"] = 1
+                state["tasks"][0]["review"] = {
+                    "path": "work/WS-01/attempt-1/task-review.json",
+                    "sha256": "3" * 64,
+                    "bytes": 10,
+                }
+                state_path.write_text(json.dumps(state), encoding="utf-8")
+                audit = _final_audit()
+                audit["findings"] = [{"id": "F-1", "status": "open", "severity": severity}]
+                write_json_create(root / "final/final-audit.json", audit)
 
-            with self.assertRaises(LifecycleError):
-                finalize_run(
-                    state_path,
-                    operation_id="finalize-op",
-                    expected_revision=1,
-                    source_revision="source",
-                    final_audit_path="final/final-audit.json",
-                    proof_path="final/proof.json",
-                    reason="done",
-                )
+                with self.assertRaises(LifecycleError):
+                    finalize_run(
+                        state_path,
+                        operation_id="finalize-op",
+                        expected_revision=1,
+                        source_revision="source",
+                        final_audit_path="final/final-audit.json",
+                        proof_path="final/proof.json",
+                        reason="done",
+                    )
 
     def test_finalize_run_requires_completion_signal(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

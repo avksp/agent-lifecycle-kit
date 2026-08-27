@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
 from agent_lifecycle.followup import validate_followup_register
 
 COMPLETION_GATE_RECEIPT_SCHEMA = "agent-completion-gate-receipt.v1"
@@ -443,13 +444,7 @@ def _open_blocking_findings(final_audit: dict[str, Any]) -> list[str]:
     findings = final_audit.get("findings", [])
     if not isinstance(findings, list):
         return ["invalid-findings"]
-    return [
-        str(item.get("id"))
-        for item in findings
-        if isinstance(item, dict)
-        and item.get("status") == "open"
-        and item.get("severity") in {"BLOCKER", "HIGH", "MEDIUM"}
-    ]
+    return open_blocking_finding_ids(findings)
 
 
 def _require_state_lineage(state: dict[str, Any]) -> None:

@@ -37,6 +37,11 @@ class ReviewMeshResultImportTests(unittest.TestCase):
         self.assertEqual(result["redaction"]["secretLikeMarkersRedacted"], 1)
         self.assertFalse(result["import"]["rawOutputStored"])
         self.assertIn("[REDACTED]", result["findings"][0]["message"])
+        self.assertFalse(result["roundParticipation"]["eligible"])
+        self.assertEqual(
+            result["roundParticipation"]["reasonCode"],
+            "review-verdict-and-terminal-job-required",
+        )
 
     def test_import_result_rejects_local_absolute_paths_by_default(self) -> None:
         profile, assignment = _profile_and_assignment()

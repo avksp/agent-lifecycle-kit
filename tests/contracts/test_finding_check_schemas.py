@@ -6,9 +6,11 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.finding_check_schemas import (
     build_finding_check_binding,
     build_finding_check_evidence,
+    build_finding_check_proposal,
     transition_finding_check_binding,
     validate_finding_check_binding,
     validate_finding_check_evidence,
+    validate_finding_check_proposal,
 )
 from agent_lifecycle.contracts.proof_validation import build_finding_identity
 from agent_lifecycle.planning.deltas import build_plan_delta, finding_check_plan_lineage
@@ -54,6 +56,24 @@ class FindingCheckSchemaTests(unittest.TestCase):
     def test_check_identity_cannot_contain_executable_text(self) -> None:
         with self.assertRaisesRegex(LifecycleError, "executable"):
             _binding(check_identity={"id": "check", "route": "tests", "command": "rm -rf /"})
+
+    def test_reviewer_reproduction_is_advisory_and_never_parsed_as_command(self) -> None:
+        for reproduction in (
+            "python -c 'open(\"owned\", \"w\")'",
+            "--output=../../owned",
+            "TOKEN=value command",
+            "check; rm -rf /",
+        ):
+            with self.subTest(reproduction=reproduction):
+                proposal = build_finding_check_proposal(_binding(), reproduction=reproduction)
+                self.assertEqual(validate_finding_check_proposal(proposal)["status"], "PASS")
+                self.assertEqual(proposal["reviewerReproduction"]["text"], reproduction)
+                self.assertFalse(proposal["reviewerReproduction"]["parsedAsCommand"])
+                self.assertFalse(proposal["applyAllowed"])
+
+    def test_check_route_rejects_traversal_identity(self) -> None:
+        with self.assertRaises(LifecycleError):
+            _binding(check_identity={"id": "check", "route": "../../etc/passwd"})
 
     def test_tampered_evidence_and_stale_source_fail_closed(self) -> None:
         binding = _binding()
