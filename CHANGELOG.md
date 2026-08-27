@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 2.7.0 - 2026-08-28
+
+- Added bounded Review Mesh rounds with fail-closed escalation, validated
+  reviewer participation and immutable terminal finding dispositions.
+- Routed reviewer reproduction suggestions through advisory proposals and
+  approved frozen finding checks so untrusted text never becomes argv.
+- Added independent statistical-evidence provenance and exact rule-of-three
+  adequacy checks, including the 150-sample 2% and 300-sample 1% boundaries.
+- Added quality-preserving audit-efficiency metrics and a create-only
+  `metrics audit-efficiency` command that retains `UNAVAILABLE` values and
+  refuses reduction claims from a single release.
+- Added bilingual operator documentation and publication checks for review
+  efficiency, evidence independence and version `2.7.0`.
+
 ## 2.6.0 - 2026-08-26
 
 - Added reviewed `plan lock-create`, bounded `metrics phase-resources` and

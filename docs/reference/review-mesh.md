@@ -185,3 +185,32 @@ mandatory only when a reviewed frozen plan explicitly requires blocking quorum
 for a named phase. Without other models, leave it off or use ordinary
 single-reviewer advice. If a frozen plan already requires independent quorum,
 the missing capacity is a blocker until the plan is revised and refrozen.
+
+## Bounded review rounds and finding dispositions
+
+A plan can set `maxPlanReviewRounds` from 1 through 10. This budget applies to
+plan and Review Mesh synthesis, not to workflow task attempts governed by
+`maxTaskAttempts`. Exhausting the round budget with an open `MEDIUM`, `HIGH`,
+`CRITICAL` or `BLOCKER` finding returns `REPLAN_REQUIRED`, `SPLIT_REQUIRED`,
+`OPERATOR_DECISION` or `BLOCKED`; it never synthesizes acceptance.
+
+Reviewer participation requires a schema-valid `agent-review-verdict.v1` bound
+to a complete, blocking-eligible `agent-external-job-result.v1` from a
+successful terminal job. `NO_FINAL_VERDICT`, a successful process exit or a
+findings-only import can be measured, but cannot count toward participation or
+acceptance.
+
+Each imported finding is joined to one immutable
+`agent-finding-disposition.v1`: `CONFIRMED`, `REJECTED`, `UNAVAILABLE` or
+`APPROVAL_REQUIRED`. Review Mesh buckets and reviewer agreement do not close a
+finding. Only a matching `REJECTED` disposition makes an open false positive
+non-blocking; undisposed or other open Medium-or-higher findings remain
+blocking.
+
+Reviewer `reproduction` text remains untrusted advice. It can create an
+`agent-finding-check-proposal.v1`, but execution requires a separately approved
+and frozen finding-check binding through the existing shell-free process
+boundary. Reviewer text never becomes argv.
+
+See [evidence independence](evidence-independence.md) for statistical claims
+and [review efficiency](review-efficiency.md) for advisory cost metrics.

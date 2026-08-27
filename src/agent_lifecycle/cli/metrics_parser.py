@@ -77,6 +77,13 @@ def add_metrics_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     audit_report.add_argument("--current-profile")
     audit_report.add_argument("--out", required=True)
     audit_report.add_argument("--terminal", action="store_true")
+    audit_efficiency = metrics_sub.add_parser(
+        "audit-efficiency",
+        help="report quality-preserving audit efficiency from explicit accounting inputs",
+    )
+    audit_efficiency.add_argument("--input", required=True)
+    audit_efficiency.add_argument("--comparison", action="append", default=[])
+    audit_efficiency.add_argument("--out", required=True)
     audit_proposal = metrics_sub.add_parser("audit-proposal", help="create an explicit audit optimization proposal")
     audit_proposal.add_argument("--report", required=True)
     audit_proposal.add_argument("--out", required=True)
