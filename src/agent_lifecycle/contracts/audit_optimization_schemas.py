@@ -122,7 +122,16 @@ AUDIT_OPTIMIZATION_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     AUDIT_OPTIMIZATION_SAMPLE_BATCH_SCHEMA: open_object_schema(
         AUDIT_OPTIMIZATION_SAMPLE_BATCH_SCHEMA,
-        required=["schemaVersion", "status", "sampleCount", "samples", "sourceCount", "blockers", "productionPromotionClaimed", "batchDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "sampleCount",
+            "samples",
+            "sourceCount",
+            "blockers",
+            "productionPromotionClaimed",
+            "batchDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "sampleCount": {"type": "integer", "minimum": 0},
@@ -135,7 +144,16 @@ AUDIT_OPTIMIZATION_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     AUDIT_OPTIMIZATION_STATISTICS_SCHEMA: open_object_schema(
         AUDIT_OPTIMIZATION_STATISTICS_SCHEMA,
-        required=["schemaVersion", "status", "sampleCount", "confidence", "minimumSample", "signals", "blockers", "statisticsDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "sampleCount",
+            "confidence",
+            "minimumSample",
+            "signals",
+            "blockers",
+            "statisticsDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "NO_RECOMMENDATION", "FAIL"]},
             "sampleCount": {"type": "integer", "minimum": 0},
@@ -182,7 +200,16 @@ AUDIT_OPTIMIZATION_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     AUDIT_OPTIMIZATION_REPORT_SCHEMA: open_object_schema(
         AUDIT_OPTIMIZATION_REPORT_SCHEMA,
-        required=["schemaVersion", "status", "statistics", "evaluation", "recommendation", "nextAction", "productionPromotionClaimed", "reportDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "statistics",
+            "evaluation",
+            "recommendation",
+            "nextAction",
+            "productionPromotionClaimed",
+            "reportDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "NO_RECOMMENDATION", "FAIL"]},
             "statistics": {"type": "object"},
@@ -195,7 +222,18 @@ AUDIT_OPTIMIZATION_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA: open_object_schema(
         AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA,
-        required=["schemaVersion", "status", "proposalId", "sourceRecommendationDigest", "approvalRequired", "applyAllowed", "candidateChanges", "rollback", "productionPromotionClaimed", "proposalDigest"],
+        required=[
+            "schemaVersion",
+            "status",
+            "proposalId",
+            "sourceRecommendationDigest",
+            "approvalRequired",
+            "applyAllowed",
+            "candidateChanges",
+            "rollback",
+            "productionPromotionClaimed",
+            "proposalDigest",
+        ],
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "proposalId": {"type": "string", "minLength": 1},

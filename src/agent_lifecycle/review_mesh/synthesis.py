@@ -186,10 +186,10 @@ def evaluate_review_round(
         if validation["status"] != "PASS":
             blockers.append({"code": "review-round-disposition-invalid", "findingId": item.get("findingId")})
             continue
-        finding = finding_map.get(item["findingId"])
-        if finding is None:
+        disposition_finding = finding_map.get(item["findingId"])
+        if disposition_finding is None:
             blockers.append({"code": "review-round-disposition-orphan", "findingId": item["findingId"]})
-        elif item.get("findingDigest") != canonical_digest(finding):
+        elif item.get("findingDigest") != canonical_digest(disposition_finding):
             blockers.append({"code": "review-round-disposition-lineage-mismatch", "findingId": item["findingId"]})
 
     missing_disposition_ids = sorted(set(finding_map).difference(disposition_map))
@@ -266,15 +266,21 @@ def _collect_participating_findings(
 ) -> None:
     values = receipt.get("findings")
     if not isinstance(values, list):
-        blockers.append({"code": "review-round-participation-findings-invalid", "reviewerId": receipt.get("reviewerId")})
+        blockers.append(
+            {"code": "review-round-participation-findings-invalid", "reviewerId": receipt.get("reviewerId")}
+        )
         return
     for finding in values:
         if not isinstance(finding, dict):
-            blockers.append({"code": "review-round-participation-finding-invalid", "reviewerId": receipt.get("reviewerId")})
+            blockers.append(
+                {"code": "review-round-participation-finding-invalid", "reviewerId": receipt.get("reviewerId")}
+            )
             continue
         finding_id = finding.get("id")
         if not isinstance(finding_id, str) or not finding_id:
-            blockers.append({"code": "review-round-participation-finding-id-invalid", "reviewerId": receipt.get("reviewerId")})
+            blockers.append(
+                {"code": "review-round-participation-finding-id-invalid", "reviewerId": receipt.get("reviewerId")}
+            )
             continue
         prior = findings.get(finding_id)
         if prior is not None and canonical_digest(prior) != canonical_digest(finding):
