@@ -14,9 +14,69 @@ AUDIT_OPTIMIZATION_REPORT_SCHEMA = "agent-audit-optimization-report.v1"
 AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA = "agent-audit-optimization-proposal.v1"
 AUDIT_OPTIMIZATION_APPLIED_PROFILE_SCHEMA = "agent-audit-optimization-applied-profile.v1"
 AUDIT_OPTIMIZATION_APPLY_RESULT_SCHEMA = "agent-audit-optimization-apply-result.v1"
+AUDIT_EFFICIENCY_INPUT_SCHEMA = "agent-audit-efficiency-input.v1"
+AUDIT_EFFICIENCY_REPORT_SCHEMA = "agent-audit-efficiency-report.v1"
 
 
 AUDIT_OPTIMIZATION_SCHEMAS: dict[str, dict[str, Any]] = {
+    AUDIT_EFFICIENCY_INPUT_SCHEMA: open_object_schema(
+        AUDIT_EFFICIENCY_INPUT_SCHEMA,
+        required=[
+            "schemaVersion",
+            "releaseId",
+            "sourceRevision",
+            "sourceLineageDigest",
+            "qualityFloor",
+            "views",
+            "outcomes",
+            "totals",
+            "productionPromotionClaimed",
+            "inputDigest",
+        ],
+        properties={
+            "releaseId": {"type": "string", "minLength": 1},
+            "sourceRevision": {"type": "string", "minLength": 1},
+            "sourceLineageDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+            "qualityFloor": {"type": "string", "minLength": 1},
+            "views": {"type": "object"},
+            "outcomes": {"type": "object"},
+            "totals": {"type": "object"},
+            "productionPromotionClaimed": {"const": False},
+            "inputDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
+    AUDIT_EFFICIENCY_REPORT_SCHEMA: open_object_schema(
+        AUDIT_EFFICIENCY_REPORT_SCHEMA,
+        required=[
+            "schemaVersion",
+            "status",
+            "releaseId",
+            "qualityFloor",
+            "qualityFloorPreserved",
+            "metrics",
+            "comparison",
+            "advisoryOnly",
+            "autoApply",
+            "blockers",
+            "inputDigest",
+            "productionPromotionClaimed",
+            "reportDigest",
+        ],
+        properties={
+            "status": {"enum": ["PASS", "NO_COMPARISON", "FAIL"]},
+            "releaseId": {"type": ["string", "null"]},
+            "qualityFloor": {"type": ["string", "null"]},
+            "qualityFloorPreserved": {"const": True},
+            "metrics": {"type": "object"},
+            "comparison": {"type": "object"},
+            "advisoryOnly": {"const": True},
+            "autoApply": {"const": False},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "inputDigest": {"type": ["string", "null"]},
+            "productionPromotionClaimed": {"const": False},
+            "reportDigest": {"type": "string", "minLength": 64, "maxLength": 64},
+        },
+    ),
     AUDIT_OPTIMIZATION_SAMPLE_SCHEMA: open_object_schema(
         AUDIT_OPTIMIZATION_SAMPLE_SCHEMA,
         required=[
@@ -42,6 +102,7 @@ AUDIT_OPTIMIZATION_SCHEMAS: dict[str, dict[str, Any]] = {
         properties={
             "sampleId": {"type": "string", "minLength": 1},
             "lineage": {"type": "object"},
+            "statisticalProvenance": {"type": "object"},
             "request": {"type": "object"},
             "review": {"type": "object"},
             "attempts": {"type": "object"},
@@ -201,6 +262,8 @@ AUDIT_OPTIMIZATION_SCHEMAS: dict[str, dict[str, Any]] = {
 
 
 __all__ = [
+    "AUDIT_EFFICIENCY_INPUT_SCHEMA",
+    "AUDIT_EFFICIENCY_REPORT_SCHEMA",
     "AUDIT_OPTIMIZATION_APPLIED_PROFILE_SCHEMA",
     "AUDIT_OPTIMIZATION_APPLY_RESULT_SCHEMA",
     "AUDIT_OPTIMIZATION_PROPOSAL_SCHEMA",

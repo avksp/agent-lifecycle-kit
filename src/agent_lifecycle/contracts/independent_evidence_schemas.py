@@ -12,7 +12,7 @@ INDEPENDENT_EVIDENCE_SCHEMA = "agent-independent-evidence.v1"
 INDEPENDENT_EVIDENCE_VALIDATION_SCHEMA = "agent-independent-evidence-validation.v1"
 
 INDEPENDENCE_DIMENSIONS = ("producer", "implementation", "source")
-INDEPENDENCE_METHODS = ("deterministic-check", "human-review")
+INDEPENDENCE_METHODS = ("deterministic-check", "human-review", "statistical-check")
 INDEPENDENCE_SOURCE_POLICIES = ("exact-revision", "current-lineage", "any-current")
 INDEPENDENT_EVIDENCE_STATUSES = ("PASS", "FAIL", "UNAVAILABLE")
 
@@ -278,6 +278,7 @@ def validate_independent_evidence(
         requirement_validation = validate_independence_requirement(requirement)
         if requirement_validation["status"] != "PASS":
             blockers.append({"code": "independent-evidence-requirement-invalid", "validation": requirement_validation})
+            return _evidence_validation(evidence, blockers, "NOT_PROVEN")
         elif evidence.get("requirementDigest") != requirement.get("requirementDigest"):
             blockers.append({"code": "independent-evidence-requirement-mismatch"})
         required = requirement.get("required") is True

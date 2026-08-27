@@ -78,6 +78,7 @@ from agent_lifecycle.contracts.runner_worktree_schemas import WORKTREE_SUPPORT_S
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 from agent_lifecycle.contracts.security_analysis_schemas import SECURITY_ANALYSIS_SCHEMAS
+from agent_lifecycle.contracts.statistical_evidence_schemas import STATISTICAL_EVIDENCE_SCHEMAS
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
 from agent_lifecycle.contracts.structured_result_schemas import STRUCTURED_RESULT_SCHEMAS
 from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
@@ -721,6 +722,7 @@ _SCHEMA_GROUPS = (
     EXTERNAL_JOB_SCHEMAS,
     FINDING_CHECK_SCHEMAS,
     INDEPENDENT_EVIDENCE_SCHEMAS,
+    STATISTICAL_EVIDENCE_SCHEMAS,
     EXECUTION_STRATEGY_SCHEMAS,
     IMPORT_DIALECT_SCHEMAS,
     STATUS_GOAL_SCHEMAS,
