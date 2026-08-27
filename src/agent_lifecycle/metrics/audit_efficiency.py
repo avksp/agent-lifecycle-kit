@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.audit_optimization_schemas import (
@@ -173,7 +173,9 @@ def validate_audit_efficiency_report(report: Any) -> dict[str, Any]:
         blockers.append({"code": "audit-efficiency-authority-boundary"})
     if report.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "audit-efficiency-production-claim"})
-    comparison = report.get("comparison") if isinstance(report.get("comparison"), dict) else {}
+    comparison: dict[str, Any] = (
+        cast(dict[str, Any], report.get("comparison")) if isinstance(report.get("comparison"), dict) else {}
+    )
     if comparison.get("sampleCount") == 1:
         for field in ("tokenReductionPercent", "wallReductionPercent"):
             metric = comparison.get(field)
@@ -203,9 +205,7 @@ def _efficiency_metrics(measurement: dict[str, Any]) -> dict[str, Any]:
         "noVerdictSessions": no_verdict,
         "remediationEvents": outcomes["remediationEvents"],
         "tokensPerConfirmedFinding": _per_unit(audit["tokens"], confirmed, "confirmed-findings-unavailable"),
-        "wallMsPerConfirmedFinding": _per_unit(
-            audit["elapsedWallMs"], confirmed, "confirmed-findings-unavailable"
-        ),
+        "wallMsPerConfirmedFinding": _per_unit(audit["elapsedWallMs"], confirmed, "confirmed-findings-unavailable"),
         "noAcceptanceEffectShare": _share(no_verdict, audit_sessions, "audit-outcomes-unavailable"),
         "rejectedFindingShare": _share(
             rejected,
@@ -284,7 +284,7 @@ def _distinct_comparison_sample_count(
     blockers: list[dict[str, Any]],
 ) -> int:
     axes = ("releaseId", "sourceRevision", "sourceLineageDigest", "contentDigest")
-    seen = {axis: set() for axis in axes}
+    seen: dict[str, set[str]] = {axis: set() for axis in axes}
     sample_count = 0
     for position, item in enumerate([measurement, *comparisons]):
         identity = _comparison_identity(item)

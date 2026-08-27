@@ -106,18 +106,26 @@ def validate_completion_gate_receipt(
     decision = receipt.get("decision")
     if decision not in COMPLETION_GATE_DECISIONS:
         raise LifecycleError("invalid-completion-gate-receipt", "completion gate decision is unsupported")
-    reason_codes = _string_list(receipt.get("reasonCodes"), label="reasonCodes", error_code="invalid-completion-gate-receipt")
+    reason_codes = _string_list(
+        receipt.get("reasonCodes"), label="reasonCodes", error_code="invalid-completion-gate-receipt"
+    )
     if not reason_codes:
         raise LifecycleError("invalid-completion-gate-receipt", "completion gate reasonCodes are required")
     _require_verifier(receipt.get("verifier"))
     _validate_gate_digest(receipt)
-    input_checks = _validate_input_bindings(receipt, state=state, final_audit=final_audit, follow_up_register=follow_up_register)
+    input_checks = _validate_input_bindings(
+        receipt, state=state, final_audit=final_audit, follow_up_register=follow_up_register
+    )
     finalization_allowed = decision in FINALIZATION_DECISIONS
     final_proof = receipt.get("finalProof")
     if decision in FINALIZATION_DECISIONS and not _receipt_final_proof_ready(final_proof):
-        raise LifecycleError("completion-gate-final-proof-missing", "stop/follow-up decisions require ready final proof evidence")
+        raise LifecycleError(
+            "completion-gate-final-proof-missing", "stop/follow-up decisions require ready final proof evidence"
+        )
     if decision in FINALIZATION_DECISIONS:
-        _require_no_finalization_blockers(receipt, state=state, final_audit=final_audit, follow_up_register=follow_up_register)
+        _require_no_finalization_blockers(
+            receipt, state=state, final_audit=final_audit, follow_up_register=follow_up_register
+        )
     validation = {
         "schemaVersion": COMPLETION_GATE_VALIDATION_SCHEMA,
         "status": "PASS",
@@ -225,18 +233,29 @@ def _acceptance_summary(state: dict[str, Any]) -> dict[str, Any]:
 
 def _blocker_summary(state: dict[str, Any]) -> dict[str, Any]:
     blocker = state.get("blocker")
-    return {"open": isinstance(blocker, dict) and bool(blocker), "blocker": blocker if isinstance(blocker, dict) else None}
+    return {
+        "open": isinstance(blocker, dict) and bool(blocker),
+        "blocker": blocker if isinstance(blocker, dict) else None,
+    }
 
 
 def _validation_summary(results: list[dict[str, Any]], required_ids: list[str]) -> dict[str, Any]:
     seen: dict[str, str] = {}
     for index, item in enumerate(results):
         if not isinstance(item, dict):
-            raise LifecycleError("invalid-completion-gate-input", "validationResults items must be objects", {"index": index})
-        result_id = _required_string(item.get("id"), label="validationResults.id", error_code="invalid-completion-gate-input")
-        status = _required_string(item.get("status"), label="validationResults.status", error_code="invalid-completion-gate-input")
+            raise LifecycleError(
+                "invalid-completion-gate-input", "validationResults items must be objects", {"index": index}
+            )
+        result_id = _required_string(
+            item.get("id"), label="validationResults.id", error_code="invalid-completion-gate-input"
+        )
+        status = _required_string(
+            item.get("status"), label="validationResults.status", error_code="invalid-completion-gate-input"
+        )
         seen[result_id] = status
-    required = _string_list(required_ids, label="requiredValidationIds", error_code="invalid-completion-gate-input", allow_empty=True)
+    required = _string_list(
+        required_ids, label="requiredValidationIds", error_code="invalid-completion-gate-input", allow_empty=True
+    )
     failed = sorted(result_id for result_id, status in seen.items() if status not in {"PASS", "WAIVED"})
     missing = sorted(set(required).difference(seen))
     return {
@@ -279,13 +298,19 @@ def _follow_up_summary(register: dict[str, Any] | None, candidates: list[dict[st
         non_blocking_items = [
             str(item.get("id"))
             for item in register.get("items", [])
-            if isinstance(item, dict) and item.get("status") in {"OPEN", "BLOCKED", "SCHEDULED"} and item.get("id") not in blocking
+            if isinstance(item, dict)
+            and item.get("status") in {"OPEN", "BLOCKED", "SCHEDULED"}
+            and item.get("id") not in blocking
         ]
     candidate_ids = []
     for index, item in enumerate(candidates):
         if not isinstance(item, dict):
-            raise LifecycleError("invalid-completion-gate-input", "followUpCandidates items must be objects", {"index": index})
-        candidate_ids.append(_required_string(item.get("id"), label="followUpCandidates.id", error_code="invalid-completion-gate-input"))
+            raise LifecycleError(
+                "invalid-completion-gate-input", "followUpCandidates items must be objects", {"index": index}
+            )
+        candidate_ids.append(
+            _required_string(item.get("id"), label="followUpCandidates.id", error_code="invalid-completion-gate-input")
+        )
     return {
         "candidateIds": sorted(candidate_ids),
         "nonBlockingItemIds": sorted(non_blocking_items),
@@ -312,8 +337,12 @@ def _split_summary(items: list[dict[str, Any]]) -> dict[str, Any]:
     candidate_ids = []
     for index, item in enumerate(items):
         if not isinstance(item, dict):
-            raise LifecycleError("invalid-completion-gate-input", "splitCandidates items must be objects", {"index": index})
-        item_id = _required_string(item.get("id"), label="splitCandidates.id", error_code="invalid-completion-gate-input")
+            raise LifecycleError(
+                "invalid-completion-gate-input", "splitCandidates items must be objects", {"index": index}
+            )
+        item_id = _required_string(
+            item.get("id"), label="splitCandidates.id", error_code="invalid-completion-gate-input"
+        )
         if item.get("required", True):
             candidate_ids.append(item_id)
     return {"candidateIds": sorted(candidate_ids)}

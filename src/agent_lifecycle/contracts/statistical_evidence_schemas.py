@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from decimal import ROUND_CEILING, Decimal, InvalidOperation
-from typing import Any
+from typing import Any, cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.schema_builders import open_object_schema
@@ -258,7 +258,8 @@ def validate_statistical_evidence_set(
         blockers.append({"code": "statistical-evidence-source-stale"})
     if evidence.get("sourceLineageDigest") != expected_source_lineage_digest:
         blockers.append({"code": "statistical-evidence-lineage-mismatch"})
-    samples = evidence.get("samples") if isinstance(evidence.get("samples"), list) else []
+    raw_samples = evidence.get("samples")
+    samples = cast(list[dict[str, Any]], raw_samples) if isinstance(raw_samples, list) else []
     if len(samples) > MAX_STATISTICAL_SAMPLES:
         blockers.append(
             {
@@ -331,10 +332,11 @@ def _evaluate(
         if not isinstance(sample, dict):
             blockers.append({"code": "statistical-sample-object-invalid", "index": index})
             continue
-        identity = sample.get("sampleIdentity")
-        if not _is_digest(identity):
+        identity_value = sample.get("sampleIdentity")
+        if not _is_digest(identity_value):
             blockers.append({"code": "statistical-sample-identity-invalid", "index": index})
             continue
+        identity = cast(str, identity_value)
         duplicate = identity in seen
         if duplicate:
             blockers.append({"code": "statistical-sample-identity-duplicate", "sampleIdentity": identity})

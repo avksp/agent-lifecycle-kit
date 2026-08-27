@@ -505,9 +505,10 @@ def build_finding_check_proposal(binding: dict[str, Any], *, reproduction: str) 
     if validation["status"] != "PASS":
         raise LifecycleError("finding-check-proposal-binding-invalid", "proposal binding failed validation")
     _required_text(reproduction, "reproduction")
+    proposal_seed = canonical_digest({"binding": binding["bindingDigest"], "text": reproduction})
     body = {
         "schemaVersion": FINDING_CHECK_PROPOSAL_SCHEMA,
-        "proposalId": f"finding-check-proposal-{canonical_digest({'binding': binding['bindingDigest'], 'text': reproduction})[:32]}",
+        "proposalId": f"finding-check-proposal-{proposal_seed[:32]}",
         "status": "PASS",
         "binding": dict(binding),
         "reviewerReproduction": {

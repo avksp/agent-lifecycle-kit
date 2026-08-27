@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from statistics import mean
-from typing import Any
+from typing import Any, cast
 
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.contracts.audit_optimization_schemas import (
@@ -85,7 +85,11 @@ def build_audit_statistics(
     confidence = _confidence(len(valid), minimum, attestation_counts, quality)
     if not sufficient and not blockers:
         blockers.append({"code": "minimum-sample-not-met", "required": minimum, "actual": len(valid)})
-    status = "FAIL" if blockers and any(item.get("code") == "audit-sample-invalid" for item in blockers) else ("PASS" if sufficient else "NO_RECOMMENDATION")
+    status = (
+        "FAIL"
+        if blockers and any(item.get("code") == "audit-sample-invalid" for item in blockers)
+        else ("PASS" if sufficient else "NO_RECOMMENDATION")
+    )
     body = {
         "schemaVersion": AUDIT_OPTIMIZATION_STATISTICS_SCHEMA,
         "status": status,
@@ -118,7 +122,9 @@ def evaluate_candidate_profiles(
         if isinstance(embedded, list):
             for item in embedded:
                 if isinstance(item, dict):
-                    all_tasks.append({**item, "candidateProfileId": item.get("candidateProfileId") or profile.get("profileId")})
+                    all_tasks.append(
+                        {**item, "candidateProfileId": item.get("candidateProfileId") or profile.get("profileId")}
+                    )
     all_tasks.extend(external_tasks)
     blockers: list[dict[str, Any]] = []
     if len(all_tasks) > max_holdout_tasks:
@@ -132,13 +138,15 @@ def evaluate_candidate_profiles(
             rows = list(all_tasks)
         task_ids = sorted({_string(item.get("taskId"), f"holdout-{index}") for item in rows})
         quality_pass = sum(1 for item in rows if _quality_pass(item))
-        false_acceptances = sum(1 for item in rows if item.get("falseAcceptance") is True or item.get("acceptedThenCorrected") is True)
+        false_acceptances = sum(
+            1 for item in rows if item.get("falseAcceptance") is True or item.get("acceptedThenCorrected") is True
+        )
         tokens = [_number(item.get("billableTokens", item.get("tokens"))) for item in rows]
         wall = [_number(item.get("wallSeconds")) for item in rows]
         quality_rate = _rate(quality_pass, len(rows))
         false_rate = _rate(false_acceptances, len(rows))
         profile_quality_floor = _string(profile.get("qualityFloor"), "standard")
-        row = {
+        row: dict[str, Any] = {
             "profileId": profile_id,
             "taskShape": shape,
             "holdoutCount": len(rows),
@@ -209,34 +217,63 @@ def recommend_audit_optimization(
         blockers.append({"code": "statistics-not-sufficient", "status": statistics.get("status")})
     if statistics.get("confidence") == "LOW":
         blockers.append({"code": "statistics-low-confidence"})
-    regression = statistics.get("regressionSignals") if isinstance(statistics.get("regressionSignals"), dict) else {}
+    regression: dict[str, Any] = (
+        cast(dict[str, Any], statistics.get("regressionSignals"))
+        if isinstance(statistics.get("regressionSignals"), dict)
+        else {}
+    )
     if regression.get("status") in {"FAIL", "BLOCK"}:
         blockers.append({"code": "quality-regression-signals", "status": regression.get("status")})
     if evaluation.get("status") != "PASS":
-        blockers.extend(evaluation.get("blockers", []))
-    candidates = [item for item in evaluation.get("eligibleCandidates", []) if item.get("taskShape") == task_shape]
+        blockers.extend(cast(list[dict[str, Any]], evaluation.get("blockers", [])))
+    candidates = [
+        item
+        for item in cast(list[dict[str, Any]], evaluation.get("eligibleCandidates", []))
+        if item.get("taskShape") == task_shape
+    ]
     if not candidates:
         blockers.append({"code": "no-eligible-candidate", "taskShape": task_shape})
     selected = None
     if candidates:
-        selected = min(candidates, key=lambda item: (-float(item.get("qualityRate", 0)), float(item.get("falseAcceptanceRate", 1)), float(item.get("averageWallSeconds") or 0), float(item.get("averageTokens") or 0), str(item.get("profileId"))))
+        selected = min(
+            candidates,
+            key=lambda item: (
+                -float(item.get("qualityRate", 0)),
+                float(item.get("falseAcceptanceRate", 1)),
+                float(item.get("averageWallSeconds") or 0),
+                float(item.get("averageTokens") or 0),
+                str(item.get("profileId")),
+            ),
+        )
         if not quality_floor_preserved(str(selected.get("qualityFloor", "standard")), quality_floor):
-            blockers.append({"code": "candidate-quality-floor-lowered", "required": quality_floor, "candidate": selected.get("qualityFloor")})
+            blockers.append(
+                {
+                    "code": "candidate-quality-floor-lowered",
+                    "required": quality_floor,
+                    "candidate": selected.get("qualityFloor"),
+                }
+            )
     if blockers:
         body = _no_recommendation(task_shape, quality_floor, statistics, evaluation, blockers)
         return {**body, "recommendationDigest": canonical_digest(body)}
-    changes = _changes(selected, current)
+    selected_profile = cast(dict[str, Any], selected)
+    changes = _changes(selected_profile, current)
+    statistics_signals: dict[str, Any] = (
+        cast(dict[str, Any], statistics.get("signals")) if isinstance(statistics.get("signals"), dict) else {}
+    )
     reasons = [
-        audit_recommendation_reason("quality-first-selection", qualityRate=selected["qualityRate"]),
-        audit_recommendation_reason("false-acceptance-floor", falseAcceptanceRate=selected["falseAcceptanceRate"]),
+        audit_recommendation_reason("quality-first-selection", qualityRate=selected_profile["qualityRate"]),
+        audit_recommendation_reason(
+            "false-acceptance-floor", falseAcceptanceRate=selected_profile["falseAcceptanceRate"]
+        ),
         audit_recommendation_reason("confidence", value=statistics.get("confidence")),
-        audit_recommendation_reason("holdout-evidence", distinctTaskCount=selected["distinctTaskCount"]),
+        audit_recommendation_reason("holdout-evidence", distinctTaskCount=selected_profile["distinctTaskCount"]),
     ]
     body = {
         "schemaVersion": AUDIT_OPTIMIZATION_RECOMMENDATION_SCHEMA,
         "status": "PASS",
         "taskShape": task_shape,
-        "selectedProfileId": selected["profileId"],
+        "selectedProfileId": selected_profile["profileId"],
         "confidence": statistics.get("confidence", "MEDIUM"),
         "qualityFloor": quality_floor,
         "qualityFloorPreserved": True,
@@ -245,14 +282,18 @@ def recommend_audit_optimization(
         "changes": changes,
         "reasons": reasons,
         "expectedTradeoffs": {
-            "qualityRate": selected["qualityRate"],
-            "falseAcceptanceRate": selected["falseAcceptanceRate"],
-            "averageTokens": selected["averageTokens"],
-            "averageWallSeconds": selected["averageWallSeconds"],
-            "bottleneck": (statistics.get("signals") or {}).get("bottleneck"),
+            "qualityRate": selected_profile["qualityRate"],
+            "falseAcceptanceRate": selected_profile["falseAcceptanceRate"],
+            "averageTokens": selected_profile["averageTokens"],
+            "averageWallSeconds": selected_profile["averageWallSeconds"],
+            "bottleneck": statistics_signals.get("bottleneck"),
         },
         "approval": {"required": True, "target": "new-project-profile-or-plan-revision", "frozenPlanMutation": False},
-        "rollback": {"strategy": "restore prior profile and re-run the optimizer", "requiresReview": True, "priorProfileDigest": canonical_digest(current) if current else None},
+        "rollback": {
+            "strategy": "restore prior profile and re-run the optimizer",
+            "requiresReview": True,
+            "priorProfileDigest": canonical_digest(current) if current else None,
+        },
         "statisticsDigest": statistics.get("statisticsDigest"),
         "evaluationDigest": evaluation.get("evaluationDigest"),
         "productionPromotionClaimed": False,
@@ -271,7 +312,9 @@ def build_audit_optimization_report(
     current_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     statistics = build_audit_statistics(samples)
-    evaluation = evaluate_candidate_profiles(candidate_profiles, holdout_tasks=holdout_tasks, reference_tasks=reference_tasks)
+    evaluation = evaluate_candidate_profiles(
+        candidate_profiles, holdout_tasks=holdout_tasks, reference_tasks=reference_tasks
+    )
     recommendation = recommend_audit_optimization(
         statistics=statistics,
         evaluation=evaluation,
@@ -279,14 +322,20 @@ def build_audit_optimization_report(
         quality_floor=quality_floor,
         current_profile=current_profile,
     )
-    status = "PASS" if recommendation.get("status") == "PASS" else ("FAIL" if statistics.get("status") == "FAIL" else "NO_RECOMMENDATION")
+    status = (
+        "PASS"
+        if recommendation.get("status") == "PASS"
+        else ("FAIL" if statistics.get("status") == "FAIL" else "NO_RECOMMENDATION")
+    )
     body = {
         "schemaVersion": AUDIT_OPTIMIZATION_REPORT_SCHEMA,
         "status": status,
         "statistics": statistics,
         "evaluation": evaluation,
         "recommendation": recommendation,
-        "nextAction": "review the advisory profile and approve a new project profile or plan revision" if status == "PASS" else "collect more attested samples and holdout evidence before tuning",
+        "nextAction": "review the advisory profile and approve a new project profile or plan revision"
+        if status == "PASS"
+        else "collect more attested samples and holdout evidence before tuning",
         "productionPromotionClaimed": False,
     }
     return {**body, "reportDigest": canonical_digest(body)}
@@ -302,7 +351,9 @@ def validate_audit_optimization_report(report: dict[str, Any]) -> dict[str, Any]
         expected = canonical_digest({key: value for key, value in report.items() if key != "reportDigest"})
         if report.get("reportDigest") != expected:
             blockers.append({"code": "audit-optimization-report-digest"})
-        recommendation = report.get("recommendation") if isinstance(report.get("recommendation"), dict) else {}
+        recommendation: dict[str, Any] = (
+            cast(dict[str, Any], report.get("recommendation")) if isinstance(report.get("recommendation"), dict) else {}
+        )
         if recommendation.get("autoApply") is not False or recommendation.get("advisoryOnly") is not True:
             blockers.append({"code": "audit-optimization-advisory-boundary"})
         if recommendation.get("qualityFloorPreserved") is not True:
@@ -320,17 +371,36 @@ def validate_audit_optimization_report(report: dict[str, Any]) -> dict[str, Any]
 def render_audit_optimization_terminal(report: dict[str, Any]) -> str:
     """Render a compact operator view without exposing receipt contents."""
 
-    statistics = report.get("statistics") if isinstance(report.get("statistics"), dict) else {}
-    signals = statistics.get("signals") if isinstance(statistics.get("signals"), dict) else {}
-    quality = signals.get("quality") if isinstance(signals.get("quality"), dict) else {}
-    latency = signals.get("latency") if isinstance(signals.get("latency"), dict) else {}
-    tokens = signals.get("tokens") if isinstance(signals.get("tokens"), dict) else {}
-    recommendation = report.get("recommendation") if isinstance(report.get("recommendation"), dict) else {}
+    statistics: dict[str, Any] = (
+        cast(dict[str, Any], report.get("statistics")) if isinstance(report.get("statistics"), dict) else {}
+    )
+    signals: dict[str, Any] = (
+        cast(dict[str, Any], statistics.get("signals")) if isinstance(statistics.get("signals"), dict) else {}
+    )
+    quality: dict[str, Any] = (
+        cast(dict[str, Any], signals.get("quality")) if isinstance(signals.get("quality"), dict) else {}
+    )
+    latency: dict[str, Any] = (
+        cast(dict[str, Any], signals.get("latency")) if isinstance(signals.get("latency"), dict) else {}
+    )
+    tokens: dict[str, Any] = (
+        cast(dict[str, Any], signals.get("tokens")) if isinstance(signals.get("tokens"), dict) else {}
+    )
+    recommendation: dict[str, Any] = (
+        cast(dict[str, Any], report.get("recommendation")) if isinstance(report.get("recommendation"), dict) else {}
+    )
     lines = [
         f"Audit optimization: {report.get('status', 'UNKNOWN')}",
         f"Samples: {statistics.get('sampleCount', 0)} | confidence: {statistics.get('confidence', 'LOW')}",
-        f"Quality: {quality.get('successRate', 0.0):.1%} success | {quality.get('falseAcceptanceRate', 0.0):.1%} false acceptance | {quality.get('correctionRate', 0.0):.1%} correction",
-        f"Time: p50={latency.get('p50', '?')}s, p95={latency.get('p95', '?')}s | tokens: p50={tokens.get('p50', '?')}, p95={tokens.get('p95', '?')}",
+        (
+            f"Quality: {quality.get('successRate', 0.0):.1%} success | "
+            f"{quality.get('falseAcceptanceRate', 0.0):.1%} false acceptance | "
+            f"{quality.get('correctionRate', 0.0):.1%} correction"
+        ),
+        (
+            f"Time: p50={latency.get('p50', '?')}s, p95={latency.get('p95', '?')}s | "
+            f"tokens: p50={tokens.get('p50', '?')}, p95={tokens.get('p95', '?')}"
+        ),
     ]
     if recommendation.get("status") == "PASS":
         lines.extend(
@@ -385,16 +455,8 @@ def _available_metric_values(samples: list[dict[str, Any]], field: str) -> list[
 def _sample_efficiency(samples: list[dict[str, Any]]) -> dict[str, Any]:
     confirmed = sum(int(_number(_value_at(sample, "review.acceptedCount"))) for sample in samples)
     rejected = sum(int(_number(_value_at(sample, "review.rejectedCount"))) for sample in samples)
-    no_verdict = sum(
-        1
-        for sample in samples
-        if _value_at(sample, "review.status") not in {"PASS", "FAIL"}
-    )
-    remediation = sum(
-        1
-        for sample in samples
-        if _number(_value_at(sample, "quality.correctionCount")) > 0
-    )
+    no_verdict = sum(1 for sample in samples if _value_at(sample, "review.status") not in {"PASS", "FAIL"})
+    remediation = sum(1 for sample in samples if _number(_value_at(sample, "quality.correctionCount")) > 0)
     tokens = sum(_number(_value_at(sample, "usage.billableTokens")) for sample in samples)
     wall = sum(_number(_value_at(sample, "usage.wallSeconds")) for sample in samples)
     decided = confirmed + rejected
@@ -413,7 +475,16 @@ def _sample_efficiency(samples: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _numeric_summary(values: list[float], *, unit: str) -> dict[str, Any]:
     if not values:
-        return {"count": 0, "unit": unit, "availability": "UNAVAILABLE", "average": None, "p50": None, "p95": None, "minimum": None, "maximum": None}
+        return {
+            "count": 0,
+            "unit": unit,
+            "availability": "UNAVAILABLE",
+            "average": None,
+            "p50": None,
+            "p95": None,
+            "minimum": None,
+            "maximum": None,
+        }
     ordered = sorted(values)
     return {
         "count": len(ordered),
@@ -463,7 +534,13 @@ def _changes(candidate: dict[str, Any], current: dict[str, Any]) -> list[dict[st
     return changes
 
 
-def _no_recommendation(task_shape: str, quality_floor: str, statistics: dict[str, Any], evaluation: dict[str, Any], blockers: list[dict[str, Any]]) -> dict[str, Any]:
+def _no_recommendation(
+    task_shape: str,
+    quality_floor: str,
+    statistics: dict[str, Any],
+    evaluation: dict[str, Any],
+    blockers: list[dict[str, Any]],
+) -> dict[str, Any]:
     return {
         "schemaVersion": AUDIT_OPTIMIZATION_RECOMMENDATION_SCHEMA,
         "status": "NO_RECOMMENDATION",

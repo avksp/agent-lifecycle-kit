@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.external_job_schemas import validate_external_job_result
@@ -194,9 +194,9 @@ def validate_review_round_participation(receipt: Any) -> dict[str, Any]:
         blockers.append({"code": "review-round-participation-schema-invalid"})
     try:
         rebuilt = build_review_round_participation(
-            reviewer_id=value.get("reviewerId"),
+            reviewer_id=cast(str, value.get("reviewerId")),
             review_verdict=value.get("reviewVerdict"),
-            findings=value.get("findings"),
+            findings=cast(list[dict[str, Any]], value.get("findings")),
             job_request=value.get("jobRequest"),
             job_status=value.get("jobStatus"),
             job_result=value.get("jobResult"),
@@ -350,15 +350,15 @@ def validate_review_round_evaluation(evaluation: Any) -> dict[str, Any]:
         blockers.append({"code": "review-round-evaluation-schema-invalid"})
     try:
         rebuilt = build_review_round_evaluation(
-            round_number=value.get("round"),
-            max_rounds=value.get("maxRounds"),
-            outcome=value.get("outcome"),
-            participating_reviewer_ids=value.get("participatingReviewerIds"),
-            resource_use_count=value.get("resourceUseCount"),
-            finding_ids=value.get("findingIds"),
-            open_blocking_finding_ids=value.get("openBlockingFindingIds"),
-            missing_disposition_finding_ids=value.get("missingDispositionFindingIds"),
-            blockers=value.get("blockers"),
+            round_number=cast(int, value.get("round")),
+            max_rounds=cast(int, value.get("maxRounds")),
+            outcome=cast(str, value.get("outcome")),
+            participating_reviewer_ids=cast(list[str], value.get("participatingReviewerIds")),
+            resource_use_count=cast(int, value.get("resourceUseCount")),
+            finding_ids=cast(list[str], value.get("findingIds")),
+            open_blocking_finding_ids=cast(list[str], value.get("openBlockingFindingIds")),
+            missing_disposition_finding_ids=cast(list[str], value.get("missingDispositionFindingIds")),
+            blockers=cast(list[dict[str, Any]], value.get("blockers")),
         )
     except LifecycleError as exc:
         blockers.append({"code": exc.code})

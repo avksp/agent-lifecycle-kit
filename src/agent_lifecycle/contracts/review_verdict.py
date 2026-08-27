@@ -28,7 +28,9 @@ def validate_review_verdict(verdict: dict[str, Any], *, findings: list[dict[str,
         raise LifecycleError("invalid-review-verdict", "review verdict must be an object")
     blockers: list[dict[str, Any]] = []
     if verdict.get("schemaVersion") != REVIEW_VERDICT_SCHEMA:
-        blockers.append({"code": "invalid-review-verdict-schema", "message": "unsupported review verdict schemaVersion"})
+        blockers.append(
+            {"code": "invalid-review-verdict-schema", "message": "unsupported review verdict schemaVersion"}
+        )
     overall = verdict.get("overall")
     if overall not in OVERALL_VERDICTS:
         blockers.append({"code": "invalid-review-verdict-overall", "message": "overall verdict is unsupported"})
@@ -68,12 +70,20 @@ def validate_review_verdict(verdict: dict[str, Any], *, findings: list[dict[str,
         blockers.append({"code": "review-verdict-routing-action", "nextAction": next_action})
     target = routing.get("target")
     if target is not None and (not isinstance(target, str) or not target):
-        blockers.append({"code": "review-verdict-routing-target", "message": "routing target must be a non-empty string"})
+        blockers.append(
+            {"code": "review-verdict-routing-target", "message": "routing target must be a non-empty string"}
+        )
     open_medium_plus = _open_medium_plus(findings or [])
     if overall == "ACCEPTED" and open_medium_plus:
         blockers.append({"code": "review-verdict-open-findings", "findings": open_medium_plus})
     if overall == "ACCEPTED" and (failing_dimensions or open_medium_plus):
-        blockers.append({"code": "review-verdict-accepted-with-blockers", "dimensions": failing_dimensions, "findings": open_medium_plus})
+        blockers.append(
+            {
+                "code": "review-verdict-accepted-with-blockers",
+                "dimensions": failing_dimensions,
+                "findings": open_medium_plus,
+            }
+        )
     if overall == "ACCEPTED" and next_action != "accept":
         blockers.append({"code": "review-verdict-routing-mismatch", "overall": overall, "nextAction": next_action})
     if overall != "ACCEPTED" and next_action == "accept":
@@ -92,7 +102,9 @@ def validate_review_verdict(verdict: dict[str, Any], *, findings: list[dict[str,
 
 def require_review_verdict_pass(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("status") == "FAIL":
-        raise LifecycleError("review-verdict-validation-failed", "review verdict validation failed", {"validation": payload})
+        raise LifecycleError(
+            "review-verdict-validation-failed", "review verdict validation failed", {"validation": payload}
+        )
     return payload
 
 
@@ -107,9 +119,7 @@ def compact_review_routing(verdict: dict[str, Any]) -> dict[str, Any]:
         "failingDimensions": validation["failingDimensions"],
         "warningDimensions": validation["warningDimensions"],
         "dimensionStatus": {
-            key: dimensions.get(key, {}).get("status")
-            for key in DIMENSIONS
-            if isinstance(dimensions.get(key), dict)
+            key: dimensions.get(key, {}).get("status") for key in DIMENSIONS if isinstance(dimensions.get(key), dict)
         },
         "verdictDigest": validation["verdictDigest"],
     }
