@@ -41,7 +41,6 @@
 - `src/agent_lifecycle/contracts/schemas.py`
 - `src/agent_lifecycle/planning/completeness.py`
 - `src/agent_lifecycle/metrics/audit_samples.py`
-- `src/agent_lifecycle/metrics/audit_efficiency.py`
 - `src/agent_lifecycle/metrics/audit_optimization.py`
 - `src/agent_lifecycle/metrics/__init__.py`
 - `tests/contracts/test_statistical_evidence_schemas.py`
@@ -49,8 +48,12 @@
 - `tests/planning/test_independence_requirements.py`
 - `tests/metrics/fixtures/release-2-6-accounting-baseline.json`
 - `tests/metrics/test_audit_samples.py`
-- `tests/metrics/test_audit_efficiency.py`
 - `tests/metrics/test_audit_optimization.py`
+
+## WS27-04 - Distinct audit comparison identity
+
+- `src/agent_lifecycle/metrics/audit_efficiency.py`
+- `tests/metrics/test_audit_efficiency.py`
 
 ## WS27-03 - CLI, documentation and publication
 

@@ -1,6 +1,6 @@
 # Plan review
 
-Status: `READY_TO_FREEZE / FROZEN AFTER EXACT-DIGEST REVIEW`.
+Status: `READY_TO_FREEZE / EXACT-DIGEST REVIEW REQUIRED`.
 
 ## Closed decisions
 
@@ -20,6 +20,7 @@ Status: `READY_TO_FREEZE / FROZEN AFTER EXACT-DIGEST REVIEW`.
 - the accepted Release 2.6 versions of `metrics_parser.py`, `dispatch_observability.py`, `contracts/schemas.py` and `metrics/__init__.py` are mandatory rebase inputs; this release extends rather than replaces them.
 - the executable base is accepted Release 2.6 merge `30e2f2a55a2b8d959fa22b884e122952a2711ff7`; prior revision-4 audit evidence is historical and cannot freeze this package.
 - the observed Release 2.6 accounting values are frozen in `baseline-2-6.md`; one baseline validates metric semantics but cannot justify an optimization percentage.
+- current and comparison artifacts must have pairwise-unique release, source revision, source lineage and label-independent content identities; path aliases, repeated arguments and release-label-only copies do not increase sample count.
 
 ## Independent review focus
 
@@ -57,6 +58,26 @@ The revision 7 verdicts are historical remediation evidence. They cannot freeze 
 ## Freeze conditions
 
 - rebase on accepted Release 2.6: complete;
-- pass structural gates and fresh independent S2 audits from GLM 5.3 and Grok 4.6 xhigh: complete for revision 8;
-- close every Medium/High finding: complete, with only non-blocking Low/Info residuals;
-- bind the final FROZEN manifest digest to `plan-review-r8.json` and generate the v2 lock: required before implementation starts.
+- revision 8 structural gates, independent S2 audits and exact-digest lock: complete and historical;
+- revision 9 structural gates and fresh independent S2 audit through the available read-only external model route: required;
+- close every revision 9 Medium/High finding: required;
+- bind the final FROZEN manifest digest to `plan-review-r9.json` and generate the v2 lock: required before plan adoption.
+
+## Revision 9 remediation
+
+Revision 8 implementation audit found `AUDIT-WS27-03-F1`: one complete measurement supplied as both current and comparison produced a two-sample measured percentage. Revision 9:
+
+- adds `R27-DISTINCT-COMPARISON`, `AC27-DISTINCT-COMPARISON` and `EV27-DISTINCT-COMPARISON`;
+- transfers the two remediation files from `WS27-02` to non-overlapping `WS27-04`;
+- makes `WS27-02` depend on `WS27-04` so the complete metrics contract is revalidated after the fix;
+- requires a fresh independent exact-revision S2 audit and a new `plan-review-r9.json` plus v2 lock before adoption.
+
+The revision 8 lock and review remain historical evidence only. They cannot authorize revision 9.
+
+### Revision 9 audit round 1
+
+OpenCode GLM 5.3 returned `CHANGES_REQUIRED` with one Medium finding: the first draft reused `inputDigest` as an identity axis even though that digest includes `releaseId`, leaving release-label-only relabelling ambiguous and making one evidence mutation unconstructible. The revised contract now defines a separate label-independent content projection, checks source revision and source lineage independently, names the stable blocker, and bounds the claim to declared provenance rather than pretending to detect total provenance forgery.
+
+### Revision 9 audit round 2
+
+A fresh OpenCode GLM 5.3 session returned `READY_TO_FREEZE` with no Medium-or-higher findings. Its two actionable Low wording findings were closed before the FROZEN candidate: all four axes now appear explicitly and duplicate handling consistently forbids both an inflated `sampleCount` and a measured reduction percentage. The final manifest still requires an exact-digest independent review before lock creation.

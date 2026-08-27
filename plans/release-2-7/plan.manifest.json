@@ -1,11 +1,11 @@
 {
   "schemaVersion": "agent-plan-manifest.v1",
   "status": "FROZEN",
-  "planRevision": 8,
+  "planRevision": 9,
   "package": {"id": "release-2-7", "title": "Review efficiency and evidence provenance", "workspaceRoot": ".", "artifactRoot": "work/release-2-7", "root": ".", "planArtifactRoot": "plans/release-2-7"},
-  "planFiles": ["plans/release-2-7/00-developer-overview.md", "plans/release-2-7/README.md", "plans/release-2-7/acceptance-criteria.md", "plans/release-2-7/baseline-2-6.md", "plans/release-2-7/evidence-plan.md", "plans/release-2-7/independent-s2-audit.md", "plans/release-2-7/plan-review-r8.json", "plans/release-2-7/plan-review.md", "plans/release-2-7/plan.manifest.json", "plans/release-2-7/release-notes.en.md", "plans/release-2-7/write-set.md"],
+  "planFiles": ["plans/release-2-7/00-developer-overview.md", "plans/release-2-7/README.md", "plans/release-2-7/acceptance-criteria.md", "plans/release-2-7/baseline-2-6.md", "plans/release-2-7/evidence-plan.md", "plans/release-2-7/independent-s2-audit.md", "plans/release-2-7/plan-review-r8.json", "plans/release-2-7/plan-review-r9.json", "plans/release-2-7/plan-review.md", "plans/release-2-7/plan.manifest.json", "plans/release-2-7/release-notes.en.md", "plans/release-2-7/write-set.md"],
   "packageIntegrity": {"required": true, "lockSchemaVersion": "agent-plan-lock.v2", "inventorySource": "planFiles", "undeclaredTopLevelFiles": "reject", "allowedUnlistedFiles": ["plan.lock.json"]},
-  "planReview": {"required": true, "verdict": "READY_TO_FREEZE", "reviewedRevision": 8, "report": "plans/release-2-7/plan-review-r8.json"},
+  "planReview": {"required": true, "verdict": "READY_TO_FREEZE", "reviewedRevision": 9, "report": "plans/release-2-7/plan-review-r9.json"},
   "author": "codex-planner",
   "baseRevision": {"ref": "main", "sha": "30e2f2a55a2b8d959fa22b884e122952a2711ff7"},
   "dependsOn": ["release-2-6"],
@@ -20,10 +20,11 @@
       {"id": "R27-DISPOSITION", "description": "Build immutable terminal dispositions for every reviewed finding."},
       {"id": "R27-PROVENANCE", "description": "Declare and validate source, derivation and independence for statistical evidence."},
       {"id": "R27-ADEQUACY", "description": "Validate sample adequacy against the declared statistical method and threshold."},
-      {"id": "R27-METRICS", "description": "Report quality-preserving audit efficiency and no-acceptance-effect use."},
+      {"id": "R27-METRICS", "description": "Report quality-preserving audit efficiency and no-acceptance-effect use, counting only pairwise-distinct declared releaseId, sourceRevision, sourceLineageDigest and label-independent content identities in comparisons."},
+      {"id": "R27-DISTINCT-COMPARISON", "description": "Reject repetition of releaseId, sourceRevision, sourceLineageDigest or canonical input content excluding releaseId/inputDigest before emitting any cross-release reduction percentage."},
       {"id": "R27-PUBLICATION", "description": "Publish schemas, documentation and version 2.7.0 consistently."}
     ],
-    "tierResolutionRequest": {"taskCount": 3, "executableOwners": ["review-policy-worker", "evidence-worker", "release-worker"], "capabilityHints": [], "riskFlags": {"architecture": true, "security": true, "performance": true, "browser": false, "externalEnvironment": true}, "requirementsBytes": 18000, "externalSpecification": true}
+    "tierResolutionRequest": {"taskCount": 4, "executableOwners": ["review-policy-worker", "metrics-remediation-worker", "evidence-worker", "release-worker"], "capabilityHints": [], "riskFlags": {"architecture": true, "security": true, "performance": true, "browser": false, "externalEnvironment": true}, "requirementsBytes": 18000, "externalSpecification": true}
   },
   "readOnly": ["plans/release-2-4", "plans/release-2-4-1", "plans/release-2-5", "plans/release-2-6", "tasks/release-1-75", "tasks/release-1-76", "tasks/release-1-77", "tasks/release-1-78", "tasks/release-1-79", "tasks/release-1-80", "tasks/release-1-81", "tasks/release-1-82", "tasks/release-1-83", "tasks/release-1-84", "tasks/release-1-85", "tasks/release-1-86", "tasks/release-1-87", "tasks/release-1-88", "tasks/release-1-89", "tasks/release-2-0", "tasks/release-2-1", "tasks/release-2-2", "tasks/release-2-3", "tasks/release-2-4", "tasks/release-2-5", "tasks/release-2-6"],
   "forbiddenWrites": [".git", ".alk", ".claude/settings.local.json", "LICENSE", "NOTICE", "tasks/analisys", "tasks/analisys8", "tasks/analisys9", "out"],
@@ -35,9 +36,14 @@
       "writes": ["src/agent_lifecycle/audit/implementation.py", "src/agent_lifecycle/contracts/implementation_audit_validation.py", "src/agent_lifecycle/contracts/review_round_schemas.py", "src/agent_lifecycle/contracts/finding_check_schemas.py", "src/agent_lifecycle/contracts/review_verdict.py", "src/agent_lifecycle/freeze/package_integrity.py", "src/agent_lifecycle/planning/manifest_contract.py", "src/agent_lifecycle/review/validation.py", "src/agent_lifecycle/review_mesh/results.py", "src/agent_lifecycle/review_mesh/synthesis.py", "src/agent_lifecycle/specification/completion_gate.py", "src/agent_lifecycle/workflow/finalization.py", "src/agent_lifecycle/workflow/reviews.py", "tests/audit/test_implementation_audit.py", "tests/audit/test_review_verdict.py", "tests/cli/test_plan_lock_commands.py", "tests/cli/test_review_mesh_commands.py", "tests/contracts/test_review_round_schemas.py", "tests/contracts/test_finding_check_schemas.py", "tests/contracts/test_review_verdict.py", "tests/freeze/test_plan_package_integrity.py", "tests/planning/test_manifest_contract.py", "tests/planning/test_sdd_services.py", "tests/review_mesh/test_quorum_gate.py", "tests/review_mesh/test_result_import.py", "tests/review_mesh/test_synthesis.py", "tests/specification/test_completion_gate.py", "tests/workflow/test_final_audit_outcomes.py", "tests/workflow/test_finalization.py", "tests/workflow/test_task_acceptance_audit_gate.py"]
     },
     {
-      "id": "WS27-02", "title": "Statistical provenance, adequacy and metrics", "owner": "evidence-worker", "dependsOn": ["WS27-01"],
+      "id": "WS27-04", "title": "Distinct audit comparison identity", "owner": "metrics-remediation-worker", "dependsOn": ["WS27-01"],
+      "acceptanceIds": ["AC27-DISTINCT-COMPARISON"], "evidenceIds": ["EV27-DISTINCT-COMPARISON"],
+      "writes": ["src/agent_lifecycle/metrics/audit_efficiency.py", "tests/metrics/test_audit_efficiency.py"]
+    },
+    {
+      "id": "WS27-02", "title": "Statistical provenance, adequacy and metrics", "owner": "evidence-worker", "dependsOn": ["WS27-04"],
       "acceptanceIds": ["AC27-PROVENANCE", "AC27-ADEQUACY", "AC27-METRICS"], "evidenceIds": ["EV27-PROVENANCE", "EV27-ADEQUACY", "EV27-METRICS"],
-      "writes": ["src/agent_lifecycle/contracts/statistical_evidence_schemas.py", "src/agent_lifecycle/contracts/independent_evidence_schemas.py", "src/agent_lifecycle/contracts/audit_optimization_schemas.py", "src/agent_lifecycle/contracts/schemas.py", "src/agent_lifecycle/planning/completeness.py", "src/agent_lifecycle/metrics/audit_samples.py", "src/agent_lifecycle/metrics/audit_efficiency.py", "src/agent_lifecycle/metrics/audit_optimization.py", "src/agent_lifecycle/metrics/__init__.py", "tests/contracts/test_statistical_evidence_schemas.py", "tests/contracts/test_independent_evidence_schemas.py", "tests/planning/test_independence_requirements.py", "tests/metrics/fixtures/release-2-6-accounting-baseline.json", "tests/metrics/test_audit_samples.py", "tests/metrics/test_audit_efficiency.py", "tests/metrics/test_audit_optimization.py"]
+      "writes": ["src/agent_lifecycle/contracts/statistical_evidence_schemas.py", "src/agent_lifecycle/contracts/independent_evidence_schemas.py", "src/agent_lifecycle/contracts/audit_optimization_schemas.py", "src/agent_lifecycle/contracts/schemas.py", "src/agent_lifecycle/planning/completeness.py", "src/agent_lifecycle/metrics/audit_samples.py", "src/agent_lifecycle/metrics/audit_optimization.py", "src/agent_lifecycle/metrics/__init__.py", "tests/contracts/test_statistical_evidence_schemas.py", "tests/contracts/test_independent_evidence_schemas.py", "tests/planning/test_independence_requirements.py", "tests/metrics/fixtures/release-2-6-accounting-baseline.json", "tests/metrics/test_audit_samples.py", "tests/metrics/test_audit_optimization.py"]
     },
     {
       "id": "WS27-03", "title": "CLI, documentation and publication", "owner": "release-worker", "dependsOn": ["WS27-02"],
@@ -53,6 +59,7 @@
     {"id": "AC27-PROVENANCE", "requirementIds": ["R27-PROVENANCE"], "evidenceIds": ["EV27-PROVENANCE"]},
     {"id": "AC27-ADEQUACY", "requirementIds": ["R27-ADEQUACY"], "evidenceIds": ["EV27-ADEQUACY"]},
     {"id": "AC27-METRICS", "requirementIds": ["R27-METRICS"], "evidenceIds": ["EV27-METRICS"]},
+    {"id": "AC27-DISTINCT-COMPARISON", "requirementIds": ["R27-DISTINCT-COMPARISON"], "evidenceIds": ["EV27-DISTINCT-COMPARISON"]},
     {"id": "AC27-PUBLICATION", "requirementIds": ["R27-PUBLICATION"], "evidenceIds": ["EV27-PUBLICATION"]}
   ]},
   "validation": {
@@ -66,7 +73,7 @@
       "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_versions.py --target-version 2.7.0 --target-ref v2.7.0 --evidence work/release-2-7/evidence/publication-versions.json",
       "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_publication_adoption.py --target-version 2.7.0 --evidence work/release-2-7/evidence/publication-adoption.json"
     ],
-    "extraEvidence": ["EV27-ROUNDS", "EV27-SEVERITY", "EV27-CHECKS", "EV27-DISPOSITION", "EV27-PROVENANCE", "EV27-ADEQUACY", "EV27-METRICS", "EV27-PUBLICATION"]
+    "extraEvidence": ["EV27-ROUNDS", "EV27-SEVERITY", "EV27-CHECKS", "EV27-DISPOSITION", "EV27-PROVENANCE", "EV27-ADEQUACY", "EV27-METRICS", "EV27-DISTINCT-COMPARISON", "EV27-PUBLICATION"]
   },
   "orchestration": {"startMode": "manual-after-freeze", "remediationMode": "bounded-auto", "maxPlanReviewRounds": 4, "maxTaskAttempts": 3, "maxParallelTasks": 1, "maxValidationRunsPerTask": 10, "maxToolCallsPerIteration": 18, "maxUsageIterationsPerAttempt": 4, "maxToolCallsPerTask": 140, "maxToolCallsPerRun": 480, "maxReportedTokensPerTask": 100000, "maxReportedTokensPerRun": 320000, "maxEvidenceArtifactBytes": 8388608, "maxEvidenceBytesPerTask": 25165824, "maxEvidenceBytesPerRun": 67108864, "maxTaskWallSeconds": 10800, "maxRunWallSeconds": 43200, "maxContextBytes": 73728, "maxRenderedPacketBytes": 106496, "stateFile": "work/release-2-7/run.state.json", "eventLog": "work/release-2-7/workflow-events.jsonl", "stepReviewRequired": true, "finalAuditRequired": true},
   "securityGates": ["reviewer text never becomes executable authority", "open MEDIUM, HIGH, CRITICAL or BLOCKER cannot be accepted on budget exhaustion", "only agent-review-verdict.v1 bound to a successful blocking-eligible external-job result counts as reviewer participation", "quality floors and no-auto-apply remain unchanged"],
@@ -80,6 +87,7 @@
     "[AC27-PROVENANCE|EV27-PROVENANCE] Statistical evidence declares and proves source independence, current lineage and unique sample identity.",
     "[AC27-ADEQUACY|EV27-ADEQUACY] Effective independent sample count supports the claimed threshold and method without duplicate or stale samples.",
     "[AC27-METRICS|EV27-METRICS] Efficiency metrics preserve quality floors and missing-data semantics.",
+    "[AC27-DISTINCT-COMPARISON|EV27-DISTINCT-COMPARISON] Current and comparison artifacts have pairwise-unique releaseId, sourceRevision, sourceLineageDigest and label-independent content identities before any percentage reduction is emitted.",
     "[AC27-PUBLICATION|EV27-PUBLICATION] Version and documentation are consistent."
   ]
 }

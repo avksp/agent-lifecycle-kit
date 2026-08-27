@@ -1,6 +1,6 @@
 # Release 2.7: Review efficiency and evidence provenance
 
-Status: `FROZEN / READY_FOR_IMPLEMENTATION`
+Status: `FROZEN CANDIDATE / EXACT-DIGEST REVIEW REQUIRED`
 Tier: `S2`
 Depends on: accepted Release 2.6
 Base: `main @ 30e2f2a55a2b8d959fa22b884e122952a2711ff7` (`v2.6.0`)
@@ -23,6 +23,7 @@ Audit rounds have explicit budgets and terminal dispositions, finding reproducti
 6. Require source class, derivation identity, sample identity, source revision/lineage and independence statement for statistical/error-rate evidence; validate unique current samples against the declared method.
 7. Add audit metrics for tokens/time per confirmed finding, no-final-verdict share, rejected-finding share and post-audit-remediation share while preserving quality floors.
 8. Reproduce the accepted Release 2.6 accounting shape as a portable tracked fixture; use it as an observed baseline without inventing a percentage reduction target from one release.
+9. Reject a current/comparison duplicate or repeated comparison when any declared identity axis (`releaseId`, source revision, source lineage or label-independent content digest) repeats, then revalidate the complete metrics contract.
 
 ## Non-goals
 
@@ -33,7 +34,11 @@ Audit rounds have explicit budgets and terminal dispositions, finding reproducti
 - replacing Review Mesh, `agent-review-verdict.v1`, finding-check or external-job contracts;
 - turning a findings-only Review Mesh import into reviewer participation;
 - claiming an optimization percentage from the single Release 2.6 baseline.
+- treating two paths, two argument occurrences or release-label-only copies for the same declared source/content identity as independent comparison samples;
+- claiming that declared-identity checks can detect a producer that forges every provenance field.
 
 `maxPlanReviewRounds` governs bounded plan/Review Mesh audit synthesis. It does not replace task-attempt policy: ordinary task rework remains governed by `maxTaskAttempts`. Release 2.7 closes the existing `CRITICAL`-severity omission everywhere the current product claims that an open Medium-or-higher finding blocks review, implementation audit, completion, finalization or package acceptance.
 
 Review Mesh `acceptedFindings`, `rejectedFindings` and `unresolvedFindings` are synthesis buckets, not closure authority. Round evaluation joins every imported finding to exactly one immutable disposition. An open `MEDIUM+` finding blocks unless its disposition is `REJECTED`; synthesis `PASS`, reviewer agreement, transport success and process exit status cannot override that rule.
+
+Revision 9 responds to final-audit finding `AUDIT-WS27-03-F1`. `WS27-04` owns the two remediation files, then `WS27-02` repeats the broader provenance/adequacy/metrics validation. Accepted task contracts are preserved only when exact compatibility receipts permit it.

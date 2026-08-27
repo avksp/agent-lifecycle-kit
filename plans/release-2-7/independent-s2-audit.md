@@ -43,4 +43,30 @@ The final canonical review binds the same revision 8 semantics plus FROZEN metad
 
 ## Current status
 
-Revision 8 has independent S2 approval. Implementation remains unauthorized until `plan-review-r8.json` is bound to the final FROZEN digest and `plan.lock.json` is created and verified.
+Revision 8 received independent S2 approval, an exact-digest review and a verified v2 lock. Its implementation reached final audit, where `AUDIT-WS27-03-F1` triggered the revision 9 contract-change route. Revision 8 authority is therefore historical and cannot authorize the revised package.
+
+## Revision 9
+
+- Trigger: final-audit finding `AUDIT-WS27-03-F1`
+- Status: `AWAITING_FRESH_INDEPENDENT_S2_AUDIT`
+- Scope: distinct current/comparison identity plus non-overlapping remediation ownership and downstream metrics revalidation
+
+Revision 8 review and lock do not authorize this contract change. Revision 9 requires a fresh read-only independent audit, exact-digest `READY_TO_FREEZE` review and a new v2 lock.
+
+### Audit round 1
+
+- Route: OpenCode `zai-coding-plan/glm-5.3`, strict read-only permissions
+- DRAFT digest: `99de06b93cf107b57a6d1e75243e58158ce3930789990096c5d0cc4b3910d231`
+- Verdict: `CHANGES_REQUIRED`
+- Open Medium: `F1`, under-specified label-independent identity
+
+The audit confirmed revision 8's duplicate-comparison defect and accepted the ownership/DAG/compatibility design. It found that `inputDigest` includes `releaseId`, so a release-label-only mutation changes both originally declared axes. Revision 9 now defines a separate content digest over the canonical input excluding `releaseId` and `inputDigest`, requires pairwise-unique source revision and lineage, and names the fail-closed blocker. A fresh audit is required against the new digest.
+
+### Audit round 2
+
+- Route: fresh OpenCode `zai-coding-plan/glm-5.3` session, strict read-only permissions
+- DRAFT digest: `5def6a9b3ae70ee42664ab7a2501e0e2ac9a36bffeb5a75a0f2dcb8f12a7f70e`
+- Verdict: `READY_TO_FREEZE`
+- Open Medium/High/Critical/Blocker: `0`
+
+The audit reproduced the original defect, verified all four identity axes, the constructible mutation matrix, non-overlapping ownership, the `WS27-01 -> WS27-04 -> WS27-02 -> WS27-03` DAG, and the exact-compatible preservation rule. Two Low wording inconsistencies were corrected before the FROZEN candidate. An exact-digest review is still required because those corrections and FROZEN metadata changed the manifest/package after the DRAFT verdict.

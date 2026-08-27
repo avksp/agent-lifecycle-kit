@@ -30,6 +30,10 @@ Define effective independent count as the number of unique sample identities wit
 
 Use tracked synthetic equivalents of the Agentic, TenderCRM and Board shapes. Add a portable fixture reproducing `baseline-2-6.md` without local paths or raw transcripts. Verify tokens/time per confirmed finding, no-acceptance-effect share, rejected-finding share and post-audit-remediation share. The Release 2.6 fixture must preserve measured audit tokens/wall/compute, time-window-only process/implementation/remediation values and unavailable non-audit tokens. A mutation that substitutes zero for unavailable data or derives a percentage reduction from this single release must fail closed. Missing implementation/controller telemetry remains unavailable and blocks cross-project ratio claims.
 
+## EV27-DISTINCT-COMPARISON
+
+Build one complete current measurement and two complete comparison measurements whose `releaseId`, `sourceRevision`, `sourceLineageDigest` and label-independent content digest are pairwise unique. Define that digest as `canonical_digest(input - {releaseId, inputDigest})`. Preserve the existing two-release PASS behavior, then independently mutate: current artifact reused as comparison; the same bytes supplied from another path; repeated comparison artifact; repeated `releaseId` with otherwise distinct input; `releaseId` changed with only `inputDigest` recomputed; and metrics changed while `sourceRevision` or `sourceLineageDigest` is retained. Every duplicate returns `audit-efficiency-comparison-duplicate-identity` with the duplicate axis and comparison index before an inflated `sampleCount` or measured reduction percentage is emitted. Re-run the complete metrics tests after the remediation so provenance, unavailable-value handling, quality floors and advisory-only authority remain unchanged. Do not claim detection when every declared provenance field is fraudulently replaced.
+
 ## EV27-PUBLICATION
 
 Run full suite, architecture, neutrality, documentation, schema and publication gates at the exact candidate.
