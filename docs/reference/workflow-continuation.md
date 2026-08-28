@@ -12,8 +12,8 @@ Projection is the default and is read-only:
 ```bash
 agent-lifecycle workflow continue \
   --state work/run.state.json \
-  --manifest plans/release-x/plan.manifest.json \
-  --lock plans/release-x/plan.lock.json \
+  --manifest work/plans/release-x/plan.manifest.json \
+  --lock work/plans/release-x/plan.lock.json \
   --operation-id continue-WS-01 \
   --expected-revision 7 \
   --source-revision <source-sha> \
@@ -33,8 +33,8 @@ Reuse the same operation id and supplied inputs. Carry the exact
 ```bash
 agent-lifecycle workflow continue \
   --state work/run.state.json \
-  --manifest plans/release-x/plan.manifest.json \
-  --lock plans/release-x/plan.lock.json \
+  --manifest work/plans/release-x/plan.manifest.json \
+  --lock work/plans/release-x/plan.lock.json \
   --operation-id continue-WS-01 \
   --expected-revision 7 \
   --source-revision <source-sha> \
