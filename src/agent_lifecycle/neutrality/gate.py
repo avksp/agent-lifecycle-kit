@@ -59,7 +59,7 @@ def _parser() -> argparse.ArgumentParser:
         gate.add_argument("--plan-digest", required=True)
         gate.add_argument("--source-revision", required=True)
         gate.add_argument("--workspace-root", required=True)
-        gate.add_argument("--artifact-root", default="plans/standalone-v1")
+        gate.add_argument("--artifact-root", default="work/neutrality")
         gate.add_argument("--operation-output", required=True)
         gate.add_argument("--receipt", required=True)
     return parser

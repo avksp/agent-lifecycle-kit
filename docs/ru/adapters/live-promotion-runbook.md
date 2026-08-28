@@ -99,7 +99,7 @@ python tools/release/validate_live_calibration.py \
 
 python tools/release/validate_support_matrix.py \
   --support-matrix docs/adapters/support-matrix.md \
-  --profile plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json \
+  --profile profiles/release/ci-matrix-profile.v2.json \
   --evidence <support-matrix-evidence.json>
 
 python tools/release/validate_docs_compat.py \

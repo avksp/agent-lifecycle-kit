@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "agent-security-plan-test-fixture.v1",
+  "package": {
+    "id": "release-2-4-security-fixture"
+  },
+  "planRevision": 1,
+  "baseRevision": {
+    "ref": "main",
+    "sha": "92f0412bb15ac082418fb52bfe3667d518363f5e"
+  }
+}

@@ -12,11 +12,11 @@ their declared locations. Create compact plan artifacts for later sessions:
 
 ```bash
 agent-lifecycle plan snapshot \
-  --manifest plans/release/plan.manifest.json \
+  --manifest work/plans/release/plan.manifest.json \
   --out work/release/plan-snapshot.json
 
 agent-lifecycle plan handoff \
-  --manifest plans/release/plan.manifest.json \
+  --manifest work/plans/release/plan.manifest.json \
   --snapshot work/release/plan-snapshot.json \
   --max-workstreams 12 \
   --target-tokens 4096 \
@@ -40,7 +40,7 @@ required action and digest-bearing artifact references. Then run:
 agent-lifecycle context checkpoint \
   --session planning-session \
   --state work/release/run.state.json \
-  --plan plans/release/plan.manifest.json \
+  --plan work/plans/release/plan.manifest.json \
   --input work/release/planning-checkpoint-input.json \
   --reason planning-complete \
   --capture-mode MILESTONE \

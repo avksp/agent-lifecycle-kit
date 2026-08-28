@@ -1,0 +1,120 @@
+{
+  "schemaVersion": "agent-lifecycle-release-assembly-profile.v1",
+  "profileId": "atomic-content-addressed-release-generation",
+  "profileVersion": "1.0.0",
+  "canonicalization": {
+    "inventory": "RFC8785-JCS",
+    "hash": "SHA-256",
+    "additionalPropertiesAllowed": false
+  },
+  "candidatePayload": {
+    "identityField": "candidatePayloadInventoryDigest",
+    "inventoryBodyExcludes": [
+      "candidatePayloadInventoryDigest",
+      "matrix receipts and aggregate",
+      "release inventory and commit marker",
+      "release provenance",
+      "neutrality and release verification receipts"
+    ],
+    "requiredObjectClasses": [
+      "wheel",
+      "source distribution",
+      "adapter bundles",
+      "SBOM",
+      "notices",
+      "generated documentation"
+    ],
+    "everyMatrixLegMustProduceAndBind": true,
+    "allNineMatrixLegDigestsMustEqual": true,
+    "matrixAggregateMustBindExactLegSetAndDigest": true,
+    "bothCleanAssemblyBuildsMustEqualAggregateDigest": true,
+    "sourceLockToolchainAndCommandDigestsRequired": true
+  },
+  "finalGeneration": {
+    "identityField": "finalInventoryDigest",
+    "inventoryBodyIncludes": [
+      "candidate payload object paths hashes sizes and modes",
+      "matrix aggregate identity",
+      "two clean build identities",
+      "source dependency-lock toolchain and command identities",
+      "license results",
+      "release provenance"
+    ],
+    "inventoryBodyExcludes": [
+      "finalInventoryDigest",
+      "inventory file",
+      "commit marker",
+      "post-assembly neutrality receipt",
+      "post-assembly release verification receipt"
+    ],
+    "inventoryDigestRule": "SHA-256(RFC8785-JCS(finalInventoryBody))",
+    "generationPathTemplate": "release/generations/{finalInventoryDigest}",
+    "mutableAliasAcceptedAsIdentity": false
+  },
+  "transaction": {
+    "stagingPathTemplate": "release/.staging/{operationId}",
+    "sameFilesystemAsGenerationRootRequired": true,
+    "stagingPathMustBeUniqueAndAbsent": true,
+    "objectWritesCreateIfAbsentNoReplace": true,
+    "orderedSteps": [
+      "perform two clean builds in isolated roots",
+      "verify both candidate payload inventories equal the matrix aggregate candidatePayloadInventoryDigest",
+      "stage exact final generation objects",
+      "write canonical inventory body without its own digest field",
+      "compute finalInventoryDigest and verify staged Merkle root",
+      "write closed commit marker last inside staging",
+      "fsync files and staging directories",
+      "atomically rename staging directory with no replace to the content-addressed generation path",
+      "fsync the generation parent",
+      "publish operation-scoped detached assembly receipt"
+    ],
+    "commitMarker": {
+      "schemaVersion": "agent-release-generation-commit.v1",
+      "path": "COMMITTED.json",
+      "requiredBindings": [
+        "operationId",
+        "sourceRevision",
+        "planDigest",
+        "candidatePayloadInventoryDigest",
+        "finalInventoryDigest",
+        "inventoryBodyDigest",
+        "generationMerkleRoot",
+        "matrixAggregateIdentity",
+        "cleanBuildIdentities"
+      ],
+      "publishedLastInStaging": true,
+      "closedSchema": true
+    },
+    "authoritativeOnlyAfterAtomicGenerationPublish": true,
+    "preCommitOrphanObjectsAreNonAuthoritative": true,
+    "occupiedGenerationWithIdenticalCommit": "read-only-idempotent-verification-only",
+    "anyMismatchOccupancyAliasOrRace": "fail-closed"
+  },
+  "handoff": {
+    "assemblyReceiptSchemaVersion": "agent-release-assembly-receipt.v1",
+    "receiptMustBindExactCommittedGeneration": true,
+    "neutralityConsumesCommittedGenerationOnly": true,
+    "releaseVerifierConsumesSameCommittedGenerationOnly": true,
+    "noBuildCapabilityForNeutralityOrVerifier": true,
+    "readOnlyHandleTraversalRequired": true,
+    "preAndPostMerkleEqualityRequired": true,
+    "sourceLockToolchainMatrixCandidateAndFinalDigestsMustMatchAcrossStages": true
+  },
+  "negativeConformance": {
+    "requiredCases": [
+      "clean-build-candidate-digest-mismatch",
+      "matrix-leg-or-aggregate-candidate-digest-mismatch",
+      "crash-before-inventory",
+      "crash-after-inventory-before-commit-marker",
+      "crash-after-commit-marker-before-generation-publish",
+      "occupied-generation-path",
+      "payload-or-inventory-substitution",
+      "commit-marker-substitution",
+      "mutable-alias-as-identity",
+      "neutrality-or-verifier-generation-mismatch",
+      "post-scan-generation-mutation",
+      "verifier-attempts-rebuild-or-write",
+      "orphan-staging-treated-as-authoritative"
+    ]
+  }
+}

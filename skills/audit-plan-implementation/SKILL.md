@@ -21,7 +21,7 @@ typed evidence producer:
 
 ```bash
 agent-lifecycle audit implementation \
-  --manifest plans/package/plan.manifest.json \
+  --manifest work/plans/package/plan.manifest.json \
   --state run.state.json \
   --task WS-01 \
   --result work/WS-01/attempt-1/task-result.json \
@@ -30,7 +30,7 @@ agent-lifecycle audit implementation \
   --out work/WS-01/attempt-1/implementation-audit.json
 
 agent-lifecycle audit final-implementation \
-  --manifest plans/package/plan.manifest.json \
+  --manifest work/plans/package/plan.manifest.json \
   --state run.state.json \
   --report work/WS-01/attempt-1/implementation-audit.json \
   --out final/final-implementation-audit.json

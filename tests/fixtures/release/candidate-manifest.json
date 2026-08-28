@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "agent-release-candidate-test-fixture.v1",
+  "package": {
+    "id": "standalone-v1"
+  },
+  "planRevision": 1
+}

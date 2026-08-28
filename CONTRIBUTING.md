@@ -11,6 +11,9 @@ adapters thin. Changes should preserve these boundaries:
   move beyond `EXPERIMENTAL`.
 - Release-candidate scripts must remain local and reproducible; production
   promotion requires separate external authority receipts.
+- Plan packages, locks, reviews, task results and workflow state are local
+  lifecycle artifacts. Keep them under ignored `work/`, `tasks/` or `.alk/`
+  paths; never add files under repository-root `plans/` to Git.
 
 ## Commit message convention
 
@@ -70,3 +73,7 @@ Before opening a change, run:
 PYTHONPATH=src python -m unittest discover -s tests -v
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --require-zero-findings
 ```
+
+The release-security suite rejects any tracked `plans/**` path. Reusable
+configuration belongs under `profiles/`; deterministic test-only inputs belong
+under `tests/fixtures/`.

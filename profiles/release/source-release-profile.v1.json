@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "agent-source-release-profile.v1",
+  "package": {
+    "id": "standalone-v1"
+  },
+  "planRevision": 1,
+  "authorityClaimed": false,
+  "productionPromotionClaimed": false
+}

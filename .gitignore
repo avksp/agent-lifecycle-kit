@@ -13,14 +13,9 @@ htmlcov/
 # Local lifecycle authority material and generated evidence are never committed.
 .agent-lifecycle-authority/
 .alk/
-plans/standalone-v1/evidence/
-plans/standalone-v1/workflow/validation/
-plans/standalone-v1/workflow/gates/
+plans/
 release/candidate/evidence/
 
 # Transient lifecycle controller locks are process-local.
-plans/**/.agent-plan/**/*.lock
-plans/**/workflow/*.lock
-
 work/
 /tasks/

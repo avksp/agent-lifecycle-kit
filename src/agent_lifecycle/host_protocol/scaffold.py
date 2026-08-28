@@ -192,7 +192,7 @@ def _projection_manifest(
             "path": validation_path.as_posix(),
             "descriptorCommand": f"agent-lifecycle adapter validate --descriptor adapters/{host}/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json",
             "inspectCommand": f"agent-lifecycle adapter inspect --descriptor adapters/{host}/adapter.descriptor.json --skip-host-commands",
-            "supportMatrixCommand": "python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json --evidence <support-matrix-evidence.json>",
+            "supportMatrixCommand": "python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile profiles/release/ci-matrix-profile.v2.json --evidence <support-matrix-evidence.json>",
         },
         "providerModelNamesInCore": False,
         "productionPromotionClaimed": False,
@@ -263,7 +263,7 @@ def _validation(host: str) -> str:
         f"agent-lifecycle adapter validate --descriptor adapters/{host}/adapter.descriptor.json --baseline conformance/core/adapter-baseline.v1.json\n"
         f"agent-lifecycle adapter inspect --descriptor adapters/{host}/adapter.descriptor.json --skip-host-commands\n"
         "agent-lifecycle adapter event-check --event <adapter-event-1.json> --event <adapter-event-2.json>\n"
-        "python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json --evidence <support-matrix-evidence.json>\n"
+        "python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile profiles/release/ci-matrix-profile.v2.json --evidence <support-matrix-evidence.json>\n"
         "```\n\n"
         "These checks prove only an EXPERIMENTAL source projection. Promotion to\n"
         "`VERIFIED` requires bounded live host conformance, live calibration,\n"

@@ -84,7 +84,7 @@ OpenCode/GLM. ALK готовит задания, импортирует отве
 
 ```bash
 agent-lifecycle audit implementation \
-  --manifest plans/package/plan.manifest.json \
+  --manifest work/plans/package/plan.manifest.json \
   --state run.state.json \
   --task WS-01 \
   --result work/WS-01/attempt-1/task-result.json \
@@ -482,7 +482,7 @@ agent-lifecycle review-mesh quorum \
 
 ```bash
 agent-lifecycle audit implementation \
-  --manifest plans/package/plan.manifest.json \
+  --manifest work/plans/package/plan.manifest.json \
   --state run.state.json \
   --task WS-01 \
   --result work/WS-01/attempt-1/task-result.json \

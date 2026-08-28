@@ -14,6 +14,10 @@ sys.path.insert(0, str(ROOT / "src"))
 
 
 class ReleaseSecurityTests(unittest.TestCase):
+    def test_temporary_plan_artifacts_are_not_tracked(self) -> None:
+        tracked_plan_paths = [path for path in _git_ls_files() if path == "plans" or path.startswith("plans/")]
+        self.assertEqual(tracked_plan_paths, [])
+
     def test_tracked_text_files_do_not_contain_local_paths_or_secret_markers(self) -> None:
         forbidden = (
             "/" + "Volumes/",

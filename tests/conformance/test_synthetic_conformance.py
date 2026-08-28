@@ -42,7 +42,7 @@ class SyntheticConformanceTests(unittest.TestCase):
             "ownership-audit": "BLOCKED",
             "adapter-operation": "BLOCKED",
         }
-        manifest = load_json(ROOT / "plans/release-2-4/plan.manifest.json")
+        manifest = load_json(ROOT / "tests/fixtures/release/security-plan-manifest.json")
         adopted_task = {
             "id": "SEC-2.4-ACTIVATION-01",
             "securityAnalysisProfile": "security-analysis.v1",

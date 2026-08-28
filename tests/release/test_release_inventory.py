@@ -18,7 +18,7 @@ class ReleaseInventoryTests(unittest.TestCase):
             inventory = out / "inventory.json"
             assembly = out / "release-assembly.json"
             verification = out / "release-verification.json"
-            _run("tools/release/assemble_release_candidate.py", "--manifest", "plans/standalone-v1/plan.manifest.json", "--inventory", str(inventory), "--evidence", str(assembly))
+            _run("tools/release/assemble_release_candidate.py", "--manifest", "tests/fixtures/release/candidate-manifest.json", "--inventory", str(inventory), "--evidence", str(assembly))
             _run("tools/release/verify_release_candidate.py", "--inventory", str(inventory), "--evidence", str(verification))
             inventory_payload = json.loads(inventory.read_text(encoding="utf-8"))
             payload = json.loads(verification.read_text(encoding="utf-8"))
@@ -90,8 +90,8 @@ class ReleaseInventoryTests(unittest.TestCase):
             out = Path(tmp)
             matrix_evidence = out / "support-matrix-contract.json"
             deferred_evidence = out / "deferred-promotion-contract.json"
-            _run("tools/release/validate_support_matrix.py", "--support-matrix", "docs/adapters/support-matrix.md", "--profile", "plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json", "--evidence", str(matrix_evidence))
-            _run("tools/release/validate_deferred_promotion.py", "--profile", "plans/standalone-v1/.agent-plan/standalone-v1/benchmark-authority-profile.v1.json", "--evidence", str(deferred_evidence))
+            _run("tools/release/validate_support_matrix.py", "--support-matrix", "docs/adapters/support-matrix.md", "--profile", "profiles/release/ci-matrix-profile.v2.json", "--evidence", str(matrix_evidence))
+            _run("tools/release/validate_deferred_promotion.py", "--profile", "profiles/release/benchmark-authority-profile.v1.json", "--evidence", str(deferred_evidence))
             matrix = json.loads(matrix_evidence.read_text(encoding="utf-8"))
             deferred = json.loads(deferred_evidence.read_text(encoding="utf-8"))
             self.assertEqual(matrix["adapterMaturity"], "HOST_SPECIFIC")
@@ -126,7 +126,7 @@ class ReleaseInventoryTests(unittest.TestCase):
                 "--support-matrix",
                 str(support_matrix),
                 "--profile",
-                "plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json",
+                "profiles/release/ci-matrix-profile.v2.json",
                 "--evidence",
                 str(evidence),
             )

@@ -79,7 +79,7 @@ requires Review Mesh for this phase, pass the quorum receipt to:
 
 ```bash
 agent-lifecycle audit implementation \
-  --manifest plans/package/plan.manifest.json \
+  --manifest work/plans/package/plan.manifest.json \
   --state run.state.json \
   --task WS-01 \
   --result work/WS-01/attempt-1/task-result.json \
@@ -457,7 +457,7 @@ audit and final audit, pass the phase-specific quorum receipt explicitly:
 
 ```bash
 agent-lifecycle audit implementation \
-  --manifest plans/package/plan.manifest.json \
+  --manifest work/plans/package/plan.manifest.json \
   --state run.state.json \
   --task WS-01 \
   --result work/WS-01/attempt-1/task-result.json \

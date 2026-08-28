@@ -23,7 +23,7 @@ git log --oneline --decorate -5
 PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 python tools/release/validate_adapter_conformance.py --baseline conformance/core/adapter-baseline.v1.json --evidence <adapter-conformance-evidence.json>
 python tools/release/validate_docs_compat.py --evidence <docs-compat-evidence.json>
-python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile plans/standalone-v1/.agent-plan/standalone-v1/ci-matrix-profile.v2.json --evidence <support-matrix-evidence.json>
+python tools/release/validate_support_matrix.py --support-matrix docs/adapters/support-matrix.md --profile profiles/release/ci-matrix-profile.v2.json --evidence <support-matrix-evidence.json>
 PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-complete --policy policy/neutrality.policy.json --report <neutrality-report.json> --require-zero-findings
 PYTHONPATH=src python tests/package/run_packaging_smoke.py --dist-dir <dist-dir> --evidence <packaging-smoke-evidence.json>
 ```
@@ -31,7 +31,7 @@ PYTHONPATH=src python tests/package/run_packaging_smoke.py --dist-dir <dist-dir>
 4. Rebuild and verify the offline candidate inventory:
 
 ```bash
-PYTHONPATH=src python tools/release/assemble_release_candidate.py --manifest plans/standalone-v1/plan.manifest.json --inventory release/candidate/inventory.json --evidence <release-assembly-evidence.json>
+PYTHONPATH=src python tools/release/assemble_release_candidate.py --manifest profiles/release/source-release-profile.v1.json --inventory release/candidate/inventory.json --evidence <release-assembly-evidence.json>
 PYTHONPATH=src python tools/release/verify_release_candidate.py --inventory release/candidate/inventory.json --evidence <release-verification-evidence.json>
 ```
 

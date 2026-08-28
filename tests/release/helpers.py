@@ -340,8 +340,8 @@ def _write_live_host_promotion_plan_fixture(package_root: Path) -> Path:
             "liveCalibrationProfile": "conformance/core/live-calibration-profile.v1.json",
             "budgetTargets": "conformance/core/budget-targets.v1.json",
             "adapterBaseline": "conformance/core/adapter-baseline.v1.json",
-            "planManifest": "plans/standalone-v1/plan.manifest.json",
-            "planLock": "plans/standalone-v1/.agent-plan/standalone-v1/plan.lock.json",
+            "planManifest": "tests/fixtures/release/candidate-manifest.json",
+            "planLock": "tests/fixtures/release/plan.lock.json",
         },
         "artifactRootPolicy": {
             "kind": "parent-release-live-evidence-carveout",

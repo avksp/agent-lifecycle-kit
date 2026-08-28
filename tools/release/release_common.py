@@ -23,8 +23,6 @@ EXCLUDED_PARTS = {
 
 EXCLUDED_PREFIXES = (
     "release/",
-    "plans/standalone-v1/workflow/",
-    "plans/standalone-v1/evidence/",
 )
 
 PAYLOAD_ROOTS = (

@@ -52,7 +52,7 @@ def _build_parser() -> argparse.ArgumentParser:
     bootstrap.add_argument("--scope", required=True, choices=NEUTRALITY_SCOPE_CHOICES)
     bootstrap.add_argument("--include-local-artifacts", action="store_true")
     bootstrap.add_argument("--policy", required=True)
-    bootstrap.add_argument("--artifact-root", default="plans/standalone-v1")
+    bootstrap.add_argument("--artifact-root", default="work/neutrality")
     bootstrap.add_argument("--validation-operation-id", required=False)
     bootstrap.add_argument("--command-id", required=False)
     bootstrap.add_argument("--primary-output", required=True)
