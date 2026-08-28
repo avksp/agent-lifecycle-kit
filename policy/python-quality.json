@@ -826,7 +826,7 @@
         "path": "src/agent_lifecycle/neutrality/gate.py",
         "code": "RUF005",
         "count": 1,
-        "sourceDigest": "2f0f964b4e8f51bbdf602e5829e88f53ee6dc1d55e00a7415c2ebfe55d65d99a"
+        "sourceDigest": "229958a2fac9db265a6b7cf3249258c61de21ffe0d7ca0d6854ff85ee0df14f8"
       },
       {
         "path": "src/agent_lifecycle/neutrality/paths.py",
@@ -1782,7 +1782,7 @@
         "path": "src/agent_lifecycle/host_protocol/scaffold.py",
         "code": "FORMAT",
         "count": 1,
-        "sourceDigest": "c20353e1366d0878d772a4e6f8a47655776467df62e431eb25d97811fadd3171"
+        "sourceDigest": "6db8004093a3a5233fa7f068b04059b54079fd5f38991739c08b1cecbe502152"
       },
       {
         "path": "src/agent_lifecycle/host_protocol/usage_normalizers.py",
@@ -1902,13 +1902,13 @@
         "path": "src/agent_lifecycle/neutrality/cli.py",
         "code": "FORMAT",
         "count": 1,
-        "sourceDigest": "28d15f8e6d9ce53e33ac7abb2f19c94eb15976e95b3c8391f995b3e0b640b677"
+        "sourceDigest": "17c58f64dfdc73541b6e5ddffac0b26417e53073f3734d8d89552e7f24f5c177"
       },
       {
         "path": "src/agent_lifecycle/neutrality/gate.py",
         "code": "FORMAT",
         "count": 1,
-        "sourceDigest": "2f0f964b4e8f51bbdf602e5829e88f53ee6dc1d55e00a7415c2ebfe55d65d99a"
+        "sourceDigest": "229958a2fac9db265a6b7cf3249258c61de21ffe0d7ca0d6854ff85ee0df14f8"
       },
       {
         "path": "src/agent_lifecycle/neutrality/scanner.py",
@@ -2834,7 +2834,7 @@
         "path": "src/agent_lifecycle/host_protocol/scaffold.py",
         "code": "E501",
         "count": 9,
-        "sourceDigest": "c20353e1366d0878d772a4e6f8a47655776467df62e431eb25d97811fadd3171"
+        "sourceDigest": "6db8004093a3a5233fa7f068b04059b54079fd5f38991739c08b1cecbe502152"
       },
       {
         "path": "src/agent_lifecycle/host_protocol/usage_normalizers.py",
@@ -2948,7 +2948,7 @@
         "path": "src/agent_lifecycle/neutrality/cli.py",
         "code": "E501",
         "count": 1,
-        "sourceDigest": "28d15f8e6d9ce53e33ac7abb2f19c94eb15976e95b3c8391f995b3e0b640b677"
+        "sourceDigest": "17c58f64dfdc73541b6e5ddffac0b26417e53073f3734d8d89552e7f24f5c177"
       },
       {
         "path": "src/agent_lifecycle/planning/completeness.py",
