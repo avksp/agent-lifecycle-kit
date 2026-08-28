@@ -31,6 +31,7 @@ from agent_lifecycle.workflow import (
     authorize_execution,
     block_run,
     commit_task_result,
+    continue_workflow,
     finalize_run,
     initialize_workflow_state,
     migrate_workflow_state,
@@ -104,6 +105,23 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         if args.out:
             write_json_create(Path(args.out), payload)
         maybe_emit_workflow_progress_hook(args, command="workflow run", state_path=state_path)
+        return payload
+    if args.workflow_command == "continue":
+        payload = continue_workflow(
+            state_path=state_path,
+            manifest_path=Path(args.manifest),
+            lock_path=Path(args.lock) if args.lock else None,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            reason=args.reason,
+            apply=args.apply,
+            projected_state_revision=args.projected_state_revision,
+            projected_action_digest=args.projected_action_digest,
+            inputs=_continuation_inputs(args),
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
         return payload
     if args.workflow_command == "adopt-plan":
         return adopt_plan(
@@ -323,6 +341,36 @@ def _require_args(args: argparse.Namespace, names: list[str], *, mode: str) -> N
     missing = [name.replace("_", "-") for name in names if not getattr(args, name, None)]
     if missing:
         raise LifecycleError("missing-cli-argument", f"{mode} requires arguments", {"missing": missing})
+
+
+def _continuation_inputs(args: argparse.Namespace) -> dict[str, Any]:
+    singular = {
+        "taskId": args.task,
+        "authorizationReceipt": args.authorization_receipt,
+        "riskProfile": args.risk_profile,
+        "result": args.result,
+        "modelUsageReceipt": args.model_usage_receipt,
+        "budgetTargets": args.budget_targets,
+        "review": args.review,
+        "implementationAudit": args.implementation_audit,
+        "finalAudit": args.final_audit,
+        "verdict": args.verdict,
+        "proof": args.proof,
+        "proofIntegrity": args.proof_integrity,
+        "goalRecord": args.goal_record,
+        "followUpRegister": args.follow_up_register,
+        "completionGateReceipt": args.completion_gate_receipt,
+        "finalImplementationAudit": args.final_implementation_audit,
+    }
+    inputs = {key: value for key, value in singular.items() if value is not None}
+    for key, values in (
+        ("findingIds", args.finding_id),
+        ("taskIds", args.task_id),
+        ("reviewMeshQuorum", args.review_mesh_quorum),
+    ):
+        if values:
+            inputs[key] = values
+    return inputs
 
 
 def _dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:

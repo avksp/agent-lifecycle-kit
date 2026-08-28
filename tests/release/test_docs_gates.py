@@ -48,6 +48,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/review-efficiency.md",
             "docs/reference/evidence-independence.md",
             "docs/guides/phase-session-handoff.md",
+            "docs/reference/workflow-continuation.md",
         ):
             self.assertIn(required, english)
         self.assertIn("quickstart.md", russian)
@@ -66,6 +67,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("reference/review-efficiency.md", russian)
         self.assertIn("reference/evidence-independence.md", russian)
         self.assertIn("guides/phase-session-handoff.md", russian)
+        self.assertIn("reference/workflow-continuation.md", russian)
         for adapter in ("Goose", "Grok Build", "OpenInterpreter", "Pi"):
             self.assertIn(adapter, english)
             self.assertIn(adapter, russian)
@@ -940,8 +942,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/ru/guides/phase-session-handoff.md",
-        handoff
-        + "полный transcript. Не снижайте review, security, architecture или quality gates.\n",  # noqa: RUF001
+        handoff + "полный transcript. Не снижайте review, security, architecture или quality gates.\n",  # noqa: RUF001
     )
     commands = (
         "agent-lifecycle start --adapter <adapter-id>. agent-lifecycle plan check. "
@@ -1094,6 +1095,18 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(root / "docs/reference/security-analysis-profile.md", security_analysis)
     _write_text(root / "docs/ru/reference/security-analysis-profile.md", security_analysis)
+    _write_text(
+        root / "docs/reference/workflow-continuation.md",
+        "agent-lifecycle workflow continue. Projection is the default and is read-only. "
+        "--projected-state-revision. --projected-action-digest. stateWritten: false. "
+        "exactly one revision. Neither outcome starts a model or host process.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/workflow-continuation.md",
+        "agent-lifecycle workflow continue. По умолчанию команда работает только для чтения. "
+        "--projected-state-revision. --projected-action-digest. stateWritten: false. "
+        "увеличивает ревизию состояния ровно на один. инструмент не запускаются.\n",
+    )
     architecture = (
         "project workflow profile. project/profile.py. agent-guided-action-receipt.v1. "
         "Project workflow profile. профиль рабочего процесса проекта. Профиль рабочего процесса проекта.\n"

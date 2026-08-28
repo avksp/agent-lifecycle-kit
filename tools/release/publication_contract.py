@@ -233,6 +233,12 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
         "fieldForm": "package.pin",
     },
     {
+        "id": "docs-index-ru-prose-version",
+        "path": "docs/ru/README.md",
+        "kind": "text-russian-version-line",
+        "fieldForm": "docs.version",
+    },
+    {
         "id": "cli-reference-package-pin",
         "path": "docs/reference/cli.md",
         "kind": "text-package-pin",
@@ -374,6 +380,12 @@ def _read_entry_value(*, path: Path, entry: dict[str, Any]) -> str | None:
             r"^##\s+([0-9]+(?:\.[0-9]+){2})(?:\s+-|$)",
             path.read_text(encoding="utf-8"),
             re.MULTILINE,
+        )
+        return match.group(1) if match else None
+    if kind == "text-russian-version-line":
+        match = re.search(
+            r"\*\*Версия:\*\*\s*([0-9]+(?:\.[0-9]+){2})",
+            path.read_text(encoding="utf-8"),
         )
         return match.group(1) if match else None
     raise ValueError(f"unsupported publication entry kind: {kind}")

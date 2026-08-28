@@ -106,6 +106,87 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
             task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
             self.assertEqual(task["status"], "RUNNING")
             self.assertEqual(task["attempt"], 2)
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(stored["tasks"][0]["attemptHistoryStart"], 2)
+
+    def test_start_task_rejects_preseeded_history_start(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = _write_state(Path(tmp), phase="RUNNING", max_attempts=2)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["attemptHistoryStart"] = 2
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-preseeded-history",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="must fail closed",
+                )
+
+            self.assertEqual(raised.exception.code, "task-attempt-history-invalid")
+
+    def test_rework_continues_from_first_current_plan_attempt_slot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root, max_attempts=3, occupy_first=True)
+
+            rework_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="rework-current-plan-attempt-two",
+                expected_revision=3,
+                source_revision="source",
+                review_path=review_path,
+                finding_ids=["F-REWORK-1"],
+                reason="rework the first current-plan attempt",
+            )
+            payload = start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-current-plan-attempt-three",
+                expected_revision=4,
+                source_revision="source",
+                reason="continue current-plan history",
+            )
+
+            task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(task["attempt"], 3)
+            stored = json.loads(state_path.read_text(encoding="utf-8"))["tasks"][0]
+            self.assertEqual(stored["attemptHistoryStart"], 2)
+            self.assertEqual([entry["attempt"] for entry in stored["attemptHistory"]], [2])
+
+    def test_rework_rejects_removed_current_plan_history_start(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root, max_attempts=3, occupy_first=True)
+            rework_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="rework-current-plan-attempt-two",
+                expected_revision=3,
+                source_revision="source",
+                review_path=review_path,
+                finding_ids=["F-REWORK-1"],
+                reason="prepare marker tamper",
+            )
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0].pop("attemptHistoryStart")
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-without-history-start",
+                    expected_revision=4,
+                    source_revision="source",
+                    reason="must fail closed",
+                )
+
+            self.assertEqual(raised.exception.code, "task-attempt-history-invalid")
 
     def test_start_task_requires_pre_launch_gate_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1120,6 +1201,121 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
             categories = {entry["path"]: entry["category"] for entry in task["ownershipReceipt"]["entries"]}
             self.assertEqual(categories["src/example.py"], "task-owned")
             self.assertEqual(categories["docs/prior-task.md"], "plan-owned")
+
+    def test_managed_acceptance_allows_adopted_lead_owned_controller_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING", max_attempts=2)
+            source_revision = _initialize_managed_git_state(root, state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["writePolicy"] = {
+                "forbiddenWrites": [],
+                "readOnly": [],
+                "leadOwned": [
+                    {"path": "plans/package", "reason": "plan authority"},
+                    {"path": "runtime/package", "reason": "runtime evidence"},
+                ],
+            }
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-lead-owned",
+                expected_revision=1,
+                source_revision=source_revision,
+                reason="launch",
+            )
+            (root / "src/example.py").write_text("value = 2\n", encoding="utf-8")
+            for path in (root / "plans/package/plan.md", root / "runtime/package/evidence.json"):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("controller-owned\n", encoding="utf-8")
+            result_path = "work/WS-01/attempt-1/task-result.json"
+            result = _fresh_result(root, state_path, attempt=1)
+            write_json_create(root / result_path, result)
+            commit_task_result(
+                state_path,
+                task_id="WS-01",
+                operation_id="result-lead-owned",
+                expected_revision=2,
+                source_revision=source_revision,
+                result_path=result_path,
+                reason="done",
+            )
+            review_path = "work/WS-01/attempt-1/task-review.json"
+            write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+
+            accepted = accept_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="accept-lead-owned",
+                expected_revision=3,
+                review_path=review_path,
+                reason="accepted",
+            )
+
+            self.assertEqual(next(item for item in accepted["tasks"] if item["id"] == "WS-01")["status"], "ACCEPTED")
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
+            categories = {entry["path"]: entry["category"] for entry in task["ownershipReceipt"]["entries"]}
+            self.assertEqual(categories["plans/package/plan.md"], "lead-owned")
+            self.assertEqual(categories["runtime/package/evidence.json"], "lead-owned")
+            self.assertEqual(task["writes"], ["src"])
+
+    def test_managed_acceptance_keeps_blocking_policy_ahead_of_lead_owned(self) -> None:
+        for policy_key, expected_category in (("forbiddenWrites", "forbidden"), ("readOnly", "read-only")):
+            with self.subTest(policy_key=policy_key), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                state_path = _write_state(root, phase="RUNNING", max_attempts=2)
+                source_revision = _initialize_managed_git_state(root, state_path)
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+                state["writePolicy"] = {
+                    "forbiddenWrites": [],
+                    "readOnly": [],
+                    "leadOwned": [{"path": "controller", "reason": "controller authority"}],
+                }
+                state["writePolicy"][policy_key] = ["controller/protected"]
+                state_path.write_text(json.dumps(state), encoding="utf-8")
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id=f"start-{expected_category}",
+                    expected_revision=1,
+                    source_revision=source_revision,
+                    reason="launch",
+                )
+                (root / "src/example.py").write_text("value = 2\n", encoding="utf-8")
+                protected = root / "controller/protected/value.txt"
+                protected.parent.mkdir(parents=True, exist_ok=True)
+                protected.write_text("must block\n", encoding="utf-8")
+                result_path = "work/WS-01/attempt-1/task-result.json"
+                result = _fresh_result(root, state_path, attempt=1)
+                write_json_create(root / result_path, result)
+                commit_task_result(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id=f"result-{expected_category}",
+                    expected_revision=2,
+                    source_revision=source_revision,
+                    result_path=result_path,
+                    reason="done",
+                )
+                review_path = "work/WS-01/attempt-1/task-review.json"
+                write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+
+                with self.assertRaises(LifecycleError) as raised:
+                    accept_task(
+                        state_path,
+                        task_id="WS-01",
+                        operation_id=f"accept-{expected_category}",
+                        expected_revision=3,
+                        review_path=review_path,
+                        reason="accepted",
+                    )
+
+                self.assertEqual(raised.exception.code, "task-ownership-violation")
+                entries = raised.exception.details["ownership"]["entries"]
+                protected_entry = next(item for item in entries if item["path"] == "controller/protected/value.txt")
+                self.assertEqual(protected_entry["category"], expected_category)
 
     def test_managed_acceptance_rejects_unowned_repository_change(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

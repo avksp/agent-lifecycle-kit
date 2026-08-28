@@ -80,6 +80,11 @@ plan audit is the decision point before implementation.
 A raw task first becomes a reviewed specification and plan. Implementation uses
 a structured frozen run request:
 
+When the exact next transition is not known, use `workflow continue` in two
+steps: project without `--apply`, then repeat the same inputs with `--apply`,
+the projected revision and action digest. Direct transition commands remain
+available. See [Workflow continuation](../reference/workflow-continuation.md).
+
 ```
 agent-lifecycle start \
   --adapter <adapter-id> \

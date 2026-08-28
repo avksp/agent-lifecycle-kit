@@ -41,6 +41,8 @@ Stable schema ids:
 - `agent-goal-record.v1`
 - `agent-objective-snapshot.v1`
 - `agent-workflow-state.v4`
+- `agent-workflow-continuation-action.v1`
+- `agent-workflow-continuation-receipt.v1`
 - `agent-workflow-next-action.v1`
 - `agent-workflow-run-receipt.v1`
 - `agent-lifecycle-start-receipt.v1`

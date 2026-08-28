@@ -38,19 +38,21 @@ and open finding IDs; in v4 use `workflow task-review-apply` (with
 Before each `task-result`, put a current `workflow task-snapshot` claim in the
 result. Later code changes require a new claim and result.
 
-For adapter-backed work, prefer `agent-lifecycle start --adapter <id>` as the
-operator-facing entrypoint. It requires exactly one task source or `--resume
-<session-id>`. Raw `--file`/`--task-file` and `--text`/`--task-text` inputs in
-`auto`, `research`, `plan` or `review` mode create reviewed draft intake only;
-they do not claim lifecycle coverage or start implementation. Surface the
-receipt's review recommendation as advice and require operator or reviewed-plan
-confirmation before treating multi-review as mandatory evidence. Only explicit
-`--mode implement` may consume a fully bound frozen request and delegate to the
-existing managed run path. `--resume` accepts only stored ALK session identity;
-it must never guess a native host conversation id. Use `adapter task start`,
-`adapter run` and `adapter session resume` as lower-level atomic commands, and use
-`adapter session start` only to record an interactive `WAITING_FOR_TASK`
-session. Native host launching remains descriptor-driven and host-owned.
+When the next transition is unknown, use `workflow continue` to project it.
+Apply only with the same inputs, `--apply`, projected revision and action
+digest. It calls no model/host and replaces no validator or transition; waits
+remain host-owned.
+
+For adapter-backed work, prefer `agent-lifecycle start --adapter <id>`. It
+requires one task source or `--resume <session-id>`. Raw input in `auto`,
+`research`, `plan` or `review` creates draft intake only; it cannot claim
+lifecycle coverage or start implementation. Review recommendations are advice
+until confirmed by the operator or reviewed plan. Only `--mode implement` may
+consume a fully bound frozen request. `--resume` accepts stored ALK session
+identity, never a guessed host conversation id. Lower-level atomic commands are
+`adapter task start`, `adapter run` and `adapter session resume`;
+`adapter session start` only records `WAITING_FOR_TASK`. Native launch remains
+descriptor-driven and host-owned.
 
 The optional thread bridge is off by default; imported content is advisory and
 only matching qualification evidence can project support.
@@ -150,7 +152,8 @@ state, ownership and accepted evidence govern execution and acceptance.
 
 ## Lifecycle authority
 
-`workflow run` and workflow transitions are authoritative. Legacy runner
+Workflow state and the existing transitions invoked through `workflow continue`
+or direct commands are authoritative. Legacy runner
 artifacts are read-only journal evidence; convert them only through the
 explicit bounded `workflow migrate-runner-artifact` route. Their statuses never
 authorize attempts, acceptance, blockers or finalization. Require workflow

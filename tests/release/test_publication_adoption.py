@@ -40,6 +40,24 @@ class PublicationAdoptionTests(unittest.TestCase):
             for marker in ("actorRunId", "reviewId", "task-review-invalid", "task-review-self-certification"):
                 self.assertIn(marker, text)
 
+    def test_workflow_continuation_is_documented_as_one_guarded_transition(self) -> None:
+        english = (ROOT / "docs/reference/workflow-continuation.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/workflow-continuation.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills/agent-workflow-orchestrator/SKILL.md").read_text(encoding="utf-8")
+
+        for text in (english, russian):
+            for marker in (
+                "workflow continue",
+                "--projected-state-revision",
+                "--projected-action-digest",
+            ):
+                self.assertIn(marker, text)
+        self.assertIn("exactly one revision", english)
+        self.assertIn("увеличивает ревизию состояния ровно на", russian)
+        self.assertIn("workflow continue", skill)
+        self.assertIn("projected revision and action", skill)
+        self.assertIn("replaces no validator or transition", skill)
+
     def test_external_tool_jobs_are_documented_as_optional_adapter_work(self) -> None:
         english = (ROOT / "docs/reference/external-tool-jobs.md").read_text(encoding="utf-8")
         russian = (ROOT / "docs/ru/reference/external-tool-jobs.md").read_text(encoding="utf-8")
@@ -139,6 +157,7 @@ class PublicationAdoptionTests(unittest.TestCase):
                 "10,000" if "# Evidence independence" in text else "10 000",
             ):
                 self.assertIn(marker, text)
+
     def test_missing_project_comparison_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -182,8 +182,17 @@ def validate_attempt_history(state_path: Path, state: dict[str, Any], task: dict
     if len(history) > max_attempts - 1:
         raise LifecycleError("task-attempt-history-invalid", "task attemptHistory exceeds the attempt budget")
     root = package_root(state_path, state)
-    previous_attempt = 0
     current_attempt = _task_attempt(task)
+    history_start = task.get("attemptHistoryStart", 1)
+    if (
+        not isinstance(history_start, int)
+        or isinstance(history_start, bool)
+        or history_start < 1
+        or history_start > max_attempts
+        or ("attemptHistoryStart" in task and history_start > current_attempt)
+    ):
+        raise LifecycleError("task-attempt-history-invalid", "task attempt history start is invalid")
+    previous_attempt = history_start - 1
     for entry in history:
         if not isinstance(entry, dict) or entry.get("schemaVersion") != "agent-task-attempt-history-entry.v1":
             raise LifecycleError("task-attempt-history-invalid", "task attempt history entry is invalid")

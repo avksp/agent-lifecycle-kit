@@ -2,8 +2,11 @@
 
 ## Canonical execution route
 
-For implementation work, use `workflow run` as the single next-action query and
-the `workflow task-*` commands as the state transition surface. The legacy
+For implementation work, use `workflow continue` when the exact next transition
+is not already known: project first, then explicitly apply the same action with
+its revision and digest guards. Direct `workflow task-*` commands remain the
+state transition surface for callers that already know the route. See
+[Workflow continuation](../reference/workflow-continuation.md). The legacy
 `runner` commands are compatibility journals only; they are deprecated and
 cannot authorize, accept or finalize work. A runner receipt must be treated as
 evidence to attach to workflow state, never as a replacement for a workflow

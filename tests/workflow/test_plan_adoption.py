@@ -165,15 +165,16 @@ class WorkflowPlanAdoptionTests(unittest.TestCase):
             state_path = _write_state(root, phase="BLOCKED", blocker={"code": "plan-drift", "reason": "x", "resumePhase": "RUNNING"})
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
-            state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["result"] = {"path": "work/WS-01/attempt-1/task-result.json", "sha256": "2" * 64, "bytes": 10}
-            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["attempt"] = 3
+            state["tasks"][0]["attemptHistoryStart"] = 3
+            state["tasks"][0]["result"] = {"path": "work/WS-01/attempt-3/task-result.json", "sha256": "2" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-3/task-review.json", "sha256": "3" * 64, "bytes": 10}
             state["tasks"][0]["implementationAuditReport"] = {
-                "path": "work/WS-01/attempt-1/implementation-audit.json",
+                "path": "work/WS-01/attempt-3/implementation-audit.json",
                 "sha256": "4" * 64,
                 "bytes": 10,
                 "taskId": "WS-01",
-                "attempt": 1,
+                "attempt": 3,
                 "verdict": "ACCEPTED",
                 "reportDigest": "5" * 64,
             }
@@ -197,6 +198,7 @@ class WorkflowPlanAdoptionTests(unittest.TestCase):
             stored = json.loads(state_path.read_text(encoding="utf-8"))
             stored_task = next(item for item in stored["tasks"] if item["id"] == "WS-01")
             self.assertEqual(stored_task["adoptedFromPlanRevision"], 1)
+            self.assertEqual(stored_task["attemptHistoryStart"], 3)
             receipt = stored_task["planCompatibilityReceipt"]
             self.assertEqual(receipt["schemaVersion"], "agent-task-plan-compatibility-receipt.v1")
             self.assertEqual(receipt["previousPlan"]["planRevision"], 1)

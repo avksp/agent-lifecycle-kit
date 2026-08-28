@@ -12,6 +12,10 @@
 - `agent-goal-record.v1`: запись цели.
 - `agent-objective-snapshot.v1`: компактный снимок цели.
 - `agent-workflow-state.v4`: текущее состояние workflow и его полномочия.
+- `agent-workflow-continuation-action.v1`: вычисленный существующий переход с
+  точными guard-значениями для явного применения.
+- `agent-workflow-continuation-receipt.v1`: результат read-only проекции или
+  применения одного перехода без запуска модели или внешнего инструмента.
 - `agent-workflow-next-action.v1`: следующий шаг workflow для host без запуска
   модели.
 - `agent-workflow-run-receipt.v1`: подтверждение управляемого шага workflow.

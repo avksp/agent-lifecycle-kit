@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.7.0
+python -m pip install agent-lifecycle-kit==2.8.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -316,6 +316,10 @@ agent-lifecycle project preset render \
   показать прогресс в stderr, или `--progress-hook receipt --progress-receipt
   <path>`, чтобы сохранить `agent-progress-hook-receipt.v1` без изменения JSON
   в stdout.
+- `agent-lifecycle workflow continue`: по умолчанию без изменения состояния
+  вычисляет следующий существующий переход workflow. Для применения повторите
+  те же входы с `--apply`, вычисленной ревизией состояния и дайджестом действия.
+  Подробности: [продолжение workflow](workflow-continuation.md).
 - `agent-lifecycle workflow init --state <путь> --run-id <id> --package-id
   <id>`: создаёт один приватный несвязанный файл
   `agent-workflow-state.v4` и не заменяет существующее состояние.

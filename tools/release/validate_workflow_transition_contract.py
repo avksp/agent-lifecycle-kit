@@ -9,8 +9,8 @@ from typing import Any
 
 from agent_lifecycle.contracts.lifecycle_action_catalog import (
     ACTION_TYPES,
-    REMOVED_RUNNER_COMMANDS,
     OPERATION_ACTION_TYPES,
+    REMOVED_RUNNER_COMMANDS,
     WORKFLOW_PHASE_ACTION_TYPES,
     validate_action_catalog,
 )
@@ -25,6 +25,7 @@ CONSUMERS = {
     "src/agent_lifecycle/workflow/query.py": "transition_contract",
     "src/agent_lifecycle/workflow/next_action.py": "transition_contract",
     "src/agent_lifecycle/workflow/run.py": "transition_contract",
+    "src/agent_lifecycle/workflow/continuation.py": "transition_contract",
     "src/agent_lifecycle/host_protocol/lifecycle_gate.py": "lifecycle_action_catalog",
     "src/agent_lifecycle/adapter_sessions/workflow_bridge.py": "transition_contract",
 }

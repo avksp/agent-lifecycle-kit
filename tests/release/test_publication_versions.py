@@ -24,7 +24,10 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertEqual(manifest["schemaVersion"], "agent-publication-manifest.v1")
         self.assertFalse(manifest["productionPromotionClaimed"])
         field_forms = {entry["fieldForm"] for entry in manifest["entries"]}
-        self.assertEqual(field_forms, {"version", "source.ref", "package.pin", "changelog.version"})
+        self.assertEqual(
+            field_forms,
+            {"version", "source.ref", "package.pin", "changelog.version", "docs.version"},
+        )
         self.assertFalse(manifest["lastChannelPolicy"]["pluginVersionMayBeFloating"])
         self.assertEqual(manifest["lastChannelPolicy"]["allowedFloatingRef"], "source-ref-only")
 
@@ -174,6 +177,24 @@ class PublicationVersionTests(unittest.TestCase):
             self.assertEqual(result["status"], "FAIL")
             self.assertIn("changelog-release-version", {item["entryId"] for item in result["blockers"]})
 
+    def test_stale_russian_docs_prose_version_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
+            path = root / "docs/ru/README.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    f"**Версия:** {TARGET_VERSION}",
+                    "**Версия:** 1.29.1",
+                ),
+                encoding="utf-8",
+            )
+
+            result = validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)
+
+            self.assertEqual(result["status"], "FAIL")
+            self.assertIn("docs-index-ru-prose-version", {item["entryId"] for item in result["blockers"]})
+
     def test_publication_manifest_tracks_every_exact_package_pin(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
         pin_paths = {entry["path"] for entry in manifest["entries"] if entry["fieldForm"] == "package.pin"}
@@ -289,6 +310,11 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
         target = root / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(f"python -m pip install agent-lifecycle-kit=={version}\n", encoding="utf-8")
+    russian_index = root / "docs/ru/README.md"
+    russian_index.write_text(
+        russian_index.read_text(encoding="utf-8") + f"**Версия:** {version}\n",
+        encoding="utf-8",
+    )
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:
