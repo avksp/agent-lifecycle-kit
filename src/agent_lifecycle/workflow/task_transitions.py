@@ -432,11 +432,7 @@ def _validate_implementation_audit(
     return validate_task_implementation_audit_artifact(state_path, state, task, implementation_audit_path)
 
 
-def _mutable_state(
-    state_path: Path,
-    operation_id: str,
-    expected_revision: int,
-) -> dict[str, Any]:
+def _mutable_state(state_path: Path, operation_id: str, expected_revision: int) -> dict[str, Any]:
     return load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
 
 
@@ -466,12 +462,7 @@ def _require_parallel_capacity(state: dict[str, Any]) -> None:
         raise LifecycleError("parallelism-budget-exhausted", "maxParallelTasks budget reached")
 
 
-def _mark_task_running(
-    state: dict[str, Any],
-    task: dict[str, Any],
-    attempt: int,
-    reason: str,
-) -> None:
+def _mark_task_running(state: dict[str, Any], task: dict[str, Any], attempt: int, reason: str) -> None:
     task["attempt"] = attempt
     task["status"] = "RUNNING"
     _clear_active_attempt_references(task)
@@ -595,6 +586,11 @@ def _validate_task_write_scope(
         for path in policy.get("readOnly", [])
         if isinstance(path, str)
     ]
+    lead_owned_roots = [
+        normalize_authority_path(item["path"], label="lead-owned path")
+        for item in policy.get("leadOwned", [])
+        if isinstance(item, dict) and isinstance(item.get("path"), str)
+    ]
     entries: list[dict[str, Any]] = []
     for raw_path in sorted(set(changed_files)):
         path = normalize_authority_path(raw_path, label="changed file path")
@@ -602,6 +598,7 @@ def _validate_task_write_scope(
         read_only = [root for root in read_only_roots if is_under_authority_path(path, root)]
         owned = [root for root in writes if is_under_authority_path(path, root)]
         plan_owned = [root for root in plan_writes if is_under_authority_path(path, root)]
+        lead_owned = [root for root in lead_owned_roots if is_under_authority_path(path, root)]
         if forbidden:
             entries.append({"path": path, "category": "forbidden", "matched": forbidden})
         elif read_only:
@@ -610,6 +607,8 @@ def _validate_task_write_scope(
             entries.append({"path": path, "category": "task-owned", "matched": owned})
         elif plan_owned:
             entries.append({"path": path, "category": "plan-owned", "matched": plan_owned})
+        elif lead_owned:
+            entries.append({"path": path, "category": "lead-owned", "matched": lead_owned})
         else:
             entries.append({"path": path, "category": "unowned"})
     blockers = [entry for entry in entries if entry["category"] in {"forbidden", "read-only", "unowned"}]
