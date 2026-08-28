@@ -1,0 +1,65 @@
+{
+  "eventLogGaps": [
+    {"reason": "event record is absent from the accepted local log", "stateRevision": 10, "status": "UNAVAILABLE"}
+  ],
+  "eventTrace": [
+    {"eventType": "plan-adopted", "stateRevision": 2},
+    {"eventType": "execution-authorized", "stateRevision": 3},
+    {"eventType": "execution-started", "stateRevision": 4},
+    {"attempt": 1, "eventType": "task-started", "stateRevision": 5, "taskId": "T1"},
+    {"attempt": 1, "eventType": "task-result-committed", "stateRevision": 6, "taskId": "T1"},
+    {"attempt": 1, "eventType": "task-rework-requested", "stateRevision": 7, "taskId": "T1"},
+    {"attempt": 2, "eventType": "task-started", "stateRevision": 8, "taskId": "T1"},
+    {"attempt": 2, "eventType": "task-result-committed", "stateRevision": 9, "taskId": "T1"},
+    {"attempt": 1, "eventType": "task-started", "stateRevision": 11, "taskId": "T2"},
+    {"attempt": 1, "eventType": "task-result-committed", "stateRevision": 12, "taskId": "T2"},
+    {"attempt": 1, "eventType": "task-rework-requested", "stateRevision": 13, "taskId": "T2"},
+    {"attempt": 2, "eventType": "task-started", "stateRevision": 14, "taskId": "T2"},
+    {"attempt": 2, "eventType": "task-result-committed", "stateRevision": 15, "taskId": "T2"},
+    {"attempt": 2, "eventType": "task-accepted", "stateRevision": 16, "taskId": "T2"},
+    {"attempt": 1, "eventType": "task-started", "stateRevision": 17, "taskId": "T3"},
+    {"attempt": 1, "eventType": "task-result-committed", "stateRevision": 18, "taskId": "T3"},
+    {"attempt": 1, "eventType": "task-accepted", "stateRevision": 19, "taskId": "T3"},
+    {"eventType": "final-audit-outcome-applied", "stateRevision": 20},
+    {"eventType": "plan-adopted", "stateRevision": 21},
+    {"eventType": "execution-started", "stateRevision": 22},
+    {"attempt": 1, "eventType": "task-started", "stateRevision": 23, "taskId": "T4"},
+    {"attempt": 1, "eventType": "task-result-committed", "stateRevision": 24, "taskId": "T4"},
+    {"attempt": 1, "eventType": "task-accepted", "stateRevision": 25, "taskId": "T4"},
+    {"attempt": 3, "eventType": "task-started", "stateRevision": 26, "taskId": "T2"},
+    {"attempt": 3, "eventType": "task-result-committed", "stateRevision": 27, "taskId": "T2"},
+    {"attempt": 3, "eventType": "task-accepted", "stateRevision": 28, "taskId": "T2"},
+    {"eventType": "final-audit-outcome-applied", "stateRevision": 29},
+    {"eventType": "run-finalized", "stateRevision": 30}
+  ],
+  "finalState": {
+    "phase": "COMPLETE",
+    "stateRevision": 30,
+    "tasks": [
+      {"archivedAttempts": [1], "attempt": 2, "status": "ACCEPTED", "taskId": "T1"},
+      {"archivedAttempts": [], "attempt": 1, "status": "ACCEPTED", "taskId": "T4"},
+      {"archivedAttempts": [], "attempt": 3, "status": "ACCEPTED", "taskId": "T2"},
+      {"archivedAttempts": [], "attempt": 1, "status": "ACCEPTED", "taskId": "T3"}
+    ]
+  },
+  "interface": {
+    "continuation": "projection-plus-single-apply",
+    "legacy": "command-specific",
+    "maxTransitionsPerApply": 1,
+    "scope": "post-adoption"
+  },
+  "schemaVersion": "agent-workflow-continuation-baseline-fixture.v1",
+  "source": {
+    "eventCount": 28,
+    "eventTypeCount": 9,
+    "kind": "accepted-local-workflow",
+    "release": "2.7"
+  },
+  "telemetry": {
+    "controllerElapsed": "UNAVAILABLE",
+    "controllerTokens": "UNAVAILABLE",
+    "implementationElapsed": "UNAVAILABLE",
+    "implementationTokens": "UNAVAILABLE",
+    "reductionPercentage": "UNAVAILABLE"
+  }
+}

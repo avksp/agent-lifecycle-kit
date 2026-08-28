@@ -4,6 +4,22 @@
 
 - No changes yet.
 
+## 2.8.0 - 2026-08-28
+
+- Added projection-first `workflow continue` receipts that derive the next
+  existing route without mutation and report exact missing external inputs.
+- Added explicit one-transition apply guarded by the projected state revision
+  and action digest while retaining every existing authorization, review,
+  audit, freshness and finalization validator.
+- Corrected managed task acceptance so adopted lead-owned plan and workflow
+  artifacts are recognized without expanding worker write authority or
+  weakening forbidden, read-only and unowned blockers.
+- Added portable Release 2.6/2.7 workflow-shape baselines that compare direct
+  and continuation interfaces while keeping unavailable time and token
+  telemetry explicit and making no unsupported efficiency percentage claim.
+- Added bilingual continuation guidance, publication adoption checks and a
+  version gate for the standalone Russian documentation version line.
+
 ## 2.7.0 - 2026-08-28
 
 - Added bounded Review Mesh rounds with fail-closed escalation, validated

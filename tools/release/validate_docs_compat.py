@@ -39,6 +39,30 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/workflow-continuation.md",
+        (
+            "agent-lifecycle workflow continue",
+            "Projection is the default and is read-only",
+            "--projected-state-revision",
+            "--projected-action-digest",
+            "stateWritten: false",
+            "exactly one revision",
+            "Neither outcome starts a model or host process",
+        ),
+    ),
+    (
+        "docs/ru/reference/workflow-continuation.md",
+        (
+            "agent-lifecycle workflow continue",
+            "По умолчанию команда работает только для чтения",
+            "--projected-state-revision",
+            "--projected-action-digest",
+            "stateWritten: false",
+            "увеличивает ревизию состояния ровно на",
+            "инструмент не запускаются",
+        ),
+    ),
+    (
         "docs/reference/security-analysis-profile.md",
         (
             "agent-lifecycle quality security-profile",
