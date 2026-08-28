@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.redaction import (
@@ -18,6 +18,7 @@ from agent_lifecycle.review_mesh.contracts import (
     require_review_mesh_result_pass,
     validate_review_mesh_result,
 )
+
 
 def import_review_mesh_result(
     *,
@@ -46,6 +47,10 @@ def import_review_mesh_result(
     )
     body = {
         **{key: value for key, value in result.items() if key != "resultDigest"},
+        "roundParticipation": {
+            "eligible": False,
+            "reasonCode": "review-verdict-and-terminal-job-required",
+        },
         "redaction": redaction,
         "import": {
             "schemaVersion": str(reviewer_output.get("schemaVersion") or "reviewer-output.unknown"),
@@ -69,7 +74,9 @@ def build_thread_context_review_input(imported_context: dict[str, Any]) -> dict[
             "thread context cannot be used for review",
             {"validation": validation},
         )
-    source = imported_context.get("source") if isinstance(imported_context.get("source"), dict) else {}
+    source: dict[str, Any] = (
+        cast(dict[str, Any], imported_context.get("source")) if isinstance(imported_context.get("source"), dict) else {}
+    )
     body = {
         "schemaVersion": "agent-review-mesh-thread-context-input.v1",
         "sourceRole": "optional-thread-context",
@@ -90,38 +97,49 @@ def project_review_result_for_optimization(result: dict[str, Any]) -> dict[str, 
 
     if not isinstance(result, dict):
         raise LifecycleError("review-mesh-result-projection-invalid", "Review Mesh result must be an object")
-    findings = result.get("findings") if isinstance(result.get("findings"), list) else []
+    findings: list[Any] = cast(list[Any], result.get("findings")) if isinstance(result.get("findings"), list) else []
     severity_counts: dict[str, int] = {}
     accepted = 0
     rejected = 0
     for finding in findings:
         if not isinstance(finding, dict):
             continue
-        severity = finding.get("severity") if isinstance(finding.get("severity"), str) else "INFO"
+        severity: str = cast(str, finding.get("severity")) if isinstance(finding.get("severity"), str) else "INFO"
         severity_counts[severity] = severity_counts.get(severity, 0) + 1
         status = str(finding.get("status", "open")).lower()
         if status in {"accepted", "fixed", "closed"}:
             accepted += 1
         if status in {"rejected", "dismissed"}:
             rejected += 1
-    reviewer = result.get("reviewer") if isinstance(result.get("reviewer"), dict) else {}
-    independence = result.get("independence") if isinstance(result.get("independence"), dict) else {}
-    subject = result.get("subject") if isinstance(result.get("subject"), dict) else {}
+    reviewer: dict[str, Any] = (
+        cast(dict[str, Any], result.get("reviewer")) if isinstance(result.get("reviewer"), dict) else {}
+    )
+    independence: dict[str, Any] = (
+        cast(dict[str, Any], result.get("independence")) if isinstance(result.get("independence"), dict) else {}
+    )
+    subject: dict[str, Any] = (
+        cast(dict[str, Any], result.get("subject")) if isinstance(result.get("subject"), dict) else {}
+    )
     projection = {
         "status": result.get("status") if result.get("status") in {"PASS", "FAIL", "SKIPPED"} else "UNKNOWN",
         "findingCount": len(findings),
         "severityCounts": dict(sorted(severity_counts.items())),
         "acceptedCount": accepted,
         "rejectedCount": rejected,
-        "disagreementCount": int(result.get("disagreementCount", 0)) if isinstance(result.get("disagreementCount"), int) else 0,
-        "independenceStatus": independence.get("status") if independence.get("status") in {"INDEPENDENT", "NOT_REQUIRED", "NOT_PROVEN"} else "MISSING",
+        "disagreementCount": int(result.get("disagreementCount", 0))
+        if isinstance(result.get("disagreementCount"), int)
+        else 0,
+        "independenceStatus": independence.get("status")
+        if independence.get("status") in {"INDEPENDENT", "NOT_REQUIRED", "NOT_PROVEN"}
+        else "MISSING",
         "reviewerRole": reviewer.get("role") if isinstance(reviewer.get("role"), str) else "unknown",
         "modelRouteClass": reviewer.get("modelClass") if isinstance(reviewer.get("modelClass"), str) else "unknown",
         "phase": result.get("phase") if isinstance(result.get("phase"), str) else subject.get("phase", "unknown"),
     }
     for field in ("hostIdentityHash", "modelIdentityHash"):
-        if isinstance(reviewer.get(field), str) and len(reviewer[field]) == 64:
-            projection[field] = reviewer[field]
+        identity_hash = reviewer.get(field)
+        if isinstance(identity_hash, str) and len(identity_hash) == 64:
+            projection[field] = identity_hash
     return projection
 
 
@@ -133,7 +151,9 @@ def _sanitize_payload(value: Any, *, allow_local_evidence_refs: bool) -> tuple[A
         "status": status,
         "secretLikeMarkersRedacted": stats["secretLikeMarkersRedacted"],
         "localPathsRedacted": stats["localPathsRedacted"],
-        "localPathPolicy": "explicit-plan-owned-reference" if allow_local_evidence_refs else "reject-local-absolute-paths",
+        "localPathPolicy": "explicit-plan-owned-reference"
+        if allow_local_evidence_refs
+        else "reject-local-absolute-paths",
     }
 
 
@@ -142,16 +162,28 @@ def _sanitize_value(value: Any, *, stats: dict[str, int], allow_local_evidence_r
         text = value
         path_present = contains_local_absolute_path(text)
         if path_present and not allow_local_evidence_refs:
-            raise LifecycleError("review-mesh-local-path-leakage", "reviewer output contains a local absolute path", {"path": path})
+            raise LifecycleError(
+                "review-mesh-local-path-leakage", "reviewer output contains a local absolute path", {"path": path}
+            )
         redacted, _changed, counts = redact_text_with_stats(text)
         text = redacted.replace(LOCAL_PATH_REDACTION, "[LOCAL_PATH]").replace("<redacted>", "[REDACTED]")
         stats["localPathsRedacted"] += counts["localPathsRedacted"]
         stats["secretLikeMarkersRedacted"] += counts["secretLikeMarkersRedacted"]
         return text
     if isinstance(value, dict):
-        return {key: _sanitize_value(item, stats=stats, allow_local_evidence_refs=allow_local_evidence_refs, path=f"{path}.{key}") for key, item in value.items()}
+        return {
+            key: _sanitize_value(
+                item, stats=stats, allow_local_evidence_refs=allow_local_evidence_refs, path=f"{path}.{key}"
+            )
+            for key, item in value.items()
+        }
     if isinstance(value, list):
-        return [_sanitize_value(item, stats=stats, allow_local_evidence_refs=allow_local_evidence_refs, path=f"{path}[{index}]") for index, item in enumerate(value)]
+        return [
+            _sanitize_value(
+                item, stats=stats, allow_local_evidence_refs=allow_local_evidence_refs, path=f"{path}[{index}]"
+            )
+            for index, item in enumerate(value)
+        ]
     return value
 
 

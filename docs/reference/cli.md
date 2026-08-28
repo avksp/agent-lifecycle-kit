@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.6.0
+  python -m pip install agent-lifecycle-kit==2.7.0
 ```
 
 ## Task evidence identity
@@ -436,6 +436,10 @@ cannot accept a workflow task or promote an adapter.
   calculate quality, time, token and resource statistics, evaluate holdout
   tasks and produce an advisory profile recommendation. Add `--terminal` for
   a compact operator view.
+- `agent-lifecycle metrics audit-efficiency --input <path> --comparison <path> --out <path>`:
+  validate explicit lineage-bound accounting inputs and write advisory
+  quality-preserving efficiency metrics. Repeat `--comparison`; one sample
+  returns `NO_COMPARISON`, and `UNAVAILABLE` never becomes zero.
 - `agent-lifecycle metrics audit-proposal --report <path> --out <path>`:
   record an explicit approval decision for a recommendation. Use
   `--approved` only after reviewing the report; it never edits a frozen plan.
@@ -445,6 +449,9 @@ cannot accept a workflow task or promote an adapter.
 
 For the complete evidence, holdout and approval flow, see [Evidence-based audit
 optimization](audit-optimization.md).
+For provenance, sample adequacy and measured audit-use semantics, see
+[evidence independence](evidence-independence.md) and
+[review efficiency](review-efficiency.md).
 - `agent-lifecycle policy tune`: build a read-only policy proposal or write an
   approved policy artifact with `--apply --output`.
 - `agent-lifecycle policy adaptive-decision/adaptive-check`: build and validate

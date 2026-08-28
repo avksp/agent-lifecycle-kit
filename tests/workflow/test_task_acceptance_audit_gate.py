@@ -8,10 +8,36 @@ from pathlib import Path
 from agent_lifecycle.audit import build_implementation_audit_report
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_json_create
 from agent_lifecycle.workflow import accept_task, commit_task_result, rework_task, start_task
+from agent_lifecycle.workflow.reviews import validate_task_review
 from agent_lifecycle.workflow.run import run_workflow_step
 
 
 class TaskAcceptanceImplementationAuditGateTests(unittest.TestCase):
+    def test_task_review_rejects_every_open_medium_plus_severity(self) -> None:
+        state = {"runId": "run", "planDigest": "a" * 64}
+        task = {
+            "id": "WS-01",
+            "attempt": 1,
+            "result": {"sha256": "b" * 64},
+            "packet": {"sha256": "c" * 64},
+        }
+        for severity in ("BLOCKER", "CRITICAL", "HIGH", "MEDIUM"):
+            review = {
+                "schemaVersion": "agent-task-review.v2",
+                "runId": "run",
+                "taskId": "WS-01",
+                "attempt": 1,
+                "planDigest": "a" * 64,
+                "resultHash": "b" * 64,
+                "taskPacketHash": "c" * 64,
+                "reviewer": {"independent": True},
+                "verdict": "ACCEPTED",
+                "findings": [{"id": severity, "status": "open", "severity": severity}],
+            }
+            with self.subTest(severity=severity), self.assertRaises(LifecycleError) as raised:
+                validate_task_review(state, task, review)
+            self.assertEqual(raised.exception.code, "task-review-open-findings")
+
     def test_task_acceptance_requires_accepted_implementation_audit_when_declared(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

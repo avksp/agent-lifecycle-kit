@@ -9,6 +9,7 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.independent_evidence_schemas import validate_independence_requirement
 from agent_lifecycle.contracts.ownership_paths import authority_paths_overlap, normalize_authority_path
+from agent_lifecycle.contracts.statistical_evidence_schemas import validate_statistical_evidence_requirement
 from agent_lifecycle.planning.traceability import validate_plan_traceability
 
 PROFILE_SCHEMA = "agent-plan-completeness-profile.v1"
@@ -201,23 +202,42 @@ def _check_acceptance(manifest: dict[str, Any], tier: str, blockers: list[dict[s
         if not isinstance(criterion.get("id"), str) or not criterion["id"]:
             blockers.append(_blocker("missing-acceptance-id", "acceptance criterion id is required", {"tier": tier}))
         independence = criterion.get("independence")
-        if independence is None:
+        if independence is not None:
+            validation = validate_independence_requirement(independence)
+            if validation["status"] != "PASS":
+                blockers.append(
+                    _blocker(
+                        "invalid-independence-requirement",
+                        "criterion independence requirement is invalid",
+                        {"criterionId": criterion.get("id"), "validation": validation},
+                    )
+                )
+            elif independence.get("required") is True and not _strings(criterion.get("independentEvidenceIds")):
+                blockers.append(
+                    _blocker(
+                        "missing-independent-evidence-route",
+                        "a criterion requiring independence must route independent evidence ids",
+                        {"criterionId": criterion.get("id")},
+                    )
+                )
+        statistical = criterion.get("statisticalEvidence")
+        if statistical is None:
             continue
-        validation = validate_independence_requirement(independence)
-        if validation["status"] != "PASS":
+        statistical_validation = validate_statistical_evidence_requirement(statistical)
+        if statistical_validation["status"] != "PASS":
             blockers.append(
                 _blocker(
-                    "invalid-independence-requirement",
-                    "criterion independence requirement is invalid",
-                    {"criterionId": criterion.get("id"), "validation": validation},
+                    "invalid-statistical-evidence-requirement",
+                    "criterion statistical evidence requirement is invalid",
+                    {"criterionId": criterion.get("id"), "validation": statistical_validation},
                 )
             )
             continue
-        if independence.get("required") is True and not _strings(criterion.get("independentEvidenceIds")):
+        if statistical.get("required") is True and not _strings(criterion.get("statisticalEvidenceIds")):
             blockers.append(
                 _blocker(
-                    "missing-independent-evidence-route",
-                    "a criterion requiring independence must route independent evidence ids",
+                    "missing-statistical-evidence-route",
+                    "a criterion requiring statistical evidence must route statistical evidence ids",
                     {"criterionId": criterion.get("id")},
                 )
             )
@@ -238,6 +258,7 @@ def _check_evidence_route(manifest: dict[str, Any], _tier: str, blockers: list[d
             )
         evidence_ids.update(ids)
         evidence_ids.update(_strings(criterion.get("independentEvidenceIds")))
+        evidence_ids.update(_strings(criterion.get("statisticalEvidenceIds")))
     routed = set()
     for workstream in _workstreams(manifest):
         routed.update(_strings(workstream.get("evidenceIds")))

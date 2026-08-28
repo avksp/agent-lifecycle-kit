@@ -8,6 +8,11 @@ from typing import Any
 from agent_lifecycle.audit.ownership import build_ownership_report, report_has_category
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.review_verdict import (
+    BLOCKING_REVIEW_SEVERITIES,
+    REVIEW_SEVERITY_RANK,
+    open_blocking_finding_ids,
+)
 from agent_lifecycle.planning.task_compatibility import (
     validate_task_plan_compatibility_receipt,
 )
@@ -22,7 +27,6 @@ from agent_lifecycle.workflow.sandbox_policy import validate_task_sandbox_eviden
 from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.workflow.state import load_state
 
-SEVERITY_RANK = {"BLOCKER": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
 IMPLEMENTATION_AUDIT_SCHEMA = "agent-implementation-audit-report.v1"
 FINAL_IMPLEMENTATION_AUDIT_SCHEMA = "agent-final-implementation-audit.v1"
 
@@ -609,14 +613,7 @@ def _has_blockers(payload: dict[str, Any]) -> bool:
 
 def _has_open_blocking_findings(payload: dict[str, Any]) -> bool:
     findings = payload.get("findings")
-    if not isinstance(findings, list):
-        return False
-    return any(
-        isinstance(item, dict)
-        and item.get("status") == "open"
-        and item.get("severity") in {"BLOCKER", "HIGH", "MEDIUM"}
-        for item in findings
-    )
+    return isinstance(findings, list) and bool(open_blocking_finding_ids(findings))
 
 
 def _add_finding(
@@ -639,12 +636,15 @@ def _add_finding(
         "context": context or {},
     }
     findings.append(finding)
-    if severity in {"BLOCKER", "HIGH", "MEDIUM"}:
+    if severity in BLOCKING_REVIEW_SEVERITIES:
         blockers.append({"code": code, "severity": severity, "message": message, "context": context or {}})
 
 
 def _sorted_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return sorted(findings, key=lambda item: (SEVERITY_RANK.get(str(item.get("severity")), 99), str(item.get("code"))))
+    return sorted(
+        findings,
+        key=lambda item: (REVIEW_SEVERITY_RANK.get(str(item.get("severity")), 99), str(item.get("code"))),
+    )
 
 
 def _verdict(findings: list[dict[str, Any]]) -> str:
@@ -652,7 +652,7 @@ def _verdict(findings: list[dict[str, Any]]) -> str:
         return "BLOCKED"
     if any(item.get("category") == "ownership" for item in findings):
         return "CONTRACT_CHANGE"
-    if any(item.get("severity") in {"HIGH", "MEDIUM"} for item in findings):
+    if any(item.get("severity") in BLOCKING_REVIEW_SEVERITIES for item in findings):
         return "REWORK"
     return "ACCEPTED"
 

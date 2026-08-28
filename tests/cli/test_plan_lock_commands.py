@@ -103,6 +103,8 @@ class PlanLockCommandTests(unittest.TestCase):
 
     def test_lock_create_rejects_case_and_whitespace_normalized_open_findings(self) -> None:
         findings = [
+            {"id": "F-0", "severity": "BLOCKER", "status": "open"},
+            {"id": "F-C", "severity": "CRITICAL", "status": "open"},
             {"id": "F-1", "severity": "Medium", "status": "Open"},
             {"id": "F-2", "severity": " medium ", "status": " open "},
             {"id": "F-3", "severity": "\tHIGH\n", "status": "OPEN"},

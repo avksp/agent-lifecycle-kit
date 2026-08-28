@@ -60,6 +60,19 @@ class CompletionGateTests(unittest.TestCase):
         self.assertEqual(failing["decision"], "CONTINUE")
         self.assertIn("validation-failed", failing["reasonCodes"])
 
+    def test_open_medium_plus_final_audit_findings_prevent_stop(self) -> None:
+        for severity in ("BLOCKER", "CRITICAL", "HIGH", "MEDIUM"):
+            audit = _final_audit()
+            audit["findings"] = [{"id": severity, "status": "open", "severity": severity}]
+            receipt = build_completion_gate_receipt(
+                state=_state(task_status="ACCEPTED"),
+                final_audit=audit,
+                validation_results=[{"id": "VAL-FULL", "status": "PASS"}],
+                required_validation_ids=["VAL-FULL"],
+            )
+            with self.subTest(severity=severity):
+                self.assertNotEqual(receipt["decision"], "STOP")
+
     def test_escalate_for_open_blocker_risk_or_blocking_follow_up(self) -> None:
         state = _state(task_status="ACCEPTED")
         state["blocker"] = {"code": "external-authority", "reason": "needs operator"}

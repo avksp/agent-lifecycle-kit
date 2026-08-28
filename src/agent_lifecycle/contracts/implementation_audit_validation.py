@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
 
 IMPLEMENTATION_AUDIT_SCHEMA = "agent-implementation-audit-report.v1"
 FINAL_IMPLEMENTATION_AUDIT_SCHEMA = "agent-final-implementation-audit.v1"
@@ -269,12 +270,7 @@ def _has_blockers(payload: dict[str, Any]) -> bool:
 
 def _has_open_blocking_findings(payload: dict[str, Any]) -> bool:
     findings = payload.get("findings")
-    return isinstance(findings, list) and any(
-        isinstance(item, dict)
-        and item.get("status") == "open"
-        and item.get("severity") in {"BLOCKER", "HIGH", "MEDIUM"}
-        for item in findings
-    )
+    return isinstance(findings, list) and bool(open_blocking_finding_ids(findings))
 
 
 __all__ = [

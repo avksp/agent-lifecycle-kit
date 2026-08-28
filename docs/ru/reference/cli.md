@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.6.0
+python -m pip install agent-lifecycle-kit==2.7.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -450,6 +450,11 @@ agent-lifecycle project preset render \
   рассчитывает качество, время, токены и ресурсы, проверяет кандидатов на
   эталонных задачах и выдаёт рекомендацию. Флаг `--terminal` показывает
   краткий отчёт для оператора.
+- `agent-lifecycle metrics audit-efficiency --input <путь> --comparison <путь> --out <путь>`:
+  проверяет явные привязанные к lineage входы учёта и создаёт рекомендательные
+  метрики эффективности без снижения quality floor. `--comparison` можно
+  повторять; один пример возвращает `NO_COMPARISON`, а `UNAVAILABLE` не
+  превращается в ноль.
 - `agent-lifecycle metrics audit-proposal --report <путь> --out <путь>`:
   фиксирует решение оператора по рекомендации. Флаг `--approved` следует
   использовать только после просмотра отчёта; замороженный план не меняется.
@@ -460,6 +465,9 @@ agent-lifecycle project preset render \
 Полный порядок сбора подтверждений, проверки на эталонных задачах и
 подтверждения решения описан в разделе [оптимизация проверок по подтверждённым
 данным](audit-optimization.md).
+Происхождение, достаточность выборки и семантика измеренных расходов описаны в
+разделах [независимость подтверждений](evidence-independence.md) и
+[эффективность проверки](review-efficiency.md).
 - `agent-lifecycle metrics usage-export`: экспорт сессий, отпечатков
   подтверждений, токенов, ресурсов, длительности, решений по бюджету и
   необязательного `cost_usd`, если его сообщает тарифицируемый хост.

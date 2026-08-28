@@ -7,7 +7,7 @@ from typing import Any
 
 from agent_lifecycle.changesets import capture_task_change_set, require_current_task_change_set
 from agent_lifecycle.contracts import LifecycleError
-from agent_lifecycle.contracts.review_verdict import validate_review_verdict
+from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids, validate_review_verdict
 from agent_lifecycle.workflow.artifacts import require_artifact_identity
 
 
@@ -188,13 +188,7 @@ def validate_task_review(
             raise LifecycleError(
                 "task-review-verdict-invalid", "task review structured verdict is invalid", {"validation": validation}
             )
-    open_medium_plus = [
-        finding.get("id")
-        for finding in findings
-        if isinstance(finding, dict)
-        and finding.get("status") == "open"
-        and finding.get("severity") in {"BLOCKER", "HIGH", "MEDIUM"}
-    ]
+    open_medium_plus = open_blocking_finding_ids(findings)
     if open_medium_plus:
         raise LifecycleError(
             "task-review-open-findings",

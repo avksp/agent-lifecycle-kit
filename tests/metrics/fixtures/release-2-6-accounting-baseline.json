@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "agent-audit-efficiency-input.v1",
+  "releaseId": "2.6.0",
+  "sourceRevision": "30e2f2a55a2b8d959fa22b884e122952a2711ff7",
+  "sourceLineageDigest": "b34cffec93d2841af52cfab8dd3651017aa1b3569d6a63271959c24bff497024",
+  "qualityFloor": "release-standard",
+  "views": {
+    "alkProcess": {
+      "tokens": {"status": "UNAVAILABLE", "value": null},
+      "elapsedWallMs": {"status": "TIME_WINDOW_ONLY", "value": 4679707},
+      "computeMs": {"status": "UNAVAILABLE", "value": null}
+    },
+    "implementation": {
+      "tokens": {"status": "UNAVAILABLE", "value": null},
+      "elapsedWallMs": {"status": "TIME_WINDOW_ONLY", "value": 4510000},
+      "computeMs": {"status": "UNAVAILABLE", "value": null}
+    },
+    "audit": {
+      "tokens": {"status": "MEASURED", "value": 29195208},
+      "elapsedWallMs": {"status": "MEASURED", "value": 9278567},
+      "computeMs": {"status": "MEASURED", "value": 12228901}
+    },
+    "postAuditRemediation": {
+      "tokens": {"status": "UNAVAILABLE", "value": null},
+      "elapsedWallMs": {"status": "TIME_WINDOW_ONLY", "value": 2679000},
+      "computeMs": {"status": "UNAVAILABLE", "value": null}
+    }
+  },
+  "outcomes": {
+    "confirmedFindings": {"status": "UNAVAILABLE", "value": null},
+    "rejectedFindings": {"status": "UNAVAILABLE", "value": null},
+    "noVerdictSessions": {"status": "UNAVAILABLE", "value": null},
+    "auditSessions": {"status": "MEASURED", "value": 22},
+    "remediationEvents": {"status": "UNAVAILABLE", "value": null}
+  },
+  "totals": {
+    "elapsedWallMs": {"status": "MIXED", "value": 21147274}
+  },
+  "productionPromotionClaimed": false,
+  "inputDigest": "08585a74d9ce129920a6a6121487ab8868aff537f953826382b7af9cf2e15968"
+}
