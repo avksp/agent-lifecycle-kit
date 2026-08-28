@@ -463,9 +463,8 @@ def _require_parallel_capacity(state: dict[str, Any]) -> None:
 
 
 def _mark_task_running(state: dict[str, Any], task: dict[str, Any], attempt: int, reason: str) -> None:
-    if "attemptHistoryStart" not in task:
-        history = task.get("attemptHistory", [])
-        task["attemptHistoryStart"] = history[0]["attempt"] if history else attempt
+    history = task.get("attemptHistory")
+    task.setdefault("attemptHistoryStart", history[0]["attempt"] if history else attempt)
     task["attempt"] = attempt
     task["status"] = "RUNNING"
     _clear_active_attempt_references(task)
@@ -478,10 +477,7 @@ def _mark_task_running(state: dict[str, Any], task: dict[str, Any], attempt: int
     task["lastReason"] = reason
     if isinstance(task.get("modelRoute"), dict) and task["modelRoute"]:
         validate_attempt_model_route(task)
-        task["attemptModelRoute"] = {
-            **task["modelRoute"],
-            "attempt": attempt,
-        }
+        task["attemptModelRoute"] = {**task["modelRoute"], "attempt": attempt}
     if isinstance(task.get("riskExecutionProfile"), dict) and task["riskExecutionProfile"]:
         task["attemptRiskExecutionProfile"] = {
             **task["riskExecutionProfile"],
