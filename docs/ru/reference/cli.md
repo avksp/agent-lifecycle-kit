@@ -365,7 +365,7 @@ agent-lifecycle project preset render \
   принимает `--final-implementation-audit <final-implementation-audit.json>`.
   Для плана с обязательной групповой проверкой на финальном аудите
   `workflow finalize` принимает `--review-mesh-quorum <path>`.
-- Управляемый вывод прогресса поддерживают только `workflow run`, `workflow continue`,
+- Управляемый вывод прогресса поддерживают только `workflow run`,
   `workflow task-result`, `workflow task-accept`, `workflow task-review-apply`,
   `workflow final-audit-outcome` и `workflow finalize`.
   `ALK_PROGRESS_HOOK=stderr` можно использовать в обёртках; установка плагина

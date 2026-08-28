@@ -351,7 +351,7 @@ language](project-domain-language.md).
   `--final-implementation-audit <final-implementation-audit.json>` when final
   implementation audit is mandatory, and `--review-mesh-quorum <path>` when an
   opted-in plan requires final-audit quorum.
-- `workflow run`, `workflow continue`, `workflow task-result`, `workflow task-accept`,
+- `workflow run`, `workflow task-result`, `workflow task-accept`,
   `workflow task-review-apply`, `workflow final-audit-outcome` and
   `workflow finalize` are the only workflow commands with managed progress
   hooks in this release. `ALK_PROGRESS_HOOK=stderr` is supported for wrappers;

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.workflow.test_workflow_run import _write_bundle
 
@@ -79,6 +81,45 @@ class WorkflowContinueCliTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertTrue(out.is_file())
             self.assertEqual(json.loads(out.read_text(encoding="utf-8")), payload)
+
+    def test_stale_action_digest_blocks_without_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path, state_path = _write_bundle(root, phase="READY", task_status="READY")
+            before = state_path.read_bytes()
+
+            code, payload = _continue_args(
+                manifest_path,
+                state_path,
+                operation_id="stale-apply",
+                extra=[
+                    "--apply",
+                    "--projected-state-revision",
+                    "1",
+                    "--projected-action-digest",
+                    "f" * 64,
+                ],
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["status"], "BLOCKED")
+            self.assertEqual(payload["blockers"][0]["code"], "continuation-projection-action-mismatch")
+            self.assertFalse(payload["stateWritten"])
+            self.assertEqual(state_path.read_bytes(), before)
+            self.assertFalse((root / "events.jsonl").exists())
+
+    def test_global_progress_hook_does_not_intercept_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path, state_path = _write_bundle(root, phase="READY", task_status="READY")
+
+            with mock.patch.dict(os.environ, {"ALK_PROGRESS_HOOK": "stderr"}):
+                code, payload = _continue_args(manifest_path, state_path, operation_id="project-with-env")
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["status"], "READY")
+            self.assertEqual(payload["mode"], "PROJECT")
+            self.assertFalse(payload["stateWritten"])
 
 
 def _continue_args(

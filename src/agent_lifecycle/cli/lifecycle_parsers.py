@@ -585,7 +585,6 @@ def _add_workflow_state_parsers(
     workflow_continue.add_argument("--final-implementation-audit")
     workflow_continue.add_argument("--review-mesh-quorum", action="append", default=[])
     workflow_continue.add_argument("--out")
-    add_progress_hook_args(workflow_continue)
     workflow_adopt = workflow_sub.add_parser("adopt-plan")
     workflow_adopt.add_argument("--state", required=True)
     workflow_adopt.add_argument("--manifest", required=True)

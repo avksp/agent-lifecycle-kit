@@ -107,7 +107,6 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         maybe_emit_workflow_progress_hook(args, command="workflow run", state_path=state_path)
         return payload
     if args.workflow_command == "continue":
-        validate_workflow_progress_hook_request(args, command="workflow continue")
         payload = continue_workflow(
             state_path=state_path,
             manifest_path=Path(args.manifest),
@@ -123,7 +122,6 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         )
         if args.out:
             write_json_create(Path(args.out), payload)
-        maybe_emit_workflow_progress_hook(args, command="workflow continue", state_path=state_path)
         return payload
     if args.workflow_command == "adopt-plan":
         return adopt_plan(
