@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
-import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,6 +19,7 @@ class NoModelCallScanTests(unittest.TestCase):
         payload = validate_no_model_calls(
             [
                 ROOT / "src/agent_lifecycle/workflow/run.py",
+                ROOT / "src/agent_lifecycle/workflow/continuation.py",
                 ROOT / "src/agent_lifecycle/workflow/managed_runner.py",
                 ROOT / "src/agent_lifecycle/workflow/next_action.py",
             ]

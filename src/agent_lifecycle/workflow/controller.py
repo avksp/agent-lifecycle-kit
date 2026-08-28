@@ -9,6 +9,7 @@ from agent_lifecycle.workflow.budget_decisions import (
     select_auto_budget_action,
     validate_budget_exceeded_policy,
 )
+from agent_lifecycle.workflow.continuation import continue_workflow
 from agent_lifecycle.workflow.finalization import apply_final_audit_outcome, finalize_run
 from agent_lifecycle.workflow.initialization import initialize_workflow_state, migrate_workflow_state
 from agent_lifecycle.workflow.lineage import check_lineage
@@ -38,6 +39,7 @@ __all__ = [
     "block_run",
     "check_lineage",
     "commit_task_result",
+    "continue_workflow",
     "finalize_run",
     "initialize_workflow_state",
     "migrate_workflow_state",

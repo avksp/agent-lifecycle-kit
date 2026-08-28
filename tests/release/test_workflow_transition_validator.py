@@ -16,6 +16,10 @@ class WorkflowTransitionValidatorTests(unittest.TestCase):
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["blockers"], [])
         self.assertGreater(result["removedRunnerCommandCount"], 0)
+        self.assertIn(
+            "src/agent_lifecycle/workflow/continuation.py",
+            {item["path"] for item in result["sourceChecks"]},
+        )
 
     def test_missing_consumer_is_blocking(self) -> None:
         with (
