@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
@@ -50,6 +50,14 @@ _DEFERRED_AUDIT_BLOCKER_CODES = {
     "implementation-audit-required",
     "security-analysis-verification-required",
 }
+
+
+class _TransitionCommon(TypedDict):
+    state_path: Path
+    operation_id: str
+    expected_revision: int
+    source_revision: str
+    reason: str
 
 
 def continue_workflow(
@@ -580,7 +588,7 @@ def _dispatch_transition(
     reason: str,
     inputs: dict[str, Any],
 ) -> None:
-    common = {
+    common: _TransitionCommon = {
         "state_path": state_path,
         "operation_id": operation_id,
         "expected_revision": expected_revision,
