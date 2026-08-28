@@ -50,7 +50,6 @@ that result. It is host-neutral and does not depend on a source project.
 - [Public locators and redaction](reference/public-locators-and-redaction.md)
 - [Finding-to-check adoption](reference/finding-check-adoption.md)
 - [Lifecycle task scenarios](guides/lifecycle-cookbook.md)
-- [Workflow continuation](reference/workflow-continuation.md)
 - [System architecture](architecture/system-architecture.md)
 - Architecture boundaries are enforced by the acyclic module/package policy in
   `policy/architecture-dependencies.json`; adapter inspection uses bounded
@@ -87,7 +86,6 @@ that result. It is host-neutral and does not depend on a source project.
 - [Beginner and advanced workflows](guides/beginner-and-advanced-workflows.md)
 - [How ALK works for different tasks](guides/how-alk-works.md)
 - [Lifecycle task scenarios](guides/lifecycle-cookbook.md)
-- [Workflow continuation](reference/workflow-continuation.md)
 - [Code review workflows](guides/code-review-workflows.md)
 - [Multi-model review workflow](guides/review-mesh-workflow.md)
 - [Issue to specification drafts](guides/issue-to-spec.md)

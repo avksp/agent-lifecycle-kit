@@ -305,10 +305,6 @@ language](project-domain-language.md).
   work. Add `--progress-hook stderr` for opt-in terminal progress on stderr, or
   `--progress-hook receipt --progress-receipt <path>` to persist
   `agent-progress-hook-receipt.v1` while preserving JSON stdout.
-- `agent-lifecycle workflow continue`: project the next existing workflow
-  transition without mutation by default. Repeat the same inputs with `--apply`,
-  the projected state revision and action digest to invoke exactly that
-  transition. See [Workflow continuation](workflow-continuation.md).
 - `agent-lifecycle workflow init --state <path> --run-id <id> --package-id
   <id>`: create one private, unbound `agent-workflow-state.v4` file without
   replacing an existing state.

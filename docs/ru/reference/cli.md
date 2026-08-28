@@ -316,10 +316,6 @@ agent-lifecycle project preset render \
   показать прогресс в stderr, или `--progress-hook receipt --progress-receipt
   <path>`, чтобы сохранить `agent-progress-hook-receipt.v1` без изменения JSON
   в stdout.
-- `agent-lifecycle workflow continue`: по умолчанию без изменения состояния
-  вычисляет следующий существующий переход workflow. Для применения повторите
-  те же входы с `--apply`, вычисленной ревизией состояния и дайджестом действия.
-  Подробности: [продолжение workflow](workflow-continuation.md).
 - `agent-lifecycle workflow init --state <путь> --run-id <id> --package-id
   <id>`: создаёт один приватный несвязанный файл
   `agent-workflow-state.v4` и не заменяет существующее состояние.
