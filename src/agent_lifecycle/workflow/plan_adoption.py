@@ -323,6 +323,7 @@ def _copy_accepted_runtime(
 ) -> None:
     preserved_keys = (
         "attempt",
+        "attemptHistoryStart",
         "attemptHistory",
         "result",
         "review",

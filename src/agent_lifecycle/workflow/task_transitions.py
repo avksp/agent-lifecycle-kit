@@ -463,6 +463,9 @@ def _require_parallel_capacity(state: dict[str, Any]) -> None:
 
 
 def _mark_task_running(state: dict[str, Any], task: dict[str, Any], attempt: int, reason: str) -> None:
+    if "attemptHistoryStart" not in task:
+        history = task.get("attemptHistory", [])
+        task["attemptHistoryStart"] = history[0]["attempt"] if history else attempt
     task["attempt"] = attempt
     task["status"] = "RUNNING"
     _clear_active_attempt_references(task)

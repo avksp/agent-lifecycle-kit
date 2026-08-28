@@ -106,6 +106,87 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
             task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
             self.assertEqual(task["status"], "RUNNING")
             self.assertEqual(task["attempt"], 2)
+            stored = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(stored["tasks"][0]["attemptHistoryStart"], 2)
+
+    def test_start_task_rejects_preseeded_history_start(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = _write_state(Path(tmp), phase="RUNNING", max_attempts=2)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0]["attemptHistoryStart"] = 2
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-preseeded-history",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="must fail closed",
+                )
+
+            self.assertEqual(raised.exception.code, "task-attempt-history-invalid")
+
+    def test_rework_continues_from_first_current_plan_attempt_slot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root, max_attempts=3, occupy_first=True)
+
+            rework_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="rework-current-plan-attempt-two",
+                expected_revision=3,
+                source_revision="source",
+                review_path=review_path,
+                finding_ids=["F-REWORK-1"],
+                reason="rework the first current-plan attempt",
+            )
+            payload = start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="start-current-plan-attempt-three",
+                expected_revision=4,
+                source_revision="source",
+                reason="continue current-plan history",
+            )
+
+            task = next(item for item in payload["tasks"] if item["id"] == "WS-01")
+            self.assertEqual(task["attempt"], 3)
+            stored = json.loads(state_path.read_text(encoding="utf-8"))["tasks"][0]
+            self.assertEqual(stored["attemptHistoryStart"], 2)
+            self.assertEqual([entry["attempt"] for entry in stored["attemptHistory"]], [2])
+
+    def test_rework_rejects_removed_current_plan_history_start(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, review_path = _prepare_rework_review(root, max_attempts=3, occupy_first=True)
+            rework_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="rework-current-plan-attempt-two",
+                expected_revision=3,
+                source_revision="source",
+                review_path=review_path,
+                finding_ids=["F-REWORK-1"],
+                reason="prepare marker tamper",
+            )
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["tasks"][0].pop("attemptHistoryStart")
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            with self.assertRaises(LifecycleError) as raised:
+                start_task(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="start-without-history-start",
+                    expected_revision=4,
+                    source_revision="source",
+                    reason="must fail closed",
+                )
+
+            self.assertEqual(raised.exception.code, "task-attempt-history-invalid")
 
     def test_start_task_requires_pre_launch_gate_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
