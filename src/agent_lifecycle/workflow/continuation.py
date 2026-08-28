@@ -6,15 +6,20 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.workflow.artifacts import package_root
 from agent_lifecycle.workflow.authorization import authorize_execution
+from agent_lifecycle.workflow.final_proof_integrity import proof_integrity_required
 from agent_lifecycle.workflow.finalization import apply_final_audit_outcome, finalize_run
 from agent_lifecycle.workflow.implementation_audit_gate import (
     final_implementation_audit_required,
     task_implementation_audit_required,
 )
+from agent_lifecycle.workflow.model_usage import model_usage_receipt_required
+from agent_lifecycle.workflow.next_action import build_managed_next_action
 from agent_lifecycle.workflow.plan_adoption import start_execution
+from agent_lifecycle.workflow.review_mesh_gate import review_mesh_required
 from agent_lifecycle.workflow.run import run_workflow_step
 from agent_lifecycle.workflow.state import load_state, state_identity
 from agent_lifecycle.workflow.task_outcomes import apply_task_review_outcome
@@ -41,6 +46,10 @@ _PATH_INPUTS = {
     "finalImplementationAudit",
 }
 _LIST_INPUTS = {"findingIds", "taskIds", "reviewMeshQuorum"}
+_DEFERRED_AUDIT_BLOCKER_CODES = {
+    "implementation-audit-required",
+    "security-analysis-verification-required",
+}
 
 
 def continue_workflow(
@@ -72,6 +81,10 @@ def continue_workflow(
         source_revision=source_revision,
         reason=reason,
     )
+    try:
+        preflight = _recover_audit_input_preflight(preflight, state_path)
+    except LifecycleError as exc:
+        return _blocked_from_preflight(preflight, operation_id, apply=apply, exc=exc)
     if preflight["status"] != "PASS":
         return _receipt(
             status="BLOCKED",
@@ -83,7 +96,7 @@ def continue_workflow(
             blockers=list(preflight.get("blockers", [])),
         )
     try:
-        state = load_state(state_path)
+        state = _load_preflight_state(state_path, preflight)
         route = _project_route(state_path, state, preflight["nextAction"], normalized_inputs)
         action = _build_action(preflight, route, normalized_inputs, operation_id)
         required = _required_inputs(state_path, state, route, normalized_inputs)
@@ -186,6 +199,40 @@ def _run_preflight(
     )
 
 
+def _recover_audit_input_preflight(preflight: dict[str, Any], state_path: Path) -> dict[str, Any]:
+    """Expose an audit-required accept route without weakening its transition gate."""
+
+    if preflight.get("status") == "PASS":
+        return preflight
+    blockers = preflight.get("blockers")
+    if not isinstance(blockers, list) or not blockers:
+        return preflight
+    if any(not isinstance(item, dict) or item.get("code") not in _DEFERRED_AUDIT_BLOCKER_CODES for item in blockers):
+        return preflight
+    state = _load_preflight_state(state_path, preflight)
+    next_action = build_managed_next_action(state)
+    if next_action.get("type") != "accept-task":
+        return preflight
+    candidates = {item for item in next_action.get("taskIds", []) if isinstance(item, str)}
+    blocked_tasks = {str(item.get("taskId")) for item in blockers if item.get("taskId")}
+    if not blocked_tasks or not blocked_tasks.issubset(candidates):
+        return preflight
+    return {**preflight, "status": "PASS", "nextAction": next_action, "blockers": []}
+
+
+def _load_preflight_state(state_path: Path, preflight: dict[str, Any]) -> dict[str, Any]:
+    state = load_state(state_path)
+    projected = preflight.get("state")
+    expected_revision = projected.get("stateRevision") if isinstance(projected, dict) else None
+    if state.get("stateRevision") != expected_revision:
+        raise LifecycleError(
+            "continuation-state-changed",
+            "workflow state changed while continuation was being projected",
+            {"expected": expected_revision, "actual": state.get("stateRevision")},
+        )
+    return state
+
+
 def _project_route(
     state_path: Path,
     state: dict[str, Any],
@@ -262,27 +309,55 @@ def _required_inputs(
     inputs: dict[str, Any],
 ) -> list[dict[str, Any]]:
     required: list[dict[str, Any]] = []
-    if len(route["taskCandidates"]) > 1 and route["taskId"] is None:
+    if route["transition"] is not None and len(route["taskCandidates"]) > 1 and route["taskId"] is None:
         required.append(_required("taskId", "--task", "select one eligible task"))
     route_name = route["name"]
     if route_name == "authorize":
         _append_missing(required, inputs, "authorizationReceipt", "--authorization-receipt")
     elif route_name == "task-result":
         _append_missing(required, inputs, "result", "--result")
+        task = _task(state, route["taskId"])
+        if task is not None and model_usage_receipt_required(task):
+            _append_missing(required, inputs, "modelUsageReceipt", "--model-usage-receipt")
     elif route_name == "task-review-apply":
         _append_missing(required, inputs, "review", "--review")
         task = _task(state, route["taskId"])
         if task is not None and task_implementation_audit_required(state_path, state, task):
             _append_missing(required, inputs, "implementationAudit", "--implementation-audit")
+        review = _read_supplied_document(state_path, state, inputs, "review", "task review")
+        if isinstance(review, dict) and review.get("verdict") == "REWORK":
+            _append_missing(required, inputs, "findingIds", "--finding-id")
     elif route_name == "final-audit-outcome":
         _append_missing(required, inputs, "finalAudit", "--final-audit")
         _append_missing(required, inputs, "verdict", "--verdict")
+        if inputs.get("verdict") == "REWORK":
+            _append_missing(required, inputs, "taskIds", "--task-id")
+            _append_missing(required, inputs, "findingIds", "--finding-id")
     elif route_name == "finalize":
         _append_missing(required, inputs, "finalAudit", "--final-audit")
         _append_missing(required, inputs, "proof", "--proof")
+        final_audit = _read_supplied_document(state_path, state, inputs, "finalAudit", "final audit")
+        if proof_integrity_required(state, final_audit):
+            _append_missing(required, inputs, "proofIntegrity", "--proof-integrity")
         if final_implementation_audit_required(state_path, state):
             _append_missing(required, inputs, "finalImplementationAudit", "--final-implementation-audit")
+        review_mesh = state.get("reviewMesh") if isinstance(state.get("reviewMesh"), dict) else None
+        if review_mesh_required(review_mesh, phase="final-audit"):
+            _append_missing(required, inputs, "reviewMeshQuorum", "--review-mesh-quorum")
     return required
+
+
+def _read_supplied_document(
+    state_path: Path,
+    state: dict[str, Any],
+    inputs: dict[str, Any],
+    name: str,
+    label: str,
+) -> dict[str, Any] | None:
+    path = inputs.get(name)
+    if not isinstance(path, str):
+        return None
+    return read_json_object(package_root(state_path, state) / path, label=label)
 
 
 def _append_missing(required: list[dict[str, Any]], inputs: dict[str, Any], name: str, option: str) -> None:
