@@ -104,7 +104,7 @@ def validate_phase_resource_measurement(measurement: dict[str, Any]) -> dict[str
     expected_digest = canonical_digest({key: value for key, value in measurement.items() if key != "measurementDigest"})
     if measurement.get("measurementDigest") != expected_digest:
         blockers.append({"code": "phase-resource-digest-mismatch"})
-    body = {
+    body: dict[str, Any] = {
         "schemaVersion": PHASE_RESOURCE_MEASUREMENT_VALIDATION_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
         "measurementStatus": status if isinstance(status, str) else None,

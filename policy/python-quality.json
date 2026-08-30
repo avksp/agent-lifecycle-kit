@@ -1,10 +1,10 @@
 {
   "schemaVersion": "agent-python-quality-policy.v1",
-  "revision": 1,
+  "revision": 2,
   "toolchain": {
-    "ruff": "0.16.3",
-    "mypy": "1.17.1",
-    "coverage": "7.10.6"
+    "ruff": "0.16.5",
+    "mypy": "2.3.1",
+    "coverage": "7.15.4"
   },
   "ruff": {
     "targetVersion": "py311",
@@ -4208,7 +4208,7 @@
       "os": "darwin",
       "pythonImplementation": "CPython",
       "pythonVersion": "3.11",
-      "coverageVersion": "7.10.6",
+      "coverageVersion": "7.15.4",
       "statementPercent": 81.4643,
       "statementCovered": 21931,
       "statementTotal": 26921,
