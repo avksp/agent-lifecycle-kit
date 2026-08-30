@@ -25,6 +25,26 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             or any(line.startswith("- ") for line in current_release.splitlines())
         )
 
+    def test_release_history_has_one_tracked_source_and_generated_output_is_untracked(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "release"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        ).stdout.splitlines()
+        english = (ROOT / "docs/reference/source-of-truth.md").read_text(encoding="utf-8")
+        russian = (ROOT / "docs/ru/reference/source-of-truth.md").read_text(encoding="utf-8")
+
+        self.assertEqual(tracked, [])
+        for text in (english, russian):
+            self.assertIn("CHANGELOG.md", text)
+            self.assertIn("GitHub Releases", text)
+            self.assertIn("release/candidate/", text)
+        self.assertNotIn("release/notes/", english)
+        self.assertNotIn("release/notes/", russian)
+
     def test_root_readmes_are_compact_and_delegate_reference_detail(self) -> None:
         english = (ROOT / "README.md").read_text(encoding="utf-8")
         russian = (ROOT / "docs/ru/README.md").read_text(encoding="utf-8")
@@ -1152,8 +1172,30 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(root / "docs/reference/neutrality.md", neutrality)
     _write_text(root / "docs/ru/reference/neutrality.md", neutrality)
     _write_text(
+        root / "docs/reference/source-of-truth.md",
+        "`CHANGELOG.md`. GitHub Releases. `release/candidate/`. "
+        "ignored generated output. never become source authority.\n",
+    )
+    _write_text(
+        root / "docs/ru/reference/source-of-truth.md",
+        "`CHANGELOG.md`. GitHub Releases. `release/candidate/`. "
+        "игнорируемый генерируемый инвентарь. не являются источником правды.\n",
+    )
+    _write_text(
+        root / "docs/guides/release-candidate.md",
+        "`release/candidate/`. not source of truth. `tracked-release`. "
+        'test -z "$(git ls-files release)". must not alter `git status --short`. '
+        "without network access.\n",
+    )
+    _write_text(
         root / "docs/ru/guides/release-candidate.md",
-        "`tracked-release`. `--include-local-artifacts`. `localArtifactRoots`. не заменяет.\n",
+        "`tracked-release`. `release/candidate/`. не источник правды. "
+        'test -z "$(git ls-files release)". не должны менять.\n',
+    )
+    _write_text(
+        root / "docs/architecture/release-architecture.md",
+        "`release/candidate/`. not source authority. clean checkout reconstructs them. "
+        "`CHANGELOG.md`. GitHub Releases.\n",
     )
     cookbook = (
         "Research and planning only.\n"
@@ -1422,21 +1464,6 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "| Hermes | Projection | VERIFIED | Claim |\n"
         "| Qwen Code | Projection | VERIFIED | Claim |\n"
         f"| Cursor | Projection | {cursor_maturity} | Claim |\n",
-    )
-    _write_text(
-        root / "release/notes/v0.19.0.md",
-        "Status: source release.\n"
-        "Updated package metadata to `0.19.0`.\n"
-        "`agent-optional-quality-pack.v1`.\n"
-        "`agent-behavior-check-run.v1`.\n"
-        "`agent-diagnostic-bundle.v1`.\n"
-        "`agent-readonly-status-view.v1`.\n"
-        "`agent-workflow-event-feed.v1`.\n"
-        "`agent-lifecycle-progress-view.v1`.\n"
-        "`agent-lifecycle quality pack-check`.\n"
-        "`agent-lifecycle diagnostics bundle`.\n"
-        "`agent-lifecycle report status-view`.\n"
-        "productionPromotionClaimed.\n",
     )
     _write_text(
         root / "docs/adapters/live-promotion-runbook.md",

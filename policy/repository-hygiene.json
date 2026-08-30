@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "agent-repository-hygiene-policy.v1",
+  "indexForbiddenRoots": [
+    ".alk",
+    ".claude",
+    "dev",
+    "out",
+    "plans",
+    "release",
+    "tasks",
+    "work"
+  ],
+  "historyForbiddenRoots": [
+    ".alk",
+    ".claude",
+    "dev",
+    "out",
+    "plans",
+    "tasks",
+    "work"
+  ],
+  "budgets": {
+    "gitCommandTimeoutSeconds": 60,
+    "maxGitOutputBytes": 67108864,
+    "maxReportedFindings": 100,
+    "maxReportedPathBytes": 4096
+  }
+}

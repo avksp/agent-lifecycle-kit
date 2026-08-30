@@ -11,11 +11,14 @@ dist/
 htmlcov/
 
 # Local lifecycle authority material and generated evidence are never committed.
-.agent-lifecycle-authority/
-.alk/
-plans/
-release/candidate/evidence/
+/.agent-lifecycle-authority/
+/.alk/
+/.claude/
+/dev/
+/out/
+/plans/
+/release/
+/tasks/
+/work/
 
 # Transient lifecycle controller locks are process-local.
-work/
-/tasks/

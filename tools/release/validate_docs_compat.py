@@ -1674,12 +1674,53 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "docs/reference/source-of-truth.md",
+        (
+            "`CHANGELOG.md`",
+            "GitHub Releases",
+            "`release/candidate/`",
+            "ignored generated output",
+            "never become source authority",
+        ),
+    ),
+    (
+        "docs/ru/reference/source-of-truth.md",
+        (
+            "`CHANGELOG.md`",
+            "GitHub Releases",
+            "`release/candidate/`",
+            "игнорируемый генерируемый инвентарь",
+            "не являются источником",
+        ),
+    ),
+    (
+        "docs/guides/release-candidate.md",
+        (
+            "`release/candidate/`",
+            "not source of truth",
+            'test -z "$(git ls-files release)"',
+            "must not alter `git status --short`",
+            "without network access",
+        ),
+    ),
+    (
         "docs/ru/guides/release-candidate.md",
         (
-            "`tracked-release`",
-            "`--include-local-artifacts`",
-            "`localArtifactRoots`",
-            "не заменяет",
+            "tracked-release",
+            "`release/candidate/`",
+            "не источник правды",
+            'test -z "$(git ls-files release)"',
+            "не должны менять",
+        ),
+    ),
+    (
+        "docs/architecture/release-architecture.md",
+        (
+            "`release/candidate/`",
+            "not source authority",
+            "checkout reconstructs them",
+            "`CHANGELOG.md`",
+            "GitHub Releases",
         ),
     ),
     (
@@ -1760,21 +1801,6 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "NO_RECOMMENDATION",
             "рекомендательным",
             "не может принять задачу",
-        ),
-    ),
-    (
-        "release/notes/v0.19.0.md",
-        (
-            "Status: source release.",
-            "Updated package metadata to `0.19.0`",
-            "`agent-optional-quality-pack.v1`",
-            "`agent-behavior-check-run.v1`",
-            "`agent-diagnostic-bundle.v1`",
-            "`agent-readonly-status-view.v1`",
-            "`agent-lifecycle quality pack-check`",
-            "`agent-lifecycle diagnostics bundle`",
-            "`agent-lifecycle report status-view`",
-            "productionPromotionClaimed",
         ),
     ),
 )

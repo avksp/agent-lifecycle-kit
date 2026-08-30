@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 2.9.0 - 2026-08-30
+
+- Added fail-closed current-index and reachable-history repository hygiene
+  validation for host-local lifecycle roots, including complete publication-ref
+  checks without treating retained non-secret release history as prohibited.
+- Removed generated `release/` artifacts from source authority while retaining
+  reproducible offline candidate assembly and using `CHANGELOG.md` plus GitHub
+  Releases as the release-history sources of truth.
+- Added a digest-bound, redacted Release 2.9 accounting fixture that separates
+  ALK process, implementation, independent audit and remediation costs while
+  preserving unavailable telemetry as `UNAVAILABLE`.
+- Updated package, plugin, marketplace and bilingual installation surfaces for
+  version `2.9.0`.
+
 ## 2.8.0 - 2026-08-28
 
 - Added projection-first `workflow continue` receipts that derive the next

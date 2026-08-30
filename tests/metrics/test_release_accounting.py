@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +16,98 @@ from agent_lifecycle.metrics import (
 
 
 class ReleaseAccountingTests(unittest.TestCase):
+    def test_release_2_9_fixture_preserves_bounded_partial_measurements(self) -> None:
+        fixture_path = Path(__file__).parent / "fixtures/release-2-9-accounting.json"
+        accounting = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(validate_release_accounting(accounting)["status"], "PASS")
+        self.assertEqual(accounting["releaseId"], "2.9.0")
+        self.assertEqual(
+            set(accounting["views"]),
+            {
+                "alkProcess",
+                "implementation",
+                "audit",
+                "postAuditRemediation",
+            },
+        )
+        self.assertEqual(
+            accounting["views"]["audit"]["metrics"]["tokens"],
+            {
+                "status": "PARTIAL",
+                "value": 467_541,
+            },
+        )
+        self.assertEqual(
+            accounting["views"]["implementation"]["metrics"]["tokens"],
+            {
+                "status": "UNAVAILABLE",
+                "value": None,
+            },
+        )
+        self.assertEqual(
+            accounting["views"]["postAuditRemediation"]["metrics"]["tokens"],
+            {
+                "status": "UNAVAILABLE",
+                "value": None,
+            },
+        )
+        self.assertEqual(
+            accounting["views"]["alkProcess"]["metrics"]["elapsedWallMs"],
+            {
+                "status": "PARTIAL",
+                "value": 1_240_263,
+            },
+        )
+        self.assertEqual(
+            accounting["views"]["implementation"]["metrics"]["elapsedWallMs"],
+            {
+                "status": "TIME_WINDOW_ONLY",
+                "value": 1_783_013,
+            },
+        )
+        self.assertEqual(
+            accounting["views"]["audit"]["metrics"]["elapsedWallMs"],
+            {
+                "status": "PARTIAL",
+                "value": 2_158_737,
+            },
+        )
+        self.assertEqual(
+            accounting["views"]["postAuditRemediation"]["metrics"]["elapsedWallMs"],
+            {
+                "status": "TIME_WINDOW_ONLY",
+                "value": 831_000,
+            },
+        )
+        for field in (
+            "controllerVersion",
+            "coreVersion",
+            "hostPluginVersion",
+            "skillPackageVersion",
+            "runAlkVersion",
+        ):
+            self.assertEqual(accounting["provenance"]["identities"][field]["declared"], "2.8.0")
+            self.assertEqual(accounting["provenance"]["identities"][field]["status"], "MATCHED")
+        self.assertEqual(
+            accounting["provenance"]["identities"]["sourceRevision"]["declared"],
+            "0ac782e765e4e6c2d528c095783c5bd0eb7b32b3",
+        )
+        self.assertEqual(
+            accounting["accountingDigest"],
+            "7f9e594321aa31c1f12f00a25dd7338f28515ab9f50282304a1fc26f8fa1dcc6",
+        )
+        serialized = json.dumps(accounting, sort_keys=True)
+        private_markers = (
+            "/" + "Volumes/",
+            "/" + "Users/",
+            "file" + "://",
+            "C:" + "\\\\",
+        )
+        for private_marker in private_markers:
+            self.assertNotIn(private_marker, serialized)
+        self.assertFalse(accounting["productionPromotionClaimed"])
+
     def test_accounting_preserves_wall_compute_availability_and_additivity(self) -> None:
         source = build_release_accounting_source(
             "2.6.0",

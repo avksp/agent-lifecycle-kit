@@ -42,3 +42,11 @@ local launch profile.
 Secrets, private signing keys, local credentials, provider tokens and host
 session cookies must never be committed, written into lifecycle evidence, or
 copied into task packets.
+
+Host-local state, lifecycle plans/evidence and generated release output are not
+source authority. Repository hygiene rejects their explicit roots from the
+current index and rejects host-local/lifecycle roots from reachable candidate
+and publication history. Similarly named product roots such as
+`.claude-plugin/` remain allowed. Published history is rewritten only for
+confirmed secrets or prohibited host-local content, never merely to remove
+stale non-secret release notes.

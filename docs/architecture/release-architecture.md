@@ -12,6 +12,12 @@ matrix and deferred-promotion contracts without claiming external execution.
 It also validates the public contract policy so schema ids, CLI JSON envelopes
 and stable error codes remain predictable for adapters and release scripts.
 
+The candidate inventory and evidence are generated under ignored
+`release/candidate/`. They are derived outputs and not source authority; a clean
+checkout reconstructs them without committed release artifacts. `CHANGELOG.md`
+is the source-tree release history, while immutable GitHub Releases record
+published versions.
+
 Production promotion is intentionally separate. It requires signed external
 receipts for platform matrix execution, release neutrality, live host lifecycle
 conformance and live cost calibration. Missing external authority blocks

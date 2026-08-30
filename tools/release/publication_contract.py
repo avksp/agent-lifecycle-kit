@@ -126,6 +126,13 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
         "fieldForm": "changelog.version",
     },
     {
+        "id": "release-accounting-fixture",
+        "path": "tests/metrics/fixtures/release-2-9-accounting.json",
+        "kind": "json-field",
+        "jsonPath": ["releaseId"],
+        "fieldForm": "accounting.release",
+    },
+    {
         "id": "codex-root-plugin",
         "path": ".codex-plugin/plugin.json",
         "kind": "json-field",

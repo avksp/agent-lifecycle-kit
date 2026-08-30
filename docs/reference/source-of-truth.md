@@ -18,7 +18,7 @@ instead of duplicating long rules.
 | Support summary | `docs/adapters/support-matrix.md` |
 | Tracked redacted adapter evidence | `docs/adapters/evidence/adapter-evidence-summary.v1.json` and linked summaries |
 | Raw live receipts | Host-local ignored evidence paths referenced by adapter descriptors |
-| Release history | `CHANGELOG.md` and `release/notes/` |
+| Release history | `CHANGELOG.md` in the source tree and immutable GitHub Releases for published versions |
 | Release security boundaries | `docs/security/release-security.md` and security tests |
 
 ## Documentation rule
@@ -31,6 +31,10 @@ was introduced; the changelog and release notes carry that history.
 Tracked evidence summaries are suitable for source releases. Local raw receipts
 are useful for re-running live promotion review, but they may be absent from a
 fresh checkout by design.
+
+`release/candidate/` is ignored generated output. Its inventory and evidence
+are recreated from the current source tree and never become source authority or
+release history.
 
 ## Intake rule
 
