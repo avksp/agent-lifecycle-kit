@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import unittest
 import re
+import unittest
 from pathlib import Path
 
 
@@ -67,7 +67,11 @@ class ReleaseWorkflowTests(unittest.TestCase):
         dependabot = (ROOT / ".github/dependabot.yml").read_text(encoding="utf-8")
         self.assertIn("github/codeql-action/init@", codeql)
         self.assertIn("github/codeql-action/analyze@", codeql)
+        codeql_revisions = re.findall(r"github/codeql-action/(?:init|analyze)@([0-9a-f]{40})", codeql)
+        self.assertEqual(len(codeql_revisions), 2)
+        self.assertEqual(len(set(codeql_revisions)), 1)
         self.assertIn("package-ecosystem: github-actions", dependabot)
+        self.assertIn("github/codeql-action/*", dependabot)
         self.assertIn("package-ecosystem: pip", dependabot)
 
 
