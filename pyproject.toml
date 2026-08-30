@@ -42,7 +42,7 @@ dependencies = []
 [dependency-groups]
 quality = [
   "ruff==0.16.3",
-  "mypy==1.17.1",
+  "mypy==2.3.1",
   "coverage==7.10.6",
 ]
 
