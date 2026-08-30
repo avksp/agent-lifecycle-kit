@@ -118,9 +118,19 @@ def _validate_workflows(workflow_root: Path, repository_root: Path) -> dict[str,
         if path.name == "ci.yml" and "tests/security" not in text:
             workflow_blockers.append({"code": "security-suite-not-directly-run", "path": relative})
         if path.name == "codeql.yml":
-            for action in ("github/codeql-action/init", "github/codeql-action/analyze"):
+            codeql_actions = ("github/codeql-action/init", "github/codeql-action/analyze")
+            for action in codeql_actions:
                 if not any(item["action"] == action and item["status"] == "PASS" for item in action_checks):
                     workflow_blockers.append({"code": "codeql-action-missing-or-unpinned", "path": relative, "action": action})
+            revisions = {
+                item["revision"]
+                for item in action_checks
+                if item["action"] in codeql_actions and item["status"] == "PASS"
+            }
+            if len(revisions) > 1:
+                workflow_blockers.append(
+                    {"code": "codeql-action-revision-mismatch", "path": relative, "revisions": sorted(revisions)}
+                )
         status = "PASS" if not workflow_blockers else "FAIL"
         checks.append({"id": f"workflow:{relative}", "status": status, "actionCount": len(action_checks)})
         blockers.extend(workflow_blockers)

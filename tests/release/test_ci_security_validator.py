@@ -42,6 +42,23 @@ class CiSecurityValidatorTests(unittest.TestCase):
         self.assertEqual(result["status"], "FAIL")
         self.assertIn("action-reference-not-immutable", {item["code"] for item in result["blockers"]})
 
+    def test_mixed_codeql_action_revisions_are_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workflow_root = Path(tmp) / "workflows"
+            workflow_root.mkdir()
+            workflow = (ROOT / ".github/workflows/codeql.yml").read_text(encoding="utf-8")
+            mutated_workflow = re.sub(
+                r"(?m)^(\s*-\s+uses:\s+github/codeql-action/analyze)@[0-9a-f]{40}",
+                rf"\1@{'0' * 40}",
+                workflow,
+                count=1,
+            )
+            (workflow_root / "codeql.yml").write_text(mutated_workflow, encoding="utf-8")
+            result = validate_ci_security(workflow_root=workflow_root, tests_root=ROOT / "tests", repository_root=ROOT)
+
+        self.assertEqual(result["status"], "FAIL")
+        self.assertIn("codeql-action-revision-mismatch", {item["code"] for item in result["blockers"]})
+
 
 if __name__ == "__main__":
     unittest.main()
