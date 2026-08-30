@@ -175,8 +175,8 @@ def _apply_final_audit_rework(
         if finding_id not in finding_ids:
             continue
         raw_task_ids = finding.get("taskIds")
-        mapped = list(raw_task_ids) if isinstance(raw_task_ids, list) else [finding.get("taskId")]
-        mapped = [item for item in mapped if isinstance(item, str)]
+        mapped_candidates = list(raw_task_ids) if isinstance(raw_task_ids, list) else [finding.get("taskId")]
+        mapped = [item for item in mapped_candidates if isinstance(item, str)]
         if not mapped or not set(mapped).issubset(task_ids):
             raise LifecycleError(
                 "final-audit-outcome-task-mapping",
