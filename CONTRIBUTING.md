@@ -77,3 +77,9 @@ PYTHONPATH=src python -m agent_lifecycle.neutrality scan --scope current-tree-co
 The release-security suite rejects any tracked `plans/**` path. Reusable
 configuration belongs under `profiles/`; deterministic test-only inputs belong
 under `tests/fixtures/`.
+
+Host-local roots (`.alk/`, `.claude/`, `dev/`, `out/`, `plans/`, `tasks/`,
+`work/`) and generated `release/` output must remain outside Git authority.
+Never weaken or bypass the repository-hygiene gate to make a change or release
+pass. Product plugin roots such as `.claude-plugin/` are separate and remain
+tracked.

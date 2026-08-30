@@ -26,7 +26,14 @@ class PublicationVersionTests(unittest.TestCase):
         field_forms = {entry["fieldForm"] for entry in manifest["entries"]}
         self.assertEqual(
             field_forms,
-            {"version", "source.ref", "package.pin", "changelog.version", "docs.version"},
+            {
+                "version",
+                "source.ref",
+                "package.pin",
+                "changelog.version",
+                "docs.version",
+                "accounting.release",
+            },
         )
         self.assertFalse(manifest["lastChannelPolicy"]["pluginVersionMayBeFloating"])
         self.assertEqual(manifest["lastChannelPolicy"]["allowedFloatingRef"], "source-ref-only")
@@ -177,6 +184,20 @@ class PublicationVersionTests(unittest.TestCase):
             self.assertEqual(result["status"], "FAIL")
             self.assertIn("changelog-release-version", {item["entryId"] for item in result["blockers"]})
 
+    def test_stale_release_accounting_fixture_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
+            _write_json(
+                root / "tests/metrics/fixtures/release-2-9-accounting.json",
+                {"releaseId": "2.8.0"},
+            )
+
+            result = validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)
+
+            self.assertEqual(result["status"], "FAIL")
+            self.assertIn("release-accounting-fixture", {item["entryId"] for item in result["blockers"]})
+
     def test_stale_russian_docs_prose_version_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -252,6 +273,10 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
     )
     (root / "src/agent_lifecycle/_version.py").write_text(f'__version__ = "{version}"\n', encoding="utf-8")
     (root / "CHANGELOG.md").write_text(f"## {version} - 2026-01-01\n", encoding="utf-8")
+    _write_json(
+        root / "tests/metrics/fixtures/release-2-9-accounting.json",
+        {"releaseId": version},
+    )
     for path in (
         ".codex-plugin/plugin.json",
         ".claude-plugin/plugin.json",

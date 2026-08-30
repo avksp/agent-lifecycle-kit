@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.8.0
+  python -m pip install agent-lifecycle-kit==2.9.0
 ```
 
 ## Task evidence identity
