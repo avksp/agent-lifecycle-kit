@@ -8,7 +8,9 @@ import time
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
+from agent_lifecycle.adapter_sessions import external_jobs as external_job_runtime
 from agent_lifecycle.adapter_sessions.external_jobs import (
     load_external_job_attempt,
     request_external_job_cancel,
@@ -116,12 +118,12 @@ class ExternalJobCleanupTests(unittest.TestCase):
             )
             worker.start()
             _wait_for_state(request, root, "RUNNING")
-            time.sleep(1.5)
             cancel = request_external_job_cancel(request, job_root=root)
             worker.join(timeout=5)
 
             self.assertFalse(worker.is_alive())
             self.assertEqual(cancel["status"], "PASS")
+            self.assertFalse(cancel["idempotent"])
             self.assertEqual(holder["view"]["result"]["state"], "CANCELLED")
             self.assertLessEqual(holder["view"]["result"]["usage"]["wallMilliseconds"], 3000)
             loaded = load_external_job_attempt(request, job_root=root)
@@ -164,15 +166,12 @@ class ExternalJobCleanupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "jobs"
             request = _request("late-write-job")
+            late_path = root / "late-write-job/attempt-1/artifacts/late.txt"
 
             def fake_runner(_argv: list[str], **kwargs: Any) -> dict[str, Any]:
                 artifact_root = Path(kwargs["env"]["ALK_EXTERNAL_JOB_ARTIFACT_DIR"])
-                late_path = artifact_root / "late.txt"
+                self.assertEqual(artifact_root.resolve(), late_path.parent.resolve())
                 late_path.write_text("same bytes", encoding="utf-8")
-                threading.Thread(
-                    target=lambda: (time.sleep(0.03), late_path.write_text("same bytes", encoding="utf-8")),
-                    daemon=True,
-                ).start()
                 return {
                     "status": "PASS",
                     "timedOut": False,
@@ -185,15 +184,37 @@ class ExternalJobCleanupTests(unittest.TestCase):
                     "processReceipt": {"schemaVersion": "fixture", "elapsedMs": 1},
                 }
 
-            view = run_external_job(
-                request,
-                ["fixture"],
-                env={},
-                job_root=root,
-                process_runner=fake_runner,
-                post_terminal_quiet_seconds=0.1,
-            )
+            collect_artifacts = external_job_runtime._collect_artifacts
+            collection_count = 0
 
+            def collect_with_same_byte_replacement(
+                collect_request: dict[str, Any], artifact_root: Path
+            ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
+                nonlocal collection_count
+                collection_count += 1
+                if collection_count == 2:
+                    before = late_path.stat()
+                    replacement = late_path.with_suffix(".replacement")
+                    replacement.write_text("same bytes", encoding="utf-8")
+                    os.utime(replacement, ns=(before.st_atime_ns, before.st_mtime_ns + 2_000_000_000))
+                    replacement.replace(late_path)
+                return collect_artifacts(collect_request, artifact_root)
+
+            with mock.patch.object(
+                external_job_runtime,
+                "_collect_artifacts",
+                side_effect=collect_with_same_byte_replacement,
+            ):
+                view = run_external_job(
+                    request,
+                    ["fixture"],
+                    env={},
+                    job_root=root,
+                    process_runner=fake_runner,
+                    post_terminal_quiet_seconds=0.1,
+                )
+
+        self.assertEqual(collection_count, 2)
         self.assertEqual(view["result"]["state"], "FAILED")
         self.assertTrue(view["jobStatus"]["postTerminalWriteDetected"])
         self.assertFalse(view["result"]["blockingEligible"])
