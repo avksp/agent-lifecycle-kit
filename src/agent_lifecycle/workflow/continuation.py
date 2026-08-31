@@ -29,7 +29,7 @@ from agent_lifecycle.workflow.transition_contract import ACTION_TYPES
 MODEL_CALLS_STARTED = False
 MAX_INPUT_LIST_ITEMS = 128
 
-_PATH_INPUTS = {
+CONTINUATION_PATH_INPUTS = {
     "authorizationReceipt",
     "riskProfile",
     "result",
@@ -45,11 +45,22 @@ _PATH_INPUTS = {
     "completionGateReceipt",
     "finalImplementationAudit",
 }
-_LIST_INPUTS = {"findingIds", "taskIds", "reviewMeshQuorum"}
+CONTINUATION_LIST_INPUTS = {"findingIds", "taskIds", "reviewMeshQuorum"}
 _DEFERRED_AUDIT_BLOCKER_CODES = {
     "implementation-audit-required",
     "security-analysis-verification-required",
 }
+
+CONTINUATION_TRANSITIONS: dict[str, tuple[str, Callable[..., dict[str, Any]] | None]] = {
+    "request-execution-authorization": ("authorize", authorize_execution),
+    "start-execution": ("run-start", start_execution),
+    "launch-tasks": ("task-start", start_task),
+    "wait-for-active-tasks": ("task-result", commit_task_result),
+    "accept-task": ("task-review-apply", apply_task_review_outcome),
+    "final-audit-outcome": ("final-audit-outcome", apply_final_audit_outcome),
+    "finalize-run": ("finalize", finalize_run),
+}
+CONTINUATION_APPLY_ACTION_TYPES = frozenset(CONTINUATION_TRANSITIONS)
 
 
 class _TransitionCommon(TypedDict):
@@ -77,7 +88,7 @@ def continue_workflow(
     """Project or apply one current workflow transition without inventing authority."""
 
     try:
-        normalized_inputs = _normalize_inputs(inputs or {})
+        normalized_inputs = normalize_continuation_inputs(inputs or {})
     except LifecycleError as exc:
         return _blocked_receipt(operation_id, apply=apply, exc=exc)
     preflight = _run_preflight(
@@ -250,16 +261,7 @@ def _project_route(
     action_type = next_action.get("type")
     if action_type not in ACTION_TYPES:
         raise LifecycleError("continuation-action-unsupported", "projected workflow action is unsupported")
-    mapping: dict[str, tuple[str, Callable[..., dict[str, Any]] | None]] = {
-        "request-execution-authorization": ("authorize", authorize_execution),
-        "start-execution": ("run-start", start_execution),
-        "launch-tasks": ("task-start", start_task),
-        "wait-for-active-tasks": ("task-result", commit_task_result),
-        "accept-task": ("task-review-apply", apply_task_review_outcome),
-        "final-audit-outcome": ("final-audit-outcome", apply_final_audit_outcome),
-        "finalize-run": ("finalize", finalize_run),
-    }
-    route_name, transition = mapping.get(action_type, (action_type, None))
+    route_name, transition = CONTINUATION_TRANSITIONS.get(action_type, (action_type, None))
     candidates = [item for item in next_action.get("taskIds", []) if isinstance(item, str)]
     task_id = _select_task(candidates, inputs.get("taskId"))
     return {
@@ -383,19 +385,23 @@ def _task(state: dict[str, Any], task_id: str | None) -> dict[str, Any] | None:
     return next((task for task in state.get("tasks", []) if task.get("id") == task_id), None)
 
 
-def _normalize_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
-    unknown = sorted(set(inputs).difference(_PATH_INPUTS | _LIST_INPUTS | {"taskId", "verdict"}))
+def normalize_continuation_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize inputs accepted by one continuation transition."""
+
+    unknown = sorted(
+        set(inputs).difference(CONTINUATION_PATH_INPUTS | CONTINUATION_LIST_INPUTS | {"taskId", "verdict"})
+    )
     if unknown:
         raise LifecycleError("continuation-input-unsupported", "continuation input is unsupported", {"fields": unknown})
     normalized: dict[str, Any] = {}
     for key, value in sorted(inputs.items()):
         if value is None:
             continue
-        if key in _PATH_INPUTS:
+        if key in CONTINUATION_PATH_INPUTS:
             if not isinstance(value, str):
                 raise LifecycleError("continuation-input-invalid", f"{key} must be a repository-relative path")
             normalized[key] = normalize_repo_path(value, label=key)
-        elif key in _LIST_INPUTS:
+        elif key in CONTINUATION_LIST_INPUTS:
             normalized[key] = _string_list(value, key)
         elif not isinstance(value, str) or not value:
             raise LifecycleError("continuation-input-invalid", f"{key} must be a non-empty string")
@@ -709,4 +715,11 @@ def _receipt(
     return {**body, "receiptDigest": canonical_digest(body)}
 
 
-__all__ = ["continue_workflow"]
+__all__ = [
+    "CONTINUATION_APPLY_ACTION_TYPES",
+    "CONTINUATION_LIST_INPUTS",
+    "CONTINUATION_PATH_INPUTS",
+    "CONTINUATION_TRANSITIONS",
+    "continue_workflow",
+    "normalize_continuation_inputs",
+]

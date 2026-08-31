@@ -84,6 +84,10 @@ When the exact next transition is not known, use `workflow continue` in two
 steps: project without `--apply`, then repeat the same inputs with `--apply`,
 the projected revision and action digest. Direct transition commands remain
 available. See [Workflow continuation](../reference/workflow-continuation.md).
+When several deterministic transitions are already declared, bounded mode can
+apply their explicit bundle in one invocation. It requires
+`--until-blocked --apply`, a lock, positive transition/I/O caps and a dedicated output receipt;
+it stops before external authority or evidence is required.
 
 ```
 agent-lifecycle start \

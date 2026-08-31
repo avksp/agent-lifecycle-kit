@@ -511,6 +511,53 @@ def _add_task_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     small_compile.add_argument("--write", action="store_true")
 
 
+def _add_workflow_continue_parser(
+    workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    workflow_continue = workflow_sub.add_parser(
+        "continue",
+        help="project or explicitly apply existing authoritative workflow transitions",
+    )
+    workflow_continue.add_argument("--state", required=True)
+    workflow_continue.add_argument("--manifest", required=True)
+    workflow_continue.add_argument("--lock")
+    workflow_continue.add_argument("--operation-id")
+    workflow_continue.add_argument("--expected-revision", required=True, type=int)
+    workflow_continue.add_argument("--source-revision", required=True)
+    workflow_continue.add_argument("--reason", required=True)
+    workflow_continue.add_argument("--apply", action="store_true")
+    workflow_continue.add_argument("--until-blocked", action="store_true")
+    workflow_continue.add_argument("--input-bundle")
+    workflow_continue.add_argument("--max-transitions", type=int)
+    workflow_continue.add_argument("--max-io-bytes", type=int)
+    workflow_continue.add_argument("--resume-receipt")
+    workflow_continue.add_argument("--projected-state-revision", type=int)
+    workflow_continue.add_argument("--projected-action-digest")
+    workflow_continue.add_argument("--task")
+    workflow_continue.add_argument("--authorization-receipt")
+    workflow_continue.add_argument("--risk-profile")
+    workflow_continue.add_argument("--result")
+    workflow_continue.add_argument("--model-usage-receipt")
+    workflow_continue.add_argument("--budget-targets")
+    workflow_continue.add_argument("--review")
+    workflow_continue.add_argument("--implementation-audit")
+    workflow_continue.add_argument("--finding-id", action="append", default=[])
+    workflow_continue.add_argument("--final-audit")
+    workflow_continue.add_argument(
+        "--verdict",
+        choices=["ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"],
+    )
+    workflow_continue.add_argument("--task-id", action="append", default=[])
+    workflow_continue.add_argument("--proof")
+    workflow_continue.add_argument("--proof-integrity")
+    workflow_continue.add_argument("--goal-record")
+    workflow_continue.add_argument("--follow-up-register")
+    workflow_continue.add_argument("--completion-gate-receipt")
+    workflow_continue.add_argument("--final-implementation-audit")
+    workflow_continue.add_argument("--review-mesh-quorum", action="append", default=[])
+    workflow_continue.add_argument("--out")
+
+
 def _add_workflow_state_parsers(
     workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser],
 ) -> None:
@@ -548,43 +595,7 @@ def _add_workflow_state_parsers(
     workflow_run.add_argument("--reason")
     workflow_run.add_argument("--out")
     add_progress_hook_args(workflow_run)
-    workflow_continue = workflow_sub.add_parser(
-        "continue",
-        help="project or explicitly apply one authoritative workflow transition",
-    )
-    workflow_continue.add_argument("--state", required=True)
-    workflow_continue.add_argument("--manifest", required=True)
-    workflow_continue.add_argument("--lock")
-    workflow_continue.add_argument("--operation-id", required=True)
-    workflow_continue.add_argument("--expected-revision", required=True, type=int)
-    workflow_continue.add_argument("--source-revision", required=True)
-    workflow_continue.add_argument("--reason", required=True)
-    workflow_continue.add_argument("--apply", action="store_true")
-    workflow_continue.add_argument("--projected-state-revision", type=int)
-    workflow_continue.add_argument("--projected-action-digest")
-    workflow_continue.add_argument("--task")
-    workflow_continue.add_argument("--authorization-receipt")
-    workflow_continue.add_argument("--risk-profile")
-    workflow_continue.add_argument("--result")
-    workflow_continue.add_argument("--model-usage-receipt")
-    workflow_continue.add_argument("--budget-targets")
-    workflow_continue.add_argument("--review")
-    workflow_continue.add_argument("--implementation-audit")
-    workflow_continue.add_argument("--finding-id", action="append", default=[])
-    workflow_continue.add_argument("--final-audit")
-    workflow_continue.add_argument(
-        "--verdict",
-        choices=["ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"],
-    )
-    workflow_continue.add_argument("--task-id", action="append", default=[])
-    workflow_continue.add_argument("--proof")
-    workflow_continue.add_argument("--proof-integrity")
-    workflow_continue.add_argument("--goal-record")
-    workflow_continue.add_argument("--follow-up-register")
-    workflow_continue.add_argument("--completion-gate-receipt")
-    workflow_continue.add_argument("--final-implementation-audit")
-    workflow_continue.add_argument("--review-mesh-quorum", action="append", default=[])
-    workflow_continue.add_argument("--out")
+    _add_workflow_continue_parser(workflow_sub)
     workflow_adopt = workflow_sub.add_parser("adopt-plan")
     workflow_adopt.add_argument("--state", required=True)
     workflow_adopt.add_argument("--manifest", required=True)

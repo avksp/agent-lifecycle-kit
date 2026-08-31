@@ -20,6 +20,7 @@ class NoModelCallScanTests(unittest.TestCase):
             [
                 ROOT / "src/agent_lifecycle/workflow/run.py",
                 ROOT / "src/agent_lifecycle/workflow/continuation.py",
+                ROOT / "src/agent_lifecycle/workflow/continuation_batch.py",
                 ROOT / "src/agent_lifecycle/workflow/managed_runner.py",
                 ROOT / "src/agent_lifecycle/workflow/next_action.py",
             ]

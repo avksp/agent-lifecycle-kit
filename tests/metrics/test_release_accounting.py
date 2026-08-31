@@ -16,6 +16,55 @@ from agent_lifecycle.metrics import (
 
 
 class ReleaseAccountingTests(unittest.TestCase):
+    def test_release_2_10_fixture_separates_windows_and_preserves_unavailable_tokens(self) -> None:
+        fixture_path = Path(__file__).parent / "fixtures/release-2-10-accounting.json"
+        accounting = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(validate_release_accounting(accounting)["status"], "PASS")
+        self.assertEqual(accounting["releaseId"], "2.10.0")
+        expected_wall = {
+            "alkProcess": ("PARTIAL", 77_000),
+            "implementation": ("TIME_WINDOW_ONLY", 3_834_000),
+            "audit": ("TIME_WINDOW_ONLY", 7_806_000),
+            "postAuditRemediation": ("TIME_WINDOW_ONLY", 1_191_000),
+        }
+        for view, (status, value) in expected_wall.items():
+            with self.subTest(view=view):
+                self.assertEqual(
+                    accounting["views"][view]["metrics"]["elapsedWallMs"],
+                    {"status": status, "value": value},
+                )
+                self.assertEqual(
+                    accounting["views"][view]["metrics"]["tokens"],
+                    {"status": "UNAVAILABLE", "value": None},
+                )
+        self.assertEqual(accounting["views"]["alkProcess"]["metrics"]["steps"]["value"], 16)
+        self.assertEqual(
+            accounting["exclusions"],
+            [
+                {
+                    "entryId": "post-cutoff-work-after-20260831t081722z",
+                    "reason": "NON_ADDITIVE_SCOPE",
+                }
+            ],
+        )
+        self.assertEqual(
+            accounting["provenance"]["identities"]["sourceRevision"]["declared"],
+            "90cb0c921fe04cbdcaba2fecb590fe6f51f194b9",
+        )
+        self.assertEqual(
+            accounting["provenance"]["identities"]["measurementDigest"]["declared"],
+            "dd001f89e122c2a9da56662b2aff1fe1549d291906d60231eeeb648b0b3c7a04",
+        )
+        self.assertTrue(
+            all(identity["status"] == "MATCHED" for identity in accounting["provenance"]["identities"].values())
+        )
+        self.assertEqual(
+            accounting["accountingDigest"],
+            "2e7ad9618391e7844c3b28be65c366a12f73951ba1924ca901a328f4e646c925",
+        )
+        self.assertFalse(accounting["productionPromotionClaimed"])
+
     def test_release_2_9_fixture_preserves_bounded_partial_measurements(self) -> None:
         fixture_path = Path(__file__).parent / "fixtures/release-2-9-accounting.json"
         accounting = json.loads(fixture_path.read_text(encoding="utf-8"))

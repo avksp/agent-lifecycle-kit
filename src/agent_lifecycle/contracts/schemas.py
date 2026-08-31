@@ -86,7 +86,9 @@ from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_SCHEMA
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
 from agent_lifecycle.contracts.workflow_artifact_schemas import WORKFLOW_ARTIFACT_SCHEMAS
 from agent_lifecycle.contracts.workflow_authorization_schemas import WORKFLOW_AUTHORIZATION_SCHEMAS
+from agent_lifecycle.contracts.workflow_continuation_batch_schemas import WORKFLOW_CONTINUATION_BATCH_SCHEMAS
 from agent_lifecycle.contracts.workflow_continuation_schemas import WORKFLOW_CONTINUATION_SCHEMAS
+from agent_lifecycle.contracts.workflow_economics_schemas import WORKFLOW_ECONOMICS_SCHEMAS
 from agent_lifecycle.contracts.workflow_run_schemas import WORKFLOW_RUN_SCHEMAS
 from agent_lifecycle.contracts.workflow_state_schemas import WORKFLOW_STATE_SCHEMAS
 
@@ -734,7 +736,9 @@ _SCHEMA_GROUPS = (
     WORKTREE_SUPPORT_SCHEMAS,
     WORKFLOW_ARTIFACT_SCHEMAS,
     WORKFLOW_AUTHORIZATION_SCHEMAS,
+    WORKFLOW_CONTINUATION_BATCH_SCHEMAS,
     WORKFLOW_CONTINUATION_SCHEMAS,
+    WORKFLOW_ECONOMICS_SCHEMAS,
     WORKFLOW_STATE_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
     SECURITY_ANALYSIS_SCHEMAS,

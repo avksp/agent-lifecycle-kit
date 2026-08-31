@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.9.0
+python -m pip install agent-lifecycle-kit==2.10.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -319,6 +319,9 @@ agent-lifecycle project preset render \
 - `agent-lifecycle workflow continue`: по умолчанию без изменения состояния
   вычисляет следующий существующий переход workflow. Для применения повторите
   те же входы с `--apply`, вычисленной ревизией состояния и дайджестом действия.
+  Для объявленной детерминированной последовательности добавьте
+  `--until-blocked`, `--apply`, входной пакет, явные положительные лимиты, lock
+  и выходной receipt; пакетный режим остановится до внешних полномочий.
   Подробности: [продолжение workflow](workflow-continuation.md).
 - `agent-lifecycle workflow init --state <путь> --run-id <id> --package-id
   <id>`: создаёт один приватный несвязанный файл

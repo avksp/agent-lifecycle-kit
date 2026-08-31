@@ -43,6 +43,9 @@ Stable schema ids:
 - `agent-workflow-state.v4`
 - `agent-workflow-continuation-action.v1`
 - `agent-workflow-continuation-receipt.v1`
+- `agent-workflow-continuation-input-bundle.v1`
+- `agent-workflow-continuation-batch-receipt.v1`
+- `agent-workflow-continuation-batch-summary.v1`
 - `agent-workflow-next-action.v1`
 - `agent-workflow-run-receipt.v1`
 - `agent-lifecycle-start-receipt.v1`

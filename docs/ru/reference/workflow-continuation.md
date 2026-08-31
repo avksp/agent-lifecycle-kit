@@ -1,9 +1,10 @@
 # Управляемое продолжение workflow
 
 `agent-lifecycle workflow continue` показывает следующий шаг workflow и может
-явно применить один существующий переход. Это сокращённый интерфейс оператора,
-а не вторая машина состояний: полномочия остаются у состояния workflow,
-зафиксированного плана, lock-файла и валидаторов обычных команд перехода.
+явно применить один существующий переход либо упорядоченный ограниченный пакет
+до внешней границы. Это сокращённый интерфейс оператора, а не вторая машина
+состояний: полномочия остаются у состояния workflow, зафиксированного плана,
+lock-файла и валидаторов обычных команд перехода.
 
 ## Сначала проекция
 
@@ -52,6 +53,43 @@ agent-lifecycle workflow continue \
 входы дают `INPUT_REQUIRED`; устаревшая связь состояния, действия, плана,
 lock-файла, исходной ревизии или артефакта даёт `BLOCKED`. Модель и внешний
 инструмент не запускаются.
+
+## Применение ограниченного пакета
+
+Используйте пакетный режим только для заранее объявленных переходов с явными
+operation ID в связанном по lineage входном пакете:
+
+```bash
+agent-lifecycle workflow continue \
+  --state work/run.state.json \
+  --manifest work/plans/release-x/plan.manifest.json \
+  --lock work/plans/release-x/plan.lock.json \
+  --expected-revision 7 \
+  --source-revision <source-sha> \
+  --reason "применять детерминированные переходы до внешнего ввода" \
+  --until-blocked \
+  --apply \
+  --input-bundle work/continuation-inputs.json \
+  --max-transitions 8 \
+  --max-io-bytes 1048576 \
+  --out work/continuation-batch-receipt.json
+```
+
+Все пакетные флаги, положительные лимиты, `--lock` и `--out` обязательны.
+Допускается только необязательный `--resume-receipt`. Нельзя передавать
+одиночный operation ID, guards проекции и прямые входы перехода: каждый шаг
+берётся из пакета, заново проецируется и вызывает существующий одношаговый
+переход. Команда резервирует и обновляет полный receipt, а stdout содержит
+связанный дайджестом компактный summary и не перезаписывает receipt после
+dispatch.
+
+Пакет останавливается до следующей мутации на границе входов, host, модели,
+рецензента, оператора, полномочий плана или лимита ресурсов. Уже записанные
+обычные события workflow сохраняются. Стабильные коды ошибок комбинаций:
+`continuation-batch-apply-required`,
+`continuation-batch-arguments-required`, `continuation-batch-cap-invalid`,
+`continuation-batch-option-conflict` и
+`continuation-one-step-operation-id-required`.
 
 ## Входы
 
