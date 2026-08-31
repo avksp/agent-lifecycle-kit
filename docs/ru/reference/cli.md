@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.10.0
+python -m pip install agent-lifecycle-kit==2.11.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -342,6 +342,13 @@ agent-lifecycle project preset render \
 - `agent-lifecycle workflow task-snapshot`: без изменения состояния вычисляет
   текущий набор файлов задачи и отпечатки их содержимого по Git. Объект `claim`
   из результата нужно поместить в результат задачи перед `task-result`.
+  Параметры `--manifest`, `--lock`, `--phase-packet-purpose` и
+  `--phase-packet-out` задаются только вместе и создают отдельный ограниченный
+  `agent-phase-packet.v1` для реализации, аудита задачи или доработки.
+- `agent-lifecycle workflow validation-select --state ... --task ...
+  --manifest ... --lock ... --snapshot ... [--out ...]`: выбирает ID
+  зафиксированных проверок без запуска команд и изменения состояния. Для
+  legacy-плана и защищённых путей консервативно выбирается `RELEASE_FULL`.
 - `agent-lifecycle workflow task-result`: сохраняет результат реализации.
 - `agent-lifecycle workflow task-rework`: после решения `REWORK` независимой
   проверки сохраняет данные текущей попытки и переводит задачу в
@@ -367,7 +374,9 @@ agent-lifecycle project preset render \
   `--implementation-audit <implementation-audit.json>`, а `workflow finalize`
   принимает `--final-implementation-audit <final-implementation-audit.json>`.
   Для плана с обязательной групповой проверкой на финальном аудите
-  `workflow finalize` принимает `--review-mesh-quorum <path>`.
+  `workflow finalize` принимает `--review-mesh-quorum <path>`. План с
+  включённой лестницей проверок также требует `--release-full-receipt
+  <release-full.json>` с точным lineage plan, lock, source, дерева и каталога.
 - Управляемый вывод прогресса поддерживают только `workflow run`,
   `workflow task-result`, `workflow task-accept`, `workflow task-review-apply`,
   `workflow final-audit-outcome` и `workflow finalize`.

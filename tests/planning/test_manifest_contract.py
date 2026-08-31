@@ -4,6 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.planning.manifest_contract import validate_plan_manifest_contract
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,9 +22,7 @@ class ManifestContractTests(unittest.TestCase):
             with self.subTest(value=value):
                 manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
                 manifest["orchestration"] = {"maxPlanReviewRounds": value}
-                self.assertNotIn(
-                    "plan-review-round-budget-invalid", _codes(validate_plan_manifest_contract(manifest))
-                )
+                self.assertNotIn("plan-review-round-budget-invalid", _codes(validate_plan_manifest_contract(manifest)))
 
     def test_canonical_fixture_passes(self) -> None:
         result = validate_plan_manifest_contract(json.loads(FIXTURE.read_text(encoding="utf-8")))
@@ -68,6 +67,22 @@ class ManifestContractTests(unittest.TestCase):
             manifest["orchestration"] = {"remediationMode": "off", "maxTaskAttempts": attempts}
             result = validate_plan_manifest_contract(manifest)
             self.assertIn("plan-task-attempt-budget-invalid", _codes(result))
+
+    def test_validation_ladder_fields_are_closed(self) -> None:
+        manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        command = manifest["validation"]["commands"][0]
+        checks = [{"id": "full", "commandDigest": canonical_digest(command)}]
+        catalog_body = {"schemaVersion": "agent-validation-check-catalog.v1", "checks": checks}
+        manifest["validation"].update(
+            {
+                "checkCatalog": {**catalog_body, "catalogDigest": canonical_digest(catalog_body)},
+                "validationLadderProfile": {"path": "profiles/validation.json", "digest": "1" * 64},
+            }
+        )
+
+        self.assertEqual(validate_plan_manifest_contract(manifest)["status"], "PASS")
+        manifest["validation"]["checkCatalog"]["command"] = command
+        self.assertIn("plan-manifest-field-unknown", _codes(validate_plan_manifest_contract(manifest)))
 
 
 def _codes(result: dict) -> set[str]:

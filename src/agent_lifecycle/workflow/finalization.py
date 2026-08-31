@@ -6,6 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.changesets.snapshot import capture_task_change_set
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.contracts.goal_validation import validate_goal_record
 from agent_lifecycle.contracts.implementation_audit_validation import (
@@ -20,6 +21,7 @@ from agent_lifecycle.host_protocol.lifecycle_gate import (
     lifecycle_control_selection,
     require_lifecycle_gate_pass,
 )
+from agent_lifecycle.quality.validation_ladder import require_release_full_validation_receipt
 from agent_lifecycle.specification import (
     require_completion_gate_finalization,
     validate_completion_check,
@@ -279,6 +281,7 @@ def finalize_run(
     follow_up_register_path: str | None = None,
     completion_gate_receipt_path: str | None = None,
     final_implementation_audit_path: str | None = None,
+    release_full_receipt_path: str | None = None,
     review_mesh_quorum_paths: list[str] | None = None,
     reason: str,
 ) -> dict[str, Any]:
@@ -325,6 +328,11 @@ def finalize_run(
         root,
         final_implementation_audit_path=final_implementation_audit_path,
     )
+    release_full_validation = _validate_release_full_validation(
+        state,
+        root,
+        release_full_receipt_path=release_full_receipt_path,
+    )
     finalization_gate_receipts = _validate_finalization_gates(
         state_path,
         state,
@@ -349,6 +357,7 @@ def finalize_run(
             follow_up_register=follow_up_register,
             proof_integrity=proof_integrity,
             final_implementation_audit=final_implementation_audit,
+            release_full_validation=release_full_validation,
             finalization_gate_receipts=finalization_gate_receipts,
             review_mesh_quorum=review_mesh_quorum,
             lifecycle_control_stop=None,
@@ -365,6 +374,7 @@ def finalize_run(
         follow_up_register=follow_up_register,
         proof_integrity=proof_integrity,
         final_implementation_audit=final_implementation_audit,
+        release_full_validation=release_full_validation,
         finalization_gate_receipts=finalization_gate_receipts,
         review_mesh_quorum=review_mesh_quorum,
         lifecycle_control_stop=lifecycle_control_stop,
@@ -386,6 +396,8 @@ def finalize_run(
         state["proofIntegrityReceipt"] = proof_integrity["receipt"]
     if final_implementation_audit is not None:
         state["finalImplementationAudit"] = final_implementation_audit["audit"]
+    if release_full_validation is not None:
+        state["releaseFullValidationReceipt"] = release_full_validation["receipt"]
     if review_mesh_quorum is not None:
         state["reviewMeshFinalQuorum"] = review_mesh_quorum
     if lifecycle_control_stop is not None:
@@ -404,6 +416,7 @@ def finalize_run(
             "followUpRegister": follow_up_register,
             "proofIntegrity": proof_integrity,
             "finalImplementationAudit": final_implementation_audit,
+            "releaseFullValidation": release_full_validation,
             "finalizationGateReceipts": finalization_gate_receipts,
             "reviewMeshQuorum": review_mesh_quorum,
             "lifecycleControlStop": lifecycle_control_stop,
@@ -660,6 +673,109 @@ def _validate_final_implementation_audit(
     return {"audit": identity, "validation": validation}
 
 
+def _validate_release_full_validation(
+    state: dict[str, Any],
+    root: Path,
+    *,
+    release_full_receipt_path: str | None,
+) -> dict[str, Any] | None:
+    manifest_path = state.get("manifestPath")
+    if not isinstance(manifest_path, str) or not manifest_path:
+        if release_full_receipt_path is not None:
+            raise LifecycleError(
+                "release-full-validation-not-enabled",
+                "release-full validation is not enabled for this legacy workflow state",
+            )
+        return None
+    manifest_rel = normalize_repo_path(manifest_path, label="plan manifest")
+    manifest = read_json_object(root / manifest_rel, label="plan manifest")
+    manifest_validation = manifest.get("validation")
+    opted_in = isinstance(manifest_validation, dict) and (
+        "checkCatalog" in manifest_validation or "validationLadderProfile" in manifest_validation
+    )
+    if not opted_in:
+        if release_full_receipt_path is not None:
+            raise LifecycleError(
+                "release-full-validation-not-enabled",
+                "release-full validation is not enabled by the frozen manifest",
+            )
+        return None
+    if release_full_receipt_path is None:
+        raise LifecycleError(
+            "release-full-validation-required",
+            "the frozen validation ladder requires a fresh release-full receipt",
+        )
+    if not isinstance(manifest_validation, dict):
+        raise LifecycleError("release-full-validation-invalid", "manifest validation authority is invalid")
+    catalog = manifest_validation.get("checkCatalog")
+    profile_reference = manifest_validation.get("validationLadderProfile")
+    if not isinstance(catalog, dict) or not isinstance(profile_reference, dict):
+        raise LifecycleError("release-full-validation-invalid", "validation ladder authority is incomplete")
+    checks = catalog.get("checks")
+    if not isinstance(checks, list) or not checks:
+        raise LifecycleError("release-full-validation-invalid", "validation check catalog is empty")
+    required_check_ids = sorted(
+        item["id"] for item in checks if isinstance(item, dict) and isinstance(item.get("id"), str)
+    )
+    if len(required_check_ids) != len(checks):
+        raise LifecycleError("release-full-validation-invalid", "validation check catalog is malformed")
+    manifest_digest = canonical_digest(manifest)
+    if state.get("planDigest") != manifest_digest:
+        raise LifecycleError("release-full-validation-stale", "workflow plan lineage is stale")
+    lock_rel = str(Path(manifest_rel).parent / "plan.lock.json")
+    lock = read_json_object(root / lock_rel, label="plan lock")
+    if lock.get("manifestHash") != manifest_digest:
+        raise LifecycleError("release-full-validation-stale", "plan lock lineage is stale")
+    current = _capture_release_current_tree(root, source_revision=str(state.get("sourceRevision")), state=state)
+    receipt_rel = normalize_repo_path(release_full_receipt_path, label="release-full validation receipt")
+    receipt = read_json_object(root / receipt_rel, label="release-full validation receipt")
+    validation = require_release_full_validation_receipt(
+        receipt,
+        source_revision=str(state.get("sourceRevision")),
+        current_tree_digest=current["currentTreeDigest"],
+        plan_digest=manifest_digest,
+        plan_lock_digest=canonical_digest(lock),
+        catalog_digest=str(catalog.get("catalogDigest")),
+        required_check_ids=required_check_ids,
+    )
+    identity = artifact_identity(root, receipt_rel, receipt)
+    return {"receipt": identity, "validation": validation, "currentTree": current}
+
+
+def _capture_release_current_tree(
+    root: Path,
+    *,
+    source_revision: str,
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    write_paths = sorted(
+        {
+            path
+            for task in state.get("tasks", [])
+            if isinstance(task, dict)
+            for path in task.get("writes", [])
+            if isinstance(path, str)
+        }
+    )
+    inventory = capture_task_change_set(root, baseline=source_revision, write_paths=write_paths)
+    changed_paths = inventory["allChangedFiles"]
+    current = capture_task_change_set(root, baseline=source_revision, write_paths=changed_paths)
+    if current["allChangedFiles"] != changed_paths or current["changedFiles"] != changed_paths:
+        raise LifecycleError(
+            "release-full-validation-tree-race",
+            "repository changes moved while the release-full tree identity was captured",
+        )
+    body = {
+        "schemaVersion": "agent-release-current-tree.v1",
+        "baselineSha": current["baselineSha"],
+        "changedFiles": current["changedFiles"],
+        "fileSetHash": current["fileSetHash"],
+        "diffHash": current["diffHash"],
+        "snapshotHash": current["snapshotHash"],
+    }
+    return {**current, "currentTreeDigest": canonical_digest(body)}
+
+
 def _proof_body(
     state: dict[str, Any],
     *,
@@ -671,6 +787,7 @@ def _proof_body(
     follow_up_register: dict[str, Any] | None,
     proof_integrity: dict[str, Any] | None,
     final_implementation_audit: dict[str, Any] | None,
+    release_full_validation: dict[str, Any] | None,
     finalization_gate_receipts: list[dict[str, Any]],
     review_mesh_quorum: dict[str, Any] | None,
     lifecycle_control_stop: dict[str, Any] | None,
@@ -704,6 +821,7 @@ def _proof_body(
         "followUpRegister": follow_up_register,
         "proofIntegrity": proof_integrity,
         "finalImplementationAudit": final_implementation_audit,
+        "releaseFullValidation": release_full_validation,
         "finalizationGateReceipts": finalization_gate_receipts,
         "reviewMeshQuorum": review_mesh_quorum,
         "lifecycleControlStop": lifecycle_control_stop,

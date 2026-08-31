@@ -5,7 +5,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from itertools import combinations
 from pathlib import Path
+from unittest.mock import patch
 
 try:
     from .helpers import *  # noqa: F401,F403,E402
@@ -20,6 +22,7 @@ from agent_lifecycle.audit.proof_integrity import (  # noqa: E402
     build_receipt_hash_chain,
     build_root_cause_evidence,
 )
+from agent_lifecycle.compiler import validate_phase_packet  # noqa: E402
 
 
 def _cli_risk_profile(*, operation_id: str) -> dict:
@@ -375,6 +378,245 @@ class CliWorkflowCommandTests(unittest.TestCase):
             self.assertEqual(payload["claim"]["schemaVersion"], "agent-task-change-set-claim.v1")
             self.assertFalse(payload["stateWritten"])
 
+    def test_workflow_task_snapshot_emits_bounded_phase_packets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "tests@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "ALK Tests"], cwd=root, check=True)
+            (root / ".gitignore").write_text("run.state.json\nevents.jsonl\nwork/\n", encoding="utf-8")
+            source = root / "src/example.py"
+            source.parent.mkdir(parents=True)
+            source.write_text("value = 1\n", encoding="utf-8")
+            subprocess.run(["git", "add", ".gitignore", "src/example.py"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "baseline"], cwd=root, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+            ).stdout.strip()
+            manifest = _phase_packet_manifest(revision)
+            manifest_path = root / "plan.manifest.json"
+            lock_path = root / "plan.lock.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            lock_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-plan-lock.v1",
+                        "manifestHash": canonical_digest(manifest),
+                        "planRevision": 1,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            state_path = _write_state(root)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["planDigest"] = canonical_digest(manifest)
+            state["sourceRevision"] = revision
+            state["tasks"][0].update(
+                {
+                    "writes": ["src"],
+                    "readOnly": ["docs"],
+                    "forbiddenWrites": [".github/workflows"],
+                    "reviewer": "independent-reviewer",
+                }
+            )
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            code, _started = _run_cli(
+                [
+                    "workflow",
+                    "task-start",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "start-op",
+                    "--expected-revision",
+                    "1",
+                    "--source-revision",
+                    revision,
+                    "--reason",
+                    "launch",
+                ]
+            )
+            self.assertEqual(code, 0)
+            source.write_text("value = 2\n", encoding="utf-8")
+
+            code, legacy = _run_cli(["workflow", "task-snapshot", "--state", str(state_path), "--task", "WS-01"])
+            self.assertEqual(code, 0)
+            implementation_path = root / "implementation-phase.json"
+            code, packet_snapshot = _run_cli(
+                _task_snapshot_packet_args(
+                    state_path,
+                    manifest_path,
+                    lock_path,
+                    purpose="IMPLEMENTATION",
+                    out=implementation_path,
+                )
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(packet_snapshot, legacy)
+            implementation = json.loads(implementation_path.read_text(encoding="utf-8"))
+            validate_phase_packet(implementation)
+            self.assertEqual(implementation["purpose"], "IMPLEMENTATION")
+            self.assertFalse(implementation["implementationAuthorized"])
+
+            optional = {
+                "manifest": ["--manifest", str(manifest_path)],
+                "lock": ["--lock", str(lock_path)],
+                "purpose": ["--phase-packet-purpose", "IMPLEMENTATION"],
+                "out": ["--phase-packet-out", str(root / "partial.json")],
+            }
+            for size in range(1, len(optional)):
+                for selected in combinations(optional, size):
+                    args = ["workflow", "task-snapshot", "--state", str(state_path), "--task", "WS-01"]
+                    for key in selected:
+                        args.extend(optional[key])
+                    code, failure = _run_cli(args)
+                    self.assertEqual(code, 2, selected)
+                    self.assertEqual(failure["code"], "phase-packet-required-fact-missing", selected)
+
+            stored_state = json.loads(state_path.read_text(encoding="utf-8"))
+            task = stored_state["tasks"][0]
+            task["status"] = "VERIFYING"
+            task["result"] = {"path": "work/result.json", "sha256": "6" * 64, "bytes": 10}
+            task["resultChangeSetEvidence"] = {
+                key: legacy[key]
+                for key in ("provider", "baselineSha", "fileSetHash", "diffHash", "snapshotHash", "changedFiles")
+            }
+            state_path.write_text(json.dumps(stored_state), encoding="utf-8")
+            audit_path = root / "audit-phase.json"
+            code, audit_snapshot = _run_cli(
+                _task_snapshot_packet_args(
+                    state_path,
+                    manifest_path,
+                    lock_path,
+                    purpose="TASK_AUDIT",
+                    out=audit_path,
+                )
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(audit_snapshot["snapshotHash"], legacy["snapshotHash"])
+            audit_packet = json.loads(audit_path.read_text(encoding="utf-8"))
+            validate_phase_packet(audit_packet)
+            self.assertEqual(audit_packet["payload"]["resultDigest"], "6" * 64)
+
+            stored_state = json.loads(state_path.read_text(encoding="utf-8"))
+            task = stored_state["tasks"][0]
+            task["status"] = "RUNNING"
+            task["attempt"] = 2
+            task["remediationFindingIds"] = ["F-WS211-03"]
+            task["attemptHistory"] = [
+                {
+                    "result": {"sha256": "7" * 64},
+                    "review": {"sha256": "8" * 64},
+                }
+            ]
+            state_path.write_text(json.dumps(stored_state), encoding="utf-8")
+            remediation_path = root / "remediation-phase.json"
+            code, _remediation_snapshot = _run_cli(
+                _task_snapshot_packet_args(
+                    state_path,
+                    manifest_path,
+                    lock_path,
+                    purpose="REMEDIATION",
+                    out=remediation_path,
+                )
+            )
+            self.assertEqual(code, 0)
+            remediation = json.loads(remediation_path.read_text(encoding="utf-8"))
+            validate_phase_packet(remediation)
+            self.assertEqual(remediation["payload"]["openFindingIds"], ["F-WS211-03"])
+            self.assertEqual(remediation["payload"]["remainingAttempts"], 2)
+
+    def test_workflow_validation_select_is_read_only_and_legacy_conservative(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = _phase_packet_manifest("source")
+            manifest_path = root / "plan.manifest.json"
+            lock_path = root / "plan.lock.json"
+            snapshot_path = root / "snapshot.json"
+            out_path = root / "selection.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            lock_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-plan-lock.v1",
+                        "manifestHash": canonical_digest(manifest),
+                        "planRevision": 1,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            snapshot_path.write_text(
+                json.dumps({"taskId": "WS-01", "snapshotHash": "9" * 64, "changedFiles": ["src/example.py"]}),
+                encoding="utf-8",
+            )
+            state_path = _write_state(root)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["planDigest"] = canonical_digest(manifest)
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            before = state_path.read_bytes()
+
+            code, selection = _run_cli(
+                [
+                    "workflow",
+                    "validation-select",
+                    "--state",
+                    str(state_path),
+                    "--task",
+                    "WS-01",
+                    "--manifest",
+                    str(manifest_path),
+                    "--lock",
+                    str(lock_path),
+                    "--snapshot",
+                    str(snapshot_path),
+                    "--out",
+                    str(out_path),
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(selection["status"], "PASS")
+            self.assertEqual(selection["level"], "RELEASE_FULL")
+            self.assertEqual(selection["reasons"], ["LEGACY_PROFILE_ABSENT"])
+            self.assertFalse(selection["commandsExecuted"])
+            self.assertFalse(selection["stateWritten"])
+            self.assertEqual(state_path.read_bytes(), before)
+            self.assertEqual(json.loads(out_path.read_text(encoding="utf-8")), selection)
+
+    @patch("agent_lifecycle.cli.dispatch_lifecycle.finalize_run")
+    def test_workflow_finalize_cli_forwards_release_full_receipt(self, finalize_mock) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = _write_state(Path(tmp))
+            finalize_mock.return_value = {"schemaVersion": "agent-workflow-status.v1", "phase": "COMPLETE"}
+
+            code, _payload = _run_cli(
+                [
+                    "workflow",
+                    "finalize",
+                    "--state",
+                    str(state_path),
+                    "--operation-id",
+                    "finalize-op",
+                    "--expected-revision",
+                    "1",
+                    "--source-revision",
+                    "source",
+                    "--final-audit",
+                    "final/final-audit.json",
+                    "--proof",
+                    "final/proof.json",
+                    "--release-full-receipt",
+                    "final/release-full.json",
+                    "--reason",
+                    "done",
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(finalize_mock.call_args.kwargs["release_full_receipt_path"], "final/release-full.json")
+
     def test_workflow_task_start_cli_consumes_risk_profile(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -706,6 +948,65 @@ class CliWorkflowCommandTests(unittest.TestCase):
             )
             self.assertEqual(applied["selectedAction"], "reroute-stronger")
             self.assertEqual(applied["nextRouteDecisionDigest"], "8" * 64)
+
+
+def _phase_packet_manifest(source_revision: str) -> dict:
+    return {
+        "status": "FROZEN",
+        "planRevision": 1,
+        "baseRevision": {"ref": source_revision, "sha": source_revision},
+        "package": {"id": "package", "planArtifactRoot": "plans/package"},
+        "readOnly": ["docs"],
+        "forbiddenWrites": [".github/workflows"],
+        "leadOwned": [],
+        "orchestration": {"maxTaskAttempts": 3},
+        "acceptance": {
+            "criteria": [
+                {
+                    "id": "AC-WS-01",
+                    "statement": "The task behavior is accepted.",
+                    "evidenceIds": ["EV-WS-01"],
+                }
+            ]
+        },
+        "workstreams": [
+            {
+                "id": "WS-01",
+                "dependsOn": [],
+                "writes": ["src"],
+                "readOnly": [],
+                "forbiddenWrites": [],
+                "acceptanceIds": ["AC-WS-01"],
+                "evidenceIds": ["EV-WS-01"],
+            }
+        ],
+    }
+
+
+def _task_snapshot_packet_args(
+    state_path: Path,
+    manifest_path: Path,
+    lock_path: Path,
+    *,
+    purpose: str,
+    out: Path,
+) -> list[str]:
+    return [
+        "workflow",
+        "task-snapshot",
+        "--state",
+        str(state_path),
+        "--task",
+        "WS-01",
+        "--manifest",
+        str(manifest_path),
+        "--lock",
+        str(lock_path),
+        "--phase-packet-purpose",
+        purpose,
+        "--phase-packet-out",
+        str(out),
+    ]
 
 
 def _cli_lineage() -> dict:

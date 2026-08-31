@@ -41,6 +41,15 @@ Stable schema ids:
 - `agent-goal-record.v1`
 - `agent-objective-snapshot.v1`
 - `agent-workflow-state.v4`
+- `agent-phase-packet.v1`
+- `agent-phase-planning-handoff-payload.v1`
+- `agent-phase-implementation-payload.v1`
+- `agent-phase-task-audit-payload.v1`
+- `agent-phase-remediation-payload.v1`
+- `agent-validation-check-catalog.v1`
+- `agent-validation-ladder-profile.v1`
+- `agent-validation-selection.v1`
+- `agent-release-full-validation-receipt.v1`
 - `agent-workflow-continuation-action.v1`
 - `agent-workflow-continuation-receipt.v1`
 - `agent-workflow-continuation-input-bundle.v1`
@@ -167,6 +176,14 @@ environment names and redacted output; current bundled adapters declare
 Plan completeness validation checks the selected SDD tier before audit, so
 small plans can stay compact while risky S2 work still has requirements,
 acceptance, evidence routes, ownership, budgets, context limits and final gates.
+
+Phase packets are bounded projections for planning handoff, implementation,
+task audit and remediation. They keep exact digest lineage and explicitly carry
+no implementation, proof or promotion authority. The validation ladder is an
+optional frozen mapping from changed paths to exact catalog check IDs. Its
+selector is read-only and command-free; legacy, unmatched and protected-path
+cases select `RELEASE_FULL`, and opted-in finalization requires a fresh full
+validation receipt.
 
 Planning launch profiles are exact-version, local and fail closed. Profile
 generation or a version probe does not establish

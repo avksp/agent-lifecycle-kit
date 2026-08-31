@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.cli.plan_lock_commands import create_reviewed_plan_lock
-from agent_lifecycle.compiler import compile_small_model_packets, compile_task_packets
+from agent_lifecycle.compiler import build_phase_packet, compile_small_model_packets, compile_task_packets
 from agent_lifecycle.contracts import (
     LifecycleError,
+    canonical_digest,
     read_json_object,
     write_json_create,
 )
@@ -18,6 +19,7 @@ from agent_lifecycle.contracts.finding_check_schemas import (
     validate_finding_check_evidence,
     validate_finding_check_proposal,
 )
+from agent_lifecycle.contracts.phase_packet_schemas import PLANNING_HANDOFF_PAYLOAD_SCHEMA
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.planning import (
     build_plan_delta,
@@ -181,6 +183,25 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
             )
         if args.out:
             write_json_create(Path(args.out), payload)
+        if args.phase_packet_out:
+            if not args.snapshot or not args.lock:
+                raise LifecycleError(
+                    "phase-packet-required-fact-missing",
+                    "plan handoff phase packet requires --snapshot and --lock",
+                )
+            lock = read_json_object(Path(args.lock), label="plan lock")
+            verify_plan_lock(manifest, lock)
+            packet = _build_planning_handoff_phase_packet(
+                manifest,
+                lock,
+                handoff_snapshot,
+                selected_workstream_ids=[
+                    item["id"]
+                    for item in payload.get("workstreams", [])
+                    if isinstance(item, dict) and isinstance(item.get("id"), str)
+                ],
+            )
+            write_json_create(Path(args.phase_packet_out), packet)
         return payload
     if args.plan_command == "delta":
 
@@ -213,6 +234,103 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
     if args.plan_command == "finding-check":
         return _dispatch_finding_check(args)
     raise LifecycleError("command-not-implemented", "plan command is not implemented")
+
+
+def _build_planning_handoff_phase_packet(
+    manifest: dict[str, Any],
+    lock: dict[str, Any],
+    snapshot: dict[str, Any] | None,
+    *,
+    selected_workstream_ids: list[str],
+) -> dict[str, Any]:
+    if not isinstance(snapshot, dict):
+        raise LifecycleError("phase-packet-required-fact-missing", "plan handoff snapshot is required")
+    all_workstreams = [item for item in manifest.get("workstreams", []) if isinstance(item, dict)]
+    by_id = {item.get("id"): item for item in all_workstreams if isinstance(item.get("id"), str)}
+    selected: list[dict[str, Any]] = []
+    for workstream_id in selected_workstream_ids:
+        workstream = by_id.get(workstream_id)
+        if not isinstance(workstream, dict):
+            raise LifecycleError(
+                "phase-packet-required-fact-missing",
+                "plan handoff selected an unknown workstream",
+                {"workstreamId": workstream_id},
+            )
+        acceptance = _phase_acceptance(manifest, workstream)
+        evidence = _phase_evidence(workstream)
+        selected.append(
+            {
+                "id": workstream_id,
+                "dependsOn": _string_list(workstream.get("dependsOn")),
+                "writes": _string_list(workstream.get("writes")),
+                "readOnly": _scope_list(manifest, workstream, "readOnly"),
+                "forbiddenWrites": _scope_list(manifest, workstream, "forbiddenWrites"),
+                "acceptanceCriteria": acceptance,
+                "evidenceRequirements": evidence,
+                "activeBlockerIds": _string_list(workstream.get("activeBlockerIds")),
+            }
+        )
+    payload = {
+        "schemaVersion": PLANNING_HANDOFF_PAYLOAD_SCHEMA,
+        "workstreams": selected,
+        "dependencyEdges": [
+            {"from": dependency, "to": item["id"]} for item in selected for dependency in item["dependsOn"]
+        ],
+    }
+    base_revision = manifest.get("baseRevision")
+    source_revision = None
+    if isinstance(base_revision, dict):
+        source_revision = base_revision.get("sha") or base_revision.get("ref")
+    if not isinstance(source_revision, str) or not source_revision:
+        source_revision = snapshot.get("sourceDigest")
+    if not isinstance(source_revision, str) or not source_revision:
+        raise LifecycleError("phase-packet-required-fact-missing", "plan handoff source revision is required")
+    acceptance = [criterion for item in selected for criterion in item["acceptanceCriteria"]]
+    evidence = [requirement for item in selected for requirement in item["evidenceRequirements"]]
+    blockers = [blocker for item in selected for blocker in item["activeBlockerIds"]]
+    scopes = [
+        {
+            "id": item["id"],
+            "writes": item["writes"],
+            "readOnly": item["readOnly"],
+            "forbiddenWrites": item["forbiddenWrites"],
+        }
+        for item in selected
+    ]
+    return build_phase_packet(
+        purpose="PLANNING_HANDOFF",
+        payload=payload,
+        plan_digest=canonical_digest(manifest),
+        plan_lock_digest=canonical_digest(lock),
+        state_revision=None,
+        source_revision=source_revision,
+        write_scope_digest=canonical_digest(scopes),
+        acceptance_digest=canonical_digest(acceptance),
+        evidence_digest=canonical_digest(evidence),
+        active_blocker_ids=blockers,
+    )
+
+
+def _phase_acceptance(manifest: dict[str, Any], workstream: dict[str, Any]) -> list[dict[str, Any]]:
+    acceptance = manifest.get("acceptance")
+    criteria = acceptance.get("criteria") if isinstance(acceptance, dict) else []
+    criteria = criteria if isinstance(criteria, list) else []
+    by_id = {item.get("id"): item for item in criteria if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    return [dict(by_id.get(item, {"id": item})) for item in _string_list(workstream.get("acceptanceIds"))]
+
+
+def _phase_evidence(workstream: dict[str, Any]) -> list[dict[str, Any]]:
+    return [{"id": item, "required": True} for item in _string_list(workstream.get("evidenceIds"))]
+
+
+def _scope_list(manifest: dict[str, Any], workstream: dict[str, Any], field: str) -> list[str]:
+    return sorted(set(_string_list(manifest.get(field)) + _string_list(workstream.get(field))))
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return sorted({item for item in value if isinstance(item, str) and item})
 
 
 def _dispatch_finding_check(args: argparse.Namespace) -> dict[str, Any]:

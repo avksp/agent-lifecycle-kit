@@ -12,6 +12,17 @@
 - `agent-goal-record.v1`: запись цели.
 - `agent-objective-snapshot.v1`: компактный снимок цели.
 - `agent-workflow-state.v4`: текущее состояние workflow и его полномочия.
+- `agent-phase-packet.v1`: ограниченная проекция фактов между фазами без
+  полномочий реализации, доказательства или публикации.
+- `agent-phase-planning-handoff-payload.v1`: payload передачи планирования.
+- `agent-phase-implementation-payload.v1`: payload одной попытки реализации.
+- `agent-phase-task-audit-payload.v1`: payload независимого аудита задачи.
+- `agent-phase-remediation-payload.v1`: payload ограниченной доработки.
+- `agent-validation-check-catalog.v1`: digest-каталог точных команд проверки.
+- `agent-validation-ladder-profile.v1`: профиль выбора уровня по буквальным
+  путям.
+- `agent-validation-selection.v1`: read-only результат выбора ID проверок.
+- `agent-release-full-validation-receipt.v1`: свежий полный релизный receipt.
 - `agent-workflow-continuation-action.v1`: вычисленный существующий переход с
   точными guard-значениями для явного применения.
 - `agent-workflow-continuation-receipt.v1`: результат read-only проекции или

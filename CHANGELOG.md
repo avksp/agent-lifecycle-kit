@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 2.11.0 - 2026-08-31
+
+- Added bounded `agent-phase-packet.v1` projections for planning handoff,
+  implementation, independent task audit and remediation without creating new
+  workflow authority.
+- Added read-only `workflow validation-select` with digest-bound check
+  catalogs, command-free path profiles, a protected `RELEASE_FULL` floor and
+  exact full-validation receipt enforcement for opted-in finalization.
+- Preserved existing handoff, task snapshot and legacy finalization behavior;
+  added a separate comparable economics pair and release accounting for
+  version `2.11.0` without inventing unavailable token telemetry.
+
 ## 2.10.0 - 2026-08-31
 
 - Added bounded multi-transition `workflow continue --input-bundle` execution

@@ -19,7 +19,7 @@ that result. It is host-neutral and does not depend on a source project.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==2.10.0` from
+  `python -m pip install agent-lifecycle-kit==2.11.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -37,6 +37,8 @@ that result. It is host-neutral and does not depend on a source project.
 - [Context checkpoints and compaction recovery](reference/context-checkpoints.md)
 - [Release accounting](reference/release-accounting.md)
 - [Phase-to-session handoff](guides/phase-session-handoff.md)
+- [Phase packets](reference/phase-packets.md)
+- [Validation ladder](reference/validation-ladder.md)
 - [Structured result qualification](reference/structured-result-qualification.md)
 - [Optional adapter lifecycle control](adapters/lifecycle-control.md)
 - [How ALK works for different tasks](guides/how-alk-works.md)

@@ -18,6 +18,8 @@ agent-lifecycle plan snapshot \
 agent-lifecycle plan handoff \
   --manifest work/plans/release/plan.manifest.json \
   --snapshot work/release/plan-snapshot.json \
+  --lock work/plans/release/plan.lock.json \
+  --phase-packet-out work/release/planning-phase-packet.json \
   --max-workstreams 12 \
   --target-tokens 4096 \
   --out work/release/plan-handoff.json
@@ -68,12 +70,32 @@ none`. Оператор всё равно обязан выполнить тек
 revision. Исполнитель читает свой пакет, меняет только принадлежащие ему пути,
 создаёт свежий `workflow task-snapshot` и отправляет `workflow task-result`.
 
+Новая сессия может получить отдельный ограниченный пакет реализации без
+изменения обычного task change set:
+
+```bash
+agent-lifecycle workflow task-snapshot \
+  --state work/release/run.state.json \
+  --task WS-01 \
+  --manifest work/plans/release/plan.manifest.json \
+  --lock work/plans/release/plan.lock.json \
+  --phase-packet-purpose IMPLEMENTATION \
+  --phase-packet-out work/release/WS-01/implementation-phase-packet.json \
+  --out work/release/WS-01/task-change-set.json
+```
+
 ## Независимая сессия аудита
 
 Рецензенту нужны зафиксированные manifest и lock, task packet, свежий change
 set, task result и evidence конкретных критериев. Не передавайте скрытые
 рассуждения исполнителя и не просите вывести приёмку из текстового резюме.
 Review содержит отдельную идентичность рецензента и его run id.
+
+После `task-result` повторите `workflow task-snapshot` с
+`--phase-packet-purpose TASK_AUDIT`: ALK спроецирует неизменяемый change set,
+связанный с сохранённым результатом. Для начатой повторной попытки используйте
+`REMEDIATION`; пакет содержит digest прошлых receipts, ID открытых находок и
+оставшееся число попыток.
 
 `workflow task-review-apply`, `workflow task-accept` и `workflow task-rework` -
 переходы с полномочиями. Оператор вызывает их только с действительным

@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.10.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.11.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -47,7 +47,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 - The [system architecture](docs/architecture/system-architecture.md) page explains how the project is organized, and [project comparison](docs/reference/project-comparison.md) shows how it differs from similar tools.
 - Multiple-agent boundaries, workflow configuration, model choice, prompts, timeouts and retries are described in [workflow customization and execution controls](docs/reference/workflow-customization.md).
 - Create a local project profile with `agent-lifecycle project profile init`; see [project workflow profile](docs/reference/project-workflow-profile.md). Explain the selected profile, plan constraints and adapter capability lineage with [effective configuration](docs/reference/effective-configuration.md), [structured result qualification](docs/reference/structured-result-qualification.md) and [adapter action evidence](docs/reference/adapter-action-evidence.md). Add optional project-owned architecture and dependency evidence with [external verification checks](docs/reference/external-verification-checks.md), run longer specialized adapter work through [bounded external tool jobs](docs/reference/external-tool-jobs.md), track bounded terminology with [project domain language](docs/reference/project-domain-language.md), coordinate several runs with the read-only [multi-run attention view](docs/reference/multi-run-attention-view.md), or use the optional [security analysis profile](docs/reference/security-analysis-profile.md) for untrusted findings and independently verified remediation.
-- For long sessions, use [context checkpoints and compaction recovery](docs/reference/context-checkpoints.md). They preserve a bounded local continuation package without changing plan authority. Measure phases and releases with [release accounting](docs/reference/release-accounting.md), and cross session boundaries with the bounded [phase-to-session handoff](docs/guides/phase-session-handoff.md).
+- For long sessions, use [context checkpoints and compaction recovery](docs/reference/context-checkpoints.md). They preserve a bounded local continuation package without changing plan authority. Measure phases and releases with [release accounting](docs/reference/release-accounting.md), follow the bounded [phase-to-session handoff](docs/guides/phase-session-handoff.md) with [phase packets](docs/reference/phase-packets.md), and choose focused checks through the read-only [validation ladder](docs/reference/validation-ladder.md).
 ## What it gives you
 - A finish-oriented lifecycle: plan, execute, review, and prove the result.
 - One process for different CLIs: adapter-specific commands stay outside the

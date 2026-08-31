@@ -51,6 +51,7 @@ from agent_lifecycle.contracts.lifecycle_control_definitions import (
 )
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
 from agent_lifecycle.contracts.multi_run_view_schemas import MULTI_RUN_VIEW_SCHEMAS
+from agent_lifecycle.contracts.phase_packet_schemas import PHASE_PACKET_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.plan_delta_schemas import PLAN_DELTA_SCHEMAS
 from agent_lifecycle.contracts.plan_manifest_schemas import PLAN_MANIFEST_SCHEMAS
@@ -84,6 +85,7 @@ from agent_lifecycle.contracts.structured_result_schemas import STRUCTURED_RESUL
 from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
 from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
+from agent_lifecycle.contracts.validation_ladder_schemas import VALIDATION_LADDER_SCHEMAS
 from agent_lifecycle.contracts.workflow_artifact_schemas import WORKFLOW_ARTIFACT_SCHEMAS
 from agent_lifecycle.contracts.workflow_authorization_schemas import WORKFLOW_AUTHORIZATION_SCHEMAS
 from agent_lifecycle.contracts.workflow_continuation_batch_schemas import WORKFLOW_CONTINUATION_BATCH_SCHEMAS
@@ -740,6 +742,8 @@ _SCHEMA_GROUPS = (
     WORKFLOW_CONTINUATION_SCHEMAS,
     WORKFLOW_ECONOMICS_SCHEMAS,
     WORKFLOW_STATE_SCHEMAS,
+    PHASE_PACKET_SCHEMAS,
+    VALIDATION_LADDER_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
     SECURITY_ANALYSIS_SCHEMAS,
     CROSS_CHECK_SCHEMAS,

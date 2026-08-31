@@ -118,7 +118,10 @@ _CRITERION = {
     "priority",
 }
 _EVIDENCE = {"id", "description", "source", "validation", "artifactPath", "required"}
-_VALIDATION = {"commands", "extraEvidence"}
+_VALIDATION = {"commands", "extraEvidence", "checkCatalog", "validationLadderProfile"}
+_VALIDATION_CHECK_CATALOG = {"schemaVersion", "checks", "catalogDigest"}
+_VALIDATION_CHECK = {"id", "commandDigest"}
+_VALIDATION_LADDER_REFERENCE = {"path", "digest"}
 _ORCHESTRATION = {
     "startMode",
     "remediationMode",
@@ -231,6 +234,7 @@ def _validate_nested(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -
         for index, criterion in enumerate(criteria):
             _object_keys(criterion, _CRITERION, f"acceptanceCriteria[{index}]", blockers)
     _object_keys(manifest.get("validation"), _VALIDATION, "validation", blockers)
+    _validate_validation_ladder_contract(manifest.get("validation"), blockers)
     orchestration = manifest.get("orchestration")
     _object_keys(orchestration, _ORCHESTRATION, "orchestration", blockers)
     _validate_remediation_policy(orchestration, blockers)
@@ -276,11 +280,7 @@ def _validate_remediation_policy(value: Any, blockers: list[dict[str, Any]]) -> 
     mode = value.get("remediationMode", "off")
     attempts = value.get("maxTaskAttempts", 1)
     review_rounds = value.get("maxPlanReviewRounds", 1)
-    if (
-        not isinstance(review_rounds, int)
-        or isinstance(review_rounds, bool)
-        or not 1 <= review_rounds <= 10
-    ):
+    if not isinstance(review_rounds, int) or isinstance(review_rounds, bool) or not 1 <= review_rounds <= 10:
         blockers.append(
             _blocker(
                 "plan-review-round-budget-invalid",
@@ -321,6 +321,53 @@ def _object_keys(value: Any, allowed: set[str], path: str, blockers: list[dict[s
         blockers.append(_blocker("plan-manifest-nested-object-invalid", f"{path} must be an object", {"path": path}))
         return
     _unknown_keys(value, allowed, path, blockers)
+
+
+def _validate_validation_ladder_contract(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(value, dict):
+        return
+    catalog = value.get("checkCatalog")
+    reference = value.get("validationLadderProfile")
+    if catalog is not None:
+        _object_keys(catalog, _VALIDATION_CHECK_CATALOG, "validation.checkCatalog", blockers)
+        if isinstance(catalog, dict):
+            if catalog.get("schemaVersion") != "agent-validation-check-catalog.v1":
+                blockers.append(
+                    _blocker("plan-validation-catalog-schema-invalid", "validation catalog schema is invalid")
+                )
+            if not _is_digest(catalog.get("catalogDigest")):
+                blockers.append(
+                    _blocker("plan-validation-catalog-digest-invalid", "validation catalog digest is invalid")
+                )
+            checks = catalog.get("checks")
+            if not isinstance(checks, list) or not checks:
+                blockers.append(
+                    _blocker("plan-validation-catalog-checks-invalid", "validation catalog checks are required")
+                )
+            else:
+                for index, check in enumerate(checks):
+                    _object_keys(check, _VALIDATION_CHECK, f"validation.checkCatalog.checks[{index}]", blockers)
+                    if not isinstance(check, dict) or not isinstance(check.get("id"), str) or not check["id"]:
+                        blockers.append(_blocker("plan-validation-check-id-invalid", "validation check id is required"))
+                    elif not _is_digest(check.get("commandDigest")):
+                        blockers.append(
+                            _blocker(
+                                "plan-validation-check-digest-invalid", "validation check commandDigest is invalid"
+                            )
+                        )
+    if reference is not None:
+        _object_keys(reference, _VALIDATION_LADDER_REFERENCE, "validation.validationLadderProfile", blockers)
+        if isinstance(reference, dict):
+            if not isinstance(reference.get("path"), str) or not reference["path"]:
+                blockers.append(_blocker("plan-validation-profile-path-invalid", "validation profile path is required"))
+            if not _is_digest(reference.get("digest")):
+                blockers.append(
+                    _blocker("plan-validation-profile-digest-invalid", "validation profile digest is invalid")
+                )
+
+
+def _is_digest(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(character in "0123456789abcdef" for character in value)
 
 
 def _unknown_keys(value: dict[str, Any], allowed: set[str], path: str, blockers: list[dict[str, Any]]) -> None:

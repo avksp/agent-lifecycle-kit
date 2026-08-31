@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import sys
 import unittest
 from pathlib import Path
@@ -9,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.planning.completeness import validate_plan_completeness  # noqa: E402
+from agent_lifecycle.quality.validation_ladder import build_validation_check_catalog  # noqa: E402
 
 
 class CanonicalPlanCompletenessTests(unittest.TestCase):
@@ -31,13 +31,43 @@ class CanonicalPlanCompletenessTests(unittest.TestCase):
     def test_unordered_cross_workstream_writes_are_rejected(self) -> None:
         manifest = _manifest()
         manifest["workstreams"] = [
-            {"id": "WS-01", "dependsOn": [], "writes": ["src/shared"], "acceptanceIds": ["AC-01"], "evidenceIds": ["EV-01"]},
-            {"id": "WS-02", "dependsOn": [], "writes": ["src/shared/file.py"], "acceptanceIds": ["AC-02"], "evidenceIds": ["EV-02"]},
+            {
+                "id": "WS-01",
+                "dependsOn": [],
+                "writes": ["src/shared"],
+                "acceptanceIds": ["AC-01"],
+                "evidenceIds": ["EV-01"],
+            },
+            {
+                "id": "WS-02",
+                "dependsOn": [],
+                "writes": ["src/shared/file.py"],
+                "acceptanceIds": ["AC-02"],
+                "evidenceIds": ["EV-02"],
+            },
         ]
 
         result = validate_plan_completeness(manifest)
 
         self.assertIn("authority-write-conflict", _codes(result))
+
+    def test_validation_ladder_authority_is_all_or_none_and_resolved(self) -> None:
+        manifest = _manifest()
+        command = manifest["validation"]["commands"][0]
+        manifest["validation"]["checkCatalog"] = build_validation_check_catalog({"full": command})
+
+        missing_peer = validate_plan_completeness(manifest)
+        self.assertIn("validation-ladder-authority", missing_peer["requiredChecks"])
+        self.assertIn("validation-ladder-authority-missing-peer", _codes(missing_peer))
+
+        manifest["validation"]["validationLadderProfile"] = {
+            "path": "profiles/validation.json",
+            "digest": "1" * 64,
+        }
+        self.assertEqual(validate_plan_completeness(manifest)["status"], "PASS")
+
+        manifest["validation"]["checkCatalog"]["checks"][0]["commandDigest"] = "2" * 64
+        self.assertIn("validation-ladder-check-missing", _codes(validate_plan_completeness(manifest)))
 
 
 def _manifest() -> dict:
@@ -67,7 +97,13 @@ def _manifest() -> dict:
             ]
         },
         "workstreams": [
-            {"id": "WS-01", "dependsOn": [], "writes": ["src/one.py"], "acceptanceIds": ["AC-01", "AC-02"], "evidenceIds": ["EV-01", "EV-02"]}
+            {
+                "id": "WS-01",
+                "dependsOn": [],
+                "writes": ["src/one.py"],
+                "acceptanceIds": ["AC-01", "AC-02"],
+                "evidenceIds": ["EV-01", "EV-02"],
+            }
         ],
         "validation": {"commands": ["python -m unittest"]},
         "budgets": {"maxInvocations": 3},
