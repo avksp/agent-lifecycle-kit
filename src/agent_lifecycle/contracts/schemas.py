@@ -9,15 +9,11 @@ from agent_lifecycle.contracts.adapter_contract_schemas import ADAPTER_CONTRACT_
 from agent_lifecycle.contracts.adapter_event_schemas import ADAPTER_EVENT_SCHEMAS
 from agent_lifecycle.contracts.adapter_session_schemas import ADAPTER_SESSION_SCHEMAS
 from agent_lifecycle.contracts.adapter_task_schemas import ADAPTER_TASK_SCHEMAS
-from agent_lifecycle.contracts.audit_optimization_schemas import (
-    AUDIT_OPTIMIZATION_SCHEMAS,
-)
+from agent_lifecycle.contracts.audit_optimization_schemas import AUDIT_OPTIMIZATION_SCHEMAS
 from agent_lifecycle.contracts.audit_schemas import AUDIT_SCHEMAS
 from agent_lifecycle.contracts.benchmark_schemas import BENCHMARK_SCHEMAS
 from agent_lifecycle.contracts.bug_forensics_schemas import BUG_FORENSICS_SCHEMAS
-from agent_lifecycle.contracts.context_checkpoint_schemas import (
-    CONTEXT_CHECKPOINT_SCHEMAS,
-)
+from agent_lifecycle.contracts.context_checkpoint_schemas import CONTEXT_CHECKPOINT_SCHEMAS
 from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.cross_check_schemas import CROSS_CHECK_SCHEMAS

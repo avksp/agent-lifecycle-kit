@@ -295,7 +295,11 @@ def finalize_run(
         raise LifecycleError("final-audit-outcome-required", "v4 finalization requires an applied final-audit outcome")
     if isinstance(outcome, dict) and outcome.get("verdict") not in {None, "ACCEPTED"}:
         raise LifecycleError("final-audit-outcome-not-accepted", "final audit outcome does not permit finalization")
-    missing = _missing_required_acceptance(state)
+    missing = [
+        str(task.get("id"))
+        for task in state.get("tasks", [])
+        if task.get("required", True) and task.get("status") != "ACCEPTED"
+    ]
     if missing:
         raise LifecycleError("finalization-precondition-failed", "required tasks are not accepted", {"tasks": missing})
     missing_implementation_audits = missing_required_implementation_audits(state_path, state)
@@ -344,64 +348,41 @@ def finalize_run(
         review_mesh_quorum_paths or [],
     )
     proof_rel = normalize_repo_path(proof_path)
-    lifecycle_control_stop = _evaluate_lifecycle_control_stop(
-        state,
-        final_audit=final_audit,
-        final_proof=_proof_body(
-            state,
-            operation_id=operation_id,
-            final_audit=final_audit_identity,
-            completion_check_receipt=completion_check_receipt,
-            completion_gate=completion_gate,
-            goal_record=goal_record,
-            follow_up_register=follow_up_register,
-            proof_integrity=proof_integrity,
-            final_implementation_audit=final_implementation_audit,
-            release_full_validation=release_full_validation,
-            finalization_gate_receipts=finalization_gate_receipts,
-            review_mesh_quorum=review_mesh_quorum,
-            lifecycle_control_stop=None,
-            reason=reason,
-        ),
-    )
-    proof = _proof_body(
-        state,
-        operation_id=operation_id,
-        final_audit=final_audit_identity,
-        completion_check_receipt=completion_check_receipt,
-        completion_gate=completion_gate,
-        goal_record=goal_record,
-        follow_up_register=follow_up_register,
-        proof_integrity=proof_integrity,
-        final_implementation_audit=final_implementation_audit,
-        release_full_validation=release_full_validation,
-        finalization_gate_receipts=finalization_gate_receipts,
-        review_mesh_quorum=review_mesh_quorum,
-        lifecycle_control_stop=lifecycle_control_stop,
-        reason=reason,
-    )
+    proof_inputs: dict[str, Any] = {
+        "operation_id": operation_id,
+        "final_audit": final_audit_identity,
+        "completion_check_receipt": completion_check_receipt,
+        "completion_gate": completion_gate,
+        "goal_record": goal_record,
+        "follow_up_register": follow_up_register,
+        "proof_integrity": proof_integrity,
+        "final_implementation_audit": final_implementation_audit,
+        "release_full_validation": release_full_validation,
+        "finalization_gate_receipts": finalization_gate_receipts,
+        "review_mesh_quorum": review_mesh_quorum,
+        "reason": reason,
+    }
+    preview = _proof_body(state, **proof_inputs, lifecycle_control_stop=None)
+    lifecycle_control_stop = _evaluate_lifecycle_control_stop(state, final_audit=final_audit, final_proof=preview)
+    proof = _proof_body(state, **proof_inputs, lifecycle_control_stop=lifecycle_control_stop)
     write_json_create(root / proof_rel, proof)
     identity = artifact_identity(root, proof_rel, proof)
     state["finalProof"] = {**identity, "semanticStatus": proof["semanticStatus"]}
     state["finalAudit"] = final_audit_identity
-    if completion_check_receipt is not None:
-        state["completionCheckReceipt"] = completion_check_receipt["receipt"]
-    if completion_gate is not None:
-        state["completionGateReceipt"] = completion_gate["receipt"]
-    if goal_record is not None:
-        state["goalRecord"] = goal_record["record"]
-    if follow_up_register is not None:
-        state["followUpRegister"] = follow_up_register["register"]
-    if proof_integrity is not None:
-        state["proofIntegrityReceipt"] = proof_integrity["receipt"]
-    if final_implementation_audit is not None:
-        state["finalImplementationAudit"] = final_implementation_audit["audit"]
-    if release_full_validation is not None:
-        state["releaseFullValidationReceipt"] = release_full_validation["receipt"]
-    if review_mesh_quorum is not None:
-        state["reviewMeshFinalQuorum"] = review_mesh_quorum
-    if lifecycle_control_stop is not None:
-        state["lifecycleControlStop"] = lifecycle_control_stop
+    optional_artifacts = (
+        ("completionCheckReceipt", completion_check_receipt, "receipt"),
+        ("completionGateReceipt", completion_gate, "receipt"),
+        ("goalRecord", goal_record, "record"),
+        ("followUpRegister", follow_up_register, "register"),
+        ("proofIntegrityReceipt", proof_integrity, "receipt"),
+        ("finalImplementationAudit", final_implementation_audit, "audit"),
+        ("releaseFullValidationReceipt", release_full_validation, "receipt"),
+        ("reviewMeshFinalQuorum", review_mesh_quorum, None),
+        ("lifecycleControlStop", lifecycle_control_stop, None),
+    )
+    for state_key, artifact, artifact_key in optional_artifacts:
+        if artifact is not None:
+            state[state_key] = artifact if artifact_key is None else artifact[artifact_key]
     state["phase"] = "COMPLETE"
     commit_state(
         state_path,
@@ -425,14 +406,6 @@ def finalize_run(
         },
     )
     return status(state_path)
-
-
-def _missing_required_acceptance(state: dict[str, Any]) -> list[str]:
-    return [
-        str(task.get("id"))
-        for task in state.get("tasks", [])
-        if task.get("required", True) and task.get("status") != "ACCEPTED"
-    ]
 
 
 def _validate_final_audit(state: dict[str, Any], final_audit: dict[str, Any]) -> None:
@@ -681,29 +654,27 @@ def _validate_release_full_validation(
 ) -> dict[str, Any] | None:
     manifest_path = state.get("manifestPath")
     if not isinstance(manifest_path, str) or not manifest_path:
-        if release_full_receipt_path is not None:
-            raise LifecycleError(
-                "release-full-validation-not-enabled",
-                "release-full validation is not enabled for this legacy workflow state",
-            )
-        return None
+        if release_full_receipt_path is None:
+            return None
+        raise LifecycleError(
+            "release-full-validation-not-enabled",
+            "release-full validation is not enabled for this legacy workflow state",
+        )
     manifest_rel = normalize_repo_path(manifest_path, label="plan manifest")
     manifest = read_json_object(root / manifest_rel, label="plan manifest")
     manifest_validation = manifest.get("validation")
-    opted_in = isinstance(manifest_validation, dict) and (
-        "checkCatalog" in manifest_validation or "validationLadderProfile" in manifest_validation
-    )
-    if not opted_in:
-        if release_full_receipt_path is not None:
-            raise LifecycleError(
-                "release-full-validation-not-enabled",
-                "release-full validation is not enabled by the frozen manifest",
-            )
-        return None
+    if not (
+        isinstance(manifest_validation, dict)
+        and ("checkCatalog" in manifest_validation or "validationLadderProfile" in manifest_validation)
+    ):
+        if release_full_receipt_path is None:
+            return None
+        raise LifecycleError(
+            "release-full-validation-not-enabled", "release-full validation is not enabled by the frozen manifest"
+        )
     if release_full_receipt_path is None:
         raise LifecycleError(
-            "release-full-validation-required",
-            "the frozen validation ladder requires a fresh release-full receipt",
+            "release-full-validation-required", "the frozen validation ladder requires a fresh release-full receipt"
         )
     if not isinstance(manifest_validation, dict):
         raise LifecycleError("release-full-validation-invalid", "manifest validation authority is invalid")
@@ -794,11 +765,7 @@ def _proof_body(
     reason: str,
 ) -> dict[str, Any]:
     accepted = [
-        {
-            "id": task.get("id"),
-            "attempt": task.get("attempt"),
-            "review": task.get("review"),
-        }
+        {"id": task.get("id"), "attempt": task.get("attempt"), "review": task.get("review")}
         for task in state.get("tasks", [])
         if task.get("status") == "ACCEPTED"
     ]

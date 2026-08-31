@@ -205,37 +205,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
 
 def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
     if args.workflow_command == "task-snapshot":
-        packet_args = (args.manifest, args.lock, args.phase_packet_purpose, args.phase_packet_out)
-        packet_requested = any(value is not None for value in packet_args)
-        if packet_requested and not all(value is not None for value in packet_args):
-            raise LifecycleError(
-                "phase-packet-required-fact-missing",
-                "task snapshot phase packet requires --manifest, --lock, --phase-packet-purpose and --phase-packet-out",
-            )
-        state = read_json_object(state_path, label="workflow state") if packet_requested else None
-        task = _state_task(state, args.task) if isinstance(state, dict) else None
-        if args.phase_packet_purpose == "TASK_AUDIT" and isinstance(task, dict) and task.get("status") == "VERIFYING":
-            assert state is not None
-            payload = _result_bound_task_change_set(state, task)
-        else:
-            payload = build_current_task_change_set(state_path, task_id=args.task)
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        if packet_requested:
-            assert state is not None
-            manifest = read_json_object(Path(args.manifest), label="plan manifest")
-            lock = read_json_object(Path(args.lock), label="plan lock")
-            verify_plan_lock(manifest, lock)
-            packet = _build_task_phase_packet(
-                manifest=manifest,
-                lock=lock,
-                state=state,
-                task_id=args.task,
-                purpose=args.phase_packet_purpose,
-                snapshot=payload,
-            )
-            write_json_create(Path(args.phase_packet_out), packet)
-        return payload
+        return _dispatch_task_snapshot(args, state_path)
     if args.workflow_command == "block":
         return block_run(
             state_path,
@@ -359,6 +329,40 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
         maybe_emit_workflow_progress_hook(args, command="workflow task-review-apply", state_path=state_path)
         return payload
     raise LifecycleError("command-not-implemented", "workflow command is not implemented")
+
+
+def _dispatch_task_snapshot(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
+    packet_args = (args.manifest, args.lock, args.phase_packet_purpose, args.phase_packet_out)
+    packet_requested = any(value is not None for value in packet_args)
+    if packet_requested and not all(value is not None for value in packet_args):
+        raise LifecycleError(
+            "phase-packet-required-fact-missing",
+            "task snapshot phase packet requires --manifest, --lock, --phase-packet-purpose and --phase-packet-out",
+        )
+    state = read_json_object(state_path, label="workflow state") if packet_requested else None
+    task = _state_task(state, args.task) if isinstance(state, dict) else None
+    if args.phase_packet_purpose == "TASK_AUDIT" and isinstance(task, dict) and task.get("status") == "VERIFYING":
+        assert state is not None
+        payload = _result_bound_task_change_set(state, task)
+    else:
+        payload = build_current_task_change_set(state_path, task_id=args.task)
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    if packet_requested:
+        assert state is not None
+        manifest = read_json_object(Path(args.manifest), label="plan manifest")
+        lock = read_json_object(Path(args.lock), label="plan lock")
+        verify_plan_lock(manifest, lock)
+        packet = _build_task_phase_packet(
+            manifest=manifest,
+            lock=lock,
+            state=state,
+            task_id=args.task,
+            purpose=args.phase_packet_purpose,
+            snapshot=payload,
+        )
+        write_json_create(Path(args.phase_packet_out), packet)
+    return payload
 
 
 def _result_bound_task_change_set(state: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:

@@ -166,22 +166,13 @@ def build_validation_selection(
 ) -> dict[str, Any]:
     """Select a validation level from frozen plain data without executing commands."""
 
-    plan_digest = canonical_digest(manifest)
-    plan_lock_digest = canonical_digest(lock)
-    state_revision = state.get("stateRevision")
-    source_revision = state.get("sourceRevision")
-    current_tree_digest = snapshot.get("snapshotHash")
-    _require_selection_lineage_shapes(state_revision, source_revision, current_tree_digest)
-    state_revision = cast(int, state_revision)
-    source_revision = cast(str, source_revision)
-    current_tree_digest = cast(str, current_tree_digest)
-
+    lineage = _selection_lineage(manifest, lock, state, snapshot)
     validation = manifest.get("validation")
     validation = validation if isinstance(validation, dict) else {}
     raw_catalog = validation.get("checkCatalog")
     raw_reference = validation.get("validationLadderProfile")
-    catalog_digest = _catalog_digest_or_default(raw_catalog)
-    profile_digest = _declared_profile_digest(
+    lineage["catalog_digest"] = _catalog_digest_or_default(raw_catalog)
+    lineage["profile_digest"] = _declared_profile_digest(
         raw_reference, opted_in=raw_catalog is not None or raw_reference is not None
     )
 
@@ -189,13 +180,7 @@ def build_validation_selection(
         return _blocked_selection(
             code="validation-ladder-profile-invalid",
             message="validation ladder catalog and profile reference are all-or-none",
-            plan_digest=plan_digest,
-            plan_lock_digest=plan_lock_digest,
-            state_revision=state_revision,
-            source_revision=source_revision,
-            current_tree_digest=current_tree_digest,
-            profile_digest=profile_digest,
-            catalog_digest=catalog_digest,
+            lineage=lineage,
         )
 
     if raw_reference is None:
@@ -204,104 +189,53 @@ def build_validation_selection(
             selected_check_ids=[],
             matched_mapping_ids=[],
             reasons=["LEGACY_PROFILE_ABSENT"],
-            plan_digest=plan_digest,
-            plan_lock_digest=plan_lock_digest,
-            state_revision=state_revision,
-            source_revision=source_revision,
-            current_tree_digest=current_tree_digest,
-            profile_digest=None,
-            catalog_digest=_EMPTY_CATALOG_DIGEST,
+            lineage={**lineage, "profile_digest": None, "catalog_digest": _EMPTY_CATALOG_DIGEST},
         )
 
-    profile: dict[str, Any]
-    if raw_reference is not None:
-        try:
-            reference = _normalize_profile_reference(raw_reference)
-        except LifecycleError as exc:
-            return _blocked_from_error(
-                exc,
-                plan_digest,
-                plan_lock_digest,
-                state_revision,
-                source_revision,
-                current_tree_digest,
-                profile_digest,
-                catalog_digest,
-            )
-        profile_digest = reference["digest"]
-        profile_path = repository_root / reference["path"]
-        try:
-            raw_bytes = read_stable_repository_file(
-                repository_root,
-                reference["path"],
-                max_bytes=1_048_576,
-                label="validation ladder profile",
-            )
-        except LifecycleError:
-            return _blocked_selection(
-                code="validation-ladder-profile-unreadable",
-                message="validation ladder profile cannot be read",
-                plan_digest=plan_digest,
-                plan_lock_digest=plan_lock_digest,
-                state_revision=state_revision,
-                source_revision=source_revision,
-                current_tree_digest=current_tree_digest,
-                profile_digest=profile_digest,
-                catalog_digest=catalog_digest,
-                context={"path": str(profile_path.relative_to(repository_root))},
-            )
-        try:
-            raw_profile = load_json_object(raw_bytes, label="validation ladder profile")
-        except LifecycleError as exc:
-            return _blocked_selection(
-                code="validation-ladder-profile-invalid",
-                message="validation ladder profile is not valid JSON",
-                plan_digest=plan_digest,
-                plan_lock_digest=plan_lock_digest,
-                state_revision=state_revision,
-                source_revision=source_revision,
-                current_tree_digest=current_tree_digest,
-                profile_digest=profile_digest,
-                catalog_digest=catalog_digest,
-                context={"cause": exc.code},
-            )
-        if canonical_digest(raw_profile) != profile_digest:
-            return _blocked_selection(
-                code="validation-ladder-profile-digest-mismatch",
-                message="validation ladder profile digest does not match its manifest reference",
-                plan_digest=plan_digest,
-                plan_lock_digest=plan_lock_digest,
-                state_revision=state_revision,
-                source_revision=source_revision,
-                current_tree_digest=current_tree_digest,
-                profile_digest=profile_digest,
-                catalog_digest=catalog_digest,
-            )
-        try:
-            profile = validate_validation_ladder_profile(raw_profile)
-        except LifecycleError as exc:
-            return _blocked_from_error(
-                exc,
-                plan_digest,
-                plan_lock_digest,
-                state_revision,
-                source_revision,
-                current_tree_digest,
-                profile_digest,
-                catalog_digest,
-            )
+    try:
+        reference = _normalize_profile_reference(raw_reference)
+    except LifecycleError as exc:
+        return _blocked_from_error(exc, lineage)
+    lineage["profile_digest"] = reference["digest"]
+    try:
+        raw_bytes = read_stable_repository_file(
+            repository_root,
+            reference["path"],
+            max_bytes=1_048_576,
+            label="validation ladder profile",
+        )
+    except LifecycleError:
+        return _blocked_selection(
+            code="validation-ladder-profile-unreadable",
+            message="validation ladder profile cannot be read",
+            lineage=lineage,
+            context={"path": reference["path"]},
+        )
+    try:
+        raw_profile = load_json_object(raw_bytes, label="validation ladder profile")
+    except LifecycleError as exc:
+        return _blocked_selection(
+            code="validation-ladder-profile-invalid",
+            message="validation ladder profile is not valid JSON",
+            lineage=lineage,
+            context={"cause": exc.code},
+        )
+    if canonical_digest(raw_profile) != lineage["profile_digest"]:
+        return _blocked_selection(
+            code="validation-ladder-profile-digest-mismatch",
+            message="validation ladder profile digest does not match its manifest reference",
+            lineage=lineage,
+        )
+    try:
+        profile = validate_validation_ladder_profile(raw_profile)
+    except LifecycleError as exc:
+        return _blocked_from_error(exc, lineage)
 
-    if state.get("planDigest") != plan_digest or lock.get("manifestHash") != plan_digest:
+    if state.get("planDigest") != lineage["plan_digest"] or lock.get("manifestHash") != lineage["plan_digest"]:
         return _blocked_selection(
             code="validation-ladder-profile-stale",
             message="validation ladder lineage is stale",
-            plan_digest=plan_digest,
-            plan_lock_digest=plan_lock_digest,
-            state_revision=state_revision,
-            source_revision=source_revision,
-            current_tree_digest=current_tree_digest,
-            profile_digest=profile_digest,
-            catalog_digest=catalog_digest,
+            lineage=lineage,
         )
 
     try:
@@ -309,7 +243,7 @@ def build_validation_selection(
         if not isinstance(commands, list):
             raise LifecycleError("validation-ladder-check-missing", "validation.commands must be an array")
         catalog = _normalize_catalog(raw_catalog, commands)
-        catalog_digest = catalog["catalogDigest"]
+        lineage["catalog_digest"] = catalog["catalogDigest"]
         catalog_ids = {item["id"] for item in catalog["checks"]}
         for mapping in profile["mappings"]:
             missing = sorted(set(mapping["checkIds"]).difference(catalog_ids))
@@ -320,30 +254,12 @@ def build_validation_selection(
                     {"mappingId": mapping["id"], "checkIds": missing},
                 )
     except LifecycleError as exc:
-        return _blocked_from_error(
-            exc,
-            plan_digest,
-            plan_lock_digest,
-            state_revision,
-            source_revision,
-            current_tree_digest,
-            profile_digest,
-            catalog_digest,
-        )
+        return _blocked_from_error(exc, lineage)
 
     try:
         changed_paths = _normalized_changed_paths(snapshot)
     except LifecycleError as exc:
-        return _blocked_from_error(
-            exc,
-            plan_digest,
-            plan_lock_digest,
-            state_revision,
-            source_revision,
-            current_tree_digest,
-            profile_digest,
-            catalog_digest,
-        )
+        return _blocked_from_error(exc, lineage)
     protected = [*BUILT_IN_PROTECTED_PATH_PREFIXES, *profile["additionalProtectedPathPrefixes"]]
     if any(is_under_authority_path(path, prefix) for path in changed_paths for prefix in protected):
         return _selected(
@@ -351,13 +267,7 @@ def build_validation_selection(
             selected_check_ids=sorted(catalog_ids),
             matched_mapping_ids=[],
             reasons=["PROTECTED_PATH"],
-            plan_digest=plan_digest,
-            plan_lock_digest=plan_lock_digest,
-            state_revision=state_revision,
-            source_revision=source_revision,
-            current_tree_digest=current_tree_digest,
-            profile_digest=profile_digest,
-            catalog_digest=catalog_digest,
+            lineage=lineage,
         )
 
     matches = [
@@ -371,13 +281,7 @@ def build_validation_selection(
             selected_check_ids=sorted(catalog_ids),
             matched_mapping_ids=[],
             reasons=["NO_MAPPING_MATCH"],
-            plan_digest=plan_digest,
-            plan_lock_digest=plan_lock_digest,
-            state_revision=state_revision,
-            source_revision=source_revision,
-            current_tree_digest=current_tree_digest,
-            profile_digest=profile_digest,
-            catalog_digest=catalog_digest,
+            lineage=lineage,
         )
     level = max((mapping["level"] for mapping in matches), key=LEVEL_RANK.__getitem__)
     selected_ids = (
@@ -390,14 +294,29 @@ def build_validation_selection(
         selected_check_ids=selected_ids,
         matched_mapping_ids=sorted(mapping["id"] for mapping in matches),
         reasons=["MAPPING_MATCH"],
-        plan_digest=plan_digest,
-        plan_lock_digest=plan_lock_digest,
-        state_revision=state_revision,
-        source_revision=source_revision,
-        current_tree_digest=current_tree_digest,
-        profile_digest=profile_digest,
-        catalog_digest=catalog_digest,
+        lineage=lineage,
     )
+
+
+def _selection_lineage(
+    manifest: dict[str, Any],
+    lock: dict[str, Any],
+    state: dict[str, Any],
+    snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    state_revision = state.get("stateRevision")
+    source_revision = state.get("sourceRevision")
+    current_tree_digest = snapshot.get("snapshotHash")
+    _require_selection_lineage_shapes(state_revision, source_revision, current_tree_digest)
+    return {
+        "plan_digest": canonical_digest(manifest),
+        "plan_lock_digest": canonical_digest(lock),
+        "state_revision": cast(int, state_revision),
+        "source_revision": cast(str, source_revision),
+        "current_tree_digest": cast(str, current_tree_digest),
+        "profile_digest": None,
+        "catalog_digest": _EMPTY_CATALOG_DIGEST,
+    }
 
 
 def validate_release_full_validation_receipt(
@@ -606,13 +525,7 @@ def _selected(
     selected_check_ids: list[str],
     matched_mapping_ids: list[str],
     reasons: list[str],
-    plan_digest: str,
-    plan_lock_digest: str,
-    state_revision: int,
-    source_revision: str,
-    current_tree_digest: str,
-    profile_digest: str | None,
-    catalog_digest: str,
+    lineage: dict[str, Any],
 ) -> dict[str, Any]:
     body = {
         "schemaVersion": VALIDATION_SELECTION_SCHEMA,
@@ -622,13 +535,13 @@ def _selected(
         "selectedCheckIds": sorted(set(selected_check_ids)),
         "matchedMappingIds": sorted(set(matched_mapping_ids)),
         "reasons": sorted(set(reasons)),
-        "planDigest": plan_digest,
-        "planLockDigest": plan_lock_digest,
-        "stateRevision": state_revision,
-        "sourceRevision": source_revision,
-        "currentTreeDigest": current_tree_digest,
-        "profileDigest": profile_digest,
-        "catalogDigest": catalog_digest,
+        "planDigest": lineage["plan_digest"],
+        "planLockDigest": lineage["plan_lock_digest"],
+        "stateRevision": lineage["state_revision"],
+        "sourceRevision": lineage["source_revision"],
+        "currentTreeDigest": lineage["current_tree_digest"],
+        "profileDigest": lineage["profile_digest"],
+        "catalogDigest": lineage["catalog_digest"],
         "commandsExecuted": False,
         "stateWritten": False,
         "blockers": [],
@@ -640,13 +553,7 @@ def _blocked_selection(
     *,
     code: str,
     message: str,
-    plan_digest: str,
-    plan_lock_digest: str,
-    state_revision: int,
-    source_revision: str,
-    current_tree_digest: str,
-    profile_digest: str | None,
-    catalog_digest: str,
+    lineage: dict[str, Any],
     context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     body = {
@@ -657,13 +564,13 @@ def _blocked_selection(
         "selectedCheckIds": [],
         "matchedMappingIds": [],
         "reasons": [code],
-        "planDigest": plan_digest,
-        "planLockDigest": plan_lock_digest,
-        "stateRevision": state_revision,
-        "sourceRevision": source_revision,
-        "currentTreeDigest": current_tree_digest,
-        "profileDigest": profile_digest,
-        "catalogDigest": catalog_digest,
+        "planDigest": lineage["plan_digest"],
+        "planLockDigest": lineage["plan_lock_digest"],
+        "stateRevision": lineage["state_revision"],
+        "sourceRevision": lineage["source_revision"],
+        "currentTreeDigest": lineage["current_tree_digest"],
+        "profileDigest": lineage["profile_digest"],
+        "catalogDigest": lineage["catalog_digest"],
         "commandsExecuted": False,
         "stateWritten": False,
         "blockers": [_blocker(code, message, context)],
@@ -671,26 +578,11 @@ def _blocked_selection(
     return {**body, "selectionDigest": canonical_digest(body)}
 
 
-def _blocked_from_error(
-    exc: LifecycleError,
-    plan_digest: str,
-    plan_lock_digest: str,
-    state_revision: int,
-    source_revision: str,
-    current_tree_digest: str,
-    profile_digest: str | None,
-    catalog_digest: str,
-) -> dict[str, Any]:
+def _blocked_from_error(exc: LifecycleError, lineage: dict[str, Any]) -> dict[str, Any]:
     return _blocked_selection(
         code=exc.code,
         message=exc.message,
-        plan_digest=plan_digest,
-        plan_lock_digest=plan_lock_digest,
-        state_revision=state_revision,
-        source_revision=source_revision,
-        current_tree_digest=current_tree_digest,
-        profile_digest=profile_digest,
-        catalog_digest=catalog_digest,
+        lineage=lineage,
         context=exc.details,
     )
 
