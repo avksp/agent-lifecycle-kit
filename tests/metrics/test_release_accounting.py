@@ -16,6 +16,60 @@ from agent_lifecycle.metrics import (
 
 
 class ReleaseAccountingTests(unittest.TestCase):
+    def test_release_2_11_fixture_separates_workflow_implementation_audit_and_remediation(self) -> None:
+        fixture_path = Path(__file__).parent / "fixtures/release-2-11-accounting.json"
+        accounting = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(validate_release_accounting(accounting)["status"], "PASS")
+        self.assertEqual(accounting["releaseId"], "2.11.0")
+        expected_wall = {
+            "alkProcess": ("PARTIAL", 128_000),
+            "implementation": ("TIME_WINDOW_ONLY", 7_402_000),
+            "audit": ("TIME_WINDOW_ONLY", 7_556_000),
+            "postAuditRemediation": ("TIME_WINDOW_ONLY", 974_000),
+        }
+        for view, (status, value) in expected_wall.items():
+            with self.subTest(view=view):
+                self.assertEqual(
+                    accounting["views"][view]["metrics"]["elapsedWallMs"],
+                    {"status": status, "value": value},
+                )
+                self.assertEqual(
+                    accounting["views"][view]["metrics"]["tokens"],
+                    {"status": "UNAVAILABLE", "value": None},
+                )
+        self.assertEqual(accounting["views"]["alkProcess"]["metrics"]["steps"]["value"], 19)
+        self.assertEqual(
+            accounting["exclusions"],
+            [
+                {
+                    "entryId": "post-cutoff-work-after-20260831t200842z",
+                    "reason": "NON_ADDITIVE_SCOPE",
+                }
+            ],
+        )
+        self.assertEqual(
+            accounting["provenance"]["identities"]["sourceRevision"]["declared"],
+            "a611ef87abffed6fee9a24301d12e69f3a5af38f",
+        )
+        self.assertEqual(accounting["provenance"]["identities"]["controllerVersion"]["declared"], "2.8.0")
+        self.assertEqual(accounting["provenance"]["identities"]["coreVersion"]["declared"], "2.11.0")
+        phase_packet_after = json.loads(
+            (fixture_path.parent / "release-2-11-phase-packet-after.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            accounting["provenance"]["identities"]["measurementDigest"]["declared"],
+            phase_packet_after["measurementDigest"],
+        )
+        self.assertTrue(
+            all(identity["status"] == "MATCHED" for identity in accounting["provenance"]["identities"].values())
+        )
+        self.assertEqual(
+            accounting["accountingDigest"],
+            "a005d07491d27d55a502cf210ef778b1797299fa3e9c510d6714b9bf5195bb72",
+        )
+        self.assertFalse(accounting["productionPromotionClaimed"])
+
     def test_release_2_10_fixture_separates_windows_and_preserves_unavailable_tokens(self) -> None:
         fixture_path = Path(__file__).parent / "fixtures/release-2-10-accounting.json"
         accounting = json.loads(fixture_path.read_text(encoding="utf-8"))
@@ -362,9 +416,7 @@ class ReleaseAccountingTests(unittest.TestCase):
             accounting = build_release_accounting("2.6.0", [Path("source.json")], project_root=root)
 
         accounting["sourceArtifacts"].append(dict(accounting["sourceArtifacts"][0]))
-        accounting["provenance"]["sourceArtifactDigests"].append(
-            accounting["sourceArtifacts"][0]["sha256"]
-        )
+        accounting["provenance"]["sourceArtifactDigests"].append(accounting["sourceArtifacts"][0]["sha256"])
         accounting["accountingDigest"] = canonical_digest(
             {key: value for key, value in accounting.items() if key != "accountingDigest"}
         )

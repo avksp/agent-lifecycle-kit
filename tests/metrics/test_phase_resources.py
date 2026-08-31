@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 from copy import deepcopy
+from hashlib import sha256
 from pathlib import Path
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
@@ -17,6 +18,41 @@ from agent_lifecycle.metrics import (
 
 
 class PhaseResourceTests(unittest.TestCase):
+    def test_release_2_11_phase_packet_pair_is_predeclared_and_reports_all_deltas(self) -> None:
+        root = Path(__file__).parent / "fixtures"
+        declaration = _load(root / "release-2-11-phase-packet-comparison-pair.json")
+        before = _load(root / "release-2-11-phase-packet-before.json")
+        after = _load(root / "release-2-11-phase-packet-after.json")
+
+        validation = validate_workflow_economics_comparison(declaration, before, after)
+
+        self.assertEqual(validation["status"], "PASS", validation["blockers"])
+        self.assertEqual(declaration["workloadIdentity"]["name"], "phase-packet-validation-selection-v1")
+        self.assertLess(declaration["declaredAt"], before["measuredAt"])
+        self.assertLess(declaration["declaredAt"], after["measuredAt"])
+        self.assertEqual(declaration["before"]["sourceRevision"], "805d8000ac3b7adb47e3b4c1bcdf5ef2ab897b38")
+        self.assertEqual(declaration["after"]["sourceRevision"], "1f14cbdb7009f7ad468dfd256bd4503fb2b62dd0")
+        self.assertLess(after["packetBytes"], before["packetBytes"])
+        self.assertGreater(after["returnedToolOutputBytes"], before["returnedToolOutputBytes"])
+        self.assertGreater(after["validationWallSeconds"], before["validationWallSeconds"])
+        self.assertEqual(before["releaseFullFallbackRate"], 1.0)
+        self.assertEqual(after["releaseFullFallbackRate"], 0.0)
+        self.assertEqual(after["selectedLevel"], "TASK_FAST")
+        self.assertEqual(before["tokenUsage"], "UNAVAILABLE")
+        self.assertEqual(after["tokenUsage"], "UNAVAILABLE")
+
+    def test_release_2_10_economics_files_remain_byte_identical(self) -> None:
+        root = Path(__file__).parent / "fixtures"
+        expected = {
+            "release-2-10-continuation-comparison-pair.json": "53ef59560fc136d67c164b41db2d5d67491b7939ecb2627f561a9fa9c34cf70a",
+            "release-2-8-continuation-baseline.json": "1ff9b4e4a6d391541fec6a2ace773d18bc5b6297ebb9ebdc20aeac7d99ecf6ce",
+            "release-2-10-continuation-baseline.json": "0c601b01cbda7efbe66259e7694f7b8b4505f6d9d135b931004315f6639a51b1",
+        }
+
+        for name, digest in expected.items():
+            with self.subTest(name=name):
+                self.assertEqual(sha256((root / name).read_bytes()).hexdigest(), digest)
+
     def test_release_2_10_economics_pair_is_predeclared_exact_and_more_compact(self) -> None:
         root = Path(__file__).parent / "fixtures"
         declaration = _load(root / "release-2-10-continuation-comparison-pair.json")
@@ -196,34 +232,26 @@ def _refresh_digest(payload: dict[str, object], field: str) -> None:
     payload[field] = canonical_digest({key: value for key, value in payload.items() if key != field})
 
 
-def _mutate_role(
-    _declaration: dict[str, object], _before: dict[str, object], after: dict[str, object]
-) -> None:
+def _mutate_role(_declaration: dict[str, object], _before: dict[str, object], after: dict[str, object]) -> None:
     after["role"] = "before"
     _refresh_digest(after, "measurementDigest")
 
 
-def _mutate_source(
-    _declaration: dict[str, object], _before: dict[str, object], after: dict[str, object]
-) -> None:
+def _mutate_source(_declaration: dict[str, object], _before: dict[str, object], after: dict[str, object]) -> None:
     implementation = after["implementation"]
     assert isinstance(implementation, dict)
     implementation["sourceRevision"] = "f" * 40
     _refresh_digest(after, "measurementDigest")
 
 
-def _mutate_version(
-    _declaration: dict[str, object], _before: dict[str, object], after: dict[str, object]
-) -> None:
+def _mutate_version(_declaration: dict[str, object], _before: dict[str, object], after: dict[str, object]) -> None:
     implementation = after["implementation"]
     assert isinstance(implementation, dict)
     implementation["coreVersion"] = "2.10.1"
     _refresh_digest(after, "measurementDigest")
 
 
-def _mutate_gate_floor(
-    declaration: dict[str, object], _before: dict[str, object], _after: dict[str, object]
-) -> None:
+def _mutate_gate_floor(declaration: dict[str, object], _before: dict[str, object], _after: dict[str, object]) -> None:
     identity = declaration["workloadIdentity"]
     assert isinstance(identity, dict)
     identity["requiredGateFloorDigest"] = "f" * 64
