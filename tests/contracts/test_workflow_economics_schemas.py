@@ -72,21 +72,21 @@ class WorkflowEconomicsSchemaTests(unittest.TestCase):
         mutations = (
             (
                 "identity",
-                lambda declaration, before, after: declaration["workloadIdentity"].__setitem__(
+                lambda declaration, _before, _after: declaration["workloadIdentity"].__setitem__(
                     "name", "substituted-workload"
                 ),
                 "comparison-workload-identity-digest-invalid",
             ),
             (
                 "declaration",
-                lambda declaration, before, after: declaration["after"].__setitem__(
+                lambda declaration, _before, _after: declaration["after"].__setitem__(
                     "sourceRevision", "c" * 40
                 ),
                 "comparison-pair-digest-invalid",
             ),
             (
                 "measurement",
-                lambda declaration, before, after: after.__setitem__("outputBytes", 101),
+                lambda _declaration, _before, after: after.__setitem__("outputBytes", 101),
                 "comparison-measurement-digest-invalid",
             ),
         )
