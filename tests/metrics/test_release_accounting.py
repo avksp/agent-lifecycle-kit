@@ -38,7 +38,16 @@ class ReleaseAccountingTests(unittest.TestCase):
                     accounting["views"][view]["metrics"]["tokens"],
                     {"status": "UNAVAILABLE", "value": None},
                 )
-        self.assertEqual(accounting["views"]["alkProcess"]["metrics"]["steps"]["value"], 17)
+        self.assertEqual(accounting["views"]["alkProcess"]["metrics"]["steps"]["value"], 16)
+        self.assertEqual(
+            accounting["exclusions"],
+            [
+                {
+                    "entryId": "post-cutoff-work-after-20260831t081722z",
+                    "reason": "NON_ADDITIVE_SCOPE",
+                }
+            ],
+        )
         self.assertEqual(
             accounting["provenance"]["identities"]["sourceRevision"]["declared"],
             "90cb0c921fe04cbdcaba2fecb590fe6f51f194b9",
@@ -52,7 +61,7 @@ class ReleaseAccountingTests(unittest.TestCase):
         )
         self.assertEqual(
             accounting["accountingDigest"],
-            "64a01a3436944eb968d459a1c89946cefcc7e3996d889a62618283703011d00a",
+            "2e7ad9618391e7844c3b28be65c366a12f73951ba1924ca901a328f4e646c925",
         )
         self.assertFalse(accounting["productionPromotionClaimed"])
 
