@@ -93,6 +93,18 @@ REVIEW_EFFICIENCY_DOCUMENTATION: dict[str, Any] = {
     "reviewerTextExecutable": False,
 }
 
+PHASE_PACKET_VALIDATION_DOCUMENTATION: dict[str, Any] = {
+    "id": "phase-packets-and-validation-ladder",
+    "status": "OPTIONAL",
+    "englishPacketPath": "docs/reference/phase-packets.md",
+    "russianPacketPath": "docs/ru/reference/phase-packets.md",
+    "englishValidationPath": "docs/reference/validation-ladder.md",
+    "russianValidationPath": "docs/ru/reference/validation-ladder.md",
+    "workflowAuthority": False,
+    "commandsExecutedBySelector": False,
+    "releaseFullFloorPreserved": True,
+}
+
 SUCCESSOR_ADOPTION: dict[str, Any] = {
     "packageId": "release-2-7",
     "requiredPredecessor": "release-2-6",
@@ -127,7 +139,7 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "release-accounting-fixture",
-        "path": "tests/metrics/fixtures/release-2-10-accounting.json",
+        "path": "tests/metrics/fixtures/release-2-11-accounting.json",
         "kind": "json-field",
         "jsonPath": ["releaseId"],
         "fieldForm": "accounting.release",
@@ -299,6 +311,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             EXTERNAL_TOOL_JOBS_DOCUMENTATION,
             RELEASE_ACCOUNTING_DOCUMENTATION,
             REVIEW_EFFICIENCY_DOCUMENTATION,
+            PHASE_PACKET_VALIDATION_DOCUMENTATION,
         ],
         "successorAdoption": SUCCESSOR_ADOPTION,
         "lastChannelPolicy": LAST_CHANNEL_POLICY,

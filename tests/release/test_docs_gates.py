@@ -68,6 +68,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/review-efficiency.md",
             "docs/reference/evidence-independence.md",
             "docs/guides/phase-session-handoff.md",
+            "docs/reference/phase-packets.md",
+            "docs/reference/validation-ladder.md",
             "docs/reference/workflow-continuation.md",
         ):
             self.assertIn(required, english)
@@ -83,10 +85,14 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("docs/reference/review-efficiency.md", english)
         self.assertIn("docs/reference/evidence-independence.md", english)
         self.assertIn("docs/guides/phase-session-handoff.md", english)
+        self.assertIn("docs/reference/phase-packets.md", english)
+        self.assertIn("docs/reference/validation-ladder.md", english)
         self.assertIn("reference/release-accounting.md", russian)
         self.assertIn("reference/review-efficiency.md", russian)
         self.assertIn("reference/evidence-independence.md", russian)
         self.assertIn("guides/phase-session-handoff.md", russian)
+        self.assertIn("reference/phase-packets.md", russian)
+        self.assertIn("reference/validation-ladder.md", russian)
         self.assertIn("reference/workflow-continuation.md", russian)
         for adapter in ("Goose", "Grok Build", "OpenInterpreter", "Pi"):
             self.assertIn(adapter, english)
@@ -114,6 +120,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/reference/review-efficiency.md",
             "docs/reference/evidence-independence.md",
             "docs/guides/phase-session-handoff.md",
+            "docs/reference/phase-packets.md",
+            "docs/reference/validation-ladder.md",
             "docs/guides/quickstart.ru.md",
             "docs/ru/README.md",
             "docs/ru/architecture/system-architecture.md",
@@ -132,6 +140,8 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             "docs/ru/reference/review-efficiency.md",
             "docs/ru/reference/evidence-independence.md",
             "docs/ru/guides/phase-session-handoff.md",
+            "docs/ru/reference/phase-packets.md",
+            "docs/ru/reference/validation-ladder.md",
             "docs/ru/reference/public-locators-and-redaction.md",
             "docs/ru/guides/production-resource-security.md",
             "docs/ru/guides/reference-task-evaluation.md",
@@ -964,6 +974,20 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         root / "docs/ru/guides/phase-session-handoff.md",
         handoff + "полный transcript. Не снижайте review, security, architecture или quality gates.\n",  # noqa: RUF001
     )
+    phase_packets = (
+        "agent-phase-packet.v1. PLANNING_HANDOFF. IMPLEMENTATION. TASK_AUDIT. REMEDIATION. "
+        "phase-packet-required-fact-missing. phase-packet-forbidden-content. "
+        "phase-packet-context-limit-exceeded. implementationAuthorized: false. proofAuthority: none.\n"
+    )
+    _write_text(root / "docs/reference/phase-packets.md", phase_packets)
+    _write_text(root / "docs/ru/reference/phase-packets.md", phase_packets)
+    validation_ladder = (
+        "workflow validation-select. agent-validation-selection.v1. commandsExecuted: false. "
+        "stateWritten: false. RELEASE_FULL. agent-release-full-validation-receipt.v1. "
+        "--release-full-receipt.\n"
+    )
+    _write_text(root / "docs/reference/validation-ladder.md", validation_ladder)
+    _write_text(root / "docs/ru/reference/validation-ladder.md", validation_ladder)
     commands = (
         "agent-lifecycle start --adapter <adapter-id>. agent-lifecycle plan check. "
         "agent-lifecycle audit package. agent-lifecycle review-mesh recommend. "

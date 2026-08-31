@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import unittest
+from pathlib import Path
 
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.contracts.schemas import get_schema
@@ -12,6 +14,19 @@ from agent_lifecycle.contracts.workflow_economics_schemas import (
 
 
 class WorkflowEconomicsSchemaTests(unittest.TestCase):
+    def test_release_2_11_tracked_pair_uses_exact_schema_and_unavailable_tokens(self) -> None:
+        root = Path(__file__).parents[1] / "metrics/fixtures"
+        declaration = json.loads((root / "release-2-11-phase-packet-comparison-pair.json").read_text(encoding="utf-8"))
+        before = json.loads((root / "release-2-11-phase-packet-before.json").read_text(encoding="utf-8"))
+        after = json.loads((root / "release-2-11-phase-packet-after.json").read_text(encoding="utf-8"))
+
+        validation = validate_workflow_economics_comparison(declaration, before, after)
+
+        self.assertEqual(validation["status"], "PASS", validation["blockers"])
+        self.assertEqual(before["tokenUsage"], "UNAVAILABLE")
+        self.assertEqual(after["tokenUsage"], "UNAVAILABLE")
+        self.assertEqual(after["selectedLevel"], "TASK_FAST")
+
     def test_exact_pair_validates_and_missing_tokens_remain_unavailable(self) -> None:
         identity = _identity()
         before = _implementation("before", "a" * 40, "2.8.0")
@@ -79,9 +94,7 @@ class WorkflowEconomicsSchemaTests(unittest.TestCase):
             ),
             (
                 "declaration",
-                lambda declaration, _before, _after: declaration["after"].__setitem__(
-                    "sourceRevision", "c" * 40
-                ),
+                lambda declaration, _before, _after: declaration["after"].__setitem__("sourceRevision", "c" * 40),
                 "comparison-pair-digest-invalid",
             ),
             (

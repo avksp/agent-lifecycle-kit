@@ -125,6 +125,33 @@ class PublicationAdoptionTests(unittest.TestCase):
             ):
                 self.assertIn(marker, text)
 
+    def test_phase_packets_and_validation_ladder_are_documented_without_authority(self) -> None:
+        packets = (
+            (ROOT / "docs/reference/phase-packets.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/phase-packets.md").read_text(encoding="utf-8"),
+        )
+        ladder = (
+            (ROOT / "docs/reference/validation-ladder.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/validation-ladder.md").read_text(encoding="utf-8"),
+        )
+        for text in packets:
+            for marker in (
+                "agent-phase-packet.v1",
+                "implementationAuthorized: false",
+                "proofAuthority: none",
+                "phase-packet-forbidden-content",
+            ):
+                self.assertIn(marker, text)
+        for text in ladder:
+            for marker in (
+                "workflow validation-select",
+                "commandsExecuted: false",
+                "stateWritten: false",
+                "RELEASE_FULL",
+                "agent-release-full-validation-receipt.v1",
+            ):
+                self.assertIn(marker, text)
+
     def test_review_efficiency_and_independence_are_documented_fail_closed(self) -> None:
         efficiency = (
             (ROOT / "docs/reference/review-efficiency.md").read_text(encoding="utf-8"),

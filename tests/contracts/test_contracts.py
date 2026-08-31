@@ -388,6 +388,12 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(get_schema("agent-task-template-library.v1")["properties"]["freezeBlocked"], {"const": True})
         self.assertEqual(get_schema("agent-bug-forensics-recipe-library.v1")["properties"]["enabledByDefault"], {"const": False})
         self.assertEqual(get_schema("agent-bug-forensics-recipe-library.v1")["properties"]["budgetUnits"], {"const": "tokens-and-resources"})
+        self.assertEqual(get_schema("agent-phase-packet.v1")["properties"]["proofAuthority"], {"const": "none"})
+        self.assertEqual(get_schema("agent-validation-selection.v1")["properties"]["commandsExecuted"], {"const": False})
+        self.assertEqual(
+            get_schema("agent-release-full-validation-receipt.v1")["properties"]["productionPromotionClaimed"],
+            {"const": False},
+        )
         with self.assertRaises(LifecycleError):
             get_schema("missing.v1")
 

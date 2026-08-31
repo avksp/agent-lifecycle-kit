@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,16 +10,21 @@ try:
 except ImportError:
     from helpers import *  # noqa: F401,F403,E402
 
+from agent_lifecycle.compiler import validate_phase_packet  # noqa: E402
+
+
 class CliSpecificationPlanCommandTests(unittest.TestCase):
     def test_specification_check_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "specification.json"
             path.write_text(
-                json.dumps({
-                    "tier": "S1",
-                    "status": "FROZEN",
-                    "requirements": [{"id": "REQ-1", "required": True}],
-                }),
+                json.dumps(
+                    {
+                        "tier": "S1",
+                        "status": "FROZEN",
+                        "requirements": [{"id": "REQ-1", "required": True}],
+                    }
+                ),
                 encoding="utf-8",
             )
             code, payload = _run_cli(["specification", "check", "--specification", str(path)])
@@ -40,10 +44,12 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
             audit_path.write_text(json.dumps(_final_audit()), encoding="utf-8")
             input_path = root / "gate-input.json"
             input_path.write_text(
-                json.dumps({
-                    "requiredValidationIds": ["VAL-FULL"],
-                    "validationResults": [{"id": "VAL-FULL", "status": "PASS"}],
-                }),
+                json.dumps(
+                    {
+                        "requiredValidationIds": ["VAL-FULL"],
+                        "validationResults": [{"id": "VAL-FULL", "status": "PASS"}],
+                    }
+                ),
                 encoding="utf-8",
             )
             out_path = root / "completion-gate.json"
@@ -76,21 +82,25 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             lock_path = root / "plan.lock.json"
             lock_path.write_text(
-                json.dumps({
-                    "schemaVersion": "agent-plan-lock.v1",
-                    "planRevision": manifest["planRevision"],
-                    "manifestHash": canonical_digest(manifest),
-                }),
+                json.dumps(
+                    {
+                        "schemaVersion": "agent-plan-lock.v1",
+                        "planRevision": manifest["planRevision"],
+                        "manifestHash": canonical_digest(manifest),
+                    }
+                ),
                 encoding="utf-8",
             )
-            code, payload = _run_cli([
-                "plan",
-                "check",
-                "--manifest",
-                str(manifest_path),
-                "--lock",
-                str(lock_path),
-            ])
+            code, payload = _run_cli(
+                [
+                    "plan",
+                    "check",
+                    "--manifest",
+                    str(manifest_path),
+                    "--lock",
+                    str(lock_path),
+                ]
+            )
             self.assertEqual(code, 0)
             self.assertEqual(payload["schemaVersion"], "agent-plan-check.v1")
             self.assertEqual(payload["manifest"]["schemaVersion"], "agent-plan-validation.v1")
@@ -114,14 +124,16 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
                 "| `AC-1` | `REQ-1` | `EV-1` | checked |\n",
                 encoding="utf-8",
             )
-            code, payload = _run_cli([
-                "plan",
-                "acceptance-check",
-                "--manifest",
-                str(manifest_path),
-                "--acceptance",
-                str(acceptance_path),
-            ])
+            code, payload = _run_cli(
+                [
+                    "plan",
+                    "acceptance-check",
+                    "--manifest",
+                    str(manifest_path),
+                    "--acceptance",
+                    str(acceptance_path),
+                ]
+            )
             self.assertEqual(code, 0)
             self.assertEqual(payload["schemaVersion"], "agent-acceptance-checklist-validation.v1")
             self.assertEqual(payload["status"], "PASS")
@@ -144,14 +156,16 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
                 "| `AC-1` | `REQ-1` | `EV-X` | drifted |\n",
                 encoding="utf-8",
             )
-            code, payload = _run_cli([
-                "plan",
-                "acceptance-check",
-                "--manifest",
-                str(manifest_path),
-                "--acceptance",
-                str(acceptance_path),
-            ])
+            code, payload = _run_cli(
+                [
+                    "plan",
+                    "acceptance-check",
+                    "--manifest",
+                    str(manifest_path),
+                    "--acceptance",
+                    str(acceptance_path),
+                ]
+            )
             self.assertEqual(code, 2)
             self.assertEqual(payload["code"], "acceptance-checklist-mismatch")
             self.assertEqual(payload["details"]["linkMismatches"][0]["id"], "AC-1")
@@ -178,28 +192,127 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(refs["schemaVersion"], "agent-plan-reference-validation.v1")
 
-            code, snapshot = _run_cli(["plan", "snapshot", "--manifest", str(manifest_path), "--out", str(snapshot_path)])
+            code, snapshot = _run_cli(
+                ["plan", "snapshot", "--manifest", str(manifest_path), "--out", str(snapshot_path)]
+            )
             self.assertEqual(code, 0)
             self.assertEqual(snapshot["schemaVersion"], "agent-plan-snapshot.v1")
             self.assertTrue(snapshot_path.exists())
 
-            code, reconciliation = _run_cli(["plan", "reconcile", "--manifest", str(manifest_path), "--snapshot", str(snapshot_path)])
+            code, reconciliation = _run_cli(
+                ["plan", "reconcile", "--manifest", str(manifest_path), "--snapshot", str(snapshot_path)]
+            )
             self.assertEqual(code, 0)
             self.assertEqual(reconciliation["classification"], "MATCH")
 
-            code, handoff = _run_cli([
-                "plan",
-                "handoff",
-                "--manifest",
-                str(manifest_path),
-                "--snapshot",
-                str(snapshot_path),
-                "--out",
-                str(handoff_path),
-            ])
+            code, handoff = _run_cli(
+                [
+                    "plan",
+                    "handoff",
+                    "--manifest",
+                    str(manifest_path),
+                    "--snapshot",
+                    str(snapshot_path),
+                    "--out",
+                    str(handoff_path),
+                ]
+            )
             self.assertEqual(code, 0)
             self.assertEqual(handoff["schemaVersion"], "agent-plan-handoff.v1")
             self.assertTrue(handoff_path.exists())
+
+    def test_plan_handoff_emits_separate_bounded_phase_packet(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path = root / "plan.manifest.json"
+            snapshot_path = root / "snapshot.json"
+            lock_path = root / "plan.lock.json"
+            legacy_path = root / "legacy-handoff.json"
+            packet_handoff_path = root / "packet-handoff.json"
+            packet_path = root / "phase-packet.json"
+            manifest = _manifest()
+            manifest["baseRevision"] = {"ref": "v1.0.0", "sha": "a" * 40}
+            manifest["readOnly"] = ["docs"]
+            manifest["forbiddenWrites"] = [".git"]
+            manifest["acceptance"] = {
+                "criteria": [{"id": "AC-1", "requirementIds": ["REQ-1"], "evidenceIds": ["EV-1"]}]
+            }
+            manifest["workstreams"][0].update(
+                {
+                    "dependsOn": [],
+                    "acceptanceIds": ["AC-1"],
+                    "evidenceIds": ["EV-1"],
+                }
+            )
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            lock = {
+                "schemaVersion": "agent-plan-lock.v1",
+                "manifestHash": canonical_digest(manifest),
+                "planRevision": manifest["planRevision"],
+            }
+            lock_path.write_text(json.dumps(lock), encoding="utf-8")
+            code, _snapshot = _run_cli(
+                ["plan", "snapshot", "--manifest", str(manifest_path), "--out", str(snapshot_path)]
+            )
+            self.assertEqual(code, 0)
+
+            code, legacy = _run_cli(
+                [
+                    "plan",
+                    "handoff",
+                    "--manifest",
+                    str(manifest_path),
+                    "--snapshot",
+                    str(snapshot_path),
+                    "--out",
+                    str(legacy_path),
+                ]
+            )
+            self.assertEqual(code, 0)
+            code, packet_handoff = _run_cli(
+                [
+                    "plan",
+                    "handoff",
+                    "--manifest",
+                    str(manifest_path),
+                    "--snapshot",
+                    str(snapshot_path),
+                    "--lock",
+                    str(lock_path),
+                    "--phase-packet-out",
+                    str(packet_path),
+                    "--out",
+                    str(packet_handoff_path),
+                ]
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(packet_handoff, legacy)
+            self.assertEqual(packet_handoff_path.read_bytes(), legacy_path.read_bytes())
+            packet = json.loads(packet_path.read_text(encoding="utf-8"))
+            self.assertEqual(validate_phase_packet(packet), packet)
+            self.assertEqual(packet["purpose"], "PLANNING_HANDOFF")
+            self.assertIsNone(packet["stateRevision"])
+            self.assertFalse(packet["implementationAuthorized"])
+            self.assertEqual(packet["proofAuthority"], "none")
+
+            for omitted in ("snapshot", "lock"):
+                with self.subTest(omitted=omitted):
+                    args = [
+                        "plan",
+                        "handoff",
+                        "--manifest",
+                        str(manifest_path),
+                        "--phase-packet-out",
+                        str(root / f"missing-{omitted}.json"),
+                    ]
+                    if omitted != "snapshot":
+                        args.extend(["--snapshot", str(snapshot_path)])
+                    if omitted != "lock":
+                        args.extend(["--lock", str(lock_path)])
+                    code, failure = _run_cli(args)
+                    self.assertEqual(code, 2)
+                    self.assertEqual(failure["code"], "phase-packet-required-fact-missing")
 
     def test_plan_reconcile_cli_fails_on_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -208,12 +321,16 @@ class CliSpecificationPlanCommandTests(unittest.TestCase):
             snapshot_path = root / "snapshot.json"
             manifest = _manifest()
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-            code, _snapshot = _run_cli(["plan", "snapshot", "--manifest", str(manifest_path), "--out", str(snapshot_path)])
+            code, _snapshot = _run_cli(
+                ["plan", "snapshot", "--manifest", str(manifest_path), "--out", str(snapshot_path)]
+            )
             self.assertEqual(code, 0)
             manifest["planRevision"] = 2
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
-            code, payload = _run_cli(["plan", "reconcile", "--manifest", str(manifest_path), "--snapshot", str(snapshot_path)])
+            code, payload = _run_cli(
+                ["plan", "reconcile", "--manifest", str(manifest_path), "--snapshot", str(snapshot_path)]
+            )
 
             self.assertEqual(code, 2)
             self.assertEqual(payload["code"], "plan-reconciliation-failed")

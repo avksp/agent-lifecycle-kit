@@ -11,6 +11,7 @@ from agent_lifecycle.contracts.independent_evidence_schemas import validate_inde
 from agent_lifecycle.contracts.ownership_paths import authority_paths_overlap, normalize_authority_path
 from agent_lifecycle.contracts.statistical_evidence_schemas import validate_statistical_evidence_requirement
 from agent_lifecycle.planning.traceability import validate_plan_traceability
+from agent_lifecycle.quality.validation_ladder import validation_ladder_manifest_blockers
 
 PROFILE_SCHEMA = "agent-plan-completeness-profile.v1"
 VALIDATION_SCHEMA = "agent-plan-completeness-validation.v1"
@@ -133,6 +134,9 @@ def validate_plan_completeness(
         _check_traceability(manifest, tier, blockers)
         _check_path_authority(manifest, tier, blockers)
         required_checks = [*required_checks, "traceability", "path-authority"]
+    if _validation_ladder_enabled(manifest):
+        blockers.extend(validation_ladder_manifest_blockers(manifest))
+        required_checks = [*required_checks, "validation-ladder-authority"]
     body = {
         "schemaVersion": VALIDATION_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
@@ -295,6 +299,11 @@ def _check_write_ownership(manifest: dict[str, Any], tier: str, blockers: list[d
 
 def _canonical_authority_enabled(manifest: dict[str, Any]) -> bool:
     return isinstance(manifest.get("packageIntegrity"), dict)
+
+
+def _validation_ladder_enabled(manifest: dict[str, Any]) -> bool:
+    validation = manifest.get("validation")
+    return isinstance(validation, dict) and ("checkCatalog" in validation or "validationLadderProfile" in validation)
 
 
 def _check_traceability(manifest: dict[str, Any], _tier: str, blockers: list[dict[str, Any]]) -> None:

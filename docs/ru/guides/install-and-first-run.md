@@ -78,7 +78,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.10.0
+python -m pip install agent-lifecycle-kit==2.11.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -89,7 +89,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.10.0
+python -m pip install agent-lifecycle-kit==2.11.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -187,7 +187,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.10.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.11.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -228,6 +228,10 @@ Agent Plugins в клиентах](../reference/agent-plugin-qualification.md). 
 и ограниченный [рецепт передачи фаз между сессиями](phase-session-handoff.md).
 Отсутствующая телеметрия остаётся недоступной, а handoff-артефакты не заменяют
 полномочия workflow.
+В релизе 2.11 появились [ограниченные пакеты фаз](../reference/phase-packets.md)
+и read-only [лестница проверок](../reference/validation-ladder.md). Фокусный
+выбор ускоряет обратную связь, а защищённые и релизные пути сохраняют полный
+минимум проверок.
 Перед выполнением создайте финальный рассмотренный lock командой
 `agent-lifecycle plan lock-create --manifest <путь> --review <путь>`: она
 завершается отказом вместо замены существующего `plan.lock.json`. См.

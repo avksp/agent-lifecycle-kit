@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.10.0
+  python -m pip install agent-lifecycle-kit==2.11.0
 ```
 
 ## Task evidence identity
@@ -328,7 +328,14 @@ language](project-domain-language.md).
 - `agent-lifecycle workflow task-start`: open a bounded task attempt.
 - `agent-lifecycle workflow task-snapshot`: compute the current task-scoped
   Git file set and content digests without changing workflow state. Put the
-  returned `claim` object in the task result before `task-result`.
+  returned `claim` object in the task result before `task-result`. Add the
+  all-or-none `--manifest`, `--lock`, `--phase-packet-purpose` and
+  `--phase-packet-out` options to emit a separate bounded
+  `agent-phase-packet.v1` for implementation, task audit or remediation.
+- `agent-lifecycle workflow validation-select --state ... --task ...
+  --manifest ... --lock ... --snapshot ... [--out ...]`: select frozen check
+  IDs without executing commands or mutating state. Legacy and protected-path
+  cases conservatively select `RELEASE_FULL`.
 - `agent-lifecycle workflow task-result`: submit implementation evidence.
 - `agent-lifecycle workflow task-rework`: after an independent review or
   implementation audit returns `REWORK`, archive the current attempt and move
@@ -353,7 +360,9 @@ language](project-domain-language.md).
   completion gate binding is required. Add
   `--final-implementation-audit <final-implementation-audit.json>` when final
   implementation audit is mandatory, and `--review-mesh-quorum <path>` when an
-  opted-in plan requires final-audit quorum.
+  opted-in plan requires final-audit quorum. An opted-in validation-ladder plan
+  also requires `--release-full-receipt <release-full.json>` with exact current
+  plan, lock, source, tree and catalog lineage.
 - `workflow run`, `workflow task-result`, `workflow task-accept`,
   `workflow task-review-apply`, `workflow final-audit-outcome` and
   `workflow finalize` are the only workflow commands with managed progress

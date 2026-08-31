@@ -21,7 +21,15 @@ from agent_lifecycle.cli.progress_hooks import (
     maybe_emit_workflow_progress_hook,
     validate_workflow_progress_hook_request,
 )
-from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
+from agent_lifecycle.compiler import build_phase_packet
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
+from agent_lifecycle.contracts.phase_packet_schemas import (
+    IMPLEMENTATION_PAYLOAD_SCHEMA,
+    REMEDIATION_PAYLOAD_SCHEMA,
+    TASK_AUDIT_PAYLOAD_SCHEMA,
+)
+from agent_lifecycle.freeze import verify_plan_lock
+from agent_lifecycle.quality import build_validation_selection
 from agent_lifecycle.workflow import (
     accept_task,
     adopt_plan,
@@ -92,6 +100,8 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         return status(state_path, full=args.full)
     if args.workflow_command == "next":
         return next_action(status(state_path, full=True)["state"])
+    if args.workflow_command == "validation-select":
+        return _dispatch_validation_select(args, state_path)
     if args.workflow_command == "run":
         validate_workflow_progress_hook_request(args, command="workflow run")
         payload = run_workflow_step(
@@ -184,6 +194,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             follow_up_register_path=args.follow_up_register,
             completion_gate_receipt_path=args.completion_gate_receipt,
             final_implementation_audit_path=args.final_implementation_audit,
+            release_full_receipt_path=args.release_full_receipt,
             review_mesh_quorum_paths=args.review_mesh_quorum,
             reason=args.reason,
         )
@@ -194,10 +205,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
 
 def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
     if args.workflow_command == "task-snapshot":
-        payload = build_current_task_change_set(state_path, task_id=args.task)
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_task_snapshot(args, state_path)
     if args.workflow_command == "block":
         return block_run(
             state_path,
@@ -321,6 +329,278 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
         maybe_emit_workflow_progress_hook(args, command="workflow task-review-apply", state_path=state_path)
         return payload
     raise LifecycleError("command-not-implemented", "workflow command is not implemented")
+
+
+def _dispatch_task_snapshot(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
+    packet_args = (args.manifest, args.lock, args.phase_packet_purpose, args.phase_packet_out)
+    packet_requested = any(value is not None for value in packet_args)
+    if packet_requested and not all(value is not None for value in packet_args):
+        raise LifecycleError(
+            "phase-packet-required-fact-missing",
+            "task snapshot phase packet requires --manifest, --lock, --phase-packet-purpose and --phase-packet-out",
+        )
+    state = read_json_object(state_path, label="workflow state") if packet_requested else None
+    task = _state_task(state, args.task) if isinstance(state, dict) else None
+    if args.phase_packet_purpose == "TASK_AUDIT" and isinstance(task, dict) and task.get("status") == "VERIFYING":
+        assert state is not None
+        payload = _result_bound_task_change_set(state, task)
+    else:
+        payload = build_current_task_change_set(state_path, task_id=args.task)
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    if packet_requested:
+        assert state is not None
+        manifest = read_json_object(Path(args.manifest), label="plan manifest")
+        lock = read_json_object(Path(args.lock), label="plan lock")
+        verify_plan_lock(manifest, lock)
+        packet = _build_task_phase_packet(
+            manifest=manifest,
+            lock=lock,
+            state=state,
+            task_id=args.task,
+            purpose=args.phase_packet_purpose,
+            snapshot=payload,
+        )
+        write_json_create(Path(args.phase_packet_out), packet)
+    return payload
+
+
+def _result_bound_task_change_set(state: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:
+    evidence = task.get("resultChangeSetEvidence")
+    if not isinstance(evidence, dict):
+        raise LifecycleError("phase-packet-required-fact-missing", "task audit result change-set evidence is missing")
+    required = ("provider", "baselineSha", "fileSetHash", "diffHash", "snapshotHash")
+    if any(not isinstance(evidence.get(field), str) or not evidence[field] for field in required):
+        raise LifecycleError(
+            "phase-packet-required-fact-missing", "task audit result change-set evidence is incomplete"
+        )
+    return {
+        **evidence,
+        "runId": state.get("runId"),
+        "packageId": state.get("packageId"),
+        "taskId": task.get("id"),
+        "attempt": task.get("attempt"),
+        "planDigest": state.get("planDigest"),
+        "sourceRevision": state.get("sourceRevision"),
+        "readOnly": True,
+        "stateWritten": False,
+        "modelCallsStarted": False,
+        "productionPromotionClaimed": False,
+        "claim": {
+            "schemaVersion": "agent-task-change-set-claim.v1",
+            **{key: evidence[key] for key in required},
+        },
+    }
+
+
+def _dispatch_validation_select(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
+    state = read_json_object(state_path, label="workflow state")
+    task = _state_task(state, args.task)
+    snapshot = read_json_object(Path(args.snapshot), label="task snapshot")
+    if snapshot.get("taskId") != task.get("id"):
+        raise LifecycleError("task-snapshot-lineage-mismatch", "task snapshot does not match the requested task")
+    payload = build_validation_selection(
+        manifest=read_json_object(Path(args.manifest), label="plan manifest"),
+        lock=read_json_object(Path(args.lock), label="plan lock"),
+        state=state,
+        snapshot=snapshot,
+        repository_root=Path.cwd(),
+    )
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
+
+
+def _build_task_phase_packet(
+    *,
+    manifest: dict[str, Any],
+    lock: dict[str, Any],
+    state: dict[str, Any],
+    task_id: str,
+    purpose: str,
+    snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    task = _state_task(state, task_id)
+    workstream = _manifest_workstream(manifest, task_id)
+    plan_digest = canonical_digest(manifest)
+    if state.get("planDigest") != plan_digest:
+        raise LifecycleError("phase-packet-required-fact-missing", "workflow state plan lineage is stale")
+    attempt = task.get("attempt")
+    if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt < 1:
+        raise LifecycleError("phase-packet-required-fact-missing", "task attempt is required")
+    writes = _task_scope(manifest, workstream, task, "writes")
+    read_only = _task_scope(manifest, workstream, task, "readOnly")
+    forbidden = _task_scope(manifest, workstream, task, "forbiddenWrites")
+    acceptance = _task_acceptance(manifest, workstream)
+    evidence = _task_evidence(workstream)
+    active_blockers = _task_active_blockers(state, task)
+    payload = _task_phase_payload(
+        purpose=purpose,
+        manifest=manifest,
+        task=task,
+        task_id=task_id,
+        attempt=attempt,
+        snapshot=snapshot,
+        writes=writes,
+        read_only=read_only,
+        forbidden=forbidden,
+        acceptance=acceptance,
+        evidence=evidence,
+        active_blockers=active_blockers,
+    )
+    state_revision = state.get("stateRevision")
+    source_revision = state.get("sourceRevision")
+    if not isinstance(state_revision, int) or isinstance(state_revision, bool) or state_revision < 1:
+        raise LifecycleError("phase-packet-required-fact-missing", "workflow state revision is required")
+    if not isinstance(source_revision, str) or not source_revision:
+        raise LifecycleError("phase-packet-required-fact-missing", "workflow source revision is required")
+    return build_phase_packet(
+        purpose=purpose,
+        payload=payload,
+        plan_digest=plan_digest,
+        plan_lock_digest=canonical_digest(lock),
+        state_revision=state_revision,
+        source_revision=source_revision,
+        write_scope_digest=canonical_digest({"writes": writes, "readOnly": read_only, "forbiddenWrites": forbidden}),
+        acceptance_digest=canonical_digest(acceptance),
+        evidence_digest=canonical_digest(evidence),
+        active_blocker_ids=active_blockers,
+    )
+
+
+def _task_phase_payload(
+    *,
+    purpose: str,
+    manifest: dict[str, Any],
+    task: dict[str, Any],
+    task_id: str,
+    attempt: int,
+    snapshot: dict[str, Any],
+    writes: list[str],
+    read_only: list[str],
+    forbidden: list[str],
+    acceptance: list[dict[str, Any]],
+    evidence: list[dict[str, Any]],
+    active_blockers: list[str],
+) -> dict[str, Any]:
+    common = {
+        "taskId": task_id,
+        "attempt": attempt,
+        "writes": writes,
+        "readOnly": read_only,
+        "forbiddenWrites": forbidden,
+        "acceptanceCriteria": acceptance,
+        "activeBlockerIds": active_blockers,
+    }
+    if purpose == "IMPLEMENTATION":
+        packet = task.get("packet")
+        task_packet_digest = packet.get("sha256") if isinstance(packet, dict) else None
+        return {
+            "schemaVersion": IMPLEMENTATION_PAYLOAD_SCHEMA,
+            **common,
+            "taskPacketDigest": task_packet_digest,
+            "evidenceRequirements": evidence,
+        }
+    changed_paths = _task_strings(snapshot.get("changedFiles"))
+    if purpose == "TASK_AUDIT":
+        result = task.get("result")
+        result_digest = result.get("sha256") if isinstance(result, dict) else None
+        return {
+            "schemaVersion": TASK_AUDIT_PAYLOAD_SCHEMA,
+            **common,
+            "resultDigest": result_digest,
+            "changeSetDigest": snapshot.get("snapshotHash"),
+            "changedPaths": changed_paths,
+            "reviewRequirements": {
+                "independentRequired": True,
+                "minimumVerdict": "ACCEPTED",
+                "requiredReviewerIds": _required_reviewer_ids(task),
+            },
+            "evidenceReferences": [item["id"] for item in evidence],
+        }
+    if purpose != "REMEDIATION":
+        raise LifecycleError("phase-packet-required-fact-missing", "phase packet purpose is unsupported")
+    history = task.get("attemptHistory")
+    prior = history[-1] if isinstance(history, list) and history and isinstance(history[-1], dict) else None
+    prior_result = prior.get("result") if isinstance(prior, dict) else None
+    prior_review = prior.get("review") if isinstance(prior, dict) else None
+    return {
+        "schemaVersion": REMEDIATION_PAYLOAD_SCHEMA,
+        **common,
+        "priorResultDigest": prior_result.get("sha256") if isinstance(prior_result, dict) else None,
+        "priorReviewDigest": prior_review.get("sha256") if isinstance(prior_review, dict) else None,
+        "changedPaths": changed_paths,
+        "openFindingIds": _task_strings(task.get("remediationFindingIds")),
+        "remainingAttempts": max(1, _max_task_attempts(manifest) - attempt + 1),
+        "evidenceRequirements": evidence,
+    }
+
+
+def _state_task(state: dict[str, Any], task_id: str) -> dict[str, Any]:
+    tasks = state.get("tasks")
+    if isinstance(tasks, list):
+        for task in tasks:
+            if isinstance(task, dict) and task.get("id") == task_id:
+                return task
+    raise LifecycleError("task-not-found", "workflow task does not exist", {"taskId": task_id})
+
+
+def _manifest_workstream(manifest: dict[str, Any], task_id: str) -> dict[str, Any]:
+    workstreams = manifest.get("workstreams")
+    if isinstance(workstreams, list):
+        for workstream in workstreams:
+            if isinstance(workstream, dict) and workstream.get("id") == task_id:
+                return workstream
+    raise LifecycleError("phase-packet-required-fact-missing", "manifest workstream is missing", {"taskId": task_id})
+
+
+def _task_acceptance(manifest: dict[str, Any], workstream: dict[str, Any]) -> list[dict[str, Any]]:
+    acceptance = manifest.get("acceptance")
+    criteria = acceptance.get("criteria") if isinstance(acceptance, dict) else []
+    criteria = criteria if isinstance(criteria, list) else []
+    by_id = {item.get("id"): item for item in criteria if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    return [dict(by_id.get(item, {"id": item})) for item in _task_strings(workstream.get("acceptanceIds"))]
+
+
+def _task_evidence(workstream: dict[str, Any]) -> list[dict[str, Any]]:
+    return [{"id": item, "required": True} for item in _task_strings(workstream.get("evidenceIds"))]
+
+
+def _task_scope(manifest: dict[str, Any], workstream: dict[str, Any], task: dict[str, Any], field: str) -> list[str]:
+    return sorted(
+        set(_task_strings(manifest.get(field)) + _task_strings(workstream.get(field)) + _task_strings(task.get(field)))
+    )
+
+
+def _task_active_blockers(state: dict[str, Any], task: dict[str, Any]) -> list[str]:
+    blockers = _task_strings(task.get("remediationFindingIds"))
+    blocker = state.get("blocker")
+    if isinstance(blocker, dict):
+        value = blocker.get("id") or blocker.get("code")
+        if isinstance(value, str) and value:
+            blockers.append(value)
+    return sorted(set(blockers))
+
+
+def _required_reviewer_ids(task: dict[str, Any]) -> list[str]:
+    reviewer = task.get("reviewer")
+    if isinstance(reviewer, str) and reviewer:
+        return [reviewer]
+    if isinstance(reviewer, dict) and isinstance(reviewer.get("id"), str) and reviewer["id"]:
+        return [reviewer["id"]]
+    return []
+
+
+def _max_task_attempts(manifest: dict[str, Any]) -> int:
+    orchestration = manifest.get("orchestration")
+    value = orchestration.get("maxTaskAttempts") if isinstance(orchestration, dict) else None
+    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else 1
+
+
+def _task_strings(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return sorted({item for item in value if isinstance(item, str) and item})
 
 
 def _require_args(args: argparse.Namespace, names: list[str], *, mode: str) -> None:

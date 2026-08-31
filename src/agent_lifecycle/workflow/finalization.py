@@ -6,6 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.changesets.snapshot import capture_task_change_set
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.contracts.goal_validation import validate_goal_record
 from agent_lifecycle.contracts.implementation_audit_validation import (
@@ -20,6 +21,7 @@ from agent_lifecycle.host_protocol.lifecycle_gate import (
     lifecycle_control_selection,
     require_lifecycle_gate_pass,
 )
+from agent_lifecycle.quality.validation_ladder import require_release_full_validation_receipt
 from agent_lifecycle.specification import (
     require_completion_gate_finalization,
     validate_completion_check,
@@ -279,6 +281,7 @@ def finalize_run(
     follow_up_register_path: str | None = None,
     completion_gate_receipt_path: str | None = None,
     final_implementation_audit_path: str | None = None,
+    release_full_receipt_path: str | None = None,
     review_mesh_quorum_paths: list[str] | None = None,
     reason: str,
 ) -> dict[str, Any]:
@@ -292,7 +295,11 @@ def finalize_run(
         raise LifecycleError("final-audit-outcome-required", "v4 finalization requires an applied final-audit outcome")
     if isinstance(outcome, dict) and outcome.get("verdict") not in {None, "ACCEPTED"}:
         raise LifecycleError("final-audit-outcome-not-accepted", "final audit outcome does not permit finalization")
-    missing = _missing_required_acceptance(state)
+    missing = [
+        str(task.get("id"))
+        for task in state.get("tasks", [])
+        if task.get("required", True) and task.get("status") != "ACCEPTED"
+    ]
     if missing:
         raise LifecycleError("finalization-precondition-failed", "required tasks are not accepted", {"tasks": missing})
     missing_implementation_audits = missing_required_implementation_audits(state_path, state)
@@ -325,6 +332,11 @@ def finalize_run(
         root,
         final_implementation_audit_path=final_implementation_audit_path,
     )
+    release_full_validation = _validate_release_full_validation(
+        state,
+        root,
+        release_full_receipt_path=release_full_receipt_path,
+    )
     finalization_gate_receipts = _validate_finalization_gates(
         state_path,
         state,
@@ -336,60 +348,41 @@ def finalize_run(
         review_mesh_quorum_paths or [],
     )
     proof_rel = normalize_repo_path(proof_path)
-    lifecycle_control_stop = _evaluate_lifecycle_control_stop(
-        state,
-        final_audit=final_audit,
-        final_proof=_proof_body(
-            state,
-            operation_id=operation_id,
-            final_audit=final_audit_identity,
-            completion_check_receipt=completion_check_receipt,
-            completion_gate=completion_gate,
-            goal_record=goal_record,
-            follow_up_register=follow_up_register,
-            proof_integrity=proof_integrity,
-            final_implementation_audit=final_implementation_audit,
-            finalization_gate_receipts=finalization_gate_receipts,
-            review_mesh_quorum=review_mesh_quorum,
-            lifecycle_control_stop=None,
-            reason=reason,
-        ),
-    )
-    proof = _proof_body(
-        state,
-        operation_id=operation_id,
-        final_audit=final_audit_identity,
-        completion_check_receipt=completion_check_receipt,
-        completion_gate=completion_gate,
-        goal_record=goal_record,
-        follow_up_register=follow_up_register,
-        proof_integrity=proof_integrity,
-        final_implementation_audit=final_implementation_audit,
-        finalization_gate_receipts=finalization_gate_receipts,
-        review_mesh_quorum=review_mesh_quorum,
-        lifecycle_control_stop=lifecycle_control_stop,
-        reason=reason,
-    )
+    proof_inputs: dict[str, Any] = {
+        "operation_id": operation_id,
+        "final_audit": final_audit_identity,
+        "completion_check_receipt": completion_check_receipt,
+        "completion_gate": completion_gate,
+        "goal_record": goal_record,
+        "follow_up_register": follow_up_register,
+        "proof_integrity": proof_integrity,
+        "final_implementation_audit": final_implementation_audit,
+        "release_full_validation": release_full_validation,
+        "finalization_gate_receipts": finalization_gate_receipts,
+        "review_mesh_quorum": review_mesh_quorum,
+        "reason": reason,
+    }
+    preview = _proof_body(state, **proof_inputs, lifecycle_control_stop=None)
+    lifecycle_control_stop = _evaluate_lifecycle_control_stop(state, final_audit=final_audit, final_proof=preview)
+    proof = _proof_body(state, **proof_inputs, lifecycle_control_stop=lifecycle_control_stop)
     write_json_create(root / proof_rel, proof)
     identity = artifact_identity(root, proof_rel, proof)
     state["finalProof"] = {**identity, "semanticStatus": proof["semanticStatus"]}
     state["finalAudit"] = final_audit_identity
-    if completion_check_receipt is not None:
-        state["completionCheckReceipt"] = completion_check_receipt["receipt"]
-    if completion_gate is not None:
-        state["completionGateReceipt"] = completion_gate["receipt"]
-    if goal_record is not None:
-        state["goalRecord"] = goal_record["record"]
-    if follow_up_register is not None:
-        state["followUpRegister"] = follow_up_register["register"]
-    if proof_integrity is not None:
-        state["proofIntegrityReceipt"] = proof_integrity["receipt"]
-    if final_implementation_audit is not None:
-        state["finalImplementationAudit"] = final_implementation_audit["audit"]
-    if review_mesh_quorum is not None:
-        state["reviewMeshFinalQuorum"] = review_mesh_quorum
-    if lifecycle_control_stop is not None:
-        state["lifecycleControlStop"] = lifecycle_control_stop
+    optional_artifacts = (
+        ("completionCheckReceipt", completion_check_receipt, "receipt"),
+        ("completionGateReceipt", completion_gate, "receipt"),
+        ("goalRecord", goal_record, "record"),
+        ("followUpRegister", follow_up_register, "register"),
+        ("proofIntegrityReceipt", proof_integrity, "receipt"),
+        ("finalImplementationAudit", final_implementation_audit, "audit"),
+        ("releaseFullValidationReceipt", release_full_validation, "receipt"),
+        ("reviewMeshFinalQuorum", review_mesh_quorum, None),
+        ("lifecycleControlStop", lifecycle_control_stop, None),
+    )
+    for state_key, artifact, artifact_key in optional_artifacts:
+        if artifact is not None:
+            state[state_key] = artifact if artifact_key is None else artifact[artifact_key]
     state["phase"] = "COMPLETE"
     commit_state(
         state_path,
@@ -404,6 +397,7 @@ def finalize_run(
             "followUpRegister": follow_up_register,
             "proofIntegrity": proof_integrity,
             "finalImplementationAudit": final_implementation_audit,
+            "releaseFullValidation": release_full_validation,
             "finalizationGateReceipts": finalization_gate_receipts,
             "reviewMeshQuorum": review_mesh_quorum,
             "lifecycleControlStop": lifecycle_control_stop,
@@ -412,14 +406,6 @@ def finalize_run(
         },
     )
     return status(state_path)
-
-
-def _missing_required_acceptance(state: dict[str, Any]) -> list[str]:
-    return [
-        str(task.get("id"))
-        for task in state.get("tasks", [])
-        if task.get("required", True) and task.get("status") != "ACCEPTED"
-    ]
 
 
 def _validate_final_audit(state: dict[str, Any], final_audit: dict[str, Any]) -> None:
@@ -660,6 +646,107 @@ def _validate_final_implementation_audit(
     return {"audit": identity, "validation": validation}
 
 
+def _validate_release_full_validation(
+    state: dict[str, Any],
+    root: Path,
+    *,
+    release_full_receipt_path: str | None,
+) -> dict[str, Any] | None:
+    manifest_path = state.get("manifestPath")
+    if not isinstance(manifest_path, str) or not manifest_path:
+        if release_full_receipt_path is None:
+            return None
+        raise LifecycleError(
+            "release-full-validation-not-enabled",
+            "release-full validation is not enabled for this legacy workflow state",
+        )
+    manifest_rel = normalize_repo_path(manifest_path, label="plan manifest")
+    manifest = read_json_object(root / manifest_rel, label="plan manifest")
+    manifest_validation = manifest.get("validation")
+    if not (
+        isinstance(manifest_validation, dict)
+        and ("checkCatalog" in manifest_validation or "validationLadderProfile" in manifest_validation)
+    ):
+        if release_full_receipt_path is None:
+            return None
+        raise LifecycleError(
+            "release-full-validation-not-enabled", "release-full validation is not enabled by the frozen manifest"
+        )
+    if release_full_receipt_path is None:
+        raise LifecycleError(
+            "release-full-validation-required", "the frozen validation ladder requires a fresh release-full receipt"
+        )
+    if not isinstance(manifest_validation, dict):
+        raise LifecycleError("release-full-validation-invalid", "manifest validation authority is invalid")
+    catalog = manifest_validation.get("checkCatalog")
+    profile_reference = manifest_validation.get("validationLadderProfile")
+    if not isinstance(catalog, dict) or not isinstance(profile_reference, dict):
+        raise LifecycleError("release-full-validation-invalid", "validation ladder authority is incomplete")
+    checks = catalog.get("checks")
+    if not isinstance(checks, list) or not checks:
+        raise LifecycleError("release-full-validation-invalid", "validation check catalog is empty")
+    required_check_ids = sorted(
+        item["id"] for item in checks if isinstance(item, dict) and isinstance(item.get("id"), str)
+    )
+    if len(required_check_ids) != len(checks):
+        raise LifecycleError("release-full-validation-invalid", "validation check catalog is malformed")
+    manifest_digest = canonical_digest(manifest)
+    if state.get("planDigest") != manifest_digest:
+        raise LifecycleError("release-full-validation-stale", "workflow plan lineage is stale")
+    lock_rel = str(Path(manifest_rel).parent / "plan.lock.json")
+    lock = read_json_object(root / lock_rel, label="plan lock")
+    if lock.get("manifestHash") != manifest_digest:
+        raise LifecycleError("release-full-validation-stale", "plan lock lineage is stale")
+    current = _capture_release_current_tree(root, source_revision=str(state.get("sourceRevision")), state=state)
+    receipt_rel = normalize_repo_path(release_full_receipt_path, label="release-full validation receipt")
+    receipt = read_json_object(root / receipt_rel, label="release-full validation receipt")
+    validation = require_release_full_validation_receipt(
+        receipt,
+        source_revision=str(state.get("sourceRevision")),
+        current_tree_digest=current["currentTreeDigest"],
+        plan_digest=manifest_digest,
+        plan_lock_digest=canonical_digest(lock),
+        catalog_digest=str(catalog.get("catalogDigest")),
+        required_check_ids=required_check_ids,
+    )
+    identity = artifact_identity(root, receipt_rel, receipt)
+    return {"receipt": identity, "validation": validation, "currentTree": current}
+
+
+def _capture_release_current_tree(
+    root: Path,
+    *,
+    source_revision: str,
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    write_paths = sorted(
+        {
+            path
+            for task in state.get("tasks", [])
+            if isinstance(task, dict)
+            for path in task.get("writes", [])
+            if isinstance(path, str)
+        }
+    )
+    inventory = capture_task_change_set(root, baseline=source_revision, write_paths=write_paths)
+    changed_paths = inventory["allChangedFiles"]
+    current = capture_task_change_set(root, baseline=source_revision, write_paths=changed_paths)
+    if current["allChangedFiles"] != changed_paths or current["changedFiles"] != changed_paths:
+        raise LifecycleError(
+            "release-full-validation-tree-race",
+            "repository changes moved while the release-full tree identity was captured",
+        )
+    body = {
+        "schemaVersion": "agent-release-current-tree.v1",
+        "baselineSha": current["baselineSha"],
+        "changedFiles": current["changedFiles"],
+        "fileSetHash": current["fileSetHash"],
+        "diffHash": current["diffHash"],
+        "snapshotHash": current["snapshotHash"],
+    }
+    return {**current, "currentTreeDigest": canonical_digest(body)}
+
+
 def _proof_body(
     state: dict[str, Any],
     *,
@@ -671,17 +758,14 @@ def _proof_body(
     follow_up_register: dict[str, Any] | None,
     proof_integrity: dict[str, Any] | None,
     final_implementation_audit: dict[str, Any] | None,
+    release_full_validation: dict[str, Any] | None,
     finalization_gate_receipts: list[dict[str, Any]],
     review_mesh_quorum: dict[str, Any] | None,
     lifecycle_control_stop: dict[str, Any] | None,
     reason: str,
 ) -> dict[str, Any]:
     accepted = [
-        {
-            "id": task.get("id"),
-            "attempt": task.get("attempt"),
-            "review": task.get("review"),
-        }
+        {"id": task.get("id"), "attempt": task.get("attempt"), "review": task.get("review")}
         for task in state.get("tasks", [])
         if task.get("status") == "ACCEPTED"
     ]
@@ -704,6 +788,7 @@ def _proof_body(
         "followUpRegister": follow_up_register,
         "proofIntegrity": proof_integrity,
         "finalImplementationAudit": final_implementation_audit,
+        "releaseFullValidation": release_full_validation,
         "finalizationGateReceipts": finalization_gate_receipts,
         "reviewMeshQuorum": review_mesh_quorum,
         "lifecycleControlStop": lifecycle_control_stop,

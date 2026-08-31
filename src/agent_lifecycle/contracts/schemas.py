@@ -9,15 +9,11 @@ from agent_lifecycle.contracts.adapter_contract_schemas import ADAPTER_CONTRACT_
 from agent_lifecycle.contracts.adapter_event_schemas import ADAPTER_EVENT_SCHEMAS
 from agent_lifecycle.contracts.adapter_session_schemas import ADAPTER_SESSION_SCHEMAS
 from agent_lifecycle.contracts.adapter_task_schemas import ADAPTER_TASK_SCHEMAS
-from agent_lifecycle.contracts.audit_optimization_schemas import (
-    AUDIT_OPTIMIZATION_SCHEMAS,
-)
+from agent_lifecycle.contracts.audit_optimization_schemas import AUDIT_OPTIMIZATION_SCHEMAS
 from agent_lifecycle.contracts.audit_schemas import AUDIT_SCHEMAS
 from agent_lifecycle.contracts.benchmark_schemas import BENCHMARK_SCHEMAS
 from agent_lifecycle.contracts.bug_forensics_schemas import BUG_FORENSICS_SCHEMAS
-from agent_lifecycle.contracts.context_checkpoint_schemas import (
-    CONTEXT_CHECKPOINT_SCHEMAS,
-)
+from agent_lifecycle.contracts.context_checkpoint_schemas import CONTEXT_CHECKPOINT_SCHEMAS
 from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.cross_check_schemas import CROSS_CHECK_SCHEMAS
@@ -51,6 +47,7 @@ from agent_lifecycle.contracts.lifecycle_control_definitions import (
 )
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
 from agent_lifecycle.contracts.multi_run_view_schemas import MULTI_RUN_VIEW_SCHEMAS
+from agent_lifecycle.contracts.phase_packet_schemas import PHASE_PACKET_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.plan_delta_schemas import PLAN_DELTA_SCHEMAS
 from agent_lifecycle.contracts.plan_manifest_schemas import PLAN_MANIFEST_SCHEMAS
@@ -84,6 +81,7 @@ from agent_lifecycle.contracts.structured_result_schemas import STRUCTURED_RESUL
 from agent_lifecycle.contracts.task_template_schemas import TASK_TEMPLATE_SCHEMAS
 from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
+from agent_lifecycle.contracts.validation_ladder_schemas import VALIDATION_LADDER_SCHEMAS
 from agent_lifecycle.contracts.workflow_artifact_schemas import WORKFLOW_ARTIFACT_SCHEMAS
 from agent_lifecycle.contracts.workflow_authorization_schemas import WORKFLOW_AUTHORIZATION_SCHEMAS
 from agent_lifecycle.contracts.workflow_continuation_batch_schemas import WORKFLOW_CONTINUATION_BATCH_SCHEMAS
@@ -740,6 +738,8 @@ _SCHEMA_GROUPS = (
     WORKFLOW_CONTINUATION_SCHEMAS,
     WORKFLOW_ECONOMICS_SCHEMAS,
     WORKFLOW_STATE_SCHEMAS,
+    PHASE_PACKET_SCHEMAS,
+    VALIDATION_LADDER_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
     SECURITY_ANALYSIS_SCHEMAS,
     CROSS_CHECK_SCHEMAS,

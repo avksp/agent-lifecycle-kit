@@ -77,7 +77,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.10.0
+python -m pip install agent-lifecycle-kit==2.11.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -88,7 +88,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.10.0
+python -m pip install agent-lifecycle-kit==2.11.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -188,7 +188,7 @@ Choose one host and follow its adapter page. The common sequence is:
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.10.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.11.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -227,6 +227,10 @@ no provider client or second lifecycle authority.
 Release 2.6 adds [release accounting](../reference/release-accounting.md) and a
 bounded [phase-to-session handoff](phase-session-handoff.md). Missing telemetry
 stays unavailable, and handoff artifacts do not replace workflow authority.
+Release 2.11 adds [bounded phase packets](../reference/phase-packets.md) and a
+read-only [validation ladder](../reference/validation-ladder.md). Focused
+selection improves feedback latency, while protected and release paths retain
+the complete validation floor.
 Before execution, create a reviewed final lock with
 `agent-lifecycle plan lock-create --manifest <path> --review <path>`; it fails
 rather than replacing an existing `plan.lock.json`. See the [CLI

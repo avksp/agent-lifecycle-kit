@@ -680,6 +680,20 @@ def _add_workflow_task_parsers(
     workflow_snapshot.add_argument("--state", required=True)
     workflow_snapshot.add_argument("--task", required=True)
     workflow_snapshot.add_argument("--out")
+    workflow_snapshot.add_argument("--manifest")
+    workflow_snapshot.add_argument("--lock")
+    workflow_snapshot.add_argument(
+        "--phase-packet-purpose",
+        choices=["IMPLEMENTATION", "TASK_AUDIT", "REMEDIATION"],
+    )
+    workflow_snapshot.add_argument("--phase-packet-out")
+    validation_select = workflow_sub.add_parser("validation-select")
+    validation_select.add_argument("--state", required=True)
+    validation_select.add_argument("--task", required=True)
+    validation_select.add_argument("--manifest", required=True)
+    validation_select.add_argument("--lock", required=True)
+    validation_select.add_argument("--snapshot", required=True)
+    validation_select.add_argument("--out")
     workflow_budget = workflow_sub.add_parser("budget-decision")
     workflow_budget.add_argument("--state", required=True)
     workflow_budget.add_argument("--task", required=True)
@@ -764,6 +778,7 @@ def _add_workflow_review_parsers(
     workflow_finalize.add_argument("--follow-up-register")
     workflow_finalize.add_argument("--completion-gate-receipt")
     workflow_finalize.add_argument("--final-implementation-audit")
+    workflow_finalize.add_argument("--release-full-receipt")
     workflow_finalize.add_argument("--review-mesh-quorum", action="append", default=[])
     workflow_finalize.add_argument("--reason", required=True)
     add_progress_hook_args(workflow_finalize)

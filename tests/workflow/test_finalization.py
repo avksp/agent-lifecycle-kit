@@ -14,10 +14,137 @@ except ImportError:
     from helpers import *  # noqa: F403
 
 from agent_lifecycle.specification import build_completion_gate_receipt  # noqa: E402
-from agent_lifecycle.workflow.finalization import _evaluate_lifecycle_control_stop  # noqa: E402
+from agent_lifecycle.workflow.finalization import (  # noqa: E402
+    _capture_release_current_tree,
+    _evaluate_lifecycle_control_stop,
+)
 
 
 class WorkflowFinalizationTests(unittest.TestCase):
+    def test_opted_in_validation_ladder_accepts_fresh_release_full_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            source_revision = _initialize_managed_git_state(root, state_path)
+            command = "python -m unittest discover -s tests -t . -q"
+            checks = [{"id": "release-full", "commandDigest": canonical_digest(command)}]
+            catalog_body = {"schemaVersion": "agent-validation-check-catalog.v1", "checks": checks}
+            catalog = {**catalog_body, "catalogDigest": canonical_digest(catalog_body)}
+            manifest = {
+                "schemaVersion": "agent-plan-manifest.v1",
+                "validation": {
+                    "commands": [command],
+                    "checkCatalog": catalog,
+                    "validationLadderProfile": {"path": "profiles/validation.json", "digest": "1" * 64},
+                },
+            }
+            manifest_digest = canonical_digest(manifest)
+            lock = {"schemaVersion": "agent-plan-lock.v2", "manifestHash": manifest_digest}
+            write_json_create(root / "tasks/package/plan.manifest.json", manifest)
+            write_json_create(root / "tasks/package/plan.lock.json", lock)
+            (root / "src/example.py").write_text("value = 2\n", encoding="utf-8")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["manifestPath"] = "tasks/package/plan.manifest.json"
+            state["planDigest"] = manifest_digest
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state["tasks"][0]["attempt"] = 1
+            state["tasks"][0]["review"] = {
+                "path": "work/WS-01/attempt-1/task-review.json",
+                "sha256": "3" * 64,
+                "bytes": 10,
+            }
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            current = _capture_release_current_tree(root, source_revision=source_revision, state=state)
+            receipt_body = {
+                "schemaVersion": "agent-release-full-validation-receipt.v1",
+                "status": "PASS",
+                "sourceRevision": source_revision,
+                "currentTreeDigest": current["currentTreeDigest"],
+                "planDigest": manifest_digest,
+                "planLockDigest": canonical_digest(lock),
+                "catalogDigest": catalog["catalogDigest"],
+                "requiredCheckIds": ["release-full"],
+                "passedCheckIds": ["release-full"],
+                "gateEvidenceDigests": ["4" * 64],
+                "completedAt": "2026-08-31T00:00:00Z",
+                "blockers": [],
+                "productionPromotionClaimed": False,
+            }
+            write_json_create(
+                root / "work/final/release-full.json",
+                {**receipt_body, "receiptDigest": canonical_digest(receipt_body)},
+            )
+            audit = _final_audit()
+            audit["planDigest"] = manifest_digest
+            audit["completionSignal"]["planDigest"] = manifest_digest
+            audit["completionSignal"]["sourceRevision"] = source_revision
+            write_json_create(root / "work/final/final-audit.json", audit)
+
+            payload = finalize_run(
+                state_path,
+                operation_id="finalize-opted-in-pass",
+                expected_revision=1,
+                source_revision=source_revision,
+                final_audit_path="work/final/final-audit.json",
+                proof_path="work/final/proof.json",
+                release_full_receipt_path="work/final/release-full.json",
+                reason="done",
+            )
+
+            self.assertEqual(payload["phase"], "COMPLETE")
+            proof = json.loads((root / "work/final/proof.json").read_text(encoding="utf-8"))
+            self.assertEqual(proof["releaseFullValidation"]["receipt"]["path"], "work/final/release-full.json")
+
+    def test_opted_in_validation_ladder_requires_release_full_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="FINAL_AUDIT")
+            command = "python -m unittest discover -s tests -t . -q"
+            checks = [{"id": "release-full", "commandDigest": canonical_digest(command)}]
+            catalog_body = {"schemaVersion": "agent-validation-check-catalog.v1", "checks": checks}
+            manifest = {
+                "schemaVersion": "agent-plan-manifest.v1",
+                "validation": {
+                    "commands": [command],
+                    "checkCatalog": {**catalog_body, "catalogDigest": canonical_digest(catalog_body)},
+                    "validationLadderProfile": {"path": "profiles/validation.json", "digest": "1" * 64},
+                },
+            }
+            manifest_digest = canonical_digest(manifest)
+            write_json_create(root / "tasks/package/plan.manifest.json", manifest)
+            write_json_create(
+                root / "tasks/package/plan.lock.json",
+                {"schemaVersion": "agent-plan-lock.v2", "manifestHash": manifest_digest},
+            )
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["manifestPath"] = "tasks/package/plan.manifest.json"
+            state["planDigest"] = manifest_digest
+            state["tasks"][0]["status"] = "ACCEPTED"
+            state["tasks"][0]["attempt"] = 1
+            state["tasks"][0]["review"] = {
+                "path": "work/WS-01/attempt-1/task-review.json",
+                "sha256": "3" * 64,
+                "bytes": 10,
+            }
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            audit = _final_audit()
+            audit["planDigest"] = manifest_digest
+            audit["completionSignal"]["planDigest"] = manifest_digest
+            write_json_create(root / "final/final-audit.json", audit)
+
+            with self.assertRaises(LifecycleError) as raised:
+                finalize_run(
+                    state_path,
+                    operation_id="finalize-opted-in",
+                    expected_revision=1,
+                    source_revision="source",
+                    final_audit_path="final/final-audit.json",
+                    proof_path="final/proof.json",
+                    reason="done",
+                )
+
+            self.assertEqual(raised.exception.code, "release-full-validation-required")
+
     def test_enforced_control_stop_requires_finalize_events(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

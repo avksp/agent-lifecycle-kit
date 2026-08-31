@@ -51,6 +51,8 @@ def _add_plan_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
     handoff = plan_sub.add_parser("handoff")
     handoff.add_argument("--manifest", required=True)
     handoff.add_argument("--snapshot")
+    handoff.add_argument("--lock")
+    handoff.add_argument("--phase-packet-out")
     handoff.add_argument("--max-workstreams", type=int, default=12)
     handoff.add_argument("--target-tokens", type=int, default=4096)
     handoff.add_argument("--out")

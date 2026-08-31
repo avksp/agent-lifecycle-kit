@@ -18,6 +18,8 @@ agent-lifecycle plan snapshot \
 agent-lifecycle plan handoff \
   --manifest work/plans/release/plan.manifest.json \
   --snapshot work/release/plan-snapshot.json \
+  --lock work/plans/release/plan.lock.json \
+  --phase-packet-out work/release/planning-phase-packet.json \
   --max-workstreams 12 \
   --target-tokens 4096 \
   --out work/release/plan-handoff.json
@@ -68,12 +70,31 @@ transition, such as `workflow task-start`, with expected state and source
 revision. The worker reads its task packet, writes only owned paths, captures a
 fresh `workflow task-snapshot`, and submits `workflow task-result`.
 
+A new session can receive a separate bounded implementation packet without
+changing the ordinary task-change-set output:
+
+```bash
+agent-lifecycle workflow task-snapshot \
+  --state work/release/run.state.json \
+  --task WS-01 \
+  --manifest work/plans/release/plan.manifest.json \
+  --lock work/plans/release/plan.lock.json \
+  --phase-packet-purpose IMPLEMENTATION \
+  --phase-packet-out work/release/WS-01/implementation-phase-packet.json \
+  --out work/release/WS-01/task-change-set.json
+```
+
 ## Independent audit session
 
 Give the reviewer the frozen manifest and lock, task packet, fresh change set,
 task result and criterion-specific evidence. Do not give the reviewer the
 worker's hidden reasoning or ask it to infer acceptance from a summary. The
 reviewer returns a review with its own identity and run id.
+
+After `task-result`, repeat `workflow task-snapshot` with
+`--phase-packet-purpose TASK_AUDIT`. ALK projects the immutable change set
+bound to the committed result. For a started retry use `REMEDIATION`; the
+packet includes prior receipt digests, open finding IDs and remaining attempts.
 
 `workflow task-review-apply`, `workflow task-accept` and `workflow task-rework`
 are authority-bearing transitions. An operator invokes them only with a valid,
