@@ -16,6 +16,12 @@
   точными guard-значениями для явного применения.
 - `agent-workflow-continuation-receipt.v1`: результат read-only проекции или
   применения одного перехода без запуска модели или внешнего инструмента.
+- `agent-workflow-continuation-input-bundle.v1`: связанный по lineage
+  упорядоченный набор явных переходов и operation ID.
+- `agent-workflow-continuation-batch-receipt.v1`: полный обновляемый receipt
+  ограниченного выполнения до внешней границы.
+- `agent-workflow-continuation-batch-summary.v1`: компактный связанный
+  дайджестом результат пакетного режима для stdout.
 - `agent-workflow-next-action.v1`: следующий шаг workflow для host без запуска
   модели.
 - `agent-workflow-run-receipt.v1`: подтверждение управляемого шага workflow.

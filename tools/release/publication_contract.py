@@ -127,7 +127,7 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "release-accounting-fixture",
-        "path": "tests/metrics/fixtures/release-2-9-accounting.json",
+        "path": "tests/metrics/fixtures/release-2-10-accounting.json",
         "kind": "json-field",
         "jsonPath": ["releaseId"],
         "fieldForm": "accounting.release",

@@ -26,6 +26,7 @@ CONSUMERS = {
     "src/agent_lifecycle/workflow/next_action.py": "transition_contract",
     "src/agent_lifecycle/workflow/run.py": "transition_contract",
     "src/agent_lifecycle/workflow/continuation.py": "transition_contract",
+    "src/agent_lifecycle/workflow/continuation_batch.py": "transition_contract",
     "src/agent_lifecycle/host_protocol/lifecycle_gate.py": "lifecycle_action_catalog",
     "src/agent_lifecycle/adapter_sessions/workflow_bridge.py": "transition_contract",
 }

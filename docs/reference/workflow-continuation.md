@@ -1,7 +1,8 @@
 # Guided workflow continuation
 
 `agent-lifecycle workflow continue` projects the next workflow action and can
-explicitly apply one existing transition. It is a smaller operator interface,
+explicitly apply either one existing transition or an ordered, bounded bundle
+until ALK reaches an external boundary. It is a smaller operator interface,
 not a second state machine: workflow state, the frozen plan, the plan lock and
 the command-specific transition validators remain authoritative.
 
@@ -51,6 +52,43 @@ A successful apply returns `APPLIED`, advances state by exactly one revision
 and records the normal event of the reused transition. Missing inputs return
 `INPUT_REQUIRED`; stale state, action, plan, lock, source or artifact lineage
 returns `BLOCKED`. Neither outcome starts a model or host process.
+
+## Apply a bounded bundle
+
+Use bounded mode only when each candidate transition and its explicit
+operation ID are already declared in a lineage-bound input bundle:
+
+```bash
+agent-lifecycle workflow continue \
+  --state work/run.state.json \
+  --manifest work/plans/release-x/plan.manifest.json \
+  --lock work/plans/release-x/plan.lock.json \
+  --expected-revision 7 \
+  --source-revision <source-sha> \
+  --reason "apply deterministic transitions until external input is required" \
+  --until-blocked \
+  --apply \
+  --input-bundle work/continuation-inputs.json \
+  --max-transitions 8 \
+  --max-io-bytes 1048576 \
+  --out work/continuation-batch-receipt.json
+```
+
+All bounded flags, the positive caps, `--lock` and `--out` are mandatory.
+`--resume-receipt` is the only optional bounded input. Do not pass singular
+operation, projection-guard or transition-input flags: every step comes from
+the bundle and is re-projected before the existing one-step transition is
+called. The command reserves and incrementally replaces the full receipt;
+stdout contains the digest-bound compact summary and never overwrites that
+receipt after dispatch.
+
+The batch stops before the next mutation at input, host, model, reviewer,
+operator, plan-authority or resource-cap boundaries. Earlier ordinary workflow
+events remain committed. Stable invalid-combination codes are
+`continuation-batch-apply-required`,
+`continuation-batch-arguments-required`, `continuation-batch-cap-invalid`,
+`continuation-batch-option-conflict` and
+`continuation-one-step-operation-id-required`.
 
 ## Inputs
 

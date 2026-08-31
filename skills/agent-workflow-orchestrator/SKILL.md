@@ -38,10 +38,9 @@ and open finding IDs; in v4 use `workflow task-review-apply` (with
 Before each `task-result`, put a current `workflow task-snapshot` claim in the
 result. Later code changes require a new claim and result.
 
-When the next transition is unknown, use `workflow continue` to project it.
-Apply only with the same inputs, `--apply`, projected revision and action
-digest. It calls no model/host and replaces no validator or transition; waits
-remain host-owned.
+`workflow continue` applies one projected revision and action digest. For
+sequences add `--until-blocked --apply`, bundle, lock, caps and `--out`. It
+replaces no validator or transition; stop at external authority.
 
 For adapter-backed work, prefer `agent-lifecycle start --adapter <id>`. It
 requires one task source or `--resume <session-id>`. Raw input in `auto`,

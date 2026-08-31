@@ -189,7 +189,7 @@ class PublicationVersionTests(unittest.TestCase):
             root = Path(tmp)
             _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
             _write_json(
-                root / "tests/metrics/fixtures/release-2-9-accounting.json",
+                root / "tests/metrics/fixtures/release-2-10-accounting.json",
                 {"releaseId": "2.8.0"},
             )
 
@@ -274,7 +274,7 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
     (root / "src/agent_lifecycle/_version.py").write_text(f'__version__ = "{version}"\n', encoding="utf-8")
     (root / "CHANGELOG.md").write_text(f"## {version} - 2026-01-01\n", encoding="utf-8")
     _write_json(
-        root / "tests/metrics/fixtures/release-2-9-accounting.json",
+        root / "tests/metrics/fixtures/release-2-10-accounting.json",
         {"releaseId": version},
     )
     for path in (

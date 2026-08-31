@@ -11,6 +11,7 @@ from agent_lifecycle.workflow.checkpoint_gate import (
     invoke_checkpoint_gate,
     normalize_context_checkpoint_policy,
 )
+from agent_lifecycle.workflow.continuation_batch import continue_workflow_batch
 from agent_lifecycle.workflow.controller import (
     accept_task,
     adopt_plan,
@@ -79,6 +80,7 @@ __all__ = [
     "clear_task_risk_profile",
     "commit_task_result",
     "continue_workflow",
+    "continue_workflow_batch",
     "finalize_run",
     "initialize_workflow_state",
     "invoke_checkpoint_gate",

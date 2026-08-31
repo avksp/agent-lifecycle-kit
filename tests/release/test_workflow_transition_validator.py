@@ -20,6 +20,10 @@ class WorkflowTransitionValidatorTests(unittest.TestCase):
             "src/agent_lifecycle/workflow/continuation.py",
             {item["path"] for item in result["sourceChecks"]},
         )
+        self.assertIn(
+            "src/agent_lifecycle/workflow/continuation_batch.py",
+            {item["path"] for item in result["sourceChecks"]},
+        )
 
     def test_missing_consumer_is_blocking(self) -> None:
         with (

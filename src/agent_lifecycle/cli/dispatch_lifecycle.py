@@ -32,6 +32,7 @@ from agent_lifecycle.workflow import (
     block_run,
     commit_task_result,
     continue_workflow,
+    continue_workflow_batch,
     finalize_run,
     initialize_workflow_state,
     migrate_workflow_state,
@@ -107,22 +108,7 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         maybe_emit_workflow_progress_hook(args, command="workflow run", state_path=state_path)
         return payload
     if args.workflow_command == "continue":
-        payload = continue_workflow(
-            state_path=state_path,
-            manifest_path=Path(args.manifest),
-            lock_path=Path(args.lock) if args.lock else None,
-            operation_id=args.operation_id,
-            expected_revision=args.expected_revision,
-            source_revision=args.source_revision,
-            reason=args.reason,
-            apply=args.apply,
-            projected_state_revision=args.projected_state_revision,
-            projected_action_digest=args.projected_action_digest,
-            inputs=_continuation_inputs(args),
-        )
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_workflow_continue(args, state_path)
     if args.workflow_command == "adopt-plan":
         return adopt_plan(
             state_path,
@@ -341,6 +327,82 @@ def _require_args(args: argparse.Namespace, names: list[str], *, mode: str) -> N
     missing = [name.replace("_", "-") for name in names if not getattr(args, name, None)]
     if missing:
         raise LifecycleError("missing-cli-argument", f"{mode} requires arguments", {"missing": missing})
+
+
+def _dispatch_workflow_continue(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
+    batch_options = (args.input_bundle, args.max_transitions, args.max_io_bytes, args.resume_receipt)
+    if not args.until_blocked:
+        if any(value is not None for value in batch_options):
+            raise LifecycleError(
+                "continuation-batch-option-conflict",
+                "bounded continuation options require --until-blocked",
+            )
+        if not args.operation_id:
+            raise LifecycleError(
+                "continuation-one-step-operation-id-required",
+                "one-step continuation requires --operation-id",
+            )
+        payload = continue_workflow(
+            state_path=state_path,
+            manifest_path=Path(args.manifest),
+            lock_path=Path(args.lock) if args.lock else None,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            reason=args.reason,
+            apply=args.apply,
+            projected_state_revision=args.projected_state_revision,
+            projected_action_digest=args.projected_action_digest,
+            inputs=_continuation_inputs(args),
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
+    if not args.apply:
+        raise LifecycleError(
+            "continuation-batch-apply-required",
+            "bounded continuation requires --apply",
+        )
+    if (
+        args.operation_id is not None
+        or args.projected_state_revision is not None
+        or args.projected_action_digest is not None
+    ):
+        raise LifecycleError(
+            "continuation-batch-option-conflict",
+            "bounded continuation cannot use singular operation or projection options",
+        )
+    if _continuation_inputs(args):
+        raise LifecycleError(
+            "continuation-batch-option-conflict",
+            "bounded continuation inputs must come from --input-bundle",
+        )
+    required = ("lock", "input_bundle", "max_transitions", "max_io_bytes", "out")
+    missing = [name.replace("_", "-") for name in required if getattr(args, name) is None or getattr(args, name) == ""]
+    if missing:
+        raise LifecycleError(
+            "continuation-batch-arguments-required",
+            "bounded continuation requires explicit lock, bundle, caps and output",
+            {"missing": missing},
+        )
+    if args.max_transitions <= 0 or args.max_io_bytes <= 0:
+        raise LifecycleError(
+            "continuation-batch-cap-invalid",
+            "bounded continuation caps must be positive",
+        )
+    return continue_workflow_batch(
+        state_path=state_path,
+        manifest_path=Path(args.manifest),
+        lock_path=Path(args.lock),
+        input_bundle_path=args.input_bundle,
+        output_path=args.out,
+        max_transitions=args.max_transitions,
+        max_io_bytes=args.max_io_bytes,
+        expected_revision=args.expected_revision,
+        source_revision=args.source_revision,
+        reason=args.reason,
+        resume_receipt_path=args.resume_receipt,
+    )
 
 
 def _continuation_inputs(args: argparse.Namespace) -> dict[str, Any]:

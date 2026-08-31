@@ -6,7 +6,10 @@ For implementation work, use `workflow continue` when the exact next transition
 is not already known: project first, then explicitly apply the same action with
 its revision and digest guards. Direct `workflow task-*` commands remain the
 state transition surface for callers that already know the route. See
-[Workflow continuation](../reference/workflow-continuation.md). The legacy
+[Workflow continuation](../reference/workflow-continuation.md).
+For a predeclared deterministic sequence, use its `--until-blocked --apply`
+mode with an explicit bundle and positive transition/I/O caps; ALK still stops
+before any model, host, reviewer, operator or plan-authority action. The legacy
 `runner` commands are compatibility journals only; they are deprecated and
 cannot authorize, accept or finalize work. A runner receipt must be treated as
 evidence to attach to workflow state, never as a replacement for a workflow

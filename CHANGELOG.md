@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 2.10.0 - 2026-08-31
+
+- Added bounded multi-transition `workflow continue --input-bundle` execution
+  over the existing transition catalog, with explicit transition and I/O caps,
+  ordered receipts, crash-safe retry proof and deterministic stop reasons.
+- Added authority-equivalence coverage for direct, one-step continuation and
+  bounded continuation routes without weakening lock, lineage, freshness,
+  ownership, security or quality gates.
+- Added canonical before/after workflow-economics evidence for the two-step
+  continuation workload; unavailable token telemetry remains `UNAVAILABLE`.
+- Updated package, plugin, marketplace and bilingual installation surfaces for
+  version `2.10.0`.
+
 ## 2.9.0 - 2026-08-30
 
 - Added fail-closed current-index and reachable-history repository hygiene

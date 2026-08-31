@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 import unittest
+from contextlib import ExitStack
+from datetime import UTC, datetime, timedelta
 from functools import cache
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
-from agent_lifecycle.contracts import canonical_digest, write_json_create
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_json_create
 from agent_lifecycle.contracts.canonical import write_json_replace_private
+from agent_lifecycle.contracts.workflow_continuation_schemas import (
+    build_workflow_continuation_authority_projection,
+)
 from agent_lifecycle.workflow import (
     adopt_plan,
     apply_final_audit_outcome,
@@ -18,6 +25,7 @@ from agent_lifecycle.workflow import (
     authorize_execution,
     commit_task_result,
     continue_workflow,
+    continue_workflow_batch,
     finalize_run,
     start_execution,
     start_task,
@@ -109,9 +117,163 @@ class WorkflowContinuationBaselineTests(unittest.TestCase):
                     )
                     self.assertEqual(task["status"], "UNAVAILABLE")
 
+    def test_direct_one_step_and_bounded_routes_have_equal_authority_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "replay"
+            projections = {
+                route: _replay_two_transition_route(root, route) for route in ("direct", "one-step", "bounded")
+            }
+
+        self.assertEqual(projections["direct"], projections["one-step"])
+        self.assertEqual(projections["direct"], projections["bounded"])
+        self.assertEqual(projections["bounded"]["state"]["phase"], "RUNNING")
+        self.assertEqual(len(projections["bounded"]["events"]), 2)
+
+    def test_patching_only_state_clock_fails_observation_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _, state_path = _write_route_bundle(root, phase="READY", task_status="READY")
+            with patch("agent_lifecycle.workflow.state.now_iso", return_value="2099-01-01T00:00:00Z"):
+                start_execution(
+                    state_path,
+                    operation_id="incomplete-clock",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="incomplete clock control",
+                )
+            state = _read_state(state_path)
+            events = [json.loads(line) for line in (root / "events.jsonl").read_text(encoding="utf-8").splitlines()]
+
+            with self.assertRaises(LifecycleError) as raised:
+                build_workflow_continuation_authority_projection(state, events)
+
+        self.assertEqual(raised.exception.code, "continuation-observation-time-non-monotonic")
+
 
 def _load(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _replay_two_transition_route(root: Path, route: str) -> dict[str, Any]:
+    if root.exists():
+        shutil.rmtree(root)
+    root.mkdir(parents=True)
+    with _patched_workflow_clock():
+        manifest_path, state_path = _write_route_bundle(root, phase="READY", task_status="READY")
+        state = _read_state(state_path)
+        state["contextCheckpointPolicy"] = {
+            "enabled": True,
+            "required": True,
+            "milestoneEvents": ["execution-started", "task-started"],
+            "checkpointRoot": ".alk/context/checkpoints",
+        }
+        _write_state(state_path, state)
+        if route == "direct":
+            start_execution(
+                state_path,
+                operation_id="equivalence-start",
+                expected_revision=1,
+                source_revision="source",
+                reason="equivalence",
+            )
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="equivalence-task-start",
+                expected_revision=2,
+                source_revision="source",
+                reason="equivalence",
+            )
+        elif route == "one-step":
+            _apply_named_continuation(manifest_path, state_path, "equivalence-start", 1)
+            _apply_named_continuation(manifest_path, state_path, "equivalence-task-start", 2)
+        else:
+            bundle = {
+                "schemaVersion": "agent-workflow-continuation-input-bundle.v1",
+                "runId": "run",
+                "packageId": "package",
+                "planDigest": _read_state(state_path)["planDigest"],
+                "sourceRevision": "source",
+                "steps": [
+                    {"operationId": "equivalence-start", "expectedActionType": "start-execution", "inputs": {}},
+                    {
+                        "operationId": "equivalence-task-start",
+                        "expectedActionType": "launch-tasks",
+                        "inputs": {},
+                    },
+                ],
+            }
+            write_json_create(root / "inputs/bundle.json", bundle)
+            summary = continue_workflow_batch(
+                state_path=state_path,
+                manifest_path=manifest_path,
+                lock_path=manifest_path.parent / "plan.lock.json",
+                input_bundle_path="inputs/bundle.json",
+                output_path="work/batch.json",
+                max_transitions=2,
+                max_io_bytes=1_048_576,
+                expected_revision=1,
+                source_revision="source",
+                reason="equivalence",
+            )
+            if summary["appliedCount"] != 2:
+                raise AssertionError(summary)
+        state = _read_state(state_path)
+        events = [json.loads(line) for line in (root / "events.jsonl").read_text(encoding="utf-8").splitlines()]
+        return build_workflow_continuation_authority_projection(state, events)
+
+
+def _apply_named_continuation(
+    manifest_path: Path,
+    state_path: Path,
+    operation_id: str,
+    expected_revision: int,
+) -> None:
+    projection = continue_workflow(
+        state_path=state_path,
+        manifest_path=manifest_path,
+        lock_path=manifest_path.parent / "plan.lock.json",
+        operation_id=operation_id,
+        expected_revision=expected_revision,
+        source_revision="source",
+        reason="equivalence",
+    )
+    receipt = continue_workflow(
+        state_path=state_path,
+        manifest_path=manifest_path,
+        lock_path=manifest_path.parent / "plan.lock.json",
+        operation_id=operation_id,
+        expected_revision=expected_revision,
+        source_revision="source",
+        reason="equivalence",
+        apply=True,
+        projected_state_revision=projection["action"]["stateRevision"],
+        projected_action_digest=projection["action"]["actionDigest"],
+    )
+    if receipt["status"] != "APPLIED":
+        raise AssertionError(receipt)
+
+
+def _patched_workflow_clock() -> ExitStack:
+    start = datetime(2026, 1, 1, 0, 0, 0, 999999, tzinfo=UTC)
+    values = iter((start + timedelta(microseconds=index)).isoformat().replace("+00:00", "Z") for index in range(64))
+
+    def clock() -> str:
+        return next(values)
+
+    stack = ExitStack()
+    for module in (
+        "events",
+        "operation_kernel",
+        "authorization",
+        "initialization",
+        "finalization",
+        "plan_adoption",
+        "task_transitions",
+        "state",
+    ):
+        stack.enter_context(patch(f"agent_lifecycle.workflow.{module}.now_iso", side_effect=clock))
+    return stack
 
 
 def _assert_source_identities(fixture: dict[str, Any]) -> None:

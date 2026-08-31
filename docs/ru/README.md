@@ -18,7 +18,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 подтверждения, а основное время остаётся на исследование, реализацию и проверку
 продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 2.9.0 · Python 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 2.10.0 · Python 3.11-3.14
 
 Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
 
@@ -28,7 +28,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 
 Описание переносимого пакета навыков находится в разделе [переносимый пакет Agent Plugins](reference/agent-plugins.md), проверка установленного пакета - в разделе [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md), а необязательный контроль жизненного цикла адаптера - в [отдельном справочнике](adapters/lifecycle-control.md). Сейчас комплектные адаптеры публикуют `GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск сохраняет статус `WRAPPER_ONLY`.
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.9.0` и разбор ошибок команды `agent-lifecycle version`.
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.10.0` и разбор ошибок команды `agent-lifecycle version`.
 
 Для быстрого старта выполните:
 

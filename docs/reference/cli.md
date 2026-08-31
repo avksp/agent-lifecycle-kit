@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.9.0
+  python -m pip install agent-lifecycle-kit==2.10.0
 ```
 
 ## Task evidence identity
@@ -308,7 +308,10 @@ language](project-domain-language.md).
 - `agent-lifecycle workflow continue`: project the next existing workflow
   transition without mutation by default. Repeat the same inputs with `--apply`,
   the projected state revision and action digest to invoke exactly that
-  transition. See [Workflow continuation](workflow-continuation.md).
+  transition. For a declared deterministic sequence, add `--until-blocked`,
+  `--apply`, an input bundle, explicit positive caps, a lock and an output
+  receipt; batch mode stops before external authority. See
+  [Workflow continuation](workflow-continuation.md).
 - `agent-lifecycle workflow init --state <path> --run-id <id> --package-id
   <id>`: create one private, unbound `agent-workflow-state.v4` file without
   replacing an existing state.
