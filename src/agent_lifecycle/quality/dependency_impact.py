@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex
@@ -310,8 +310,11 @@ def _valid_source_identity(value: Any) -> bool:
         and value["bytes"] >= 0
     ):
         return False
+    source_path = value["path"]
+    if PurePosixPath(source_path).is_absolute() or PureWindowsPath(source_path).is_absolute():
+        return False
     try:
-        return normalize_repo_path(value["path"], label="dependency source") == value["path"]
+        return normalize_repo_path(source_path, label="dependency source") == source_path
     except LifecycleError:
         return False
 

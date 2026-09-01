@@ -54,16 +54,27 @@ class DependencyImpactTests(unittest.TestCase):
             root = Path(tmp) / "agent_lifecycle"
             root.mkdir()
             (root / "__init__.py").write_text("", encoding="utf-8")
-            report = build_module_dependency_report(root, repository_root=Path(tmp))
-            report["sourceFiles"][0]["path"] = (root / "__init__.py").as_posix()
-            report["reportDigest"] = canonical_digest(
-                {key: value for key, value in report.items() if key != "reportDigest"}
+            absolute_paths = (
+                (root / "__init__.py").as_posix(),
+                "/tmp/agent_lifecycle/__init__.py",
+                "C:/repo/agent_lifecycle/__init__.py",
+                "//server/share/agent_lifecycle/__init__.py",
             )
+            for absolute_path in absolute_paths:
+                with self.subTest(absolute_path=absolute_path):
+                    report = build_module_dependency_report(root, repository_root=Path(tmp))
+                    report["sourceFiles"][0]["path"] = absolute_path
+                    report["reportDigest"] = canonical_digest(
+                        {key: value for key, value in report.items() if key != "reportDigest"}
+                    )
 
-            validation = validate_module_dependency_report(report)
+                    validation = validate_module_dependency_report(report)
 
-            self.assertEqual(validation["status"], "FAIL")
-            self.assertIn("dependency-report-source-invalid", {item["code"] for item in validation["blockers"]})
+                    self.assertEqual(validation["status"], "FAIL")
+                    self.assertIn(
+                        "dependency-report-source-invalid",
+                        {item["code"] for item in validation["blockers"]},
+                    )
 
 
 if __name__ == "__main__":
