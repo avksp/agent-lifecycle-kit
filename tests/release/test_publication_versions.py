@@ -99,6 +99,16 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertFalse(feature["automaticApply"])
         self.assertFalse(feature["reviewerTextExecutable"])
 
+    def test_publication_manifest_exposes_delta_audit_boundaries(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}["rework-delta-audit"]
+
+        self.assertEqual(feature["status"], "OPTIONAL")
+        self.assertFalse(feature["commandsExecutedByBuilder"])
+        self.assertTrue(feature["independentAcceptanceRequired"])
+        self.assertTrue(feature["freshFinalAuditRequired"])
+        self.assertTrue(feature["conservativeFullAuditFallback"])
+
     def test_publication_manifest_exposes_phase_packet_validation_boundaries(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
         feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
@@ -195,12 +205,12 @@ class PublicationVersionTests(unittest.TestCase):
             self.assertEqual(result["status"], "FAIL")
             self.assertIn("changelog-release-version", {item["entryId"] for item in result["blockers"]})
 
-    def test_stale_release_accounting_fixture_fails(self) -> None:
+    def test_stale_release_economics_fixture_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
             _write_json(
-                root / "tests/metrics/fixtures/release-2-11-accounting.json",
+                root / "tests/metrics/fixtures/release-2-12-delta-audit-baseline.json",
                 {"releaseId": "2.8.0"},
             )
 
@@ -285,7 +295,7 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
     (root / "src/agent_lifecycle/_version.py").write_text(f'__version__ = "{version}"\n', encoding="utf-8")
     (root / "CHANGELOG.md").write_text(f"## {version} - 2026-01-01\n", encoding="utf-8")
     _write_json(
-        root / "tests/metrics/fixtures/release-2-11-accounting.json",
+        root / "tests/metrics/fixtures/release-2-12-delta-audit-baseline.json",
         {"releaseId": version},
     )
     for path in (

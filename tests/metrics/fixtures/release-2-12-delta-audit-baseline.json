@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "agent-delta-audit-economics-baseline.v1",
+  "releaseId": "2.12.0",
+  "source": {
+    "baseRevision": "1944069a55768ee0ffac0b35ff30e9b1a5fcdf21",
+    "coreVersion": "2.12.0",
+    "planRevision": 11,
+    "planDigest": "5216ec1e95624efba299801fab29617c78376761c6c7a2521f28e448e747f742",
+    "planFilesHash": "fa492daa7e6b28febd748399dc8765da25dbdf62535c86a8e0404ca0f0a0fd29",
+    "requiredGateFloorDigest": "cf98aadd0828a0dcc44ef59fff24c7c5422fd9ea6d47e67414775e7d729f8a1e"
+  },
+  "workloadIdentity": {
+    "schemaVersion": "agent-comparable-workload-identity.v1",
+    "name": "ws212-01-attempt-2-rework-audit",
+    "workloadInputDigest": "d6de042fa83ce2eacbabcf21c7933c0555a4bdcd8aae445c43b8955c13dbbdc4",
+    "fixtureShapeDigest": "22e3c8276f6e7dd3be578e8ce1838e6dd8832fd28846a6344a4d3f6a4c132787",
+    "environmentDigest": "0582fcbf390e8bdaac8f555716655f0a8b835de7c8b5ecfe95c6884d6c5e3bf9",
+    "requiredGateFloorDigest": "cf98aadd0828a0dcc44ef59fff24c7c5422fd9ea6d47e67414775e7d729f8a1e",
+    "workloadIdentityDigest": "fe6af737dd31af3b05fe8c34af924893d0b92db7c999960fc4d50a090279684d"
+  },
+  "routes": {
+    "fullRepeat": {
+      "status": "MEASURED",
+      "selection": "FULL_AUDIT",
+      "reviewer": {
+        "model": "claude-sonnet-5",
+        "sessionId": "cc719775-8a83-41be-9062-939325c44a7d",
+        "surface": "claude-code-read-only",
+        "independent": true
+      },
+      "reviewerInput": {
+        "status": "MEASURED",
+        "bytes": 2790,
+        "sha256": "e37a6ac172c963b574462e7de9af67de5573df324628adc9ac24c9246b68abd5"
+      },
+      "toolCalls": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "tokens": {
+        "status": "MEASURED",
+        "inputTokens": 26,
+        "cacheCreationInputTokens": 182051,
+        "cacheReadInputTokens": 1659735,
+        "outputTokens": 68121,
+        "thinkingTokens": 59470,
+        "totalReportedTokens": 1909933
+      },
+      "time": {
+        "status": "MEASURED",
+        "elapsedMs": 727368,
+        "apiElapsedMs": 727985
+      },
+      "turns": {
+        "status": "MEASURED",
+        "value": 37
+      },
+      "verdict": "ACCEPTED",
+      "rawArtifactSha256": "31af1481885078b188bf952156422b1bf52e0f8fc968371f7100c675412f348a"
+    },
+    "deltaReview": {
+      "status": "UNAVAILABLE",
+      "selection": "FULL_AUDIT_REQUIRED",
+      "reviewerInput": {
+        "status": "UNAVAILABLE",
+        "bytes": null
+      },
+      "toolCalls": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "tokens": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "time": {
+        "status": "UNAVAILABLE",
+        "elapsedMs": null,
+        "apiElapsedMs": null
+      },
+      "fallback": {
+        "status": "MEASURED",
+        "observed": true,
+        "selectedRoute": "FULL_AUDIT",
+        "reason": "DELTA_ROUTE_NOT_USED_FOR_ACCEPTANCE"
+      }
+    }
+  },
+  "comparison": {
+    "status": "UNAVAILABLE",
+    "reason": "IDENTICAL_HISTORY_DELTA_MEASUREMENT_NOT_AVAILABLE",
+    "tokenReductionPercent": null,
+    "wallReductionPercent": null
+  },
+  "qualityFloorPreserved": true,
+  "independentAcceptanceRequired": true,
+  "freshFinalAuditRequired": true,
+  "commandsExecutedByDeltaBuilder": false,
+  "productionPromotionClaimed": false,
+  "fixtureDigest": "dfb56be3efb9f001b1cdd41f6eb79b01c5801c3a521c2147243894a9f64c3cad"
+}

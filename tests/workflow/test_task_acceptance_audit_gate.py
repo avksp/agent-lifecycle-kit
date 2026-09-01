@@ -114,6 +114,41 @@ class TaskAcceptanceImplementationAuditGateTests(unittest.TestCase):
             self.assertEqual(receipt["nextAction"]["type"], "blocked")
             self.assertIn("implementation-audit-required", {item["code"] for item in receipt["blockers"]})
 
+    def test_manifest_audit_policy_does_not_replace_independent_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle = _write_bundle(root, phase="RUNNING", task_status="READY", audit_required=True)
+            start_task(
+                bundle["statePath"],
+                task_id="WS-01",
+                operation_id="start-op",
+                expected_revision=1,
+                source_revision="source",
+                reason="launch",
+            )
+            result_path, review_path = _write_result_review(root, bundle, reviewer_id="worker")
+            commit_task_result(
+                bundle["statePath"],
+                task_id="WS-01",
+                operation_id="result-op",
+                expected_revision=2,
+                source_revision="source",
+                result_path=result_path,
+                reason="done",
+            )
+
+            with self.assertRaises(LifecycleError) as raised:
+                accept_task(
+                    bundle["statePath"],
+                    task_id="WS-01",
+                    operation_id="accept-op",
+                    expected_revision=3,
+                    review_path=review_path,
+                    reason="self review is not authority",
+                )
+
+            self.assertEqual(raised.exception.code, "task-review-self-certification")
+
     def test_task_rework_accepts_accepted_review_with_rework_audit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -184,12 +219,12 @@ def _write_bundle(
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],
+        "implementationAudit": {"required": audit_required, "finalRequired": False},
         "workstreams": [
             {
                 "id": "WS-01",
                 "dependsOn": [],
                 "writes": ["src/example.py"],
-                "implementationAuditRequired": audit_required,
             }
         ],
         "acceptanceCriteria": [{"id": "AC-01", "evidenceIds": []}],
@@ -223,7 +258,6 @@ def _write_bundle(
                 "writes": ["src/example.py"],
                 "acceptanceIds": [],
                 "evidenceIds": [],
-                "implementationAuditRequired": audit_required,
                 "artifactPaths": {
                     "result": "work/WS-01/attempt-{attempt}/task-result.json",
                     "review": "work/WS-01/attempt-{attempt}/task-review.json",

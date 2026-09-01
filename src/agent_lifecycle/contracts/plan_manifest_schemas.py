@@ -55,6 +55,7 @@ PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
             "acceptanceCriteria": {"type": "array", "items": {"type": "object"}},
             "validation": _OBJECT,
             "orchestration": _OBJECT,
+            "implementationAudit": {"$ref": "#/$defs/implementationAudit"},
             "developerOverview": {"type": ["string", "null"]},
             "releaseTarget": _OBJECT,
             "releaseImpact": {"type": ["string", "object", "null"]},
@@ -132,6 +133,15 @@ PLAN_MANIFEST_SCHEMAS[MANIFEST_SCHEMA]["$defs"] = {
             "inventorySource": {"const": "planFiles"},
             "undeclaredTopLevelFiles": {"const": "reject"},
             "allowedUnlistedFiles": _STRING_LIST,
+        },
+    ),
+    "implementationAudit": _closed_object_schema(
+        "agent-plan-implementation-audit-policy.v1",
+        required=["required", "finalRequired"],
+        include_schema_version=False,
+        properties={
+            "required": {"type": "boolean"},
+            "finalRequired": {"type": "boolean"},
         },
     ),
     "extensions": {

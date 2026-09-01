@@ -16,6 +16,7 @@ class DispatchRoutingTests(unittest.TestCase):
             "version": "dispatch_contracts",
             "review-mesh": "dispatch_contracts",
             "workflow": "dispatch_lifecycle",
+            "audit": "dispatch_lifecycle",
             "report": "dispatch_observability",
             "metrics": "dispatch_observability",
             "plan": "dispatch_planning",

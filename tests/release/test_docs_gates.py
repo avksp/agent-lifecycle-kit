@@ -681,6 +681,19 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                 "autoApply: false",
                 "UNAVAILABLE",
                 "NO_COMPARISON",
+                "FULL_AUDIT",
+            ):
+                self.assertIn(marker, text)
+
+        implementation_audit = (
+            (ROOT / "docs/reference/implementation-audit.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/implementation-audit.md").read_text(encoding="utf-8"),
+        )
+        for text in implementation_audit:
+            for marker in (
+                "agent-lifecycle audit delta",
+                "agent-rework-delta-audit-receipt.v1",
+                "FULL_AUDIT_REQUIRED",
             ):
                 self.assertIn(marker, text)
         for text in independence:
@@ -946,6 +959,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "agent-lifecycle metrics audit-efficiency. agent-audit-efficiency-input.v1. "
         "agent-audit-efficiency-report.v1. qualityFloorPreserved: true. advisoryOnly: true. "
         "autoApply: false. UNAVAILABLE. NO_COMPARISON. 29,195,208. "
+        "Release 2.12 delta-audit baseline. baseline дельта-аудита Release 2.12. FULL_AUDIT. "
     )
     _write_text(root / "docs/reference/review-efficiency.md", efficiency)
     _write_text(root / "docs/ru/reference/review-efficiency.md", efficiency)
@@ -1323,6 +1337,9 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-final-implementation-audit.v1`.\n"
         "agent-lifecycle audit implementation.\n"
         "agent-lifecycle audit final-implementation.\n"
+        "agent-lifecycle audit delta.\n"
+        "`agent-rework-delta-audit-receipt.v1`.\n"
+        "`FULL_AUDIT_REQUIRED`.\n"
         "`workflow task-accept`.\n"
         "`workflow finalize`.\n"
     )

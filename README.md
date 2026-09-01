@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.11.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.12.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -76,7 +76,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 
 ### Quality and proof
 - Implementation audits compare results with the frozen plan and acceptance
-  evidence.
+  evidence; rework delta receipts focus the next reviewer and fail closed to a full audit.
 - For explicit bug and regression repair, the optional Bug Forensics profile
   records reproduction, fingerprint, failure class, hypotheses, minimal patch,
   regression proof, and reusable recipes.

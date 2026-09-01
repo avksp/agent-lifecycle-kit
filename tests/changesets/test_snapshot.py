@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.changesets import capture_task_change_set, require_current_task_change_set
 from agent_lifecycle.contracts import LifecycleError
@@ -32,6 +33,9 @@ class TaskChangeSetSnapshotTests(unittest.TestCase):
             require_current_task_change_set(result, evidence)
             self.assertEqual(evidence["changedFiles"], ["src/task.py"])
             self.assertEqual(evidence["allChangedFiles"], ["other.txt", "src/task.py"])
+            self.assertEqual(evidence["entries"][0]["path"], "src/task.py")
+            self.assertEqual(set(evidence["entries"][0]), {"path", "kind", "mode", "sha256", "bytes"})
+            self.assertNotIn("content", evidence["entries"][0])
 
             (root / "src/task.py").write_text("value = 3\n", encoding="utf-8")
             current = capture_task_change_set(root, baseline=baseline, write_paths=["src"])
@@ -50,6 +54,34 @@ class TaskChangeSetSnapshotTests(unittest.TestCase):
             evidence = capture_task_change_set(root, baseline=baseline, write_paths=["src"])
 
             self.assertEqual(evidence["changedFiles"], ["src/path with space.py"])
+
+    def test_snapshot_limits_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            baseline = _git(root, "rev-parse", "HEAD")
+            (root / "src/task.py").write_text("value = 12345\n", encoding="utf-8")
+            with (
+                patch("agent_lifecycle.changesets.snapshot.MAX_FILE_BYTES", 4),
+                self.assertRaises(LifecycleError) as raised,
+            ):
+                capture_task_change_set(root, baseline=baseline, write_paths=["src"])
+            self.assertEqual(raised.exception.code, "repository-input-too-large")
+
+            with (
+                patch("agent_lifecycle.changesets.snapshot.MAX_TOTAL_BYTES", 1),
+                self.assertRaises(LifecycleError) as raised,
+            ):
+                capture_task_change_set(root, baseline=baseline, write_paths=["src"])
+            self.assertEqual(raised.exception.code, "task-snapshot-byte-limit")
+
+            (root / "src/second.py").write_text("value = 2\n", encoding="utf-8")
+            with (
+                patch("agent_lifecycle.changesets.snapshot.MAX_CHANGED_FILES", 1),
+                self.assertRaises(LifecycleError) as raised,
+            ):
+                capture_task_change_set(root, baseline=baseline, write_paths=["src"])
+            self.assertEqual(raised.exception.code, "task-snapshot-file-limit")
 
 
 def _init_repo(root: Path) -> None:

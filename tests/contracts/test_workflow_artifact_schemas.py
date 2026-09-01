@@ -10,10 +10,14 @@ class WorkflowArtifactSchemaTests(unittest.TestCase):
         change_set = get_schema("agent-task-change-set-evidence.v1")
         claim = get_schema("agent-task-change-set-claim.v1")
         history = get_schema("agent-task-attempt-history-entry.v1")
+        delta = get_schema("agent-rework-delta-audit-receipt.v1")
 
         self.assertEqual(change_set["properties"]["provider"]["const"], "git-worktree-v2")
         self.assertEqual(claim["properties"]["provider"]["const"], "git-worktree-v2")
         self.assertEqual(history["properties"]["attempt"]["minimum"], 1)
+        self.assertNotIn("entries", change_set["required"])
+        self.assertEqual(change_set["properties"]["entries"]["maxItems"], 10000)
+        self.assertEqual(delta["properties"]["commandsExecuted"]["const"], False)
 
 
 if __name__ == "__main__":

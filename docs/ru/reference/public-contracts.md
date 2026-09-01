@@ -70,6 +70,10 @@
 - `agent-project-principles-validation.v1`: результат проверки принципов проекта.
 - `agent-plan-delta.v1`: сравнение двух версий плана без изменения исходных файлов.
 - `agent-plan-delta-validation.v1`: результат проверки дельты и её линии наследования.
+- `agent-finding-impact-scope.v1`: зафиксированная машинная область находки.
+- `agent-finding-impact-scope-validation.v1`: проверка области находки.
+- `agent-rework-delta-audit-receipt.v1`: read-only дельта-аудит соседних попыток.
+- `agent-rework-delta-audit-receipt-validation.v1`: проверка дельта-аудита.
 - `agent-implementation-audit-report.v1`: отчёт аудита реализации по задаче.
 - `agent-implementation-audit-report-validation.v1`: проверка отчёта аудита
   реализации.

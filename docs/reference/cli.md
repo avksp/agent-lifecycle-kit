@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.11.0
+  python -m pip install agent-lifecycle-kit==2.12.0
 ```
 
 ## Task evidence identity
@@ -413,6 +413,10 @@ cannot accept a workflow task or promote an adapter.
   `agent-implementation-audit-report.v1` for a task result and independent
   review. Add `--review-mesh-quorum <path>` when an opted-in plan requires
   Review Mesh quorum for implementation audit.
+- `agent-lifecycle audit delta`: build read-only, command-free
+  `agent-rework-delta-audit-receipt.v1` evidence across adjacent rework
+  attempts. Uncertain or stale impact selects `FULL_AUDIT_REQUIRED`; this
+  receipt never accepts a task.
 - `agent-lifecycle audit final-implementation`: aggregate accepted
   implementation audit reports before final workflow proof.
 - `agent-lifecycle audit package --plan-dir <dir>`: audit a plan directory and,

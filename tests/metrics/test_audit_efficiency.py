@@ -15,9 +15,58 @@ from agent_lifecycle.metrics.audit_efficiency import (
 
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = ROOT / "tests/metrics/fixtures/release-2-6-accounting-baseline.json"
+DELTA_BASELINE = ROOT / "tests/metrics/fixtures/release-2-12-delta-audit-baseline.json"
 
 
 class AuditEfficiencyTests(unittest.TestCase):
+    def test_release_2_12_delta_baseline_preserves_raw_measurement_and_fallback(self) -> None:
+        baseline = json.loads(DELTA_BASELINE.read_text(encoding="utf-8"))
+
+        self.assertEqual(baseline["releaseId"], "2.12.0")
+        self.assertEqual(baseline["fixtureDigest"], _fixture_digest(baseline))
+        identity = baseline["workloadIdentity"]
+        self.assertEqual(
+            identity["workloadIdentityDigest"],
+            canonical_digest({key: value for key, value in identity.items() if key != "workloadIdentityDigest"}),
+        )
+        full = baseline["routes"]["fullRepeat"]
+        raw_tokens = full["tokens"]
+        self.assertEqual(
+            raw_tokens["totalReportedTokens"],
+            sum(
+                raw_tokens[key]
+                for key in (
+                    "inputTokens",
+                    "cacheCreationInputTokens",
+                    "cacheReadInputTokens",
+                    "outputTokens",
+                )
+            ),
+        )
+        self.assertEqual(full["reviewerInput"]["bytes"], 2790)
+        self.assertEqual(full["time"]["elapsedMs"], 727_368)
+        self.assertEqual(full["toolCalls"], {"status": "UNAVAILABLE", "value": None})
+
+        delta = baseline["routes"]["deltaReview"]
+        self.assertEqual(delta["status"], "UNAVAILABLE")
+        self.assertEqual(delta["fallback"]["selectedRoute"], "FULL_AUDIT")
+        self.assertTrue(delta["fallback"]["observed"])
+        self.assertEqual(baseline["comparison"]["status"], "UNAVAILABLE")
+        self.assertIsNone(baseline["comparison"]["tokenReductionPercent"])
+        self.assertIsNone(baseline["comparison"]["wallReductionPercent"])
+        self.assertTrue(baseline["qualityFloorPreserved"])
+        self.assertTrue(baseline["independentAcceptanceRequired"])
+        self.assertTrue(baseline["freshFinalAuditRequired"])
+        self.assertFalse(baseline["commandsExecutedByDeltaBuilder"])
+
+    def test_release_2_12_delta_baseline_cannot_replace_unavailable_with_zero(self) -> None:
+        baseline = json.loads(DELTA_BASELINE.read_text(encoding="utf-8"))
+        original_digest = baseline["fixtureDigest"]
+
+        baseline["routes"]["deltaReview"]["tokens"] = {"status": "UNAVAILABLE", "value": 0}
+
+        self.assertNotEqual(original_digest, _fixture_digest(baseline))
+
     def test_release_2_6_fixture_preserves_measured_and_unavailable_values(self) -> None:
         baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
 
@@ -249,6 +298,10 @@ def _unavailable() -> dict:
 
 def _refresh_input_digest(value: dict) -> None:
     value["inputDigest"] = canonical_digest({key: item for key, item in value.items() if key != "inputDigest"})
+
+
+def _fixture_digest(value: dict) -> str:
+    return canonical_digest({key: item for key, item in value.items() if key != "fixtureDigest"})
 
 
 def _duplicate_axes(report: dict, *, index: int = 0) -> set[str]:

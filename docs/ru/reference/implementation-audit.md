@@ -31,6 +31,33 @@ agent-lifecycle audit final-implementation \
 Команда задачи создаёт `agent-implementation-audit-report.v1`. Итоговая команда
 создаёт `agent-final-implementation-audit.v1`.
 
+## Дельта-аудит повторной попытки
+
+После архивирования попытки и создания нового результата сформируйте
+ограниченное подтверждение для следующего независимого проверяющего:
+
+```bash
+agent-lifecycle audit delta \
+  --manifest tasks/package/plan.manifest.json \
+  --lock tasks/package/plan.lock.json \
+  --state work/package/run.state.json \
+  --task WS-01 \
+  --dependency-report work/evidence/module-dependencies.json \
+  --validation-selection work/evidence/validation-selection.json \
+  --finding-check-binding work/findings/F-1-binding.json \
+  --finding-check-evidence work/findings/F-1-evidence.json \
+  --out work/WS-01/attempt-2/delta-audit.json
+```
+
+Read-only команда создаёт `agent-rework-delta-audit-receipt.v1`. Она получает
+соседние попытки из состояния workflow, проверяет зафиксированную область
+находки и использует общий граф зависимостей для определения влияния. Команда
+не запускает проверку, модель или процесс хоста. Отсутствующая или устаревшая
+линия происхождения, неполная область, защищённые пути, неопределённость графа,
+изменение полномочий или ошибка replay возвращают `FULL_AUDIT_REQUIRED`.
+Дельта-подтверждение не заменяет независимую приёмку задачи и свежий полный
+финальный аудит.
+
 ## Проверка папки плана и реализации
 
 Когда один человек передаёт другому план и готовую реализацию, их можно

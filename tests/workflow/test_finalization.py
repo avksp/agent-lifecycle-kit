@@ -644,9 +644,7 @@ class WorkflowFinalizationTests(unittest.TestCase):
             root = Path(tmp)
             state_path = _write_state(root, phase="FINAL_AUDIT")
             _accept_only_task(state_path)
-            state = json.loads(state_path.read_text(encoding="utf-8"))
-            state["implementationAuditRequired"] = True
-            state_path.write_text(json.dumps(state), encoding="utf-8")
+            _write_implementation_audit_policy(root, state_path, required=True, final_required=False)
             write_json_create(root / "final/final-audit.json", _final_audit())
 
             with self.assertRaises(LifecycleError) as raised:
@@ -667,8 +665,8 @@ class WorkflowFinalizationTests(unittest.TestCase):
             root = Path(tmp)
             state_path = _write_state(root, phase="FINAL_AUDIT")
             _accept_only_task(state_path)
+            _write_implementation_audit_policy(root, state_path, required=True, final_required=True)
             state = json.loads(state_path.read_text(encoding="utf-8"))
-            state["finalImplementationAuditRequired"] = True
             state["tasks"][0]["implementationAuditReport"] = {
                 "path": "work/WS-01/attempt-1/implementation-audit.json",
                 "sha256": "4" * 64,
@@ -700,6 +698,31 @@ def _accept_only_task(state_path: Path) -> None:
     state["tasks"][0]["status"] = "ACCEPTED"
     state["tasks"][0]["attempt"] = 1
     state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+
+def _write_implementation_audit_policy(
+    root: Path,
+    state_path: Path,
+    *,
+    required: bool,
+    final_required: bool,
+) -> None:
+    manifest_path = root / "plans/package/plan.manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "status": "FROZEN",
+                "planRevision": 1,
+                "package": {"id": "package"},
+                "implementationAudit": {"required": required, "finalRequired": final_required},
+            }
+        ),
+        encoding="utf-8",
+    )
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["manifestPath"] = "plans/package/plan.manifest.json"
     state_path.write_text(json.dumps(state), encoding="utf-8")
 
 

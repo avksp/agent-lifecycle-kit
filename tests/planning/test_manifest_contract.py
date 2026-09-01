@@ -84,6 +84,34 @@ class ManifestContractTests(unittest.TestCase):
         manifest["validation"]["checkCatalog"]["command"] = command
         self.assertIn("plan-manifest-field-unknown", _codes(validate_plan_manifest_contract(manifest)))
 
+    def test_implementation_audit_policy_is_optional_and_closed(self) -> None:
+        manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        self.assertEqual(validate_plan_manifest_contract(manifest)["status"], "PASS")
+
+        manifest["implementationAudit"] = {"required": True, "finalRequired": True}
+        self.assertEqual(validate_plan_manifest_contract(manifest)["status"], "PASS")
+
+        manifest["implementationAudit"]["reviewerMaySelfCertify"] = True
+        self.assertIn("plan-manifest-field-unknown", _codes(validate_plan_manifest_contract(manifest)))
+
+    def test_implementation_audit_policy_requires_booleans_and_task_audits_for_final(self) -> None:
+        for field, code in (
+            ("required", "plan-implementation-audit-required-invalid"),
+            ("finalRequired", "plan-implementation-audit-final-required-invalid"),
+        ):
+            with self.subTest(field=field):
+                manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+                manifest["implementationAudit"] = {"required": True, "finalRequired": True}
+                manifest["implementationAudit"][field] = 1
+                self.assertIn(code, _codes(validate_plan_manifest_contract(manifest)))
+
+        manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        manifest["implementationAudit"] = {"required": False, "finalRequired": True}
+        self.assertIn(
+            "plan-implementation-audit-final-without-task",
+            _codes(validate_plan_manifest_contract(manifest)),
+        )
+
 
 def _codes(result: dict) -> set[str]:
     return {item["code"] for item in result["blockers"]}

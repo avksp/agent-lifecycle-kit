@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 2.12.0 - 2026-09-01
+
+- Added source-bound rework delta-audit receipts with conservative transitive
+  impact closure, immutable finding dispositions and full-audit fallback.
+- Added canonical manifest policy for required task and final implementation
+  audits while preserving independent acceptance and exact-source final proof.
+- Added the read-only `audit delta` CLI, a narrow audit dispatcher and a
+  redacted economics baseline that keeps missing delta measurements
+  `UNAVAILABLE` instead of claiming savings.
+- Updated package, plugin, marketplace and bilingual installation surfaces for
+  version `2.12.0`.
+
 ## 2.11.0 - 2026-08-31
 
 - Added bounded `agent-phase-packet.v1` projections for planning handoff,

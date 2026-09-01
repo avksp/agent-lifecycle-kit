@@ -5,6 +5,7 @@ from agent_lifecycle.audit.bug_forensics import (
     require_bug_forensics_audit_pass,
     validate_bug_forensics_audit,
 )
+from agent_lifecycle.audit.delta import build_rework_delta_audit, validate_rework_delta_audit
 from agent_lifecycle.audit.domain_language import (
     build_domain_language_impact_audit,
     validate_domain_language_impact_audit,
@@ -63,6 +64,7 @@ __all__ = [
     "build_package_audit",
     "build_proof_integrity_receipt",
     "build_receipt_hash_chain",
+    "build_rework_delta_audit",
     "build_root_cause_evidence",
     "build_security_analysis_audit",
     "build_security_verification_assignment",
@@ -85,6 +87,7 @@ __all__ = [
     "validate_proof_integrity_receipt",
     "validate_receipt_hash_chain",
     "validate_review_verdict",
+    "validate_rework_delta_audit",
     "validate_root_cause_evidence",
     "validate_security_analysis_audit",
     "validate_security_verification_assignment",

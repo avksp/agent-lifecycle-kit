@@ -32,6 +32,7 @@ class ModuleDependencyValidatorTests(unittest.TestCase):
 
         self.assertEqual(payload["status"], "PASS")
         self.assertEqual(payload["forbiddenCycles"][0][0], "agent_lifecycle.audit")
+        self.assertTrue(all(not Path(item["path"]).is_absolute() for item in payload["sourceFiles"]))
 
     def test_validator_rejects_declared_cycle(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -90,6 +91,9 @@ class ModuleDependencyValidatorTests(unittest.TestCase):
 
         self.assertEqual(payload["status"], "PASS")
         self.assertEqual(payload["moduleSccs"], [])
+        self.assertTrue(payload["dependencyReportDigest"])
+        self.assertEqual(payload["dependencyReport"]["reportDigest"], payload["dependencyReportDigest"])
+        self.assertTrue(any(edge["to"] == "agent_lifecycle.second" for edge in payload["moduleEdges"]))
         self.assertTrue(any(edge["to"] == "second" for edge in payload["packageEdges"]))
 
     def test_validator_rejects_package_only_cycle_and_layer_violation(self) -> None:
