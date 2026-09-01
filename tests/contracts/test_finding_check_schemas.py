@@ -7,16 +7,54 @@ from agent_lifecycle.contracts.finding_check_schemas import (
     build_finding_check_binding,
     build_finding_check_evidence,
     build_finding_check_proposal,
+    build_finding_impact_scope,
     transition_finding_check_binding,
     validate_finding_check_binding,
     validate_finding_check_evidence,
     validate_finding_check_proposal,
+    validate_finding_impact_scope,
 )
 from agent_lifecycle.contracts.proof_validation import build_finding_identity
 from agent_lifecycle.planning.deltas import build_plan_delta, finding_check_plan_lineage
 
 
 class FindingCheckSchemaTests(unittest.TestCase):
+    def test_frozen_impact_scope_is_exact_and_source_bound(self) -> None:
+        scope = build_finding_impact_scope(
+            finding_id="F-1",
+            finding_digest="a" * 64,
+            plan_revision=2,
+            plan_digest="b" * 64,
+            source_revision="c" * 40,
+            paths=["src/agent_lifecycle/example.py"],
+            modules=["agent_lifecycle.example"],
+            ownership_paths=["src/agent_lifecycle/example.py"],
+            acceptance_ids=["AC-1"],
+            gate_ids=["gate-1"],
+        )
+
+        self.assertEqual(validate_finding_impact_scope(scope)["status"], "PASS")
+        scope["sourceRevision"] = "d" * 40
+        self.assertEqual(validate_finding_impact_scope(scope)["status"], "FAIL")
+
+    def test_impact_scope_rejects_unknown_fields_even_with_recomputed_digest(self) -> None:
+        scope = build_finding_impact_scope(
+            finding_id="F-1",
+            finding_digest="a" * 64,
+            plan_revision=2,
+            plan_digest="b" * 64,
+            source_revision="c" * 40,
+            paths=["src/agent_lifecycle/example.py"],
+            modules=["agent_lifecycle.example"],
+        )
+        scope["reviewerText"] = "not authority"
+        scope["scopeDigest"] = canonical_digest({key: value for key, value in scope.items() if key != "scopeDigest"})
+
+        validation = validate_finding_impact_scope(scope)
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn("finding-impact-scope-shape", {item["code"] for item in validation["blockers"]})
+
     def test_binding_lifecycle_is_authorized_and_idempotent(self) -> None:
         binding = _binding()
         authorization = _authorization("accept")
@@ -59,7 +97,7 @@ class FindingCheckSchemaTests(unittest.TestCase):
 
     def test_reviewer_reproduction_is_advisory_and_never_parsed_as_command(self) -> None:
         for reproduction in (
-            "python -c 'open(\"owned\", \"w\")'",
+            'python -c \'open("owned", "w")\'',
             "--output=../../owned",
             "TOKEN=value command",
             "check; rm -rf /",
@@ -111,7 +149,9 @@ class FindingCheckSchemaTests(unittest.TestCase):
 
 
 def _binding(*, check_identity: dict[str, str] | None = None) -> dict:
-    finding = build_finding_identity({"path": "src/example.py", "ruleId": "H1", "severity": "HIGH", "message": "defect"})
+    finding = build_finding_identity(
+        {"path": "src/example.py", "ruleId": "H1", "severity": "HIGH", "message": "defect"}
+    )
     delta = build_plan_delta(_manifest(1, "before"), _manifest(2, "after"))
     return build_finding_check_binding(
         finding_id=finding["findingId"],

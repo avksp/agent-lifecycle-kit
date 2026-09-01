@@ -30,6 +30,7 @@ _TOP_LEVEL = {
     "acceptanceCriteria",
     "validation",
     "orchestration",
+    "implementationAudit",
     "developerOverview",
     "releaseTarget",
     "releaseImpact",
@@ -147,6 +148,7 @@ _ORCHESTRATION = {
     "stepReviewRequired",
     "finalAuditRequired",
 }
+_IMPLEMENTATION_AUDIT = {"required", "finalRequired"}
 _AUTHORITY_MARKERS = {
     "writes",
     "readOnly",
@@ -238,6 +240,9 @@ def _validate_nested(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -
     orchestration = manifest.get("orchestration")
     _object_keys(orchestration, _ORCHESTRATION, "orchestration", blockers)
     _validate_remediation_policy(orchestration, blockers)
+    implementation_audit = manifest.get("implementationAudit")
+    _object_keys(implementation_audit, _IMPLEMENTATION_AUDIT, "implementationAudit", blockers)
+    _validate_implementation_audit_policy(implementation_audit, blockers)
     integrity = manifest.get("packageIntegrity")
     if integrity is not None:
         if not isinstance(integrity, dict):
@@ -308,6 +313,34 @@ def _validate_remediation_policy(value: Any, blockers: list[dict[str, Any]]) -> 
             _blocker(
                 "plan-remediation-attempt-budget-too-low",
                 "enabled remediation requires maxTaskAttempts of at least 2",
+            )
+        )
+
+
+def _validate_implementation_audit_policy(value: Any, blockers: list[dict[str, Any]]) -> None:
+    if value is None or not isinstance(value, dict):
+        return
+    required = value.get("required")
+    final_required = value.get("finalRequired")
+    if not isinstance(required, bool):
+        blockers.append(
+            _blocker(
+                "plan-implementation-audit-required-invalid",
+                "implementationAudit.required must be a boolean",
+            )
+        )
+    if not isinstance(final_required, bool):
+        blockers.append(
+            _blocker(
+                "plan-implementation-audit-final-required-invalid",
+                "implementationAudit.finalRequired must be a boolean",
+            )
+        )
+    if final_required is True and required is not True:
+        blockers.append(
+            _blocker(
+                "plan-implementation-audit-final-without-task",
+                "a required final implementation audit also requires per-task implementation audits",
             )
         )
 

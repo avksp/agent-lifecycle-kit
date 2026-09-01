@@ -31,6 +31,32 @@ agent-lifecycle audit final-implementation \
 The task command emits `agent-implementation-audit-report.v1`. The final command
 emits `agent-final-implementation-audit.v1`.
 
+## Rework delta audit
+
+After an archived attempt and a fresh result exist, build bounded evidence for
+the next independent reviewer:
+
+```bash
+agent-lifecycle audit delta \
+  --manifest tasks/package/plan.manifest.json \
+  --lock tasks/package/plan.lock.json \
+  --state work/package/run.state.json \
+  --task WS-01 \
+  --dependency-report work/evidence/module-dependencies.json \
+  --validation-selection work/evidence/validation-selection.json \
+  --finding-check-binding work/findings/F-1-binding.json \
+  --finding-check-evidence work/findings/F-1-evidence.json \
+  --out work/WS-01/attempt-2/delta-audit.json
+```
+
+The read-only command emits `agent-rework-delta-audit-receipt.v1`. It resolves
+adjacent attempts from workflow state, validates the frozen finding scope and
+uses the shared dependency graph to determine impact. It executes no check,
+model or host command. Missing or stale lineage, incomplete scope, protected
+paths, graph uncertainty, changed authority or replay failure returns
+`FULL_AUDIT_REQUIRED`. Delta evidence cannot replace independent task
+acceptance or the fresh full final audit.
+
 ## Audit a plan package
 
 When one person hands a plan and its implementation to another, audit the

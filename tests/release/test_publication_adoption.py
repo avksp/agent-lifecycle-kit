@@ -185,6 +185,19 @@ class PublicationAdoptionTests(unittest.TestCase):
             ):
                 self.assertIn(marker, text)
 
+    def test_delta_audit_is_documented_without_acceptance_authority(self) -> None:
+        references = (
+            (ROOT / "docs/reference/implementation-audit.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/implementation-audit.md").read_text(encoding="utf-8"),
+        )
+        for text in references:
+            for marker in (
+                "agent-lifecycle audit delta",
+                "agent-rework-delta-audit-receipt.v1",
+                "FULL_AUDIT_REQUIRED",
+            ):
+                self.assertIn(marker, text)
+
     def test_missing_project_comparison_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

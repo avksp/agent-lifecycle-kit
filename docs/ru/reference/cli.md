@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.11.0
+python -m pip install agent-lifecycle-kit==2.12.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -428,6 +428,10 @@ agent-lifecycle project preset render \
   `agent-implementation-audit-report.v1` по результату задачи и независимой
   проверке. Если зафиксированный план требует групповую проверку для аудита
   реализации, используйте `--review-mesh-quorum <path>`.
+- `agent-lifecycle audit delta`: создаёт read-only и command-free
+  `agent-rework-delta-audit-receipt.v1` для соседних повторных попыток.
+  Неопределённое или устаревшее влияние выбирает `FULL_AUDIT_REQUIRED`; этот
+  артефакт никогда не принимает задачу.
 - `agent-lifecycle audit final-implementation`: итоговый отчёт
   `agent-final-implementation-audit.v1` перед финальным подтверждением
   рабочего цикла.

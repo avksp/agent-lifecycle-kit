@@ -133,6 +133,8 @@ class ImplementationAuditTests(unittest.TestCase):
                 review_path=review_path,
             )
             self.assertEqual(fresh["status"], "PASS")
+            self.assertEqual(fresh["result"]["changeSetEvidence"]["entries"][0]["path"], "src/example.py")
+            self.assertNotIn("content", fresh["result"]["changeSetEvidence"]["entries"][0])
 
             source.write_text("value = 3\n", encoding="utf-8")
             stale = build_implementation_audit_report(

@@ -53,6 +53,13 @@ The tracked Release 2.6 fixture preserves the observed baseline: `29,195,208`
 audit tokens, `9,278,567 ms` audit wall time and `12,228,901 ms` audit compute
 time. Its non-audit token telemetry is `UNAVAILABLE`, not zero.
 
+The tracked Release 2.12 delta-audit baseline follows the same rule. It records
+the measured full-repeat reviewer input, raw token counters and elapsed time,
+but marks the identical-history delta route and reduction percentages
+`UNAVAILABLE` because that route was not used for acceptance. The observed
+fallback to `FULL_AUDIT` remains visible. A later comparable run may add the
+missing side; it may not reconstruct it from prompt size or another session.
+
 ## Relationship to audit optimization
 
 [Evidence-based audit optimization](audit-optimization.md) evaluates future

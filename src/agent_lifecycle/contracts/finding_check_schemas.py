@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.ownership_paths import normalize_authority_path
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 
 FINDING_CHECK_BINDING_SCHEMA = "agent-finding-check-binding.v1"
@@ -16,6 +17,8 @@ FINDING_CHECK_EVIDENCE_SCHEMA = "agent-finding-check-evidence.v1"
 FINDING_CHECK_EVIDENCE_VALIDATION_SCHEMA = "agent-finding-check-evidence-validation.v1"
 FINDING_CHECK_TRANSITION_SCHEMA = "agent-finding-check-transition.v1"
 FINDING_CHECK_TRACEABILITY_SCHEMA = "agent-finding-check-traceability-validation.v1"
+FINDING_IMPACT_SCOPE_SCHEMA = "agent-finding-impact-scope.v1"
+FINDING_IMPACT_SCOPE_VALIDATION_SCHEMA = "agent-finding-impact-scope-validation.v1"
 
 FINDING_CHECK_STATUSES = ("PROPOSED", "ACCEPTED", "IMPLEMENTED", "VERIFIED", "RETIRED")
 FINDING_CHECK_RESULTS = ("PASS", "FAIL", "BLOCKED")
@@ -28,25 +31,45 @@ _CHECK_ROUTE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$")
 
 
 FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
+    FINDING_IMPACT_SCOPE_SCHEMA: open_object_schema(
+        FINDING_IMPACT_SCOPE_SCHEMA,
+        required=(  # noqa: SIM905
+            "schemaVersion status findingId findingDigest planRevision planDigest sourceRevision paths modules "
+            "ownershipPaths acceptanceIds gateIds productionPromotionClaimed scopeDigest"
+        ).split(),
+        properties={
+            "status": {"const": "FROZEN"},
+            "findingId": _ID,
+            "findingDigest": _DIGEST,
+            "planRevision": {"type": "integer", "minimum": 1},
+            "planDigest": _DIGEST,
+            "sourceRevision": _TEXT,
+            "paths": {"type": "array", "minItems": 1, "maxItems": 128, "items": _ID},
+            "modules": {"type": "array", "minItems": 1, "maxItems": 128, "items": _ID},
+            "ownershipPaths": {"type": "array", "maxItems": 128, "items": _ID},
+            "acceptanceIds": {"type": "array", "maxItems": 128, "items": _ID},
+            "gateIds": {"type": "array", "maxItems": 128, "items": _ID},
+            "productionPromotionClaimed": {"const": False},
+            "scopeDigest": _DIGEST,
+        },
+    ),
+    FINDING_IMPACT_SCOPE_VALIDATION_SCHEMA: open_object_schema(
+        FINDING_IMPACT_SCOPE_VALIDATION_SCHEMA,
+        required=["schemaVersion", "status", "findingId", "blockers", "productionPromotionClaimed", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "findingId": {"type": ["string", "null"]},
+            "blockers": _BLOCKERS,
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
+        },
+    ),
     FINDING_CHECK_BINDING_SCHEMA: open_object_schema(
         FINDING_CHECK_BINDING_SCHEMA,
-        required=[
-            "schemaVersion",
-            "bindingId",
-            "status",
-            "findingId",
-            "findingDigest",
-            "planDeltaDigest",
-            "planLineage",
-            "checkIdentity",
-            "owner",
-            "scope",
-            "sourceRevision",
-            "expectedResult",
-            "transitions",
-            "productionPromotionClaimed",
-            "bindingDigest",
-        ],
+        required=(  # noqa: SIM905
+            "schemaVersion bindingId status findingId findingDigest planDeltaDigest planLineage checkIdentity owner "
+            "scope sourceRevision expectedResult transitions productionPromotionClaimed bindingDigest"
+        ).split(),
         properties={
             "bindingId": _ID,
             "status": {"enum": list(FINDING_CHECK_STATUSES)},
@@ -56,7 +79,7 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
             "planLineage": {"type": "object", "maxProperties": 12},
             "checkIdentity": {"type": "object", "maxProperties": 8},
             "owner": _TEXT,
-            "scope": {"type": "object", "maxProperties": 12},
+            "scope": {"type": "object", "maxProperties": 16},
             "sourceRevision": _TEXT,
             "expectedResult": {"enum": list(FINDING_CHECK_RESULTS)},
             "transitions": {"type": "array", "maxItems": 5, "items": {"type": "object", "maxProperties": 12}},
@@ -66,15 +89,9 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_BINDING_VALIDATION_SCHEMA: open_object_schema(
         FINDING_CHECK_BINDING_VALIDATION_SCHEMA,
-        required=[
-            "schemaVersion",
-            "status",
-            "bindingStatus",
-            "bindingId",
-            "blockers",
-            "productionPromotionClaimed",
-            "validationDigest",
-        ],
+        required=(  # noqa: SIM905
+            "schemaVersion status bindingStatus bindingId blockers productionPromotionClaimed validationDigest"
+        ).split(),
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "bindingStatus": {"type": ["string", "null"]},
@@ -86,18 +103,10 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_PROPOSAL_SCHEMA: open_object_schema(
         FINDING_CHECK_PROPOSAL_SCHEMA,
-        required=[
-            "schemaVersion",
-            "proposalId",
-            "status",
-            "binding",
-            "approvalRequired",
-            "applyAllowed",
-            "authorityClaimed",
-            "blockers",
-            "productionPromotionClaimed",
-            "proposalDigest",
-        ],
+        required=(  # noqa: SIM905
+            "schemaVersion proposalId status binding approvalRequired applyAllowed authorityClaimed blockers "
+            "productionPromotionClaimed proposalDigest"
+        ).split(),
         properties={
             "proposalId": _ID,
             "status": {"enum": ["PASS", "FAIL"]},
@@ -113,14 +122,7 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_PROPOSAL_VALIDATION_SCHEMA: open_object_schema(
         FINDING_CHECK_PROPOSAL_VALIDATION_SCHEMA,
-        required=[
-            "schemaVersion",
-            "status",
-            "proposalStatus",
-            "blockers",
-            "productionPromotionClaimed",
-            "validationDigest",
-        ],
+        required="schemaVersion status proposalStatus blockers productionPromotionClaimed validationDigest".split(),  # noqa: SIM905
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "proposalStatus": {"type": ["string", "null"]},
@@ -131,21 +133,10 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_EVIDENCE_SCHEMA: open_object_schema(
         FINDING_CHECK_EVIDENCE_SCHEMA,
-        required=[
-            "schemaVersion",
-            "status",
-            "bindingId",
-            "findingId",
-            "checkIdentity",
-            "sourceRevision",
-            "result",
-            "evidenceIds",
-            "readOnly",
-            "modelCallsStarted",
-            "hostLaunchStarted",
-            "productionPromotionClaimed",
-            "evidenceDigest",
-        ],
+        required=(  # noqa: SIM905
+            "schemaVersion status bindingId findingId checkIdentity sourceRevision result evidenceIds readOnly "
+            "modelCallsStarted hostLaunchStarted productionPromotionClaimed evidenceDigest"
+        ).split(),
         properties={
             "status": {"enum": ["PASS", "FAIL", "BLOCKED"]},
             "bindingId": _ID,
@@ -163,15 +154,7 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_EVIDENCE_VALIDATION_SCHEMA: open_object_schema(
         FINDING_CHECK_EVIDENCE_VALIDATION_SCHEMA,
-        required=[
-            "schemaVersion",
-            "status",
-            "result",
-            "bindingId",
-            "blockers",
-            "productionPromotionClaimed",
-            "validationDigest",
-        ],
+        required="schemaVersion status result bindingId blockers productionPromotionClaimed validationDigest".split(),  # noqa: SIM905
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "result": {"type": ["string", "null"]},
@@ -183,16 +166,9 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_TRANSITION_SCHEMA: open_object_schema(
         FINDING_CHECK_TRANSITION_SCHEMA,
-        required=[
-            "schemaVersion",
-            "status",
-            "binding",
-            "targetStatus",
-            "idempotent",
-            "blockers",
-            "productionPromotionClaimed",
-            "transitionDigest",
-        ],
+        required=(  # noqa: SIM905
+            "schemaVersion status binding targetStatus idempotent blockers productionPromotionClaimed transitionDigest"
+        ).split(),
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "binding": {"type": "object"},
@@ -205,14 +181,7 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
     FINDING_CHECK_TRACEABILITY_SCHEMA: open_object_schema(
         FINDING_CHECK_TRACEABILITY_SCHEMA,
-        required=[
-            "schemaVersion",
-            "status",
-            "bindingCount",
-            "blockers",
-            "productionPromotionClaimed",
-            "validationDigest",
-        ],
+        required="schemaVersion status bindingCount blockers productionPromotionClaimed validationDigest".split(),  # noqa: SIM905
         properties={
             "status": {"enum": ["PASS", "FAIL"]},
             "bindingCount": {"type": "integer", "minimum": 0, "maximum": 128},
@@ -222,6 +191,110 @@ FINDING_CHECK_SCHEMAS: dict[str, dict[str, Any]] = {
         },
     ),
 }
+
+
+def build_finding_impact_scope(
+    *,
+    finding_id: str,
+    finding_digest: str,
+    plan_revision: int,
+    plan_digest: str,
+    source_revision: str,
+    paths: list[str],
+    modules: list[str],
+    ownership_paths: list[str] | None = None,
+    acceptance_ids: list[str] | None = None,
+    gate_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Freeze the machine-readable impact boundary for one accepted finding."""
+
+    _required_id(finding_id, "findingId")
+    _digest(finding_digest, "findingDigest")
+    if not isinstance(plan_revision, int) or isinstance(plan_revision, bool) or plan_revision < 1:
+        raise LifecycleError("finding-impact-scope-revision", "planRevision must be a positive integer")
+    _digest(plan_digest, "planDigest")
+    _required_text(source_revision, "sourceRevision")
+    normalized_modules = _canonical_string_list(sorted(set(modules)), "modules", allow_empty=False)
+    if any(not _valid_module_name(module) for module in normalized_modules):
+        raise LifecycleError("finding-impact-scope-module-invalid", "modules contains an invalid package module")
+    body = {
+        "schemaVersion": FINDING_IMPACT_SCOPE_SCHEMA,
+        "status": "FROZEN",
+        "findingId": finding_id,
+        "findingDigest": finding_digest,
+        "planRevision": plan_revision,
+        "planDigest": plan_digest,
+        "sourceRevision": source_revision,
+        "paths": _canonical_scope_paths(paths, "paths", allow_empty=False),
+        "modules": normalized_modules,
+        "ownershipPaths": _canonical_scope_paths(ownership_paths or [], "ownershipPaths", allow_empty=True),
+        "acceptanceIds": _canonical_string_list(sorted(set(acceptance_ids or [])), "acceptanceIds", allow_empty=True),
+        "gateIds": _canonical_string_list(sorted(set(gate_ids or [])), "gateIds", allow_empty=True),
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "scopeDigest": canonical_digest(body)}
+
+
+def validate_finding_impact_scope(scope: dict[str, Any], *, expected: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Validate exact frozen scope lineage and canonical collections."""
+
+    blockers: list[dict[str, Any]] = []
+    expected_keys = set(FINDING_CHECK_SCHEMAS[FINDING_IMPACT_SCOPE_SCHEMA]["required"])
+    if not isinstance(scope, dict) or set(scope) != expected_keys:
+        blockers.append({"code": "finding-impact-scope-shape"})
+    else:
+        if scope.get("schemaVersion") != FINDING_IMPACT_SCOPE_SCHEMA or scope.get("status") != "FROZEN":
+            blockers.append({"code": "finding-impact-scope-status"})
+        for field in ("findingId", "sourceRevision"):
+            if not isinstance(scope.get(field), str) or not scope[field]:
+                blockers.append({"code": "finding-impact-scope-field", "field": field})
+        for field in ("findingDigest", "planDigest"):
+            if not _is_digest(scope.get(field)):
+                blockers.append({"code": "finding-impact-scope-digest", "field": field})
+        if (
+            not isinstance(scope.get("planRevision"), int)
+            or isinstance(scope.get("planRevision"), bool)
+            or scope["planRevision"] < 1
+        ):
+            blockers.append({"code": "finding-impact-scope-revision"})
+        for field, allow_empty in (
+            ("paths", False),
+            ("modules", False),
+            ("ownershipPaths", True),
+            ("acceptanceIds", True),
+            ("gateIds", True),
+        ):
+            try:
+                normalized = _canonical_string_list(scope.get(field), field, allow_empty=allow_empty)
+                if normalized != scope.get(field):
+                    blockers.append({"code": "finding-impact-scope-list-not-canonical", "field": field})
+            except LifecycleError:
+                blockers.append({"code": "finding-impact-scope-list-invalid", "field": field})
+        for field in ("paths", "ownershipPaths"):
+            try:
+                if _canonical_scope_paths(scope.get(field), field, allow_empty=field == "ownershipPaths") != scope.get(
+                    field
+                ):
+                    blockers.append({"code": "finding-impact-scope-path-not-canonical", "field": field})
+            except LifecycleError:
+                blockers.append({"code": "finding-impact-scope-path-invalid", "field": field})
+        if any(not _valid_module_name(item) for item in scope.get("modules", [])):
+            blockers.append({"code": "finding-impact-scope-module-invalid"})
+        for field, value in (expected or {}).items():
+            if scope.get(field) != value:
+                blockers.append({"code": "finding-impact-scope-lineage", "field": field})
+        body = {key: value for key, value in scope.items() if key != "scopeDigest"}
+        if scope.get("scopeDigest") != canonical_digest(body):
+            blockers.append({"code": "finding-impact-scope-digest-mismatch"})
+        if scope.get("productionPromotionClaimed") is not False:
+            blockers.append({"code": "finding-impact-scope-production-claim"})
+    return _validation(
+        FINDING_IMPACT_SCOPE_VALIDATION_SCHEMA,
+        blockers,
+        findingId=scope.get("findingId")
+        if isinstance(scope, dict) and isinstance(scope.get("findingId"), str)
+        else None,
+    )
 
 
 def build_finding_check_binding(
@@ -656,6 +729,36 @@ def _string_list(values: Any, field: str) -> None:
         raise LifecycleError("finding-check-list-invalid", f"{field} must be a non-empty list of bounded strings")
 
 
+def _canonical_string_list(values: Any, field: str, *, allow_empty: bool) -> list[str]:
+    if not isinstance(values, list) or any(
+        not isinstance(value, str) or not value or len(value) > 256 for value in values
+    ):
+        raise LifecycleError("finding-check-list-invalid", f"{field} must be an array of bounded strings")
+    normalized = sorted(set(values))
+    if normalized != values or (not allow_empty and not normalized) or len(normalized) > 128:
+        raise LifecycleError("finding-check-list-invalid", f"{field} must be canonical and within limits")
+    return normalized
+
+
+def _canonical_scope_paths(values: Any, field: str, *, allow_empty: bool) -> list[str]:
+    normalized = _canonical_string_list(
+        sorted(set(values)) if isinstance(values, list) else values, field, allow_empty=allow_empty
+    )
+    try:
+        paths = sorted(normalize_authority_path(value, label=field) for value in normalized)
+    except LifecycleError as exc:
+        raise LifecycleError("finding-check-list-invalid", f"{field} contains an invalid repository path") from exc
+    return paths
+
+
+def _valid_module_name(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and all(part.isidentifier() for part in value.split("."))
+        and value.startswith("agent_lifecycle")
+    )
+
+
 __all__ = [
     "FINDING_CHECK_BINDING_SCHEMA",
     "FINDING_CHECK_BINDING_VALIDATION_SCHEMA",
@@ -668,11 +771,15 @@ __all__ = [
     "FINDING_CHECK_STATUSES",
     "FINDING_CHECK_TRACEABILITY_SCHEMA",
     "FINDING_CHECK_TRANSITION_SCHEMA",
+    "FINDING_IMPACT_SCOPE_SCHEMA",
+    "FINDING_IMPACT_SCOPE_VALIDATION_SCHEMA",
     "build_finding_check_binding",
     "build_finding_check_evidence",
     "build_finding_check_proposal",
+    "build_finding_impact_scope",
     "transition_finding_check_binding",
     "validate_finding_check_binding",
     "validate_finding_check_evidence",
     "validate_finding_check_proposal",
+    "validate_finding_impact_scope",
 ]

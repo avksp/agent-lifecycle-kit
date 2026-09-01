@@ -64,6 +64,7 @@ def capture_task_change_set(
         "baselineSha": baseline_sha,
         "changedFiles": scoped,
         "allChangedFiles": all_changed,
+        "entries": current_entries,
         "fileSetHash": canonical_digest(file_set),
         "diffHash": canonical_digest(diff),
         "snapshotHash": canonical_digest(snapshot),

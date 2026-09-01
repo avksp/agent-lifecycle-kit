@@ -6,17 +6,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.audit import (
-    build_final_implementation_audit,
-    build_implementation_audit_report,
-    build_ownership_report,
-    build_package_audit,
-    require_package_audit_pass,
-    require_review_verdict_pass,
-    validate_review_verdict,
-)
-from agent_lifecycle.audit.ownership import report_has_category
-from agent_lifecycle.changesets import changed_files
+from agent_lifecycle.cli.dispatch_audit import dispatch_audit
 from agent_lifecycle.cli.progress_hooks import (
     maybe_emit_workflow_progress_hook,
     validate_workflow_progress_hook_request,
@@ -64,7 +54,7 @@ def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
     if args.command == "workflow":
         return _dispatch_workflow(args)
     if args.command == "audit":
-        return _dispatch_audit(args)
+        return dispatch_audit(args)
     raise LifecycleError("command-not-implemented", "lifecycle command is not implemented")
 
 
@@ -713,74 +703,3 @@ def _continuation_inputs(args: argparse.Namespace) -> dict[str, Any]:
         if values:
             inputs[key] = values
     return inputs
-
-
-def _dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:
-    if args.audit_command == "review-check":
-        review = read_json_object(Path(args.review), label="task review")
-        verdict = review.get("reviewVerdict", review)
-        findings = review.get("findings", []) if isinstance(review.get("findings", []), list) else []
-        return require_review_verdict_pass(validate_review_verdict(verdict, findings=findings))
-    if args.audit_command == "implementation":
-        payload = build_implementation_audit_report(
-            manifest_path=Path(args.manifest),
-            state_path=Path(args.state),
-            task_id=args.task,
-            result_path=args.result,
-            review_path=args.review,
-            evidence_paths=args.evidence,
-            sandbox_receipt_paths=args.sandbox_receipt,
-            review_mesh_quorum_paths=args.review_mesh_quorum,
-            changed_paths=args.path or None,
-            expected_revision=args.expected_revision,
-            base=args.base,
-            auditor_id=args.auditor_id,
-            auditor_surface=args.auditor_surface,
-        )
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
-    if args.audit_command == "final-implementation":
-        payload = build_final_implementation_audit(
-            manifest_path=Path(args.manifest),
-            state_path=Path(args.state),
-            report_paths=args.report,
-            auditor_id=args.auditor_id,
-            auditor_surface=args.auditor_surface,
-        )
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
-    if args.audit_command == "package":
-        payload = build_package_audit(
-            plan_dir=Path(args.plan_dir),
-            state_path=Path(args.state) if args.state else None,
-            report_paths=args.report,
-            changed_paths=args.path or None,
-            base=args.base,
-            require_frozen=args.require_frozen,
-            require_implementation=args.require_implementation,
-            completeness_profile_path=Path(args.completeness_profile) if args.completeness_profile else None,
-            auditor_id=args.auditor_id,
-            auditor_surface=args.auditor_surface,
-        )
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        if args.strict:
-            require_package_audit_pass(payload)
-        return payload
-    paths = args.path or changed_files(Path.cwd(), base=args.base)
-    report = build_ownership_report(Path(args.manifest), paths, base=args.base)
-    if args.fail_on_forbidden and report_has_category(report, {"forbidden"}):
-        raise LifecycleError(
-            "forbidden-write-detected",
-            "ownership report contains forbidden writes",
-            report["summary"],
-        )
-    if args.fail_on_unowned and report_has_category(report, {"unowned"}):
-        raise LifecycleError(
-            "unowned-write-detected",
-            "ownership report contains unowned writes",
-            report["summary"],
-        )
-    return report

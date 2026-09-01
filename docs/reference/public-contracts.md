@@ -77,6 +77,10 @@ Stable schema ids:
 - `agent-project-principles-validation.v1`
 - `agent-plan-delta.v1`
 - `agent-plan-delta-validation.v1`
+- `agent-finding-impact-scope.v1`
+- `agent-finding-impact-scope-validation.v1`
+- `agent-rework-delta-audit-receipt.v1`
+- `agent-rework-delta-audit-receipt-validation.v1`
 - `agent-implementation-audit-report.v1`
 - `agent-implementation-audit-report-validation.v1`
 - `agent-final-implementation-audit.v1`
@@ -165,7 +169,9 @@ before confidence-aware resource deltas and never mutates policy. The workflow
 execution route uses a typed `workflow run` receipt that checks frozen plan/state
 lineage and returns the next host-owned action. Implementation audit reports bind task
 results, independent reviews, ownership, evidence and sandbox checks before a
-task or run can pass a mandatory audit gate.
+task or run can pass a mandatory audit gate. Rework delta-audit receipts bind
+adjacent attempt snapshots and frozen finding scopes for reviewer focus; they
+execute no commands, fail closed to full audit and carry no acceptance authority.
 Managed adapter session receipts bind an adapter session to a workflow state
 and task lineage only when the operator uses an ALK-managed command such as
 `adapter run` or `adapter session promote`. Plain plugin installation and

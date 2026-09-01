@@ -12,6 +12,12 @@ class PlanManifestSchemaTests(unittest.TestCase):
         schema = get_schema("agent-plan-manifest.v1")
         self.assertFalse(schema["additionalProperties"])
         self.assertFalse(schema["$defs"]["packageIntegrity"]["additionalProperties"])
+        self.assertEqual(schema["properties"]["implementationAudit"]["$ref"], "#/$defs/implementationAudit")
+        self.assertFalse(schema["$defs"]["implementationAudit"]["additionalProperties"])
+        self.assertEqual(
+            schema["$defs"]["implementationAudit"]["required"],
+            ["required", "finalRequired"],
+        )
         self.assertEqual(
             schema["$defs"]["extensions"]["properties"]["securityAnalysis"]["properties"]["profileId"]["const"],
             "security-analysis.v1",
@@ -31,6 +37,12 @@ class PlanManifestSchemaTests(unittest.TestCase):
                 self.assertEqual(len(schema["required"]), len(set(schema["required"])))
                 self.assertEqual(schema["required"].count("schemaVersion"), 1)
                 self.assertTrue(set(schema["required"]).issubset(schema["properties"]))
+
+    def test_implementation_audit_policy_has_exact_boolean_fields(self) -> None:
+        policy = get_schema("agent-plan-manifest.v1")["$defs"]["implementationAudit"]
+        self.assertEqual(set(policy["properties"]), {"required", "finalRequired"})
+        self.assertEqual(policy["properties"]["required"], {"type": "boolean"})
+        self.assertEqual(policy["properties"]["finalRequired"], {"type": "boolean"})
 
 
 if __name__ == "__main__":
