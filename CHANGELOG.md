@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 2.13.0 - 2026-09-04
+
+- Bound provider-neutral execution strategies to the exact next task attempt,
+  plan, lock, state, source, adapter capability and project-profile identity.
+- Adopted the same fail-closed strategy through managed start, direct task
+  start and one-step or bounded workflow continuation without adding model or
+  execution authority.
+- Preserved frozen quality and review floors, snapshot-driven validation and
+  mandatory final `RELEASE_FULL` validation across every strategy route.
+- Added bilingual operator guidance and a redacted S0/S1/S2 routing baseline
+  that keeps unavailable model telemetry explicit.
+- Updated package, plugin, marketplace and installation surfaces for version
+  `2.13.0`.
+
 ## 2.12.0 - 2026-09-01
 
 - Added source-bound rework delta-audit receipts with conservative transitive

@@ -95,7 +95,11 @@ events remain committed. Stable invalid-combination codes are
 The command accepts only inputs already owned by existing transitions:
 
 - authorization: `--authorization-receipt`;
-- task selection/start: `--task`, optionally `--risk-profile`;
+- task selection/start: `--task`, optionally `--risk-profile`, or an immutable
+  `--strategy` plus the exact `--strategy-risk`, `--strategy-risk-policy`,
+  `--strategy-routing-profile`, `--strategy-baseline-profile`,
+  `--strategy-host-model-profile`, `--strategy-descriptor`,
+  `--strategy-capability-manifest` and `--strategy-project-profile` inputs;
 - task result: `--result`, `--model-usage-receipt`, `--budget-targets`;
 - task review: `--review`, `--implementation-audit`, repeated `--finding-id`;
 - final audit outcome: `--final-audit`, `--verdict`, repeated `--task-id` and
@@ -107,6 +111,14 @@ The command accepts only inputs already owned by existing transitions:
 Every path must be repository-relative. Supplying an input does not make it
 trusted: the selected transition still validates canonical form, lineage,
 independence, freshness, ownership and policy before mutation.
+
+When a task-start strategy is supplied, the projection exposes the selected
+quality, packet, review and model-class values plus their source decision
+digests and blockers. It reports `modelCallsStarted: false`. Apply recomputes
+the strategy from the separately supplied policy files and validates the exact
+next attempt; a stale or incomplete binding blocks before mutation. The
+strategy cannot lower the snapshot-driven validation selection or replace the
+final `RELEASE_FULL` gate.
 
 ## Non-mutating routes
 

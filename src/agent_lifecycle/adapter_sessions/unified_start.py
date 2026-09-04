@@ -35,8 +35,9 @@ from agent_lifecycle.adapter_sessions.start_receipts import (
 from agent_lifecycle.adapter_sessions.start_routing import (
     _binding_path,
     _binding_string,
+    _missing_frozen_bindings,
     _profile_plan_authority,
-    _strategy_summary_for_receipt,
+    strategy_projection_for_receipt,
 )
 from agent_lifecycle.adapter_sessions.task_intake import (
     ADAPTER_TASK_RUN_REQUEST_SCHEMA,
@@ -85,7 +86,9 @@ def _start_lifecycle_core(
     host_model_profile_path: Path | None = None,
     launch: bool = False,
     host_launch_profile_path: Path | None = None,
-    project_profile_digest: str | None = None,
+    project_profile: dict[str, Any] | None = None,
+    project_profile_path: Path | None = None,
+    strategy_out_path: Path | None = None,
 ) -> dict[str, Any]:
     """Select one existing lifecycle action without creating new authority."""
 
@@ -181,22 +184,15 @@ def _start_lifecycle_core(
         routing_profile_path=routing_profile_path,
         baseline_profile_path=baseline_profile_path,
         host_model_profile_path=host_model_profile_path,
+        project_profile=project_profile,
+        project_profile_path=project_profile_path,
+        strategy_out_path=strategy_out_path,
     )
     if mode in _NON_EXECUTING_MODES and _claims_execution(receipt):
         return _blocked(
             adapter_id=adapter_id, mode=mode, input_summary=input_summary, code="start-non-implement-execution-claim"
         )
-    strategy_summary = _strategy_summary_for_receipt(
-        receipt,
-        adapter_id=adapter_id,
-        descriptor_path=descriptor_path,
-        requested_risk=requested_risk,
-        risk_policy_path=risk_policy_path,
-        routing_profile_path=routing_profile_path,
-        baseline_profile_path=baseline_profile_path,
-        host_model_profile_path=host_model_profile_path,
-        project_profile_digest=project_profile_digest,
-    )
+    strategy_summary = strategy_projection_for_receipt(receipt)
     return _finish_start(
         adapter_id=adapter_id,
         mode=mode,
@@ -437,45 +433,6 @@ def _is_frozen_input(payload: dict[str, Any] | None) -> bool:
     return payload.get("schemaVersion") == "agent-plan-manifest.v1" and payload.get("status") == "FROZEN"
 
 
-def _missing_frozen_bindings(
-    payload: dict[str, Any] | None,
-    *,
-    state_path: Path | None,
-    lock_path: Path | None,
-    task_id: str | None,
-    operation_id: str | None,
-    expected_revision: int | None,
-    source_revision: str | None,
-) -> list[str]:
-    if not isinstance(payload, dict):
-        return ["frozenInput"]
-    if payload.get("schemaVersion") == ADAPTER_TASK_RUN_REQUEST_SCHEMA:
-        values = {
-            "state": payload.get("state"),
-            "manifest": payload.get("manifest"),
-            "lock": payload.get("lock"),
-            "task": payload.get("task"),
-            "operationId": payload.get("operationId"),
-            "expectedRevision": payload.get("expectedRevision"),
-            "sourceRevision": payload.get("sourceRevision"),
-        }
-    else:
-        values = {
-            "state": state_path,
-            "manifest": "provided-input",
-            "lock": lock_path,
-            "task": task_id,
-            "operationId": operation_id,
-            "expectedRevision": expected_revision,
-            "sourceRevision": source_revision,
-        }
-    missing = [field for field, value in values.items() if value in {None, ""}]
-    revision = values.get("expectedRevision")
-    if revision is not None and (not isinstance(revision, int) or isinstance(revision, bool) or revision < 1):
-        missing.append("expectedRevision")
-    return sorted(set(missing))
-
-
 def _from_task_receipt(
     *,
     adapter_id: str,
@@ -711,6 +668,7 @@ def start_lifecycle(
     project_profile: dict[str, Any] | None = None,
     project_profile_path: Path | None = None,
     project_root: Path | None = None,
+    strategy_out_path: Path | None = None,
 ) -> dict[str, Any]:
     """Run the existing start path, optionally wrapped by a project profile."""
 
@@ -740,6 +698,8 @@ def start_lifecycle(
             host_model_profile_path=host_model_profile_path,
             launch=launch,
             host_launch_profile_path=host_launch_profile_path,
+            project_profile_path=project_profile_path,
+            strategy_out_path=strategy_out_path,
         )
 
     overrides: dict[str, Any] = {}
@@ -789,7 +749,9 @@ def start_lifecycle(
         host_model_profile_path=host_model_profile_path,
         launch=launch,
         host_launch_profile_path=host_launch_profile_path,
-        project_profile_digest=effective["effectiveProfileDigest"],
+        project_profile=project_profile,
+        project_profile_path=project_profile_path,
+        strategy_out_path=strategy_out_path,
     )
     return _build_guided_action_receipt(
         base,

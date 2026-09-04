@@ -283,9 +283,11 @@ def _explain_profile(args: argparse.Namespace) -> dict[str, Any]:
         "status": "PASS" if not blockers else "FAIL",
         "effectiveProfile": effective_profile,
         "fields": fields,
+        "selection": _configuration_selection(effective_profile, fields, capability_status),
         "descriptorLineage": descriptor_lineage,
         "capabilityLineage": capability_lineage,
         "blockers": blockers,
+        "modelCallsStarted": False,
         "productionPromotionClaimed": False,
     }
     result = {**body, "explanationDigest": canonical_digest(body)}
@@ -296,6 +298,30 @@ def _explain_profile(args: argparse.Namespace) -> dict[str, Any]:
         _ensure_output_contained(output, root)
         write_json_create(output, result)
     return result
+
+
+def _configuration_selection(
+    effective: dict[str, Any],
+    fields: list[dict[str, Any]],
+    capability_status: str,
+) -> dict[str, Any]:
+    winning_sources = {
+        str(item["field"]): item.get("winningSource") for item in fields if isinstance(item.get("field"), str)
+    }
+    return {
+        "adapterId": effective.get("defaultAdapter"),
+        "mode": effective.get("defaultMode"),
+        "requestedRisk": effective.get("defaultRisk"),
+        "stages": effective.get("stages", {}),
+        "winningSources": winning_sources,
+        "minimumConstraints": effective.get("authority", {}),
+        "capabilityStatus": capability_status,
+        "reasons": {
+            "precedence": "plan-floor-then-command-profile-preset-default",
+            "capability": "enforceability-only",
+        },
+        "blockers": [],
+    }
 
 
 def _profile_overrides(args: argparse.Namespace) -> dict[str, Any]:

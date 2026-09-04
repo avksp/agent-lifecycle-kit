@@ -573,6 +573,12 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                 self.assertIn("agent-lifecycle benchmark compare", text)
                 self.assertIn("DEFERRED_UNTIL_FREEZE", text)
                 self.assertIn("agent-execution-strategy.v1", text)
+                self.assertIn("automaticAdoptionEligible", text)
+                self.assertIn("--strategy-out", text)
+                self.assertIn("--strategy-descriptor", text)
+                self.assertIn("--strategy-capability-manifest", text)
+                self.assertIn("modelCallsStarted: false", text)
+                self.assertIn("RELEASE_FULL", text)
 
     def test_python_package_guidance_is_synchronized(self) -> None:
         package_url = "https://pypi.org/project/agent-lifecycle-kit/"
@@ -1409,6 +1415,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "agent-lifecycle benchmark compare.\n"
         "Automatic adoption eligibility requires no measurement gaps.\n"
         "Пригодность для автоматического принятия требует отсутствия пробелов в измерениях.\n"
+        "automaticAdoptionEligible. --strategy-out. --strategy-descriptor.\n"
+        "--strategy-capability-manifest. modelCallsStarted: false. RELEASE_FULL.\n"
     )
     _write_text(root / "docs/reference/execution-strategy.md", execution_strategy)
     _write_text(root / "docs/ru/reference/execution-strategy.md", execution_strategy)

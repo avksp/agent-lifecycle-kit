@@ -40,6 +40,20 @@ adapter, migration, architecture and S2 work. For those task classes, tuning
 may keep or raise the lifecycle mode, but it cannot remove required evidence,
 review or final proof.
 
+## Execution-strategy adoption
+
+`agent-execution-strategy.v1` composes the existing risk, quality, routing,
+packet and review decisions for one exact next task attempt. Managed `start`,
+direct `workflow task-start` and `workflow continue` may consume the receipt
+only when `automaticAdoptionEligible` is true and every plan, lock, state,
+source, descriptor, capability and project-profile binding can be recomputed.
+The computation starts no model and grants no workflow authority.
+
+Explicit operator or project settings may preserve or strengthen a frozen
+floor, never lower it. Missing capability evidence is not a reason to weaken a
+route. Snapshot-driven task validation remains independent, and final
+`RELEASE_FULL` validation remains mandatory.
+
 Small local models should use `agent-lifecycle-policy-summary.v1` summaries for
 the next action and refusal reasons. Larger models can inspect the full
 proposal, regression signals and tuned policy artifact before approval.

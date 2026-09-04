@@ -7,6 +7,7 @@ import argparse
 from agent_lifecycle.adapter_sessions import START_MODES
 from agent_lifecycle.cli.progress_hooks import add_progress_hook_args
 from agent_lifecycle.cli.project import add_project_parser
+from agent_lifecycle.cli.workflow_task_parsers import add_strategy_adoption_args, add_workflow_task_parsers
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
 from agent_lifecycle.resources import builtin_profile_path
 from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
@@ -42,6 +43,7 @@ def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
         help="operator-local profile; planning defaults to .alk/host-launch/<adapter>.json",
     )
     start.add_argument("--risk-profile-out")
+    start.add_argument("--strategy-out")
     start.add_argument("--descriptor")
     start.add_argument("--session-root")
     start.add_argument("--state")
@@ -536,6 +538,7 @@ def _add_workflow_continue_parser(
     workflow_continue.add_argument("--task")
     workflow_continue.add_argument("--authorization-receipt")
     workflow_continue.add_argument("--risk-profile")
+    add_strategy_adoption_args(workflow_continue)
     workflow_continue.add_argument("--result")
     workflow_continue.add_argument("--model-usage-receipt")
     workflow_continue.add_argument("--budget-targets")
@@ -654,69 +657,6 @@ def _add_workflow_control_parsers(
     workflow_resolve.add_argument("--reason", required=True)
 
 
-def _add_workflow_task_parsers(
-    workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser],
-) -> None:
-    workflow_task = workflow_sub.add_parser("task-start")
-    workflow_task.add_argument("--state", required=True)
-    workflow_task.add_argument("--task", required=True)
-    workflow_task.add_argument("--operation-id", required=True)
-    workflow_task.add_argument("--expected-revision", required=True, type=int)
-    workflow_task.add_argument("--source-revision", required=True)
-    workflow_task.add_argument("--risk-profile")
-    workflow_task.add_argument("--reason", required=True)
-    workflow_result = workflow_sub.add_parser("task-result")
-    workflow_result.add_argument("--state", required=True)
-    workflow_result.add_argument("--task", required=True)
-    workflow_result.add_argument("--operation-id", required=True)
-    workflow_result.add_argument("--expected-revision", required=True, type=int)
-    workflow_result.add_argument("--source-revision", required=True)
-    workflow_result.add_argument("--result", required=True)
-    workflow_result.add_argument("--model-usage-receipt")
-    workflow_result.add_argument("--budget-targets")
-    workflow_result.add_argument("--reason", required=True)
-    add_progress_hook_args(workflow_result)
-    workflow_snapshot = workflow_sub.add_parser("task-snapshot")
-    workflow_snapshot.add_argument("--state", required=True)
-    workflow_snapshot.add_argument("--task", required=True)
-    workflow_snapshot.add_argument("--out")
-    workflow_snapshot.add_argument("--manifest")
-    workflow_snapshot.add_argument("--lock")
-    workflow_snapshot.add_argument(
-        "--phase-packet-purpose",
-        choices=["IMPLEMENTATION", "TASK_AUDIT", "REMEDIATION"],
-    )
-    workflow_snapshot.add_argument("--phase-packet-out")
-    validation_select = workflow_sub.add_parser("validation-select")
-    validation_select.add_argument("--state", required=True)
-    validation_select.add_argument("--task", required=True)
-    validation_select.add_argument("--manifest", required=True)
-    validation_select.add_argument("--lock", required=True)
-    validation_select.add_argument("--snapshot", required=True)
-    validation_select.add_argument("--out")
-    workflow_budget = workflow_sub.add_parser("budget-decision")
-    workflow_budget.add_argument("--state", required=True)
-    workflow_budget.add_argument("--task", required=True)
-    workflow_budget.add_argument("--operation-id", required=True)
-    workflow_budget.add_argument("--expected-revision", required=True, type=int)
-    workflow_budget.add_argument("--source-revision", required=True)
-    workflow_budget.add_argument("--model-usage-receipt")
-    workflow_budget.add_argument("--budget-policy")
-    workflow_budget.add_argument("--receipt", required=True)
-    workflow_budget.add_argument(
-        "--action",
-        choices=["continue-same-route", "reroute-cheaper", "reroute-stronger", "split-task", "abort"],
-    )
-    workflow_budget.add_argument("--decision-receipt")
-    workflow_budget.add_argument("--route-decision")
-    workflow_budget.add_argument("--split-packet")
-    workflow_budget.add_argument("--cap-deltas")
-    workflow_budget.add_argument("--operator-identity-hash")
-    workflow_budget.add_argument("--reason", required=True)
-    workflow_budget_policy = workflow_sub.add_parser("budget-policy-check")
-    workflow_budget_policy.add_argument("--policy", required=True)
-
-
 def _add_workflow_review_parsers(
     workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser],
 ) -> None:
@@ -789,5 +729,5 @@ def _add_workflow_parser(subparsers: argparse._SubParsersAction[argparse.Argumen
     workflow_sub = workflow.add_subparsers(dest="workflow_command", required=True)
     _add_workflow_state_parsers(workflow_sub)
     _add_workflow_control_parsers(workflow_sub)
-    _add_workflow_task_parsers(workflow_sub)
+    add_workflow_task_parsers(workflow_sub)
     _add_workflow_review_parsers(workflow_sub)

@@ -31,6 +31,7 @@ class StrategyCliTests(unittest.TestCase):
             self.assertEqual(payload["quality"]["resolvedRiskTier"], "S2")
             self.assertEqual(payload["packet"]["mode"], "FULL")
             self.assertFalse(payload["authority"]["canAuthorizeImplementation"])
+            self.assertFalse(payload["authority"]["automaticAdoptionEligible"])
             self.assertEqual(json.loads(out.read_text(encoding="utf-8")), payload)
 
             repeat_code, repeat = _run_cli(args)

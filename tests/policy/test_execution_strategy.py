@@ -58,6 +58,48 @@ class ExecutionStrategyTests(unittest.TestCase):
         with self.assertRaisesRegex(LifecycleError, "manifestHash mismatch"):
             self._resolve(lock=bad_lock)
 
+    def test_complete_attempt_binding_is_adoption_eligible_without_authority(self) -> None:
+        strategy = self._resolve(complete_binding=True)
+
+        self.assertTrue(strategy["authority"]["automaticAdoptionEligible"])
+        self.assertEqual(strategy["adoptionBinding"]["status"], "AVAILABLE")
+        self.assertEqual(strategy["lineage"]["targetAttempt"], 1)
+        self.assertEqual(strategy["lineage"]["projectProfileIdentity"]["status"], "ABSENT")
+        for field in (
+            "canFreezePlan",
+            "canStartHost",
+            "canAuthorizeImplementation",
+            "canAcceptTask",
+            "canFinalizeRun",
+        ):
+            self.assertFalse(strategy["authority"][field])
+        self.assertEqual(validate_execution_strategy(strategy)["status"], "PASS")
+
+    def test_missing_capability_binding_remains_advisory(self) -> None:
+        strategy = self._resolve(target_attempt=1)
+
+        self.assertFalse(strategy["authority"]["automaticAdoptionEligible"])
+        self.assertEqual(strategy["adoptionBinding"]["status"], "UNAVAILABLE")
+        self.assertIn(
+            "strategy-capability-binding-unavailable",
+            {item["code"] for item in strategy["adoptionBinding"]["blockers"]},
+        )
+
+    def test_eligibility_rejects_recomputed_attempt_lineage_drift(self) -> None:
+        strategy = self._resolve(complete_binding=True)
+        strategy["lineage"]["targetAttempt"] = 2
+        strategy["strategyDigest"] = canonical_digest(
+            {key: value for key, value in strategy.items() if key != "strategyDigest"}
+        )
+
+        validation = validate_execution_strategy(strategy)
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn(
+            "strategy-auto-adoption-lineage-mismatch",
+            {item["code"] for item in validation["blockers"]},
+        )
+
     def test_validation_rejects_quality_downgrade_and_authority(self) -> None:
         strategy = self._resolve()
         strategy["quality"]["selectedMode"] = "light"
@@ -83,7 +125,13 @@ class ExecutionStrategyTests(unittest.TestCase):
         *,
         expected_revision: int = 3,
         lock: dict | None = None,
+        complete_binding: bool = False,
+        target_attempt: int | None = None,
+        project_profile_digest: str | None = None,
+        project_profile_path: str | None = None,
     ) -> dict:
+        descriptor = _load("adapters/codex/adapter.descriptor.json") if complete_binding else None
+        capability = _load("adapters/codex/capabilities.manifest.json") if complete_binding else None
         return resolve_execution_strategy(
             manifest=deepcopy(self.manifest),
             lock=deepcopy(lock or self.lock),
@@ -99,6 +147,15 @@ class ExecutionStrategyTests(unittest.TestCase):
             routing_profile=_load("profiles/model-routing-profile.v1.json"),
             baseline_profile=_load("profiles/lifecycle-baselines.v1.json"),
             host_profile=_load("profiles/hosts/codex-live-profile.v1.json"),
+            project_profile_digest=project_profile_digest,
+            project_profile_path=(project_profile_path or ".alk/project-profile.json")
+            if complete_binding
+            else project_profile_path,
+            descriptor=descriptor,
+            capability_manifest=capability,
+            target_attempt=1 if complete_binding else target_attempt,
+            descriptor_path="adapters/codex/adapter.descriptor.json" if complete_binding else None,
+            capability_manifest_path="adapters/codex/capabilities.manifest.json" if complete_binding else None,
         )
 
 

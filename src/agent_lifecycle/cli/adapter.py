@@ -52,6 +52,17 @@ from agent_lifecycle.host_protocol.event_capture import (
 )
 from agent_lifecycle.host_protocol.lifecycle_control import load_lifecycle_control_policy
 from agent_lifecycle.reporting.progress_hooks import build_progress_hook_receipt
+from agent_lifecycle.resources import builtin_profile_path
+
+
+def _add_strategy_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--risk", choices=["auto", "S0", "S1", "S2"])
+    parser.add_argument("--risk-policy", default=builtin_profile_path("risk-execution-policy.v1.json"))
+    parser.add_argument("--routing-profile", default=builtin_profile_path("model-routing-profile.v1.json"))
+    parser.add_argument("--baseline-profile", default=builtin_profile_path("lifecycle-baselines.v1.json"))
+    parser.add_argument("--host-model-profile")
+    parser.add_argument("--project-profile")
+    parser.add_argument("--strategy-out")
 
 
 def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -145,6 +156,7 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     task_start.add_argument("--target-tokens", type=int, default=4096)
     task_start.add_argument("--progress-hook", choices=["stderr", "receipt", "off"], default="stderr")
     task_start.add_argument("--progress-receipt")
+    _add_strategy_args(task_start)
     task_start.add_argument("--out")
     adapter_run = adapter_sub.add_parser("run")
     adapter_run.add_argument("--adapter", required=True)
@@ -159,6 +171,7 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     adapter_run.add_argument("--source-revision", required=True)
     adapter_run.add_argument("--progress-hook", choices=["stderr", "receipt", "off"], default="stderr")
     adapter_run.add_argument("--progress-receipt")
+    _add_strategy_args(adapter_run)
     adapter_run.add_argument("--out")
     adapter_external_job = adapter_sub.add_parser("external-job")
     external_job_sub = adapter_external_job.add_subparsers(dest="external_job_command", required=True)
@@ -293,23 +306,7 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
     if args.adapter_command == "task":
         return _dispatch_adapter_task(args)
     if args.adapter_command == "run":
-        _validate_adapter_progress_args(args)
-        payload = managed_adapter_run(
-            adapter_id=args.adapter,
-            descriptor_path=Path(args.descriptor) if args.descriptor else None,
-            session_root=Path(args.session_root) if args.session_root else None,
-            state_path=Path(args.state),
-            manifest_path=Path(args.manifest),
-            lock_path=Path(args.lock) if args.lock else None,
-            task_id=args.task,
-            operation_id=args.operation_id,
-            expected_revision=args.expected_revision,
-            source_revision=args.source_revision,
-        )
-        _emit_adapter_progress(args, adapter_id=args.adapter, state_path=Path(args.state), task_id=args.task)
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_adapter_run(args)
     if args.adapter_command == "thread-capability":
         payload = _build_thread_capability_payload(args)
         if args.out:
@@ -458,6 +455,7 @@ def _manifest_path_from_descriptor(descriptor_path: Path, descriptor: dict[str, 
 def _dispatch_adapter_task(args: argparse.Namespace) -> dict[str, Any]:
     if args.adapter_task_command != "start":
         raise LifecycleError("command-not-implemented", "adapter task command is not implemented")
+    project_profile, project_profile_path = _project_profile_input(args)
     payload = start_adapter_task(
         adapter_id=args.adapter,
         task_file=Path(args.task_file) if args.task_file else None,
@@ -474,6 +472,14 @@ def _dispatch_adapter_task(args: argparse.Namespace) -> dict[str, Any]:
         max_input_bytes=args.max_input_bytes,
         target_tokens=args.target_tokens,
         package_id=args.package_id,
+        requested_risk=args.risk,
+        risk_policy_path=Path(args.risk_policy),
+        routing_profile_path=Path(args.routing_profile),
+        baseline_profile_path=Path(args.baseline_profile),
+        host_model_profile_path=Path(args.host_model_profile) if args.host_model_profile else None,
+        project_profile=project_profile,
+        project_profile_path=project_profile_path,
+        strategy_out_path=Path(args.strategy_out) if args.strategy_out else None,
     )
     raw_binding = payload.get("workflowBinding")
     binding: dict[str, Any] = raw_binding if isinstance(raw_binding, dict) else {}
@@ -484,6 +490,43 @@ def _dispatch_adapter_task(args: argparse.Namespace) -> dict[str, Any]:
     if args.out:
         write_json_create(Path(args.out), payload)
     return payload
+
+
+def _dispatch_adapter_run(args: argparse.Namespace) -> dict[str, Any]:
+    _validate_adapter_progress_args(args)
+    project_profile, project_profile_path = _project_profile_input(args)
+    payload = managed_adapter_run(
+        adapter_id=args.adapter,
+        descriptor_path=Path(args.descriptor) if args.descriptor else None,
+        session_root=Path(args.session_root) if args.session_root else None,
+        state_path=Path(args.state),
+        manifest_path=Path(args.manifest),
+        lock_path=Path(args.lock) if args.lock else None,
+        task_id=args.task,
+        operation_id=args.operation_id,
+        expected_revision=args.expected_revision,
+        source_revision=args.source_revision,
+        requested_risk=args.risk,
+        risk_policy_path=Path(args.risk_policy),
+        routing_profile_path=Path(args.routing_profile),
+        baseline_profile_path=Path(args.baseline_profile),
+        host_model_profile_path=Path(args.host_model_profile) if args.host_model_profile else None,
+        project_profile=project_profile,
+        project_profile_path=project_profile_path,
+        strategy_out_path=Path(args.strategy_out) if args.strategy_out else None,
+    )
+    _emit_adapter_progress(args, adapter_id=args.adapter, state_path=Path(args.state), task_id=args.task)
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
+
+
+def _project_profile_input(args: argparse.Namespace) -> tuple[dict[str, Any] | None, Path | None]:
+    raw = getattr(args, "project_profile", None)
+    if not raw:
+        return None, None
+    path = Path(raw)
+    return read_json_object(path, label="project profile"), path
 
 
 def _dispatch_adapter_session(args: argparse.Namespace) -> dict[str, Any]:

@@ -17,6 +17,7 @@ from .test_task_acceptance_audit_gate import (
 from .test_task_acceptance_audit_gate import (
     _write_result_review,
 )
+from .test_task_transitions import _strategy_start_inputs, _write_strategy_start_bundle
 from .test_workflow_run import _write_bundle
 
 
@@ -104,6 +105,37 @@ class WorkflowContinuationTests(unittest.TestCase):
             self.assertEqual(receipt["action"]["route"], "task-start")
             self.assertIsNone(receipt["action"]["taskId"])
             self.assertIn("taskId", {item["name"] for item in receipt["requiredInputs"]})
+
+    def test_task_start_projection_and_apply_consume_exact_strategy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, strategy_path, strategy = _write_strategy_start_bundle(root)
+            manifest_path = root / "tasks/strategy/plan.manifest.json"
+            inputs = _continuation_strategy_inputs(strategy_path)
+
+            projection = _continue(
+                manifest_path,
+                state_path,
+                operation_id="start-strategy",
+                inputs=inputs,
+            )
+            applied = _continue(
+                manifest_path,
+                state_path,
+                operation_id="start-strategy",
+                inputs=inputs,
+                apply=True,
+                projected_state_revision=projection["action"]["stateRevision"],
+                projected_action_digest=projection["action"]["actionDigest"],
+            )
+
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(projection["action"]["executionStrategy"]["strategyDigest"], strategy["strategyDigest"])
+            self.assertFalse(projection["action"]["executionStrategy"]["modelCallsStarted"])
+            self.assertEqual(applied["status"], "APPLIED")
+            self.assertEqual(
+                state["tasks"][0]["attemptExecutionStrategy"]["strategyDigest"], strategy["strategyDigest"]
+            )
 
     def test_multi_task_wait_does_not_request_an_inapplicable_task_selection(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -400,6 +432,21 @@ def _continue(
         projected_action_digest=projected_action_digest,
         inputs=inputs,
     )
+
+
+def _continuation_strategy_inputs(strategy_path: str) -> dict[str, object]:
+    inputs = _strategy_start_inputs()
+    return {
+        "executionStrategy": strategy_path,
+        "strategyRequestedRisk": inputs["requestedRisk"],
+        "strategyRiskPolicy": inputs["riskPolicyPath"],
+        "strategyRoutingProfile": inputs["routingProfilePath"],
+        "strategyBaselineProfile": inputs["baselineProfilePath"],
+        "strategyHostProfile": inputs["hostProfilePath"],
+        "strategyDescriptor": inputs["descriptorPath"],
+        "strategyCapabilityManifest": inputs["capabilityManifestPath"],
+        "strategyProjectProfile": inputs["projectProfilePath"],
+    }
 
 
 def _bind_manifest(root: Path, state_path: Path) -> Path:

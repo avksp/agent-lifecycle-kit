@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.12.0
+python -m pip install agent-lifecycle-kit==2.13.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -339,6 +339,10 @@ agent-lifecycle project preset render \
   Обе операции проверяют связь запуска, плана и исходной ревизии, ожидаемую
   ревизию состояния и идемпотентность.
 - `agent-lifecycle workflow task-start`: открывает ограниченную попытку задачи.
+  Параметр `--strategy <receipt>` вместе с точными входами
+  `--strategy-risk`, политики, дескриптора, манифеста возможностей и профиля
+  проекта принимает полностью связанную стратегию. Переход заново вычисляет
+  все отпечатки и блокирует устаревшие или неполные входы до записи.
 - `agent-lifecycle workflow task-snapshot`: без изменения состояния вычисляет
   текущий набор файлов задачи и отпечатки их содержимого по Git. Объект `claim`
   из результата нужно поместить в результат задачи перед `task-result`.
@@ -390,6 +394,17 @@ agent-lifecycle project preset render \
   --task ... --operation-id ... --expected-revision ... --source-revision ...
   --adapter ... --out ...`: записывает одну нейтральную стратегию выполнения
   без изменения состояния. Для S1/S2 нужен подходящий `--host-model-profile`.
+- `agent-lifecycle start ... --strategy-out <path>` и
+  `agent-lifecycle adapter task start ... --strategy-out <path>`: создают один
+  create-only артефакт стратегии для точной следующей попытки в управляемом
+  маршруте. Истинное `automaticAdoptionEligible` означает только пригодность
+  маршрута; артефакт содержит `modelCallsStarted: false` и не даёт полномочий
+  реализации, приёмки или завершения.
+- `agent-lifecycle workflow continue ... --strategy <path>
+  --strategy-descriptor <path> --strategy-capability-manifest <path>
+  --strategy-project-profile <path>`: проецирует или применяет запуск задачи
+  через тот же артефакт. Команда по-прежнему требует защиту проекции и не может
+  понизить проверку или заменить финальную `RELEASE_FULL`.
 - `agent-lifecycle task compile --manifest ... --strategy ...`: передаёт
   проверенную стратегию в связанный полный пакет, не меняя полномочия плана.
 - `agent-lifecycle task compile-small`: пакеты для маленьких моделей с

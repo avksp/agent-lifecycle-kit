@@ -6,7 +6,6 @@ from typing import Any
 
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 
-
 EXECUTION_STRATEGY_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-execution-strategy.v1": open_object_schema(
         "agent-execution-strategy.v1",
@@ -33,12 +32,14 @@ EXECUTION_STRATEGY_SCHEMAS: dict[str, dict[str, Any]] = {
             "lineage": {"type": "object"},
             "quality": {"type": "object"},
             "phaseRoutes": {"type": "array", "items": {"type": "object"}},
+            "modelRoute": {"type": "object"},
             "packet": {"type": "object"},
             "reviewMesh": {"type": "object"},
             "resourceCaps": {"type": "object"},
             "usageEvidence": {"type": "object"},
             "sourceDecisionDigests": {"type": "object"},
             "authority": {"type": "object"},
+            "adoptionBinding": {"type": "object"},
             "blockers": {"type": "array", "items": {"type": "object"}},
             "modelCallsStarted": {"const": False},
             "hostLaunchStarted": {"const": False},

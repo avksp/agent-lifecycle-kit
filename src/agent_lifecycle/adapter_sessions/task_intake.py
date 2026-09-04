@@ -63,6 +63,9 @@ def start_adapter_task(
     routing_profile_path: Path | None = None,
     baseline_profile_path: Path | None = None,
     host_model_profile_path: Path | None = None,
+    project_profile: dict[str, Any] | None = None,
+    project_profile_path: Path | None = None,
+    strategy_out_path: Path | None = None,
 ) -> dict[str, Any]:
     """Classify adapter task input without turning raw text into authority."""
 
@@ -88,35 +91,44 @@ def start_adapter_task(
             routing_profile_path=routing_profile_path,
             baseline_profile_path=baseline_profile_path,
             host_model_profile_path=host_model_profile_path,
+            project_profile=project_profile,
+            project_profile_path=project_profile_path,
+            strategy_out_path=strategy_out_path,
         )
-    if parsed is not None and parsed.get("schemaVersion") == "agent-plan-manifest.v1":
-        if parsed.get("status") == "FROZEN":
-            if source.get("path") is None:
-                return _receipt(
-                    adapter_id=adapter_id,
-                    source=_source_summary(source),
-                    action="BLOCKED",
-                    status="BLOCKED",
-                    blockers=[{"code": "adapter-task-frozen-manifest-file-required"}],
-                )
-            return _from_frozen_manifest(
+    if (
+        parsed is not None
+        and parsed.get("schemaVersion") == "agent-plan-manifest.v1"
+        and parsed.get("status") == "FROZEN"
+    ):
+        if source.get("path") is None:
+            return _receipt(
                 adapter_id=adapter_id,
-                manifest_path=Path(source["path"]),
                 source=_source_summary(source),
-                descriptor_path=descriptor_path,
-                session_root=session_root,
-                state_path=state_path,
-                lock_path=lock_path,
-                task_id=task_id,
-                operation_id=operation_id,
-                expected_revision=expected_revision,
-                source_revision=source_revision,
-                requested_risk=requested_risk,
-                risk_policy_path=risk_policy_path,
-                routing_profile_path=routing_profile_path,
-                baseline_profile_path=baseline_profile_path,
-                host_model_profile_path=host_model_profile_path,
+                action="BLOCKED",
+                status="BLOCKED",
+                blockers=[{"code": "adapter-task-frozen-manifest-file-required"}],
             )
+        return _from_frozen_manifest(
+            adapter_id=adapter_id,
+            manifest_path=Path(source["path"]),
+            source=_source_summary(source),
+            descriptor_path=descriptor_path,
+            session_root=session_root,
+            state_path=state_path,
+            lock_path=lock_path,
+            task_id=task_id,
+            operation_id=operation_id,
+            expected_revision=expected_revision,
+            source_revision=source_revision,
+            requested_risk=requested_risk,
+            risk_policy_path=risk_policy_path,
+            routing_profile_path=routing_profile_path,
+            baseline_profile_path=baseline_profile_path,
+            host_model_profile_path=host_model_profile_path,
+            project_profile=project_profile,
+            project_profile_path=project_profile_path,
+            strategy_out_path=strategy_out_path,
+        )
     return _planning_intake(
         adapter_id=adapter_id,
         source=source,
@@ -128,9 +140,16 @@ def start_adapter_task(
     )
 
 
-def _load_source(*, task_file: Path | None, task_text: str | None) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+def _load_source(
+    *, task_file: Path | None, task_text: str | None
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
     if (task_file is None and task_text is None) or (task_file is not None and task_text is not None):
-        return None, [{"code": "adapter-task-source-invalid", "message": "exactly one of --file/--task-file or --text/--task-text is required"}]
+        return None, [
+            {
+                "code": "adapter-task-source-invalid",
+                "message": "exactly one of --file/--task-file or --text/--task-text is required",
+            }
+        ]
     if task_text is not None:
         data = task_text.encode("utf-8")
         return {"kind": "TEXT", "label": "inline-task", "data": data, "text": task_text, "path": None}, []
@@ -177,9 +196,17 @@ def _planning_intake(
         source.get("text", ""),
         source_label=source["label"],
     )
-    blockers = [{"code": item.get("code", "planning-import-blocker"), **({"source": "planning-import"} if "code" in item else {})} for item in planning.get("blockers", [])]
+    blockers = [
+        {
+            "code": item.get("code", "planning-import-blocker"),
+            **({"source": "planning-import"} if "code" in item else {}),
+        }
+        for item in planning.get("blockers", [])
+    ]
     status = "BLOCKED" if planning.get("status") != "PASS" else "REVIEW_REQUIRED"
-    action = "BLOCKED" if status == "BLOCKED" else ("DRAFT_PLAN_REVIEW" if _parse_json(source["data"]) else "DRAFT_INTAKE")
+    action = (
+        "BLOCKED" if status == "BLOCKED" else ("DRAFT_PLAN_REVIEW" if _parse_json(source["data"]) else "DRAFT_INTAKE")
+    )
     return _receipt(
         adapter_id=adapter_id,
         source=_source_summary(source),
@@ -211,6 +238,9 @@ def _from_run_request(
     routing_profile_path: Path | None,
     baseline_profile_path: Path | None,
     host_model_profile_path: Path | None,
+    project_profile: dict[str, Any] | None,
+    project_profile_path: Path | None,
+    strategy_out_path: Path | None,
 ) -> dict[str, Any]:
     blockers = _run_request_blockers(adapter_id, request)
     if blockers:
@@ -232,6 +262,9 @@ def _from_run_request(
         routing_profile_path=routing_profile_path,
         baseline_profile_path=baseline_profile_path,
         host_model_profile_path=host_model_profile_path,
+        project_profile=project_profile,
+        project_profile_path=project_profile_path,
+        strategy_out_path=strategy_out_path,
     )
 
 
@@ -253,6 +286,9 @@ def _from_frozen_manifest(
     routing_profile_path: Path | None,
     baseline_profile_path: Path | None,
     host_model_profile_path: Path | None,
+    project_profile: dict[str, Any] | None,
+    project_profile_path: Path | None,
+    strategy_out_path: Path | None,
 ) -> dict[str, Any]:
     missing = [
         name
@@ -279,7 +315,7 @@ def _from_frozen_manifest(
         source=source,
         descriptor_path=descriptor_path,
         session_root=session_root,
-        state_path=state_path or Path(""),
+        state_path=state_path or Path(),
         manifest_path=manifest_path,
         lock_path=lock_path,
         task_id=str(task_id),
@@ -291,6 +327,9 @@ def _from_frozen_manifest(
         routing_profile_path=routing_profile_path,
         baseline_profile_path=baseline_profile_path,
         host_model_profile_path=host_model_profile_path,
+        project_profile=project_profile,
+        project_profile_path=project_profile_path,
+        strategy_out_path=strategy_out_path,
     )
 
 
@@ -312,6 +351,9 @@ def _managed_run_receipt(
     routing_profile_path: Path | None,
     baseline_profile_path: Path | None,
     host_model_profile_path: Path | None,
+    project_profile: dict[str, Any] | None,
+    project_profile_path: Path | None,
+    strategy_out_path: Path | None,
 ) -> dict[str, Any]:
     try:
         session_receipt = managed_adapter_run(
@@ -330,6 +372,9 @@ def _managed_run_receipt(
             routing_profile_path=routing_profile_path,
             baseline_profile_path=baseline_profile_path,
             host_model_profile_path=host_model_profile_path,
+            project_profile=project_profile,
+            project_profile_path=project_profile_path,
+            strategy_out_path=strategy_out_path,
         )
     except LifecycleError as exc:
         return _receipt(
@@ -376,7 +421,9 @@ def _run_request_blockers(adapter_id: str, request: dict[str, Any]) -> list[dict
         blockers.append({"code": "adapter-task-run-request-revision-invalid"})
     request_adapter = request.get("adapterId") or request.get("adapter")
     if isinstance(request_adapter, str) and request_adapter and request_adapter != adapter_id:
-        blockers.append({"code": "adapter-task-run-request-adapter-mismatch", "expected": adapter_id, "actual": request_adapter})
+        blockers.append(
+            {"code": "adapter-task-run-request-adapter-mismatch", "expected": adapter_id, "actual": request_adapter}
+        )
     if request.get("productionPromotionClaimed") is not False and "productionPromotionClaimed" in request:
         blockers.append({"code": "adapter-task-run-request-production-claim"})
     digest = request.get("requestDigest")
@@ -491,7 +538,9 @@ def _receipt(
         "bugForensicsAdvisory": bug_forensics_advisory,
         "riskAdvisory": risk_advisory,
         "modelCallsStarted": False,
-        "hostLaunchStarted": bool(adapter_session_receipt.get("hostLaunchStarted")) if isinstance(adapter_session_receipt, dict) else False,
+        "hostLaunchStarted": bool(adapter_session_receipt.get("hostLaunchStarted"))
+        if isinstance(adapter_session_receipt, dict)
+        else False,
         "secretsWritten": False,
         "nativeConfigWritten": False,
         "rawTaskTextStored": False,

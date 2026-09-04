@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-  python -m pip install agent-lifecycle-kit==2.12.0
+python -m pip install agent-lifecycle-kit==2.13.0
 ```
 
 ## Task evidence identity
@@ -326,6 +326,10 @@ language](project-domain-language.md).
   then resume only after the matching receipt is present. Both operations bind
   run, plan and source lineage and use the normal revision/idempotency checks.
 - `agent-lifecycle workflow task-start`: open a bounded task attempt.
+  Add `--strategy <receipt>` with the exact `--strategy-risk`, policy,
+  descriptor, capability-manifest and project-profile inputs to adopt a fully
+  bound execution strategy. The transition recomputes every digest and blocks
+  stale or incomplete inputs before mutation.
 - `agent-lifecycle workflow task-snapshot`: compute the current task-scoped
   Git file set and content digests without changing workflow state. Put the
   returned `claim` object in the task result before `task-result`. Add the
@@ -376,6 +380,17 @@ language](project-domain-language.md).
   --task ... --operation-id ... --expected-revision ... --source-revision ...
   --adapter ... --out ...`: write one provider-neutral, read-only execution
   strategy. S1/S2 also require a matching `--host-model-profile`.
+- `agent-lifecycle start ... --strategy-out <path>` and
+  `agent-lifecycle adapter task start ... --strategy-out <path>`: derive a
+  create-only strategy for the exact next attempt on the managed path. A true
+  `automaticAdoptionEligible` value is routing eligibility only; the receipt
+  has `modelCallsStarted: false` and no implementation, acceptance or
+  finalization authority.
+- `agent-lifecycle workflow continue ... --strategy <path>
+  --strategy-descriptor <path> --strategy-capability-manifest <path>
+  --strategy-project-profile <path>`: project or apply task start through the
+  same receipt. Continue still requires the normal projection guard and cannot
+  lower validation or replace final `RELEASE_FULL`.
 - `agent-lifecycle task compile --manifest ... --strategy ...`: project a
   validated strategy into the matching full task packet without changing plan
   authority.
