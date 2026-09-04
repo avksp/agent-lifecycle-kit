@@ -43,7 +43,7 @@ dependencies = []
 quality = [
   "ruff==0.16.5",
   "mypy==2.3.1",
-  "coverage==7.15.4",
+  "coverage==7.16.0",
 ]
 
 [project.scripts]
