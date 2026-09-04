@@ -48,6 +48,9 @@ def generate_lifecycle_cost_report(
         "lineage": _lineage(source_artifacts, payloads),
         "entries": entries,
         "usageConfidence": summarize_usage_confidence(entries),
+        "workflowEconomics": [
+            entry["workflowEconomics"] for entry in entries if isinstance(entry.get("workflowEconomics"), dict)
+        ],
         "productionPromotionClaimed": False,
     }
     report["compactSummary"] = build_lifecycle_cost_summary(report)
@@ -91,6 +94,7 @@ def build_lifecycle_cost_summary(report: dict[str, Any]) -> dict[str, Any]:
         "categoryTotals": totals,
         "ratios": ratios,
         "usageConfidence": usage_confidence,
+        "workflowEconomics": report.get("workflowEconomics", []),
         "usefulWorkTokens": totals["implementation"]["tokens"] + totals["productValidation"]["tokens"],
         "processOverheadTokens": totals["pipelineCompliance"]["tokens"] + totals["coordination"]["tokens"],
     }
@@ -140,6 +144,10 @@ def _entry_from_artifact(index: int, source: dict[str, Any], payload: dict[str, 
         value = payload.get(field)
         if isinstance(value, (str, int)):
             entry[field] = value
+    if payload.get("schemaVersion") == PHASE_RESOURCE_MEASUREMENT_SCHEMA and isinstance(
+        payload.get("workflowEconomics"), dict
+    ):
+        entry["workflowEconomics"] = payload["workflowEconomics"]
     return entry
 
 

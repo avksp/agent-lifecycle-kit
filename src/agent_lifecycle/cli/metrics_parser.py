@@ -31,6 +31,24 @@ def add_metrics_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     release_accounting.add_argument("--project-root", default=".")
     release_accounting.add_argument("--provenance")
     release_accounting.add_argument("--out", required=True)
+    workflow_compare = metrics_sub.add_parser(
+        "workflow-compare",
+        help="compare two explicitly bound workflow economics fixtures",
+    )
+    workflow_compare.add_argument("--before", required=True)
+    workflow_compare.add_argument("--after", required=True)
+    workflow_compare.add_argument("--comparison-pair")
+    workflow_compare.add_argument("--out", required=True)
+    workflow_recommend = metrics_sub.add_parser(
+        "workflow-recommend",
+        help="build an advisory recommendation from a workflow comparison",
+    )
+    workflow_recommend.add_argument("--comparison", required=True)
+    workflow_recommend.add_argument("--task-shape", default="feature")
+    workflow_recommend.add_argument("--current-mode", choices=MODES, required=True)
+    workflow_recommend.add_argument("--required-mode", choices=MODES, required=True)
+    workflow_recommend.add_argument("--protected-work", action="store_true")
+    workflow_recommend.add_argument("--out", required=True)
     usage_export = metrics_sub.add_parser("usage-export")
     usage_export.add_argument("--artifact", action="append", default=[])
     usage_export.add_argument("--project-root", default=".")

@@ -9,8 +9,12 @@ from agent_lifecycle.contracts.audit_optimization_schemas import (
     AUDIT_EFFICIENCY_INPUT_SCHEMA,
     AUDIT_EFFICIENCY_REPORT_SCHEMA,
 )
+from agent_lifecycle.metrics.regression_signals import (
+    compare_workflow_economics,
+    validate_workflow_economics_comparison_view,
+)
 
-METRIC_STATUSES = ("MEASURED", "ESTIMATED", "TIME_WINDOW_ONLY", "MIXED", "UNAVAILABLE")
+METRIC_STATUSES = ("MEASURED", "ESTIMATED", "TIME_WINDOW_ONLY", "UNAVAILABLE")
 _VIEW_NAMES = ("alkProcess", "implementation", "audit", "postAuditRemediation")
 _VIEW_METRICS = ("tokens", "elapsedWallMs", "computeMs")
 _OUTCOME_METRICS = (
@@ -31,6 +35,8 @@ def build_audit_efficiency_input(
     views: dict[str, Any],
     outcomes: dict[str, Any],
     totals: dict[str, Any],
+    comparison_context: dict[str, Any] | None = None,
+    comparison_pair: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a portable accounting input without inventing unavailable values."""
 
@@ -45,6 +51,10 @@ def build_audit_efficiency_input(
         "totals": totals,
         "productionPromotionClaimed": False,
     }
+    if comparison_context is not None:
+        body["comparisonContext"] = comparison_context
+    if comparison_pair is not None:
+        body["comparisonPair"] = comparison_pair
     result = {**body, "inputDigest": canonical_digest(body)}
     validation = validate_audit_efficiency_input(result)
     if validation["status"] != "PASS":
@@ -107,6 +117,7 @@ def validate_audit_efficiency_input(value: Any) -> dict[str, Any]:
             blockers,
             code="audit-efficiency-total-metric-invalid",
             location="totals.elapsedWallMs",
+            allow_derived=True,
         )
     if value.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "audit-efficiency-production-claim"})
@@ -181,6 +192,15 @@ def validate_audit_efficiency_report(report: Any) -> dict[str, Any]:
             metric = comparison.get(field)
             if metric != _unavailable("comparison-sample-required"):
                 blockers.append({"code": "audit-efficiency-single-sample-reduction", "field": field})
+    workflow_comparison = comparison.get("workflowComparison")
+    if workflow_comparison is not None:
+        workflow_validation = validate_workflow_economics_comparison_view(workflow_comparison)
+        if workflow_validation["status"] != "PASS":
+            blockers.append({"code": "audit-efficiency-workflow-comparison-invalid"})
+        if workflow_comparison.get("status") != "IMPROVED":
+            for field in ("tokenReductionPercent", "wallReductionPercent"):
+                if _available(comparison.get(field)):
+                    blockers.append({"code": "audit-efficiency-unproven-reduction", "field": field})
     expected = canonical_digest({key: item for key, item in report.items() if key != "reportDigest"})
     if report.get("reportDigest") != expected:
         blockers.append({"code": "audit-efficiency-report-digest-mismatch"})
@@ -265,16 +285,61 @@ def _comparison(
             "wallReductionPercent": _unavailable("comparison-telemetry-unavailable"),
             "qualityFloorPreserved": True,
         }
+    before_context = baseline.get("comparisonContext")
+    after_context = measurement.get("comparisonContext")
+    if not isinstance(before_context, dict) or not isinstance(after_context, dict):
+        blockers.append({"code": "audit-efficiency-comparison-context-unavailable"})
+        return {
+            "sampleCount": sample_count,
+            "workflowStatus": "NO_COMPARABLE_BASELINE",
+            "tokenReductionPercent": _unavailable("comparison-context-unavailable"),
+            "wallReductionPercent": _unavailable("comparison-context-unavailable"),
+            "qualityFloorPreserved": True,
+        }
+    before_pair = baseline.get("comparisonPair")
+    after_pair = measurement.get("comparisonPair")
+    pair = before_pair if before_pair == after_pair and isinstance(before_pair, dict) else None
+    if (before_pair is None) != (after_pair is None) or (
+        before_pair is not None and after_pair is not None and before_pair != after_pair
+    ):
+        blockers.append({"code": "audit-efficiency-comparison-pair-mismatch"})
+    workflow_comparison = compare_workflow_economics(before_context, after_context, comparison_pair=pair)
+    workflow_validation = validate_workflow_economics_comparison_view(workflow_comparison)
+    if workflow_validation["status"] != "PASS":
+        blockers.append({"code": "audit-efficiency-workflow-comparison-invalid", "validation": workflow_validation})
+    if workflow_comparison["status"] == "NO_COMPARABLE_BASELINE":
+        blockers.append(
+            {
+                "code": "audit-efficiency-workflow-baseline-not-comparable",
+                "comparisonBlockers": workflow_comparison["blockers"],
+            }
+        )
+    if workflow_comparison["assurance"]["status"] == "WEAKER":
+        blockers.append(
+            {
+                "code": "audit-efficiency-assurance-weakened",
+                "reasons": workflow_comparison["assurance"]["reasons"],
+            }
+        )
+    reductions_allowed = workflow_comparison["status"] == "IMPROVED" and not blockers
     return {
         "sampleCount": sample_count,
-        "tokenReductionPercent": _reduction(
-            baseline["views"]["audit"]["tokens"], measurement["views"]["audit"]["tokens"]
+        "workflowStatus": workflow_comparison["status"],
+        "workflowComparison": workflow_comparison,
+        "tokenReductionPercent": (
+            _reduction(baseline["views"]["audit"]["tokens"], measurement["views"]["audit"]["tokens"])
+            if reductions_allowed
+            else _unavailable("workflow-improvement-not-proven")
         ),
-        "wallReductionPercent": _reduction(
-            baseline["views"]["audit"]["elapsedWallMs"],
-            measurement["views"]["audit"]["elapsedWallMs"],
+        "wallReductionPercent": (
+            _reduction(
+                baseline["views"]["audit"]["elapsedWallMs"],
+                measurement["views"]["audit"]["elapsedWallMs"],
+            )
+            if reductions_allowed
+            else _unavailable("workflow-improvement-not-proven")
         ),
-        "qualityFloorPreserved": True,
+        "qualityFloorPreserved": workflow_comparison["assurance"]["status"] != "WEAKER",
     }
 
 
@@ -322,8 +387,10 @@ def _validate_metric(
     code: str,
     location: str,
     integer: bool = False,
+    allow_derived: bool = False,
 ) -> None:
-    if not isinstance(metric, dict) or metric.get("status") not in METRIC_STATUSES:
+    allowed_statuses = {*METRIC_STATUSES, "MIXED", "PARTIAL"} if allow_derived else set(METRIC_STATUSES)
+    if not isinstance(metric, dict) or metric.get("status") not in allowed_statuses:
         blockers.append({"code": code, "location": location})
         return
     value = metric.get("value")

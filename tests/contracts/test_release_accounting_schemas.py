@@ -14,6 +14,8 @@ class ReleaseAccountingSchemaTests(unittest.TestCase):
 
         self.assertEqual(source["properties"]["entries"]["maxItems"], 1024)
         self.assertEqual(accounting["properties"]["sourceArtifacts"]["maxItems"], 64)
+        self.assertEqual(source["properties"]["workflowEconomics"], {"type": "object"})
+        self.assertEqual(accounting["properties"]["workflowEconomics"], {"type": "object"})
         self.assertEqual(accounting["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(validation["properties"]["productionPromotionClaimed"], {"const": False})
         self.assertEqual(generation["properties"]["liveCallsStarted"], {"const": False})

@@ -486,6 +486,92 @@ class ReleaseAccountingTests(unittest.TestCase):
         elapsed = accounting["views"]["postAuditRemediation"]["metrics"]["elapsedWallMs"]
         self.assertEqual(elapsed, {"status": "TIME_WINDOW_ONLY", "value": 412_139})
 
+    def test_new_accounting_sources_carry_complete_workflow_metrics_without_invented_zeroes(self) -> None:
+        entry = _entry("audit", "audit", "productValidation")
+        entry["workflowMetrics"] = {
+            "modelInputTokens": {"status": "MEASURED", "value": 1000},
+            "modelCachedInputTokens": {"status": "MEASURED", "value": 500},
+            "modelOutputTokens": {"status": "MEASURED", "value": 100},
+            "modelTurns": {"status": "MEASURED", "value": 3},
+            "toolCalls": {"status": "MEASURED", "value": 8},
+            "toolWallMs": {"status": "MEASURED", "value": 120},
+            "toolOutputBytes": {"status": "MEASURED", "value": 4096},
+            "packetBytes": {"status": "MEASURED", "value": 2048},
+            "controllerTransitions": {"status": "MEASURED", "value": 4},
+            "requiredGateCount": {"status": "MEASURED", "value": 2},
+            "passedGateCount": {"status": "MEASURED", "value": 2},
+            "failedGateCount": {"status": "MEASURED", "value": 0},
+            "elapsedWallMs": {"status": "TIME_WINDOW_ONLY", "value": 500},
+            "parallelComputeMs": {"status": "MEASURED", "value": 650},
+        }
+        source = build_release_accounting_source(
+            "2.14.0",
+            [entry],
+            enclosing_elapsed_wall={"status": "MEASURED", "value": 450},
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_json_create(root / "source.json", source)
+            accounting = build_release_accounting("2.14.0", [Path("source.json")], project_root=root)
+
+        self.assertEqual(validate_release_accounting_source(source)["status"], "PASS")
+        self.assertEqual(validate_release_accounting(accounting)["status"], "PASS")
+        self.assertEqual(accounting["workflowEconomics"]["metrics"]["modelInputTokens"]["value"], 1000)
+        self.assertEqual(accounting["workflowEconomics"]["metrics"]["parallelComputeMs"]["value"], 650)
+        self.assertEqual(
+            accounting["workflowEconomics"]["metrics"]["elapsedWallMs"],
+            {"status": "MEASURED", "value": 450},
+        )
+
+        unavailable_source = build_release_accounting_source(
+            "2.14.0",
+            [_entry("implementation", "implementation", "implementation")],
+        )
+        self.assertEqual(
+            unavailable_source["entries"][0]["workflowMetrics"]["modelTurns"],
+            {"status": "UNAVAILABLE", "value": None},
+        )
+
+    def test_multi_source_accounting_rejects_unbound_common_wall(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = _entry("first", "audit", "productValidation")
+            second = _entry("second", "audit", "productValidation")
+            write_json_create(
+                root / "first.json",
+                build_release_accounting_source(
+                    "2.14.0",
+                    [first],
+                    enclosing_elapsed_wall={"status": "MEASURED", "value": 100},
+                ),
+            )
+            write_json_create(
+                root / "second.json",
+                build_release_accounting_source(
+                    "2.14.0",
+                    [second],
+                    enclosing_elapsed_wall={"status": "MEASURED", "value": 200},
+                ),
+            )
+            accounting = build_release_accounting(
+                "2.14.0",
+                [Path("first.json"), Path("second.json")],
+                project_root=root,
+            )
+
+        self.assertEqual(
+            accounting["workflowEconomics"]["metrics"]["elapsedWallMs"],
+            {"status": "UNAVAILABLE", "value": None},
+        )
+        accounting["workflowEconomics"]["enclosingElapsedWall"] = {"status": "MEASURED", "value": 999}
+        accounting["workflowEconomics"]["metrics"]["elapsedWallMs"] = {"status": "MEASURED", "value": 999}
+        _refresh_digest(accounting["workflowEconomics"], "summaryDigest")
+        _refresh_digest(accounting, "accountingDigest")
+
+        validation = validate_release_accounting(accounting)
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn("release-accounting-enclosing-wall-unbound", {item["code"] for item in validation["blockers"]})
+
 
 def _entry(
     entry_id: str,
@@ -526,6 +612,10 @@ def _unavailable_entry(entry_id: str, view: str, category: str) -> dict:
 
 def _metric(status: str, value: int | None, *, additive: bool = True) -> dict:
     return {"status": status, "value": value, "additive": additive}
+
+
+def _refresh_digest(payload: dict, field: str) -> None:
+    payload[field] = canonical_digest({key: value for key, value in payload.items() if key != field})
 
 
 def _phase(phase_id: str, phase_kind: str, total_tokens: int) -> dict:

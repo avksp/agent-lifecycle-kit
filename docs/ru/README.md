@@ -18,7 +18,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 подтверждения, а основное время остаётся на исследование, реализацию и проверку
 продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 2.13.0 · Python 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 2.14.0 · Python 3.11-3.14
 
 Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
 
@@ -28,7 +28,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 
 Описание переносимого пакета навыков находится в разделе [переносимый пакет Agent Plugins](reference/agent-plugins.md), проверка установленного пакета - в разделе [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md), а необязательный контроль жизненного цикла адаптера - в [отдельном справочнике](adapters/lifecycle-control.md). Сейчас комплектные адаптеры публикуют `GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск сохраняет статус `WRAPPER_ONLY`.
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.13.0` и разбор ошибок команды `agent-lifecycle version`.
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.14.0` и разбор ошибок команды `agent-lifecycle version`.
 
 Для быстрого старта выполните:
 
@@ -57,7 +57,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 - Границы нескольких агентов, настройка рабочих потоков, выбор модели, промпты, тайм-ауты и повторы собраны в разделе [настройка рабочего процесса и управления выполнением](reference/workflow-customization.md).
 - Локальный профиль проекта создаётся командой `agent-lifecycle project profile init`; его описание приведено в разделе [профиль рабочего процесса проекта](reference/project-workflow-profile.md). Готовые маршруты можно посмотреть и проверить через [профили рабочего процесса](reference/workflow-presets.md), а принципы и дельты плана — в [отдельном разделе](reference/project-principles-and-plan-deltas.md), [предметном языке проекта](reference/project-domain-language.md), [представлении внимания по нескольким запускам](reference/multi-run-attention-view.md) и [руководстве долгосрочного управления](guides/long-term-project-governance.md).
 - Выбранные значения, ограничения плана и линию происхождения capability можно проверить через [объяснение эффективной конфигурации](reference/effective-configuration.md) и [подтверждение действий адаптера](reference/adapter-action-evidence.md). Дополнительные подтверждения архитектуры и зависимостей описаны в разделе [внешние проверки проекта](reference/external-verification-checks.md), длительные специализированные процессы адаптера — в разделе [ограниченные задания внешних инструментов](reference/external-tool-jobs.md), а [профиль анализа безопасности](reference/security-analysis-profile.md) предназначен для ограниченных расследований только для чтения и независимой проверки доработок высокой серьёзности; импортированные находки остаются недоверенными.
-- Для длинных сессий используйте [снимки контекста и восстановление после сжатия](reference/context-checkpoints.md). Они сохраняют ограниченный локальный пакет продолжения, не меняя полномочия плана. Измеряйте фазы и релизы через [учёт ресурсов релиза](reference/release-accounting.md), следуйте [рецепту передачи фаз](guides/phase-session-handoff.md) с [пакетами фаз](reference/phase-packets.md), а фокусные проверки выбирайте с помощью read-only [лестницы проверок](reference/validation-ladder.md).
+- Для длинных сессий используйте [снимки контекста и восстановление после сжатия](reference/context-checkpoints.md). Они сохраняют ограниченный локальный пакет продолжения, не меняя полномочия плана. Измеряйте фазы и релизы через [учёт ресурсов релиза](reference/release-accounting.md), сравнивайте только совместимые подтверждения через [экономику рабочего процесса](reference/workflow-economics.md), следуйте [рецепту передачи фаз](guides/phase-session-handoff.md) с [пакетами фаз](reference/phase-packets.md), а фокусные проверки выбирайте с помощью read-only [лестницы проверок](reference/validation-ladder.md).
 
 ## Что даёт ALK
 - Процесс ориентирован на результат: план, выполнение, проверка и подтверждение

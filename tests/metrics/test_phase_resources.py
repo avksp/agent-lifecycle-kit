@@ -12,6 +12,7 @@ from agent_lifecycle.contracts.workflow_economics_schemas import (
 )
 from agent_lifecycle.metrics import (
     MAX_PHASE_RESOURCE_ENTRIES,
+    WORKFLOW_METRIC_KEYS,
     build_phase_resource_measurement,
     validate_phase_resource_measurement,
 )
@@ -145,6 +146,19 @@ class PhaseResourceTests(unittest.TestCase):
         self.assertEqual(measurement["phaseCount"], 2)
         self.assertEqual(measurement["usageExport"]["schemaVersion"], "agent-usage-export.v1")
         self.assertEqual(measurement["totals"]["tokens"]["total"], 150)
+        self.assertEqual(set(measurement["phases"][0]["workflowMetrics"]), set(WORKFLOW_METRIC_KEYS))
+        self.assertEqual(
+            measurement["phases"][0]["workflowMetrics"]["toolCalls"],
+            {"status": "MEASURED", "value": 3},
+        )
+        self.assertEqual(
+            measurement["workflowEconomics"]["metrics"]["modelCachedInputTokens"],
+            {"status": "UNAVAILABLE", "value": None},
+        )
+        self.assertEqual(
+            measurement["workflowEconomics"]["metrics"]["elapsedWallMs"],
+            {"status": "UNAVAILABLE", "value": None},
+        )
         self.assertEqual(measurement["totals"]["hostReportedCost"]["entryCount"], 0)
         self.assertNotIn("monetary", measurement["phases"][0])
         self.assertFalse(measurement["productionPromotionClaimed"])
@@ -210,6 +224,40 @@ class PhaseResourceTests(unittest.TestCase):
                 phase[field] = value
                 with self.assertRaises(LifecycleError):
                     build_phase_resource_measurement([phase])
+
+    def test_explicit_enclosing_wall_and_detailed_metrics_round_trip(self) -> None:
+        phase = _phase("audit")
+        phase["workflowMetrics"] = {
+            "modelCachedInputTokens": {"status": "MEASURED", "value": 400},
+            "modelTurns": {"status": "MEASURED", "value": 2},
+            "toolWallMs": {"status": "MEASURED", "value": 12},
+            "toolOutputBytes": {"status": "MEASURED", "value": 2048},
+            "packetBytes": {"status": "MEASURED", "value": 1024},
+            "controllerTransitions": {"status": "MEASURED", "value": 3},
+            "requiredGateCount": {"status": "MEASURED", "value": 2},
+            "passedGateCount": {"status": "MEASURED", "value": 2},
+            "failedGateCount": {"status": "MEASURED", "value": 0},
+            "parallelComputeMs": {"status": "MEASURED", "value": 20},
+        }
+        measurement = build_phase_resource_measurement(
+            [phase],
+            enclosing_elapsed_wall={"status": "MEASURED", "value": 18},
+        )
+
+        self.assertEqual(validate_phase_resource_measurement(measurement)["status"], "PASS")
+        self.assertEqual(measurement["workflowEconomics"]["metrics"]["elapsedWallMs"]["value"], 18)
+        self.assertEqual(measurement["workflowEconomics"]["metrics"]["parallelComputeMs"]["value"], 20)
+
+    def test_absent_legacy_tokens_remain_unavailable_in_workflow_metrics(self) -> None:
+        phase = _phase("implementation")
+        phase.pop("tokens")
+
+        measurement = build_phase_resource_measurement([phase])
+
+        workflow_metrics = measurement["phases"][0]["workflowMetrics"]
+        self.assertEqual(workflow_metrics["modelInputTokens"], {"status": "UNAVAILABLE", "value": None})
+        self.assertEqual(workflow_metrics["modelOutputTokens"], {"status": "UNAVAILABLE", "value": None})
+        self.assertEqual(measurement["totals"]["tokens"]["total"], 0)
 
 
 def _phase(phase_id: str) -> dict[str, object]:

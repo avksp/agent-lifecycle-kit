@@ -115,3 +115,6 @@ agent-lifecycle metrics cost-report \
 
 Release accounting is advisory evidence. It cannot accept a task, authorize
 execution, lower a quality gate or claim production promotion.
+
+For strict before/after identity, assurance and recommendation rules, see
+[workflow economics](workflow-economics.md).

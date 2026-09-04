@@ -116,3 +116,6 @@ agent-lifecycle metrics cost-report \
 Учёт релиза является рекомендательным evidence. Он не принимает задачу, не
 авторизует выполнение, не снижает quality gate и не заявляет production
 promotion.
+
+Строгие правила идентичности before/after, уровня проверок и рекомендаций
+описаны в разделе [экономика рабочего процесса](workflow-economics.md).

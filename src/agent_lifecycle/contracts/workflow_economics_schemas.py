@@ -9,8 +9,90 @@ from agent_lifecycle.contracts.schema_builders import open_object_schema
 
 _DIGEST = {"type": "string", "minLength": 64, "maxLength": 64}
 _IMPLEMENTATION_REQUIRED = ["role", "sourceRevision", "coreVersion", "publicationVersions"]
+_SOURCE_STATUS = ["MEASURED", "ESTIMATED", "TIME_WINDOW_ONLY", "UNAVAILABLE"]
+_AGGREGATE_STATUS = [*_SOURCE_STATUS, "MIXED", "PARTIAL"]
+_NON_WINDOW_AGGREGATE_STATUS = [status for status in _AGGREGATE_STATUS if status != "TIME_WINDOW_ONLY"]
+_WORKFLOW_METRIC_KEYS = (
+    "modelInputTokens",
+    "modelCachedInputTokens",
+    "modelOutputTokens",
+    "modelTurns",
+    "toolCalls",
+    "toolWallMs",
+    "toolOutputBytes",
+    "packetBytes",
+    "controllerTransitions",
+    "requiredGateCount",
+    "passedGateCount",
+    "failedGateCount",
+    "elapsedWallMs",
+    "parallelComputeMs",
+)
+_METRIC_VALUE = {"type": ["integer", "null"], "minimum": 0, "maximum": (1 << 63) - 1}
+_SOURCE_METRIC = {
+    "type": "object",
+    "required": ["status", "value"],
+    "properties": {"status": {"enum": _SOURCE_STATUS}, "value": _METRIC_VALUE},
+    "additionalProperties": False,
+}
+_AGGREGATE_METRIC = {
+    "type": "object",
+    "required": ["status", "value"],
+    "properties": {"status": {"enum": _AGGREGATE_STATUS}, "value": _METRIC_VALUE},
+    "additionalProperties": False,
+}
+
+
+def _aggregate_metric_schema(name: str) -> dict[str, Any]:
+    statuses = _AGGREGATE_STATUS if name in {"elapsedWallMs", "toolWallMs"} else _NON_WINDOW_AGGREGATE_STATUS
+    return {
+        "type": "object",
+        "required": ["status", "value"],
+        "properties": {"status": {"enum": statuses}, "value": _METRIC_VALUE},
+        "additionalProperties": False,
+    }
+
 
 WORKFLOW_ECONOMICS_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-workflow-resource-summary.v1": open_object_schema(
+        "agent-workflow-resource-summary.v1",
+        required=[
+            "schemaVersion",
+            "status",
+            "sourceAvailabilityStatuses",
+            "derivedAggregateStatuses",
+            "sourceCount",
+            "enclosingElapsedWall",
+            "metrics",
+            "productionPromotionClaimed",
+            "summaryDigest",
+        ],
+        properties={
+            "status": {"const": "PASS"},
+            "sourceAvailabilityStatuses": {"const": _SOURCE_STATUS},
+            "derivedAggregateStatuses": {"const": ["MIXED", "PARTIAL"]},
+            "sourceCount": {"type": "integer", "minimum": 0, "maximum": 1024},
+            "enclosingElapsedWall": _SOURCE_METRIC,
+            "metrics": {
+                "type": "object",
+                "required": list(_WORKFLOW_METRIC_KEYS),
+                "properties": {name: _aggregate_metric_schema(name) for name in _WORKFLOW_METRIC_KEYS},
+                "additionalProperties": False,
+            },
+            "productionPromotionClaimed": {"const": False},
+            "summaryDigest": _DIGEST,
+        },
+    ),
+    "agent-workflow-resource-summary-validation.v1": open_object_schema(
+        "agent-workflow-resource-summary-validation.v1",
+        required=["schemaVersion", "status", "blockers", "summaryDigest", "validationDigest"],
+        properties={
+            "status": {"enum": ["PASS", "FAIL"]},
+            "blockers": {"type": "array", "items": {"type": "object"}},
+            "summaryDigest": {"type": ["string", "null"], "minLength": 64, "maxLength": 64},
+            "validationDigest": _DIGEST,
+        },
+    ),
     "agent-comparable-workload-identity.v1": open_object_schema(
         "agent-comparable-workload-identity.v1",
         required=[
@@ -154,9 +236,7 @@ def validate_workflow_economics_comparison(
         workload_identity = {}
         blockers.append({"code": "comparison-workload-identity-invalid"})
     else:
-        identity_body = {
-            key: value for key, value in workload_identity.items() if key != "workloadIdentityDigest"
-        }
+        identity_body = {key: value for key, value in workload_identity.items() if key != "workloadIdentityDigest"}
         if workload_identity.get("workloadIdentityDigest") != canonical_digest(identity_body):
             blockers.append({"code": "comparison-workload-identity-digest-invalid"})
 

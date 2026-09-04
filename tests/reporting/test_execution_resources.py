@@ -27,6 +27,37 @@ class ExecutionResourceReportTests(unittest.TestCase):
         self.assertEqual(report["status"], "PASS")
         self.assertEqual(validation["status"], "PASS")
         self.assertNotIn("private output", str(report))
+        self.assertEqual(report["workflowEconomics"]["metrics"]["toolCalls"]["value"], 1)
+        self.assertEqual(report["workflowEconomics"]["metrics"]["elapsedWallMs"]["status"], "MEASURED")
+        self.assertEqual(report["workflowEconomics"]["metrics"]["modelInputTokens"]["status"], "UNAVAILABLE")
+
+    def test_multiple_receipts_need_an_explicit_enclosing_wall(self) -> None:
+        first = run_process(
+            [sys.executable, "-c", "pass"],
+            env={},
+            timeout_seconds=5,
+            operation_id="op-1",
+            attempt_id="attempt-1",
+            adapter_id="fixture",
+        )["processReceipt"]
+        second = run_process(
+            [sys.executable, "-c", "pass"],
+            env={},
+            timeout_seconds=5,
+            operation_id="op-2",
+            attempt_id="attempt-1",
+            adapter_id="fixture",
+        )["processReceipt"]
+
+        unavailable = build_execution_resource_report([first, second])
+        measured = build_execution_resource_report(
+            [first, second],
+            enclosing_elapsed_wall={"status": "MEASURED", "value": 50},
+        )
+
+        self.assertEqual(unavailable["workflowEconomics"]["metrics"]["elapsedWallMs"]["status"], "UNAVAILABLE")
+        self.assertEqual(measured["workflowEconomics"]["metrics"]["elapsedWallMs"]["value"], 50)
+        self.assertEqual(measured["workflowEconomics"]["metrics"]["toolCalls"]["value"], 2)
 
     def test_cleanup_blocker_is_not_hidden(self) -> None:
         receipt = {
@@ -59,7 +90,9 @@ class ExecutionResourceReportTests(unittest.TestCase):
         }
         from agent_lifecycle.contracts import canonical_digest
 
-        receipt["receiptDigest"] = canonical_digest({key: value for key, value in receipt.items() if key != "receiptDigest"})
+        receipt["receiptDigest"] = canonical_digest(
+            {key: value for key, value in receipt.items() if key != "receiptDigest"}
+        )
         report = build_execution_resource_report([receipt])
 
         self.assertEqual(report["status"], "BLOCKED")
