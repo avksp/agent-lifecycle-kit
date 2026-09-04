@@ -14,6 +14,26 @@ from agent_lifecycle.contracts.workflow_economics_schemas import (
 
 
 class WorkflowEconomicsSchemaTests(unittest.TestCase):
+    def test_workflow_resource_summary_schemas_separate_source_and_aggregate_statuses(self) -> None:
+        summary = get_schema("agent-workflow-resource-summary.v1")
+        validation = get_schema("agent-workflow-resource-summary-validation.v1")
+
+        self.assertEqual(summary["properties"]["productionPromotionClaimed"], {"const": False})
+        source_statuses = summary["properties"]["enclosingElapsedWall"]["properties"]["status"]["enum"]
+        metrics_schema = summary["properties"]["metrics"]
+        aggregate_statuses = metrics_schema["properties"]["elapsedWallMs"]["properties"]["status"]["enum"]
+        self.assertNotIn("MIXED", source_statuses)
+        self.assertNotIn("PARTIAL", source_statuses)
+        self.assertIn("MIXED", aggregate_statuses)
+        self.assertIn("PARTIAL", aggregate_statuses)
+        self.assertEqual(set(metrics_schema["required"]), set(metrics_schema["properties"]))
+        self.assertFalse(metrics_schema["additionalProperties"])
+        self.assertNotIn(
+            "TIME_WINDOW_ONLY",
+            metrics_schema["properties"]["parallelComputeMs"]["properties"]["status"]["enum"],
+        )
+        self.assertEqual(validation["properties"]["status"]["enum"], ["PASS", "FAIL"])
+
     def test_release_2_11_tracked_pair_uses_exact_schema_and_unavailable_tokens(self) -> None:
         root = Path(__file__).parents[1] / "metrics/fixtures"
         declaration = json.loads((root / "release-2-11-phase-packet-comparison-pair.json").read_text(encoding="utf-8"))

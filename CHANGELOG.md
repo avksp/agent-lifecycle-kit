@@ -4,6 +4,21 @@
 
 - No changes yet.
 
+## 2.14.0 - 2026-09-04
+
+- Added explicit workflow resource measurements and release accounting that
+  keep model, tool, transition, gate, elapsed-wall and parallel-compute
+  semantics separate without turning unavailable telemetry into zero.
+- Added fail-closed workflow comparison for equal stable identities or exact
+  canonical before/after implementation pairs declared before measurement.
+- Added advisory-only workflow recommendations that cannot mutate policy,
+  workflow, acceptance or required gates, including for protected work.
+- Added local create-only `metrics workflow-compare` and
+  `metrics workflow-recommend` commands, bilingual documentation and immutable
+  predecessor-evidence adoption through the Release 2.14 accounting fixture.
+- Updated package, plugin, marketplace and installation surfaces for version
+  `2.14.0`.
+
 ## 2.13.0 - 2026-09-04
 
 - Bound provider-neutral execution strategies to the exact next task attempt,

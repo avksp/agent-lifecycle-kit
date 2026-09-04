@@ -28,7 +28,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.13.0
+python -m pip install agent-lifecycle-kit==2.14.0
 ```
 
 ## Task evidence identity
@@ -454,6 +454,16 @@ cannot accept a workflow task or promote an adapter.
   source artifacts into fixed ALK-process, implementation, audit and
   post-audit-remediation views. Repeat `--artifact`; add `--provenance` to
   compare declared and observed identities without claiming attestation.
+- `agent-lifecycle metrics workflow-compare --before <path> --after <path>
+  --out <path>`: compare immutable workflow-economics fixtures only when their
+  stable workload and implementation identities match. Use
+  `--comparison-pair` only for an exact canonical pair declared before both
+  measurements; missing telemetry and weaker gates never become improvement.
+- `agent-lifecycle metrics workflow-recommend --comparison <path>
+  --current-mode <mode> --required-mode <mode> --out <path>`: create an
+  advisory-only recommendation with no policy, workflow, acceptance or gate
+  mutation authority. Add `--protected-work` for security, architecture,
+  quality or release work.
 - `agent-lifecycle metrics usage-export`: export sessions, receipt digests,
   tokens, resources, durations, budget decisions, and optional host-reported
   `cost_usd` from explicit JSON artifact paths.
@@ -487,6 +497,8 @@ optimization](audit-optimization.md).
 For provenance, sample adequacy and measured audit-use semantics, see
 [evidence independence](evidence-independence.md) and
 [review efficiency](review-efficiency.md).
+The complete identity, pair and safety contract is documented in
+[workflow economics](workflow-economics.md).
 - `agent-lifecycle policy tune`: build a read-only policy proposal or write an
   approved policy artifact with `--apply --output`.
 - `agent-lifecycle policy adaptive-decision/adaptive-check`: build and validate

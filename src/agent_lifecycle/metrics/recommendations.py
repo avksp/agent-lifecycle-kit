@@ -14,6 +14,7 @@ from agent_lifecycle.metrics.costs import (
     validate_lifecycle_cost_report,
 )
 from agent_lifecycle.metrics.outcome_index import QUALITY_COST_SIGNALS_SCHEMA
+from agent_lifecycle.metrics.regression_signals import validate_workflow_economics_comparison_view
 
 BASELINES_SCHEMA = "agent-lifecycle-baselines.v1"
 BASELINE_VALIDATION_SCHEMA = "agent-lifecycle-baselines-validation.v1"
@@ -40,10 +41,14 @@ def validate_lifecycle_baselines(profile: dict[str, Any]) -> dict[str, Any]:
     if profile.get("schemaVersion") != BASELINES_SCHEMA:
         blockers.append({"code": "baseline-schema", "message": "unsupported lifecycle baseline schemaVersion"})
     if profile.get("productionPromotionClaimed") is not False:
-        blockers.append({"code": "baseline-production-claim", "message": "baseline profile must not claim production promotion"})
+        blockers.append(
+            {"code": "baseline-production-claim", "message": "baseline profile must not claim production promotion"}
+        )
     minimum_reports = profile.get("minimumReportsForConfidence")
     if not isinstance(minimum_reports, int) or isinstance(minimum_reports, bool) or minimum_reports < 1:
-        blockers.append({"code": "baseline-minimum-reports", "message": "minimumReportsForConfidence must be a positive integer"})
+        blockers.append(
+            {"code": "baseline-minimum-reports", "message": "minimumReportsForConfidence must be a positive integer"}
+        )
     mode_order = profile.get("modeOrder")
     if "modeOrder" in profile and (not isinstance(mode_order, list) or tuple(mode_order) != MODE_ORDER):
         blockers.append({"code": "baseline-mode-order", "message": "modeOrder must match lifecycle modes"})
@@ -143,7 +148,9 @@ def recommend_lifecycle_mode(
     warnings = _warnings(stats, shape, baseline_profile)
     weak_data = _weak_data(stats, baseline_profile)
     confidence = _confidence(stats, weak_data=weak_data, warning_count=len(warnings))
-    recommended = _recommended_mode(shape, floor=floor, current_mode=current_mode, confidence=confidence, warnings=warnings)
+    recommended = _recommended_mode(
+        shape, floor=floor, current_mode=current_mode, confidence=confidence, warnings=warnings
+    )
     body = {
         "schemaVersion": RECOMMENDATION_SCHEMA,
         "status": "PASS",
@@ -203,7 +210,11 @@ def recommend_from_quality_cost_signals(
     warnings = _quality_cost_warnings(best, signals=signals, profile=baseline_profile)
     confidence = _quality_cost_confidence(best, baseline_profile, warning_count=len(warnings))
     current = current_mode if current_mode in MODE_ORDER else None
-    candidate = str(best.get("lifecycleMode")) if best and best.get("lifecycleMode") in MODE_ORDER else str(shape["defaultMode"])
+    candidate = (
+        str(best.get("lifecycleMode"))
+        if best and best.get("lifecycleMode") in MODE_ORDER
+        else str(shape["defaultMode"])
+    )
     if confidence == "LOW":
         candidate = current or str(shape["defaultMode"])
     recommended = _max_mode(candidate, floor)
@@ -246,10 +257,70 @@ def recommend_from_quality_cost_signals(
     return {**body, "recommendationDigest": canonical_digest(body)}
 
 
+def recommend_from_workflow_comparison(
+    *,
+    comparison: dict[str, Any],
+    task_shape: str,
+    current_mode: str,
+    required_mode: str,
+    protected_work: bool = False,
+) -> dict[str, Any]:
+    """Describe a verified economics result without authorizing policy changes."""
+
+    validation = validate_workflow_economics_comparison_view(comparison)
+    modes_valid = current_mode in MODE_ORDER and required_mode in MODE_ORDER
+    recommended = max_mode(current_mode, required_mode) if modes_valid else "release"
+    comparison_status = comparison.get("status") if isinstance(comparison, dict) else None
+    valid = validation["status"] == "PASS" and modes_valid
+    confidence = "HIGH" if valid and comparison_status == "IMPROVED" else "LOW"
+    warnings: list[dict[str, Any]] = []
+    if comparison_status != "IMPROVED":
+        warnings.append({"code": "workflow-economics-no-proven-improvement", "status": comparison_status})
+    if protected_work:
+        warnings.append({"code": "workflow-economics-protected-work"})
+    if not valid:
+        warnings.append({"code": "workflow-economics-comparison-invalid", "validation": validation})
+    body = {
+        "schemaVersion": RECOMMENDATION_SCHEMA,
+        "status": "PASS" if valid else "FAIL",
+        "taskShape": task_shape,
+        "currentMode": current_mode if current_mode in MODE_ORDER else None,
+        "recommendedMode": recommended,
+        "confidence": confidence,
+        "advisoryOnly": True,
+        "autoApply": False,
+        "authorityClaimed": False,
+        "policyMutationAllowed": False,
+        "workflowMutationAllowed": False,
+        "acceptanceMutationAllowed": False,
+        "gateRemovalAllowed": False,
+        "protectedWork": protected_work,
+        "qualityFloor": required_mode if required_mode in MODE_ORDER else "release",
+        "qualityFloorPreserved": True if not modes_valid else quality_floor_preserved(recommended, required_mode),
+        "warnings": warnings,
+        "reasons": [
+            f"workflow-comparison={comparison_status}",
+            "review advisory evidence before any separately authorized policy proposal",
+        ],
+        "statistics": {
+            "workflowComparisonStatus": comparison_status,
+            "workflowComparisonDigest": comparison.get("comparisonDigest") if isinstance(comparison, dict) else None,
+            "assurance": comparison.get("assurance") if isinstance(comparison, dict) else None,
+        },
+        "baselineValidation": validation,
+        "productionPromotionClaimed": False,
+    }
+    body["compactSummary"] = build_lifecycle_recommendation_summary(body)
+    return {**body, "recommendationDigest": canonical_digest(body)}
+
+
 def build_lifecycle_recommendation_summary(recommendation: dict[str, Any]) -> dict[str, Any]:
-    stats = recommendation.get("statistics") if isinstance(recommendation.get("statistics"), dict) else {}
-    ratios = stats.get("ratios") if isinstance(stats.get("ratios"), dict) else {}
-    warnings = recommendation.get("warnings") if isinstance(recommendation.get("warnings"), list) else []
+    raw_stats = recommendation.get("statistics")
+    stats: dict[str, Any] = raw_stats if isinstance(raw_stats, dict) else {}
+    raw_ratios = stats.get("ratios")
+    ratios: dict[str, Any] = raw_ratios if isinstance(raw_ratios, dict) else {}
+    raw_warnings = recommendation.get("warnings")
+    warnings: list[Any] = raw_warnings if isinstance(raw_warnings, list) else []
     return {
         "schemaVersion": RECOMMENDATION_SUMMARY_SCHEMA,
         "latestUserIntent": "Choose the lightest lifecycle mode that preserves the required quality floor.",
@@ -320,11 +391,25 @@ def _warnings(stats: dict[str, Any], shape: dict[str, Any], profile: dict[str, A
     pipeline_share = float(ratios.get("pipelineTokenShare", 0.0))
     coordination_share = _coordination_share(stats)
     if pipeline_share > float(shape["overheadWarningShare"]):
-        warnings.append({"code": "pipeline-token-share-high", "value": pipeline_share, "limit": shape["overheadWarningShare"]})
+        warnings.append(
+            {"code": "pipeline-token-share-high", "value": pipeline_share, "limit": shape["overheadWarningShare"]}
+        )
     if coordination_share > float(shape["coordinationWarningShare"]):
-        warnings.append({"code": "coordination-token-share-high", "value": coordination_share, "limit": shape["coordinationWarningShare"]})
+        warnings.append(
+            {
+                "code": "coordination-token-share-high",
+                "value": coordination_share,
+                "limit": shape["coordinationWarningShare"],
+            }
+        )
     if stats.get("averageProductValidationSteps", 0) > shape["reviewStepWarningThreshold"]:
-        warnings.append({"code": "review-step-cost-high", "value": stats["averageProductValidationSteps"], "limit": shape["reviewStepWarningThreshold"]})
+        warnings.append(
+            {
+                "code": "review-step-cost-high",
+                "value": stats["averageProductValidationSteps"],
+                "limit": shape["reviewStepWarningThreshold"],
+            }
+        )
     confidence = stats.get("usageConfidence", {})
     if confidence.get("missingEntries", 0) > 0:
         warnings.append({"code": "missing-usage", "entries": confidence["missingEntries"]})
@@ -369,7 +454,9 @@ def _recommended_mode(
         return _max_mode(current or str(shape["defaultMode"]), floor)
     if shape.get("highRisk") is True:
         return _max_mode(current or str(shape["defaultMode"]), floor)
-    overhead_warning = any(item["code"] in {"pipeline-token-share-high", "coordination-token-share-high"} for item in warnings)
+    overhead_warning = any(
+        item["code"] in {"pipeline-token-share-high", "coordination-token-share-high"} for item in warnings
+    )
     target = str(shape["minMode"] if overhead_warning else shape["defaultMode"])
     return _max_mode(target, floor)
 
@@ -478,7 +565,9 @@ def _quality_cost_reasons(
     return reasons
 
 
-def _reasons(confidence: str, recommended: str, floor: str, weak_data: bool, warnings: list[dict[str, Any]]) -> list[str]:
+def _reasons(
+    confidence: str, recommended: str, floor: str, weak_data: bool, warnings: list[dict[str, Any]]
+) -> list[str]:
     reasons = [f"recommendedMode={recommended}", f"qualityFloor={floor}", f"confidence={confidence}"]
     if weak_data:
         reasons.append("statistics are weak or incomplete, so the safer current/floor mode is retained")

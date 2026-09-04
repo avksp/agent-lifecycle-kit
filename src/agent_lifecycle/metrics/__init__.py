@@ -47,15 +47,26 @@ from agent_lifecycle.metrics.usage_export import (
     usage_export_totals,
     validate_usage_export,
 )
+from agent_lifecycle.metrics.workflow_economics import (
+    DERIVED_AGGREGATE_STATUSES,
+    SOURCE_AVAILABILITY_STATUSES,
+    WORKFLOW_METRIC_KEYS,
+    build_workflow_metric_set,
+    build_workflow_resource_summary,
+    validate_workflow_resource_summary,
+)
 
 __all__ = [
     "ACCOUNTING_VIEWS",
     "COST_CATEGORIES",
     "DEFAULT_MODE_LIMITS",
+    "DERIVED_AGGREGATE_STATUSES",
     "MAX_PHASE_RESOURCE_ENTRIES",
     "MAX_RELEASE_ACCOUNTING_ARTIFACTS",
     "MAX_RELEASE_ACCOUNTING_ENTRIES",
     "PROVENANCE_FIELDS",
+    "SOURCE_AVAILABILITY_STATUSES",
+    "WORKFLOW_METRIC_KEYS",
     "build_lifecycle_cost_summary",
     "build_lifecycle_recommendation_summary",
     "build_phase_resource_measurement",
@@ -65,6 +76,8 @@ __all__ = [
     "build_release_accounting_source",
     "build_task_outcome_index",
     "build_usage_export",
+    "build_workflow_metric_set",
+    "build_workflow_resource_summary",
     "generate_lifecycle_cost_report",
     "recommend_from_quality_cost_signals",
     "recommend_lifecycle_mode",
@@ -82,6 +95,7 @@ __all__ = [
     "validate_release_accounting",
     "validate_release_accounting_source",
     "validate_usage_export",
+    "validate_workflow_resource_summary",
 ]
 
 _LAZY_AUDIT_OPTIMIZATION_EXPORTS = {

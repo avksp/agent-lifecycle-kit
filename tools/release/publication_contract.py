@@ -80,6 +80,19 @@ RELEASE_ACCOUNTING_DOCUMENTATION: dict[str, Any] = {
     "rawTranscriptRequired": False,
 }
 
+WORKFLOW_ECONOMICS_DOCUMENTATION: dict[str, Any] = {
+    "id": "workflow-economics-and-regression-evidence",
+    "status": "ADVISORY",
+    "englishPath": "docs/reference/workflow-economics.md",
+    "russianPath": "docs/ru/reference/workflow-economics.md",
+    "stableWorkloadIdentityRequired": True,
+    "predeclaredPairRequiredForImplementationChange": True,
+    "missingTelemetryIsImprovement": False,
+    "weakerAssuranceIsImprovement": False,
+    "automaticApply": False,
+    "workflowAuthority": False,
+}
+
 REVIEW_EFFICIENCY_DOCUMENTATION: dict[str, Any] = {
     "id": "review-efficiency-and-evidence-independence",
     "status": "ADVISORY",
@@ -162,7 +175,7 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "release-accounting-fixture",
-        "path": "tests/metrics/fixtures/release-2-13-strategy-baseline.json",
+        "path": "tests/metrics/fixtures/release-2-14-accounting.json",
         "kind": "json-field",
         "jsonPath": ["releaseId"],
         "fieldForm": "accounting.release",
@@ -333,6 +346,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             WORKFLOW_EVIDENCE_DOCUMENTATION,
             EXTERNAL_TOOL_JOBS_DOCUMENTATION,
             RELEASE_ACCOUNTING_DOCUMENTATION,
+            WORKFLOW_ECONOMICS_DOCUMENTATION,
             REVIEW_EFFICIENCY_DOCUMENTATION,
             DELTA_AUDIT_DOCUMENTATION,
             PHASE_PACKET_VALIDATION_DOCUMENTATION,

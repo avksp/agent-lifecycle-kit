@@ -15,6 +15,11 @@ from agent_lifecycle.metrics.phase_resources import (
     require_phase_resource_measurement_pass,
     validate_phase_resource_measurement,
 )
+from agent_lifecycle.metrics.workflow_economics import (
+    build_workflow_metric_set,
+    build_workflow_resource_summary,
+    validate_workflow_resource_summary,
+)
 
 RELEASE_ACCOUNTING_SOURCE_SCHEMA = "agent-release-accounting-source.v1"
 RELEASE_ACCOUNTING_SCHEMA = "agent-release-accounting.v1"
@@ -50,6 +55,7 @@ def build_release_accounting_source(
     entries: list[dict[str, Any]],
     *,
     provenance: dict[str, Any] | None = None,
+    enclosing_elapsed_wall: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one normalized source artifact for release accounting."""
 
@@ -62,7 +68,11 @@ def build_release_accounting_source(
             "accounting source exceeds the entry limit",
             {"entryCount": len(entries), "maxEntries": MAX_RELEASE_ACCOUNTING_ENTRIES},
         )
-    normalized_entries = [_normalize_entry(entry) for entry in entries]
+    normalized_entries = []
+    for entry in entries:
+        normalized = _normalize_entry(entry)
+        normalized.setdefault("workflowMetrics", build_workflow_metric_set())
+        normalized_entries.append(normalized)
     _require_unique_entry_ids(normalized_entries)
     body = {
         "schemaVersion": RELEASE_ACCOUNTING_SOURCE_SCHEMA,
@@ -70,6 +80,10 @@ def build_release_accounting_source(
         "releaseId": normalized_release_id,
         "entryCount": len(normalized_entries),
         "entries": normalized_entries,
+        "workflowEconomics": build_workflow_resource_summary(
+            [entry["workflowMetrics"] for entry in normalized_entries],
+            enclosing_elapsed_wall=enclosing_elapsed_wall,
+        ),
         "provenance": _normalize_provenance_values(provenance or {}),
         "blockers": [],
         "productionPromotionClaimed": False,
@@ -101,6 +115,8 @@ def validate_release_accounting_source(source: dict[str, Any]) -> dict[str, Any]
     if source.get("entryCount") != len(entries):
         blockers.append({"code": "release-accounting-source-count-mismatch"})
     _validate_provenance_values(source.get("provenance"), blockers)
+    if source.get("workflowEconomics") is not None:
+        _validate_accounting_workflow_economics(source, entries, blockers)
     if source.get("blockers") != []:
         blockers.append({"code": "release-accounting-source-blockers-invalid"})
     if source.get("productionPromotionClaimed") is not False:
@@ -137,6 +153,7 @@ def build_release_accounting(
 
     root = (project_root or Path.cwd()).resolve()
     source_artifacts: list[dict[str, Any]] = []
+    source_workflow_summaries: list[dict[str, Any]] = []
     entries: list[dict[str, Any]] = []
     observed_provenance: dict[str, set[str]] = {field: set() for field in PROVENANCE_FIELDS}
     for artifact_index, raw_path in enumerate(artifact_paths):
@@ -147,6 +164,8 @@ def build_release_accounting(
         if schema == PHASE_RESOURCE_MEASUREMENT_SCHEMA:
             require_phase_resource_measurement_pass(validate_phase_resource_measurement(payload))
             entries.extend(_entries_from_phase_measurement(payload, artifact_index, descriptor["payloadDigest"]))
+            if isinstance(payload.get("workflowEconomics"), dict):
+                source_workflow_summaries.append(payload["workflowEconomics"])
             _collect_provenance(payload.get("usageExport", {}).get("lineage"), observed_provenance)
             observed_provenance["measurementDigest"].add(str(payload["measurementDigest"]))
         elif schema == RELEASE_ACCOUNTING_SOURCE_SCHEMA:
@@ -164,6 +183,8 @@ def build_release_accounting(
                 )
             for entry in payload["entries"]:
                 entries.append({**entry, "sourceArtifactDigest": descriptor["payloadDigest"]})
+            if isinstance(payload.get("workflowEconomics"), dict):
+                source_workflow_summaries.append(payload["workflowEconomics"])
             _collect_provenance(payload.get("provenance"), observed_provenance)
         else:
             raise LifecycleError(
@@ -179,7 +200,10 @@ def build_release_accounting(
             )
 
     _require_unique_entry_ids(entries)
-    summaries = _summaries(entries)
+    inherited_elapsed_wall = None
+    if len(source_artifacts) == 1 and len(source_workflow_summaries) == 1:
+        inherited_elapsed_wall = source_workflow_summaries[0].get("enclosingElapsedWall")
+    summaries = _summaries(entries, enclosing_elapsed_wall=inherited_elapsed_wall)
     provenance = _build_provenance(declared_provenance or {}, observed_provenance, source_artifacts)
     body = {
         "schemaVersion": RELEASE_ACCOUNTING_SCHEMA,
@@ -192,6 +216,7 @@ def build_release_accounting(
         "views": summaries["views"],
         "categoryTotals": summaries["categoryTotals"],
         "totals": summaries["totals"],
+        "workflowEconomics": summaries["workflowEconomics"],
         "exclusions": summaries["exclusions"],
         "provenance": provenance,
         "blockers": [],
@@ -226,10 +251,34 @@ def validate_release_accounting(accounting: dict[str, Any]) -> dict[str, Any]:
     if accounting.get("entryCount") != len(entries):
         blockers.append({"code": "release-accounting-count-mismatch"})
     if entries:
-        expected = _summaries(entries)
+        workflow_economics = accounting.get("workflowEconomics")
+        enclosing_elapsed_wall = (
+            workflow_economics.get("enclosingElapsedWall") if isinstance(workflow_economics, dict) else None
+        )
+        source_artifacts = accounting.get("sourceArtifacts")
+        source_count = len(source_artifacts) if isinstance(source_artifacts, list) else 0
+        unbound_wall = (
+            source_count != 1
+            and isinstance(enclosing_elapsed_wall, dict)
+            and enclosing_elapsed_wall.get("status") != "UNAVAILABLE"
+        )
+        if unbound_wall:
+            blockers.append({"code": "release-accounting-enclosing-wall-unbound"})
+        expected = _summaries(
+            entries,
+            enclosing_elapsed_wall=None if unbound_wall else enclosing_elapsed_wall,
+        )
         for key in ("views", "categoryTotals", "totals", "exclusions"):
             if accounting.get(key) != expected[key]:
                 blockers.append({"code": f"release-accounting-{key}-mismatch"})
+        if accounting.get("workflowEconomics") is not None:
+            if accounting.get("workflowEconomics") != expected["workflowEconomics"]:
+                blockers.append({"code": "release-accounting-workflow-economics-mismatch"})
+            workflow_validation = validate_workflow_resource_summary(accounting["workflowEconomics"])
+            if workflow_validation["status"] != "PASS":
+                blockers.append(
+                    {"code": "release-accounting-workflow-economics-invalid", "validation": workflow_validation}
+                )
     _validate_source_artifacts(accounting.get("sourceArtifacts"), blockers)
     allowed_payload_digests = {
         item.get("payloadDigest")
@@ -317,6 +366,7 @@ def _entries_from_phase_measurement(
                     "elapsedWallMs": _metric("MEASURED", phase["durationMs"], additive=True),
                     "computeMs": _metric("UNAVAILABLE", None, additive=False),
                 },
+                "workflowMetrics": phase.get("workflowMetrics", build_workflow_metric_set()),
                 "sourceArtifactDigest": source_digest,
             }
         )
@@ -326,7 +376,15 @@ def _entries_from_phase_measurement(
 def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(entry, dict):
         raise LifecycleError("release-accounting-entry-invalid", "accounting entries must be objects")
-    allowed_entry_fields = {"entryId", "view", "costCategory", "scope", "metrics", "sourceArtifactDigest"}
+    allowed_entry_fields = {
+        "entryId",
+        "view",
+        "costCategory",
+        "scope",
+        "metrics",
+        "workflowMetrics",
+        "sourceArtifactDigest",
+    }
     if not set(entry).issubset(allowed_entry_fields):
         raise LifecycleError("release-accounting-entry-invalid", "accounting entry contains unsupported fields")
     view = entry.get("view")
@@ -345,7 +403,7 @@ def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
     raw_metrics = entry.get("metrics")
     if not isinstance(raw_metrics, dict) or set(raw_metrics) != set(METRIC_KEYS):
         raise LifecycleError("release-accounting-metrics-invalid", "all accounting metrics are required")
-    return {
+    normalized = {
         "entryId": _token(entry.get("entryId"), label="entryId"),
         "view": view,
         "costCategory": category,
@@ -356,6 +414,9 @@ def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
         },
         "metrics": {key: _normalize_metric(raw_metrics[key], key) for key in METRIC_KEYS},
     }
+    if "workflowMetrics" in entry:
+        normalized["workflowMetrics"] = build_workflow_metric_set(entry["workflowMetrics"])
+    return normalized
 
 
 def _normalize_metric(metric: Any, label: str) -> dict[str, Any]:
@@ -381,7 +442,11 @@ def _metric(status: str, value: int | None, *, additive: bool) -> dict[str, Any]
     return {"status": status, "value": value, "additive": additive}
 
 
-def _summaries(entries: list[dict[str, Any]]) -> dict[str, Any]:
+def _summaries(
+    entries: list[dict[str, Any]],
+    *,
+    enclosing_elapsed_wall: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     additive_entries = [entry for entry in entries if entry["scope"]["additive"]]
     views = {
         view: _summarize_group([entry for entry in additive_entries if entry["view"] == view])
@@ -400,8 +465,38 @@ def _summaries(entries: list[dict[str, Any]]) -> dict[str, Any]:
         "views": views,
         "categoryTotals": categories,
         "totals": _summarize_group(additive_entries),
+        "workflowEconomics": build_workflow_resource_summary(
+            [_entry_workflow_metrics(entry) for entry in additive_entries],
+            enclosing_elapsed_wall=enclosing_elapsed_wall,
+        ),
         "exclusions": exclusions,
     }
+
+
+def _validate_accounting_workflow_economics(
+    container: dict[str, Any],
+    entries: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
+) -> None:
+    workflow_economics = container.get("workflowEconomics")
+    validation = validate_workflow_resource_summary(workflow_economics)
+    if validation["status"] != "PASS":
+        blockers.append({"code": "release-accounting-workflow-economics-invalid", "validation": validation})
+        return
+    if not isinstance(workflow_economics, dict):
+        blockers.append({"code": "release-accounting-workflow-economics-invalid"})
+        return
+    expected = build_workflow_resource_summary(
+        [_entry_workflow_metrics(entry) for entry in entries],
+        enclosing_elapsed_wall=workflow_economics.get("enclosingElapsedWall"),
+    )
+    if workflow_economics != expected:
+        blockers.append({"code": "release-accounting-workflow-economics-mismatch"})
+
+
+def _entry_workflow_metrics(entry: dict[str, Any]) -> dict[str, Any]:
+    value = entry.get("workflowMetrics")
+    return value if isinstance(value, dict) else build_workflow_metric_set()
 
 
 def _summarize_group(entries: list[dict[str, Any]]) -> dict[str, Any]:
@@ -564,11 +659,7 @@ def _require_unique_source_artifact(
     candidate: dict[str, Any],
 ) -> None:
     for index, existing in enumerate(source_artifacts):
-        duplicate_fields = [
-            field
-            for field in ("sha256", "payloadDigest")
-            if existing[field] == candidate[field]
-        ]
+        duplicate_fields = [field for field in ("sha256", "payloadDigest") if existing[field] == candidate[field]]
         if duplicate_fields:
             raise LifecycleError(
                 "release-accounting-source-artifact-duplicate",

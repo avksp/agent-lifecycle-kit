@@ -9,6 +9,11 @@ from agent_lifecycle.contracts.process_execution_schemas import (
     PROCESS_EXECUTION_RECEIPT_SCHEMA,
     validate_process_execution_receipt,
 )
+from agent_lifecycle.metrics.workflow_economics import (
+    build_workflow_metric_set,
+    build_workflow_resource_summary,
+    validate_workflow_resource_summary,
+)
 
 EXECUTION_RESOURCE_REPORT_SCHEMA = "agent-execution-resource-report.v1"
 EXECUTION_RESOURCE_VALIDATION_SCHEMA = "agent-execution-resource-report-validation.v1"
@@ -18,6 +23,7 @@ def build_execution_resource_report(
     receipts: list[dict[str, Any]],
     *,
     lineage: dict[str, Any] | None = None,
+    enclosing_elapsed_wall: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Aggregate bounded receipt projections without retaining host output."""
 
@@ -39,6 +45,10 @@ def build_execution_resource_report(
         "receiptCount": len(projections),
         "receipts": projections,
         "summary": _summary(projections),
+        "workflowEconomics": build_workflow_resource_summary(
+            [_workflow_metric_set(item) for item in projections],
+            enclosing_elapsed_wall=enclosing_elapsed_wall,
+        ),
         "blockers": blockers[:32],
         "rawOutputStored": False,
         "productionPromotionClaimed": False,
@@ -65,6 +75,9 @@ def validate_execution_resource_report(report: dict[str, Any]) -> dict[str, Any]
                 continue
             if item.get("schemaVersion") != PROCESS_EXECUTION_RECEIPT_SCHEMA:
                 blockers.append({"code": "execution-resource-report-receipt-schema", "index": index})
+    workflow_validation = validate_workflow_resource_summary(report.get("workflowEconomics"))
+    if workflow_validation["status"] != "PASS":
+        blockers.append({"code": "execution-resource-workflow-economics", "validation": workflow_validation})
     expected = canonical_digest({key: value for key, value in report.items() if key != "reportDigest"})
     if report.get("reportDigest") != expected:
         blockers.append({"code": "execution-resource-report-digest"})
@@ -81,7 +94,11 @@ def validate_execution_resource_report(report: dict[str, Any]) -> dict[str, Any]
 
 def require_execution_resource_report_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("execution-resource-report-invalid", "execution resource report validation failed", {"validation": validation})
+        raise LifecycleError(
+            "execution-resource-report-invalid",
+            "execution resource report validation failed",
+            {"validation": validation},
+        )
     return validation
 
 
@@ -119,7 +136,11 @@ def _summary(projections: list[dict[str, Any]]) -> dict[str, Any]:
         resources = item.get("resources", {})
         for key, target in (("cpuMs", cpu_values), ("peakMemoryMb", memory_values), ("processCount", process_values)):
             metric = resources.get(key, {}) if isinstance(resources, dict) else {}
-            if isinstance(metric, dict) and metric.get("availability") == "ATTESTED" and isinstance(metric.get("value"), (int, float)):
+            if (
+                isinstance(metric, dict)
+                and metric.get("availability") == "ATTESTED"
+                and isinstance(metric.get("value"), (int, float))
+            ):
                 target.append(float(metric["value"]))
         if item.get("cleanup", {}).get("status") != "PASS":
             cleanup_blocked += 1
@@ -142,6 +163,25 @@ def _aggregate(values: list[float], *, maximum: bool = False) -> dict[str, Any]:
     return {"value": max(values) if maximum else round(sum(values), 3), "availability": "ATTESTED"}
 
 
+def _workflow_metric_set(projection: dict[str, Any]) -> dict[str, Any]:
+    timing = projection.get("timing")
+    elapsed = timing.get("elapsedMs") if isinstance(timing, dict) else None
+    elapsed_metric = (
+        {"status": "MEASURED", "value": elapsed}
+        if isinstance(elapsed, int) and not isinstance(elapsed, bool) and elapsed >= 0
+        else {"status": "UNAVAILABLE", "value": None}
+    )
+    return build_workflow_metric_set(
+        {
+            "toolCalls": {"status": "MEASURED", "value": 1},
+            "toolWallMs": elapsed_metric,
+            "elapsedWallMs": elapsed_metric,
+        }
+    )
+
+
 def _safe_lineage(value: dict[str, Any]) -> dict[str, Any]:
     allowed = {"runId", "packageId", "taskId", "operationId", "sourceRevision"}
-    return {key: value[key] for key in sorted(value) if key in allowed and isinstance(value[key], (str, int, float, bool))}
+    return {
+        key: value[key] for key in sorted(value) if key in allowed and isinstance(value[key], (str, int, float, bool))
+    }

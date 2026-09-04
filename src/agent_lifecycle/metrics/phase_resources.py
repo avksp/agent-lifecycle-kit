@@ -7,6 +7,11 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.metrics.usage_export import usage_export_totals, validate_usage_export
+from agent_lifecycle.metrics.workflow_economics import (
+    build_workflow_metric_set,
+    build_workflow_resource_summary,
+    validate_workflow_resource_summary,
+)
 
 PHASE_RESOURCE_MEASUREMENT_SCHEMA = "agent-phase-resource-measurement.v1"
 PHASE_RESOURCE_MEASUREMENT_VALIDATION_SCHEMA = "agent-phase-resource-measurement-validation.v1"
@@ -23,6 +28,7 @@ def build_phase_resource_measurement(
     *,
     lineage: dict[str, Any] | None = None,
     source_artifacts: list[dict[str, Any]] | None = None,
+    enclosing_elapsed_wall: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a phase measurement using the usage-export entry envelope."""
 
@@ -48,6 +54,10 @@ def build_phase_resource_measurement(
         "productionPromotionClaimed": False,
     }
     usage_export = {**usage_export, "exportDigest": canonical_digest(usage_export)}
+    workflow_economics = build_workflow_resource_summary(
+        [entry["workflowMetrics"] for entry in entries],
+        enclosing_elapsed_wall=enclosing_elapsed_wall,
+    )
     body = {
         "schemaVersion": PHASE_RESOURCE_MEASUREMENT_SCHEMA,
         "status": "PASS",
@@ -55,6 +65,7 @@ def build_phase_resource_measurement(
         "phases": entries,
         "usageExport": usage_export,
         "totals": usage_export["totals"],
+        "workflowEconomics": workflow_economics,
         "blockers": [],
         "productionPromotionClaimed": False,
     }
@@ -98,6 +109,18 @@ def validate_phase_resource_measurement(measurement: dict[str, Any]) -> dict[str
         if measurement.get("totals") != usage_export.get("totals"):
             blockers.append({"code": "phase-resource-total-mismatch"})
         _check_source_artifacts(usage_export.get("sourceArtifacts"), blockers)
+    workflow_economics = measurement.get("workflowEconomics")
+    if workflow_economics is not None:
+        workflow_validation = validate_workflow_resource_summary(workflow_economics)
+        if workflow_validation["status"] != "PASS":
+            blockers.append({"code": "phase-resource-workflow-economics-invalid", "validation": workflow_validation})
+        elif phases and all(isinstance(phase, dict) and "workflowMetrics" in phase for phase in phases):
+            expected_economics = build_workflow_resource_summary(
+                [phase["workflowMetrics"] for phase in phases],
+                enclosing_elapsed_wall=workflow_economics.get("enclosingElapsedWall"),
+            )
+            if workflow_economics != expected_economics:
+                blockers.append({"code": "phase-resource-workflow-economics-mismatch"})
     if measurement.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "phase-resource-production-claim"})
     _check_object_list(measurement.get("blockers", []), "phase-resource-blockers-invalid", blockers)
@@ -131,8 +154,17 @@ def _phase_entry(index: int, phase: dict[str, Any]) -> dict[str, Any]:
         raise LifecycleError("invalid-phase-resource-measurement", "phase entries must be objects")
     if any(key in phase for key in MONEY_KEYS):
         raise LifecycleError("invalid-phase-resource-measurement", "phase resources must not use monetary fields")
-    tokens = _tokens(phase.get("tokens", {}))
+    raw_tokens = phase.get("tokens")
+    tokens = _tokens(raw_tokens if raw_tokens is not None else {})
     resources = _resources(phase.get("resources", {}))
+    duration_ms = _non_negative_int(phase.get("durationMs"), label="durationMs")
+    inferred = {"elapsedWallMs": duration_ms}
+    if isinstance(raw_tokens, dict) and "input" in raw_tokens:
+        inferred["modelInputTokens"] = tokens["input"]
+    if isinstance(raw_tokens, dict) and "output" in raw_tokens:
+        inferred["modelOutputTokens"] = tokens["output"]
+    if "toolCalls" in resources:
+        inferred["toolCalls"] = resources["toolCalls"]
     return {
         "entryId": f"phase-{index + 1}",
         "phaseId": _required_string(phase.get("phaseId"), label="phaseId"),
@@ -142,7 +174,11 @@ def _phase_entry(index: int, phase: dict[str, Any]) -> dict[str, Any]:
         "tokens": tokens,
         "steps": _non_negative_int(phase.get("steps"), label="steps"),
         "resources": resources,
-        "durationMs": _non_negative_int(phase.get("durationMs"), label="durationMs"),
+        "durationMs": duration_ms,
+        "workflowMetrics": build_workflow_metric_set(
+            phase.get("workflowMetrics"),
+            inferred_measured=inferred,
+        ),
         "receiptDigests": _digest_list(phase.get("receiptDigests", [])),
     }
 
@@ -173,6 +209,15 @@ def _validate_phase_entry(index: int, phase: Any, blockers: list[dict[str, Any]]
                 blockers.append({"code": "phase-resource-resource-unsupported", "index": index, "field": key})
             if not isinstance(value, int) or isinstance(value, bool) or value < 0:
                 blockers.append({"code": "phase-resource-resource-invalid", "index": index, "field": key})
+    workflow_metrics = phase.get("workflowMetrics")
+    if workflow_metrics is not None:
+        try:
+            normalized_workflow_metrics = build_workflow_metric_set(workflow_metrics)
+        except LifecycleError as exc:
+            blockers.append({"code": exc.code, "index": index})
+        else:
+            if workflow_metrics != normalized_workflow_metrics:
+                blockers.append({"code": "phase-resource-workflow-metrics-shape-invalid", "index": index})
     for key in ("steps", "durationMs"):
         if not isinstance(phase.get(key), int) or isinstance(phase.get(key), bool) or phase[key] < 0:
             blockers.append({"code": "phase-resource-counter-invalid", "index": index, "field": key})

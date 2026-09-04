@@ -27,7 +27,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.13.0
+python -m pip install agent-lifecycle-kit==2.14.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -475,6 +475,17 @@ agent-lifecycle project preset render \
   локальных источников в представления процесса ALK, реализации, аудита и
   исправлений после аудита. `--artifact` можно повторять; `--provenance`
   сравнивает объявленные и наблюдаемые идентичности без заявления аттестации.
+- `agent-lifecycle metrics workflow-compare --before <путь> --after <путь>
+  --out <путь>`: сравнивает неизменяемые артефакты экономики workflow только
+  при совпадении устойчивой идентичности нагрузки и реализации. Флаг
+  `--comparison-pair` допустим только для точной канонической пары, объявленной
+  до обоих измерений; отсутствующая телеметрия и ослабленные гейты не становятся
+  улучшением.
+- `agent-lifecycle metrics workflow-recommend --comparison <путь>
+  --current-mode <режим> --required-mode <режим> --out <путь>`: создаёт только
+  рекомендательный артефакт без полномочий менять policy, workflow, приёмку или
+  гейты. Для задач безопасности, архитектуры, качества и выпуска используйте
+  `--protected-work`.
 - `agent-lifecycle metrics outcome-index/quality-signals/learn-recommend`:
   рекомендательное обучение по локальным артефактам без автоматического
   применения.
@@ -503,6 +514,8 @@ agent-lifecycle project preset render \
 Происхождение, достаточность выборки и семантика измеренных расходов описаны в
 разделах [независимость подтверждений](evidence-independence.md) и
 [эффективность проверки](review-efficiency.md).
+Полный контракт идентичности, пар и защитных ограничений описан в разделе
+[экономика рабочего процесса](workflow-economics.md).
 - `agent-lifecycle metrics usage-export`: экспорт сессий, отпечатков
   подтверждений, токенов, ресурсов, длительности, решений по бюджету и
   необязательного `cost_usd`, если его сообщает тарифицируемый хост.

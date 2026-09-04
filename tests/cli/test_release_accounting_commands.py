@@ -109,6 +109,95 @@ class ReleaseAccountingCommandTests(unittest.TestCase):
         self.assertEqual(payload["code"], "release-accounting-source-artifact-duplicate")
         self.assertFalse(output.exists())
 
+    def test_workflow_compare_consumes_exact_predeclared_pair(self) -> None:
+        fixtures = Path(__file__).resolve().parents[1] / "metrics" / "fixtures"
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "comparison.json"
+            code, payload = _run_cli(
+                [
+                    "metrics",
+                    "workflow-compare",
+                    "--before",
+                    str(fixtures / "release-2-8-continuation-baseline.json"),
+                    "--after",
+                    str(fixtures / "release-2-10-continuation-baseline.json"),
+                    "--comparison-pair",
+                    str(fixtures / "release-2-10-continuation-comparison-pair.json"),
+                    "--out",
+                    str(output),
+                ]
+            )
+            written = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(code, 0)
+        self.assertEqual(payload, written)
+        self.assertEqual(payload["implementationStatus"], "PREDECLARED_PAIR")
+        self.assertEqual(payload["status"], "MIXED")
+        self.assertFalse(payload["authorityClaimed"])
+
+    def test_workflow_recommend_is_advisory_and_create_only(self) -> None:
+        fixtures = Path(__file__).resolve().parents[1] / "metrics" / "fixtures"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            comparison_path = root / "comparison.json"
+            recommendation_path = root / "recommendation.json"
+            compare_code, _ = _run_cli(
+                [
+                    "metrics",
+                    "workflow-compare",
+                    "--before",
+                    str(fixtures / "release-2-8-continuation-baseline.json"),
+                    "--after",
+                    str(fixtures / "release-2-10-continuation-baseline.json"),
+                    "--comparison-pair",
+                    str(fixtures / "release-2-10-continuation-comparison-pair.json"),
+                    "--out",
+                    str(comparison_path),
+                ]
+            )
+            code, payload = _run_cli(
+                [
+                    "metrics",
+                    "workflow-recommend",
+                    "--comparison",
+                    str(comparison_path),
+                    "--task-shape",
+                    "release",
+                    "--current-mode",
+                    "release",
+                    "--required-mode",
+                    "release",
+                    "--protected-work",
+                    "--out",
+                    str(recommendation_path),
+                ]
+            )
+            second_code, second = _run_cli(
+                [
+                    "metrics",
+                    "workflow-recommend",
+                    "--comparison",
+                    str(comparison_path),
+                    "--current-mode",
+                    "release",
+                    "--required-mode",
+                    "release",
+                    "--out",
+                    str(recommendation_path),
+                ]
+            )
+
+        self.assertEqual(compare_code, 0)
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["status"], "PASS")
+        self.assertTrue(payload["advisoryOnly"])
+        self.assertFalse(payload["autoApply"])
+        self.assertFalse(payload["authorityClaimed"])
+        self.assertFalse(payload["policyMutationAllowed"])
+        self.assertFalse(payload["workflowMutationAllowed"])
+        self.assertEqual(second_code, 2)
+        self.assertEqual(second["code"], "cli-io-error")
+
 
 def _entry() -> dict:
     return {

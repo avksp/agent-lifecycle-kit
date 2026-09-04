@@ -12,6 +12,8 @@ from agent_lifecycle.metrics.audit_efficiency import (
     validate_audit_efficiency_input,
     validate_audit_efficiency_report,
 )
+from agent_lifecycle.metrics.regression_signals import build_workflow_comparison_context
+from agent_lifecycle.metrics.workflow_economics import WORKFLOW_METRIC_KEYS
 
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = ROOT / "tests/metrics/fixtures/release-2-6-accounting-baseline.json"
@@ -232,6 +234,53 @@ class AuditEfficiencyTests(unittest.TestCase):
             {item["code"] for item in report["blockers"]},
         )
 
+    def test_comparison_without_stable_context_cannot_claim_reduction(self) -> None:
+        current = _measurement(release_id="2.7.0", audit_tokens=800, audit_wall=8000)
+        baseline = _measurement(release_id="2.6.0", audit_tokens=1000, audit_wall=10000)
+        current.pop("comparisonContext")
+        baseline.pop("comparisonContext")
+        _refresh_input_digest(current)
+        _refresh_input_digest(baseline)
+
+        report = build_audit_efficiency_report(current, comparison_measurements=[baseline])
+
+        self.assertEqual(report["status"], "FAIL")
+        self.assertIn(
+            "audit-efficiency-comparison-context-unavailable",
+            {item["code"] for item in report["blockers"]},
+        )
+        self.assertEqual(report["comparison"]["tokenReductionPercent"]["status"], "UNAVAILABLE")
+
+    def test_apparent_savings_with_weaker_gate_are_not_reported_as_reduction(self) -> None:
+        current = _measurement(release_id="2.7.0", audit_tokens=500, audit_wall=5000)
+        baseline = _measurement(release_id="2.6.0", audit_tokens=1000, audit_wall=10000)
+        context = current["comparisonContext"]
+        context["gateOutcomes"]["requiredGateIds"].remove("security")
+        context["gateOutcomes"]["passedGateIds"].remove("security")
+        context["contextDigest"] = canonical_digest(
+            {key: value for key, value in context.items() if key != "contextDigest"}
+        )
+        _refresh_input_digest(current)
+
+        report = build_audit_efficiency_report(current, comparison_measurements=[baseline])
+
+        self.assertEqual(report["comparison"]["workflowStatus"], "REGRESSED")
+        self.assertEqual(report["comparison"]["tokenReductionPercent"]["status"], "UNAVAILABLE")
+        self.assertFalse(report["comparison"]["qualityFloorPreserved"])
+
+    def test_mixed_is_not_valid_as_source_metric_status(self) -> None:
+        measurement = _measurement()
+        measurement["views"]["audit"]["tokens"]["status"] = "MIXED"
+        _refresh_input_digest(measurement)
+
+        validation = validate_audit_efficiency_input(measurement)
+
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertIn(
+            "audit-efficiency-view-metric-invalid",
+            {item["code"] for item in validation["blockers"]},
+        )
+
     def test_agentic_tendercrm_and_board_shapes_preserve_outcome_distinctions(self) -> None:
         shapes = {
             "agentic": (3, 1, 2, 1),
@@ -266,6 +315,27 @@ def _measurement(
     no_verdict: int = 2,
     remediation: int = 1,
 ) -> dict:
+    role = "before" if release_id.startswith("2.6") else "after"
+    comparison_metrics = {
+        key: {"status": "MEASURED", "value": audit_tokens if "Token" in key else audit_wall}
+        for key in WORKFLOW_METRIC_KEYS
+        if key not in {"requiredGateCount", "passedGateCount", "failedGateCount"}
+    }
+    comparison_context = build_workflow_comparison_context(
+        source_digest=canonical_digest({"release": release_id, "kind": "audit-efficiency"}),
+        workload_identity_digest=canonical_digest({"workload": "audit-efficiency-synthetic"}),
+        implementation={"sourceRevision": "shared", "coreVersion": "2.14.0", "publicationVersions": {}},
+        role=role,
+        metrics=comparison_metrics,
+        gate_outcomes={
+            "requiredGateIds": ["architecture", "quality", "security"],
+            "passedGateIds": ["architecture", "quality", "security"],
+            "failedGateIds": [],
+            "qualityFloorDigest": canonical_digest({"floor": "release-standard"}),
+            "acceptanceStatus": "PASS",
+        },
+        measured_at=f"2026-09-04T00:00:0{1 if role == 'before' else 2}Z",
+    )
     return build_audit_efficiency_input(
         release_id=release_id,
         source_revision=f"source-{release_id}",
@@ -274,8 +344,16 @@ def _measurement(
         views={
             "alkProcess": {"tokens": _metric(100), "elapsedWallMs": _metric(1000), "computeMs": _unavailable()},
             "implementation": {"tokens": _metric(200), "elapsedWallMs": _metric(2000), "computeMs": _unavailable()},
-            "audit": {"tokens": _metric(audit_tokens), "elapsedWallMs": _metric(audit_wall), "computeMs": _metric(12000)},
-            "postAuditRemediation": {"tokens": _metric(50), "elapsedWallMs": _metric(4000), "computeMs": _unavailable()},
+            "audit": {
+                "tokens": _metric(audit_tokens),
+                "elapsedWallMs": _metric(audit_wall),
+                "computeMs": _metric(12000),
+            },
+            "postAuditRemediation": {
+                "tokens": _metric(50),
+                "elapsedWallMs": _metric(4000),
+                "computeMs": _unavailable(),
+            },
         },
         outcomes={
             "confirmedFindings": _metric(confirmed),
@@ -285,6 +363,7 @@ def _measurement(
             "remediationEvents": _metric(remediation),
         },
         totals={"elapsedWallMs": _metric(20000)},
+        comparison_context=comparison_context,
     )
 
 
@@ -308,8 +387,7 @@ def _duplicate_axes(report: dict, *, index: int = 0) -> set[str]:
     return {
         item["axis"]
         for item in report["blockers"]
-        if item.get("code") == "audit-efficiency-comparison-duplicate-identity"
-        and item.get("index") == index
+        if item.get("code") == "audit-efficiency-comparison-duplicate-identity" and item.get("index") == index
     }
 
 

@@ -87,6 +87,20 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertFalse(feature["workflowAuthority"])
         self.assertFalse(feature["rawTranscriptRequired"])
 
+    def test_publication_manifest_exposes_workflow_economics_boundaries(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "workflow-economics-and-regression-evidence"
+        ]
+
+        self.assertEqual(feature["status"], "ADVISORY")
+        self.assertTrue(feature["stableWorkloadIdentityRequired"])
+        self.assertTrue(feature["predeclaredPairRequiredForImplementationChange"])
+        self.assertFalse(feature["missingTelemetryIsImprovement"])
+        self.assertFalse(feature["weakerAssuranceIsImprovement"])
+        self.assertFalse(feature["automaticApply"])
+        self.assertFalse(feature["workflowAuthority"])
+
     def test_publication_manifest_exposes_review_efficiency_boundaries(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
         feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
@@ -219,7 +233,7 @@ class PublicationVersionTests(unittest.TestCase):
             root = Path(tmp)
             _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
             _write_json(
-                root / "tests/metrics/fixtures/release-2-13-strategy-baseline.json",
+                root / "tests/metrics/fixtures/release-2-14-accounting.json",
                 {"releaseId": "2.8.0"},
             )
 

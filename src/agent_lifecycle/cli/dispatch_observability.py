@@ -7,7 +7,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.cli.dispatch_metrics import _dispatch_execution_report
+from agent_lifecycle.cli.dispatch_metrics import (
+    _dispatch_execution_report,
+    _dispatch_workflow_compare,
+    _dispatch_workflow_recommend,
+)
 from agent_lifecycle.context import check_context, load_context_profile, render_context
 from agent_lifecycle.context.checkpoint_store import (
     restore_context_checkpoint,
@@ -452,18 +456,14 @@ def _dispatch_model(args: argparse.Namespace) -> dict[str, Any]:
     if args.model_command == "route":
         routing_profile = read_json_object(Path(args.profile), label="model routing profile")
         host_profile = (
-            read_json_object(Path(args.host_profile), label="host model profile")
-            if args.host_profile
-            else None
+            read_json_object(Path(args.host_profile), label="host model profile") if args.host_profile else None
         )
         request = read_json_object(Path(args.request), label="model route request")
         return resolve_model_route(request, routing_profile, host_profile=host_profile)
     if args.model_command == "usage-check":
         receipt = read_json_object(Path(args.receipt), label="model usage receipt")
         decision = (
-            read_json_object(Path(args.route_decision), label="model route decision")
-            if args.route_decision
-            else None
+            read_json_object(Path(args.route_decision), label="model route decision") if args.route_decision else None
         )
         targets = read_json_object(Path(args.budget_targets), label="budget targets") if args.budget_targets else None
         result = validate_usage_receipt(receipt, budget_targets=targets, route_decision=decision)
@@ -512,6 +512,10 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any] | str:
         return _dispatch_phase_resources(args)
     if args.metrics_command == "release-accounting":
         return _dispatch_release_accounting(args)
+    if args.metrics_command == "workflow-compare":
+        return _dispatch_workflow_compare(args)
+    if args.metrics_command == "workflow-recommend":
+        return _dispatch_workflow_recommend(args)
     if args.metrics_command == "usage-export":
         export = build_usage_export(
             artifact_paths=[Path(item) for item in args.artifact],
@@ -591,9 +595,7 @@ def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any] | str:
     if args.metrics_command == "audit-proposal":
         report = read_json_object(Path(args.report), label="audit optimization report")
         raw_recommendation = report.get("recommendation")
-        proposal_recommendation: dict[str, Any] = (
-            raw_recommendation if isinstance(raw_recommendation, dict) else {}
-        )
+        proposal_recommendation: dict[str, Any] = raw_recommendation if isinstance(raw_recommendation, dict) else {}
         proposal = build_optimization_proposal(
             proposal_recommendation,
             approved=args.approved,
@@ -648,9 +650,7 @@ def _dispatch_phase_resources(args: argparse.Namespace) -> dict[str, Any]:
 
 def _dispatch_release_accounting(args: argparse.Namespace) -> dict[str, Any]:
     declared_provenance = (
-        read_json_object(Path(args.provenance), label="release accounting provenance")
-        if args.provenance
-        else None
+        read_json_object(Path(args.provenance), label="release accounting provenance") if args.provenance else None
     )
     accounting = build_release_accounting(
         args.release_id,

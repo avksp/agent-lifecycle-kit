@@ -125,6 +125,23 @@ class PublicationAdoptionTests(unittest.TestCase):
             ):
                 self.assertIn(marker, text)
 
+    def test_workflow_economics_is_documented_fail_closed(self) -> None:
+        references = (
+            (ROOT / "docs/reference/workflow-economics.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/workflow-economics.md").read_text(encoding="utf-8"),
+        )
+        for text in references:
+            for marker in (
+                "metrics workflow-compare",
+                "metrics workflow-recommend",
+                "NO_COMPARABLE_BASELINE",
+                "UNAVAILABLE",
+                "advisoryOnly: true",
+                "autoApply: false",
+                "authorityClaimed: false",
+            ):
+                self.assertIn(marker, text)
+
     def test_phase_packets_and_validation_ladder_are_documented_without_authority(self) -> None:
         packets = (
             (ROOT / "docs/reference/phase-packets.md").read_text(encoding="utf-8"),
