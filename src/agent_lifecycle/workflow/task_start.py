@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import agent_lifecycle.workflow.state as workflow_state
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.ownership_paths import normalize_authority_path
 from agent_lifecycle.contracts.paths import normalize_repo_path
@@ -32,7 +33,7 @@ from agent_lifecycle.workflow.risk_execution_gate import (
     load_task_risk_profile,
 )
 from agent_lifecycle.workflow.selectors import find_task
-from agent_lifecycle.workflow.state import deadline_after, now_iso
+from agent_lifecycle.workflow.state import deadline_after
 
 
 def start_task(
@@ -468,7 +469,7 @@ def _mark_task_running(state: dict[str, Any], task: dict[str, Any], attempt: int
     task["attempt"] = attempt
     task["status"] = "RUNNING"
     clear_active_attempt_references(task)
-    task["attemptStartedAt"] = now_iso()
+    task["attemptStartedAt"] = workflow_state.now_iso()
     task["attemptBaseRevision"] = state.get("sourceRevision")
     task["attemptDeadlineAt"] = deadline_after(
         task["attemptStartedAt"],
