@@ -196,6 +196,14 @@ A lower layer can fill a default but cannot reduce the plan's risk tier,
 quality floor, write scope, required gate or receipt requirement. The profile
 digest is carried into the execution strategy and task packet projections.
 
+For managed task start, this precedence is materialized in the
+`agent-execution-strategy.v1` receipt. The receipt binds either the exact
+effective profile digest and path or a canonical `ABSENT` identity. A changed
+profile cannot affect an attempt already in progress and cannot be silently
+reused for the next attempt: derive a fresh strategy with `--strategy-out`.
+Capability evidence affects only whether the selected route can be enforced;
+it never chooses a weaker value.
+
 Without an active profile, `start` keeps the existing
 `agent-lifecycle-start-receipt.v1` contract. With an active profile, the facade
 returns `agent-guided-action-receipt.v1`, which contains the base start receipt,

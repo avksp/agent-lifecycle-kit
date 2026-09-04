@@ -1,0 +1,188 @@
+{
+  "schemaVersion": "agent-execution-strategy-economics-baseline.v1",
+  "releaseId": "2.13.0",
+  "source": {
+    "baseRevision": "3ef13b08d9d9d86135dfdee7c6bdf0a5b81a3f4a",
+    "coreVersion": "2.13.0",
+    "planRevision": 9,
+    "planDigest": "090e91c76a1265bb55e4cf1db21b2bae7ea8035a6a988c46fbb1116bc212e2aa",
+    "planFilesHash": "8182a9b12813d588439570a93d1a8d42d76b12256e01147425c9a60f9e379375",
+    "requiredGateFloorDigest": "a267f03b0e0df1591e5735a8c116f49a17c3acb1a8b116b29ce5b28479dfa36e",
+    "securityGateDigest": "c7877f8ae065f3ffbb05b15eaa2ce0434216fbd80dae3cdde082b67e7f3cecad"
+  },
+  "workloadIdentity": {
+    "schemaVersion": "agent-comparable-workload-identity.v1",
+    "name": "two-transition-continuation",
+    "workloadInputDigest": "a249fc8d0b91c4f74114730a10105edd2b3dbaf524f8b7aedbd5ab8553f17e41",
+    "fixtureShapeDigest": "3df71eae9321b7a28f72bd86bfdfa984fd258ab53ffbca42f94e9ab54ef592c6",
+    "environmentDigest": "ed341f3e6ce4003cdc8db265ac235e0156ef06b110255c7581782f24a83a1781",
+    "requiredGateFloorDigest": "494bc2f9c845b7ef0d9f99a0c808375bdbe2f8b70b4e7fdba3206c7492c489fb",
+    "workloadIdentityDigest": "4f29d051997693aa96045cebe5c2d4e0d84c11841e5d392f264ef3aa052b0927"
+  },
+  "policyInputs": {
+    "riskPolicyDigest": "c7c066c7c8a17ab78b7813892af095748e5ca7abf797946dbc97f7cb541ace93",
+    "routingProfileDigest": "a728085275d69ff76e14f416cf4638cd90a2f97fe08c8d176afa2d66f6e2197b",
+    "baselineProfileDigest": "3013bf1fadc300adbac5ba7841a56a2a1c8c12a7b2b5ed4b6f3c4d3a51a8a008",
+    "descriptorDigest": "fbf327bd9a08ab189c4dc0a1dfc9f53d73ac3b6fdcca67330d5276e76cea483b",
+    "capabilityManifestDigest": "308e09bc9a2980d168ca424e2f40ddb2f073fd2cdb5a80d5dd020a29b56ae310"
+  },
+  "measurementMethod": {
+    "kind": "in-process-deterministic-policy",
+    "sampleCount": 31,
+    "statistic": "median",
+    "temporaryFilesystem": false,
+    "modelCalls": false,
+    "networkCalls": false,
+    "commandCountSemantics": "declared public orchestration steps",
+    "packetBytesSemantics": "canonical full strategy for explicit routing and canonical strategy-plus-summary envelope for managed adoption"
+  },
+  "cases": [
+    {
+      "caseId": "short-local-s0",
+      "riskTier": "S0",
+      "caseInputDigest": "390111b8c4c33703d9d520c920062df11416cd0d99b2f865386f8b9bdb202450",
+      "strategyDigest": "4440e213d430bf165bd2f09efe6b12cb3fc3942627bd5e7404905ca68cd22121",
+      "selection": {
+        "qualityFloor": "standard",
+        "selectedMode": "standard",
+        "packetMode": "COMPACT",
+        "reviewMode": "off",
+        "requiredReviewers": 0,
+        "maxInvocations": 1,
+        "maxWallSeconds": 900
+      },
+      "automaticAdoption": {
+        "status": "MEASURED",
+        "commandCount": 1,
+        "modelTurns": 0,
+        "reviewInvocationsStarted": 0,
+        "packetBytes": 7675,
+        "strategyArtifactBytes": 6789,
+        "summaryPacketBytes": 833,
+        "strategyResolutionWallSeconds": 0.000874
+      },
+      "explicitManualRouting": {
+        "status": "MEASURED",
+        "commandCount": 2,
+        "modelTurns": 0,
+        "reviewInvocationsStarted": 0,
+        "packetBytes": 6789,
+        "wallSeconds": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "comparison": {
+        "status": "MEASURED",
+        "commandCountDelta": -1,
+        "packetBytesDelta": 886,
+        "qualityFloorPreserved": true,
+        "ratioAuthority": false
+      }
+    },
+    {
+      "caseId": "normal-s1",
+      "riskTier": "S1",
+      "caseInputDigest": "cea2349f7c3182c6355a3bb13f2395b60c4fda763d35d126a18c5cd77500b98a",
+      "strategyDigest": "af7d5935fcb405135132f3dd7472b5578ef072b12a4e41334162395dced5bfe2",
+      "selection": {
+        "qualityFloor": "standard",
+        "selectedMode": "standard",
+        "packetMode": "COMPACT",
+        "reviewMode": "off",
+        "requiredReviewers": 0,
+        "maxInvocations": 8,
+        "maxWallSeconds": 1800
+      },
+      "automaticAdoption": {
+        "status": "MEASURED",
+        "commandCount": 1,
+        "modelTurns": 0,
+        "reviewInvocationsStarted": 0,
+        "packetBytes": 7679,
+        "strategyArtifactBytes": 6791,
+        "summaryPacketBytes": 835,
+        "strategyResolutionWallSeconds": 0.0008645
+      },
+      "explicitManualRouting": {
+        "status": "MEASURED",
+        "commandCount": 2,
+        "modelTurns": 0,
+        "reviewInvocationsStarted": 0,
+        "packetBytes": 6791,
+        "wallSeconds": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "comparison": {
+        "status": "MEASURED",
+        "commandCountDelta": -1,
+        "packetBytesDelta": 888,
+        "qualityFloorPreserved": true,
+        "ratioAuthority": false
+      }
+    },
+    {
+      "caseId": "audit-heavy-s2",
+      "riskTier": "S2",
+      "caseInputDigest": "ce0060bacd5dee760e89dfd96f570670b6060a0e110e4c41fa75ca1b24d5d17b",
+      "strategyDigest": "6a2084735d55b4c4c26964416f9db661ebd51ccd5b70eaa6c7f416578bed9403",
+      "selection": {
+        "qualityFloor": "strict",
+        "selectedMode": "strict",
+        "packetMode": "FULL",
+        "reviewMode": "leader-draft-multi-review",
+        "requiredReviewers": 2,
+        "maxInvocations": 33,
+        "maxWallSeconds": 3600
+      },
+      "automaticAdoption": {
+        "status": "MEASURED",
+        "commandCount": 1,
+        "modelTurns": 0,
+        "reviewInvocationsStarted": 0,
+        "packetBytes": 7723,
+        "strategyArtifactBytes": 6817,
+        "summaryPacketBytes": 853,
+        "strategyResolutionWallSeconds": 0.000909625
+      },
+      "explicitManualRouting": {
+        "status": "MEASURED",
+        "commandCount": 2,
+        "modelTurns": 0,
+        "reviewInvocationsStarted": 0,
+        "packetBytes": 6817,
+        "wallSeconds": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "comparison": {
+        "status": "MEASURED",
+        "commandCountDelta": -1,
+        "packetBytesDelta": 906,
+        "qualityFloorPreserved": true,
+        "ratioAuthority": false
+      }
+    }
+  ],
+  "modelTelemetry": {
+    "status": "UNAVAILABLE",
+    "inputTokens": null,
+    "cachedInputTokens": null,
+    "outputTokens": null,
+    "reason": "NO_MODEL_OR_HOST_WAS_CALLED_BY_THE_DETERMINISTIC_POLICY_MEASUREMENT"
+  },
+  "gateOutcomes": {
+    "quality": "PASS",
+    "security": "PASS",
+    "architecture": "PASS",
+    "publication": "PASS"
+  },
+  "qualityFloorPreserved": true,
+  "releaseFullRequired": true,
+  "automaticPolicyMutation": false,
+  "productionPromotionClaimed": false,
+  "fixtureDigest": "391004f2773beac8e7ee9f2a2b61c21f8994ef3148b51a008067ec3ad9d200e9"
+}

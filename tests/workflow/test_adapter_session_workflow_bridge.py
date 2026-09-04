@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.adapter_sessions.session_store import create_session
 from agent_lifecycle.adapter_sessions.workflow_bridge import (
     managed_adapter_run,
     promote_session_to_workflow,
     resume_adapter_session,
 )
-from agent_lifecycle.adapter_sessions.session_store import create_session
 from agent_lifecycle.contracts import canonical_digest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +48,8 @@ class AdapterSessionWorkflowBridgeTests(unittest.TestCase):
             root = Path(tmp)
             manifest, state, descriptor = _write_bundle(root)
             before = state.read_bytes()
+            strategy_out = root / "work/execution-strategy.json"
+            strategy_out.parent.mkdir()
 
             receipt = managed_adapter_run(
                 adapter_id="codex",
@@ -64,11 +67,22 @@ class AdapterSessionWorkflowBridgeTests(unittest.TestCase):
                 routing_profile_path=ROOT / "profiles/model-routing-profile.v1.json",
                 baseline_profile_path=ROOT / "profiles/lifecycle-baselines.v1.json",
                 host_model_profile_path=ROOT / "profiles/hosts/codex-live-profile.v1.json",
+                strategy_out_path=strategy_out,
             )
 
             self.assertEqual(state.read_bytes(), before)
             self.assertTrue(receipt["nextAction"]["riskProfileRequiredAtTaskStart"])
             self.assertEqual(receipt["nextAction"]["riskExecutionProfile"]["resolvedRiskTier"], "S2")
+            strategy = receipt["nextAction"]["executionStrategy"]
+            self.assertTrue(strategy["authority"]["automaticAdoptionEligible"])
+            self.assertEqual(
+                receipt["nextAction"]["executionStrategyProjection"]["strategyDigest"], strategy["strategyDigest"]
+            )
+            self.assertFalse(receipt["nextAction"]["executionStrategyProjection"]["modelCallsStarted"])
+            self.assertEqual(receipt["nextAction"]["executionStrategyPath"], "work/execution-strategy.json")
+            self.assertEqual(
+                json.loads(strategy_out.read_text(encoding="utf-8"))["strategyDigest"], strategy["strategyDigest"]
+            )
 
     def test_promote_and_resume_require_matching_lineage(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -156,24 +170,11 @@ def _write_bundle(root: Path) -> tuple[Path, Path, Path]:
         ),
         encoding="utf-8",
     )
-    descriptor = root / "adapter.descriptor.json"
-    descriptor.write_text(
-        json.dumps(
-            {
-                "adapterId": "codex",
-                "host": "codex",
-                "managedLaunch": {
-                    "status": "WRAPPER_ONLY",
-                    "reason": "wrapper required",
-                    "shell": False,
-                    "timeoutSeconds": 30,
-                    "env": {"allow": [], "allowPatterns": [], "projectPolicyAllowed": True},
-                    "writesNativeConfig": False,
-                    "promptInjectionDefault": False,
-                },
-            }
-        ),
-        encoding="utf-8",
+    descriptor = root / "adapters/codex/adapter.descriptor.json"
+    descriptor.parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / "adapters/codex/adapter.descriptor.json", descriptor)
+    shutil.copyfile(
+        ROOT / "adapters/codex/capabilities.manifest.json", descriptor.with_name("capabilities.manifest.json")
     )
     return manifest, state, descriptor
 

@@ -8,6 +8,7 @@ from typing import Any, TypedDict
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.policy.execution_strategy import execution_strategy_summary, validate_execution_strategy
 from agent_lifecycle.workflow.artifacts import package_root
 from agent_lifecycle.workflow.authorization import authorize_execution
 from agent_lifecycle.workflow.final_proof_integrity import proof_integrity_required
@@ -32,6 +33,14 @@ MAX_INPUT_LIST_ITEMS = 128
 CONTINUATION_PATH_INPUTS = {
     "authorizationReceipt",
     "riskProfile",
+    "executionStrategy",
+    "strategyRiskPolicy",
+    "strategyRoutingProfile",
+    "strategyBaselineProfile",
+    "strategyHostProfile",
+    "strategyDescriptor",
+    "strategyCapabilityManifest",
+    "strategyProjectProfile",
     "result",
     "modelUsageReceipt",
     "budgetTargets",
@@ -309,7 +318,53 @@ def _build_action(
         "suppliedInputs": inputs,
         "managedActionDigest": preflight["nextAction"]["actionDigest"],
     }
+    if route["name"] == "task-start" and inputs.get("executionStrategy") is not None:
+        body["executionStrategy"] = _execution_strategy_projection(
+            state_path=Path(route["statePath"]), state=state, inputs=inputs
+        )
     return {**body, "actionDigest": canonical_digest(body)}
+
+
+def _execution_strategy_projection(
+    *, state_path: Path, state: dict[str, Any], inputs: dict[str, Any]
+) -> dict[str, Any]:
+    strategy = _read_supplied_document(state_path, state, inputs, "executionStrategy", "execution strategy")
+    if strategy is None:
+        raise LifecycleError("execution-strategy-required", "execution strategy input is required")
+    validation = validate_execution_strategy(strategy)
+    if validation["status"] != "PASS":
+        raise LifecycleError(
+            "execution-strategy-invalid",
+            "continuation requires a valid execution strategy",
+            {"validation": validation},
+        )
+    projection = execution_strategy_summary(strategy)
+    projection["selectedValidationMode"] = strategy["quality"]["selectedMode"]
+    projection["sourceDecisionDigests"] = dict(strategy["sourceDecisionDigests"])
+    projection["selectionReasons"] = {
+        "quality": "frozen-plan-and-risk-policy",
+        "packet": "validated-quality-floor",
+        "review": "frozen-plan-review-policy",
+        "route": "validated-model-routing-profile",
+    }
+    projection["blockers"] = list(strategy.get("blockers", []))
+    projection["modelCallsStarted"] = False
+    return projection
+
+
+def _task_strategy_inputs(inputs: dict[str, Any]) -> dict[str, Any] | None:
+    if inputs.get("executionStrategy") is None:
+        return None
+    return {
+        "requestedRisk": inputs.get("strategyRequestedRisk"),
+        "riskPolicyPath": inputs.get("strategyRiskPolicy"),
+        "routingProfilePath": inputs.get("strategyRoutingProfile"),
+        "baselineProfilePath": inputs.get("strategyBaselineProfile"),
+        "hostProfilePath": inputs.get("strategyHostProfile"),
+        "descriptorPath": inputs.get("strategyDescriptor"),
+        "capabilityManifestPath": inputs.get("strategyCapabilityManifest"),
+        "projectProfilePath": inputs.get("strategyProjectProfile"),
+    }
 
 
 def _required_inputs(
@@ -324,6 +379,17 @@ def _required_inputs(
     route_name = route["name"]
     if route_name == "authorize":
         _append_missing(required, inputs, "authorizationReceipt", "--authorization-receipt")
+    elif route_name == "task-start" and inputs.get("executionStrategy") is not None:
+        for name, option in (
+            ("strategyRequestedRisk", "--strategy-risk"),
+            ("strategyRiskPolicy", "--strategy-risk-policy"),
+            ("strategyRoutingProfile", "--strategy-routing-profile"),
+            ("strategyBaselineProfile", "--strategy-baseline-profile"),
+            ("strategyDescriptor", "--strategy-descriptor"),
+            ("strategyCapabilityManifest", "--strategy-capability-manifest"),
+            ("strategyProjectProfile", "--strategy-project-profile"),
+        ):
+            _append_missing(required, inputs, name, option)
     elif route_name == "task-result":
         _append_missing(required, inputs, "result", "--result")
         task = _task(state, route["taskId"])
@@ -389,7 +455,9 @@ def normalize_continuation_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
     """Validate and normalize inputs accepted by one continuation transition."""
 
     unknown = sorted(
-        set(inputs).difference(CONTINUATION_PATH_INPUTS | CONTINUATION_LIST_INPUTS | {"taskId", "verdict"})
+        set(inputs).difference(
+            CONTINUATION_PATH_INPUTS | CONTINUATION_LIST_INPUTS | {"taskId", "verdict", "strategyRequestedRisk"}
+        )
     )
     if unknown:
         raise LifecycleError("continuation-input-unsupported", "continuation input is unsupported", {"fields": unknown})
@@ -607,7 +675,13 @@ def _dispatch_transition(
     elif name == "run-start":
         start_execution(**common)
     elif name == "task-start":
-        start_task(**common, task_id=route["taskId"], risk_profile_path=inputs.get("riskProfile"))
+        start_task(
+            **common,
+            task_id=route["taskId"],
+            risk_profile_path=inputs.get("riskProfile"),
+            strategy_path=inputs.get("executionStrategy"),
+            strategy_inputs=_task_strategy_inputs(inputs),
+        )
     elif name == "task-result":
         commit_task_result(
             **common,

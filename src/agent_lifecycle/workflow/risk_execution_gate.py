@@ -77,7 +77,9 @@ def validate_task_risk_profile(
         raise LifecycleError("risk-profile-tier-invalid", "risk execution profile tier is unsupported")
     requested_risk = profile.get("requestedRisk")
     if requested_risk not in RISK_REQUESTS or resolve_risk_tier(plan_tier, requested_risk) != resolved_tier:
-        raise LifecycleError("risk-profile-tier-mismatch", "resolved risk tier does not match the requested and plan tiers")
+        raise LifecycleError(
+            "risk-profile-tier-mismatch", "resolved risk tier does not match the requested and plan tiers"
+        )
     adapter_id = profile.get("adapterId")
     if not isinstance(adapter_id, str) or not adapter_id:
         raise LifecycleError("risk-profile-adapter-invalid", "risk execution profile adapterId is required")
@@ -107,9 +109,12 @@ def validate_task_risk_profile(
     if not _digest_string(profile.get("policyDigest")):
         raise LifecycleError("risk-profile-policy-digest-invalid", "risk execution profile policyDigest is invalid")
     host_digest = profile.get("hostProfileDigest")
-    if resolved_tier in {"S1", "S2"}:
-        if not _digest_string(host_digest) or route.get("hostProfileDigest") != host_digest:
-            raise LifecycleError("risk-profile-host-digest-mismatch", "risk execution host profile digest is missing or inconsistent")
+    if resolved_tier in {"S1", "S2"} and (
+        not _digest_string(host_digest) or route.get("hostProfileDigest") != host_digest
+    ):
+        raise LifecycleError(
+            "risk-profile-host-digest-mismatch", "risk execution host profile digest is missing or inconsistent"
+        )
     if profile.get("blockers") != []:
         raise LifecycleError("risk-profile-blocked", "PASS risk execution profile must not contain blockers")
     for field in ("modelCallsStarted", "hostLaunchStarted", "productionPromotionClaimed"):
@@ -156,20 +161,26 @@ def clear_task_risk_profile(task: dict[str, Any]) -> None:
 
 
 def validate_attempt_risk_usage(task: dict[str, Any], receipt: dict[str, Any]) -> dict[str, Any] | None:
-    """Enforce risk-profile caps after canonical usage validation succeeds."""
+    """Enforce risk or adopted-strategy caps after usage validation succeeds."""
 
     profile = task.get("attemptRiskExecutionProfile")
     if not isinstance(profile, dict):
         profile = task.get("riskExecutionProfile")
-    if not isinstance(profile, dict) or not profile:
+    strategy = task.get("attemptExecutionStrategy")
+    if not isinstance(strategy, dict):
+        strategy = task.get("executionStrategy")
+    binding = profile if isinstance(profile, dict) and profile else strategy
+    if not isinstance(binding, dict) or not binding:
         return None
     usage = receipt.get("usage")
     if not isinstance(usage, dict):
         raise LifecycleError("risk-usage-missing", "risk-aware task requires usage metrics")
     invocations = usage.get("invocations")
     if not isinstance(invocations, int) or isinstance(invocations, bool) or invocations < 0:
-        raise LifecycleError("risk-usage-invocations-missing", "risk-aware usage requires a non-negative invocations metric")
-    caps = profile.get("resourceCaps")
+        raise LifecycleError(
+            "risk-usage-invocations-missing", "risk-aware usage requires a non-negative invocations metric"
+        )
+    caps = binding.get("resourceCaps")
     if not isinstance(caps, dict):
         raise LifecycleError("risk-profile-caps-missing", "attempt risk profile resourceCaps is missing")
     metrics = {
@@ -186,13 +197,16 @@ def validate_attempt_risk_usage(task: dict[str, Any], receipt: dict[str, Any]) -
     for metric, value in metrics.items():
         limit = caps.get(cap_fields[metric])
         passed = isinstance(value, int) and not isinstance(value, bool) and isinstance(limit, int) and value <= limit
-        checks.append({"id": f"risk-cap-{metric}", "status": "PASS" if passed else "FAIL", "value": value, "limit": limit})
+        checks.append(
+            {"id": f"risk-cap-{metric}", "status": "PASS" if passed else "FAIL", "value": value, "limit": limit}
+        )
     if any(item["status"] == "FAIL" for item in checks):
         raise LifecycleError("risk-usage-cap-exceeded", "risk-aware usage exceeded its bound caps", {"checks": checks})
     body = {
         "schemaVersion": "agent-risk-execution-usage-validation.v1",
         "status": "PASS",
-        "profileDigest": profile.get("profileDigest"),
+        "profileDigest": binding.get("profileDigest"),
+        "strategyDigest": binding.get("strategyDigest"),
         "checks": checks,
     }
     return {**body, "validationDigest": canonical_digest(body)}
@@ -200,12 +214,18 @@ def validate_attempt_risk_usage(task: dict[str, Any], receipt: dict[str, Any]) -
 
 def _validate_quality_floor(value: Any, resolved_tier: str) -> None:
     if not isinstance(value, dict) or value.get("status") != "PASS":
-        raise LifecycleError("risk-profile-quality-floor-invalid", "risk execution quality floor must be a PASS decision")
+        raise LifecycleError(
+            "risk-profile-quality-floor-invalid", "risk execution quality floor must be a PASS decision"
+        )
     if value.get("sddTier") != resolved_tier or value.get("qualityFloor") not in QUALITY_MODES:
-        raise LifecycleError("risk-profile-quality-floor-mismatch", "risk execution quality floor does not match the resolved tier")
+        raise LifecycleError(
+            "risk-profile-quality-floor-mismatch", "risk execution quality floor does not match the resolved tier"
+        )
     expected = canonical_digest({key: item for key, item in value.items() if key != "floorDigest"})
     if value.get("floorDigest") != expected:
-        raise LifecycleError("risk-profile-quality-floor-digest-mismatch", "risk execution quality floor digest mismatch")
+        raise LifecycleError(
+            "risk-profile-quality-floor-digest-mismatch", "risk execution quality floor digest mismatch"
+        )
 
 
 def _validate_usage_evidence(value: Any, resolved_tier: str) -> None:

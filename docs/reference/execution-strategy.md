@@ -9,8 +9,9 @@ running a model or changing workflow state:
 3. May the implementation task use a compact packet?
 4. Which review mode and resource evidence are required?
 
-The strategy is an explanation and a handoff artifact. It cannot freeze a
-plan, authorize implementation, start a host, accept a task, or finalize a run.
+The strategy is an explanation and a handoff artifact. A completely bound
+receipt can be adopted by task start, but it still cannot freeze a plan,
+authorize implementation, start a host, accept a task, or finalize a run.
 
 ## Beginner path
 
@@ -34,9 +35,60 @@ Raw text and Markdown have no frozen execution authority. Their
 ```
 
 After a reviewed, frozen run is supplied to `start --mode implement`, the same
-field becomes a compact summary bound to the exact plan, task, operation,
-state revision, adapter and source revision. Existing review and task-start
-gates still control execution.
+field becomes a compact summary bound to the exact plan, lock, next attempt,
+task, operation, state revision, source revision, adapter descriptor,
+capability manifest and project-profile-or-`ABSENT` identity. Existing
+authorization, ownership, review and task-start gates still control execution.
+
+## Managed adoption
+
+The public and lower-level managed start routes can derive the strategy and
+write the complete create-only receipt without asking a model to reconstruct
+policy:
+
+```bash
+agent-lifecycle start \
+  --adapter codex \
+  --mode implement \
+  --file tasks/my-release/plan.manifest.json \
+  --state work/my-release/run.state.json \
+  --lock tasks/my-release/plan.lock.json \
+  --task WS-01 \
+  --operation-id start-WS-01 \
+  --expected-revision 3 \
+  --source-revision "$(git rev-parse HEAD)" \
+  --strategy-out work/my-release/WS-01/attempt-1/execution-strategy.json
+```
+
+`automaticAdoptionEligible: true` means only that the immutable receipt has a
+complete next-attempt binding. All lifecycle-authority fields remain false and
+the receipt reports `modelCallsStarted: false`. A profile, descriptor,
+capability manifest, source revision, plan, lock, state or attempt change makes
+the receipt stale; derive a new one instead of reusing it.
+
+Direct task start consumes the same receipt and independently supplied policy
+inputs:
+
+```bash
+agent-lifecycle workflow task-start \
+  --state work/my-release/run.state.json \
+  --task WS-01 \
+  --operation-id start-WS-01 \
+  --expected-revision 3 \
+  --source-revision "$(git rev-parse HEAD)" \
+  --strategy work/my-release/WS-01/attempt-1/execution-strategy.json \
+  --strategy-risk auto \
+  --strategy-descriptor adapters/codex/adapter.descriptor.json \
+  --strategy-capability-manifest adapters/codex/capabilities.manifest.json \
+  --strategy-project-profile .alk/project-profile.json \
+  --reason "start the accepted packet"
+```
+
+Use the same `--strategy-*` inputs with `workflow continue`. Projection is
+read-only; apply still requires the projected state revision and action digest.
+Missing or changed inputs block before state mutation. The final exact-candidate
+`RELEASE_FULL` validation is mandatory and cannot be replaced, cached or
+suppressed by a strategy.
 
 ## Full strategy receipt
 
@@ -57,7 +109,8 @@ agent-lifecycle strategy resolve \
   --out work/my-release/WS-01/execution-strategy.json
 ```
 
-The output path is write-once. S1 and S2 need a host-local model profile so
+The output path is write-once. The manual command remains advisory unless its
+receipt has the complete binding required by the managed path. S1 and S2 need a host-local model profile so
 the neutral class can be checked against installed host capabilities. Concrete
 provider and model names remain in that local profile and do not enter the
 portable strategy.
@@ -128,8 +181,8 @@ agent-lifecycle benchmark compare \
   --out work/benchmark/comparison.json
 ```
 
-Quality is checked before resource savings. A new false acceptance, lost oracle
-check or lineage mismatch fails the comparison. Estimated tokens remain
+Quality is checked before resource savings. A new false acceptance, lost
+deterministic expected-result check or lineage mismatch fails the comparison. Estimated tokens remain
 advisory. Automatic adoption eligibility additionally requires:
 
 - comparable host-attested token usage;
@@ -140,6 +193,12 @@ advisory. Automatic adoption eligibility additionally requires:
 
 The receipt does not mutate policy automatically. It is evidence for a later
 reviewed policy or plan change.
+
+Release 2.13 records the local routing measurement in
+`tests/metrics/fixtures/release-2-13-strategy-baseline.json`. It preserves the
+2.10 comparable-workload identity, separates S0, S1 and S2 observations, and
+keeps unavailable model telemetry explicit. Command counts and packet bytes do
+not waive a gate and are not an automatic policy recommendation.
 
 ## Architecture boundary
 

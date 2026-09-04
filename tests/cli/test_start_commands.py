@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import shutil
 import tempfile
 import unittest
 from io import StringIO
@@ -12,6 +13,10 @@ from agent_lifecycle.adapter_sessions.session_store import create_session
 from agent_lifecycle.cli import main
 from agent_lifecycle.cli.parsers import build_parser
 from agent_lifecycle.resources import builtin_profile_path
+
+from .test_adapter_task_commands import _write_bundle
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class StartCommandTests(unittest.TestCase):
@@ -214,6 +219,58 @@ class StartCommandTests(unittest.TestCase):
             self.assertEqual(stderr, "")
             self.assertEqual(json.loads(out.read_text(encoding="utf-8")), profile)
             self.assertEqual(payload["delegate"]["riskExecutionProfile"], profile)
+
+    def test_public_start_writes_the_same_managed_strategy_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, state = _write_bundle(root)
+            descriptor = root / "adapters/codex/adapter.descriptor.json"
+            descriptor.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / "adapters/codex/adapter.descriptor.json", descriptor)
+            shutil.copyfile(
+                ROOT / "adapters/codex/capabilities.manifest.json",
+                descriptor.with_name("capabilities.manifest.json"),
+            )
+            strategy_out = root / "work/execution-strategy.json"
+            strategy_out.parent.mkdir()
+
+            code, payload, stderr = _run_cli(
+                [
+                    "start",
+                    "--adapter",
+                    "codex",
+                    "--mode",
+                    "implement",
+                    "--file",
+                    str(manifest),
+                    "--descriptor",
+                    str(descriptor),
+                    "--state",
+                    str(state),
+                    "--lock",
+                    str(manifest.with_name("plan.lock.json")),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "public-strategy-start",
+                    "--expected-revision",
+                    "1",
+                    "--source-revision",
+                    "source",
+                    "--strategy-out",
+                    str(strategy_out),
+                    "--session-root",
+                    str(root / "sessions"),
+                    "--no-project-profile",
+                ]
+            )
+
+            strategy = json.loads(strategy_out.read_text(encoding="utf-8"))
+            self.assertEqual(code, 0, payload)
+            self.assertEqual(stderr, "")
+            self.assertTrue(strategy["authority"]["automaticAdoptionEligible"])
+            self.assertEqual(payload["executionStrategy"]["strategyDigest"], strategy["strategyDigest"])
+            self.assertFalse(payload["executionStrategy"]["modelCallsStarted"])
 
     def test_launch_profile_requires_launch_and_raw_implement_stays_blocked(self) -> None:
         profile_only = _run_cli(

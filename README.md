@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.12.0`, and common `agent-lifecycle version` errors.
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.13.0`, and common `agent-lifecycle version` errors.
 
 For a quick start, run:
 
@@ -55,7 +55,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 - Small-model friendly packets: compact context, clear next actions, and
   deterministic checks for local or cheaper models.
 - Quality without overengineering: one provider-neutral execution strategy
-  composes risk, model class, packet size, review and resource limits.
+  composes risk, model class, packet size, review and resource limits, then binds the decision to one exact task attempt without giving it workflow authority.
 - Usage visibility: tokens, time, resource counters and structured execution records without sensitive data are native; monetary cost is optional and only used when a metered host reports it.
 - Project-specific workflow settings: ALK can discover and validate uncommitted local defaults, or apply a built-in workflow preset for a common route, while the frozen plan remains authoritative.
 - Reproducible Python maintenance: pinned development-only Ruff, mypy and coverage checks, a non-growing quality ratchet, stable redacted CLI errors, installed package resources, an explicit documented Python API, and bounded performance controls that preserve security and evidence rules.

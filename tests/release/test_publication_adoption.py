@@ -152,6 +152,22 @@ class PublicationAdoptionTests(unittest.TestCase):
             ):
                 self.assertIn(marker, text)
 
+    def test_execution_strategy_adoption_is_documented_fail_closed(self) -> None:
+        references = (
+            (ROOT / "docs/reference/execution-strategy.md").read_text(encoding="utf-8"),
+            (ROOT / "docs/ru/reference/execution-strategy.md").read_text(encoding="utf-8"),
+        )
+        for text in references:
+            for marker in (
+                "automaticAdoptionEligible",
+                "--strategy-out",
+                "--strategy-descriptor",
+                "--strategy-capability-manifest",
+                "RELEASE_FULL",
+                "modelCallsStarted: false",
+            ):
+                self.assertIn(marker, text)
+
     def test_review_efficiency_and_independence_are_documented_fail_closed(self) -> None:
         efficiency = (
             (ROOT / "docs/reference/review-efficiency.md").read_text(encoding="utf-8"),

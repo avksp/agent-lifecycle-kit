@@ -14,8 +14,10 @@ from agent_lifecycle.workflow.continuation_batch import STOP_ACTION_REASONS
 from agent_lifecycle.workflow.transition_contract import ACTION_TYPES
 
 from .test_authorization import _receipt as _authorization_receipt
+from .test_continuation import _continuation_strategy_inputs
 from .test_task_acceptance_audit_gate import _write_bundle as _write_audit_bundle
 from .test_task_acceptance_audit_gate import _write_result_review
+from .test_task_transitions import _write_strategy_start_bundle
 from .test_workflow_run import _write_bundle
 
 
@@ -93,6 +95,49 @@ class WorkflowContinuationBatchTests(unittest.TestCase):
                 len((root / "work/batch-receipt.json").read_bytes()) + len(canonical_bytes(summary)) + 1,
             )
             self.assertLessEqual(summary["inputBytes"] + summary["outputBytes"], 1_048_576)
+
+    def test_batch_task_start_consumes_same_strategy_as_one_step_service(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path, strategy_path, strategy = _write_strategy_start_bundle(
+                root,
+                project_profile={"schemaVersion": "test-project-profile.v1", "profileId": "batch"},
+            )
+            manifest_path = root / "tasks/strategy/plan.manifest.json"
+            inputs: dict[str, object] = {}
+            for name, path in _continuation_strategy_inputs(strategy_path).items():
+                if name == "strategyRequestedRisk":
+                    inputs[name] = path
+                    continue
+                input_path = str(path)
+                inputs[name] = {
+                    "path": input_path,
+                    "sha256": sha256_hex((root / input_path).read_bytes()),
+                }
+            projection = continue_workflow(
+                state_path=state_path,
+                manifest_path=manifest_path,
+                lock_path=manifest_path.parent / "plan.lock.json",
+                operation_id="start-strategy",
+                expected_revision=1,
+                source_revision="source",
+                reason="bounded continuation test",
+                inputs=_continuation_strategy_inputs(strategy_path),
+            )
+            bundle_path = _write_custom_bundle(
+                root,
+                [{"operationId": "start-strategy", "expectedActionType": "launch-tasks", "inputs": inputs}],
+            )
+
+            summary = _batch(manifest_path, state_path, bundle_path=bundle_path)
+
+            state = _read(state_path)
+            receipt = _read(root / "work/batch-receipt.json")
+            self.assertEqual(summary["appliedCount"], 1)
+            self.assertEqual(receipt["steps"][0]["projectedActionDigest"], projection["action"]["actionDigest"])
+            self.assertEqual(
+                state["tasks"][0]["attemptExecutionStrategy"]["strategyDigest"], strategy["strategyDigest"]
+            )
 
     def test_transition_cap_stops_before_second_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

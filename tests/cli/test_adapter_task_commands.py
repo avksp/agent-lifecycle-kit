@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import shutil
 import tempfile
 import unittest
 from io import StringIO
@@ -9,6 +10,8 @@ from pathlib import Path
 
 from agent_lifecycle.cli import main
 from agent_lifecycle.contracts import canonical_digest
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class AdapterTaskCommandTests(unittest.TestCase):
@@ -125,6 +128,59 @@ class AdapterTaskCommandTests(unittest.TestCase):
         self.assertTrue(payload["executionStarted"])
         self.assertIn("RUNNING", stderr)
 
+    def test_frozen_start_writes_adoption_eligible_strategy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, state = _write_bundle(root)
+            descriptor = root / "adapters/codex/adapter.descriptor.json"
+            descriptor.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / "adapters/codex/adapter.descriptor.json", descriptor)
+            shutil.copyfile(
+                ROOT / "adapters/codex/capabilities.manifest.json",
+                descriptor.with_name("capabilities.manifest.json"),
+            )
+            strategy_out = root / "work/execution-strategy.json"
+            strategy_out.parent.mkdir()
+
+            code, payload, _stderr = _run_cli(
+                [
+                    "adapter",
+                    "task",
+                    "start",
+                    "--adapter",
+                    "codex",
+                    "--file",
+                    str(manifest),
+                    "--descriptor",
+                    str(descriptor),
+                    "--state",
+                    str(state),
+                    "--lock",
+                    str(manifest.with_name("plan.lock.json")),
+                    "--task",
+                    "WS-01",
+                    "--operation-id",
+                    "strategy-start",
+                    "--expected-revision",
+                    "1",
+                    "--source-revision",
+                    "source",
+                    "--risk",
+                    "auto",
+                    "--strategy-out",
+                    str(strategy_out),
+                ]
+            )
+
+            self.assertEqual(code, 0, payload)
+            self.assertTrue(strategy_out.exists(), payload)
+            strategy = json.loads(strategy_out.read_text(encoding="utf-8"))
+            self.assertTrue(strategy["authority"]["automaticAdoptionEligible"])
+            self.assertEqual(
+                payload["adapterSessionReceipt"]["nextAction"]["executionStrategyProjection"]["strategyDigest"],
+                strategy["strategyDigest"],
+            )
+
 
 def _run_cli(args: list[str]) -> tuple[int, dict, str]:
     stdout = StringIO()
@@ -140,6 +196,10 @@ def _write_bundle(root: Path) -> tuple[Path, Path]:
         "status": "FROZEN",
         "planRevision": 1,
         "package": {"id": "package", "planArtifactRoot": "plans/package"},
+        "specification": {
+            "tier": "S0",
+            "tierResolutionRequest": {"riskFlags": {}, "capabilityHints": []},
+        },
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],

@@ -20,7 +20,6 @@ from agent_lifecycle.quality.security_analysis import security_analysis_acceptan
 from agent_lifecycle.workflow.artifacts import (
     artifact_identity,
     artifact_path,
-    next_available_attempt,
     package_root,
     validate_attempt_history,
 )
@@ -32,7 +31,6 @@ from agent_lifecycle.workflow.implementation_audit_gate import (
 )
 from agent_lifecycle.workflow.model_usage import (
     model_usage_receipt_required,
-    validate_attempt_model_route,
     validate_task_model_usage_receipt,
 )
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
@@ -45,74 +43,22 @@ from agent_lifecycle.workflow.reviews import (
     validate_task_review,
     validate_task_rework_review,
 )
-from agent_lifecycle.workflow.risk_execution_gate import (
-    apply_task_risk_profile,
-    clear_task_risk_profile,
-    load_task_risk_profile,
-    validate_attempt_risk_usage,
-)
+from agent_lifecycle.workflow.risk_execution_gate import validate_attempt_risk_usage
 from agent_lifecycle.workflow.selectors import find_task, ready_tasks, unlock_ready_tasks
-from agent_lifecycle.workflow.state import (
-    deadline_after,
-    now_iso,
+from agent_lifecycle.workflow.state import now_iso
+from agent_lifecycle.workflow.task_start import (
+    clear_active_attempt_references,
+    require_source_and_authorization,
 )
+from agent_lifecycle.workflow.task_start import (
+    start_task as start_task,
+)
+
+# Compatibility export for the existing finalization boundary.
+_clear_active_attempt_references = clear_active_attempt_references
 
 MAX_REMEDIATION_FINDINGS = 128
 MAX_REMEDIATION_FINDING_ID_LENGTH = 256
-
-
-def start_task(
-    state_path: Path,
-    *,
-    task_id: str,
-    operation_id: str,
-    expected_revision: int,
-    source_revision: str,
-    risk_profile_path: str | None = None,
-    reason: str,
-) -> dict[str, Any]:
-    state = _mutable_state(state_path, operation_id, expected_revision)
-    if state["phase"] not in {"RUNNING", "REMEDIATING"}:
-        raise LifecycleError("invalid-phase", f"cannot start task from phase {state['phase']}")
-    _require_source_and_authorization(state, source_revision)
-    task = find_task(state, task_id)
-    if task.get("status") not in {"READY", "REWORK"}:
-        raise LifecycleError("invalid-task-status", f"task {task_id} is not launchable")
-    _require_dependencies_accepted(state, task)
-    _require_parallel_capacity(state)
-    validate_attempt_history(state_path, state, task)
-    _validate_task_authority_paths(state, task)
-    if risk_profile_path is not None:
-        profile, profile_identity = load_task_risk_profile(
-            state_path,
-            state,
-            task,
-            risk_profile_path,
-            operation_id=operation_id,
-            source_revision=source_revision,
-        )
-        apply_task_risk_profile(task, profile, profile_identity)
-    else:
-        clear_task_risk_profile(task)
-    attempt = next_available_attempt(state_path, state, task)
-    gate_receipts = validate_controller_gates(
-        state_path,
-        state,
-        task,
-        phase="pre-launch",
-        operation_id=operation_id,
-        attempt=attempt,
-    )
-    _mark_task_running(state, task, attempt, reason)
-    record_gate_receipts(task, gate_receipts)
-    commit_state(
-        state_path,
-        state,
-        operation_id=operation_id,
-        event_type="task-started",
-        payload={"taskId": task_id, "attempt": attempt, "reason": reason},
-    )
-    return status(state_path)
 
 
 def commit_task_result(
@@ -314,7 +260,7 @@ def rework_task(
     expected_phase = "RUNNING" if state.get("schemaVersion") == WORKFLOW_STATE_V4 else "STEP_REVIEW"
     if state.get("phase") != expected_phase:
         raise LifecycleError("invalid-phase", "task rework requires STEP_REVIEW phase")
-    _require_source_and_authorization(state, source_revision)
+    require_source_and_authorization(state, source_revision)
     task = find_task(state, task_id)
     if task.get("status") != "VERIFYING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not VERIFYING")
@@ -391,7 +337,7 @@ def rework_task(
         }
     )
     task["remediationFindingIds"] = requested
-    _clear_active_attempt_references(task)
+    clear_active_attempt_references(task)
     task["status"] = "REWORK"
     task["lastReason"] = reason
     if state.get("schemaVersion") != WORKFLOW_STATE_V4:
@@ -434,62 +380,6 @@ def _validate_implementation_audit(
 
 def _mutable_state(state_path: Path, operation_id: str, expected_revision: int) -> dict[str, Any]:
     return load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
-
-
-def _require_source_and_authorization(state: dict[str, Any], source_revision: str) -> None:
-    if state.get("sourceRevision") != source_revision:
-        raise LifecycleError("source-revision-mismatch", "source revision mismatch")
-    authorization = state.get("authorization")
-    if not isinstance(authorization, dict) or authorization.get("granted") is not True:
-        raise LifecycleError("authorization-required", "execution authorization is required")
-
-
-def _require_dependencies_accepted(state: dict[str, Any], task: dict[str, Any]) -> None:
-    accepted = {item.get("id") for item in state["tasks"] if item.get("status") == "ACCEPTED"}
-    missing = sorted(set(task.get("dependsOn", [])).difference(accepted))
-    if missing:
-        raise LifecycleError(
-            "task-dependencies-missing",
-            f"task {task.get('id')} dependencies are not accepted",
-            {"missing": missing},
-        )
-
-
-def _require_parallel_capacity(state: dict[str, Any]) -> None:
-    running = sum(1 for item in state["tasks"] if item.get("status") in {"RUNNING", "VALIDATING", "VERIFYING"})
-    max_parallel = int(state.get("budgets", {}).get("maxParallelTasks", 1))
-    if running >= max_parallel:
-        raise LifecycleError("parallelism-budget-exhausted", "maxParallelTasks budget reached")
-
-
-def _mark_task_running(state: dict[str, Any], task: dict[str, Any], attempt: int, reason: str) -> None:
-    history = task.get("attemptHistory")
-    task.setdefault("attemptHistoryStart", history[0]["attempt"] if history else attempt)
-    task["attempt"] = attempt
-    task["status"] = "RUNNING"
-    _clear_active_attempt_references(task)
-    task["attemptStartedAt"] = now_iso()
-    task["attemptBaseRevision"] = state.get("sourceRevision")
-    task["attemptDeadlineAt"] = deadline_after(
-        task["attemptStartedAt"],
-        int(state.get("budgets", {}).get("maxTaskWallSeconds", 3600)),
-    )
-    task["lastReason"] = reason
-    if isinstance(task.get("modelRoute"), dict) and task["modelRoute"]:
-        validate_attempt_model_route(task)
-        task["attemptModelRoute"] = {**task["modelRoute"], "attempt": attempt}
-    if isinstance(task.get("riskExecutionProfile"), dict) and task["riskExecutionProfile"]:
-        task["attemptRiskExecutionProfile"] = {
-            **task["riskExecutionProfile"],
-            "attempt": attempt,
-        }
-        wall_cap = task["attemptRiskExecutionProfile"].get("resourceCaps", {}).get("maxWallSeconds")
-        if isinstance(wall_cap, int) and wall_cap > 0:
-            task["attemptDeadlineAt"] = deadline_after(
-                task["attemptStartedAt"],
-                min(wall_cap, int(state.get("budgets", {}).get("maxTaskWallSeconds", 3600))),
-            )
-    state["phase"] = "RUNNING"
 
 
 def _read_budget_targets(root: Path, budget_targets_path: str | None) -> dict[str, Any] | None:
@@ -676,42 +566,6 @@ def _normalize_finding_ids(finding_ids: list[str]) -> list[str]:
             {"maxFindings": MAX_REMEDIATION_FINDINGS, "maxIdLength": MAX_REMEDIATION_FINDING_ID_LENGTH},
         )
     return values
-
-
-def _clear_active_attempt_references(task: dict[str, Any]) -> None:
-    task["usageIterations"] = []
-    task["controllerGateReceipts"] = []
-    for key in (
-        "result",
-        "review",
-        "resultChangeSetEvidence",
-        "implementationAuditReport",
-        "ownershipReceipt",
-        "modelUsageReceipt",
-        "lifecycleControlPostAction",
-        "attemptModelRoute",
-        "attemptRiskExecutionProfile",
-        "attemptBaseRevision",
-        "attemptStartedAt",
-        "attemptDeadlineAt",
-        "budgetDecision",
-        "budgetDecisionApplied",
-        "lifecycleControlPreAction",
-    ):
-        task.pop(key, None)
-
-
-def _validate_task_authority_paths(state: dict[str, Any], task: dict[str, Any]) -> None:
-    """Reject pseudo-glob task authority before a task state mutation."""
-
-    for path in task.get("writes", []):
-        if isinstance(path, str):
-            normalize_authority_path(path, label="task write path")
-    policy = state.get("writePolicy", {}) if isinstance(state.get("writePolicy"), dict) else {}
-    for field in ("readOnly", "forbiddenWrites"):
-        for path in policy.get(field, []):
-            if isinstance(path, str):
-                normalize_authority_path(path, label=f"{field} path")
 
 
 def _validate_control_post_action(

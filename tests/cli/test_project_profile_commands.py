@@ -8,6 +8,8 @@ import unittest
 from pathlib import Path
 
 from agent_lifecycle.cli import main
+from tests.cli.test_project_explain import _command as _explain_command
+from tests.cli.test_project_explain import _write_bundle as _write_explain_bundle
 
 
 def _run_cli(argv: list[str]) -> tuple[int, dict[str, object]]:
@@ -34,9 +36,7 @@ class ProjectProfileCommandTests(unittest.TestCase):
     def test_init_can_set_default_adapter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            code, _receipt = _run_cli(
-                ["project", "profile", "init", "--project-root", str(root), "--adapter", "codex"]
-            )
+            code, _receipt = _run_cli(["project", "profile", "init", "--project-root", str(root), "--adapter", "codex"])
             profile = json.loads((root / ".alk/project-profile.json").read_text(encoding="utf-8"))
 
         self.assertEqual(code, 0)
@@ -77,6 +77,17 @@ class ProjectProfileCommandTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual(error["code"], "project-profile-missing")
         self.assertIn("project profile init", error["details"]["initCommand"])
+
+    def test_explain_projects_strategy_selection_without_model_calls(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            paths = _write_explain_bundle(Path(directory))
+            code, payload = _run_cli(_explain_command(paths))
+
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["selection"]["requestedRisk"], "S1")
+        self.assertEqual(payload["selection"]["winningSources"]["defaultRisk"], "preset")
+        self.assertEqual(payload["selection"]["capabilityStatus"], "PASS")
+        self.assertFalse(payload["modelCallsStarted"])
 
 
 if __name__ == "__main__":

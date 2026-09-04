@@ -60,6 +60,7 @@ def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, 
         project_profile=project_profile,
         project_profile_path=profile_path,
         project_root=project_root,
+        strategy_out_path=Path(args.strategy_out) if args.strategy_out else None,
     )
     if args.risk_profile_out:
         profile = _risk_profile(payload)

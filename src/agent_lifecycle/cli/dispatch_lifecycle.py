@@ -219,6 +219,8 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
             expected_revision=args.expected_revision,
             source_revision=args.source_revision,
             risk_profile_path=args.risk_profile,
+            strategy_path=args.strategy,
+            strategy_inputs=_strategy_inputs(args),
             reason=args.reason,
         )
     if args.workflow_command == "task-result":
@@ -695,6 +697,21 @@ def _continuation_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "finalImplementationAudit": args.final_implementation_audit,
     }
     inputs = {key: value for key, value in singular.items() if value is not None}
+    if args.strategy:
+        inputs["executionStrategy"] = args.strategy
+        strategy = _strategy_inputs(args) or {}
+        strategy_values = {
+            "strategyRequestedRisk": strategy["requestedRisk"],
+            "strategyRiskPolicy": strategy["riskPolicyPath"],
+            "strategyRoutingProfile": strategy["routingProfilePath"],
+            "strategyBaselineProfile": strategy["baselineProfilePath"],
+            "strategyDescriptor": strategy["descriptorPath"],
+            "strategyCapabilityManifest": strategy["capabilityManifestPath"],
+            "strategyProjectProfile": strategy["projectProfilePath"],
+        }
+        inputs.update({key: value for key, value in strategy_values.items() if value is not None})
+        if strategy["hostProfilePath"] is not None:
+            inputs["strategyHostProfile"] = strategy["hostProfilePath"]
     for key, values in (
         ("findingIds", args.finding_id),
         ("taskIds", args.task_id),
@@ -703,3 +720,18 @@ def _continuation_inputs(args: argparse.Namespace) -> dict[str, Any]:
         if values:
             inputs[key] = values
     return inputs
+
+
+def _strategy_inputs(args: argparse.Namespace) -> dict[str, Any] | None:
+    if not args.strategy:
+        return None
+    return {
+        "requestedRisk": args.strategy_risk,
+        "riskPolicyPath": str(args.strategy_risk_policy),
+        "routingProfilePath": str(args.strategy_routing_profile),
+        "baselineProfilePath": str(args.strategy_baseline_profile),
+        "hostProfilePath": args.strategy_host_model_profile,
+        "descriptorPath": args.strategy_descriptor,
+        "capabilityManifestPath": args.strategy_capability_manifest,
+        "projectProfilePath": args.strategy_project_profile,
+    }

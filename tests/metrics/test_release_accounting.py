@@ -16,6 +16,53 @@ from agent_lifecycle.metrics import (
 
 
 class ReleaseAccountingTests(unittest.TestCase):
+    def test_release_2_13_strategy_fixture_is_comparable_and_non_authoritative(self) -> None:
+        fixture_root = Path(__file__).parent / "fixtures"
+        baseline = json.loads((fixture_root / "release-2-13-strategy-baseline.json").read_text(encoding="utf-8"))
+        comparison_pair = json.loads(
+            (fixture_root / "release-2-10-continuation-comparison-pair.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(baseline["schemaVersion"], "agent-execution-strategy-economics-baseline.v1")
+        self.assertEqual(baseline["releaseId"], "2.13.0")
+        self.assertEqual(baseline["workloadIdentity"], comparison_pair["workloadIdentity"])
+        self.assertEqual({item["riskTier"] for item in baseline["cases"]}, {"S0", "S1", "S2"})
+        for case in baseline["cases"]:
+            with self.subTest(case=case["caseId"]):
+                automatic = case["automaticAdoption"]
+                manual = case["explicitManualRouting"]
+                self.assertEqual(automatic["status"], "MEASURED")
+                self.assertEqual(manual["status"], "MEASURED")
+                self.assertEqual(automatic["commandCount"], 1)
+                self.assertEqual(manual["commandCount"], 2)
+                self.assertEqual(automatic["modelTurns"], 0)
+                self.assertEqual(manual["modelTurns"], 0)
+                self.assertGreater(automatic["packetBytes"], 0)
+                self.assertGreater(manual["packetBytes"], 0)
+                self.assertEqual(manual["wallSeconds"], {"status": "UNAVAILABLE", "value": None})
+                self.assertTrue(case["comparison"]["qualityFloorPreserved"])
+                self.assertFalse(case["comparison"]["ratioAuthority"])
+        self.assertEqual(
+            baseline["modelTelemetry"],
+            {
+                "status": "UNAVAILABLE",
+                "inputTokens": None,
+                "cachedInputTokens": None,
+                "outputTokens": None,
+                "reason": "NO_MODEL_OR_HOST_WAS_CALLED_BY_THE_DETERMINISTIC_POLICY_MEASUREMENT",
+            },
+        )
+        self.assertEqual(set(baseline["gateOutcomes"].values()), {"PASS"})
+        self.assertTrue(baseline["qualityFloorPreserved"])
+        self.assertTrue(baseline["releaseFullRequired"])
+        self.assertFalse(baseline["automaticPolicyMutation"])
+        self.assertFalse(baseline["productionPromotionClaimed"])
+        body = {key: value for key, value in baseline.items() if key != "fixtureDigest"}
+        self.assertEqual(baseline["fixtureDigest"], canonical_digest(body))
+        serialized = json.dumps(baseline, sort_keys=True)
+        for private_marker in ("/" + "Volumes/", "/" + "Users/", "file" + "://", "C:" + "\\\\"):
+            self.assertNotIn(private_marker, serialized)
+
     def test_release_2_11_fixture_separates_workflow_implementation_audit_and_remediation(self) -> None:
         fixture_path = Path(__file__).parent / "fixtures/release-2-11-accounting.json"
         accounting = json.loads(fixture_path.read_text(encoding="utf-8"))

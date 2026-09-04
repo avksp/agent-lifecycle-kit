@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from agent_lifecycle.adapter_sessions.start_routing import resolve_managed_execution_strategy
 from agent_lifecycle.adapter_sessions.unified_start import start_lifecycle
 from agent_lifecycle.contracts import canonical_digest
 
@@ -31,6 +33,11 @@ class UnifiedStartStrategyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             manifest, lock, state = _write_frozen_bundle(root)
+            descriptor = root / "adapters/codex/adapter.descriptor.json"
+            capability = descriptor.with_name("capabilities.manifest.json")
+            descriptor.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / "adapters/codex/adapter.descriptor.json", descriptor)
+            shutil.copyfile(ROOT / "adapters/codex/capabilities.manifest.json", capability)
             request = {
                 "schemaVersion": "agent-adapter-task-run-request.v1",
                 "adapterId": "codex",
@@ -43,12 +50,27 @@ class UnifiedStartStrategyTests(unittest.TestCase):
                 "sourceRevision": "source-sha",
                 "productionPromotionClaimed": False,
             }
+            resolved = resolve_managed_execution_strategy(
+                adapter_id="codex",
+                descriptor_path=descriptor,
+                state_path=state,
+                manifest_path=manifest,
+                lock_path=lock,
+                task_id="WS-01",
+                operation_id="start-strategy",
+                expected_revision=3,
+                source_revision="source-sha",
+                requested_risk="auto",
+                host_model_profile_path=ROOT / "profiles/hosts/codex-live-profile.v1.json",
+                project_profile_path=root / ".alk/project-profile.json",
+            )
             managed = {
                 "schemaVersion": "agent-adapter-session-receipt.v1",
                 "status": "READY",
                 "blockers": [],
                 "lifecycleCoverageClaimed": True,
                 "hostLaunchStarted": False,
+                "nextAction": {"executionStrategy": resolved["strategy"]},
                 "receiptDigest": "a" * 64,
             }
             with patch(
@@ -57,6 +79,7 @@ class UnifiedStartStrategyTests(unittest.TestCase):
             ):
                 receipt = start_lifecycle(
                     adapter_id="codex",
+                    descriptor_path=descriptor,
                     mode="implement",
                     task_text=json.dumps(request),
                     host_model_profile_path=ROOT / "profiles/hosts/codex-live-profile.v1.json",
@@ -96,9 +119,7 @@ def _write_frozen_bundle(root: Path) -> tuple[Path, Path, Path]:
                 "evidenceIds": ["EV-1"],
             }
         ],
-        "acceptance": {
-            "criteria": [{"id": "AC-1", "requirementIds": ["R-1"], "evidenceIds": ["EV-1"]}]
-        },
+        "acceptance": {"criteria": [{"id": "AC-1", "requirementIds": ["R-1"], "evidenceIds": ["EV-1"]}]},
     }
     digest = canonical_digest(manifest_payload)
     lock_payload = {
