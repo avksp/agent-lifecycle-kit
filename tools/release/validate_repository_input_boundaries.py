@@ -142,19 +142,33 @@ def _code_matches(code: CodeType, namespace: dict[str, Any], source_path: Path) 
     for value in code.co_consts:
         if not isinstance(value, CodeType) or value.co_name.startswith("<"):
             continue
+        if value.co_name == "__annotate__" and value.co_name not in namespace:
+            # Python 3.14 attaches annotation code to functions, not the module.
+            annotations = [
+                getattr(inspect.unwrap(item), "__annotate__", None)
+                for item in namespace.values()
+                if inspect.isfunction(item)
+            ]
+            if not any(_function_matches(item, value, source_path) for item in annotations):
+                return False
+            continue
         actual = namespace.get(value.co_name)
         if inspect.isclass(actual):
             if not _code_matches(value, vars(actual), source_path):
                 return False
         else:
-            actual = inspect.unwrap(actual)
-            if (
-                not inspect.isfunction(actual)
-                or Path(actual.__code__.co_filename).resolve() != source_path.resolve()
-                or _normalized_code(actual.__code__) != _normalized_code(value)
-            ):
+            if not _function_matches(actual, value, source_path):
                 return False
     return True
+
+
+def _function_matches(actual: Any, expected: CodeType, source_path: Path) -> bool:
+    actual = inspect.unwrap(actual)
+    return (
+        inspect.isfunction(actual)
+        and Path(actual.__code__.co_filename).resolve() == source_path.resolve()
+        and _normalized_code(actual.__code__) == _normalized_code(expected)
+    )
 
 
 def _inspect_source(path: Path, module: ModuleType | None) -> tuple[str, dict[str, Any], list[str]]:

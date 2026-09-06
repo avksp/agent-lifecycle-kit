@@ -96,13 +96,21 @@ def read_json_object(path: Path, *, label: str | None = None) -> dict[str, Any]:
 
 def write_json_create(path: Path, value: Any) -> bytes:
     data = canonical_bytes(value) + b"\n"
-    return create_authority_bytes(path, data, private=_is_private_local_path(path))
+    try:
+        return create_authority_bytes(path, data, private=_is_private_local_path(path))
+    except LifecycleError as exc:
+        if _is_private_local_path(path):
+            raise _private_storage_error(exc) from None
+        raise
 
 
 def ensure_private_directory(path: Path) -> Path:
     """Create or validate a private local directory without overclaiming Windows ACLs."""
 
-    return ensure_authority_directory(path, private=True)
+    try:
+        return ensure_authority_directory(path, private=True)
+    except LifecycleError as exc:
+        raise _private_storage_error(exc) from None
 
 
 def require_private_file(path: Path) -> Path:
@@ -114,6 +122,8 @@ def require_private_file(path: Path) -> Path:
                 raise LifecycleError("private-file-mode-invalid", "private storage file does not use owner-only mode")
     except FileNotFoundError:
         raise LifecycleError("private-file-invalid", "private storage file is invalid") from None
+    except LifecycleError as exc:
+        raise _private_storage_error(exc) from None
     return path
 
 
@@ -121,14 +131,34 @@ def write_json_create_private(path: Path, value: Any) -> bytes:
     """Write one canonical JSON artifact with owner-only POSIX permissions."""
 
     data = canonical_bytes(value) + b"\n"
-    return create_authority_bytes(path, data, private=True)
+    try:
+        return create_authority_bytes(path, data, private=True)
+    except LifecycleError as exc:
+        raise _private_storage_error(exc) from None
 
 
 def write_json_replace_private(path: Path, value: Any) -> bytes:
     """Atomically replace a canonical JSON artifact with owner-only permissions."""
 
     data = canonical_bytes(value) + b"\n"
-    return replace_authority_bytes(path, data)
+    try:
+        return replace_authority_bytes(path, data)
+    except LifecycleError as exc:
+        raise _private_storage_error(exc) from None
+
+
+def _private_storage_error(error: LifecycleError) -> LifecycleError:
+    """Preserve established private-storage errors; retain new race/cap failures."""
+
+    legacy = {
+        "authority-input-not-regular": ("private-file-invalid", "private storage file is invalid"),
+        "authority-input-symlink": ("private-directory-symlink", "private directory must not be a symlink"),
+        "authority-directory-unavailable": ("private-directory-unavailable", "private storage directory is unavailable"),
+        "authority-output-unavailable": ("private-file-write-failed", "private storage file could not be written"),
+    }
+    if error.code in legacy:
+        return LifecycleError(*legacy[error.code])
+    return error
 
 
 def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:

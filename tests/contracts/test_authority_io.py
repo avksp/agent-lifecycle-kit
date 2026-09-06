@@ -104,6 +104,17 @@ class AuthorityReadTests(unittest.TestCase):
 
 
 class AuthorityWriteTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "POSIX permissions; not a Windows ACL claim")
+    def test_private_write_does_not_chmod_ancestors_above_explicit_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ancestor = Path(directory) / ".alk"
+            root = ancestor / "project"
+            root.mkdir(parents=True)
+            ancestor.chmod(0o755)
+            authority_io.create_authority_bytes(root / "private" / "document", b"data", root=root, private=True)
+            self.assertEqual(ancestor.stat().st_mode & 0o777, 0o755)
+            self.assertEqual((root / "private").stat().st_mode & 0o777, 0o700)
+
     def test_native_create_replace_append_keep_byte_identity(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

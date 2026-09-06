@@ -200,6 +200,7 @@ def _parent(
     root: Path, relative_name: str, *, create: bool = False, private: bool = False
 ) -> Iterator[tuple[_Directory, str]]:
     _require_primitives()
+    authority_depth = len(root.parts) - 1
     parts = (*root.parts[1:], *_relative_parts(relative_name))
     root = Path(root.anchor)
     with ExitStack() as stack:
@@ -237,7 +238,9 @@ def _parent(
             stack.callback(child.close)
             if child.fd is not None:
                 _same_identity(before, os.fstat(child.fd))
-            private_started |= part == ".alk" or made or index == len(parts) - 2
+            private_started |= index >= authority_depth - 1 and (
+                part == ".alk" or made or index == len(parts) - 2
+            )
             if private and private_started and child.fd is not None:
                 os.fchmod(child.fd, 0o700)
                 before = os.fstat(child.fd)
@@ -326,6 +329,8 @@ def create_authority_bytes(path: Path, data: bytes, *, root: Path | None = None,
     mode = 0o600 if private else 0o644
     try:
         with _parent(root, name, create=True, private=private) as (parent, leaf):
+            with suppress(FileNotFoundError):
+                _require_regular(parent.stat_child(leaf))
             fd = parent.write_child(leaf, append=False, mode=mode)
             _write_fd(fd, data, mode=mode if private else None)
             parent.sync()

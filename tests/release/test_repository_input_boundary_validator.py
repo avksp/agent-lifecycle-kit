@@ -114,6 +114,18 @@ class RepositoryInputBoundaryValidatorTests(unittest.TestCase):
             _, _, errors = _inspect_source(source, authority_io)
             self.assertIn("source-runtime-origin-mismatch", errors)
 
+    def test_runtime_annotation_binding_is_checked_when_available(self):
+        function = paths.normalize_repo_path
+        annotation = getattr(function, "__annotate__", None)
+        if annotation is None:
+            return
+        try:
+            function.__annotate__ = lambda *_a: {}
+            _, _, errors = _inspect_source(Path(paths.__file__), paths)
+        finally:
+            function.__annotate__ = annotation
+        self.assertIn("source-runtime-code-mismatch", errors)
+
     def test_live_runtime_replacement_cannot_be_attested_from_unchanged_disk(self):
         with patch.object(paths, "read_stable_repository_file", lambda *_a, **_kw: b"unsafe"):
             payload = validate_sources(ROOT / "src/agent_lifecycle")
