@@ -8,10 +8,44 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agent_lifecycle.contracts.persistence import create_private_json, require_private_json, replace_private_json
+from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts.persistence import create_private_json, replace_private_json, require_private_json
 
 
 class PersistenceTests(unittest.TestCase):
+    def test_private_file_symlink_keeps_error_family_without_mutating_target(self) -> None:
+        for operation in (require_private_json, create_private_json, replace_private_json):
+            with self.subTest(operation=operation.__name__), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = root / "target"
+                target.write_bytes(b"original")
+                link = root / "link"
+                link.symlink_to(target)
+                with self.assertRaises(LifecycleError) as raised:
+                    if operation is require_private_json:
+                        operation(link)
+                    else:
+                        operation(link, {"value": "must not write"})
+                self.assertEqual(raised.exception.code, "private-file-invalid")
+                self.assertEqual(target.read_bytes(), b"original")
+
+    def test_private_directory_symlink_keeps_error_family(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            target.mkdir()
+            (root / "link").symlink_to(target, target_is_directory=True)
+            with self.assertRaises(LifecycleError) as raised:
+                create_private_json(root / "link" / "state.json", {"value": 1})
+            self.assertEqual(raised.exception.code, "private-directory-symlink")
+            self.assertEqual(list(target.iterdir()), [])
+
+    def test_missing_private_file_keeps_the_structured_polling_error(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(LifecycleError) as raised:
+                require_private_json(Path(directory) / "not-created" / "state.json")
+            self.assertEqual(raised.exception.code, "private-file-invalid")
+
     def test_create_replace_and_require_preserve_private_atomic_storage(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / ".alk" / "state.json"

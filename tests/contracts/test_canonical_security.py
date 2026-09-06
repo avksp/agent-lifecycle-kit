@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import stat
 import tempfile
+import traceback
 import unittest
 from pathlib import Path
 
@@ -14,16 +16,74 @@ from agent_lifecycle.contracts.canonical import (
     PRIVATE_DIRECTORY_MODE,
     PRIVATE_FILE_MODE,
     canonical_bytes,
+    canonical_digest,
     load_json_object,
     read_json_object,
-    write_json_create_private,
     write_json_create,
+    write_json_create_private,
 )
 
 
 class CanonicalSecurityTests(unittest.TestCase):
+    def test_duplicate_members_are_rejected_without_input_in_diagnostics(self) -> None:
+        payloads = (
+            b'{"actor":"worker","actor":"reviewer"}',
+            b'{"nested":{"actor":1,"actor":2}}',
+            b'{"list":[{"actor":1,"a\\u0063tor":2}]}',
+            b'{"/private/sensitive-key":"sensitive-value","/private/sensitive-key":false}',
+        )
+        for payload in payloads:
+            with self.subTest(payload=payload):
+                try:
+                    load_json_object(payload)
+                except LifecycleError as exc:
+                    self.assertEqual(exc.code, "invalid-json")
+                    self.assertEqual(exc.message, "JSON input is invalid")
+                    self.assertIsNone(exc.__cause__)
+                    self.assertTrue(exc.__suppress_context__)
+                    diagnostic = "".join(traceback.format_exception(exc)) + json.dumps(exc.to_json())
+                    self.assertNotIn("sensitive-key", diagnostic)
+                    self.assertNotIn("sensitive-value", diagnostic)
+                    self.assertNotIn("duplicate JSON member", diagnostic)
+                else:
+                    self.fail("ambiguous JSON was accepted")
+
+    def test_distinct_members_preserve_canonical_bytes_and_digest(self) -> None:
+        value = load_json_object(b'{"z":[{"a":1},{"a":2}],"a":true}')
+        self.assertEqual(canonical_bytes(value), b'{"a":true,"z":[{"a":1},{"a":2}]}')
+        expected = hashlib.sha256(b'{"a":true,"z":[{"a":1},{"a":2}]}').hexdigest()
+        self.assertEqual(canonical_digest(value), expected)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "artifact.json"
+            write_json_create(path, value)
+            self.assertEqual(path.read_bytes(), b'{"a":true,"z":[{"a":1},{"a":2}]}\n')
+
+    def test_parser_error_chain_does_not_echo_invalid_utf8_payload(self) -> None:
+        payload = b'{"/private/sensitive-key":"sensitive-value\xff"}'
+        try:
+            load_json_object(payload)
+        except LifecycleError as exc:
+            self.assertEqual(exc.code, "invalid-json")
+            diagnostic = "".join(traceback.format_exception(exc))
+            self.assertNotIn("UnicodeDecodeError", diagnostic)
+            self.assertNotIn("sensitive-key", diagnostic)
+            self.assertNotIn("sensitive-value", diagnostic)
+        else:
+            self.fail("invalid UTF-8 was accepted")
+
+    def test_duplicate_file_read_preserves_input_and_creates_no_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "input.json"
+            payload = b'{"stateRevision":1,"stateRevision":2}'
+            path.write_bytes(payload)
+            with self.assertRaises(LifecycleError) as raised:
+                read_json_object(path)
+            self.assertEqual(raised.exception.code, "invalid-json")
+            self.assertEqual(path.read_bytes(), payload)
+            self.assertEqual(list(Path(tmp).iterdir()), [path])
+
     def test_json_input_is_bounded_and_unicode_is_preserved(self) -> None:
-        self.assertEqual(load_json_object('{"message":"Привет"}'.encode("utf-8"))["message"], "Привет")
+        self.assertEqual(load_json_object('{"message":"Привет"}'.encode())["message"], "Привет")
         with self.assertRaisesRegex(LifecycleError, "byte limit") as raised:
             load_json_object(b'{"value":"' + b"x" * MAX_JSON_INPUT_BYTES + b'"}')
         self.assertEqual(raised.exception.code, "json-input-too-large")

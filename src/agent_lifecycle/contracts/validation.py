@@ -6,6 +6,7 @@ import ast
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.errors import LifecycleError
 
 
@@ -33,15 +34,15 @@ def load_bounded_literal_profile(
     if not resolved.is_file():
         raise LifecycleError(f"{error_prefix}-path", "literal profile must be a regular file")
     try:
-        if resolved.stat().st_size > max_bytes:
-            raise LifecycleError(f"{error_prefix}-too-large", "literal profile exceeds its size limit")
-        source = resolved.read_text(encoding="utf-8")
-    except LifecycleError:
-        raise
+        source = read_authority_bytes(lexical_candidate, root=lexical_root, max_bytes=max_bytes).decode("utf-8")
+    except LifecycleError as exc:
+        if exc.code == "authority-input-too-large":
+            raise LifecycleError(f"{error_prefix}-too-large", "literal profile exceeds its size limit") from None
+        raise LifecycleError(f"{error_prefix}-path", "literal profile cannot be safely read") from None
     except (OSError, UnicodeDecodeError) as exc:
         raise LifecycleError(f"{error_prefix}-invalid", "literal profile cannot be read") from exc
     try:
-        tree = ast.parse(source, filename=resolved.as_posix())
+        tree = ast.parse(source, filename="<literal profile>")
     except (SyntaxError, ValueError) as exc:
         raise LifecycleError(f"{error_prefix}-invalid", "literal profile cannot be parsed") from exc
     statements = list(tree.body)
@@ -55,7 +56,11 @@ def load_bounded_literal_profile(
     if len(statements) != 1 or not isinstance(statements[0], ast.Assign):
         raise LifecycleError(f"{error_prefix}-not-literal", "literal profile must contain only PROFILE")
     assignment = statements[0]
-    if len(assignment.targets) != 1 or not isinstance(assignment.targets[0], ast.Name) or assignment.targets[0].id != "PROFILE":
+    if (
+        len(assignment.targets) != 1
+        or not isinstance(assignment.targets[0], ast.Name)
+        or assignment.targets[0].id != "PROFILE"
+    ):
         raise LifecycleError(f"{error_prefix}-not-literal", "literal profile must assign PROFILE")
     try:
         profile = ast.literal_eval(assignment.value)
