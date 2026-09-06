@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
+import platform
+import plistlib
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,7 +17,91 @@ from unittest.mock import patch
 from agent_lifecycle.contracts import LifecycleError, authority_io
 
 
+def _filesystem_type(root: Path) -> str:
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        api = ctypes.WinDLL("kernel32", use_last_error=True)
+        api.GetVolumeInformationW.argtypes = [
+            wintypes.LPCWSTR,
+            wintypes.LPWSTR,
+            wintypes.DWORD,
+            ctypes.POINTER(wintypes.DWORD),
+            ctypes.POINTER(wintypes.DWORD),
+            ctypes.POINTER(wintypes.DWORD),
+            wintypes.LPWSTR,
+            wintypes.DWORD,
+        ]
+        api.GetVolumeInformationW.restype = wintypes.BOOL
+        name = ctypes.create_unicode_buffer(256)
+        if not api.GetVolumeInformationW(root.anchor, None, 0, None, None, None, name, len(name)):
+            raise RuntimeError("native filesystem metadata unavailable")
+        return name.value
+    if sys.platform == "darwin":
+        device = (
+            subprocess.check_output(["df", "-P", str(root)], text=True, stdin=subprocess.DEVNULL, timeout=10)
+            .splitlines()[1]
+            .split()[0]
+        )
+        info = plistlib.loads(
+            subprocess.check_output(["diskutil", "info", "-plist", device], stdin=subprocess.DEVNULL, timeout=10)
+        )
+        return str(info["FilesystemType"])
+    return subprocess.check_output(
+        ["stat", "-f", "-c", "%T", str(root)], text=True, stdin=subprocess.DEVNULL, timeout=10
+    ).strip()
+
+
 class AuthorityReadTests(unittest.TestCase):
+    def test_native_environment_metadata_is_observed_not_acceptance(self) -> None:
+        repository = Path(__file__).resolve().parents[2]
+        names = (
+            "src/agent_lifecycle/contracts/authority_io.py",
+            "src/agent_lifecycle/contracts/canonical.py",
+            "src/agent_lifecycle/contracts/persistence.py",
+            "src/agent_lifecycle/contracts/paths.py",
+            "src/agent_lifecycle/workflow/state.py",
+            "src/agent_lifecycle/workflow/events.py",
+            "src/agent_lifecycle/workflow/artifacts.py",
+            "src/agent_lifecycle/workflow/operation_kernel.py",
+            "tools/release/validate_repository_input_boundaries.py",
+            "tools/release/validate_input_privacy.py",
+            "tests/contracts/test_authority_io.py",
+            "tests/contracts/test_persistence.py",
+            "tests/workflow/test_event_boundaries.py",
+            "tests/workflow/test_state_contract.py",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            filesystem = _filesystem_type(root)
+            self.assertTrue(filesystem)
+            if os.name == "nt":
+                api = authority_io._windows_api()
+                primitives = {
+                    name: callable(getattr(api, name))
+                    for name in ("CreateFileW", "GetFileInformationByHandleEx", "CloseHandle")
+                }
+            else:
+                primitives = {
+                    "O_NOFOLLOW": bool(os.O_NOFOLLOW),
+                    "O_DIRECTORY": bool(os.O_DIRECTORY),
+                    "open_dir_fd": os.open in os.supports_dir_fd,
+                    "stat_dir_fd": os.stat in os.supports_dir_fd,
+                }
+            self.assertTrue(all(primitives.values()))
+            payload = {
+                "platform": platform.system(),
+                "python": platform.python_version(),
+                "filesystem": filesystem,
+                "primitives": primitives,
+                "sourceFiles": {name: hashlib.sha256((repository / name).read_bytes()).hexdigest() for name in names},
+                "testId": self.id(),
+                "runtimeMetadataOnly": True,
+                "acceptanceClaimed": False,
+            }
+            print("ALK_NATIVE_CONTAINMENT " + json.dumps(payload, sort_keys=True, separators=(",", ":")), flush=True)
+
     def test_native_contained_read_and_cap(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -40,7 +130,6 @@ class AuthorityReadTests(unittest.TestCase):
                 with self.subTest(name=name), self.assertRaises(LifecycleError):
                     authority_io.read_authority_bytes(Path(directory) / name, max_bytes=32)
 
-    @unittest.skipIf(os.name == "nt", "POSIX rename race; Windows held handles deny this mutation")
     def test_final_replacement_between_stat_and_open_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -58,7 +147,6 @@ class AuthorityReadTests(unittest.TestCase):
                 authority_io.read_authority_bytes(path, root=root, max_bytes=32)
             self.assertEqual(raised.exception.code, "authority-input-changed")
 
-    @unittest.skipIf(os.name == "nt", "POSIX rename race; Windows held handles deny this mutation")
     def test_parent_swap_cannot_redirect_the_descriptor_to_an_outside_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -72,26 +160,46 @@ class AuthorityReadTests(unittest.TestCase):
             consumed = []
 
             def swap(handle, name):
-                parent.rename(root / "moved")
-                parent.symlink_to(outside, target_is_directory=True)
+                if os.name == "nt":
+                    with self.assertRaises(PermissionError):
+                        parent.rename(root / "moved")
+                else:
+                    parent.rename(root / "moved")
+                    parent.symlink_to(outside, target_is_directory=True)
                 fd = original(handle, name)
                 consumed.append(os.read(fd, 32))
                 os.lseek(fd, 0, os.SEEK_SET)
                 return fd
 
-            with patch.object(authority_io._Directory, "open_child", swap), self.assertRaises(LifecycleError):
-                authority_io.read_authority_bytes(parent / "document", root=root, max_bytes=32)
+            with patch.object(authority_io._Directory, "open_child", swap):
+                if os.name == "nt":
+                    self.assertEqual(
+                        authority_io.read_authority_bytes(parent / "document", root=root, max_bytes=32), b"inside"
+                    )
+                    self.assertFalse((root / "moved").exists())
+                else:
+                    with self.assertRaises(LifecycleError):
+                        authority_io.read_authority_bytes(parent / "document", root=root, max_bytes=32)
             self.assertEqual(consumed, [b"inside"])
+            self.assertEqual((outside / "document").read_bytes(), b"outside")
 
-    @unittest.skipIf(os.name == "nt", "POSIX concurrent write; Windows reader denies write sharing")
     def test_disappearance_after_read_is_not_reported_as_an_absent_journal(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "journal"
             path.write_bytes(b"record\n")
-            with self.assertRaises(LifecycleError) as raised, authority_io.open_authority_read(path) as handle:
-                self.assertEqual(handle.read(), b"record\n")
-                path.unlink()
-            self.assertEqual(raised.exception.code, "authority-input-changed")
+            if os.name == "nt":
+                with authority_io.open_authority_read(path) as handle:
+                    with self.assertRaises(PermissionError):
+                        path.unlink()
+                    with self.assertRaises(PermissionError):
+                        path.write_bytes(b"modified")
+                    self.assertEqual(handle.read(), b"record\n")
+                self.assertEqual(path.read_bytes(), b"record\n")
+            else:
+                with self.assertRaises(LifecycleError) as raised, authority_io.open_authority_read(path) as handle:
+                    self.assertEqual(handle.read(), b"record\n")
+                    path.unlink()
+                self.assertEqual(raised.exception.code, "authority-input-changed")
 
     @unittest.skipIf(os.name == "nt", "POSIX primitive availability contract")
     def test_missing_no_follow_primitive_fails_closed(self) -> None:
@@ -143,7 +251,6 @@ class AuthorityWriteTests(unittest.TestCase):
                 self.assertEqual(path.stat().st_mode & 0o777, 0o600)
                 self.assertEqual(path.parent.stat().st_mode & 0o777, 0o700)
 
-    @unittest.skipIf(os.name == "nt", "POSIX symlink fixtures; native Windows mutation evidence is separate")
     def test_parent_symlink_never_redirects_create_replace_or_append(self) -> None:
         for operation in (
             authority_io.create_authority_bytes,
@@ -161,7 +268,6 @@ class AuthorityWriteTests(unittest.TestCase):
                     operation(root / "link" / "document", b"must-not-write", root=root)
                 self.assertEqual(target.read_bytes(), b"unchanged")
 
-    @unittest.skipIf(os.name == "nt", "POSIX symlink fixtures; native Windows mutation evidence is separate")
     def test_final_symlink_never_mutates_the_target(self) -> None:
         for operation in (
             authority_io.create_authority_bytes,

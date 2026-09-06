@@ -14,6 +14,9 @@ class WorkflowStateContractTests(unittest.TestCase):
         for field, value in (
             ("event_log", "../outside.jsonl"),
             ("event_log", "C:events.jsonl"),
+            ("event_log", "C:/events.jsonl"),
+            ("event_log", "//server/share/events.jsonl"),
+            ("event_log", "\\\\server\\share\\events.jsonl"),
             ("event_log", "events.jsonl:stream"),
             ("package_root", "C:/outside"),
         ):
