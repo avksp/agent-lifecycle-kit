@@ -188,7 +188,7 @@ class _Directory:
         if self.fd is not None:
             os.replace(source, destination, src_dir_fd=self.fd, dst_dir_fd=self.fd)
         else:
-            (self.path / source).replace(self.path / destination)
+            _windows_replace(self, source, destination)
 
     def sync(self) -> None:
         if self.fd is not None:
@@ -411,6 +411,8 @@ def _windows_api() -> Any:
     api.CloseHandle.restype = wintypes.BOOL
     api.GetFileInformationByHandleEx.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD]
     api.GetFileInformationByHandleEx.restype = wintypes.BOOL
+    api.SetFileInformationByHandle.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD]
+    api.SetFileInformationByHandle.restype = wintypes.BOOL
     return api
 
 
@@ -422,7 +424,7 @@ def _windows_open(path: Path, *, directory: bool, operation: str = "read") -> in
 
     api = _windows_api()
     # Hold read access and exclude both rename and in-place reparse writers.
-    access = {"read": 0x80000000, "create": 0x40000000, "append": 0x40000000}[operation]
+    access = {"read": 0x80000000, "create": 0x40000000, "append": 0x40000000, "rename": 0x00010000}[operation]
     handle = api.CreateFileW(
         str(path),
         0x80000000 if directory else access,
@@ -453,6 +455,33 @@ def _windows_open(path: Path, *, directory: bool, operation: str = "read") -> in
 
 def _windows_directory(path: Path) -> int:
     return _windows_open(path, directory=True)
+
+
+def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
+    """Rename against the held directory without reopening it for write access."""
+    import ctypes
+    from ctypes import wintypes
+
+    if parent.handle is None:
+        raise LifecycleError("authority-io-unavailable", "Windows directory handle is unavailable")
+    name = destination.encode("utf-16-le")
+
+    class RenameInfo(ctypes.Structure):
+        _fields_ = [
+            ("ReplaceIfExists", wintypes.DWORD),
+            ("RootDirectory", wintypes.HANDLE),
+            ("FileNameLength", wintypes.DWORD),
+            ("FileName", wintypes.WCHAR * (len(name) // 2 + 1)),
+        ]
+
+    info = RenameInfo(1, parent.handle, len(name))
+    ctypes.memmove(ctypes.addressof(info) + RenameInfo.FileName.offset, name, len(name))
+    handle = _windows_open(parent.path / source, directory=False, operation="rename")
+    try:
+        if not _windows_api().SetFileInformationByHandle(handle, 3, ctypes.byref(info), ctypes.sizeof(info)):
+            raise LifecycleError("authority-output-unavailable", "authority output cannot be safely replaced")
+    finally:
+        _windows_close(handle)
 
 
 def _windows_file(path: Path, *, operation: str = "read") -> int:
