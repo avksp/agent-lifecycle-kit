@@ -49,7 +49,7 @@ class WorkflowEventBoundaryTests(unittest.TestCase):
                 touched = []
 
                 def substitute(parent, name):
-                    replacement.replace(path)
+                    parent.replace_child(replacement.name, path.name)
                     touched.append(name)
                     return original(parent, name)
 
@@ -149,7 +149,7 @@ class WorkflowEventBoundaryTests(unittest.TestCase):
 
             def substitute(parent, name):
                 if name == "events.jsonl":
-                    replacement.replace(journal)
+                    parent.replace_child(replacement.name, journal.name)
                     substitutions.append(name)
                 return original(parent, name)
 

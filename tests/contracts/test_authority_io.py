@@ -181,12 +181,13 @@ class AuthorityReadTests(unittest.TestCase):
             original = authority_io._Directory.open_child
 
             def swap(parent, name):
-                replacement.replace(path)
+                parent.replace_child(replacement.name, path.name)
                 return original(parent, name)
 
             with patch.object(authority_io._Directory, "open_child", swap), self.assertRaises(LifecycleError) as raised:
                 authority_io.read_authority_bytes(path, root=root, max_bytes=32)
             self.assertEqual(raised.exception.code, "authority-input-changed")
+            self.assertEqual(path.read_bytes(), b"modified")
 
     def test_parent_swap_cannot_redirect_the_descriptor_to_an_outside_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -412,6 +413,10 @@ class AuthorityWriteTests(unittest.TestCase):
                 if mutation == ["denied"]:
                     self.assertEqual(os.name, "nt")
                     self.assertIsNone(failure)
+                    expected = b"must-stay-inside"
+                    if operation is authority_io.append_authority_bytes:
+                        expected = b"inside" + expected
+                    self.assertEqual((parent / "document").read_bytes(), expected)
                 else:
                     self.assertEqual(mutation, ["substituted"])
                     self.assertIsNotNone(failure)
