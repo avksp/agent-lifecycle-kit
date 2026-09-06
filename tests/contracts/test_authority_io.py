@@ -110,6 +110,8 @@ class AuthorityReadTests(unittest.TestCase):
             "tests/contracts/test_persistence.py",
             "tests/workflow/test_event_boundaries.py",
             "tests/workflow/test_state_contract.py",
+            "tests/release/test_input_privacy_validator.py",
+            "tests/release/test_repository_input_boundary_validator.py",
         )
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -446,7 +448,10 @@ class AuthorityWriteTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 authority_io.create_authority_bytes(path, b"overwrite", root=root)
             self.assertEqual(path.read_bytes(), b"one\n")
-            authority_io.replace_authority_bytes(path, b"two\n", root=root)
+            try:
+                authority_io.replace_authority_bytes(path, b"two\n", root=root)
+            except LifecycleError as exc:
+                self.fail(str(exc.to_json()))
             authority_io.append_authority_bytes(path, b"three\n", root=root)
             self.assertEqual(path.read_bytes(), b"two\nthree\n")
             self.assertEqual(sorted(item.name for item in path.parent.iterdir()), ["document"])

@@ -458,7 +458,7 @@ def _windows_directory(path: Path) -> int:
 
 
 def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
-    """Rename against the held directory without reopening it for write access."""
+    """Rename within the source handle's directory while its parent stays guarded."""
     import ctypes
     from ctypes import wintypes
 
@@ -474,12 +474,17 @@ def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
             ("FileName", wintypes.WCHAR * (len(name) // 2 + 1)),
         ]
 
-    info = RenameInfo(1, parent.handle, len(name))
+    # A simple name with a null root means a same-directory rename, not a move.
+    info = RenameInfo(1, None, len(name))
     ctypes.memmove(ctypes.addressof(info) + RenameInfo.FileName.offset, name, len(name))
     handle = _windows_open(parent.path / source, directory=False, operation="rename")
     try:
         if not _windows_api().SetFileInformationByHandle(handle, 3, ctypes.byref(info), ctypes.sizeof(info)):
-            raise LifecycleError("authority-output-unavailable", "authority output cannot be safely replaced")
+            raise LifecycleError(
+                "authority-output-unavailable",
+                "authority output cannot be safely replaced",
+                {"windowsError": ctypes.get_last_error()},
+            )
     finally:
         _windows_close(handle)
 

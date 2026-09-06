@@ -14,7 +14,7 @@ from tools.release.validate_repository_input_boundaries import (
     validate_sources,
 )
 
-from agent_lifecycle.contracts import authority_io, paths
+from agent_lifecycle.contracts import authority_io, canonical_bytes, paths
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -35,6 +35,7 @@ class RepositoryInputBoundaryValidatorTests(unittest.TestCase):
         self.assertTrue(payload["requiredProperties"]["stableRegularFileContainment"])
         self.assertTrue(payload["requiredProperties"]["symlinksRejected"])
         self.assertTrue(payload["requiredProperties"]["artifactRecognitionSeparateFromValidation"])
+        print("ALK_REPOSITORY_BOUNDARY_REPORT " + canonical_bytes(payload).decode("utf-8"), flush=True)
 
     def test_validator_requires_each_boundary_source_and_regression_test(self) -> None:
         payload = validate_sources(ROOT / "src/agent_lifecycle")

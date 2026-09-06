@@ -38,6 +38,7 @@ class InputPrivacyValidatorTests(unittest.TestCase):
         self.assertEqual(payload["permissionContract"]["platform"], expected_platform)
         self.assertEqual(payload["permissionContract"]["posixModesAuthoritative"], os.name != "nt")
         self.assertFalse(any(Path(item["name"]).is_absolute() for item in payload["files"]))
+        print("ALK_INPUT_PRIVACY_REPORT " + canonical.canonical_bytes(payload).decode("utf-8"), flush=True)
 
     def test_validator_fails_when_a_required_boundary_is_removed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
