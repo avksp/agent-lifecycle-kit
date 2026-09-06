@@ -421,7 +421,7 @@ def _windows_open(path: Path, *, directory: bool, operation: str = "read") -> in
     from ctypes import wintypes
 
     api = _windows_api()
-    # No SHARE_DELETE: the held ancestor cannot be renamed during a child operation.
+    # Omit SHARE_DELETE, but still check identity: some directory renames can succeed.
     access = {"read": 0x80000000, "create": 0x40000000, "append": 0x40000000}[operation]
     handle = api.CreateFileW(
         str(path),

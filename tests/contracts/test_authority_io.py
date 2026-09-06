@@ -158,29 +158,44 @@ class AuthorityReadTests(unittest.TestCase):
             (outside / "document").write_bytes(b"outside")
             original = authority_io._Directory.open_child
             consumed = []
+            mutation = []
 
             def swap(handle, name):
-                if os.name == "nt":
-                    with self.assertRaises(PermissionError):
-                        parent.rename(root / "moved")
-                else:
+                try:
                     parent.rename(root / "moved")
+                except PermissionError:
+                    if os.name != "nt":
+                        raise
+                    mutation.append("denied")
+                else:
+                    mutation.append("substituted")
                     parent.symlink_to(outside, target_is_directory=True)
                 fd = original(handle, name)
-                consumed.append(os.read(fd, 32))
-                os.lseek(fd, 0, os.SEEK_SET)
+                if os.name != "nt":
+                    consumed.append(os.read(fd, 32))
+                    os.lseek(fd, 0, os.SEEK_SET)
                 return fd
 
+            yielded = []
+            failure = None
             with patch.object(authority_io._Directory, "open_child", swap):
-                if os.name == "nt":
-                    self.assertEqual(
-                        authority_io.read_authority_bytes(parent / "document", root=root, max_bytes=32), b"inside"
-                    )
-                    self.assertFalse((root / "moved").exists())
-                else:
-                    with self.assertRaises(LifecycleError):
-                        authority_io.read_authority_bytes(parent / "document", root=root, max_bytes=32)
-            self.assertEqual(consumed, [b"inside"])
+                try:
+                    with authority_io.open_authority_read(parent / "document", root=root) as handle:
+                        yielded.append(handle.read(32))
+                except LifecycleError as exc:
+                    failure = exc.code
+            if mutation == ["denied"]:
+                self.assertEqual(os.name, "nt")
+                self.assertIsNone(failure)
+                self.assertEqual(yielded, [b"inside"])
+                self.assertFalse((root / "moved").exists())
+            else:
+                self.assertEqual(mutation, ["substituted"])
+                self.assertEqual(failure, "authority-input-changed")
+                self.assertEqual(yielded, [b"inside"] if os.name != "nt" else [])
+                self.assertTrue(parent.is_symlink())
+            if os.name != "nt":
+                self.assertEqual(consumed, [b"inside"])
             self.assertEqual((outside / "document").read_bytes(), b"outside")
 
     def test_disappearance_after_read_is_not_reported_as_an_absent_journal(self) -> None:
