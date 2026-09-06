@@ -421,12 +421,12 @@ def _windows_open(path: Path, *, directory: bool, operation: str = "read") -> in
     from ctypes import wintypes
 
     api = _windows_api()
-    # Metadata-only directory opens do not enforce share exclusion; hold read access.
+    # Hold read access and exclude both rename and in-place reparse writers.
     access = {"read": 0x80000000, "create": 0x40000000, "append": 0x40000000}[operation]
     handle = api.CreateFileW(
         str(path),
         0x80000000 if directory else access,
-        3 if directory else 1,
+        1,
         None,
         1 if operation == "create" else 3,
         0x00200000 | (0x02000000 if directory else 0),

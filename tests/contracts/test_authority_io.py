@@ -266,6 +266,27 @@ class AuthorityReadTests(unittest.TestCase):
 
 
 class AuthorityWriteTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows sharing requires native Windows")
+    def test_windows_existing_directory_writer_blocks_authority(self) -> None:
+        import ctypes
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            parent = root / "parent"
+            parent.mkdir()
+            api = authority_io._windows_api()
+            handle = api.CreateFileW(str(parent), 0x40000000, 7, None, 3, 0x02200000, None)
+            self.assertNotEqual(handle, ctypes.c_void_p(-1).value)
+            try:
+                with self.assertRaises(LifecycleError) as raised:
+                    authority_io.create_authority_bytes(parent / "document", b"data", root=root)
+                self.assertEqual(raised.exception.code, "authority-input-unavailable")
+                self.assertEqual(list(parent.iterdir()), [])
+            finally:
+                api.CloseHandle(handle)
+            authority_io.create_authority_bytes(parent / "document", b"data", root=root)
+            self.assertEqual((parent / "document").read_bytes(), b"data")
+
     @unittest.skipUnless(os.name == "nt", "Windows FSCTL requires native Windows")
     def test_windows_native_reparse_primitive_controls(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
