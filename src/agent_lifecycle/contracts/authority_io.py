@@ -411,8 +411,6 @@ def _windows_api() -> Any:
     api.CloseHandle.restype = wintypes.BOOL
     api.GetFileInformationByHandleEx.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD]
     api.GetFileInformationByHandleEx.restype = wintypes.BOOL
-    api.SetFileInformationByHandle.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD]
-    api.SetFileInformationByHandle.restype = wintypes.BOOL
     return api
 
 
@@ -459,6 +457,8 @@ def _windows_directory(path: Path) -> int:
 
 def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
     """Rename within the source handle's directory while its parent stays guarded."""
+    if sys.platform != "win32":
+        raise LifecycleError("authority-io-unavailable", "Windows authority I/O is unavailable")
     import ctypes
     from ctypes import wintypes
 
@@ -474,16 +474,30 @@ def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
             ("FileName", wintypes.WCHAR * (len(name) // 2 + 1)),
         ]
 
-    # A simple name with a null root means a same-directory rename, not a move.
+    class IoStatus(ctypes.Structure):
+        _fields_ = [("StatusOrPointer", ctypes.c_void_p), ("Information", ctypes.c_size_t)]
+
+    # Native simple-name rename avoids Win32 path expansion and target-directory reopen.
     info = RenameInfo(1, None, len(name))
     ctypes.memmove(ctypes.addressof(info) + RenameInfo.FileName.offset, name, len(name))
+    api = ctypes.WinDLL("ntdll")
+    api.NtSetInformationFile.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(IoStatus),
+        wintypes.LPVOID,
+        wintypes.ULONG,
+        ctypes.c_int,
+    ]
+    api.NtSetInformationFile.restype = wintypes.LONG
+    io_status = IoStatus()
     handle = _windows_open(parent.path / source, directory=False, operation="rename")
     try:
-        if not _windows_api().SetFileInformationByHandle(handle, 3, ctypes.byref(info), ctypes.sizeof(info)):
+        status = api.NtSetInformationFile(handle, ctypes.byref(io_status), ctypes.byref(info), ctypes.sizeof(info), 10)
+        if status != 0:
             raise LifecycleError(
                 "authority-output-unavailable",
                 "authority output cannot be safely replaced",
-                {"windowsError": ctypes.get_last_error()},
+                {"ntStatus": status & 0xFFFFFFFF},
             )
     finally:
         _windows_close(handle)
