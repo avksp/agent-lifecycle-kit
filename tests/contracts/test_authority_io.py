@@ -7,6 +7,7 @@ import json
 import os
 import platform
 import plistlib
+import struct
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,44 @@ from pathlib import Path
 from unittest.mock import patch
 
 from agent_lifecycle.contracts import LifecycleError, authority_io
+
+
+def _set_native_mount_point(path: Path, target: Path) -> None:
+    """Exercise a real Windows mount-point FSCTL without replacing its directory."""
+    import ctypes
+    from ctypes import wintypes
+
+    api = authority_io._windows_api()
+    api.DeviceIoControl.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        wintypes.LPVOID,
+    ]
+    api.DeviceIoControl.restype = wintypes.BOOL
+    handle = api.CreateFileW(str(path), 0x40000000, 7, None, 3, 0x02200000, None)
+    if handle == ctypes.c_void_p(-1).value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        substitute = ("\\??\\" + str(target)).encode("utf-16-le")
+        printable = str(target).encode("utf-16-le")
+        names = substitute + b"\0\0" + printable + b"\0\0"
+        data = (
+            struct.pack(
+                "<IHHHHHH", 0xA0000003, 8 + len(names), 0, 0, len(substitute), len(substitute) + 2, len(printable)
+            )
+            + names
+        )
+        buffer = ctypes.create_string_buffer(data)
+        returned = wintypes.DWORD()
+        if not api.DeviceIoControl(handle, 0x000900A4, buffer, len(data), None, 0, ctypes.byref(returned), None):
+            raise ctypes.WinError(ctypes.get_last_error())
+    finally:
+        api.CloseHandle(handle)
 
 
 def _filesystem_type(root: Path) -> str:
@@ -227,6 +266,88 @@ class AuthorityReadTests(unittest.TestCase):
 
 
 class AuthorityWriteTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows FSCTL requires native Windows")
+    def test_windows_native_reparse_primitive_controls(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            parent, outside = root / "parent", root / "outside"
+            parent.mkdir()
+            outside.mkdir()
+            (outside / "marker").write_bytes(b"outside")
+            try:
+                _set_native_mount_point(parent, outside)
+                self.assertTrue(parent.stat(follow_symlinks=False).st_file_attributes & 0x400)
+                self.assertEqual((parent / "marker").read_bytes(), b"outside")
+            finally:
+                if parent.stat(follow_symlinks=False).st_file_attributes & 0x400:
+                    parent.rmdir()
+            parent.mkdir()
+            (parent / "existing").write_bytes(b"inside")
+            with self.assertRaises(OSError) as raised:
+                _set_native_mount_point(parent, outside)
+            self.assertEqual(raised.exception.winerror, 145)
+            self.assertFalse(parent.stat(follow_symlinks=False).st_file_attributes & 0x400)
+            self.assertEqual((parent / "existing").read_bytes(), b"inside")
+
+    @unittest.skipUnless(os.name == "nt", "Windows FSCTL requires native Windows")
+    def test_windows_inplace_reparse_never_redirects_writes(self) -> None:
+        for operation in (
+            authority_io.create_authority_bytes,
+            authority_io.replace_authority_bytes,
+            authority_io.append_authority_bytes,
+        ):
+            with self.subTest(operation=operation.__name__), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                parent, outside = root / "parent", root / "outside"
+                parent.mkdir()
+                outside.mkdir()
+                (outside / "marker").write_bytes(b"outside")
+                before = {p.name: p.read_bytes() for p in outside.iterdir()}
+                original = authority_io._Directory.write_child
+                mutation = []
+
+                def substitute(handle, name, *, append, mode):
+                    self.assertEqual(mutation, [])
+                    self.assertEqual(list(parent.iterdir()), [])
+                    try:
+                        _set_native_mount_point(parent, outside)
+                    except OSError as exc:
+                        self.assertIn(exc.winerror, {5, 32})
+                        mutation.append({"status": "denied", "winerror": exc.winerror})
+                    else:
+                        mutation.append({"status": "converted"})
+                    return original(handle, name, append=append, mode=mode)
+
+                failure = None
+                try:
+                    with patch.object(authority_io._Directory, "write_child", substitute):
+                        try:
+                            operation(parent / "document", b"must-stay-inside", root=root)
+                        except LifecycleError as exc:
+                            failure = exc.code
+                    unchanged = {p.name: p.read_bytes() for p in outside.iterdir()} == before
+                    print(
+                        "ALK_NATIVE_REPARSE "
+                        + json.dumps(
+                            {
+                                "operation": operation.__name__,
+                                "mutation": mutation,
+                                "failure": failure,
+                                "outsideUnchanged": unchanged,
+                            },
+                            sort_keys=True,
+                        ),
+                        flush=True,
+                    )
+                    self.assertEqual(len(mutation), 1)
+                    self.assertTrue(unchanged, "in-place reparse redirected a write outside the authorized parent")
+                    if mutation[0]["status"] == "denied":
+                        self.assertIsNone(failure)
+                        self.assertEqual((parent / "document").read_bytes(), b"must-stay-inside")
+                finally:
+                    if parent.stat(follow_symlinks=False).st_file_attributes & 0x400:
+                        parent.rmdir()
+
     def test_native_parent_swap_never_redirects_writes(self) -> None:
         for operation in (
             authority_io.create_authority_bytes,
