@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.authority_io import read_authority_bytes
+from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES, load_json_object
 from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
 from agent_lifecycle.planning.task_compatibility import (
@@ -464,8 +466,9 @@ def _last_plan_review(root: Path, manifest: dict[str, Any]) -> dict[str, Any]:
     report = review.get("report") if isinstance(review, dict) else None
     if not isinstance(report, str):
         return _last_plan_lock_review(root, manifest)
-    review = read_json_object(root / report, label="plan review")
-    identity = _raw_file_identity(root / report)
+    data = read_authority_bytes(root / report, root=root, max_bytes=MAX_JSON_INPUT_BYTES)
+    review = load_json_object(data, label="plan review")
+    identity = {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
     return {
         **identity,
         "path": report,
@@ -499,5 +502,5 @@ def _last_plan_lock_review(root: Path, manifest: dict[str, Any]) -> dict[str, An
 
 
 def _raw_file_identity(path: Path) -> dict[str, Any]:
-    data = path.read_bytes()
+    data = read_authority_bytes(path, max_bytes=MAX_JSON_INPUT_BYTES)
     return {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}

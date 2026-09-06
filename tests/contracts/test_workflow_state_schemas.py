@@ -53,6 +53,51 @@ class WorkflowStateSchemaTests(unittest.TestCase):
         with self.assertRaises(LifecycleError):
             validate_workflow_state(state)
 
+    def test_event_log_rejects_escape_and_platform_aliases(self) -> None:
+        for path in (
+            "../events.jsonl",
+            "./events.jsonl",
+            "a/../events.jsonl",
+            "C:events.jsonl",
+            "events.jsonl:stream",
+            "//server/share",
+            "a\\events.jsonl",
+            "bad\ud800path",
+        ):
+            state = _state()
+            state["eventLog"] = path
+            with self.subTest(path=repr(path)), self.assertRaises(LifecycleError) as raised:
+                validate_workflow_state(state)
+            self.assertEqual(raised.exception.code, "invalid-workflow-state")
+            self.assertNotIn(path, raised.exception.message)
+
+    def test_package_root_preserves_parent_anchors_without_granting_containment(self) -> None:
+        for root in (".", "..", "../..", "../../project", "project/work"):
+            state = _state()
+            state["packageRoot"] = root
+            with self.subTest(root=root):
+                self.assertIs(validate_workflow_state(state), state)
+
+    def test_package_root_rejects_ambiguous_anchors(self) -> None:
+        for root in (
+            "",
+            "/tmp",
+            "C:root",
+            "a/../b",
+            "../",
+            "../a:stream",
+            "../a\\b",
+            ".././a",
+            "//server/share",
+            "bad\ud800path",
+            "../" * 2000,
+        ):
+            state = _state()
+            state["packageRoot"] = root
+            with self.subTest(root=repr(root)), self.assertRaises(LifecycleError) as raised:
+                validate_workflow_state(state)
+            self.assertEqual(raised.exception.code, "invalid-workflow-state")
+
 
 if __name__ == "__main__":
     unittest.main()

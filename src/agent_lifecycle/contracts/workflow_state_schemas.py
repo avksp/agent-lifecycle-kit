@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.contracts.paths import MAX_REPO_PATH_BYTES, normalize_repo_path
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 
 WORKFLOW_STATE_V3 = "agent-workflow-state.v3"
@@ -117,15 +118,36 @@ def validate_workflow_state(state: dict[str, Any], *, allow_legacy: bool = True)
         raise LifecycleError("invalid-workflow-state", "tasks must be an array")
     if not isinstance(state.get("operationLedger"), dict):
         raise LifecycleError("invalid-workflow-state", "operationLedger must be an object")
-    event_log = state.get("eventLog")
-    if not isinstance(event_log, str) or not event_log or event_log.startswith("/"):
-        raise LifecycleError("invalid-workflow-state", "eventLog must be a relative path")
-    package_root = state.get("packageRoot", ".")
-    if not isinstance(package_root, str) or not package_root or package_root.startswith("/"):
-        raise LifecycleError("invalid-workflow-state", "packageRoot must be a relative path")
+    _validate_storage_paths(state)
     _validate_tasks(state)
     _validate_phase_invariants(state)
     return state
+
+
+def _validate_storage_paths(state: dict[str, Any]) -> None:
+    event_log = state.get("eventLog")
+    if not isinstance(event_log, str):
+        raise LifecycleError("invalid-workflow-state", "eventLog must be a portable relative path")
+    try:
+        normalize_repo_path(event_log, label="eventLog")
+    except LifecycleError:
+        raise LifecycleError("invalid-workflow-state", "eventLog must be a portable relative path") from None
+    root = state.get("packageRoot", ".")
+    if not isinstance(root, str) or not root:
+        raise LifecycleError("invalid-workflow-state", "packageRoot must be a relative path")
+    try:
+        if len(root.encode("utf-8")) > MAX_REPO_PATH_BYTES:
+            raise ValueError
+        if root != ".":
+            # Parent anchors are lexical input, never a grant to escape the runtime root.
+            parts = root.split("/")
+            first = 0
+            while first < len(parts) and parts[first] == "..":
+                first += 1
+            if first < len(parts):
+                normalize_repo_path("/".join(parts[first:]), label="packageRoot")
+    except (UnicodeError, ValueError, LifecycleError):
+        raise LifecycleError("invalid-workflow-state", "packageRoot must be a portable relative path") from None
 
 
 def _validate_legacy_state(state: dict[str, Any]) -> None:

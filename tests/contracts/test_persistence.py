@@ -8,10 +8,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agent_lifecycle.contracts.persistence import create_private_json, require_private_json, replace_private_json
+from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts.persistence import create_private_json, replace_private_json, require_private_json
 
 
 class PersistenceTests(unittest.TestCase):
+    def test_missing_private_file_keeps_the_structured_polling_error(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(LifecycleError) as raised:
+                require_private_json(Path(directory) / "not-created" / "state.json")
+            self.assertEqual(raised.exception.code, "private-file-invalid")
+
     def test_create_replace_and_require_preserve_private_atomic_storage(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / ".alk" / "state.json"
