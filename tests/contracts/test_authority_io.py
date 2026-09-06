@@ -227,6 +227,52 @@ class AuthorityReadTests(unittest.TestCase):
 
 
 class AuthorityWriteTests(unittest.TestCase):
+    def test_native_parent_swap_never_redirects_writes(self) -> None:
+        for operation in (
+            authority_io.create_authority_bytes,
+            authority_io.replace_authority_bytes,
+            authority_io.append_authority_bytes,
+        ):
+            with self.subTest(operation=operation.__name__), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                parent = root / "inside"
+                outside = root / "outside"
+                parent.mkdir()
+                outside.mkdir()
+                if operation is not authority_io.create_authority_bytes:
+                    (parent / "document").write_bytes(b"inside")
+                    (outside / "document").write_bytes(b"outside")
+                before = {path.name: path.read_bytes() for path in outside.iterdir()}
+                original = authority_io._Directory.write_child
+                mutation = []
+
+                def substitute(handle, name, *, append, mode):
+                    self.assertEqual(mutation, [])
+                    try:
+                        parent.rename(root / "moved")
+                    except PermissionError:
+                        if os.name != "nt":
+                            raise
+                        mutation.append("denied")
+                    else:
+                        mutation.append("substituted")
+                        parent.symlink_to(outside, target_is_directory=True)
+                    return original(handle, name, append=append, mode=mode)
+
+                failure = None
+                with patch.object(authority_io._Directory, "write_child", substitute):
+                    try:
+                        operation(parent / "document", b"must-stay-inside", root=root)
+                    except LifecycleError as exc:
+                        failure = exc.code
+                if mutation == ["denied"]:
+                    self.assertEqual(os.name, "nt")
+                    self.assertIsNone(failure)
+                else:
+                    self.assertEqual(mutation, ["substituted"])
+                    self.assertIsNotNone(failure)
+                self.assertEqual({path.name: path.read_bytes() for path in outside.iterdir()}, before)
+
     @unittest.skipIf(os.name == "nt", "POSIX directory mode compatibility")
     def test_journal_append_preserves_existing_non_private_parent_mode(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
