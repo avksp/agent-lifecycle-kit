@@ -17,6 +17,33 @@ from agent_lifecycle.workflow.run_transitions import block_run
 
 
 class WorkflowEventBoundaryTests(unittest.TestCase):
+    def test_unreadable_journal_keeps_legacy_error_and_state_unchanged(self) -> None:
+        from agent_lifecycle.contracts import authority_io
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_path = root / "run.state.json"
+            initialize_workflow_state(state_path, run_id="run", package_id="package")
+            journal = root / "events.jsonl"
+            journal.write_bytes(b'{"stateRevision":1}\n')
+            before = state_path.read_bytes()
+            original = authority_io._Directory.open_child
+
+            def unavailable(parent, name):
+                if name == "events.jsonl":
+                    raise PermissionError("private payload must not escape")
+                return original(parent, name)
+
+            with (
+                patch.object(authority_io._Directory, "open_child", unavailable),
+                self.assertRaises(LifecycleError) as raised,
+            ):
+                block_run(state_path, operation_id="no-write", expected_revision=1, blocker_code="test", reason="test")
+            self.assertEqual(raised.exception.code, "invalid-workflow-event-log")
+            self.assertEqual(state_path.read_bytes(), before)
+            self.assertEqual(journal.read_bytes(), b'{"stateRevision":1}\n')
+            self.assertNotIn("private payload", str(raised.exception))
+
     def test_duplicate_members_cannot_hide_an_ahead_event_revision(self) -> None:
         for record, code in (
             (b'{"operationId":"prior","stateRevision":9}\n', "workflow-split-brain"),

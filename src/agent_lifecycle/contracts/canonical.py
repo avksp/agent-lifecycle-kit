@@ -153,7 +153,10 @@ def _private_storage_error(error: LifecycleError) -> LifecycleError:
     legacy = {
         "authority-input-not-regular": ("private-file-invalid", "private storage file is invalid"),
         "authority-input-symlink": ("private-directory-symlink", "private directory must not be a symlink"),
-        "authority-directory-unavailable": ("private-directory-unavailable", "private storage directory is unavailable"),
+        "authority-directory-unavailable": (
+            "private-directory-unavailable",
+            "private storage directory is unavailable",
+        ),
         "authority-output-unavailable": ("private-file-write-failed", "private storage file could not be written"),
     }
     if error.code in legacy:

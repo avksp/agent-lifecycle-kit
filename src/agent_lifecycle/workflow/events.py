@@ -46,6 +46,10 @@ def read_events(path: Path) -> Iterator[dict[str, Any]]:
                     ) from None
     except FileNotFoundError:
         return
+    except LifecycleError as exc:
+        if exc.code == "authority-input-unavailable":
+            raise LifecycleError("invalid-workflow-event-log", "event log is unavailable") from None
+        raise
 
 
 def append_event(

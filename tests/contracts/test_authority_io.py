@@ -104,6 +104,18 @@ class AuthorityReadTests(unittest.TestCase):
 
 
 class AuthorityWriteTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "POSIX directory mode compatibility")
+    def test_journal_append_preserves_existing_non_private_parent_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            root.chmod(0o755)
+            path = root / "events.jsonl"
+            authority_io.append_authority_bytes(path, b"first\n", root=root)
+            authority_io.append_authority_bytes(path, b"second\n", root=root)
+            self.assertEqual(root.stat().st_mode & 0o777, 0o755)
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(path.read_bytes(), b"first\nsecond\n")
+
     @unittest.skipIf(os.name == "nt", "POSIX permissions; not a Windows ACL claim")
     def test_private_write_does_not_chmod_ancestors_above_explicit_root(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

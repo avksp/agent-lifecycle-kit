@@ -197,7 +197,7 @@ class _Directory:
 
 @contextmanager
 def _parent(
-    root: Path, relative_name: str, *, create: bool = False, private: bool = False
+    root: Path, relative_name: str, *, create: bool = False, private: bool = False, private_existing: bool = True
 ) -> Iterator[tuple[_Directory, str]]:
     _require_primitives()
     authority_depth = len(root.parts) - 1
@@ -239,7 +239,7 @@ def _parent(
             if child.fd is not None:
                 _same_identity(before, os.fstat(child.fd))
             private_started |= index >= authority_depth - 1 and (
-                part == ".alk" or made or index == len(parts) - 2
+                part == ".alk" or made or (private_existing and index == len(parts) - 2)
             )
             if private and private_started and child.fd is not None:
                 os.fchmod(child.fd, 0o700)
@@ -371,7 +371,7 @@ def append_authority_bytes(path: Path, data: bytes, *, root: Path | None = None)
 
     root, name = authority_location(path, root=root)
     try:
-        with _parent(root, name, create=True, private=True) as (parent, leaf):
+        with _parent(root, name, create=True, private=True, private_existing=False) as (parent, leaf):
             try:
                 before = parent.stat_child(leaf)
             except FileNotFoundError:

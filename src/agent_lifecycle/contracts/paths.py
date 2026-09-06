@@ -81,6 +81,8 @@ def read_stable_repository_file(
             "authority-input-not-regular": "repository-file-not-regular",
         }.get(exc.code, "repository-input-read-failed")
         raise LifecycleError(code, f"{label}: stable read failed") from None
+    except FileNotFoundError:
+        raise LifecycleError("repository-file-missing", f"{label}: file does not exist") from None
     except OSError:
         raise LifecycleError("repository-input-read-failed", f"{label}: stable read failed") from None
 
