@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +32,7 @@ from agent_lifecycle.workflow.continuation import (
     continue_workflow,
     normalize_continuation_inputs,
 )
-from agent_lifecycle.workflow.events import event_log_path
+from agent_lifecycle.workflow.events import event_log_path, read_events
 from agent_lifecycle.workflow.state import load_state, state_identity
 from agent_lifecycle.workflow.transition_contract import ACTION_TYPES
 
@@ -429,23 +428,12 @@ def _record_matches_history(record: dict[str, Any], ledger: dict[str, Any], even
 
 def _events_by_operation(state_path: Path, state: dict[str, Any]) -> dict[str, dict[str, Any]]:
     path = event_log_path(state_path, state)
-    if not path.exists():
-        return {}
     events: dict[str, dict[str, Any]] = {}
-    try:
-        with path.open("r", encoding="utf-8") as handle:
-            for line in handle:
-                if not line.strip():
-                    continue
-                event = json.loads(line)
-                operation_id = event.get("operationId") if isinstance(event, dict) else None
-                if not isinstance(operation_id, str) or operation_id in events:
-                    raise LifecycleError("invalid-workflow-event-log", "event operation identity is invalid")
-                events[operation_id] = event
-    except json.JSONDecodeError as exc:
-        raise LifecycleError("invalid-workflow-event-log", "workflow event log contains malformed JSON") from exc
-    except OSError as exc:
-        raise LifecycleError("invalid-workflow-event-log", "workflow event log is unavailable") from exc
+    for event in read_events(path):
+        operation_id = event.get("operationId")
+        if not isinstance(operation_id, str) or operation_id in events:
+            raise LifecycleError("invalid-workflow-event-log", "event operation identity is invalid")
+        events[operation_id] = event
     return events
 
 

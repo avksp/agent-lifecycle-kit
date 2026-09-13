@@ -7,6 +7,7 @@ from typing import Any
 
 from agent_lifecycle.changesets import capture_task_change_set, require_current_task_change_set
 from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts.authority_text import require_review_text
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids, validate_review_verdict
 from agent_lifecycle.workflow.artifacts import require_artifact_identity
 
@@ -245,6 +246,7 @@ def validate_task_outcome_review(
 
 
 def open_finding_ids(value: dict[str, Any]) -> set[str]:
+    require_review_text(value)
     findings = value.get("findings")
     if not isinstance(findings, list):
         return set()
@@ -263,6 +265,7 @@ def _validate_review_lineage(
     task: dict[str, Any],
     review: dict[str, Any],
 ) -> None:
+    require_review_text(review)
     result = task.get("result")
     if not isinstance(result, dict):
         raise LifecycleError("missing-task-result", "task review requires committed result")

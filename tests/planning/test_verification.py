@@ -1,20 +1,41 @@
 from __future__ import annotations
 
+import copy
 import sys
 import tempfile
 import unittest
-import copy
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.contracts import canonical_digest  # noqa: E402
 from agent_lifecycle.contracts.schemas import get_schema  # noqa: E402
+from agent_lifecycle.planning.completeness import validate_plan_completeness  # noqa: E402
 from agent_lifecycle.planning.verification import build_plan_verification  # noqa: E402
 
 
 class PlanVerificationTests(unittest.TestCase):
+    def test_outer_root_guard_blocks_aliases_despite_offline_completeness_pass(self) -> None:
+        manifest = _manifest()
+        manifest["readOnly"] = ["Private"]
+        manifest["workstreams"][0]["writes"] = ["private/file.py"]
+        self.assertEqual(validate_plan_completeness(manifest)["status"], "PASS")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lock = {"schemaVersion": "agent-plan-lock.v1", "planRevision": 1, "manifestHash": canonical_digest(manifest)}
+            def compare(anchor, _parent, _left, _right, *, expected_root=root):
+                self.assertEqual(anchor, expected_root.resolve())
+                return True
+            with patch("agent_lifecycle.contracts.ownership_paths._same_filesystem_name", side_effect=compare):
+                result = build_plan_verification(manifest, manifest_path=root / "plan.manifest.json", lock=lock,
+                                                 acceptance_markdown=_acceptance_markdown(), repository_root=root)
+            self.assertEqual(result["checks"]["completeness"]["status"], "PASS")
+            self.assertEqual(result["status"], "FAIL")
+            self.assertIn("ambiguous-authority-path", _codes(result))
+            self.assertEqual(list(root.iterdir()), [])
+
     def test_verification_receipt_schema_is_registered(self) -> None:
         self.assertEqual(get_schema("agent-plan-verification-receipt.v1")["$id"], "agent-plan-verification-receipt.v1")
 

@@ -6,7 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
-from agent_lifecycle.contracts.ownership_paths import is_under_authority_path, normalize_authority_path
+from agent_lifecycle.contracts.ownership_paths import (
+    is_under_authority_path,
+    normalize_authority_path,
+    observed_authority_paths,
+    require_manifest_authority_paths,
+)
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.workflow_state_schemas import WORKFLOW_STATE_V4
 from agent_lifecycle.freeze import verify_plan_lock_envelope
@@ -105,6 +110,17 @@ def commit_task_result(
         require_freshness=task_result_freshness_required(state),
         allow_non_accepting_outcome=state.get("schemaVersion") == WORKFLOW_STATE_V4,
     )
+    policy = state.get("writePolicy")
+    if isinstance(policy, dict):
+        _validate_task_write_scope(
+            state,
+            task,
+            result,
+            changed_files=freshness["allChangedFiles"] if freshness is not None else result.get("changedFiles", []),
+            include_plan_scope=freshness is not None,
+            repository_root=root,
+            protected_only=True,
+        )
     control_post_action = _validate_control_post_action(state, task, result, root)
     model_usage_identity = None
     if model_usage_receipt_required(task):
@@ -219,6 +235,7 @@ def accept_task(
         result,
         changed_files=ownership_paths,
         include_plan_scope=freshness is not None,
+        repository_root=root,
     )
     implementation_audit = _validate_implementation_audit(
         state_path,
@@ -426,10 +443,27 @@ def _validate_task_write_scope(
     *,
     changed_files: list[str] | None = None,
     include_plan_scope: bool = False,
+    repository_root: Path | None = None,
+    protected_only: bool = False,
 ) -> dict[str, Any]:
     changed_files = result.get("changedFiles") if changed_files is None else changed_files
     if not isinstance(changed_files, list) or not all(isinstance(path, str) for path in changed_files):
         raise LifecycleError("task-result-invalid", "task result changedFiles must be a list of strings")
+    changed_files = observed_authority_paths(changed_files, operation_root=repository_root)
+    policy_value = state.get("writePolicy")
+    policy = policy_value if isinstance(policy_value, dict) else {}
+    tasks_value = state.get("tasks")
+    planned_tasks = tasks_value if isinstance(tasks_value, list) else []
+    require_manifest_authority_paths(
+        {
+            **policy,
+            "workstreams": [
+                item for item in planned_tasks if isinstance(item, dict) and item.get("id") != task.get("id")
+            ]
+            + [task],
+        },
+        operation_root=repository_root,
+    )
     writes = [
         normalize_authority_path(path, label="task write path")
         for path in task.get("writes", [])
@@ -464,7 +498,6 @@ def _validate_task_write_scope(
             "entries": [],
             "blockers": [],
         }
-    policy = state.get("writePolicy", {}) if isinstance(state.get("writePolicy"), dict) else {}
     forbidden_roots = [
         normalize_authority_path(path, label="forbidden write path")
         for path in policy.get("forbiddenWrites", [])
@@ -481,13 +514,25 @@ def _validate_task_write_scope(
         if isinstance(item, dict) and isinstance(item.get("path"), str)
     ]
     entries: list[dict[str, Any]] = []
-    for raw_path in sorted(set(changed_files)):
-        path = normalize_authority_path(raw_path, label="changed file path")
-        forbidden = [root for root in forbidden_roots if is_under_authority_path(path, root)]
-        read_only = [root for root in read_only_roots if is_under_authority_path(path, root)]
-        owned = [root for root in writes if is_under_authority_path(path, root)]
-        plan_owned = [root for root in plan_writes if is_under_authority_path(path, root)]
-        lead_owned = [root for root in lead_owned_roots if is_under_authority_path(path, root)]
+    for raw_path in changed_files:
+        path = normalize_repo_path(raw_path, label="changed file path")
+        forbidden = [
+            root for root in forbidden_roots if is_under_authority_path(path, root, operation_root=repository_root)
+        ]
+        read_only = [
+            root for root in read_only_roots if is_under_authority_path(path, root, operation_root=repository_root)
+        ]
+        owned = [root for root in writes if is_under_authority_path(path, root, operation_root=repository_root)]
+        plan_owned = [
+            root for root in plan_writes if is_under_authority_path(path, root, operation_root=repository_root)
+        ]
+        lead_owned = [
+            root for root in lead_owned_roots if is_under_authority_path(path, root, operation_root=repository_root)
+        ]
+        if not forbidden and not read_only and repository_root is not None:
+            granted = owned or plan_owned or lead_owned
+            if any(not is_under_authority_path(path, prefix) for prefix in granted):
+                raise LifecycleError("ambiguous-authority-path", "filesystem alias would broaden a write grant")
         if forbidden:
             entries.append({"path": path, "category": "forbidden", "matched": forbidden})
         elif read_only:
@@ -500,7 +545,8 @@ def _validate_task_write_scope(
             entries.append({"path": path, "category": "lead-owned", "matched": lead_owned})
         else:
             entries.append({"path": path, "category": "unowned"})
-    blockers = [entry for entry in entries if entry["category"] in {"forbidden", "read-only", "unowned"}]
+    blocking_categories = {"forbidden", "read-only"} if protected_only else {"forbidden", "read-only", "unowned"}
+    blockers = [entry for entry in entries if entry["category"] in blocking_categories]
     receipt = {
         "schemaVersion": "agent-task-ownership-receipt.v1",
         "status": "PASS" if not blockers else "FAIL",
@@ -610,6 +656,7 @@ def _validate_control_post_action(
         pre_action = evidence.get("preAction") if isinstance(evidence.get("preAction"), dict) else None
     gate = evaluate_post_action_gate(
         pre_action=pre_action or {},
+        repository_root=root,
         manifest=manifest,
         actual_changed_paths=result.get("changedFiles", []),
         outcome={

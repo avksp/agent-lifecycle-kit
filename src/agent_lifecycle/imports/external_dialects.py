@@ -333,7 +333,7 @@ def _candidate_plan(
             "workspaceRoot": ".",
             "artifactRoot": "imported",
             "root": ".",
-            "planArtifactRoot": "imported",
+            "planArtifactRoot": "imported/plan",
         },
         "author": {"id": "external-dialect-import", "surface": "agent-lifecycle", "runId": source_digest[:16]},
         "baseRevision": {"ref": "UNRESOLVED", "sha": "UNRESOLVED"},

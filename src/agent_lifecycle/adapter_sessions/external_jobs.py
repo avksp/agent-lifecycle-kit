@@ -313,7 +313,7 @@ def request_external_job_cancel(
     job_root: Path | None = None,
     now: Clock | None = None,
 ) -> dict[str, Any]:
-    """Create an idempotent, source-bound cancellation request for a running attempt."""
+    """Acknowledge cancellation-request publication, not process termination."""
 
     require_external_job_pass(validate_external_job_request(request), "request")
     attempt_root = external_job_attempt_path(request, job_root=job_root)
@@ -345,8 +345,7 @@ def request_external_job_cancel(
     except FileExistsError:
         existing = _load_private_json(path, "external job cancel request")
         return _cancel_receipt(request, latest, requested_at=existing.get("requestedAt"), idempotent=True)
-    if completion_path.exists():
-        return _cancel_receipt(request, latest, requested_at=requested_at, idempotent=True, terminal=True)
+    # Completion after publication cannot turn this creator into a no-op retry.
     return _cancel_receipt(request, latest, requested_at=requested_at, idempotent=False)
 
 

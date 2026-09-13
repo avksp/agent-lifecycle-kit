@@ -19,6 +19,25 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_current_accounting_fixture_keeps_unavailable_telemetry(self) -> None:
+        from agent_lifecycle.metrics.release_accounting import validate_release_accounting
+
+        path = ROOT / "tests/metrics/fixtures/release-2-15-accounting.json"
+        accounting = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(accounting["releaseId"], TARGET_VERSION)
+        self.assertEqual(validate_release_accounting(accounting)["status"], "PASS")
+        self.assertFalse(accounting["productionPromotionClaimed"])
+        self.assertFalse(accounting["liveCallsStarted"])
+        self.assertEqual(
+            {entry["view"] for entry in accounting["entries"]},
+            {"alkProcess", "implementation", "audit", "postAuditRemediation"},
+        )
+        for entry in accounting["entries"]:
+            for metrics in (entry["metrics"], entry["workflowMetrics"]):
+                for metric in metrics.values():
+                    self.assertEqual(metric["status"], "UNAVAILABLE")
+                    self.assertIsNone(metric["value"])
+
     def test_publication_manifest_records_field_shapes_and_last_policy(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
         self.assertEqual(manifest["schemaVersion"], "agent-publication-manifest.v1")
@@ -233,7 +252,7 @@ class PublicationVersionTests(unittest.TestCase):
             root = Path(tmp)
             _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
             _write_json(
-                root / "tests/metrics/fixtures/release-2-14-accounting.json",
+                root / "tests/metrics/fixtures/release-2-15-accounting.json",
                 {"releaseId": "2.8.0"},
             )
 

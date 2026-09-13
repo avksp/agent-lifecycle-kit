@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.canonical import canonical_bytes
+from agent_lifecycle.contracts.authority_io import read_authority_bytes, resolve_authority_anchor
+from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES, canonical_bytes, load_json_object
 from agent_lifecycle.contracts.finding_check_schemas import (
     build_finding_check_evidence,
     validate_finding_check_evidence,
@@ -17,10 +18,7 @@ STRUCTURED_RESULT_ARTIFACT_SCHEMA = "agent-workflow-structured-result-artifact.v
 
 
 def package_root(state_path: Path, state: dict[str, Any]) -> Path:
-    raw = state.get("packageRoot")
-    if isinstance(raw, str) and raw:
-        return (state_path.parent / raw).resolve()
-    return state_path.parent
+    return resolve_authority_anchor(state_path, state.get("packageRoot", "."))
 
 
 def artifact_path(task: dict[str, Any], role: str, attempt: int) -> str:
@@ -35,7 +33,7 @@ def artifact_path(task: dict[str, Any], role: str, attempt: int) -> str:
 
 def artifact_identity(root: Path, path: str, value: dict[str, Any]) -> dict[str, Any]:
     data = canonical_bytes(value) + b"\n"
-    actual = (root / path).read_bytes()
+    actual = read_authority_bytes(root / normalize_repo_path(path), root=root, max_bytes=MAX_JSON_INPUT_BYTES)
     if actual != data:
         raise LifecycleError(
             "non-canonical-artifact",
@@ -158,17 +156,12 @@ def require_artifact_identity(root: Path, identity: dict[str, Any], *, label: st
         raise LifecycleError("artifact-identity-invalid", f"{label} identity has no path")
     artifact = root / normalize_repo_path(path, label=label)
     try:
-        actual = artifact.read_bytes()
+        actual = read_authority_bytes(artifact, root=root, max_bytes=MAX_JSON_INPUT_BYTES)
     except OSError as exc:
         raise LifecycleError("archived-artifact-missing", f"{label} is missing", {"path": path}) from exc
     if len(actual) != identity.get("bytes"):
         raise LifecycleError("archived-artifact-changed", f"{label} byte size changed", {"path": path})
-    try:
-        from agent_lifecycle.contracts import read_json_object
-
-        value = read_json_object(artifact, label=label)
-    except OSError as exc:
-        raise LifecycleError("archived-artifact-missing", f"{label} is missing", {"path": path}) from exc
+    value = load_json_object(actual, label=label)
     if canonical_digest(value) != identity.get("sha256") or canonical_bytes(value) + b"\n" != actual:
         raise LifecycleError("archived-artifact-changed", f"{label} content changed", {"path": path})
     return value

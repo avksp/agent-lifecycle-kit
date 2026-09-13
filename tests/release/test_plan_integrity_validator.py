@@ -5,7 +5,6 @@ from pathlib import Path
 
 from tools.release.validate_plan_integrity import validate_plan_integrity
 
-
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = ROOT / "tests/freeze/fixtures/canonical-v2-plan-package"
 

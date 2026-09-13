@@ -6,8 +6,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import read_json_object
-from agent_lifecycle.contracts.ownership_paths import is_under_authority_path, normalize_authority_path
+from agent_lifecycle.contracts import LifecycleError, read_json_object
+from agent_lifecycle.contracts.ownership_paths import (
+    is_under_authority_path,
+    normalize_authority_path,
+    observed_authority_paths,
+    require_manifest_authority_paths,
+)
 from agent_lifecycle.contracts.paths import normalize_repo_path
 
 
@@ -16,9 +21,16 @@ def build_ownership_report(
     paths: list[str],
     *,
     base: str | None = None,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
     manifest = read_json_object(manifest_path, label="plan manifest")
-    return build_ownership_report_from_manifest(manifest, paths, manifest_path=manifest_path, base=base)
+    return build_ownership_report_from_manifest(
+        manifest,
+        paths,
+        manifest_path=manifest_path,
+        base=base,
+        repository_root=repository_root if repository_root is not None else Path.cwd(),
+    )
 
 
 def build_ownership_report_from_manifest(
@@ -27,11 +39,16 @@ def build_ownership_report_from_manifest(
     *,
     manifest_path: Path | None = None,
     base: str | None = None,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
     """Classify changed paths against an already loaded frozen manifest."""
 
-    classifiers = _classifiers(manifest, manifest_path)
-    entries = [_classify_path(path, classifiers) for path in sorted(set(paths))]
+    require_manifest_authority_paths(manifest, operation_root=repository_root)
+    classifiers = _classifiers(manifest, manifest_path, repository_root=repository_root)
+    entries = [
+        _classify_path(path, classifiers, repository_root=repository_root)
+        for path in observed_authority_paths(paths, operation_root=repository_root)
+    ]
     categories = Counter(entry["category"] for entry in entries)
     owners = Counter(owner for entry in entries for owner in entry.get("owners", []))
     return {
@@ -57,15 +74,13 @@ def declared_ownership_paths(manifest: dict[str, Any]) -> list[str]:
     """Return literal workstream ownership paths for read-only projections."""
 
     classifiers = _classifiers(manifest, None)
-    paths = {
-        path
-        for roots in classifiers["workstreams"].values()
-        for path in roots
-    }
+    paths = {path for roots in classifiers["workstreams"].values() for path in roots}
     return sorted(paths)
 
 
-def _classifiers(manifest: dict[str, Any], manifest_path: Path | None) -> dict[str, Any]:
+def _classifiers(
+    manifest: dict[str, Any], manifest_path: Path | None, *, repository_root: Path | None = None
+) -> dict[str, Any]:
     package_value = manifest.get("package")
     package = package_value if isinstance(package_value, dict) else {}
     plan_root = package.get("planArtifactRoot")
@@ -97,7 +112,7 @@ def _classifiers(manifest: dict[str, Any], manifest_path: Path | None) -> dict[s
         ],
     }
     return {
-        "manifestPath": _repo_relative(manifest_path),
+        "manifestPath": _repo_relative(manifest_path, repository_root=repository_root),
         "planArtifactRoot": normalize_authority_path(plan_root, label="planArtifactRoot")
         if isinstance(plan_root, str)
         else None,
@@ -134,28 +149,48 @@ def _classifiers(manifest: dict[str, Any], manifest_path: Path | None) -> dict[s
     }
 
 
-def _classify_path(path: str, classifiers: dict[str, Any]) -> dict[str, Any]:
+def _classify_path(path: str, classifiers: dict[str, Any], *, repository_root: Path | None = None) -> dict[str, Any]:
     normalized = normalize_repo_path(path)
     manifest_path = classifiers["manifestPath"]
-    if isinstance(manifest_path, str) and normalized == manifest_path:
+    if (
+        isinstance(manifest_path, str)
+        and normalized.count("/") == manifest_path.count("/")
+        and is_under_authority_path(normalized, manifest_path, operation_root=repository_root)
+    ):
         return _entry(normalized, "plan-authority", ["controller"])
     plan_root = classifiers["planArtifactRoot"]
-    if isinstance(plan_root, str) and is_under_authority_path(normalized, plan_root):
+    if isinstance(plan_root, str) and is_under_authority_path(normalized, plan_root, operation_root=repository_root):
         return _entry(normalized, "plan-authority", ["controller"])
-    lead = [root for root in classifiers["leadOwned"] if is_under_authority_path(normalized, root)]
+    lead = [
+        root
+        for root in classifiers["leadOwned"]
+        if is_under_authority_path(normalized, root, operation_root=repository_root)
+    ]
     if lead:
         return _entry(normalized, "lead-owned", ["controller"], matched=lead)
-    forbidden = [root for root in classifiers["forbiddenWrites"] if is_under_authority_path(normalized, root)]
+    forbidden = [
+        root
+        for root in classifiers["forbiddenWrites"]
+        if is_under_authority_path(normalized, root, operation_root=repository_root)
+    ]
     if forbidden:
         return _entry(normalized, "forbidden", [], matched=forbidden)
-    read_only = [root for root in classifiers["readOnly"] if is_under_authority_path(normalized, root)]
+    read_only = [
+        root
+        for root in classifiers["readOnly"]
+        if is_under_authority_path(normalized, root, operation_root=repository_root)
+    ]
     if read_only:
         return _entry(normalized, "read-only", [], matched=read_only)
-    owners = [
-        owner
-        for owner, roots in classifiers["workstreams"].items()
-        if any(is_under_authority_path(normalized, root) for root in roots)
-    ]
+    owners = []
+    for owner, roots in classifiers["workstreams"].items():
+        for root in roots:
+            if not is_under_authority_path(normalized, root, operation_root=repository_root):
+                continue
+            if repository_root is not None and not is_under_authority_path(normalized, root):
+                raise LifecycleError("ambiguous-authority-path", "filesystem alias would broaden a write grant")
+            if owner not in owners:
+                owners.append(owner)
     if owners:
         return _entry(normalized, "workstream-owned", owners)
     return _entry(normalized, "unowned", [])
@@ -174,11 +209,12 @@ def _entry(
     return value
 
 
-def _repo_relative(path: Path | None) -> str | None:
+def _repo_relative(path: Path | None, *, repository_root: Path | None = None) -> str | None:
     if path is None:
         return None
     try:
-        return normalize_repo_path(str(path.resolve().relative_to(Path.cwd().resolve())))
+        root = repository_root if repository_root is not None else Path.cwd()
+        return normalize_repo_path(path.absolute().relative_to(root.absolute()).as_posix())
     except ValueError:
         return None
 

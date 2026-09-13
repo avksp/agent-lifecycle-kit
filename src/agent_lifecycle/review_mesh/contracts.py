@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.authority_text import require_review_text
 from agent_lifecycle.contracts.independent_evidence_schemas import validate_independence_requirement
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
 from agent_lifecycle.model_routing.profiles import ALLOWED_MODEL_CLASSES
@@ -325,6 +326,7 @@ def validate_review_mesh_result(result: dict[str, Any], *, profile: dict[str, An
     blockers: list[dict[str, Any]] = []
     if not isinstance(result, dict):
         raise LifecycleError("invalid-review-mesh-result", "Review Mesh result must be an object")
+    require_review_text(result)
     if result.get("schemaVersion") != REVIEW_MESH_RESULT_SCHEMA:
         blockers.append({"code": "review-mesh-result-schema-invalid"})
     if result.get("status") not in RESULT_STATUSES:

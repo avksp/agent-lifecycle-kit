@@ -11,7 +11,11 @@ from typing import Any
 
 from agent_lifecycle.changesets.git import GIT_TIMEOUT_SECONDS, changed_files, resolve_revision
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.ownership_paths import is_under_authority_path, normalize_authority_path
+from agent_lifecycle.contracts.ownership_paths import (
+    is_under_authority_path,
+    normalize_authority_path,
+    observed_authority_paths,
+)
 from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file
 
 MAX_CHANGED_FILES = 10_000
@@ -38,7 +42,12 @@ def capture_task_change_set(
             "changed file count exceeds the task snapshot limit",
             {"count": len(all_changed), "maxFiles": MAX_CHANGED_FILES},
         )
-    scoped = [path for path in all_changed if any(is_under_authority_path(path, prefix) for prefix in authority)]
+    all_changed = observed_authority_paths(all_changed, operation_root=root)
+    scoped = [
+        path
+        for path in all_changed
+        if any(is_under_authority_path(path, prefix, operation_root=root) for prefix in authority)
+    ]
     transitions: list[dict[str, Any]] = []
     current_entries: list[dict[str, Any]] = []
     total_bytes = 0

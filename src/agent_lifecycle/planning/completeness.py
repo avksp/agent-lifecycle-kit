@@ -8,7 +8,11 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.independent_evidence_schemas import validate_independence_requirement
-from agent_lifecycle.contracts.ownership_paths import authority_paths_overlap, normalize_authority_path
+from agent_lifecycle.contracts.ownership_paths import (
+    authority_paths_overlap,
+    normalize_authority_path,
+    require_manifest_authority_paths,
+)
 from agent_lifecycle.contracts.statistical_evidence_schemas import validate_statistical_evidence_requirement
 from agent_lifecycle.planning.traceability import validate_plan_traceability
 from agent_lifecycle.quality.validation_ladder import validation_ladder_manifest_blockers
@@ -117,7 +121,13 @@ def validate_plan_completeness(
     manifest: dict[str, Any],
     *,
     profile: dict[str, Any] | None = None,
+    operation_root: Path | None = None,
 ) -> dict[str, Any]:
+    """Check structural completeness, plus declaration aliases when an explicit root is supplied.
+
+    A rootless PASS is offline evidence and cannot authorize filesystem operations.
+    """
+
     active_profile = profile or build_plan_completeness_profile()
     profile_validation = validate_plan_completeness_profile(active_profile)
     blockers = list(profile_validation["blockers"])
@@ -134,6 +144,12 @@ def validate_plan_completeness(
         _check_traceability(manifest, tier, blockers)
         _check_path_authority(manifest, tier, blockers)
         required_checks = [*required_checks, "traceability", "path-authority"]
+    if operation_root is not None:
+        required_checks = [*required_checks, "filesystem-path-authority"]
+        try:
+            require_manifest_authority_paths(manifest, operation_root=operation_root)
+        except LifecycleError as exc:
+            blockers.append(_blocker(exc.code, exc.message, exc.details))
     if _validation_ladder_enabled(manifest):
         blockers.extend(validation_ladder_manifest_blockers(manifest))
         required_checks = [*required_checks, "validation-ladder-authority"]

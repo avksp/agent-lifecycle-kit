@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 import tempfile
 import threading
 import time
 import unittest
+from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -16,7 +20,7 @@ from agent_lifecycle.adapter_sessions.external_jobs import (
     request_external_job_cancel,
     run_external_job,
 )
-from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.external_job_schemas import build_external_job_request
 
 
@@ -66,7 +70,157 @@ def _wait_for_state(request: dict[str, Any], root: Path, state: str) -> None:
     raise AssertionError(f"job did not reach {state}")
 
 
+@contextmanager
+def _cancel_attempt() -> Iterator[tuple[Path, dict[str, Any], Path]]:
+    """Isolate acknowledgement schedules; native cleanup is tested separately."""
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory) / "jobs"
+        request = _request("acknowledgement")
+        attempt = external_job_runtime.external_job_attempt_path(request, job_root=root)
+        external_job_runtime.create_private_json(attempt / "request.json", request)
+        with mock.patch.object(external_job_runtime, "_latest_status", return_value={"state": "RUNNING"}):
+            yield root, request, attempt
+
+
 class ExternalJobCleanupTests(unittest.TestCase):
+    def test_publication_acknowledgement_survives_native_completion(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "jobs"
+            request = _request("ordered-native-cancel", max_wall_seconds=3, cancel_grace_seconds=0)
+            completion_written = threading.Event()
+            holder: dict[str, Any] = {}
+            original = external_job_runtime.create_private_json
+
+            def publish_then_wait(path: Path, value: dict[str, Any]) -> None:
+                if path.name == "cancel-request.json":
+                    self.assertFalse((path.parent / "completion-observed.json").exists())
+                original(path, value)
+                if path.name == "completion-observed.json":
+                    completion_written.set()
+                if path.name == "cancel-request.json":
+                    holder["cancelBytes"] = path.read_bytes()
+                    self.assertTrue(completion_written.wait(timeout=2))
+
+            with (
+                mock.patch.object(external_job_runtime, "create_private_json", side_effect=publish_then_wait),
+                ThreadPoolExecutor(max_workers=1) as pool,
+            ):
+                worker = pool.submit(
+                    run_external_job,
+                    request,
+                    [sys.executable, "-c", "import time; time.sleep(10)"],
+                    env=dict(os.environ),
+                    job_root=root,
+                )
+                try:
+                    _wait_for_state(request, root, "RUNNING")
+                    receipt = request_external_job_cancel(request, job_root=root)
+                finally:
+                    view = worker.result(timeout=5)
+            self.assertEqual(receipt["status"], "PASS")
+            self.assertFalse(receipt["idempotent"])
+            self.assertEqual(view["result"]["state"], "CANCELLED")
+            self.assertEqual(view["jobStatus"]["processCleanupStatus"], "PASS")
+            self.assertLessEqual(view["result"]["usage"]["wallMilliseconds"], 3000)
+            attempt = root / "ordered-native-cancel/attempt-1"
+            self.assertEqual((attempt / "cancel-request.json").read_bytes(), holder["cancelBytes"])
+
+    def test_completion_between_initial_check_and_publication_is_not_cancellation_proof(self) -> None:
+        with _cancel_attempt() as (root, request, attempt):
+            original = external_job_runtime.create_private_json
+            terminal = attempt / "terminal-fixture.json"
+
+            def complete_then_publish(path: Path, value: dict[str, Any]) -> None:
+                original(attempt / "completion-observed.json", {"observedAt": "fixture"})
+                original(terminal, {"state": "SUCCEEDED"})
+                original(path, value)
+
+            with mock.patch.object(external_job_runtime, "create_private_json", side_effect=complete_then_publish):
+                receipt = request_external_job_cancel(request, job_root=root)
+            before = {path.name: path.read_bytes() for path in attempt.iterdir()}
+            repeated = request_external_job_cancel(request, job_root=root)
+            self.assertEqual(receipt["status"], "PASS")
+            self.assertFalse(receipt["idempotent"])
+            self.assertFalse(receipt["authorityClaimed"])
+            self.assertEqual(receipt["observedState"], "RUNNING")
+            self.assertEqual(json.loads(terminal.read_bytes())["state"], "SUCCEEDED")
+            self.assertEqual(repeated["status"], "NOT_REQUIRED")
+            self.assertTrue(repeated["idempotent"])
+            self.assertEqual(before, {path.name: path.read_bytes() for path in attempt.iterdir()})
+
+    def test_initial_terminal_or_completion_is_a_read_only_noop(self) -> None:
+        for state in ("SUCCEEDED", "CANCELLED", "COMPLETION_OBSERVED"):
+            with self.subTest(state=state), _cancel_attempt() as (root, request, attempt):
+                if state == "COMPLETION_OBSERVED":
+                    external_job_runtime.create_private_json(
+                        attempt / "completion-observed.json", {"observedAt": "fixture"}
+                    )
+                before = {path.name: path.read_bytes() for path in attempt.iterdir()}
+                latest = {"state": "RUNNING" if state == "COMPLETION_OBSERVED" else state}
+                with mock.patch.object(external_job_runtime, "_latest_status", return_value=latest):
+                    receipt = request_external_job_cancel(request, job_root=root)
+                self.assertEqual(receipt["status"], "NOT_REQUIRED")
+                self.assertTrue(receipt["idempotent"])
+                self.assertFalse((attempt / "cancel-request.json").exists())
+                self.assertEqual(before, {path.name: path.read_bytes() for path in attempt.iterdir()})
+
+    def test_nonterminal_retry_reuses_immutable_request(self) -> None:
+        with _cancel_attempt() as (root, request, attempt):
+            first = request_external_job_cancel(request, job_root=root, now=lambda: "2026-09-06T00:00:00Z")
+            before = (attempt / "cancel-request.json").read_bytes()
+            second = request_external_job_cancel(request, job_root=root, now=lambda: "2026-09-06T00:00:01Z")
+            self.assertEqual((first["status"], first["idempotent"]), ("PASS", False))
+            self.assertEqual((second["status"], second["idempotent"]), ("PASS", True))
+            self.assertEqual(first["requestedAt"], second["requestedAt"])
+            self.assertEqual(before, (attempt / "cancel-request.json").read_bytes())
+            stored = json.loads(before)
+            self.assertEqual(
+                stored["cancelDigest"], canonical_digest({k: v for k, v in stored.items() if k != "cancelDigest"})
+            )
+
+    def test_competing_creators_acknowledge_one_immutable_publication(self) -> None:
+        with _cancel_attempt() as (root, request, attempt):
+            barrier = threading.Barrier(2, timeout=3)
+            publication = threading.Lock()
+            original = external_job_runtime.create_private_json
+
+            def contend(path: Path, value: dict[str, Any]) -> None:
+                barrier.wait()
+                # Both callers passed exists(); the loser observes a complete publication.
+                with publication:
+                    original(path, value)
+
+            with (
+                mock.patch.object(external_job_runtime, "create_private_json", side_effect=contend),
+                ThreadPoolExecutor(max_workers=2) as pool,
+            ):
+                workers = [pool.submit(request_external_job_cancel, request, job_root=root) for _ in range(2)]
+                receipts = [worker.result(timeout=5) for worker in workers]
+            self.assertEqual(len(receipts), 2)
+            self.assertEqual(sorted(r["idempotent"] for r in receipts), [False, True])
+            self.assertTrue(all(r["status"] == "PASS" for r in receipts))
+            self.assertEqual(receipts[0]["requestedAt"], receipts[1]["requestedAt"])
+            before = (attempt / "cancel-request.json").read_bytes()
+            request_external_job_cancel(request, job_root=root)
+            self.assertEqual(before, (attempt / "cancel-request.json").read_bytes())
+
+    def test_wrong_lineage_and_failed_publication_do_not_acknowledge(self) -> None:
+        with _cancel_attempt() as (root, request, attempt):
+            before = {path.name: path.read_bytes() for path in attempt.iterdir()}
+            changed = {**request, "sourceRevision": "different-source"}
+            changed["requestDigest"] = canonical_digest({k: v for k, v in changed.items() if k != "requestDigest"})
+            with self.assertRaises(LifecycleError) as caught:
+                request_external_job_cancel(changed, job_root=root)
+            self.assertEqual(caught.exception.code, "external-job-cancel-lineage-mismatch")
+            with (
+                mock.patch.object(
+                    external_job_runtime, "create_private_json", side_effect=OSError("fixture write failure")
+                ),
+                self.assertRaises(OSError),
+            ):
+                request_external_job_cancel(request, job_root=root)
+            self.assertEqual(before, {path.name: path.read_bytes() for path in attempt.iterdir()})
+
     @unittest.skipUnless(os.name == "posix", "process-group incident fixture uses POSIX sessions")
     def test_addressed_cancel_terminates_descendants_without_mixed_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

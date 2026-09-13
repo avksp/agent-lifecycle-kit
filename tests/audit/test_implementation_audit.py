@@ -524,3 +524,53 @@ def _write_result_review(
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ImplementationFindingTextMatrixTests(unittest.TestCase):
+    def test_valid_multilingual_findings_and_every_rejected_field_at_audit_entrypoint(self) -> None:
+        import copy
+
+        from agent_lifecycle.contracts import LifecycleError
+
+        for prose in (
+            "English\n\u0420\u0443\u0441\u0441\u043a\u0438\u0439\t\u0442\u0435\u043a\u0441\u0442\r\n",
+            "\u0641\u0627\u0631\u0633\u06cc\u200c\u0645\u062a\u0646 \u0939\u093f\u0928\u094d\u0926\u0940\u200d\u092a\u093e\u0920",
+        ):
+            with self.subTest(prose=prose), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                bundle = _write_bundle(root)
+                result_path, review_path = _write_result_review(root, bundle)
+                report = build_implementation_audit_report(
+                    manifest_path=bundle["manifestPath"],
+                    state_path=bundle["statePath"],
+                    task_id="WS-01",
+                    result_path=result_path,
+                    review_path=review_path,
+                )
+                self.assertEqual(validate_implementation_audit_report(report)["status"], "PASS")
+                finding = {
+                    "id": "F-TEXT",
+                    "severity": "LOW",
+                    "status": "closed",
+                    "code": "TEXT",
+                    "category": "quality",
+                    "path": "src/example.py",
+                    **{key: prose for key in ("title", "summary", "message", "description", "recommendation")},
+                }
+                report["findings"] = [finding]
+                for key in ("auditDigest", "reportDigest"):
+                    if key in report:
+                        report[key] = canonical_digest({name: value for name, value in report.items() if name != key})
+                before = copy.deepcopy(report)
+                self.assertEqual(validate_implementation_audit_report(report)["status"], "PASS")
+                self.assertEqual(report, before)
+                for field in finding:
+                    bad = copy.deepcopy(report)
+                    bad["findings"][0][field] = "UNTRUSTED\u202e"
+                    before = copy.deepcopy(bad)
+                    with self.assertRaises(LifecycleError) as raised:
+                        validate_implementation_audit_report(bad)
+                    self.assertEqual(raised.exception.code, "authority-text-control")
+                    self.assertEqual(raised.exception.details, {})
+                    self.assertNotIn("UNTRUSTED", raised.exception.message)
+                    self.assertEqual(bad, before)

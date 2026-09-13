@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.contracts.ownership_paths import require_declared_output_footprint
 from agent_lifecycle.imports import import_external_dialect, validate_external_import_result
 
 
@@ -32,6 +33,8 @@ class ExternalDialectTests(unittest.TestCase):
             self.assertEqual(result["candidatePlan"]["status"], "DRAFT")
             self.assertFalse(result["candidatePlan"]["externalImport"]["executesInput"])
             self.assertTrue(result["requiresReview"])
+            require_declared_output_footprint(result["candidatePlan"])
+            self.assertEqual(result["candidatePlan"]["package"]["planArtifactRoot"], "imported/plan")
 
 
 if __name__ == "__main__":

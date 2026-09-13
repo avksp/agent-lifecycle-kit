@@ -69,10 +69,9 @@ def pre_action_gate(
         policy=policy,
         next_action=next_action,
         task_id=task_id,
-        expected_state_revision=(
-            expected_state_revision if expected_state_revision is not None else 0
-        ),
+        expected_state_revision=(expected_state_revision if expected_state_revision is not None else 0),
         package_integrity=package_integrity,
+        repository_root=repository_root,
     )
 
 
@@ -92,6 +91,7 @@ def post_action_gate(
     actual_status: str = "PASS",
     event: dict[str, Any] | None = None,
     policy_path: Path | None = None,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
     """Validate host output and changed paths after an authorized action."""
 
@@ -99,6 +99,7 @@ def post_action_gate(
     policy = load_lifecycle_control_policy(policy_path) if policy_path else None
     return evaluate_post_action_gate(
         pre_action=pre_action,
+        repository_root=repository_root,
         manifest=manifest,
         actual_changed_paths=actual_changed_paths,
         outcome=outcome,

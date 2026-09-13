@@ -68,6 +68,20 @@ class RepositoryPathSecurityTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(LifecycleError):
                 normalize_repo_path(value)
 
+    def test_windows_aliases_and_invalid_unicode_are_rejected_on_every_platform(self) -> None:
+        for value in (
+            "C:artifact.json",
+            "C:/artifact.json",
+            "data/item:stream",
+            "//server/share",
+            "\\\\server\\share",
+            "bad\ud800name",
+        ):
+            with self.subTest(value=repr(value)), self.assertRaises(LifecycleError) as raised:
+                normalize_repo_path(value)
+            self.assertEqual(raised.exception.code, "invalid-repo-path")
+            self.assertNotIn(value, raised.exception.message)
+
 
 if __name__ == "__main__":
     unittest.main()

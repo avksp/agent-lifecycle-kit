@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.workflow_state_schemas import validate_workflow_state
 from agent_lifecycle.workflow.checkpoint_gate import invoke_checkpoint_gate
-from agent_lifecycle.workflow.events import append_event, event_log_path
+from agent_lifecycle.workflow.events import append_event, event_log_path, read_events
 from agent_lifecycle.workflow.state import (
     load_state,
     now_iso,
@@ -35,8 +34,6 @@ def load_for_update(
 
 def _require_no_split_brain(state_path: Path, state: dict[str, Any]) -> None:
     path = event_log_path(state_path, state)
-    if not path.exists():
-        return
     last_event = _last_event(path)
     if last_event is None:
         return
@@ -58,23 +55,7 @@ def _require_no_split_brain(state_path: Path, state: dict[str, Any]) -> None:
 
 def _last_event(path: Path) -> dict[str, Any] | None:
     last: dict[str, Any] | None = None
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-        if not line.strip():
-            continue
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise LifecycleError(
-                "invalid-workflow-event-log",
-                "workflow event log contains malformed JSON",
-                {"path": path.as_posix(), "line": line_number},
-            ) from exc
-        if not isinstance(event, dict):
-            raise LifecycleError(
-                "invalid-workflow-event-log",
-                "workflow event log entry must be an object",
-                {"path": path.as_posix(), "line": line_number},
-            )
+    for event in read_events(path):
         last = event
     return last
 

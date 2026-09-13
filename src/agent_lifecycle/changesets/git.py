@@ -24,6 +24,7 @@ def changed_files(cwd: Path, *, base: str | None = None) -> list[str]:
                     "diff",
                     "--no-ext-diff",
                     "--no-textconv",
+                    "--no-renames",
                     "--name-only",
                     "-z",
                     "--end-of-options",
@@ -36,13 +37,23 @@ def changed_files(cwd: Path, *, base: str | None = None) -> list[str]:
         paths.update(
             _git_paths(
                 cwd,
-                ["git", "diff", "--no-ext-diff", "--no-textconv", "--name-only", "-z", "--"],
+                ["git", "diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--name-only", "-z", "--"],
             )
         )
         paths.update(
             _git_paths(
                 cwd,
-                ["git", "diff", "--no-ext-diff", "--no-textconv", "--name-only", "-z", "--cached", "--"],
+                [
+                    "git",
+                    "diff",
+                    "--no-ext-diff",
+                    "--no-textconv",
+                    "--no-renames",
+                    "--name-only",
+                    "-z",
+                    "--cached",
+                    "--",
+                ],
             )
         )
     paths.update(_git_paths(cwd, ["git", "ls-files", "--others", "--exclude-standard", "-z"]))

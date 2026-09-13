@@ -15,7 +15,9 @@ from agent_lifecycle.audit import compact_review_routing, validate_review_verdic
 from agent_lifecycle.audit.review_verdict import validate_review_verdict as facade_validate_review_verdict  # noqa: E402
 from agent_lifecycle.cli import main  # noqa: E402
 from agent_lifecycle.contracts import LifecycleError  # noqa: E402
-from agent_lifecycle.contracts.review_verdict import validate_review_verdict as contract_validate_review_verdict  # noqa: E402
+from agent_lifecycle.contracts.review_verdict import (  # noqa: E402
+    validate_review_verdict as contract_validate_review_verdict,
+)
 from agent_lifecycle.workflow.reviews import validate_task_review  # noqa: E402
 
 
