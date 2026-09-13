@@ -6,16 +6,72 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.compiler import compile_small_model_packets, validate_small_model_output  # noqa: E402
-from agent_lifecycle.contracts import canonical_digest, write_json_create  # noqa: E402
+from agent_lifecycle.contracts import (  # noqa: E402
+    LifecycleError,
+    canonical_digest,
+    read_json_object,
+    write_json_create,
+)
 from agent_lifecycle.policy import build_adaptive_lifecycle_decision  # noqa: E402
 
 
 class SmallModelPacketCompilerTests(unittest.TestCase):
+    def test_compact_compiler_checks_explicit_destination_before_creation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = _write_bundle(root)
+            previous_cwd = Path.cwd()
+            os.chdir(root)
+            try:
+                destination = Path("plans/p/.agent-plan/p/new")
+                with self.assertRaises(LifecycleError) as raised:
+                    compile_small_model_packets(
+                        manifest,
+                        context_profile_path=ROOT / "profiles/small-context-profile.v1.json",
+                        out_dir=destination,
+                        write=True,
+                    )
+                self.assertEqual(raised.exception.code, "plan-output-conflict")
+                self.assertFalse(destination.exists())
+            finally:
+                os.chdir(previous_cwd)
+
+    def test_repeated_manifest_read_must_match_verified_packet_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = _write_bundle(root)
+            value = read_json_object(manifest)
+            value["package"]["artifactRoot"] = "unverified-output"
+            previous_cwd = Path.cwd()
+            os.chdir(root)
+            try:
+
+                def first_read(path, **kwargs):
+                    return (
+                        value if Path(path).resolve() == Path(manifest).resolve() else read_json_object(path, **kwargs)
+                    )
+
+                with (
+                    patch("agent_lifecycle.compiler.small_model_packets.read_json_object", side_effect=first_read),
+                    self.assertRaises(LifecycleError) as raised,
+                ):
+                    compile_small_model_packets(
+                        manifest,
+                        context_profile_path=ROOT / "profiles/small-context-profile.v1.json",
+                        write=True,
+                    )
+                self.assertEqual(raised.exception.code, "authority-input-changed")
+                self.assertFalse(Path("unverified-output").exists())
+                self.assertFalse(Path("plans/p/workflow").exists())
+            finally:
+                os.chdir(previous_cwd)
+
     def test_compile_small_model_packets_writes_bounded_packets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -81,7 +137,9 @@ class SmallModelPacketCompilerTests(unittest.TestCase):
         self.assertEqual(missing_validation["status"], "FAIL")
         self.assertIn("small-model-output-field-missing", {item["code"] for item in missing_validation["blockers"]})
         self.assertEqual(outside_validation["status"], "FAIL")
-        self.assertIn("small-model-output-outside-write-scope", {item["code"] for item in outside_validation["blockers"]})
+        self.assertIn(
+            "small-model-output-outside-write-scope", {item["code"] for item in outside_validation["blockers"]}
+        )
 
     def test_adaptive_strict_floor_blocks_small_model_packet_selection(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

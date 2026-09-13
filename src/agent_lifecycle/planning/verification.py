@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.ownership_paths import require_declared_output_footprint
 from agent_lifecycle.freeze import verify_plan_lock, verify_plan_package_integrity
 from agent_lifecycle.planning.acceptance_markdown import validate_acceptance_checklist
 from agent_lifecycle.planning.completeness import validate_plan_completeness
@@ -36,6 +37,10 @@ def build_plan_verification(
     manifest_check = _check("manifest", lambda: validate_plan_manifest(manifest))
     checks["manifest"] = manifest_check
     _extend_blockers(blockers, manifest_check)
+
+    output_check = _check("outputFootprint", lambda: require_declared_output_footprint(manifest, repository_root=root))
+    checks["outputFootprint"] = output_check
+    _extend_blockers(blockers, output_check)
 
     package_only = package_root is not None and _is_package_inventory_fixture(manifest)
     completeness_check = (

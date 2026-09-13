@@ -9,6 +9,7 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES, load_json_object
+from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
 from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
 from agent_lifecycle.planning.task_compatibility import (
@@ -155,6 +156,7 @@ def _verify_frozen_manifest(root: Path, manifest: dict[str, Any]) -> str:
     validate_plan_manifest(manifest)
     if manifest.get("status") != "FROZEN":
         raise LifecycleError("plan-not-frozen", "only FROZEN plans can be adopted")
+    require_manifest_authority_paths(manifest, operation_root=root)
     if isinstance(manifest.get("packageIntegrity"), dict):
         require_plan_completeness_pass(validate_plan_completeness(manifest))
     digest = canonical_digest(manifest)

@@ -28,6 +28,7 @@ class AdapterLifecycleControlTests(unittest.TestCase):
             root = Path(tmp)
             manifest_path, lock_path, state_path, policy_path = _write_bundle(root)
             pre = pre_action_gate(
+                repository_root=root,
                 manifest_path=manifest_path,
                 lock_path=lock_path,
                 state_path=state_path,
@@ -49,6 +50,7 @@ class AdapterLifecycleControlTests(unittest.TestCase):
                 outcome={"status": "PASS"},
             )
             post = post_action_gate(
+                repository_root=root,
                 pre_action=pre,
                 manifest_path=manifest_path,
                 actual_changed_paths=["src/example.py"],
@@ -66,6 +68,7 @@ class AdapterLifecycleControlTests(unittest.TestCase):
             manifest_path, lock_path, state_path, policy_path = _write_bundle(root)
 
             gate = pre_action_gate(
+                repository_root=root,
                 manifest_path=manifest_path,
                 lock_path=lock_path,
                 state_path=state_path,
@@ -81,6 +84,7 @@ class AdapterLifecycleControlTests(unittest.TestCase):
             self.assertIn("state-revision-mismatch", {item["code"] for item in gate["blockers"]})
             with self.assertRaises(LifecycleError):
                 require_pre_action(
+                    repository_root=root,
                     manifest_path=manifest_path,
                     lock_path=lock_path,
                     state_path=state_path,
@@ -119,6 +123,7 @@ class AdapterLifecycleControlTests(unittest.TestCase):
             root = Path(tmp)
             manifest_path, lock_path, state_path, policy_path = _write_bundle(root)
             gate = pre_action_gate(
+                repository_root=root,
                 manifest_path=manifest_path,
                 lock_path=lock_path,
                 state_path=state_path,

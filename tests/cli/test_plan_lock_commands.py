@@ -107,7 +107,6 @@ class PlanLockCommandTests(unittest.TestCase):
             {"id": "F-C", "severity": "CRITICAL", "status": "open"},
             {"id": "F-1", "severity": "Medium", "status": "Open"},
             {"id": "F-2", "severity": " medium ", "status": " open "},
-            {"id": "F-3", "severity": "\tHIGH\n", "status": "OPEN"},
         ]
         for finding in findings:
             with self.subTest(finding=finding), tempfile.TemporaryDirectory() as tmp:
@@ -119,6 +118,18 @@ class PlanLockCommandTests(unittest.TestCase):
                 self.assertEqual(code, 2)
                 self.assertEqual(payload["code"], "review-open-findings")
                 self.assertFalse(_lock_path(root).exists())
+
+    def test_lock_create_rejects_control_bearing_severity_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            finding = {"id": "F-3", "severity": "\tHIGH\n", "status": "OPEN"}
+            manifest_path, review_path = _write_reviewed_package(root, findings=[finding])
+
+            code, payload = _run_lock_create(root, manifest_path, review_path)
+
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "authority-text-control")
+            self.assertFalse(_lock_path(root).exists())
 
     def test_lock_create_rejects_review_and_manifest_mutations_without_writing(self) -> None:
         cases = (
@@ -327,3 +338,55 @@ def _write_reviewed_package(
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DefaultOutputLifecycleMatrixTests(unittest.TestCase):
+    def test_reviewed_freeze_compile_integrity_and_approval_required_adoption(self) -> None:
+        from agent_lifecycle.compiler import compile_task_packets
+        from agent_lifecycle.freeze import verify_plan_package_integrity
+        from agent_lifecycle.workflow import adopt_plan
+        from tests.planning.test_plan_completeness import _manifest
+        from tests.workflow.helpers import _write_state
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path, review_path = _write_reviewed_package(root)
+            original = _read_json(root / manifest_path)
+            manifest = _manifest("S1")
+            manifest.update({key: value for key, value in original.items() if key != "workstreams"})
+            manifest["workstreams"][0]["owner"] = "worker"
+            review = _read_json(root / review_path)
+            review["reviewedPlanHash"] = canonical_digest(manifest)
+            for name, value in ((manifest_path, manifest), (review_path, review)):
+                (root / name).unlink()
+                write_json_create(root / name, value)
+            with contextlib.chdir(root):
+                code, locked = _run_cli(["plan", "lock-create", "--manifest", manifest_path, "--review", review_path])
+                self.assertEqual(code, 0, locked)
+                protected = {
+                    p.relative_to(root).as_posix(): p.read_bytes() for p in (root / "plans").rglob("*") if p.is_file()
+                }
+                first = compile_task_packets(root / manifest_path, write=True)
+                self.assertEqual(first, compile_task_packets(root / manifest_path, write=True))
+                lock = _read_json(root / locked["lockPath"])
+                self.assertEqual(verify_plan_package_integrity(manifest, lock, repository_root=root)["status"], "PASS")
+                state_path = _write_state(root, phase="READY")
+                adopted = adopt_plan(
+                    state_path,
+                    manifest_path=root / manifest_path,
+                    operation_id="adopt-output",
+                    expected_revision=1,
+                    source_revision="source",
+                    reset_tasks=True,
+                    start_mode="approval-required",
+                )
+                self.assertEqual(adopted["phase"], "AWAITING_AUTHORIZATION")
+                self.assertFalse(json.loads(state_path.read_text(encoding="utf-8"))["authorization"]["granted"])
+                self.assertEqual(
+                    {
+                        p.relative_to(root).as_posix(): p.read_bytes()
+                        for p in (root / "plans").rglob("*")
+                        if p.is_file()
+                    },
+                    protected,
+                )

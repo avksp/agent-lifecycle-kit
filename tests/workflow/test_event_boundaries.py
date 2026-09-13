@@ -8,9 +8,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from agent_lifecycle.contracts import LifecycleError, authority_io, canonical_bytes
+from agent_lifecycle.contracts import LifecycleError, authority_io, canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.authority_io import resolve_authority_anchor
-from agent_lifecycle.workflow.artifacts import artifact_identity
+from agent_lifecycle.workflow import artifacts
+from agent_lifecycle.workflow.artifacts import artifact_identity, require_artifact_identity
 from agent_lifecycle.workflow.continuation_batch import _events_by_operation
 from agent_lifecycle.workflow.events import read_events
 from agent_lifecycle.workflow.initialization import initialize_workflow_state
@@ -19,6 +20,138 @@ from agent_lifecycle.workflow.state import load_state, write_state_replace
 
 
 class WorkflowEventBoundaryTests(unittest.TestCase):
+    def test_current_and_archived_identity_require_exact_canonical_lf_bytes(self) -> None:
+        value = {"value": 1}
+        canonical = canonical_bytes(value) + b"\n"
+        for role in ("current", "archive"):
+            for case, data in (
+                ("valid", canonical),
+                ("same-size-content", canonical.replace(b"1", b"2")),
+                ("missing-lf", canonical[:-1]),
+                ("crlf", canonical[:-1] + b"\r\n"),
+                ("trailing-space", canonical[:-1] + b" \n"),
+                ("duplicate", b'{"value":1,"value":1}\n'),
+                ("digest-mismatch", canonical),
+                ("size-mismatch", canonical),
+            ):
+                with self.subTest(role=role, case=case), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp).resolve()
+                    path = root / "result.json"
+                    path.write_bytes(data)
+                    identity = {"path": path.name, "sha256": canonical_digest(value), "bytes": len(data)}
+                    expected_value = value
+                    if case == "digest-mismatch":
+                        identity["sha256"] = "0" * 64
+                        expected_value = {"value": 2}
+                    elif case == "size-mismatch":
+                        identity["bytes"] += 1
+                        if role == "current":
+                            continue  # Current identities derive size from the consumed bytes.
+                    if case == "valid":
+                        self.assertEqual(artifact_identity(root, path.name, value), identity)
+                        self.assertEqual(require_artifact_identity(root, identity, label="archive"), value)
+                    else:
+                        with self.assertRaises(LifecycleError) as raised:
+                            if role == "current":
+                                artifact_identity(root, path.name, expected_value)
+                            else:
+                                require_artifact_identity(root, identity, label="archive")
+                        expected_code = "non-canonical-artifact" if role == "current" else "archived-artifact-changed"
+                        if role == "archive" and case == "duplicate":
+                            expected_code = "invalid-json"
+                        self.assertEqual(raised.exception.code, expected_code)
+                    self.assertEqual(path.read_bytes(), data)
+
+    def test_archived_parser_uses_the_same_single_guarded_read_as_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            path = root / "result.json"
+            value = {"value": 1}
+            data = canonical_bytes(value) + b"\n"
+            changed = data.replace(b"1", b"2")
+            path.write_bytes(data)
+            identity = {"path": path.name, "sha256": canonical_digest(value), "bytes": len(data)}
+            original_open = authority_io._Directory.open_child
+            original_parse = artifacts.load_json_object
+            opened = []
+            consumed = []
+
+            def observe(parent, name):
+                opened.append(name)
+                return original_open(parent, name)
+
+            def replace_before_parse(raw, *, label):
+                consumed.append(raw)
+                path.write_bytes(changed)
+                return original_parse(raw, label=label)
+
+            with (
+                patch.object(authority_io._Directory, "open_child", observe),
+                patch.object(artifacts, "load_json_object", replace_before_parse),
+            ):
+                self.assertEqual(require_artifact_identity(root, identity, label="archive"), value)
+            self.assertEqual(opened, [path.name])
+            self.assertEqual(consumed, [data])
+            self.assertEqual(path.read_bytes(), changed)
+            with self.assertRaises(LifecycleError) as raised:
+                require_artifact_identity(root, identity, label="archive")
+            self.assertEqual(raised.exception.code, "archived-artifact-changed")
+
+    def test_current_and_archived_identity_reject_same_size_replacement_and_links(self) -> None:
+        for role in ("current", "archive"):
+            for change in ("replace", "leaf-link", "parent-link"):
+                with self.subTest(role=role, change=change), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp).resolve()
+                    folder = root / "attempt-1"
+                    folder.mkdir()
+                    path = folder / "result.json"
+                    value = {"value": 1}
+                    data = canonical_bytes(value) + b"\n"
+                    path.write_bytes(data)
+                    replacement = folder / "replacement.json"
+                    replacement.write_bytes(data.replace(b"1", b"2"))
+                    if change == "leaf-link":
+                        path.unlink()
+                        path.symlink_to(replacement)
+                    elif change == "parent-link":
+                        link = root / "linked"
+                        link.symlink_to(folder, target_is_directory=True)
+                        path = link / path.name
+                    identity = {
+                        "path": path.relative_to(root).as_posix(),
+                        "sha256": canonical_digest(value),
+                        "bytes": len(data),
+                    }
+                    original_open = authority_io._Directory.open_child
+                    touched = []
+
+                    def substitute(
+                        parent,
+                        name,
+                        *,
+                        change=change,
+                        path=path,
+                        replacement=replacement,
+                        touched=touched,
+                        original_open=original_open,
+                    ):
+                        if change == "replace" and name == path.name:
+                            parent.replace_child(replacement.name, name)
+                            touched.append(name)
+                        return original_open(parent, name)
+
+                    with (
+                        patch.object(authority_io._Directory, "open_child", substitute),
+                        self.assertRaises(LifecycleError) as raised,
+                    ):
+                        if role == "current":
+                            artifact_identity(root, identity["path"], value)
+                        else:
+                            require_artifact_identity(root, identity, label="archive")
+                    if change == "replace":
+                        self.assertEqual(raised.exception.code, "authority-input-changed")
+                        self.assertEqual(touched, [path.name])
+
     def test_native_artifact_paths_reject_traversal_drive_and_unc_forms(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -48,7 +181,9 @@ class WorkflowEventBoundaryTests(unittest.TestCase):
                 original = authority_io._Directory.open_child
                 touched = []
 
-                def substitute(parent, name):
+                def substitute(
+                    parent, name, *, replacement=replacement, path=path, touched=touched, original=original
+                ):
                     parent.replace_child(replacement.name, path.name)
                     touched.append(name)
                     return original(parent, name)

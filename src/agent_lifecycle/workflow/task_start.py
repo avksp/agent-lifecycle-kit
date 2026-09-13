@@ -7,7 +7,7 @@ from typing import Any
 
 import agent_lifecycle.workflow.state as workflow_state
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
-from agent_lifecycle.contracts.ownership_paths import normalize_authority_path
+from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.freeze import verify_plan_lock_envelope
 from agent_lifecycle.host_protocol.capabilities import validate_capability_manifest
@@ -60,7 +60,7 @@ def start_task(
     _require_dependencies_accepted(state, task)
     _require_parallel_capacity(state)
     validate_attempt_history(state_path, state, task)
-    _validate_task_authority_paths(state, task)
+    _validate_task_authority_paths(state_path, state)
     attempt = next_available_attempt(state_path, state, task)
 
     clear_task_risk_profile(task)
@@ -529,15 +529,14 @@ def clear_active_attempt_references(task: dict[str, Any]) -> None:
         task.pop(key, None)
 
 
-def _validate_task_authority_paths(state: dict[str, Any], task: dict[str, Any]) -> None:
-    for path in task.get("writes", []):
-        if isinstance(path, str):
-            normalize_authority_path(path, label="task write path")
+def _validate_task_authority_paths(state_path: Path, state: dict[str, Any]) -> None:
+    root = package_root(state_path, state)
     policy = state.get("writePolicy", {}) if isinstance(state.get("writePolicy"), dict) else {}
-    for field in ("readOnly", "forbiddenWrites"):
-        for path in policy.get(field, []):
-            if isinstance(path, str):
-                normalize_authority_path(path, label=f"{field} path")
+    tasks = state.get("tasks", [])
+    require_manifest_authority_paths(
+        {**policy, "workstreams": [item for item in tasks if isinstance(item, dict)]},
+        operation_root=root,
+    )
 
 
 def _object(value: Any) -> dict[str, Any]:

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.compiler.output_contract import build_output_contract, validate_output_contract
-from agent_lifecycle.compiler.task_packets import compile_task_packets
+from agent_lifecycle.compiler.task_packets import _write_idempotent, compile_task_packets
 from agent_lifecycle.context import render_context
 from agent_lifecycle.context.profiles import small_model_windows
 from agent_lifecycle.contracts import (
@@ -15,6 +15,11 @@ from agent_lifecycle.contracts import (
     canonical_digest,
     is_under_repo_path,
     read_json_object,
+)
+from agent_lifecycle.contracts.ownership_paths import (
+    compiler_output_paths,
+    repository_authority_name,
+    require_output_footprint,
 )
 from agent_lifecycle.policy.adaptive_lifecycle import small_model_packet_eligibility
 from agent_lifecycle.resources import builtin_profile_path
@@ -50,9 +55,12 @@ def compile_small_model_packets(
     adaptive_decision: dict[str, Any] | None = None,
     write: bool = False,
     execution_strategy: dict[str, Any] | None = None,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
     """Compile frozen task packets into bounded small-model packets."""
 
+    root = repository_root if repository_root is not None else Path.cwd()
+    manifest_path = root / repository_authority_name(root / manifest_path, root)
     manifest = read_json_object(manifest_path, label="plan manifest")
     profile = read_json_object(
         context_profile_path or builtin_profile_path("small-context-profile.v1.json"),
@@ -68,8 +76,17 @@ def compile_small_model_packets(
         manifest_path,
         write=False,
         execution_strategy=execution_strategy,
+        repository_root=root,
     )
+    if canonical_digest(manifest) != compiled["index"]["manifestDigest"]:
+        raise LifecycleError("authority-input-changed", "plan manifest changed during compilation")
     output_dir = out_dir or _default_output_dir(manifest)
+    require_output_footprint(
+        manifest,
+        compiler_output_paths(manifest, output_dir=output_dir, small=True),
+        repository_root=root,
+        manifest_path=manifest_path,
+    )
     eligibility = (
         small_model_packet_eligibility(adaptive_decision) if adaptive_decision is not None else _default_eligibility()
     )
@@ -119,7 +136,7 @@ def compile_small_model_packets(
     }
     index = {**index_body, "indexDigest": canonical_digest(index_body)}
     if write:
-        _write_packets(output_dir, packets, index)
+        _write_packets(output_dir, packets, index, repository_root=root)
     body = {
         "schemaVersion": SMALL_MODEL_COMPILE_RESULT_SCHEMA,
         "status": index["status"],
@@ -312,20 +329,14 @@ def _default_output_dir(manifest: dict[str, Any]) -> Path:
     return Path(artifact_root) / "workflow/small-model-packets"
 
 
-def _write_packets(output_dir: Path, packets: list[dict[str, Any]], index: dict[str, Any]) -> None:
+def _write_packets(
+    output_dir: Path, packets: list[dict[str, Any]], index: dict[str, Any], *, repository_root: Path
+) -> None:
     for packet in packets:
-        _write_idempotent(output_dir / f"{packet['task']['id']}.small-model-packet.json", packet)
-    _write_idempotent(output_dir / "index.json", index)
-
-
-def _write_idempotent(path: Path, payload: dict[str, Any]) -> None:
-    data = canonical_bytes(payload) + b"\n"
-    if path.exists():
-        if path.read_bytes() != data:
-            raise LifecycleError("output-conflict", f"output exists with different content: {path}")
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
+        _write_idempotent(
+            output_dir / f"{packet['task']['id']}.small-model-packet.json", packet, repository_root=repository_root
+        )
+    _write_idempotent(output_dir / "index.json", index, repository_root=repository_root)
 
 
 def _string_list(value: Any) -> list[str]:

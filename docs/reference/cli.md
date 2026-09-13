@@ -1,5 +1,53 @@
 # CLI reference
 
+## Migrating authority artifacts to 2.15
+
+Version 2.15 tightens validation before artifacts can grant authority. Existing
+valid distinct-key JSON retains the 2.14 canonical bytes, digests and trailing
+newline convention. Do not rewrite historical manifests, locks or receipts;
+correct invalid input in a new plan revision and repeat independent review and
+freeze when authority-bearing inputs change.
+
+- JSON object keys must be unique at every depth, including escaped spellings
+  of the same key. Ambiguous input fails with `invalid-json` and
+  `JSON input is invalid`; diagnostics do not echo keys, values, paths or payloads.
+- Authority reads and writes use a root-bound guarded I/O boundary. Traversal,
+  symlink escapes, Windows/UNC aliases and ancestor-swap races fail closed.
+  A missing platform primitive does not turn a structural check into permission.
+- Declare authority paths in NFC. An unambiguous observed filesystem spelling
+  compares in NFC while retaining its original I/O and evidence bytes. Verified
+  case-sensitive roots preserve distinct names such as `Foo.py` and `foo.py`;
+  case-insensitive roots block ambiguous or protected aliases using NFC and
+  casefold. Unknown filesystem semantics and ambiguous normalization fail closed.
+  The same policy applies to `readOnly`, `forbiddenWrites`, `leadOwned[].path`
+  and `workstreams[].writes`; normalization cannot broaden a write grant.
+- Authority token/path fields reject control and display-spoofing characters.
+  Decision-bearing prose uses the same protection while retaining TAB/LF/CR and
+  language joiners U+200C/U+200D. Ordinary multilingual text, including English
+  and Russian multiline prose, remains valid. A rejected field reports
+  `authority-text-control` without echoing unsafe text; it is not silently repaired.
+- Changeset ownership includes both the removed and added sides of a rename.
+  A copy includes the changed destination, without assigning its unchanged
+  source to the task.
+- The compiler validates every packet and index destination before creating
+  output directories or files. Declared/default outputs and explicit `--out-dir`
+  cannot overlap protected plan inventory or escape the repository. Safe sibling
+  layouts, disjoint shared-parent layouts and contained absolute exports remain
+  supported. An explicit export does not override later adoption bindings.
+  Guarded writes retain containment after preflight; this is not a general
+  rollback guarantee for unrelated I/O failures.
+- External-job cancellation `PASS` acknowledges publication of the cancellation
+  request. It does not prove process termination; terminal evidence and cleanup
+  remain separate. Initial terminal no-ops, idempotency and lineage are preserved.
+
+See [Authority and artifact boundaries](authority-artifact-boundaries.md) for
+`operation_root`, task-start and package-audit semantics. Rootless completeness
+PASS proves offline structure only. Validator evidence remains bound to the
+checked source and actual guarded-I/O consumers. These changes do not establish
+host `ENFORCED` qualification or release readiness. Full regression, security,
+architecture, neutrality, quality, documentation and publication gates remain
+required with their existing thresholds.
+
 ## Lifecycle command authority
 
 Use `workflow run` and the `workflow task-*` commands for all integrations.
@@ -28,7 +76,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.14.0
+python -m pip install agent-lifecycle-kit==2.15.0
 ```
 
 ## Task evidence identity

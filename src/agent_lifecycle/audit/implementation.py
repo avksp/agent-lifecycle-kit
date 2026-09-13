@@ -7,6 +7,7 @@ from typing import Any
 
 from agent_lifecycle.audit.ownership import build_ownership_report, report_has_category
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.authority_text import require_review_text
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.review_verdict import (
     BLOCKING_REVIEW_SEVERITIES,
@@ -218,6 +219,7 @@ def validate_implementation_audit_report(
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     compatibility_validation: dict[str, Any] | None = None
+    require_review_text(report)
     if report.get("schemaVersion") != IMPLEMENTATION_AUDIT_SCHEMA:
         blockers.append(
             {"code": "implementation-audit-schema", "message": "unsupported implementation audit schemaVersion"}
@@ -389,6 +391,7 @@ def build_final_implementation_audit(
 def validate_final_implementation_audit(
     audit: dict[str, Any], *, state: dict[str, Any] | None = None
 ) -> dict[str, Any]:
+    require_review_text(audit)
     blockers: list[dict[str, Any]] = []
     if audit.get("schemaVersion") != FINAL_IMPLEMENTATION_AUDIT_SCHEMA:
         blockers.append(

@@ -4,16 +4,55 @@ import json
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import nullcontext, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 try:
-    from .helpers import *  # noqa: F401,F403,E402
+    from .helpers import (
+        LifecycleError,
+        _add_gate,
+        _fresh_result,
+        _gate,
+        _initialize_managed_git_state,
+        _model_route,
+        _model_usage_receipt,
+        _result,
+        _review,
+        _set_task_model_route,
+        _write_gate_receipt,
+        _write_state,
+        accept_task,
+        canonical_digest,
+        commit_task_result,
+        rework_task,
+        start_task,
+        write_json_create,
+    )
 except ImportError:
-    from helpers import *  # noqa: F401,F403,E402
+    from helpers import (
+        LifecycleError,
+        _add_gate,
+        _fresh_result,
+        _gate,
+        _initialize_managed_git_state,
+        _model_route,
+        _model_usage_receipt,
+        _result,
+        _review,
+        _set_task_model_route,
+        _write_gate_receipt,
+        _write_state,
+        accept_task,
+        canonical_digest,
+        commit_task_result,
+        rework_task,
+        start_task,
+        write_json_create,
+    )
 
 from agent_lifecycle.cli import main  # noqa: E402
 
@@ -666,7 +705,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
 
             self.assertEqual(raised.exception.code, "task-ownership-violation")
 
-    def test_accept_task_rejects_forbidden_changed_files(self) -> None:
+    def test_start_task_rejects_contradictory_forbidden_declaration(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             state_path = _write_state(root, phase="RUNNING")
@@ -674,43 +713,81 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
             state["writePolicy"] = {"forbiddenWrites": [".git"], "readOnly": []}
             state["tasks"][0]["writes"] = ["src", ".git"]
             state_path.write_text(json.dumps(state), encoding="utf-8")
-            start_task(
-                state_path,
-                task_id="WS-01",
-                operation_id="start-op",
-                expected_revision=1,
-                source_revision="source",
-                reason="launch",
-            )
-            result_path = "work/WS-01/attempt-1/task-result.json"
-            result = _result(attempt=1)
-            result["changedFiles"] = [".git/config"]
-            result["itemOutcomes"][0]["changedFiles"] = [".git/config"]
-            write_json_create(root / result_path, result)
-            commit_task_result(
-                state_path,
-                task_id="WS-01",
-                operation_id="result-op",
-                expected_revision=2,
-                source_revision="source",
-                result_path=result_path,
-                reason="done",
-            )
-            review_path = "work/WS-01/attempt-1/task-review.json"
-            review = _review(attempt=1, result_hash=canonical_digest(result))
-            write_json_create(root / review_path, review)
-
+            before = state_path.read_bytes()
             with self.assertRaises(LifecycleError) as raised:
-                accept_task(
+                start_task(
                     state_path,
                     task_id="WS-01",
-                    operation_id="accept-op",
-                    expected_revision=3,
-                    review_path=review_path,
-                    reason="accepted",
+                    operation_id="start-op",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="launch",
                 )
+            self.assertEqual(raised.exception.code, "ambiguous-authority-path")
+            self.assertEqual(state_path.read_bytes(), before)
+            self.assertFalse((root / "events.jsonl").exists())
+            self.assertFalse((root / "work").exists())
 
-            self.assertEqual(raised.exception.code, "task-ownership-violation")
+    def test_start_guards_full_state_inventory_before_attempt_allocation(self) -> None:
+        for scope in (
+            "global-readOnly",
+            "global-forbiddenWrites",
+            "global-leadOwned",
+            "task-readOnly",
+            "task-forbiddenWrites",
+            "task-leadOwned",
+            "competing-writer",
+        ):
+            for aliases in (True, None):
+                with self.subTest(scope=scope, aliases=aliases), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    state_path = _write_state(root, phase="RUNNING")
+                    state = json.loads(state_path.read_text(encoding="utf-8"))
+                    state["tasks"][0]["writes"] = ["Private/file.py"]
+                    if scope == "competing-writer":
+                        state["tasks"].append({**state["tasks"][0], "id": "WS-02", "writes": ["private/file.py"]})
+                    else:
+                        owner, field = scope.split("-", 1)
+                        target = state.setdefault("writePolicy", {}) if owner == "global" else state["tasks"][0]
+                        target[field] = (
+                            [{"path": "private", "reason": "controller"}] if field == "leadOwned" else ["private"]
+                        )
+                    state_path.write_text(json.dumps(state), encoding="utf-8")
+                    before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+                    # The native missing-name route must fail closed. The deterministic
+                    # alias route qualifies caller propagation independently of host case rules.
+                    def compare(anchor, _parent, _left, _right, *, expected_root=root):
+                        self.assertEqual(anchor, expected_root.resolve())
+                        return True
+
+                    policy = (
+                        patch("agent_lifecycle.contracts.ownership_paths._same_filesystem_name", side_effect=compare)
+                        if aliases
+                        else nullcontext()
+                    )
+                    with (
+                        policy,
+                        patch("agent_lifecycle.workflow.task_start.next_available_attempt") as allocate,
+                        self.assertRaises(LifecycleError) as raised,
+                    ):
+                        start_task(
+                            state_path,
+                            task_id="WS-01",
+                            operation_id="guard-op",
+                            expected_revision=1,
+                            source_revision="source",
+                            reason="guard",
+                        )
+                    self.assertEqual(
+                        raised.exception.code,
+                        "ambiguous-authority-path" if aliases else "filesystem-policy-unavailable",
+                    )
+                    allocate.assert_not_called()
+                    self.assertEqual(
+                        {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}, before
+                    )
+                    self.assertFalse((root / "work").exists())
 
     def test_accept_task_rejects_adopted_state_without_write_scope(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1261,7 +1338,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
             self.assertEqual(categories["runtime/package/evidence.json"], "lead-owned")
             self.assertEqual(task["writes"], ["src"])
 
-    def test_managed_acceptance_keeps_blocking_policy_ahead_of_lead_owned(self) -> None:
+    def test_managed_result_keeps_blocking_policy_ahead_of_lead_owned(self) -> None:
         for policy_key, expected_category in (("forbiddenWrites", "forbidden"), ("readOnly", "read-only")):
             with self.subTest(policy_key=policy_key), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
@@ -1290,32 +1367,21 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 result_path = "work/WS-01/attempt-1/task-result.json"
                 result = _fresh_result(root, state_path, attempt=1)
                 write_json_create(root / result_path, result)
-                commit_task_result(
-                    state_path,
-                    task_id="WS-01",
-                    operation_id=f"result-{expected_category}",
-                    expected_revision=2,
-                    source_revision=source_revision,
-                    result_path=result_path,
-                    reason="done",
-                )
-                review_path = "work/WS-01/attempt-1/task-review.json"
-                write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
-
+                before = state_path.read_bytes()
+                events_before = (root / "events.jsonl").read_bytes()
                 with self.assertRaises(LifecycleError) as raised:
-                    accept_task(
+                    commit_task_result(
                         state_path,
                         task_id="WS-01",
-                        operation_id=f"accept-{expected_category}",
-                        expected_revision=3,
-                        review_path=review_path,
-                        reason="accepted",
+                        operation_id=f"result-{expected_category}",
+                        expected_revision=2,
+                        source_revision=source_revision,
+                        result_path=result_path,
+                        reason="done",
                     )
-
                 self.assertEqual(raised.exception.code, "task-ownership-violation")
-                entries = raised.exception.details["ownership"]["entries"]
-                protected_entry = next(item for item in entries if item["path"] == "controller/protected/value.txt")
-                self.assertEqual(protected_entry["category"], expected_category)
+                self.assertEqual(state_path.read_bytes(), before)
+                self.assertEqual((root / "events.jsonl").read_bytes(), events_before)
 
     def test_managed_acceptance_rejects_unowned_repository_change(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1362,3 +1428,64 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ProtectedRenameTransactionTests(unittest.TestCase):
+    def test_protected_rename_blocks_ownership_and_task_result_without_mutation(self) -> None:
+        from agent_lifecycle.audit.ownership import build_ownership_report_from_manifest
+        from agent_lifecycle.changesets import changed_files
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root, phase="RUNNING")
+            source_revision = _initialize_managed_git_state(root, state_path)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["writePolicy"] = {"forbiddenWrites": ["src/example.py"]}
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            start_task(
+                state_path,
+                task_id="WS-01",
+                operation_id="rename-start",
+                expected_revision=1,
+                source_revision=source_revision,
+                reason="launch",
+            )
+            (root / "src/example.py").rename(root / "src/allowed.py")
+            changed = changed_files(root, base=source_revision)
+            self.assertIn("src/example.py", changed)
+            self.assertIn("src/allowed.py", changed)
+            report = build_ownership_report_from_manifest(
+                {"forbiddenWrites": ["src/example.py"], "workstreams": [{"id": "WS-01", "writes": ["src"]}]},
+                changed,
+                repository_root=root,
+            )
+            self.assertEqual(
+                next(entry for entry in report["entries"] if entry["path"] == "src/example.py")["category"], "forbidden"
+            )
+            result = _fresh_result(root, state_path, attempt=1)
+            result_path = "work/WS-01/attempt-1/task-result.json"
+            write_json_create(root / result_path, result)
+            before = {
+                p.relative_to(root).as_posix(): p.read_bytes()
+                for p in root.rglob("*")
+                if p.is_file() and ".git" not in p.parts
+            }
+            with self.assertRaises(LifecycleError) as raised:
+                commit_task_result(
+                    state_path,
+                    task_id="WS-01",
+                    operation_id="rename-result",
+                    expected_revision=2,
+                    source_revision=source_revision,
+                    result_path=result_path,
+                    reason="reject protected source",
+                )
+            self.assertEqual(raised.exception.code, "task-ownership-violation")
+            self.assertEqual(
+                {
+                    p.relative_to(root).as_posix(): p.read_bytes()
+                    for p in root.rglob("*")
+                    if p.is_file() and ".git" not in p.parts
+                },
+                before,
+            )

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.authority_text import require_manifest_text
+from agent_lifecycle.contracts.ownership_paths import (
+    require_declared_output_footprint,
+    require_manifest_authority_paths,
+)
 from agent_lifecycle.contracts.plan_manifest_schemas import (
     MANIFEST_SCHEMA,
     MANIFEST_VALIDATION_SCHEMA,
@@ -108,6 +113,7 @@ _WORKSTREAM = {
 }
 _ACCEPTANCE = {"criteria", "evidence", "releaseGate", "qualityFloor"}
 _CRITERION = {
+    "title",
     "id",
     "requirementIds",
     "evidenceIds",
@@ -180,6 +186,12 @@ def validate_plan_manifest_contract(manifest: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(manifest, dict):
         blockers.append(_blocker("plan-manifest-object-required", "plan manifest must be an object"))
         return _result(manifest, blockers)
+    require_manifest_text(manifest)
+    require_manifest_authority_paths(manifest)
+    try:
+        require_declared_output_footprint(manifest)
+    except LifecycleError as exc:
+        blockers.append(_blocker(exc.code, exc.message))
     if manifest.get("schemaVersion") != MANIFEST_SCHEMA:
         blockers.append(_blocker("plan-manifest-schema-unsupported", "plan manifest schemaVersion is unsupported"))
     _unknown_keys(manifest, _TOP_LEVEL, "manifest", blockers)

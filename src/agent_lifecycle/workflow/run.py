@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
 from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.host_protocol.lifecycle_gate import (
     evaluate_pre_action_gate,
@@ -18,6 +19,7 @@ from agent_lifecycle.host_protocol.lifecycle_gate import (
 )
 from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
 from agent_lifecycle.planning.validation import validate_plan_manifest
+from agent_lifecycle.workflow.artifacts import package_root
 from agent_lifecycle.workflow.implementation_audit_gate import implementation_audit_blockers
 from agent_lifecycle.workflow.next_action import MODEL_CALLS_STARTED, build_managed_next_action
 from agent_lifecycle.workflow.state import load_state, state_identity
@@ -34,6 +36,7 @@ def run_workflow_step(
     lock_path: Path | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
+    repository_root: Path | None = None
     blockers: list[dict[str, Any]] = []
     manifest: dict[str, Any] | None = None
     lock: dict[str, Any] | None = None
@@ -43,18 +46,22 @@ def run_workflow_step(
     control_gate: dict[str, Any] | None = None
 
     try:
+        state = load_state(state_path)
+        repository_root = package_root(state_path, state)
         manifest = read_json_object(manifest_path, label="frozen plan manifest")
         validate_plan_manifest(manifest)
         _require_frozen_manifest(manifest)
+        require_manifest_authority_paths(manifest, operation_root=repository_root)
         if isinstance(manifest.get("packageIntegrity"), dict):
             require_plan_completeness_pass(validate_plan_completeness(manifest))
         lock = _load_lock(manifest_path, lock_path)
-        package_integrity = verify_plan_package_integrity(manifest, lock, repository_root=Path.cwd())
+        package_integrity = verify_plan_package_integrity(manifest, lock, repository_root=repository_root)
     except LifecycleError as exc:
         blockers.append(_blocker(exc.code, exc.message, exc.details))
 
     try:
-        state = load_state(state_path)
+        if state is None:
+            raise LifecycleError("workflow-state-unavailable", "workflow state could not be loaded")
         _require_state_lineage(
             state,
             manifest=manifest,
@@ -62,7 +69,7 @@ def run_workflow_step(
             source_revision=source_revision,
         )
         if not blockers:
-            if manifest is None or lock is None:
+            if manifest is None or lock is None or repository_root is None:
                 raise LifecycleError("lifecycle-control-context-missing", "frozen plan context is unavailable")
             next_action = build_managed_next_action(state)
             control_gate = _managed_control_gate(
@@ -72,6 +79,7 @@ def run_workflow_step(
                 next_action=next_action,
                 package_integrity=package_integrity,
                 expected_revision=expected_revision,
+                repository_root=repository_root,
             )
             if control_gate.get("blocking") is True and control_gate.get("status") != "PASS":
                 blockers.append(
@@ -118,6 +126,7 @@ def _managed_control_gate(
     next_action: dict[str, Any],
     package_integrity: dict[str, Any] | None,
     expected_revision: int,
+    repository_root: Path,
 ) -> dict[str, Any]:
     level, policy, _ = lifecycle_control_selection(state)
     if level == "OFF":
@@ -182,6 +191,7 @@ def _managed_control_gate(
         task_id=task_ids[0] if task_ids else None,
         expected_state_revision=expected_revision,
         package_integrity=package_integrity,
+        repository_root=repository_root,
     )
 
 

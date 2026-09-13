@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.audit import build_package_audit, validate_package_audit
 from agent_lifecycle.contracts import canonical_digest, write_json_create
@@ -12,6 +14,33 @@ from agent_lifecycle.contracts.schemas import get_schema
 
 
 class PackageAuditTests(unittest.TestCase):
+    def test_explicit_root_legacy_audit_blocks_alias_and_unknown_declarations(self) -> None:
+        for policy in ("alias", "unknown", "distinct"):
+            with self.subTest(policy=policy), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                package = _write_package(root, status="FROZEN")
+                path = package / "plan.manifest.json"
+                manifest = json.loads(path.read_text(encoding="utf-8"))
+                manifest["readOnly"] = ["Private"]
+                manifest["workstreams"][0]["writes"] = ["private/file.py"]
+                path.write_text(json.dumps(manifest), encoding="utf-8")
+                lock_path = package / "plan.lock.json"
+                lock = json.loads(lock_path.read_text(encoding="utf-8"))
+                lock["manifestHash"] = canonical_digest(manifest)
+                lock_path.write_text(json.dumps(lock), encoding="utf-8")
+                before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                self.assertNotEqual(Path.cwd(), root)
+                def compare(anchor, _parent, _left, _right, *, expected_root=root, expected_policy=policy):
+                    self.assertEqual(anchor, expected_root.resolve())
+                    return expected_policy == "alias"
+                comparison = patch("agent_lifecycle.contracts.ownership_paths._same_filesystem_name", side_effect=compare) if policy != "unknown" else nullcontext()
+                with comparison:
+                    audit = build_package_audit(plan_dir=package, project_root=root, require_frozen=True)
+                self.assertEqual(audit["plan"]["status"], "PASS" if policy == "distinct" else "FAIL")
+                if policy != "distinct":
+                    self.assertIn("ambiguous-authority-path" if policy == "alias" else "filesystem-policy-unavailable", json.dumps(audit["blockers"]))
+                self.assertEqual({p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}, before)
+
     def test_package_audit_contract_is_registered(self) -> None:
         schema = get_schema("agent-plan-package-audit-report.v1")
         validation_schema = get_schema("agent-plan-package-audit-validation.v1")
@@ -147,8 +176,7 @@ def _write_state(root: Path, package: Path) -> Path:
     return state_path
 
 
-def _write_implementation_report(root: Path, package: Path, state_path: Path) -> None:
-    manifest = json.loads((package / "plan.manifest.json").read_text(encoding="utf-8"))
+def _write_implementation_report(root: Path, _package: Path, state_path: Path) -> None:
     state = json.loads(state_path.read_text(encoding="utf-8"))
     body = {
         "schemaVersion": "agent-implementation-audit-report.v1",

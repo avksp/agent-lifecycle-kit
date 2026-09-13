@@ -3,6 +3,14 @@
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
+## Upgrading to 2.15
+
+Before reusing existing plans, read the
+[authority-artifact migration notes](../reference/cli.md#migrating-authority-artifacts-to-215)
+and [authority boundaries](../reference/authority-artifact-boundaries.md).
+Correct invalid inputs through a new reviewed revision; preserve historical
+locks and evidence. Installing the package does not establish host qualification.
+
 ## Before you start
 
 You need:
@@ -77,7 +85,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.14.0
+python -m pip install agent-lifecycle-kit==2.15.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -88,7 +96,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.14.0
+python -m pip install agent-lifecycle-kit==2.15.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -188,7 +196,7 @@ Choose one host and follow its adapter page. The common sequence is:
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.14.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.15.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```

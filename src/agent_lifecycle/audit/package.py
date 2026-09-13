@@ -13,6 +13,8 @@ from agent_lifecycle.audit.implementation import (
 from agent_lifecycle.audit.ownership import build_ownership_report, report_has_category
 from agent_lifecycle.changesets import changed_files
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.authority_text import require_review_text
+from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.freeze import plan_integrity_required, verify_plan_lock, verify_plan_package_integrity
 from agent_lifecycle.planning import (
@@ -79,9 +81,16 @@ def build_package_audit(
     package_files = _package_file_check(package_dir, manifest=manifest, repository_root=repository_root)
     _capture_check_failure("package-files", package_files, findings, blockers)
 
+    authority_check = _run_check(
+        lambda: require_manifest_authority_paths(manifest, operation_root=repository_root)
+    )
+    _capture_check_failure("authority-paths", authority_check, findings, blockers)
+
     profile = _load_profile(completeness_profile_path)
     manifest_check = _run_check(lambda: validate_plan_manifest(manifest))
-    completeness_check = _run_check(lambda: validate_plan_completeness(manifest, profile=profile))
+    completeness_check = _run_check(
+        lambda: validate_plan_completeness(manifest, profile=profile, operation_root=repository_root)
+    )
     _capture_check_failure("manifest", manifest_check, findings, blockers)
     _capture_check_failure("completeness", completeness_check, findings, blockers)
 
@@ -121,6 +130,7 @@ def build_package_audit(
             "packageFiles": package_files,
             "manifest": manifest_check,
             "completeness": completeness_check,
+            "authorityPaths": authority_check,
             "lock": lock_check,
             "acceptance": acceptance_check,
             "references": references_check,
@@ -170,6 +180,7 @@ def build_package_audit(
                 "packageFiles": package_files,
                 "manifest": manifest_check,
                 "completeness": completeness_check,
+            "authorityPaths": authority_check,
                 "lock": lock_check,
                 "acceptance": acceptance_check,
                 "references": references_check,
@@ -219,6 +230,7 @@ def build_finding_check_adoption_audit(
 def validate_package_audit(audit: dict[str, Any]) -> dict[str, Any]:
     """Validate the integrity and top-level semantics of a package receipt."""
 
+    require_review_text(audit)
     blockers: list[dict[str, Any]] = []
     if audit.get("schemaVersion") != PACKAGE_AUDIT_SCHEMA:
         blockers.append({"code": "package-audit-schema", "message": "unsupported package audit schemaVersion"})

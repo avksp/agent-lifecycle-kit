@@ -11,6 +11,55 @@ from agent_lifecycle.contracts import LifecycleError
 
 
 class TaskChangeSetSnapshotTests(unittest.TestCase):
+    def test_snapshot_scoping_uses_actual_root_case_resolution(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            baseline = _git(root, "rev-parse", "HEAD")
+            (root / "src/task.py").write_text("value = 2\n")
+            insensitive = (root / "src/TASK.py").exists()
+            evidence = capture_task_change_set(root, baseline=baseline, write_paths=["src/TASK.py"])
+            self.assertEqual(evidence["changedFiles"], ["src/task.py"] if insensitive else [])
+
+    def test_deleted_case_alias_without_filesystem_evidence_blocks_before_scoping(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            baseline = _git(root, "rev-parse", "HEAD")
+            (root / "src/task.py").unlink()
+            with self.assertRaises(LifecycleError) as raised:
+                capture_task_change_set(root, baseline=baseline, write_paths=["src/TASK.py"])
+            self.assertEqual(raised.exception.code, "filesystem-policy-unavailable")
+
+    def test_nfd_git_name_matches_nfc_authority_without_rewriting_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            _git(root, "config", "core.precomposeUnicode", "false")
+            baseline = _git(root, "rev-parse", "HEAD")
+            name = "src/cafe\u0301.py"
+            (root / name).write_bytes(b"value = 2\n")
+
+            evidence = capture_task_change_set(root, baseline=baseline, write_paths=["src/caf\u00e9.py"])
+
+            self.assertEqual(evidence["changedFiles"], [name])
+            self.assertEqual(evidence["entries"][0]["path"], name)
+            self.assertEqual(evidence["entries"][0]["bytes"], 10)
+
+    def test_collision_outside_write_scope_is_rejected_before_content_reads(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _init_repo(root)
+            baseline = _git(root, "rev-parse", "HEAD")
+            with (
+                patch("agent_lifecycle.changesets.snapshot.changed_files", return_value=["other/caf\u00e9", "other/cafe\u0301"]),
+                patch("agent_lifecycle.changesets.snapshot._current_entry") as read,
+                self.assertRaises(LifecycleError) as raised,
+            ):
+                capture_task_change_set(root, baseline=baseline, write_paths=["src"])
+            self.assertEqual(raised.exception.code, "ambiguous-authority-path")
+            read.assert_not_called()
+
     def test_snapshot_is_task_scoped_and_detects_content_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

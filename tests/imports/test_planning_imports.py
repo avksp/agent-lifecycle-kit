@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.contracts.ownership_paths import require_declared_output_footprint
 from agent_lifecycle.imports import (
     import_planning_input,
     require_import_validation_pass,
@@ -35,6 +36,8 @@ class PlanningImportTests(unittest.TestCase):
             self.assertTrue(candidate["importState"]["freezeBlocked"])
             self.assertTrue(candidate["importState"]["auditRequired"])
             self.assertEqual(validate_plan_manifest(candidate)["status"], "DRAFT")
+            require_declared_output_footprint(candidate)
+            self.assertEqual(candidate["package"]["planArtifactRoot"], "imported/plan")
             self.assertEqual(len(candidate["specification"]["requirements"]), 2)
 
     def test_import_blocks_sensitive_source_content(self) -> None:

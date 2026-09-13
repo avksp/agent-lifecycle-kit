@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
 from copy import deepcopy
 from datetime import UTC, datetime
+from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.lifecycle_control_schemas import (
@@ -18,11 +21,81 @@ from agent_lifecycle.host_protocol.lifecycle_gate import (
 
 
 class LifecycleGateTests(unittest.TestCase):
+    def test_pre_action_uses_one_ownership_observation_for_decision_and_report(self) -> None:
+        report = {"entries": [], "blockers": [{"code": "ambiguous-authority-path"}], "summary": {"total": 0}}
+        with patch("agent_lifecycle.host_protocol.lifecycle_gate._ownership_summary", return_value=report) as observe:
+            gate = _root_gate(Path.cwd(), ["src/example.py"])
+        observe.assert_called_once()
+        self.assertIs(gate["ownership"], report)
+        self.assertEqual(gate["status"], "BLOCKED")
+        self.assertFalse(gate["decision"]["hostActionAllowed"])
+
+    def test_selected_pre_action_without_root_fails_closed(self) -> None:
+        gate = _root_gate(None, ["src/example.py"])
+        self.assertEqual(gate["status"], "BLOCKED")
+        self.assertFalse(gate["decision"]["hostActionAllowed"])
+        self.assertIn("filesystem-policy-unavailable", {item["code"] for item in gate["blockers"]})
+
+    def test_root_bound_case_alias_cannot_bypass_protected_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "Protected").mkdir()
+            insensitive = (root / "protected").exists()
+            gate = _root_gate(root, ["protected/file.py"], protected="Protected", writes=["protected"])
+            self.assertEqual(gate["status"], "BLOCKED" if insensitive else "PASS")
+            if insensitive:
+                self.assertIn("ambiguous-authority-path", {item["code"] for item in gate["blockers"]})
+
+    def test_missing_case_semantics_blocks_pre_action(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            gate = _root_gate(Path(tmp), ["protected/file.py"], protected="Protected", writes=["protected"])
+            self.assertEqual(gate["status"], "BLOCKED")
+            self.assertIn("filesystem-policy-unavailable", {item["code"] for item in gate["blockers"]})
+
+    def test_post_action_cannot_rebind_root_from_pre_action_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            pre = _root_gate(Path(first), ["src/example.py"])
+            self.assertEqual(pre["status"], "PASS")
+            manifest, _, _ = _bundle()
+            post = evaluate_post_action_gate(
+                repository_root=Path(second),
+                pre_action=pre,
+                manifest=manifest,
+                actual_changed_paths=["src/example.py"],
+            )
+            self.assertEqual(post["status"], "BLOCKED")
+            self.assertIn("post-action-root-mismatch", {item["code"] for item in post["blockers"]})
+
+    def test_observed_nfd_is_retained_and_ambiguous_names_block_real_pre_action(self) -> None:
+        manifest, lock, state = _bundle()
+        name = "src/cafe\u0301.py"
+        for paths, expected in (([name], "PASS"), ([name, "src/caf\u00e9.py"], "BLOCKED")):
+            with self.subTest(paths=paths):
+                gate = evaluate_pre_action_gate(
+                    repository_root=Path.cwd(),
+                    manifest=manifest,
+                    lock=lock,
+                    state=state,
+                    operation="file-edit",
+                    action_digest="c" * 64,
+                    paths=paths,
+                    policy=_enforced_policy("file-edit"),
+                    requested_level="ENFORCED",
+                    next_action={"projectedAction": {"type": "launch-tasks", "taskIds": ["WS-01"]}},
+                    task_id="WS-01",
+                )
+                self.assertEqual(gate["status"], expected)
+                if expected == "PASS":
+                    self.assertEqual(gate["ownership"]["entries"][0]["path"], name)
+                else:
+                    self.assertIn("ambiguous-authority-path", {entry["code"] for entry in gate["blockers"]})
+
     def test_pre_action_accepts_frozen_owned_action_only_at_enforced_level(self) -> None:
         manifest, lock, state = _bundle()
         policy = _enforced_policy("file-edit")
 
         gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -45,6 +118,7 @@ class LifecycleGateTests(unittest.TestCase):
         manifest["readOnly"] = ["docs"]
         lock["manifestHash"] = "f" * 64
         gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -66,6 +140,7 @@ class LifecycleGateTests(unittest.TestCase):
         manifest["readOnly"] = []
         manifest["forbiddenWrites"] = ["secrets"]
         forbidden_gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -85,6 +160,7 @@ class LifecycleGateTests(unittest.TestCase):
         manifest, lock, state = _bundle()
         manifest["status"] = "DRAFT"
         draft_gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -100,6 +176,7 @@ class LifecycleGateTests(unittest.TestCase):
 
         manifest, lock, state = _bundle()
         wrong_action_gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -114,6 +191,7 @@ class LifecycleGateTests(unittest.TestCase):
 
         manifest, lock, state = _bundle()
         missing_action_gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -131,6 +209,7 @@ class LifecycleGateTests(unittest.TestCase):
         manifest, lock, state = _bundle()
         state["lifecycleControl"]["level"] = "ENFORCED "
         gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -150,6 +229,7 @@ class LifecycleGateTests(unittest.TestCase):
     def test_continue_phase_cannot_authorize_a_host_operation(self) -> None:
         manifest, lock, state = _bundle()
         gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -169,6 +249,7 @@ class LifecycleGateTests(unittest.TestCase):
         manifest, lock, state = _bundle()
         state["lifecycleControl"]["level"] = "OBSERVED"
         gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -189,6 +270,7 @@ class LifecycleGateTests(unittest.TestCase):
     def test_post_action_rejects_changed_path_drift(self) -> None:
         manifest, lock, state = _bundle()
         pre = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -201,6 +283,7 @@ class LifecycleGateTests(unittest.TestCase):
             task_id="WS-01",
         )
         post = evaluate_post_action_gate(
+            repository_root=Path.cwd(),
             pre_action=pre,
             manifest=manifest,
             actual_changed_paths=["src/other.py"],
@@ -213,6 +296,7 @@ class LifecycleGateTests(unittest.TestCase):
     def test_post_action_rejects_replayed_event_lineage(self) -> None:
         manifest, lock, state = _bundle()
         pre = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -235,6 +319,7 @@ class LifecycleGateTests(unittest.TestCase):
         event["requestDigest"] = "e" * 64
         event["eventDigest"] = canonical_digest({key: value for key, value in event.items() if key != "eventDigest"})
         post = evaluate_post_action_gate(
+            repository_root=Path.cwd(),
             pre_action=pre,
             manifest=manifest,
             actual_changed_paths=["src/example.py"],
@@ -248,6 +333,7 @@ class LifecycleGateTests(unittest.TestCase):
         manifest, lock, state = _bundle()
         policy = _enforced_policy("run-finalize")
         pre = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -259,6 +345,7 @@ class LifecycleGateTests(unittest.TestCase):
             next_action={"projectedAction": {"type": "finalize-run", "taskIds": []}},
         )
         post = evaluate_post_action_gate(
+            repository_root=Path.cwd(),
             pre_action=pre,
             manifest=manifest,
             actual_changed_paths=[],
@@ -300,6 +387,7 @@ class LifecycleGateTests(unittest.TestCase):
         manifest["status"] = "DRAFT"
         lock["manifestHash"] = "f" * 64
         gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -329,8 +417,8 @@ class LifecycleGateTests(unittest.TestCase):
             "created_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         }
 
-        first = evaluate_pre_action_gate(**arguments)
-        second = evaluate_pre_action_gate(**arguments)
+        first = evaluate_pre_action_gate(repository_root=Path.cwd(), **arguments)
+        second = evaluate_pre_action_gate(repository_root=Path.cwd(), **arguments)
 
         self.assertEqual(first["gateDigest"], second["gateDigest"])
 
@@ -338,6 +426,7 @@ class LifecycleGateTests(unittest.TestCase):
         manifest, lock, state = _bundle()
         state["lifecycleControl"]["planDigest"] = "f" * 64
         gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -356,6 +445,7 @@ class LifecycleGateTests(unittest.TestCase):
     def test_enforced_selection_cannot_be_bypassed_by_requesting_off(self) -> None:
         manifest, lock, state = _bundle()
         gate = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -374,6 +464,7 @@ class LifecycleGateTests(unittest.TestCase):
         manifest, lock, state = _bundle()
         policy = _enforced_policy("run-finalize")
         pre = evaluate_pre_action_gate(
+            repository_root=Path.cwd(),
             manifest=manifest,
             lock=lock,
             state=state,
@@ -385,6 +476,7 @@ class LifecycleGateTests(unittest.TestCase):
             next_action={"projectedAction": {"type": "finalize-run", "taskIds": []}},
         )
         post = evaluate_post_action_gate(
+            repository_root=Path.cwd(),
             pre_action=pre,
             manifest=manifest,
             actual_changed_paths=[],
@@ -418,6 +510,33 @@ class LifecycleGateTests(unittest.TestCase):
 
         self.assertEqual(stop["status"], "BLOCKED")
         self.assertIn("post-action-evidence-invalid", {item["code"] for item in stop["blockers"]})
+
+
+def _root_gate(
+    root: Path | None, paths: list[str], *, protected: str | None = None, writes: list[str] | None = None
+) -> dict:
+    manifest, lock, state = _bundle()
+    if protected is not None:
+        manifest["readOnly"] = [protected]
+    if writes is not None:
+        manifest["workstreams"][0]["writes"] = writes
+    digest = canonical_digest(manifest)
+    lock["manifestHash"] = digest
+    state["planDigest"] = digest
+    state["lifecycleControl"]["planDigest"] = digest
+    return evaluate_pre_action_gate(
+        repository_root=root,
+        manifest=manifest,
+        lock=lock,
+        state=state,
+        operation="file-edit",
+        action_digest="c" * 64,
+        paths=paths,
+        policy=_enforced_policy("file-edit"),
+        requested_level="ENFORCED",
+        next_action={"projectedAction": {"type": "launch-tasks", "taskIds": ["WS-01"]}},
+        task_id="WS-01",
+    )
 
 
 def _bundle() -> tuple[dict, dict, dict]:

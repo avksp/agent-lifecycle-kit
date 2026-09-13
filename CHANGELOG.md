@@ -4,6 +4,26 @@
 
 - No changes yet.
 
+## 2.15.0 - 2026-09-13
+
+- Reject duplicate JSON keys without echoing unsafe input; retain canonical
+  bytes, digests and trailing-newline behavior for valid artifacts.
+- Centralize root-bound guarded authority I/O and reject path aliases, symlink
+  escapes and ancestor-swap races; enforce NFC declarations and actual filesystem
+  case semantics without broadening ownership.
+- Reject display-spoofing controls in authority fields while preserving ordinary
+  multilingual prose and permitted language joiners.
+- Include both rename endpoints in changeset ownership and protect the complete
+  compiler packet/index footprint before output creation, including explicit
+  exports, while preserving safe layouts and adoption bindings.
+- Bind validator evidence to source identity and guarded-I/O consumers.
+- Acknowledge cancellation-request publication independently of process exit;
+  retain terminal evidence, cleanup, no-op, idempotency and lineage contracts.
+- Update installation pins and EN/RU migration notes for 2.15.0. Preserve all
+  regression, security, architecture, neutrality, quality and publication gates.
+  The publication accounting fixture keeps unavailable telemetry unavailable;
+  its structural PASS does not report release completion or host qualification.
+
 ## 2.14.0 - 2026-09-04
 
 - Added explicit workflow resource measurements and release accounting that

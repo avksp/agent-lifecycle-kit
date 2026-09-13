@@ -3,6 +3,14 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
+## Обновление до 2.15
+
+Перед повторным использованием планов прочитайте
+[заметки о миграции](../reference/cli.md#миграция-артефактов-полномочий-на-215)
+и [границы полномочий](../reference/authority-artifact-boundaries.md).
+Исправляйте некорректный ввод в новой проверенной ревизии; сохраняйте
+исторические lock и evidence. Установка пакета не подтверждает квалификацию хоста.
+
 ## Что потребуется
 
 Нужны:
@@ -78,7 +86,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.14.0
+python -m pip install agent-lifecycle-kit==2.15.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -89,7 +97,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.14.0
+python -m pip install agent-lifecycle-kit==2.15.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -187,7 +195,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.14.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.15.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```

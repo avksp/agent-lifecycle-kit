@@ -7,6 +7,7 @@ rules, then returns a bounded decision that an adapter-owned host may enforce.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
@@ -22,7 +23,12 @@ from agent_lifecycle.contracts.lifecycle_control_schemas import (
     validate_lifecycle_control_event,
     validate_lifecycle_control_policy,
 )
-from agent_lifecycle.contracts.ownership_paths import is_under_authority_path, normalize_authority_path
+from agent_lifecycle.contracts.ownership_paths import (
+    is_under_authority_path,
+    normalize_authority_path,
+    observed_authority_paths,
+    require_manifest_authority_paths,
+)
 from agent_lifecycle.freeze import verify_plan_lock_envelope
 
 LIFECYCLE_GATE_SCHEMA = "agent-lifecycle-control-gate.v1"
@@ -46,6 +52,7 @@ def evaluate_pre_action_gate(
     package_integrity: dict[str, Any] | None = None,
     nonce: str | None = None,
     created_at: str | None = None,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
     """Evaluate a host action without starting it or writing state."""
 
@@ -76,6 +83,7 @@ def evaluate_pre_action_gate(
     policy_validation = validate_lifecycle_control_policy(selected_policy)
     if policy_validation["status"] != "PASS":
         blockers.extend(policy_validation["blockers"])
+    ownership = _ownership_summary(manifest, paths, repository_root=repository_root)
     if selected:
         blockers.extend(
             _pre_action_invariants(
@@ -89,6 +97,7 @@ def evaluate_pre_action_gate(
                 task_id=task_id,
                 expected_state_revision=expected_state_revision,
                 package_integrity=package_integrity,
+                ownership=ownership,
             )
         )
     if requested_level in _SELECTED_LEVELS and effective_level not in _SELECTED_LEVELS:
@@ -110,6 +119,7 @@ def evaluate_pre_action_gate(
         task_id=task_id,
         nonce=nonce,
         created_at=created_at,
+        repository_root=repository_root,
     )
     if resolved.get("status") != "PASS" and selected:
         blockers.extend(resolved.get("blockers", []))
@@ -138,7 +148,8 @@ def evaluate_pre_action_gate(
         "operation": operation,
         "request": request,
         "decision": decision,
-        "ownership": _ownership_summary(manifest, paths),
+        "ownership": ownership,
+        "repositoryRoot": _root_name(repository_root),
         "blockers": blockers,
         "productionPromotionClaimed": False,
     }
@@ -154,6 +165,7 @@ def evaluate_post_action_gate(
     actual_status: str = "PASS",
     event: dict[str, Any] | None = None,
     policy: dict[str, Any] | None = None,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
     """Bind observed command results to the previously authorized action."""
 
@@ -166,8 +178,17 @@ def evaluate_post_action_gate(
         blockers.append({"code": "pre-action-not-passed"})
     elif not _gate_digest_valid(pre_action):
         blockers.append({"code": "pre-action-evidence-invalid"})
-    expected_paths = _normalize_paths(request.get("paths"), blockers, "expected-action-paths")
-    actual_paths = _normalize_paths(actual_changed_paths, blockers, "actual-changed-paths")
+    if pre_action.get("selected"):
+        if repository_root is None:
+            blockers.append({"code": "filesystem-policy-unavailable"})
+        elif pre_action.get("repositoryRoot") != _root_name(repository_root):
+            blockers.append({"code": "post-action-root-mismatch"})
+    expected_paths = _normalize_paths(
+        request.get("paths"), blockers, "expected-action-paths", repository_root=repository_root
+    )
+    actual_paths = _normalize_paths(
+        actual_changed_paths, blockers, "actual-changed-paths", repository_root=repository_root
+    )
     if set(expected_paths) != set(actual_paths):
         blockers.append(
             {
@@ -190,7 +211,7 @@ def evaluate_post_action_gate(
             _bind_event(event, request, blockers, expected_type="post-action")
     elif bool(pre_action.get("enforcementActive")) or bool(pre_action.get("selected")):
         blockers.append({"code": "post-action-event-missing"})
-    ownership = _ownership_summary(manifest, actual_paths)
+    ownership = _ownership_summary(manifest, actual_paths, repository_root=repository_root)
     blockers.extend(_ownership_blockers(ownership))
     selected = bool(pre_action.get("selected"))
     enforcement_active = bool(pre_action.get("enforcementActive"))
@@ -206,6 +227,7 @@ def evaluate_post_action_gate(
         "requestDigest": request.get("requestDigest"),
         "actionDigest": request.get("actionDigest"),
         "actualChangedPaths": actual_paths,
+        "repositoryRoot": _root_name(repository_root),
         "outcome": _outcome_summary(outcome),
         "event": event,
         "ownership": ownership,
@@ -370,6 +392,7 @@ def _pre_action_invariants(
     task_id: str | None,
     expected_state_revision: int | None,
     package_integrity: dict[str, Any] | None,
+    ownership: dict[str, Any],
 ) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     if not isinstance(manifest, dict) or manifest.get("status") != "FROZEN":
@@ -416,7 +439,6 @@ def _pre_action_invariants(
     normalized_paths = _normalize_paths(paths, blockers, "action-paths")
     if operation in {"file-edit", "shell-command"} and not normalized_paths:
         blockers.append({"code": "action-paths-missing"})
-    ownership = _ownership_summary(manifest, normalized_paths)
     blockers.extend(_ownership_blockers(ownership))
     return blockers
 
@@ -458,13 +480,14 @@ def _build_request(
     task_id: str | None,
     nonce: str | None,
     created_at: str | None,
+    repository_root: Path | None,
 ) -> dict[str, Any]:
     safe_level = requested_level if requested_level in CONTROL_LEVELS else "GUIDANCE_ONLY"
     safe_operation = operation if operation in CONTROL_OPERATIONS else "file-edit"
     safe_paths: list[str] = []
     for raw_path in paths if isinstance(paths, list) else []:
         try:
-            safe_paths.append(normalize_authority_path(raw_path, label="action path"))
+            safe_paths.extend(observed_authority_paths([raw_path]))
         except LifecycleError:
             continue
     package = manifest.get("package") if isinstance(manifest, dict) else {}
@@ -485,6 +508,7 @@ def _build_request(
                 "stateRevision": state_revision,
                 "actionDigest": action_digest,
                 "paths": safe_paths,
+                "repositoryRoot": _root_name(repository_root),
             }
         )[:32]
     )
@@ -513,8 +537,13 @@ def _build_request(
     )
 
 
-def _ownership_summary(manifest: dict[str, Any], paths: list[str]) -> dict[str, Any]:
+def _ownership_summary(
+    manifest: dict[str, Any], paths: list[str], *, repository_root: Path | None = None
+) -> dict[str, Any]:
     try:
+        if repository_root is None:
+            raise LifecycleError("filesystem-policy-unavailable", "host ownership requires an explicit operation root")
+        require_manifest_authority_paths(manifest, operation_root=repository_root)
         raw_package = manifest.get("package")
         package: dict[str, Any] = (
             {str(key): value for key, value in raw_package.items()} if isinstance(raw_package, dict) else {}
@@ -533,24 +562,35 @@ def _ownership_summary(manifest: dict[str, Any], paths: list[str]) -> dict[str, 
             if isinstance(workstream, dict) and isinstance(workstream.get("id"), str)
         }
         entries = []
-        for path in sorted(set(paths)):
-            normalized = normalize_authority_path(path, label="ownership path")
-            if plan_root and is_under_authority_path(normalized, plan_root):
+        for normalized in observed_authority_paths(paths, operation_root=repository_root):
+            if plan_root and is_under_authority_path(normalized, plan_root, operation_root=repository_root):
                 entries.append({"path": normalized, "category": "plan-authority", "owners": ["controller"]})
                 continue
-            matched_lead = [root for root in lead_roots if root and is_under_authority_path(normalized, root)]
+            matched_lead = [
+                root
+                for root in lead_roots
+                if root and is_under_authority_path(normalized, root, operation_root=repository_root)
+            ]
             if matched_lead:
                 entries.append(
                     {"path": normalized, "category": "lead-owned", "owners": ["controller"], "matched": matched_lead}
                 )
                 continue
-            matched_forbidden = [root for root in forbidden_roots if root and is_under_authority_path(normalized, root)]
+            matched_forbidden = [
+                root
+                for root in forbidden_roots
+                if root and is_under_authority_path(normalized, root, operation_root=repository_root)
+            ]
             if matched_forbidden:
                 entries.append(
                     {"path": normalized, "category": "forbidden", "owners": [], "matched": matched_forbidden}
                 )
                 continue
-            matched_read_only = [root for root in read_only_roots if root and is_under_authority_path(normalized, root)]
+            matched_read_only = [
+                root
+                for root in read_only_roots
+                if root and is_under_authority_path(normalized, root, operation_root=repository_root)
+            ]
             if matched_read_only:
                 entries.append(
                     {"path": normalized, "category": "read-only", "owners": [], "matched": matched_read_only}
@@ -559,8 +599,18 @@ def _ownership_summary(manifest: dict[str, Any], paths: list[str]) -> dict[str, 
             matched_owners = [
                 owner
                 for owner, roots in workstream_roots.items()
-                if any(root and is_under_authority_path(normalized, root) for root in roots)
+                if any(
+                    root and is_under_authority_path(normalized, root, operation_root=repository_root) for root in roots
+                )
             ]
+            for owner in matched_owners:
+                if any(
+                    root
+                    and is_under_authority_path(normalized, root, operation_root=repository_root)
+                    and not is_under_authority_path(normalized, root)
+                    for root in workstream_roots[owner]
+                ):
+                    raise LifecycleError("ambiguous-authority-path", "filesystem alias would broaden a write grant")
             entries.append(
                 {
                     "path": normalized,
@@ -629,17 +679,17 @@ def _ownership_blockers(report: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
-def _normalize_paths(value: Any, blockers: list[dict[str, Any]], code: str) -> list[str]:
+def _normalize_paths(
+    value: Any, blockers: list[dict[str, Any]], code: str, *, repository_root: Path | None = None
+) -> list[str]:
     if not isinstance(value, list):
         blockers.append({"code": f"{code}-shape"})
         return []
-    paths: list[str] = []
-    for raw in value:
-        try:
-            paths.append(normalize_authority_path(raw, label=code))
-        except LifecycleError as exc:
-            blockers.append({"code": exc.code, "message": exc.message})
-    return sorted(set(paths))
+    try:
+        return observed_authority_paths(value, operation_root=repository_root)
+    except LifecycleError as exc:
+        blockers.append({"code": exc.code, "message": exc.message})
+        return []
 
 
 def _bind_event(
@@ -694,3 +744,9 @@ __all__ = [
     "lifecycle_control_selection_blockers",
     "require_lifecycle_gate_pass",
 ]
+
+
+def _root_name(root: Path | None) -> str | None:
+    """Bind host-owned context without deriving authority from a receipt or cwd."""
+
+    return root.absolute().as_posix() if root is not None else None

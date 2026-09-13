@@ -1,21 +1,31 @@
 from __future__ import annotations
 
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.contracts import canonical_digest
+
 try:
-    from .helpers import *  # noqa: F401,F403,E402
+    from .helpers import ROOT, _run, _write_context_manifest, _write_json
 except ImportError:
-    from helpers import *  # noqa: F401,F403,E402
+    from helpers import ROOT, _run, _write_context_manifest, _write_json
+
 
 class TaskPacketContextVerifierTests(unittest.TestCase):
     def test_task_packet_context_verifier_compiles_and_checks_windows(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             out = Path(tmp)
             manifest = _write_context_manifest(out)
+            value = json.loads(manifest.read_text(encoding="utf-8"))
+            for key in ("artifactRoot", "planArtifactRoot"):
+                value["package"][key] = Path(value["package"][key]).relative_to(ROOT).as_posix()
+            _write_json(manifest, value)
+            lock_path = out / "plan/plan.lock.json"
+            lock = json.loads(lock_path.read_text(encoding="utf-8"))
+            lock["manifestHash"] = canonical_digest(value)
+            _write_json(lock_path, lock)
             summary = out / "summary.json"
             evidence = out / "context-fit.json"
             _write_json(

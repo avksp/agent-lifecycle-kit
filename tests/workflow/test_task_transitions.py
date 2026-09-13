@@ -11,12 +11,65 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_json_create
 from agent_lifecycle.policy.execution_strategy import resolve_execution_strategy, validate_execution_strategy
 from agent_lifecycle.workflow import start_task
-from agent_lifecycle.workflow.task_transitions import _require_control_task_acceptance
+from agent_lifecycle.workflow.task_transitions import _require_control_task_acceptance, _validate_task_write_scope
 
 from .helpers import _write_state
 
 
 class TaskTransitionAuthorityTests(unittest.TestCase):
+    def test_native_rejects_conflicting_tasks_before_empty_result_can_pass(self) -> None:
+        task = {"id": "A", "writes": ["src"]}
+        state = {"tasks": [task, {"id": "B", "writes": ["src/child"]}]}
+        with self.assertRaises(LifecycleError) as raised:
+            _validate_task_write_scope(state, task, {"changedFiles": []})
+        self.assertEqual(raised.exception.code, "ambiguous-authority-path")
+
+    def test_root_bound_native_ownership_protects_case_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "Protected").mkdir()
+            insensitive = (root / "protected").exists()
+            state = {"writePolicy": {"readOnly": ["Protected"]}}
+            task = {"id": "WS-01", "writes": ["protected"]}
+            result = {"changedFiles": ["protected/file.py"]}
+            if insensitive:
+                with self.assertRaises(LifecycleError) as raised:
+                    _validate_task_write_scope(state, task, result, repository_root=root)
+                self.assertEqual(raised.exception.code, "ambiguous-authority-path")
+            else:
+                receipt = _validate_task_write_scope(state, task, result, repository_root=root)
+                self.assertEqual(receipt["status"], "PASS")
+
+    def test_native_missing_alias_semantics_does_not_grant_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(LifecycleError) as raised:
+                _validate_task_write_scope(
+                    {"writePolicy": {"readOnly": ["Protected"]}},
+                    {"id": "WS-01", "writes": ["protected"]},
+                    {"changedFiles": ["protected/file.py"]},
+                    repository_root=Path(tmp),
+                )
+            self.assertEqual(raised.exception.code, "filesystem-policy-unavailable")
+
+    def test_observed_nfd_keeps_spelling_and_cannot_bypass_read_only(self) -> None:
+        name = "src/cafe\u0301.py"
+        task = {"id": "WS-01", "writes": ["src/caf\u00e9.py"]}
+        state = {"writePolicy": {}}
+        result = {"changedFiles": [name]}
+        receipt = _validate_task_write_scope(state, task, result)
+        self.assertEqual(receipt["entries"][0]["path"], name)
+        self.assertEqual(receipt["entries"][0]["category"], "task-owned")
+        state["writePolicy"]["readOnly"] = ["src/caf\u00e9.py"]
+        with self.assertRaises(LifecycleError) as raised:
+            _validate_task_write_scope(state, task, result)
+        self.assertEqual(raised.exception.code, "ambiguous-authority-path")
+
+    def test_observed_collision_rejects_before_any_scope_can_allow_it(self) -> None:
+        task = {"id": "WS-01", "writes": ["src"]}
+        with self.assertRaises(LifecycleError) as raised:
+            _validate_task_write_scope({}, task, {"changedFiles": ["src/caf\u00e9", "src/cafe\u0301"]})
+        self.assertEqual(raised.exception.code, "ambiguous-authority-path")
+
     def test_start_task_rejects_pseudo_glob_before_state_write(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.authority_text import require_finding_text, require_review_text
 
 REVIEW_VERDICT_SCHEMA = "agent-review-verdict.v1"
 REVIEW_VERDICT_VALIDATION_SCHEMA = "agent-review-verdict-validation.v1"
@@ -26,6 +27,8 @@ REVIEW_SEVERITY_RANK = {
 def validate_review_verdict(verdict: dict[str, Any], *, findings: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     if not isinstance(verdict, dict):
         raise LifecycleError("invalid-review-verdict", "review verdict must be an object")
+    require_review_text(verdict)
+    require_finding_text(findings)
     blockers: list[dict[str, Any]] = []
     if verdict.get("schemaVersion") != REVIEW_VERDICT_SCHEMA:
         blockers.append(
@@ -128,6 +131,7 @@ def compact_review_routing(verdict: dict[str, Any]) -> dict[str, Any]:
 def open_blocking_finding_ids(findings: list[dict[str, Any]]) -> list[str]:
     """Return stable IDs for open findings governed by the blocking policy."""
 
+    require_finding_text(findings)
     return [
         str(finding.get("id") or "<unknown>")
         for finding in findings

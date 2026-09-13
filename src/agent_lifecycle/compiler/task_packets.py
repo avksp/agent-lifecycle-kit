@@ -11,6 +11,14 @@ from agent_lifecycle.contracts import (
     canonical_digest,
     read_json_object,
 )
+from agent_lifecycle.contracts.authority_io import create_authority_bytes, read_authority_bytes
+from agent_lifecycle.contracts.authority_text import require_manifest_text
+from agent_lifecycle.contracts.ownership_paths import (
+    compiler_output_paths,
+    repository_authority_name,
+    require_manifest_authority_paths,
+    require_output_footprint,
+)
 from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.policy.execution_strategy import validate_execution_strategy
 
@@ -21,12 +29,22 @@ def compile_task_packets(
     out_dir: Path | None = None,
     write: bool = False,
     execution_strategy: dict[str, Any] | None = None,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
-    root = Path.cwd()
+    root = repository_root if repository_root is not None else Path.cwd()
+    manifest_path = root / repository_authority_name(root / manifest_path, root)
     manifest = read_json_object(manifest_path, label="plan manifest")
+    require_manifest_text(manifest)
+    require_manifest_authority_paths(manifest, operation_root=root)
     plan_digest = _verify_manifest(root, manifest)
     _verify_execution_strategy(execution_strategy, plan_digest=plan_digest)
-    output_dir = out_dir or _default_output_dir(root, manifest)
+    output_dir = out_dir or _default_output_dir(manifest)
+    require_output_footprint(
+        manifest,
+        compiler_output_paths(manifest, output_dir=output_dir),
+        repository_root=root,
+        manifest_path=manifest_path,
+    )
     packets = [
         _packet(manifest, plan_digest, workstream, execution_strategy=execution_strategy)
         for workstream in _workstreams(manifest)
@@ -34,7 +52,7 @@ def compile_task_packets(
     packet_records = [_packet_record(output_dir, packet) for packet in packets]
     index = _index(manifest, plan_digest, output_dir, packet_records)
     if write:
-        _write_packets(output_dir, packets, index)
+        _write_packets(output_dir, packets, index, repository_root=root)
     return {"index": index, "packets": packets}
 
 
@@ -51,7 +69,7 @@ def _verify_manifest(root: Path, manifest: dict[str, Any]) -> str:
     return digest
 
 
-def _default_output_dir(root: Path, manifest: dict[str, Any]) -> Path:
+def _default_output_dir(manifest: dict[str, Any]) -> Path:
     artifact_root = manifest.get("package", {}).get("artifactRoot")
     if not isinstance(artifact_root, str) or not artifact_root:
         raise LifecycleError("invalid-plan-manifest", "package.artifactRoot is required")
@@ -99,7 +117,8 @@ def _verify_execution_strategy(strategy: dict[str, Any] | None, *, plan_digest: 
     validation = validate_execution_strategy(strategy)
     if validation["status"] != "PASS":
         raise LifecycleError("task-strategy-invalid", "execution strategy is invalid", {"validation": validation})
-    lineage = strategy.get("lineage") if isinstance(strategy.get("lineage"), dict) else {}
+    lineage_value = strategy.get("lineage")
+    lineage = lineage_value if isinstance(lineage_value, dict) else {}
     if lineage.get("planDigest") != plan_digest:
         raise LifecycleError("task-strategy-plan-mismatch", "execution strategy plan digest mismatch")
 
@@ -107,15 +126,22 @@ def _verify_execution_strategy(strategy: dict[str, Any] | None, *, plan_digest: 
 def _strategy_projection(strategy: dict[str, Any] | None, *, task_id: str) -> dict[str, Any] | None:
     if strategy is None:
         return None
-    lineage = strategy.get("lineage") if isinstance(strategy.get("lineage"), dict) else {}
+    lineage_value = strategy.get("lineage")
+    lineage = lineage_value if isinstance(lineage_value, dict) else {}
     if lineage.get("taskId") != task_id:
         return None
     implementation = next(
-        (item for item in strategy.get("phaseRoutes", []) if isinstance(item, dict) and item.get("phase") == "task-implementation"),
+        (
+            item
+            for item in strategy.get("phaseRoutes", [])
+            if isinstance(item, dict) and item.get("phase") == "task-implementation"
+        ),
         {},
     )
-    packet = strategy.get("packet") if isinstance(strategy.get("packet"), dict) else {}
-    quality = strategy.get("quality") if isinstance(strategy.get("quality"), dict) else {}
+    packet_value = strategy.get("packet")
+    packet = packet_value if isinstance(packet_value, dict) else {}
+    quality_value = strategy.get("quality")
+    quality = quality_value if isinstance(quality_value, dict) else {}
     projection = {
         "schemaVersion": strategy.get("schemaVersion"),
         "strategyDigest": strategy.get("strategyDigest"),
@@ -264,17 +290,22 @@ def _write_packets(
     output_dir: Path,
     packets: list[dict[str, Any]],
     index: dict[str, Any],
+    *,
+    repository_root: Path,
 ) -> None:
     for packet in packets:
-        _write_idempotent(output_dir / f"{packet['task']['id']}.task-packet.json", packet)
-    _write_idempotent(output_dir / "index.json", index)
+        _write_idempotent(
+            output_dir / f"{packet['task']['id']}.task-packet.json", packet, repository_root=repository_root
+        )
+    _write_idempotent(output_dir / "index.json", index, repository_root=repository_root)
 
 
-def _write_idempotent(path: Path, payload: dict[str, Any]) -> None:
+def _write_idempotent(path: Path, payload: dict[str, Any], *, repository_root: Path | None = None) -> None:
     data = canonical_bytes(payload) + b"\n"
-    if path.exists():
-        if path.read_bytes() != data:
-            raise LifecycleError("output-conflict", f"output exists with different content: {path}")
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
+    root = repository_root if repository_root is not None else Path.cwd()
+    path = root / repository_authority_name(root / path, root)
+    try:
+        create_authority_bytes(path, data, root=root)
+    except FileExistsError:
+        if read_authority_bytes(path, root=root, max_bytes=len(data)) != data:
+            raise LifecycleError("output-conflict", "output exists with different content") from None

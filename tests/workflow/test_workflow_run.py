@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from contextlib import nullcontext
 from copy import deepcopy
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.contracts.lifecycle_control_schemas import build_default_lifecycle_control_policy
@@ -33,6 +35,39 @@ class WorkflowRunTests(unittest.TestCase):
             self.assertIn("plan-manifest-contract-failed", {item["code"] for item in receipt["blockers"]})
             self.assertEqual(receipt["nextAction"]["type"], "blocked")
             self.assertFalse(receipt["stateWritten"])
+
+    def test_legacy_off_runner_guards_state_root_before_action(self) -> None:
+        for policy in ("alias", "unknown", "distinct"):
+            with self.subTest(policy=policy), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                manifest_path, state_path = _write_bundle(root, phase="RUNNING", task_status="READY", lifecycle_level="OFF")
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest["readOnly"] = ["Private"]
+                manifest["workstreams"][0]["writes"] = ["private/file.py"]
+                manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+                lock_path = manifest_path.with_name("plan.lock.json")
+                lock = json.loads(lock_path.read_text(encoding="utf-8"))
+                lock["manifestHash"] = canonical_digest(manifest)
+                lock_path.write_text(json.dumps(lock), encoding="utf-8")
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+                state["planDigest"] = canonical_digest(manifest)
+                state["lifecycleControl"]["planDigest"] = state["planDigest"]
+                state_path.write_text(json.dumps(state), encoding="utf-8")
+                before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                self.assertNotEqual(Path.cwd(), root)
+                def compare(anchor, _parent, _left, _right, *, expected_root=root, expected_policy=policy):
+                    self.assertEqual(anchor, expected_root.resolve())
+                    return expected_policy == "alias"
+                comparison = patch("agent_lifecycle.contracts.ownership_paths._same_filesystem_name", side_effect=compare) if policy != "unknown" else nullcontext()
+                with comparison:
+                    receipt = run_workflow_step(state_path=state_path, manifest_path=manifest_path,
+                                                operation_id="root-guard", expected_revision=1, source_revision="source")
+                self.assertEqual(receipt["status"], "PASS" if policy == "distinct" else "FAIL")
+                self.assertEqual(receipt["nextAction"]["type"], "launch-tasks" if policy == "distinct" else "blocked")
+                if policy != "distinct":
+                    self.assertIn("ambiguous-authority-path" if policy == "alias" else "filesystem-policy-unavailable",
+                                  {b["code"] for b in receipt["blockers"]})
+                self.assertEqual({p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}, before)
 
     def test_ready_task_returns_host_owned_launch_action(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

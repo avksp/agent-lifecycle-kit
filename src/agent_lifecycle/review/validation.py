@@ -5,10 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts.authority_text import require_review_text
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
 
 
 def validate_independent_review(review: dict[str, Any]) -> dict[str, Any]:
+    require_review_text(review)
     reviewer = review.get("reviewer")
     if not isinstance(reviewer, dict) or reviewer.get("independent") is not True:
         raise LifecycleError("review-not-independent", "reviewer must be independent")

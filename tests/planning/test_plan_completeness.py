@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
@@ -24,6 +26,26 @@ class PlanCompletenessTests(unittest.TestCase):
         self.assertEqual(profile["schemaVersion"], "agent-plan-completeness-profile.v1")
         self.assertEqual(set(profile["profiles"]), {"S0", "S1", "S2"})
         self.assertEqual(load_plan_completeness_profile(ROOT / "profiles/plan-completeness-profile.v1.json")["profileDigest"], profile["profileDigest"])
+
+    def test_explicit_root_checks_aliases_without_changing_offline_contract(self) -> None:
+        manifest = _manifest("S1")
+        manifest["readOnly"] = ["Private"]
+        manifest["workstreams"][0]["writes"] = ["private/file.py"]
+        self.assertEqual(validate_plan_completeness(manifest)["status"], "PASS")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            unknown = validate_plan_completeness(manifest, operation_root=root)
+            self.assertEqual(unknown["status"], "FAIL")
+            self.assertIn("filesystem-policy-unavailable", {b["code"] for b in unknown["blockers"]})
+            def compare(anchor, _parent, _left, _right, *, expected_root=root):
+                self.assertEqual(anchor, expected_root.resolve())
+                return True
+            with patch("agent_lifecycle.contracts.ownership_paths._same_filesystem_name", side_effect=compare):
+                aliases = validate_plan_completeness(manifest, operation_root=root)
+            self.assertIn("ambiguous-authority-path", {b["code"] for b in aliases["blockers"]})
+            (root / "Private").mkdir()
+            native = validate_plan_completeness(manifest, operation_root=root)
+            self.assertEqual(native["status"], "FAIL" if (root / "private").exists() else "PASS")
 
     def test_s0_plan_stays_lightweight(self) -> None:
         payload = validate_plan_completeness(_manifest("S0"))
