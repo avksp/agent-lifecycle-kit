@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from pathlib import Path
 
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.process_execution_schemas import validate_process_execution_receipt
@@ -52,10 +53,18 @@ def validate_task_model_usage_receipt(
     *,
     budget_targets: dict[str, Any] | None = None,
     fail_on_invalid: bool = True,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
     route = _attempt_route(task)
     if route is None or not model_usage_receipt_required(task):
         raise LifecycleError("unexpected-model-usage-receipt", "task attempt does not require a model usage receipt")
+    if receipt.get("schemaVersion") == "agent-lifecycle-model-usage-receipt.v2":
+        if repository_root is None:
+            raise LifecycleError("scoped-usage-policy-context-required", "v2 requires independently bound repository context")
+        validate_attempt_model_route({"modelRoute": route})
+        from agent_lifecycle.workflow.limited_usage import validate_limited_source_usage
+
+        return validate_limited_source_usage(repository_root, state, task, receipt)
     _require_lineage(state, task, receipt)
     result = validate_usage_receipt(receipt, budget_targets=budget_targets, route_decision=route)
     if result["status"] == "FAIL" and fail_on_invalid:

@@ -215,7 +215,7 @@
         "sourceDigest": "3119a86ea26b509ba569a851e97c7b303dfd7f82adea53e55ebda3f64ed969e2"
       },
       {
-        "path": "src/agent_lifecycle/neutrality/ed25519.py",
+        "path": "src/agent_lifecycle/contracts/ed25519.py",
         "code": "E741",
         "count": 1,
         "sourceDigest": "f0f759ae68a5c0f5ad6cd18f1db34b212d61fb969ff7288fdd7e88ec346e198e"

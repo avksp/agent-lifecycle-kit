@@ -8,11 +8,55 @@ from unittest.mock import patch
 
 from agent_lifecycle.adapter_sessions.session_store import create_session, session_path
 from agent_lifecycle.adapter_sessions.unified_start import start_lifecycle
+from agent_lifecycle.adapter_sessions import unified_start
+from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.compatibility import build_contract_policy, validate_contract_policy
 from agent_lifecycle.contracts.schemas import get_schema, list_schemas
 
 
 class UnifiedStartContractTests(unittest.TestCase):
+    def test_public_cleanup_uncertainty_preserves_exception_details_and_raw(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = Path(tmp) / 'input.json'
+            raw.write_bytes(b'private retained input')
+            error = LifecycleError('codex-exact-start-uncertain', 'existing possible child start',
+                                   {'costStatus': 'UNAVAILABLE', 'retryAuthorized': False})
+            no_start = {'status': 'BLOCKED', 'hostLaunchStarted': False, 'blockers': []}
+            with patch.object(unified_start, '_start_lifecycle_unprotected', return_value=no_start), patch.object(
+                    unified_start, 'cleanup_no_start', side_effect=error):
+                with self.assertRaises(LifecycleError) as raised:
+                    start_lifecycle(adapter_id='codex', mode='implement', input_request=raw, project_root=Path(tmp))
+            self.assertIs(raised.exception, error)
+            self.assertEqual(raised.exception.details, {'costStatus': 'UNAVAILABLE', 'retryAuthorized': False})
+            self.assertEqual(raw.read_bytes(), b'private retained input')
+
+    def test_managed_wrapper_propagates_possible_start_failure(self) -> None:
+        receipt = {'status': 'READY', 'action': 'MANAGED_RUN',
+            'workflowBinding': {'state': 'state.json', 'manifest': 'manifest.json',
+                'lock': 'lock.json', 'task': 'task', 'operationId': 'op', 'sourceRevision': 'source'},
+            'riskExecutionProfile': {'profileDigest': 'risk'}}
+        for code in ['codex-exact-start-uncertain', 'local-launch-start-uncertain']:
+            error = LifecycleError(code, 'possible child start', {'costStatus': 'UNAVAILABLE'})
+            with self.subTest(code=code), patch.object(
+                    unified_start, 'launch_from_local_profile', side_effect=error):
+                with self.assertRaises(LifecycleError) as raised:
+                    unified_start._launch_managed_receipt(adapter_id='codex', mode='implement',
+                        receipt=receipt, profile_path=Path('profile.json'), execution_strategy={})
+                self.assertIs(raised.exception, error)
+
+    def test_public_start_preserves_uncertain_failure_and_raw_staging(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = Path(tmp) / 'input.json'
+            raw.write_bytes(b'private input')
+            error = LifecycleError('codex-exact-start-uncertain', 'possible child start')
+            with patch.object(unified_start, '_start_lifecycle_unprotected', side_effect=error), patch.object(
+                    unified_start, '_finish_staged_no_start') as cleanup:
+                with self.assertRaises(LifecycleError) as raised:
+                    start_lifecycle(adapter_id='codex', mode='implement', input_request=raw)
+            self.assertIs(raised.exception, error)
+            cleanup.assert_not_called()
+            self.assertEqual(raw.read_bytes(), b'private input')
+
     def test_raw_text_is_review_gated_and_never_starts_execution(self) -> None:
         raw = "Investigate the checkout failure and prepare a plan"
 
@@ -264,3 +308,24 @@ def _run_request() -> dict[str, object]:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class R1054InputTests(unittest.TestCase):
+    def test_oversized_file_is_bounded_before_parsing_or_delegation(self):
+        import io
+        class Tracked(io.BytesIO):
+            def read(self,size=-1):
+                observed.append(size);return super().read(size)
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'task.txt';path.write_bytes(b'x'*100);observed=[]
+            with patch.object(Path,'open',return_value=Tracked(b'x'*100)), patch.object(unified_start,'_parse_payload') as parse:
+                with self.assertRaises(LifecycleError) as caught:
+                    unified_start._inspect_task_source(task_file=path,task_text=None,max_input_bytes=16)
+            self.assertEqual(caught.exception.code,'start-task-input-too-large');self.assertEqual(observed,[17]);parse.assert_not_called()
+    def test_public_limits_utf8_and_valid_small_input(self):
+        for text in ('x'*17,'я'*9):
+            with self.subTest(text=text):
+                r=start_lifecycle(adapter_id='codex',task_text=text,max_input_bytes=16)
+                self.assertEqual(r['status'],'BLOCKED');self.assertIn('start-task-input-too-large',{x['code'] for x in r['blockers']})
+        r=start_lifecycle(adapter_id='codex',task_text='inspect',max_input_bytes=16)
+        self.assertEqual(r['status'],'REVIEW_REQUIRED')

@@ -10,6 +10,7 @@ from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.authority_text import require_review_text
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids, validate_review_verdict
 from agent_lifecycle.workflow.artifacts import require_artifact_identity
+from agent_lifecycle.workflow.state import validate_typed_blocker
 
 
 def _read_committed_result(root: Path, task: dict[str, Any]) -> dict[str, Any]:
@@ -60,20 +61,19 @@ def validate_task_result(
             "task-result-lineage-mismatch",
             "task result packet hash mismatch",
         )
-    if not allow_non_accepting_outcome and (
-        result.get("blocker") is not None or result.get("contractChangeRequest") is not None
-    ):
-        raise LifecycleError(
-            "task-result-not-acceptable",
-            "blocking task result cannot enter review acceptance path",
-        )
+    non_accepting = _validate_non_accepting_outcome(
+        state, task, result, allowed=allow_non_accepting_outcome,
+    )
     _validate_attempt_baseline(task, result)
     item_outcomes = result.get("itemOutcomes")
     if not isinstance(item_outcomes, list) or not item_outcomes:
         raise LifecycleError("task-result-invalid", "task result itemOutcomes are required")
-    if any(item.get("status") != "COMPLETE" for item in item_outcomes if isinstance(item, dict)):
+    if any(not isinstance(item, dict) for item in item_outcomes):
+        raise LifecycleError("task-result-invalid", "task result itemOutcomes entries must be objects")
+    allowed_statuses = {"COMPLETE", "INCOMPLETE", "BLOCKED", "NOT_STARTED"} if non_accepting else {"COMPLETE"}
+    if any(not isinstance(item.get("status"), str) or item["status"] not in allowed_statuses for item in item_outcomes):
         raise LifecycleError("task-result-not-complete", "task result has incomplete items")
-    _validate_commands(result)
+    _validate_commands(result, allow_failed=non_accepting)
     if not identity["sha256"]:
         raise LifecycleError("task-result-invalid", "task result identity missing")
     if repository_root is None:
@@ -90,6 +90,25 @@ def validate_task_result(
     )
     require_current_task_change_set(result, evidence)
     return evidence
+
+
+def _validate_non_accepting_outcome(
+    state: dict[str, Any], task: dict[str, Any], result: dict[str, Any], *, allowed: bool,
+) -> bool:
+    blocker, change = result.get("blocker"), result.get("contractChangeRequest")
+    if blocker is None and change is None:
+        return False
+    if not allowed or state.get("schemaVersion") != "agent-workflow-state.v4":
+        raise LifecycleError("task-result-not-acceptable", "blocking task result cannot enter review acceptance path")
+    if blocker is not None and change is not None:
+        raise LifecycleError("task-result-invalid", "task result must select one non-accepting outcome")
+    if blocker is not None:
+        validate_typed_blocker(blocker, expected_task_id=task.get("id"))
+        if "attempt" in blocker and blocker["attempt"] != task.get("attempt"):
+            raise LifecycleError("task-result-lineage-mismatch", "task result blocker attempt mismatch")
+    elif not isinstance(change, dict) or not isinstance(change.get("reason"), str) or not change["reason"].strip():
+        raise LifecycleError("task-result-invalid", "contract change request requires a reason")
+    return True
 
 
 def _validate_attempt_baseline(task: dict[str, Any], result: dict[str, Any]) -> None:
@@ -132,7 +151,7 @@ def _valid_reconciliation(
     )
 
 
-def _validate_commands(result: dict[str, Any]) -> None:
+def _validate_commands(result: dict[str, Any], *, allow_failed: bool = False) -> None:
     commands = result.get("commands")
     if commands is None:
         return
@@ -144,11 +163,16 @@ def _validate_commands(result: dict[str, Any]) -> None:
             raise LifecycleError("task-result-invalid", "task result command entries must be objects")
         status = command.get("status")
         exit_code = command.get("exitCode")
-        if status in {"FAIL", "FAILED"} or (
-            isinstance(exit_code, int) and not isinstance(exit_code, bool) and exit_code != 0
-        ):
+        failed_outcome = status in ("FAIL", "FAILED") or (
+            type(exit_code) is int and exit_code != 0
+        )
+        unproven_outcome = (
+            not isinstance(status, str) or status not in {"PASS", "PASSED"}
+            or type(exit_code) is not int or exit_code != 0
+        )
+        if failed_outcome or (not allow_failed and unproven_outcome):
             failed.append(command.get("id") or command.get("command") or "<unknown>")
-    if failed:
+    if failed and not allow_failed:
         raise LifecycleError(
             "task-result-failed-command",
             "task result cannot report completion over failed commands",
@@ -297,6 +321,13 @@ def _require_reviewer_separate_from_worker(review: dict[str, Any], result: dict[
     reviewer = review.get("reviewer")
     if not isinstance(reviewer, dict):
         raise LifecycleError("task-review-not-independent", "task review must identify an independent reviewer")
+    for field in ("id", "runId"):
+        value = reviewer.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise LifecycleError(
+                "task-review-not-independent",
+                f"task review reviewer.{field} must identify an independent reviewer",
+            )
     same_actor = isinstance(result.get("actor"), str) and result["actor"] and reviewer.get("id") == result["actor"]
     same_run = (
         isinstance(result.get("actorRunId"), str)

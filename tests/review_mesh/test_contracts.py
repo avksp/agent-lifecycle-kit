@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import unittest
+from copy import deepcopy
 
+from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.quality.cross_check import validate_cross_check_receipt
 from agent_lifecycle.review_mesh import (
     build_review_mesh_assignment,
     build_review_mesh_profile,
@@ -14,9 +17,124 @@ from agent_lifecycle.review_mesh import (
     validate_review_mesh_result,
     validate_review_mesh_synthesis,
 )
+from agent_lifecycle.review_mesh.contracts import require_review_mesh_quorum_pass
 
 
 class ReviewMeshContractTests(unittest.TestCase):
+    def test_supplied_profile_modes_bind_result_synthesis_and_quorum_acceptance(self) -> None:
+        allowed, excluded = "leader-draft-multi-review", "parallel-research-synthesis"
+        profile = build_review_mesh_profile(modes=[allowed], independence_required=False)
+        assignment = build_review_mesh_assignment(
+            profile=profile,
+            assignment_id="MODE-BOUND",
+            subject={"taskId": "TASK-1"},
+            reviewer={"role": "reviewer", "modelClass": "strong-reasoning"},
+        )
+        result = build_review_mesh_result(
+            profile=profile,
+            assignment=assignment,
+            budget_usage={"invocations": 1, "inputTokens": 11, "outputTokens": 1, "wallSeconds": 1},
+            status="PASS",
+        )
+        synthesis = build_review_mesh_synthesis(
+            profile=profile, mode=allowed, subject={"taskId": "TASK-1"}, result_digests=[result["resultDigest"]]
+        )
+        quorum = build_review_mesh_quorum_receipt(
+            profile=profile,
+            mode=allowed,
+            subject={"reviewMeshRequired": True},
+            quorum_policy={"minReviewers": 1, "requiredRoles": []},
+            reviewer_count=1,
+        )
+        require_review_mesh_quorum_pass(validate_review_mesh_quorum_receipt(quorum, profile=profile))
+        for name, receipt, validator, digest in [
+            ("result", result, validate_review_mesh_result, "resultDigest"),
+            ("synthesis", synthesis, validate_review_mesh_synthesis, "synthesisDigest"),
+            ("quorum", quorum, validate_review_mesh_quorum_receipt, "receiptDigest"),
+        ]:
+            with self.subTest(consumer=name):
+                self.assertEqual(validator(receipt, profile=profile)["status"], "PASS")
+                mutant = deepcopy(receipt)
+                mutant["mode"] = excluded
+                _repair(mutant, digest)
+                self.assertEqual(validator(mutant)["status"], "PASS")
+                validation = validator(mutant, profile=profile)
+                self.assertIn(f"review-mesh-{name}-mode-not-profile", {b["code"] for b in validation["blockers"]})
+                self.assertEqual(validation["status"], "FAIL")
+                if name == "quorum":
+                    with self.assertRaises(LifecycleError):
+                        require_review_mesh_quorum_pass(validation)
+
+    def test_direct_result_validation_rejects_conflicting_whole_profile(self) -> None:
+        profile, _assignment, result = _direct_result(live_calls=True)
+        self.assertEqual(validate_review_mesh_result(result, profile=profile)["status"], "PASS")
+        for field in ["liveCallsAllowed", "budgetCap"]:
+            with self.subTest(field=field):
+                bad = deepcopy(profile)
+                if field == "liveCallsAllowed":
+                    bad[field] = False
+                else:
+                    bad[field]["maxInputTokens"] = 0
+                _repair(bad, "profileDigest")
+                value = deepcopy(result)
+                value["profileDigest"] = bad["profileDigest"]
+                _repair(value, "resultDigest")
+                validation = validate_review_mesh_result(value, profile=bad)
+                self.assertIn("review-mesh-profile-invalid", {b["code"] for b in validation["blockers"]})
+
+    def test_profile_labels_join_assignment_result_and_cross_receipt(self) -> None:
+        profile, assignment, result = _direct_result()
+        assignment["profileId"] = "OTHER"
+        _repair(assignment, "assignmentDigest")
+        validation = validate_review_mesh_assignment(assignment, profile=profile)
+        self.assertIn("review-mesh-assignment-profile-id-mismatch", {b["code"] for b in validation["blockers"]})
+        result["profileId"] = "OTHER"
+        _repair(result, "resultDigest")
+        validation = validate_review_mesh_result(result, profile=profile)
+        self.assertIn("review-mesh-result-profile-id-mismatch", {b["code"] for b in validation["blockers"]})
+        cross = deepcopy(result["crossCheckReceipt"])
+        cross["profileId"] = "OTHER"
+        _repair(cross, "receiptDigest")
+        validation = validate_cross_check_receipt(cross, profile=profile["crossCheckProfile"])
+        self.assertIn("cross-check-profile-id-mismatch", {b["code"] for b in validation["blockers"]})
+
+    def test_quorum_pass_rejects_valid_failed_receipt_and_forged_count_roles(self) -> None:
+        profile = build_review_mesh_profile(independence_required=False)
+        failed = build_review_mesh_quorum_receipt(
+            profile=profile,
+            mode=profile["defaultMode"],
+            subject={"reviewMeshRequired": True},
+            quorum_policy={"minReviewers": 2, "requiredRoles": []},
+            reviewer_count=2,
+            blocking_findings_unresolved=True,
+        )
+        validation = validate_review_mesh_quorum_receipt(failed, profile=profile)
+        self.assertEqual(validation["status"], "PASS", validation["blockers"])
+        self.assertEqual(validation["receiptStatus"], "FAIL")
+        with self.assertRaises(LifecycleError):
+            require_review_mesh_quorum_pass(validation)
+        positive = build_review_mesh_quorum_receipt(
+            profile=profile,
+            mode=profile["defaultMode"],
+            subject={"reviewMeshRequired": True},
+            quorum_policy={"minReviewers": 2, "requiredRoles": []},
+            reviewer_count=2,
+        )
+        require_review_mesh_quorum_pass(validate_review_mesh_quorum_receipt(positive, profile=profile))
+        for field, value in [
+            ("reviewerCount", 1),
+            ("requiredRolesSatisfied", False),
+            ("blockingFindingsUnresolved", True),
+        ]:
+            with self.subTest(field=field):
+                mutant = deepcopy(positive)
+                mutant[field] = value
+                _repair(mutant, "receiptDigest")
+                validation = validate_review_mesh_quorum_receipt(mutant, profile=profile)
+                self.assertEqual(validation["status"], "FAIL")
+                with self.assertRaises(LifecycleError):
+                    require_review_mesh_quorum_pass(validation)
+
     def test_profile_reuses_cross_check_budget_and_independence_semantics(self) -> None:
         profile = build_review_mesh_profile(
             budget_cap={"maxInvocations": 2, "maxInputTokens": 8000, "maxOutputTokens": 2000, "maxWallSeconds": 300},
@@ -154,6 +272,28 @@ class ReviewMeshContractTests(unittest.TestCase):
 
         self.assertEqual(validate_review_mesh_synthesis(synthesis, profile=profile)["status"], "PASS")
         self.assertEqual(validate_review_mesh_quorum_receipt(quorum, profile=profile)["status"], "PASS")
+
+
+def _repair(value: dict, key: str) -> None:
+    value[key] = canonical_digest({k: v for k, v in value.items() if k != key})
+
+
+def _direct_result(*, live_calls: bool = False) -> tuple[dict, dict, dict]:
+    profile = build_review_mesh_profile(independence_required=False, live_calls_allowed=live_calls)
+    assignment = build_review_mesh_assignment(
+        profile=profile,
+        assignment_id="DIRECT",
+        subject={"taskId": "TASK"},
+        reviewer={"role": "reviewer", "modelClass": "strong-reasoning"},
+    )
+    result = build_review_mesh_result(
+        profile=profile,
+        assignment=assignment,
+        budget_usage={"invocations": 1, "inputTokens": 11, "outputTokens": 1, "wallSeconds": 1},
+        status="PASS",
+        live_calls_started=live_calls,
+    )
+    return profile, assignment, result
 
 
 if __name__ == "__main__":

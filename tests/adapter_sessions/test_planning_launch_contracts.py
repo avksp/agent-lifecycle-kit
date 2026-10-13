@@ -11,12 +11,12 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
+from agent_lifecycle.adapter_sessions.launcher import run_planning_qualification_candidate  # noqa: E402
 from agent_lifecycle.adapter_sessions.planning_launch import (  # noqa: E402
     build_planning_envelope,
     parse_planning_result,
     run_planning_launch,
 )
-from agent_lifecycle.adapter_sessions.launcher import run_planning_qualification_candidate  # noqa: E402
 from agent_lifecycle.adapter_sessions.qualification import load_shipped_launch_profile  # noqa: E402
 from agent_lifecycle.contracts.schemas import get_schema  # noqa: E402
 
@@ -66,6 +66,7 @@ class PlanningLaunchContractTests(unittest.TestCase):
             input_source="text",
             argv=command,
             env=dict(os.environ),
+            explicit_launch=True,
         )
 
         self.assertEqual(receipt["status"], "REVIEW_REQUIRED")
@@ -113,6 +114,7 @@ class PlanningLaunchContractTests(unittest.TestCase):
                 argv=[sys.executable, "-c", script],
                 env=dict(os.environ),
                 process_cwd=Path(tmp),
+                explicit_launch=True,
             )
         self.assertEqual(receipt["status"], "REVIEW_REQUIRED")
 
@@ -211,3 +213,15 @@ class PlanningLaunchContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class R1054UsageTests(unittest.TestCase):
+    def test_model_authored_usage_cannot_supply_attested_counts(self):
+        from agent_lifecycle.adapter_sessions.planning_launch import _usage_evidence
+        for value in (80,-1,True,1.0,'80',None):
+            with self.subTest(value=value):
+                result={'usage':{'confidence':'ATTESTED','inputTokens':value,'outputTokens':value}}
+                original=json.loads(json.dumps(result));evidence=_usage_evidence(result)
+                self.assertEqual(evidence['confidence'],'MISSING')
+                self.assertIsNone(evidence['inputTokens']);self.assertIsNone(evidence['outputTokens'])
+                self.assertEqual(result,original)

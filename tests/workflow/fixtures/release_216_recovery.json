@@ -1,0 +1,1457 @@
+{
+  "artifactRole": "ISOLATED_PLANNED_ORACLE_INPUT_NOT_EVIDENCE",
+  "nativeReady": false,
+  "nativeRouteCases": [
+    {
+      "actual": null,
+      "caseId": "recovery.route.or01",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR01",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or01",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "missing qualification",
+          "stale qualification",
+          "task-selected positive qualification",
+          "forged qualification"
+        ]
+      },
+      "name": "Route identity, stale/forged qualification",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Current exact OS/source/config/Journal/root/clock route is unsupported; stale, missing or task-selected positive qualification denies.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or02",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR02",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or02",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "valid protected adoption request via direct CLI",
+          "same request via static Python adopt_run"
+        ]
+      },
+      "name": "Direct adoption refusal",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Direct CLI and Python adopt_run attempts deny before Journal/legacy/outbox write; old scope/history stays byte-identical.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or03",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR03",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or03",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "root issuer publication",
+          "epoch-zero publication",
+          "owner-root pin creation"
+        ]
+      },
+      "name": "Root and epoch-zero refusal",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Owner-root/issuer/epoch-0 publication denies before key, pin, authority or Journal mutation.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or04",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR04",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or04",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "closing activation request",
+          "window grant request"
+        ]
+      },
+      "name": "Closing activation refusal",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Protected activation denies before state/Journal/outbox write or process start; no READY/grant is claimed.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or05",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR05",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or05",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "old run deadline already expired",
+          "old task deadline expired",
+          "retained FAIL/freshness boundaries"
+        ]
+      },
+      "name": "Old deadline remains",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Old execution deadline and evidence freshness/failure remain; refusal never refreshes or erases them.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or06",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR06",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or06",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "malformed request",
+          "unauthorized request",
+          "mismatched request/source/run"
+        ]
+      },
+      "name": "Malformed protected request",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Malformed, unauthorized or mismatched protected request denies before any relevant mutation.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or07",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR07",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or07",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "identical denied request replay",
+          "conflicting request with same identity",
+          "new process restart replay"
+        ]
+      },
+      "name": "Replay of denied request",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Same or conflicting denied request after retry/restart remains denied with no nonce, grant or policy effect.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or08",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR08",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or08",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "unknown route with apparent spare resources",
+          "stale route with apparent spare resources"
+        ]
+      },
+      "name": "Unqualified route guard",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Unknown/unqualified route refuses even with apparent time/tokens; no silent ordinary downgrade.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or09",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR09",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or09",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "prior overrun",
+          "active reservations",
+          "protected closeout remains charged"
+        ]
+      },
+      "name": "No protected allowance",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "No closing allocation/prospective cap is issued; original cap, reservations, costs and overrun persist.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "additionalActualFactMutationProofRequired": "Legitimate actual late settlement under original scope, once; denial-only port result does not establish it.",
+      "caseId": "recovery.route.or10",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR10",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or10",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "unknown cumulative history",
+          "incomplete cumulative history",
+          "legitimate late settlement follow-on"
+        ]
+      },
+      "name": "Unknown financial history",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Unknown/incomplete cumulative history blocks protected admission while legitimate late actual settlement remains recordable.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "additionalActualFactMutationProofRequired": "Legitimate actual late settlement under original scope, once; denial-only port result does not establish it.",
+      "caseId": "recovery.route.or11",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR11",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or11",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "accepted evidence retained",
+          "late actual expense idempotently retained",
+          "violation retained once"
+        ]
+      },
+      "name": "Old evidence and late settlement",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Accepted evidence persists; no fabricated protected proof; actual late expense/violation records once under original scope.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "additionalActualFactMutationProofRequired": "Legitimate actual late settlement under original scope, once; denial-only port result does not establish it.",
+      "caseId": "recovery.route.or12",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR12",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or12",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "trusted clock passes original deadline during request",
+          "late facts after refusal"
+        ]
+      },
+      "name": "Expiry during requested proof",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Expiry during a denied protected request does not start work; actual late facts persist and remain blocked for new work.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or13",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR13",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or13",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "unrelated source blocker",
+          "unrelated security blocker",
+          "unrelated final evidence failure"
+        ]
+      },
+      "name": "Other finalization guards",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Original unrelated finalization failures stay blocking; route refusal does not suppress them.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or14",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR14",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or14",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "restart after denied operation",
+          "recovery of absent grant/window/reservation"
+        ]
+      },
+      "name": "Crash/recovery of denial",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Restart/replay of denied request cannot recover a nonexistent grant, window, reservation or dispatch.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or15",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR15",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or15",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "protected COMPLETE request denied",
+          "ordinary eligible finalization separately assessed"
+        ]
+      },
+      "name": "No protected finalization",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Protected COMPLETE outcome cannot be claimed; ordinary authorized finalization remains separately eligible.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or16",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR16",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or16",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "no fabricated task after denial",
+          "no manual state fallback",
+          "no ordinary retry after protected denial"
+        ]
+      },
+      "name": "No manual fallback",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "No fabricated task, manual state edit or silent ordinary fallback follows protected denial.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or17",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR17",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or17",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "direct_cli_adopt",
+          "python_adopt_api",
+          "direct_cli_closing",
+          "python_closing_api",
+          "continuation",
+          "managed_task_preflight",
+          "configured_closing_consumers"
+        ]
+      },
+      "name": "All dispatch entry points",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Direct CLI/Python, continuation, managedTask preflight and configured closing consumers deny protected launch before host/process start; zero dispatch.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or18",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR18",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or18",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "ORDINARY_LIMITED",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "ordinary limited compatible work with all existing gates satisfied",
+          "stronger request rejected without downgrade"
+        ]
+      },
+      "mustNotCountProtectedDenialAsOrdinaryPass": true,
+      "name": "Ordinary route preservation",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Guarded ORDINARY_LIMITED task may proceed under exact H04/A5/financial/ownership/deadline profile; stronger protected request cannot downgrade.",
+      "owner": "WS216-02",
+      "positiveOrdinaryObservationRequired": true,
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "ORDINARY_LIMITED",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "caseId": "recovery.route.or19",
+      "evidenceId": "EV216-CLOSING-WINDOW",
+      "executionStatus": "NOT_RUN",
+      "id": "OR19",
+      "input": {
+        "actualBillableTokens": null,
+        "actualCumulativeUsage": null,
+        "approvedDistinctRunId": "release-2-16-f101-finalize-20261011",
+        "caseIdentity": "recovery.route.or19",
+        "currentFrozenPlanDigest": "eb10c08788668bb7b300dfee3ba9ae7a2c843ccb08fad8598fca8bc7482eb1bc",
+        "inputRole": "SYNTHETIC_SCENARIO_DEFINITION_NOT_NATIVE_OBSERVATION",
+        "negativeProofStatus": "NOT_RUN",
+        "oldRuntimeMustRemainUnchanged": true,
+        "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+        "unknownTelemetryMustNotBecomeZero": true,
+        "variations": [
+          "missing route decision",
+          "stale decision",
+          "wrong route",
+          "wrong claim",
+          "wrong source",
+          "worker-selected applicability",
+          "missing negative receipts"
+        ]
+      },
+      "mustNotCountUnrelatedPhaseOrMissingFileRefusal": true,
+      "name": "Final consumer applicability",
+      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "oracle": "Final audit rejects absent, stale, wrong-route/claim/source or worker-selected applicability and missing negative receipts; positives stay NOT_RUN.",
+      "owner": "WS216-02",
+      "proofKind": "NATIVE_EXACT_SOURCE",
+      "readiness": "CASE_ORACLE_DEFINED_PUBLIC_ROUTE_BINDINGS_PENDING",
+      "requestedClaim": "PROTECTED_ADOPTION_OR_CLOSING",
+      "requiredActualObservationFields": [
+        "decisionDigest",
+        "entrypoint",
+        "requestedClaim",
+        "sourceDigest",
+        "beforeJournalDigest",
+        "afterJournalDigest",
+        "beforeLegacyDigest",
+        "afterLegacyDigest",
+        "beforeRootEpochDigest",
+        "afterRootEpochDigest",
+        "beforeOutboxDigest",
+        "afterOutboxDigest",
+        "hostLaunchStarted",
+        "dispatchCount",
+        "denialCode",
+        "observedAt"
+      ],
+      "route": "CURRENT_CODEX_UNSUPPORTED",
+      "status": "NOT_RUN"
+    }
+  ],
+  "noProductCodeChanged": true,
+  "noProductSourceChanged": false,
+  "ordinaryFinalizationCases": [
+    {
+      "expected": "run-start chooses FINAL_AUDIT; accepted task is not restarted; finalization still requires all configured gates.",
+      "given": "Nonempty required tasks ACCEPTED, fresh matching authorization, compatible retained artifacts.",
+      "id": "CC01",
+      "item": "CF01",
+      "status": "NOT_RUN"
+    },
+    {
+      "expected": "Normal incomplete run remains RUNNING; unauthorized or incompatible state refuses transition without mutation.",
+      "given": "Empty/optional-only task set, incomplete required task, wrong source or missing authorization.",
+      "id": "CC02",
+      "item": "CF01",
+      "status": "NOT_RUN"
+    },
+    {
+      "expected": "Hashes and identities retained; attempt and usage do not reset; real final outcome is not replaced by fixture status.",
+      "given": "CF01 roundtrip with accepted task history, result/review/audit/compatibility receipts and cumulative usage.",
+      "id": "CC03",
+      "item": "CF01",
+      "status": "NOT_RUN"
+    }
+  ],
+  "originalPositiveStatusesPreserved": true,
+  "originalProtectedPositiveApplicability": [
+    {
+      "caseId": "recovery.cc01",
+      "currentRoute": "ORIGINAL_POSITIVE_REQUIRED",
+      "id": "CC01",
+      "originalEvidenceId": "EV216-FINALIZATION-RECOVERY",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc02",
+      "currentRoute": "ORIGINAL_POSITIVE_REQUIRED",
+      "id": "CC02",
+      "originalEvidenceId": "EV216-FINALIZATION-RECOVERY",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc03",
+      "currentRoute": "ORIGINAL_POSITIVE_REQUIRED",
+      "id": "CC03",
+      "originalEvidenceId": "EV216-FINALIZATION-RECOVERY",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc04",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC04",
+      "negativeCaseIds": [
+        "recovery.route.or04"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc05",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC05",
+      "negativeCaseIds": [
+        "recovery.route.or05"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc06",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC06",
+      "negativeCaseIds": [
+        "recovery.route.or06"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc07",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC07",
+      "negativeCaseIds": [
+        "recovery.route.or07"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc08",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC08",
+      "negativeCaseIds": [
+        "recovery.route.or08"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc09",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC09",
+      "negativeCaseIds": [
+        "recovery.route.or09"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc10",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC10",
+      "negativeCaseIds": [
+        "recovery.route.or10"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc11",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC11",
+      "negativeCaseIds": [
+        "recovery.route.or11"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc12",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC12",
+      "negativeCaseIds": [
+        "recovery.route.or12"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc13",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC13",
+      "negativeCaseIds": [
+        "recovery.route.or13"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc14",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC14",
+      "negativeCaseIds": [
+        "recovery.route.or14"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc15",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC15",
+      "negativeCaseIds": [
+        "recovery.route.or15"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.cc16",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "CC16",
+      "negativeCaseIds": [
+        "recovery.route.or16"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.state.ds10",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DS10",
+      "negativeCaseIds": [
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.state.ds13",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DS13",
+      "negativeCaseIds": [
+        "recovery.route.or04",
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.state.ds14",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DS14",
+      "negativeCaseIds": [
+        "recovery.route.or02"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-WORKFLOW-STORE",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.state.ds17",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DS17",
+      "negativeCaseIds": [
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.state.ds21",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DS21",
+      "negativeCaseIds": [
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.authority.da08",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DA08",
+      "negativeCaseIds": [
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.authority.da12",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DA12",
+      "negativeCaseIds": [
+        "recovery.route.or03",
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.authority.da14",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DA14",
+      "negativeCaseIds": [
+        "recovery.route.or11",
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.authority.da15",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DA15",
+      "negativeCaseIds": [
+        "recovery.route.or01",
+        "recovery.route.or03"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.resource.dr13",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DR13",
+      "negativeCaseIds": [
+        "recovery.route.or09",
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.resource.dr15",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DR15",
+      "negativeCaseIds": [
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.resource.dr19",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DR19",
+      "negativeCaseIds": [
+        "recovery.route.or09",
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.resource.dr20",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DR20",
+      "negativeCaseIds": [
+        "recovery.route.or11"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.deadline.dd06",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DD06",
+      "negativeCaseIds": [
+        "recovery.route.or05",
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.deadline.dd07",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DD07",
+      "negativeCaseIds": [
+        "recovery.route.or05"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.deadline.dd08",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DD08",
+      "negativeCaseIds": [
+        "recovery.route.or05"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.deadline.dd09",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DD09",
+      "negativeCaseIds": [
+        "recovery.route.or05",
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.deadline.dd10",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DD10",
+      "negativeCaseIds": [
+        "recovery.route.or05",
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.deadline.dd12",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DD12",
+      "negativeCaseIds": [
+        "recovery.route.or12",
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.deadline.dd13",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DD13",
+      "negativeCaseIds": [
+        "recovery.route.or17"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    },
+    {
+      "caseId": "recovery.deadline.dd15",
+      "currentRoute": "DEFERRED_UNSUPPORTED_ROUTE",
+      "id": "DD15",
+      "negativeCaseIds": [
+        "recovery.route.or05"
+      ],
+      "negativeEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalEvidenceId": "EV216-CLOSING-WINDOW",
+      "originalStatus": "NOT_RUN"
+    }
+  ],
+  "owner": "WS216-02",
+  "schemaVersion": "alk-release-216-recovery-oracle-inputs.v1",
+  "sourceContractRefs": [
+    {
+      "bytes": 152725,
+      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/plan.manifest.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "6e5e0194715f2dfd1922ea4569af1b14bcb9ef22ceaa78af9632427fc1fc60dc"
+    },
+    {
+      "bytes": 19870,
+      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/accounting-and-recovery-cases.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "9dab0dc17a6889df8d9af22aea670fdc90025a955e6037403b53fc6b6bef9b62"
+    },
+    {
+      "bytes": 8834,
+      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/cf01-a5-capability-scope.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "afc8c917e47598f81e579ae9fdd851753f45202fa612351a987a1d936a61817d"
+    },
+    {
+      "bytes": 76468,
+      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/cf01-a5-implementation-contract.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "b4720a9eb297d9d84c59040fd80df3aca05a836489228a745e4bf478a8c536b7"
+    },
+    {
+      "bytes": 23584,
+      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/closing-write-inventory.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "d8091e1a2db1a17140d6741549653d21d093f2490c5aa971f58fdb5e6fe4dacd"
+    },
+    {
+      "bytes": 16893,
+      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/cf-d-window-request-contract.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "1eacd18002f6daba4755a8f978e6145eef76ea7d3ac9b4c9f0279cad206e75c8"
+    }
+  ],
+  "status": "INPUTS_INSTALLED_NOT_RUN"
+}

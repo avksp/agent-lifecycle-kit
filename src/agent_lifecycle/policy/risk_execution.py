@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from typing import Any
+from pathlib import Path
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.policy.quality_floor import resolve_quality_floor
+from agent_lifecycle.accounting.source_usage_context import SourceUsageContext, validate_source_usage_context
 
 RISK_EXECUTION_POLICY_SCHEMA = "agent-risk-execution-policy.v1"
 RISK_EXECUTION_PROFILE_SCHEMA = "agent-risk-execution-profile.v1"
@@ -76,6 +78,8 @@ def derive_risk_execution_profile(
     routing_profile: dict[str, Any],
     baseline_profile: dict[str, Any],
     host_profile: dict[str, Any] | None,
+    repository_root: Path | None = None,
+    source_usage_context: SourceUsageContext | None = None,
 ) -> dict[str, Any]:
     """Build a provider-neutral profile without changing workflow state."""
 
@@ -176,6 +180,19 @@ def derive_risk_execution_profile(
         "hostLaunchStarted": False,
         "productionPromotionClaimed": False,
     }
+    selected_context = validate_source_usage_context(
+        source_usage_context, manifest=manifest, state=state, task_id=task_id,
+        adapter_id=adapter_id, adapter_host=adapter_host,
+    )
+    if selected_context is not None and selected_context.appliesToTask:
+        from agent_lifecycle.contracts.scoped_usage_schemas import (
+            SOURCE_RISK_PROFILE, SOURCE_USAGE_MODE, limited_usage_evidence,
+        )
+        if route["modelClass"] not in selected_context.allowedModelClasses:
+            raise LifecycleError("scoped-usage-model-scope-mismatch", "model route is outside limited source scope")
+        body.update(schemaVersion=SOURCE_RISK_PROFILE, usageMode=SOURCE_USAGE_MODE,
+                    sourceUsagePolicyDigest=selected_context.policyDigest,
+                    usageEvidence=limited_usage_evidence())
     return {**body, "profileDigest": canonical_digest(body)}
 
 

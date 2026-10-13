@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "alk-reviewer-provenance-test-authority.v1",
+  "authority": "TEST_AUTHORITY_ONLY",
+  "context": {
+    "trustRoot": {
+      "schemaVersion": "agent-reviewer-trust-root.v1",
+      "revision": 1,
+      "authorizedIssuers": [
+        {
+          "issuerId": "issuer",
+          "fingerprint": "ed25519:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c",
+          "publicKeyHex": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+          "actorIds": [
+            "reviewer"
+          ],
+          "phases": [
+            "task-review"
+          ]
+        }
+      ]
+    },
+    "expectedTrustRootDigest": "13bd7793c3cca4f7c6bda95135b6096890971c059a5a72251b55402456f3892d",
+    "expectedIssuerId": "issuer",
+    "expectedActorId": "reviewer",
+    "expectedSessionId": "reviewer-session",
+    "expectedPhase": "task-review",
+    "expectedAssignmentId": "assignment",
+    "expectedAssignmentDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expectedSubjectDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "workerActorId": "worker",
+    "workerSessionId": "worker-session",
+    "referenceTime": "2026-09-23T02:00:00Z"
+  },
+  "attestation": {
+    "schemaVersion": "agent-reviewer-attestation.v1",
+    "claims": {
+      "schemaVersion": "agent-reviewer-identity-claims.v1",
+      "issuerId": "issuer",
+      "actorId": "reviewer",
+      "sessionId": "reviewer-session",
+      "phase": "task-review",
+      "assignmentId": "assignment",
+      "assignmentDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "subjectDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "trustRootDigest": "13bd7793c3cca4f7c6bda95135b6096890971c059a5a72251b55402456f3892d",
+      "issuedAt": "2026-09-23T01:59:00Z",
+      "expiresAt": "2026-09-23T02:04:00Z",
+      "nonce": "b3effee44a06f30264293dfc5845827f6f43f28f67e3f2357c3437949168f8e7"
+    },
+    "signer": {
+      "algorithm": "Ed25519",
+      "fingerprint": "ed25519:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c"
+    },
+    "signature": "8debe533375d26d68c715ff087a383b74fcf1f435457961dff29430bffce1feefd211a1560fd52e03aecf3819336dd73e11efc6555b873f09f2a85f85ef05805"
+  },
+  "expectedPureVerifierStatus": "PASS",
+  "nativeRouteQualified": false
+}

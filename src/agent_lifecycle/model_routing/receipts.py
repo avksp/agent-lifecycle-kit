@@ -45,6 +45,14 @@ def validate_usage_receipt(
     return payload
 
 
+def validate_source_usage_receipt_shape(receipt: dict[str, Any]) -> dict[str, Any]:
+    """Validate only the closed v2 shape; never grant usage acceptance."""
+
+    from agent_lifecycle.contracts.scoped_usage_schemas import validate_source_usage_receipt_shape as validate
+
+    return validate(receipt)
+
+
 def _validate_shape(receipt: dict[str, Any]) -> None:
     if receipt.get("schemaVersion") != "agent-lifecycle-model-usage-receipt.v1":
         raise LifecycleError("invalid-model-usage-receipt", "unsupported model usage receipt schema")

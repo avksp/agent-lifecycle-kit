@@ -7,19 +7,10 @@ from typing import Any
 
 from agent_lifecycle.context.profiles import WINDOWS
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.model_classes import (
+    ALLOWED_MODEL_CLASSES, CRITICAL_REVIEW_CLASSES, LOCAL_MODEL_CLASSES,
+)
 
-ALLOWED_MODEL_CLASSES = {
-    "no-model",
-    "budget",
-    "local-compact",
-    "standard-code",
-    "local-standard-code",
-    "strong-reasoning",
-    "local-strong-review",
-    "specialist-review",
-}
-LOCAL_MODEL_CLASSES = {"local-compact", "local-standard-code", "local-strong-review"}
-CRITICAL_REVIEW_CLASSES = {"strong-reasoning", "local-strong-review", "specialist-review"}
 ROUTING_POLICIES = {"cost-optimized", "balanced", "quality-first", "local-only", "manual"}
 SDD_TIERS = {"S0", "S1", "S2"}
 JSON_RELIABILITY = {"strict", "best-effort", "unsupported"}

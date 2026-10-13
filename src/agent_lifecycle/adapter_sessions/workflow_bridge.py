@@ -5,6 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.accounting.source_usage_context import load_source_usage_context
+from agent_lifecycle.workflow.artifacts import package_root
+from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.adapter_sessions.contracts import build_adapter_session_receipt, build_resume_receipt
 from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, managed_launch_profile
 from agent_lifecycle.adapter_sessions.session_store import create_session, load_session, update_session
@@ -52,15 +55,22 @@ def managed_adapter_run(
     next_action = workflow_receipt.get("nextAction")
     if workflow_receipt["status"] == "PASS" and (requested_risk is not None or strategy_out_path is not None):
         risk_request = requested_risk or "auto"
+        manifest = read_json_object(manifest_path, label="frozen plan manifest")
+        state = read_json_object(state_path, label="workflow state")
+        root = package_root(state_path, state)
         risk_profile = derive_risk_execution_profile(
-            manifest=read_json_object(manifest_path, label="frozen plan manifest"),
-            state=read_json_object(state_path, label="workflow state"),
+            manifest=manifest,
+            state=state,
             task_id=task_id,
             adapter_id=adapter_id,
             adapter_host=str(descriptor.get("host", "")),
             operation_id=operation_id,
             source_revision=source_revision,
             requested_risk=risk_request,
+            source_usage_context=load_source_usage_context(
+                root, manifest, state, find_task(state, task_id),
+                adapter_id, str(descriptor.get("host", "")),
+            ),
             risk_policy=read_json_object(
                 risk_policy_path or builtin_profile_path("risk-execution-policy.v1.json"),
                 label="risk execution policy",

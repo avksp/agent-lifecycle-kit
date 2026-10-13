@@ -18,6 +18,10 @@ from agent_lifecycle.planning.task_compatibility import (
     validate_task_plan_compatibility_receipt,
 )
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
+from agent_lifecycle.workflow.implementation_audit_gate import (
+    validate_final_task_evidence_reports,
+    validate_task_evidence_paths,
+)
 from agent_lifecycle.workflow.review_mesh_gate import validate_review_mesh_quorum_path
 from agent_lifecycle.workflow.reviews import (
     task_result_freshness_required,
@@ -77,7 +81,9 @@ def build_implementation_audit_report(
         manifest_path, result, snapshot_evidence, changed_paths, base, findings, blockers
     )
 
-    evidence = _evidence_summary(root, task, evidence_paths or [])
+    evidence = _collect_evidence_summary(
+        root, manifest, state, task, result_identity, snapshot_evidence, evidence_paths or [], findings, blockers,
+    )
     for missing in evidence["missingEvidenceIds"]:
         _add_finding(
             findings,
@@ -365,6 +371,12 @@ def build_final_implementation_audit(
         blockers.append({"code": "implementation-audit-report-missing", "taskId": task_id})
     if manifest.get("status") != "FROZEN":
         blockers.append({"code": "plan-not-frozen", "message": "final implementation audit requires a FROZEN plan"})
+    try:
+        validate_final_task_evidence_reports(
+            state_path, state, {"reports": reports, "missingTaskIds": missing_task_ids}, manifest=manifest,
+        )
+    except LifecycleError as exc:
+        blockers.append({"code": exc.code, "message": str(exc)})
     body = {
         "schemaVersion": FINAL_IMPLEMENTATION_AUDIT_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
@@ -538,20 +550,22 @@ def _result_changed_files(result: dict[str, Any]) -> list[str]:
     return [item for item in changed if isinstance(item, str)] if isinstance(changed, list) else []
 
 
-def _evidence_summary(root: Path, task: dict[str, Any], evidence_paths: list[str]) -> dict[str, Any]:
-    identities = []
-    for raw_path in evidence_paths:
-        rel = normalize_repo_path(raw_path, label="evidence")
-        payload = read_json_object(root / rel, label="evidence")
-        identities.append(artifact_identity(root, rel, payload))
-    required_ids = [item for item in task.get("evidenceIds", []) if isinstance(item, str)]
-    # The facade is path-based; supplied evidence paths satisfy the task evidence set.
-    missing = required_ids if required_ids and not identities else []
-    return {
-        "requiredEvidenceIds": required_ids,
-        "suppliedEvidence": identities,
-        "missingEvidenceIds": missing,
-    }
+def _collect_evidence_summary(
+    root: Path, manifest: dict[str, Any], state: dict[str, Any], task: dict[str, Any],
+    result_identity: dict[str, Any], snapshots: list[dict[str, Any]], evidence_paths: list[str],
+    findings: list[dict[str, Any]], blockers: list[dict[str, Any]],
+) -> dict[str, Any]:
+    try:
+        return validate_task_evidence_paths(
+            root, manifest, state, task, result_identity, snapshots[0] if snapshots else None, evidence_paths,
+        )
+    except LifecycleError as exc:
+        _add_finding(
+            findings, blockers, code=exc.code, severity="HIGH", category="evidence",
+            message="required typed evidence did not validate", context={"taskId": task.get("id")},
+        )
+        return {"requiredEvidenceIds": task.get("evidenceIds", []), "suppliedEvidence": [],
+                "missingEvidenceIds": task.get("evidenceIds", []), "validationError": exc.code}
 
 
 def _sandbox_summary(

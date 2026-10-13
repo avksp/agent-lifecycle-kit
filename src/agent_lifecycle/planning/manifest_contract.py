@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.authority_text import require_manifest_text
+from agent_lifecycle.contracts.immutable_input_schemas import validate_a5_plan_policy, validate_a5_policy
 from agent_lifecycle.contracts.ownership_paths import (
     require_declared_output_footprint,
     require_manifest_authority_paths,
@@ -57,6 +58,7 @@ _TOP_LEVEL = {
     "taskTemplates",
     "compatibility",
     "extensions",
+    "immutableInput",
 }
 
 _PACKAGE = {"id", "title", "workspaceRoot", "artifactRoot", "root", "planArtifactRoot"}
@@ -110,6 +112,7 @@ _WORKSTREAM = {
     "controllerGates",
     "taskShape",
     "qualityFloor",
+    "immutableInput",
 }
 _ACCEPTANCE = {"criteria", "evidence", "releaseGate", "qualityFloor"}
 _CRITERION = {
@@ -208,6 +211,7 @@ def validate_plan_manifest_contract(manifest: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(package.get("id"), str) or not package["id"].strip():
             blockers.append(_blocker("plan-manifest-package-id-missing", "package.id is required"))
     _validate_nested(manifest, blockers)
+    _validate_immutable_input_policy(manifest, blockers)
     _validate_extensions(manifest.get("extensions"), blockers)
     return _result(manifest, blockers)
 
@@ -287,6 +291,37 @@ def _validate_nested(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -
     if isinstance(workstreams, list):
         for index, workstream in enumerate(workstreams):
             _object_keys(workstream, _WORKSTREAM, f"workstreams[{index}]", blockers)
+
+
+def _validate_immutable_input_policy(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
+    """Bind every applicable task policy to an explicit, closed plan marker."""
+    marked = "immutableInput" in manifest
+    plan_policy = None
+    if marked:
+        try:
+            plan_policy = validate_a5_plan_policy(manifest["immutableInput"])
+        except LifecycleError as exc:
+            blockers.append(_blocker("plan-a5-policy-invalid", exc.message))
+    workstreams = manifest.get("workstreams")
+    if not isinstance(workstreams, list):
+        return
+    for index, task in enumerate(workstreams):
+        if not isinstance(task, dict):
+            continue
+        if not marked:
+            if "immutableInput" in task:
+                blockers.append(_blocker("plan-a5-policy-without-marker", f"workstreams[{index}] has A5 policy without a plan marker"))
+            continue
+        if "immutableInput" not in task:
+            blockers.append(_blocker("plan-a5-task-policy-missing", f"workstreams[{index}] lacks A5 policy"))
+            continue
+        try:
+            policy = validate_a5_policy(task["immutableInput"])
+        except LifecycleError as exc:
+            blockers.append(_blocker("plan-a5-task-policy-invalid", f"workstreams[{index}]: {exc.message}"))
+            continue
+        if plan_policy is not None and plan_policy["defaultRequirement"] == "STRONG_A5" and policy["frozenTaskRequirement"] != "STRONG_A5":
+            blockers.append(_blocker("plan-a5-requirement-downgrade", f"workstreams[{index}] lowers the frozen A5 requirement"))
 
 
 def _validate_remediation_policy(value: Any, blockers: list[dict[str, Any]]) -> None:

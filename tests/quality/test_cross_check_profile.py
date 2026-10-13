@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import unittest
+from copy import deepcopy
 
-from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.quality import (
     build_cross_check_profile,
     build_cross_check_receipt,
@@ -13,6 +14,32 @@ from agent_lifecycle.quality import (
 
 
 class CrossCheckProfileTests(unittest.TestCase):
+    def test_authoritative_profile_cap_cannot_be_widened_by_rehashing(self) -> None:
+        profile = build_cross_check_profile()
+        original = build_cross_check_receipt(
+            profile=profile,
+            subject={"taskId": "TASK-1"},
+            reviewer={"role": "reviewer"},
+            budget_usage={"invocations": 1, "inputTokens": 10, "outputTokens": 4, "wallSeconds": 1},
+        )
+        for usage_field, cap_field in {
+            "invocations": "maxInvocations",
+            "inputTokens": "maxInputTokens",
+            "outputTokens": "maxOutputTokens",
+            "wallSeconds": "maxWallSeconds",
+        }.items():
+            with self.subTest(resource=usage_field):
+                receipt = deepcopy(original)
+                value = profile["budgetCap"][cap_field] + 1
+                receipt["budgetUsage"][usage_field] = value
+                receipt["budgetCap"][cap_field] = value
+                receipt["receiptDigest"] = canonical_digest({k: v for k, v in receipt.items() if k != "receiptDigest"})
+                validation = validate_cross_check_receipt(receipt, profile=profile)
+                self.assertEqual(validation["status"], "FAIL")
+                codes = {b["code"] for b in validation["blockers"]}
+                self.assertIn("cross-check-budget-cap-profile-mismatch", codes)
+                self.assertIn("cross-check-budget-cap-exceeded", codes)
+
     def test_default_profile_is_optional_advisory_and_budget_capped(self) -> None:
         profile = build_cross_check_profile()
 
@@ -42,7 +69,9 @@ class CrossCheckProfileTests(unittest.TestCase):
         self.assertEqual(require_cross_check_receipt_pass(validation), validation)
 
     def test_budget_cap_and_blocking_without_plan_opt_in_fail(self) -> None:
-        profile = build_cross_check_profile(budget_cap={"maxInvocations": 1, "maxInputTokens": 100, "maxOutputTokens": 100, "maxWallSeconds": 10})
+        profile = build_cross_check_profile(
+            budget_cap={"maxInvocations": 1, "maxInputTokens": 100, "maxOutputTokens": 100, "maxWallSeconds": 10}
+        )
         receipt = build_cross_check_receipt(
             profile=profile,
             subject={"taskId": "WS22-03"},

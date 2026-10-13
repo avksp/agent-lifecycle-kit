@@ -17,7 +17,7 @@ class InputPrivacyValidatorTests(unittest.TestCase):
     def inputs(self):
         return {
             "canonical_path": ROOT / "src/agent_lifecycle/contracts/canonical.py",
-            "ed25519_path": ROOT / "src/agent_lifecycle/neutrality/ed25519.py",
+            "ed25519_path": ROOT / "src/agent_lifecycle/contracts/ed25519.py",
             "session_store_path": ROOT / "src/agent_lifecycle/adapter_sessions/session_store.py",
             "planning_session_path": ROOT / "src/agent_lifecycle/adapter_sessions/planning_session.py",
             "checkpoint_store_path": ROOT / "src/agent_lifecycle/context/checkpoint_store.py",
@@ -27,7 +27,7 @@ class InputPrivacyValidatorTests(unittest.TestCase):
     def test_validator_uses_separate_json_crypto_and_storage_inputs(self) -> None:
         payload = validate_input_privacy(
             canonical_path=ROOT / "src/agent_lifecycle/contracts/canonical.py",
-            ed25519_path=ROOT / "src/agent_lifecycle/neutrality/ed25519.py",
+            ed25519_path=ROOT / "src/agent_lifecycle/contracts/ed25519.py",
             session_store_path=ROOT / "src/agent_lifecycle/adapter_sessions/session_store.py",
             planning_session_path=ROOT / "src/agent_lifecycle/adapter_sessions/planning_session.py",
             checkpoint_store_path=ROOT / "src/agent_lifecycle/context/checkpoint_store.py",
@@ -47,7 +47,7 @@ class InputPrivacyValidatorTests(unittest.TestCase):
             altered.write_text(source.replace("MAX_JSON_NESTING", "REMOVED_JSON_NESTING"), encoding="utf-8")
             payload = validate_input_privacy(
                 canonical_path=altered,
-                ed25519_path=ROOT / "src/agent_lifecycle/neutrality/ed25519.py",
+                ed25519_path=ROOT / "src/agent_lifecycle/contracts/ed25519.py",
                 session_store_path=ROOT / "src/agent_lifecycle/adapter_sessions/session_store.py",
                 planning_session_path=ROOT / "src/agent_lifecycle/adapter_sessions/planning_session.py",
                 checkpoint_store_path=ROOT / "src/agent_lifecycle/context/checkpoint_store.py",

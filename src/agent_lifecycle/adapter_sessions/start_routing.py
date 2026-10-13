@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.accounting.source_usage_context import load_source_usage_context
 from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.policy.execution_strategy import (
@@ -54,8 +55,9 @@ def resolve_managed_execution_strategy(
     baseline_file = baseline_profile_path or builtin_profile_path("lifecycle-baselines.v1.json")
     task = find_task(state, task_id)
     selected_attempt = next_available_attempt(state_path, state, task)
+    manifest = read_json_object(manifest_path, label="frozen plan manifest")
     strategy = resolve_execution_strategy(
-        manifest=read_json_object(manifest_path, label="frozen plan manifest"),
+        manifest=manifest,
         lock=read_json_object(lock_path, label="plan lock"),
         state=state,
         task_id=task_id,
@@ -80,6 +82,10 @@ def resolve_managed_execution_strategy(
         descriptor_path=_repo_relative(root, descriptor_file, label="adapter descriptor"),
         capability_manifest_path=_repo_relative(root, capability_file, label="capability manifest"),
         project_profile_path=_repo_relative(root, profile_file, label="project profile"),
+        repository_root=root,
+        source_usage_context=load_source_usage_context(
+            root, manifest, state, task, adapter_id, str(descriptor.get("host", "")),
+        ),
     )
     return {
         "strategy": strategy,
