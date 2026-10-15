@@ -25,7 +25,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==2.15.0` from
+  `python -m pip install agent-lifecycle-kit==2.16.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -173,3 +173,5 @@ updating existing plans and runtime output layouts.
 - [Live cost calibration](reference/live-cost-calibration.md)
 - [Release security](security/release-security.md)
 - [Neutrality authority contract](security/neutrality-contract.md)
+
+- [30-day raw retention and hourly maintenance](operations/retention-maintenance.md)

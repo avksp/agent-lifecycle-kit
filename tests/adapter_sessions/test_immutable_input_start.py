@@ -114,7 +114,7 @@ class A5ManagedSinkTests(unittest.TestCase):
     def test_exact_sink_refuses_unbound_call_before_claim_cleanup_and_runner(self):
         with tempfile.TemporaryDirectory() as tmp:
             launch, args, _current = managed_fixture(Path(tmp))
-            prepared = {"verifyBeforeStart": Mock()}
+            prepared = {"operationId": "ordinary", "verifyBeforeStart": Mock()}
             with patch.object(launch_preflight, "claim_attempt_start") as claim, patch.object(launch_preflight, "cleanup_prestart_raw") as cleanup:
                 result = launch_preflight._run_exact_managed_process(launch, prepared=prepared, audit={},
                     session_id="session", risk_profile=args["risk_profile"], host_identity={}, operation_id="ordinary")
