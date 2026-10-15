@@ -293,7 +293,9 @@ def verify_area_report(project_root: Path, *, review_id: str) -> dict[str, Any]:
     reads.recheck()
     _require(read_coordinator_cost_head(reads.root)['headSha256'] == result['currentFinancialHeadSha256'],
              'financial head changed during verification')
-    return {**result, 'nativeAllowed': False, 'assurance': 'PROCEDURAL_SAME_ACCOUNT'}
+    return {**result, 'nativeAllowed': False, 'assurance': 'PROCEDURAL_SAME_ACCOUNT',
+            'snapshotRefs': [{'path': name, 'bytes': len(raw), 'sha256': _sha(raw)}
+                             for name, (raw, _, _) in sorted(reads.records.items())]}
 
 
 def _tests(reads: _Reads, authority: dict[str, Any], review_id: str,
@@ -477,6 +479,16 @@ def _metadata_clock(operation: dict[str, Any]) -> None:
              'original metadata clock expired or moved backwards; no renewal')
 
 
+def _task_gate_key(identity: dict[str, Any], intent_path: Path) -> str:
+    from agent_lifecycle.adapter_sessions.attempt_authority import _invocation_namespace
+    operation = _invocation_namespace(identity['runId'], identity['taskId'], identity['attemptId'],
+                                      identity['operationId'])
+    keys = ('runId', 'taskId', 'attemptId')
+    if tuple(Path(intent_path).parent.parts[-len(operation.parts):]) == operation.parts:
+        keys += ('operationId',)
+    return canonical_digest({name: identity[name] for name in keys})
+
+
 def _admit_fresh_metadata(project_root: Path, *, intent_path: Path, state_path: Path,
                           profile: dict[str, Any]) -> None:
     """Consume a previously authorized request after the actual intent exists.
@@ -488,7 +500,7 @@ def _admit_fresh_metadata(project_root: Path, *, intent_path: Path, state_path: 
     reads = _Reads(project_root)
     task = _r11_native_task(reads.root, Path(intent_path).absolute(), Path(state_path).absolute())
     identity = task['identity']
-    key = canonical_digest({name: identity[name] for name in ('runId', 'taskId', 'attemptId')})
+    key = _task_gate_key(identity, intent_path)
     request = reads.json(_STORE + 'tasks/' + key + '/admission-request.json', private=True)
     _require(set(request) == {'schemaVersion', 'runId', 'taskId', 'attemptId', 'operationId', 'planDigest',
                               'lockSha256', 'profileSha256', 'selectedBinarySha256', 'integrationReportSha256',
@@ -585,7 +597,7 @@ def require_fresh_task_gate(project_root: Path, **kwargs: Any) -> dict[str, Any]
                           profile=kwargs['profile'])
     receipt, context = _fresh_basis(project_root, **kwargs)
     root = Path(project_root).absolute()
-    key = canonical_digest({name: receipt[name] for name in ('runId', 'taskId', 'attemptId')})
+    key = _task_gate_key(receipt, kwargs['intent_path'])
     directory = root / _STORE / 'tasks' / key
     create_authority_bytes(directory / 'context.json', canonical_bytes(context), root=root, private=True)
     _metadata_clock(context['operation'])
@@ -608,7 +620,7 @@ def verify_fresh_task_gate(project_root: Path, *, audit: dict[str, Any], intent_
              'fresh context fields differ')
     _require(Path(intent_path).absolute() == reads.root / normalize_authority_path(context['intentPath'])
              and audit['auditSha256'] == canonical_digest(gate), 'receipt belongs to another reserved attempt')
-    key = canonical_digest({name: gate[name] for name in ('runId', 'taskId', 'attemptId')})
+    key = _task_gate_key(gate, intent_path)
     base = _STORE + 'tasks/' + key + '/'
     _require(reads.json(base + 'fresh-gate.json', private=True) == gate
              and reads.json(base + 'context.json', private=True) == context, 'persisted task receipt changed')

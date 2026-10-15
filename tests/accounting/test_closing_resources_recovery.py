@@ -319,11 +319,16 @@ class RawRetentionWitnessTests(unittest.TestCase):
         target.chmod(0o600)
         return {"path": path, "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
 
-    def _seal(self, attempt="attempt-1"):
+    def _seal(self, attempt="attempt-1", *, operation_id=None):
+        prefix = attempt if operation_id is None else attempt + "/operations/" + digest({"operationId": operation_id})
+        parent = self.root
+        for part in Path(prefix).parts:
+            parent = parent / part
+            parent.mkdir(mode=0o700, exist_ok=True)
         entries = []
         for name, kind in (("input-request.json", "sealed-request"), ("prompt-input.json", "diagnostic"),
                            ("effective-config.json", "effective-config")):
-            ref = self._write(attempt + "/" + name, (attempt + ":" + name).encode())
+            ref = self._write(prefix + "/" + name, (prefix + ":" + name).encode())
             target = self.root / ref["path"]
             entries.append({**ref, "kind": kind, "fileIdentity": self._file_id(target),
                             "pathSha256": hashlib.sha256(os.fsencode(str(target))).hexdigest()})
@@ -335,11 +340,28 @@ class RawRetentionWitnessTests(unittest.TestCase):
                      "rootPathSha256": self.authority["rootPathSha256"],
                      "rootFileIdentity": self.authority["rootFileIdentity"],
                      "workflowStateDigest": digest({"localFixture": True}), "sources": entries}
-        ref = self._write(attempt + "/raw-inventory.json", canonical(inventory).encode())
+        if operation_id is not None:
+            inventory["operationId"] = operation_id
+        ref = self._write(prefix + "/raw-inventory.json", canonical(inventory).encode())
         self.assertEqual(self.j.register_raw_inventory("run", ref, private_root=self.root,
                                                        authority_ref=self.authority_ref)["status"], "PENDING")
-        self.sources[attempt] = [self.root / e["path"] for e in entries] + [self.root / ref["path"]]
+        self.sources[prefix] = [self.root / e["path"] for e in entries] + [self.root / ref["path"]]
         return ref
+
+    def test_same_attempt_operations_retain_all_raw_obligations_and_original_summary(self):
+        refs = [self._seal(), self._seal(operation_id="worker/one"), self._seal(operation_id="validator/two")]
+        before = self.j.raw_obligations("run", self.clock_now.isoformat())
+        self.assertEqual(len({row["obligationId"] for row in before}), 3)
+        self.assertEqual({row["inventorySha256"] for row in before}, {ref["sha256"] for ref in refs})
+        self.assertTrue(all(path.exists() for paths in self.sources.values() for path in paths))
+        closed = self._close()
+        summary = self.j.closed_run("run")["summary_digest"]
+        self.assertEqual(self.j.collect_closed_run("run", closed.eligible_after).status, "COLLECTED")
+        self.assertEqual(self._collect_raw(closed.eligible_after)["status"], "DONE")
+        self.assertTrue(all(not path.exists() for paths in self.sources.values() for path in paths))
+        self.assertEqual(self.j.closed_run("run")["summary_digest"], summary)
+        self.assertEqual(self.j.snapshot("run").known_spent, 10)
+        self.assertEqual(self.j.ingest_usage("run", self.original).status, "ALREADY_SETTLED")
 
     def _close(self):
         from agent_lifecycle.accounting.contracts import RunClosure

@@ -236,6 +236,118 @@ class InputFitTests(unittest.TestCase):
                 with self.assertRaises(LifecycleError):
                     assess_local_input_fit(self.root, CONTRACT, PROFILE, self.packet, self.summary, forged, **arguments)
 
+    def test_canonical_context_can_include_index_only_metadata(self):
+        extra = "tasks/release-2-16/ordinary-release-contract-r105.md"
+        allowed = list(CONTRACT["sourceScope"]["orderedContextRefs"])
+        self.packet["context"]["refs"] = [extra, *allowed]
+        index = validate_context_ref_index(self.packet, CONTRACT)
+        self.assertEqual(index["count"], len(allowed) + 1)
+        self.assertEqual(index["status"], "PENDING_SOURCE_SELECTION")
+        selected = self._select([self.request])
+        self.assertEqual(selected["status"], "SELECTED")
+        self.assertEqual(selected["indexOnlyCount"], len(allowed) + 1)
+        self.assertEqual([entry["path"] for entry in selected["selected"]], [self.path])
+        self.assertEqual(CONTRACT["sourceScope"]["orderedContextRefs"], allowed)
+        fit = assess_local_input_fit(
+            self.root, CONTRACT, PROFILE, self.packet, self.summary, selected,
+            role="worker", host_adapter_id="codex", host_version="0.155.1",
+            host_mode="managedTask", estimator_id="canonical-json-bytes-div-4-ceil",
+            instruction="bounded task", schema={}, current_binding=self._binding(),
+        )
+        self.assertEqual(fit["status"], "PASS_ALK_COMPONENTS_ONLY")
+        self.assertEqual(fit["hostOwnedInput"], "UNAVAILABLE")
+        self.assertFalse(fit["fullFinancial"])
+
+    def test_changed_index_only_refs_refuse_after_selection(self):
+        allowed = list(CONTRACT["sourceScope"]["orderedContextRefs"])
+        extra_a = "tasks/release-2-16/index-a.md"
+        extra_b = "tasks/release-2-16/index-b.md"
+        extra_c = "tasks/release-2-16/index-c.md"
+        self.packet["context"]["refs"] = [extra_a, extra_b, *allowed]
+        selected = self._select([self.request])
+        changes = {
+            "replace": [extra_a, extra_c, *allowed],
+            "add": [extra_a, extra_b, extra_c, *allowed],
+            "remove": [extra_a, *allowed],
+            "reorder": [extra_b, extra_a, *allowed],
+        }
+        for change, refs in changes.items():
+            with self.subTest(change=change):
+                self.packet["context"]["refs"] = refs
+                validate_context_ref_index(self.packet, CONTRACT)
+                with self.assertRaises(LifecycleError) as raised:
+                    assess_local_input_fit(
+                        self.root, CONTRACT, PROFILE, self.packet, self.summary, selected,
+                        role="worker", host_adapter_id="codex", host_version="0.155.1",
+                        host_mode="managedTask", estimator_id="canonical-json-bytes-div-4-ceil",
+                        instruction="bounded task", schema={}, current_binding=self._binding(),
+                    )
+                self.assertEqual(raised.exception.code, "source-selection-mismatch")
+
+    def test_forged_context_index_digest_or_count_refuses(self):
+        self.packet["context"]["refs"] = [
+            "tasks/release-2-16/index-a.md", *CONTRACT["sourceScope"]["orderedContextRefs"]
+        ]
+        selected = self._select([self.request])
+        changes = (
+            {"contextRefIndexDigest": "b" * 64},
+            {"contextRefIndexDigest": "malformed"},
+            {"contextRefIndexDigest": None},
+            {"indexOnlyCount": selected["indexOnlyCount"] + 1},
+            {"indexOnlyCount": str(selected["indexOnlyCount"])},
+            {"indexOnlyCount": float(selected["indexOnlyCount"])},
+            {"indexOnlyCount": True},
+            {"indexOnlyCount": None},
+        )
+        for change in changes:
+            with self.subTest(change=change):
+                forged = {**selected, **change}
+                forged["receiptDigest"] = canonical_digest({
+                    key: value for key, value in forged.items() if key != "receiptDigest"
+                })
+                with self.assertRaises(LifecycleError) as raised:
+                    assess_local_input_fit(
+                        self.root, CONTRACT, PROFILE, self.packet, self.summary, forged,
+                        role="worker", host_adapter_id="codex", host_version="0.155.1",
+                        host_mode="managedTask", estimator_id="canonical-json-bytes-div-4-ceil",
+                        instruction="bounded task", schema={}, current_binding=self._binding(),
+                    )
+                self.assertEqual(raised.exception.code, "source-selection-mismatch")
+
+    def test_index_only_metadata_never_authorizes_raw_source(self):
+        extra = "tasks/release-2-16/ordinary-release-contract-r105.md"
+        self.packet["context"]["refs"] = [extra, *CONTRACT["sourceScope"]["orderedContextRefs"]]
+        path = self.root / extra
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(self.data)
+        with self.assertRaises(LifecycleError) as raised:
+            self._select([{**self.request, "path": extra}])
+        self.assertEqual(raised.exception.code, "undeclared-source")
+
+    def test_augmented_context_requires_every_allowed_ref_in_order(self):
+        allowed = list(CONTRACT["sourceScope"]["orderedContextRefs"])
+        extra = "tasks/release-2-16/ordinary-release-contract-r105.md"
+        for changed in (allowed[1:], list(reversed(allowed))):
+            with self.subTest(changed=changed):
+                self.packet["context"]["refs"] = [extra, *changed]
+                with self.assertRaises(LifecycleError) as raised:
+                    self._select([self.request])
+                self.assertEqual(raised.exception.code, "context-ref-index-mismatch")
+
+    def test_augmented_context_rejects_duplicate_or_unsafe_index_refs(self):
+        allowed = list(CONTRACT["sourceScope"]["orderedContextRefs"])
+        extra = "tasks/release-2-16/ordinary-release-contract-r105.md"
+        invalid = ([extra, extra, *allowed], [allowed[0], *allowed],
+                   ["../outside.md", *allowed], ["/absolute.md", *allowed],
+                   ["tasks//duplicate-separator.md", *allowed], [None, *allowed])
+        for changed in invalid:
+            with self.subTest(changed=changed):
+                self.packet["context"]["refs"] = changed
+                with self.assertRaises(LifecycleError) as raised:
+                    self._select([self.request])
+                self.assertEqual(raised.exception.code, "context-ref-index-mismatch")
+
+
 
 class SupportProfileMatchingTests(unittest.TestCase):
     def setUp(self) -> None:

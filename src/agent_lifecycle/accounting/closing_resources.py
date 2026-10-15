@@ -468,6 +468,10 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
             required = {"schemaVersion", "runId", "taskId", "attemptId", "planDigest",
                         "journalAuthorityKind", "journalIdentity", "eventLog", "eventLogFileIdentity",
                         "rootPathSha256", "rootFileIdentity", "workflowStateDigest", "sources"}
+            if isinstance(inventory, dict) and "operationId" in inventory:
+                required.add("operationId")
+                if not isinstance(inventory["operationId"], str) or not inventory["operationId"]:
+                    raise JournalUnavailable("Raw inventory operation identity is invalid")
             if (not isinstance(inventory, dict) or set(inventory) != required
                     or inventory["schemaVersion"] != "alk-r68b-raw-inventory.v1"
                     or inventory["runId"] != run_id or inventory["planDigest"] != authority["planDigest"]
@@ -504,11 +508,14 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
                 raise JournalUnavailable("Aggregate raw inventory exceeds bound")
             files.append({"kind": "sealed-inventory", **inventory_ref, "fileIdentity": file_id,
                           "pathSha256": hashlib.sha256(os.fsencode(str(root / inventory_ref["path"]))).hexdigest()})
-            key = "raw-inventory:" + digest([run_id, inventory["taskId"], inventory["attemptId"]])
+            operation = [inventory["operationId"]] if "operationId" in inventory else []
+            key = "raw-inventory:" + digest([run_id, inventory["taskId"], inventory["attemptId"], *operation])
             payload = {"schemaVersion": "alk-r68b-per-run-raw-obligation.v1", "runId": run_id,
                        "taskId": inventory["taskId"], "attemptId": inventory["attemptId"],
                        "inventoryRef": inventory_ref, "authorityRef": authority_ref, "authority": authority,
                        "files": files}
+            if operation:
+                payload["operationId"] = inventory["operationId"]
             old = self._retained("maintenance_receipts", key)
             if self.closed_run(run_id) is not None and old != payload:
                 raise JournalUnavailable("Cannot add raw obligations after full run closure")

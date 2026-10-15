@@ -133,6 +133,19 @@ class OrdinaryAuditTests(unittest.TestCase):
     def verify(self):
         return audit.verify_area_report(self.root, review_id='area1')
 
+    def test_area_origin_snapshot_exposes_reopened_evidence_for_bounded_consumers(self):
+        self.publish()
+        result = self.verify()
+        refs = result['snapshotRefs']
+        self.assertEqual([r['path'] for r in refs], sorted({r['path'] for r in refs}))
+        paths = {r['path'] for r in refs}
+        self.assertTrue({'src/scoped.py', *(audit._STORE + 'area1/' + name for name in
+            ('assignment.json', 'admission.json', 'request.txt', 'test-evidence.json',
+             'report.json', 'publication.json', 'observation.json', 'raw-result.txt'))} <= paths)
+        for ref in refs:
+            raw = (self.root / ref['path']).read_bytes()
+            self.assertEqual((ref['bytes'], ref['sha256']), (len(raw), audit._sha(raw)))
+
     def test_coordinator_observed_review_required(self):
         forged = self.publication()
         forged['report']['reviewText'] = 'Coordinator invented another result.'
@@ -411,7 +424,7 @@ class OrdinaryAuditTests(unittest.TestCase):
             start.assert_not_called()
             cost.assert_not_called()
 
-    def fresh_fixture(self):
+    def fresh_fixture(self, operation_id=None):
         from agent_lifecycle.adapter_sessions.codex_exact_prompt import ROUTE_ID, CLAIM
         patch.object(source_review_preparation_records, 'verify_attempt_reservation').start()
         # Real current-state/intent checks; existing attempt reservation tests
@@ -426,6 +439,11 @@ class OrdinaryAuditTests(unittest.TestCase):
         binary.write_bytes(b'test executable identity only')
         intent['binarySha256'] = audit._sha(binary.read_bytes())
         intent_path = self.root / 'work/release-2-16/evidence/codex-exact-prompt/run1/WS216-01/1/prelaunch-intent.json'
+        if operation_id is not None:
+            from agent_lifecycle.adapter_sessions.attempt_authority import _invocation_namespace
+            intent['operationId'] = operation_id
+            intent_path = (self.root / 'work/release-2-16/evidence/codex-exact-prompt'
+                           / _invocation_namespace('run1', 'WS216-01', '1', operation_id) / 'prelaunch-intent.json')
         create_authority_bytes(intent_path, canonical_bytes(intent), root=self.root, private=True)
         state_path = self.root / 'state.json'
         state_path.write_bytes(canonical_bytes({'runId': 'run1', 'sourceRevision': 'fixture',
@@ -468,11 +486,18 @@ class OrdinaryAuditTests(unittest.TestCase):
                                     ('intent_path', 'profile', 'executable_identity', 'process_env')})
 
     def test_current_task_authority_and_executable_join(self):
-        kwargs, _, state_path, binary = self.fresh_fixture()
+        self._check_current_task_authority_and_executable_join()
+
+    def test_current_operation_admission_and_gate_are_create_only_and_bound(self):
+        self._check_current_task_authority_and_executable_join(operation_id='worker/one')
+
+    def _check_current_task_authority_and_executable_join(self, operation_id=None):
+        kwargs, _, state_path, binary = self.fresh_fixture(operation_id=operation_id)
         # Exercise real request consumption and create-once metadata admission;
         # control only the cumulative ledger boundary, never use the live ledger.
         task = audit._r11_native_task(self.root, kwargs['intent_path'], kwargs['state_path'])
-        key = canonical_digest({name: task['identity'][name] for name in ('runId', 'taskId', 'attemptId')})
+        fields = ('runId', 'taskId', 'attemptId') + (() if operation_id is None else ('operationId',))
+        key = canonical_digest({name: task['identity'][name] for name in fields})
         request = {'schemaVersion': 'alk-ordinary-fresh-admission-request.v1',
                    **{name: task['identity'][name] for name in ('runId', 'taskId', 'attemptId', 'operationId', 'planDigest')},
                    'lockSha256': kwargs['lock_sha256'], 'profileSha256': canonical_digest(kwargs['profile']),

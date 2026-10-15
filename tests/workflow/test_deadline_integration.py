@@ -1,6 +1,7 @@
 """Expired attempts retain honest results without becoming accepted work."""
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -11,16 +12,25 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_js
 from agent_lifecycle.workflow import accept_task, commit_task_result, start_task
 from agent_lifecycle.workflow.task_outcomes import apply_task_review_outcome
 
-from .helpers import _fresh_result, _initialize_managed_git_state, _review, _write_state
+from .helpers import _fresh_result, _initialize_managed_git_state, _review, _write_plan_bundle, _write_state
 
 
 class IncompleteAttemptRecoveryTests(unittest.TestCase):
     def prepare(self, root: Path):
+        _write_plan_bundle(root)
         state_path = _write_state(root, phase="RUNNING", max_attempts=3)
         revision = _initialize_managed_git_state(root, state_path, max_attempts=3)
         state = json.loads(state_path.read_text())
+        manifest_path = "plans/package/plan.manifest.json"
+        manifest = json.loads((root / manifest_path).read_text())
+        lock_path = root / "plans/package/.agent-plan/package/plan.lock.json"
+        index = json.loads((root / "plans/package/workflow/task-packets/index.json").read_text())
         state.update(schemaVersion="agent-workflow-state.v4", operationLedger={}, packageRoot=".",
-                     runDeadlineAt="2020-01-02T00:00:00Z")
+                     runDeadlineAt="2020-01-02T00:00:00Z", manifestPath=manifest_path,
+                     planRevision=manifest["planRevision"], planDigest=canonical_digest(manifest),
+                     packetSet={"manifestDigest": index["manifestDigest"],
+                                "packetSetHash": index["packetSetHash"],
+                                "planLockSha256": hashlib.sha256(lock_path.read_bytes()).hexdigest()})
         task = state["tasks"][0]
         task.update(status="RUNNING", attempt=1, attemptBaseRevision=revision,
                     attemptStartedAt="2020-01-01T00:00:00Z", attemptDeadlineAt="2020-01-01T01:00:00Z",
@@ -28,11 +38,17 @@ class IncompleteAttemptRecoveryTests(unittest.TestCase):
         state_path.write_text(json.dumps(state))
         (root / "src/example.py").write_text("value = 2\n")
         result = _fresh_result(root, state_path, attempt=1)
+        result["planDigest"] = state["planDigest"]
         result["itemOutcomes"][0]["status"] = "INCOMPLETE"
         result["summary"] = "Attempt expired; partial changes retained, acceptance not established."
         result["blocker"] = {"code": "ATTEMPT_DEADLINE_EXPIRED", "reason": "Original deadline expired",
                              "scope": "task", "recoveryRoute": "task-review", "taskId": "WS-01", "attempt": 1}
         return state_path, revision, result
+
+    def review(self, result):
+        review = _review(attempt=1, result_hash=canonical_digest(result))
+        review["planDigest"] = result["planDigest"]
+        return review
 
     def commit(self, root, path, revision, result):
         result_path = "work/WS-01/attempt-1/task-result.json"
@@ -48,7 +64,7 @@ class IncompleteAttemptRecoveryTests(unittest.TestCase):
             self.commit(root, path, revision, result)
             committed = json.loads(path.read_text())
             self.assertEqual(committed["tasks"][0]["status"], "VERIFYING")
-            review = _review(attempt=1, result_hash=canonical_digest(result))
+            review = self.review(result)
             review.update(verdict="BLOCKED", blocker=result["blocker"], summary="Incomplete attempt is blocked")
             write_json_create(root / "work/WS-01/attempt-1/task-review.json", review)
             apply_task_review_outcome(path, task_id="WS-01", operation_id="block-incomplete", expected_revision=2,
@@ -70,7 +86,7 @@ class IncompleteAttemptRecoveryTests(unittest.TestCase):
             result["commands"] = [{"id": "affected-check", "status": "FAIL", "exitCode": 1}]
             self.commit(root, path, revision, result)
             write_json_create(root / "work/WS-01/attempt-1/task-review.json",
-                              _review(attempt=1, result_hash=canonical_digest(result)))
+                              self.review(result))
             before = path.read_bytes()
             with self.assertRaises(LifecycleError) as raised:
                 accept_task(path, task_id="WS-01", operation_id="invalid-accept", expected_revision=2,
@@ -122,7 +138,7 @@ class IncompleteAttemptRecoveryTests(unittest.TestCase):
             original = json.loads(path.read_text())
             self.commit(root, path, revision, result)
             finding = {"id": "DEADLINE-01", "severity": "HIGH", "status": "open", "title": "Incomplete evidence"}
-            review = _review(attempt=1, result_hash=canonical_digest(result))
+            review = self.review(result)
             review.update(verdict="REWORK", findings=[finding], summary="Resume only missing proof in next attempt")
             write_json_create(root / "work/WS-01/attempt-1/task-review.json", review)
             apply_task_review_outcome(path, task_id="WS-01", operation_id="rework-incomplete", expected_revision=2,

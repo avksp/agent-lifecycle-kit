@@ -1601,7 +1601,7 @@ class ExactPromptPublicGateTests(unittest.TestCase):
             (plan / "plan.manifest.json").write_bytes(canonical_bytes(manifest))
             lock = plan / "plan.lock.json"
             lock.write_bytes(b'{}')
-            argv = [sys.executable, "-c", "import sys; sys.stdin.buffer.read()"]
+            argv = [sys.executable, "-c", "import sys; sys.stdin.buffer.read(); print(\"RAW_PREFIX_PRIVATE_MARKER\" + \"x\" * 8000)"]
             intent_path = evidence / "prelaunch-intent.json"
             intent = {"schemaVersion": "alk-codex-prelaunch-intent.v1", "hostLaunchStarted": False,
                       "runId": "run-1", "taskId": "task-1", "attemptId": "1", "operationId": "op-1",
@@ -1649,6 +1649,7 @@ class ExactPromptPublicGateTests(unittest.TestCase):
                 "codexHome": str(root / "codex-home"), "stdinText": final,
                 "runId": "run-1", "taskId": "task-1", "attemptId": "1",
                 "sealedSha256": "a" * 64, "finalPromptSha256": final_sha,
+                "operationId": "op-1",
                 "fitReceiptDigest": "b" * 64,
                 "startReceiptPath": start_path, "inputReceiptPath": input_path,
                 "onStarted": on_started, "onInput": on_input,
@@ -1675,6 +1676,15 @@ class ExactPromptPublicGateTests(unittest.TestCase):
             self.assertEqual(receipt["exactPrompt"]["inputReceiptSha256"],
                              joined["processInputSha256"])
             self.assertEqual(joined["childConsumption"], "UNPROVEN")
+            observed = receipt["exactPrompt"]["observedProcessResult"]
+            self.assertNotIn("stdout", observed)
+            self.assertNotIn("stderr", observed)
+            self.assertNotIn(b"RAW_PREFIX_PRIVATE_MARKER", canonical_bytes(receipt))
+            terminal = json.loads((evidence / "attempt-result-terminal.json").read_bytes())
+            self.assertEqual(terminal["processResultSha256"], canonical_digest(observed))
+            self.assertEqual(observed["stdoutTail"][-2000:], receipt["stdout"]["tail"])
+            changed = {**observed, "stdoutTail": "invented native completion"}
+            self.assertNotEqual(terminal["processResultSha256"], canonical_digest(changed))
 
     def test_prelaunch_sources_config_and_diagnostic_without_caller_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -2230,6 +2240,90 @@ class ExactPromptPublicGateTests(unittest.TestCase):
             with self.assertRaises(LifecycleError) as caught:
                 _r69h_check_test_dependency_closure(root, oracle, checked)
         self.assertIn("unknown self/cls test callee", str(caught.exception))
+
+
+
+
+class CodexLimitedQualificationTests(unittest.TestCase):
+    """Opt-in native24; normal unit discovery has no model authority."""
+
+    def _qualify(self, role: str, polarity: str) -> None:
+        if not os.environ.get("ALK_R69_FINITE_ADMISSION"):
+            self.skipTest("explicit native finite admission is absent")
+        from tests.adapter_sessions.codex_limited_native_support import produce_case
+        produce_case(Path.cwd(), f"IF69-{role.upper()}-{polarity}", self.id())
+
+    def test_worker_positive(self):
+        self._qualify("worker", "POSITIVE")
+
+    def test_worker_prelaunch_refusal(self):
+        self._qualify("worker", "PRELAUNCH_REFUSAL")
+
+    def test_worker_started_failure(self):
+        self._qualify("worker", "STARTED_FAILURE")
+
+    def test_worker_strong_refusal(self):
+        self._qualify("worker", "STRONG_REFUSAL")
+
+    def test_validator_positive(self):
+        self._qualify("validator", "POSITIVE")
+
+    def test_validator_prelaunch_refusal(self):
+        self._qualify("validator", "PRELAUNCH_REFUSAL")
+
+    def test_validator_started_failure(self):
+        self._qualify("validator", "STARTED_FAILURE")
+
+    def test_validator_strong_refusal(self):
+        self._qualify("validator", "STRONG_REFUSAL")
+
+    def test_auditor_positive(self):
+        self._qualify("auditor", "POSITIVE")
+
+    def test_auditor_prelaunch_refusal(self):
+        self._qualify("auditor", "PRELAUNCH_REFUSAL")
+
+    def test_auditor_started_failure(self):
+        self._qualify("auditor", "STARTED_FAILURE")
+
+    def test_auditor_strong_refusal(self):
+        self._qualify("auditor", "STRONG_REFUSAL")
+
+    def test_retry_positive(self):
+        self._qualify("retry", "POSITIVE")
+
+    def test_retry_prelaunch_refusal(self):
+        self._qualify("retry", "PRELAUNCH_REFUSAL")
+
+    def test_retry_started_failure(self):
+        self._qualify("retry", "STARTED_FAILURE")
+
+    def test_retry_strong_refusal(self):
+        self._qualify("retry", "STRONG_REFUSAL")
+
+    def test_coordinator_positive(self):
+        self._qualify("coordinator", "POSITIVE")
+
+    def test_coordinator_prelaunch_refusal(self):
+        self._qualify("coordinator", "PRELAUNCH_REFUSAL")
+
+    def test_coordinator_started_failure(self):
+        self._qualify("coordinator", "STARTED_FAILURE")
+
+    def test_coordinator_strong_refusal(self):
+        self._qualify("coordinator", "STRONG_REFUSAL")
+
+    def test_closing_positive(self):
+        self._qualify("closing", "POSITIVE")
+
+    def test_closing_prelaunch_refusal(self):
+        self._qualify("closing", "PRELAUNCH_REFUSAL")
+
+    def test_closing_started_failure(self):
+        self._qualify("closing", "STARTED_FAILURE")
+
+    def test_closing_strong_refusal(self):
+        self._qualify("closing", "STRONG_REFUSAL")
 
 
 if __name__ == "__main__":

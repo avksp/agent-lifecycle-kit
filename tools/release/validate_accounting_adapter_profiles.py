@@ -25,6 +25,7 @@ from agent_lifecycle.accounting.host_bridge import (
     _json,
     _read,
     _refs,
+    read_source_lifecycle_qualifications,
 )
 from agent_lifecycle.accounting.host_bridge import (
     BoundedReader as BoundedReader,
@@ -33,8 +34,12 @@ from agent_lifecycle.accounting.host_bridge import (
     EvidenceGraph as EvidenceGraph,
 )
 from agent_lifecycle.accounting.support_profiles import match_requested_claims, validate_profile_payload
-from agent_lifecycle.adapter_sessions.launch_execution import verify_final_source_accounting_profiles
+from agent_lifecycle.adapter_sessions.launch_execution import (
+    _read_reviewed_final_profile_snapshot,
+    _require_matching_final_profile_snapshots,
+)
 from agent_lifecycle.adapter_sessions.ordinary_audit import verify_area_report
+from agent_lifecycle.adapter_sessions.limited_native_evidence import verify_native_observations
 from agent_lifecycle.changesets import capture_task_change_set, require_current_task_change_set
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_json_create
 from agent_lifecycle.contracts.evidence_receipt_schemas import validate_evidence_receipt_shape
@@ -310,14 +315,10 @@ def _boundary_checks(profiles: dict, core: dict, required_ids: list[str]) -> lis
             for name, proof in witnesses.items()]
 
 
-def validate_final_profiles(repo_root: Path, manifest: Path, catalog: Path, profiles_root: Path, *,
-                            state_path: str | None = None, run_id: str | None = None) -> dict:
-    """An accepting data result requires all21 checks and actual review origins."""
-    checks, blockers = [], []
-    root = repo_root.absolute()
-    manifest = manifest if manifest.is_absolute() else root / manifest
-    catalog = catalog if catalog.is_absolute() else root / catalog
-    profiles_root = profiles_root if profiles_root.is_absolute() else root / profiles_root
+def _prepare_final_profiles(root: Path, manifest: Path, catalog: Path, profiles_root: Path, *,
+                            state_path: str | None = None, run_id: str | None = None) -> tuple[dict, dict]:
+    """One private validation snapshot; no PASS until the final fresh boundary."""
+    checks = []
     reader = BoundedReader()
     try:
         manifest_path = manifest.absolute().relative_to(root).as_posix()
@@ -331,8 +332,8 @@ def validate_final_profiles(repo_root: Path, manifest: Path, catalog: Path, prof
         if len(required_ids) != 21 or len(set(required_ids)) != 21:
             _fail("accounting-final-case-inventory-mismatch")
         core = _check_current_core(root, manifest_value, reader, state_path=state_path, run_id=run_id)
-        final = verify_final_source_accounting_profiles(project_root=root, profiles_root=profiles_root,
-                                                       adapter_ids=adapters, byte_limit=25_165_824 - reader.charged_bytes)
+        final = _read_reviewed_final_profile_snapshot(project_root=root, profiles_root=profiles_root,
+                                                       adapter_ids=adapters, byte_limit=TASK_BYTES - reader.charged_bytes)
         for adapter, item in final["profiles"].items():
             _check_resolver_observations(item)
             checks.append({"id": "accounting.profile." + adapter, "status": "PASS",
@@ -345,9 +346,9 @@ def validate_final_profiles(repo_root: Path, manifest: Path, catalog: Path, prof
             refs[ref["path"]] = ref
         if reader.charged_bytes + final["readBytes"] > TASK_BYTES:
             _fail("accounting-final-read-budget-exceeded")
-        return {"schemaVersion": "alk-accounting-final-validation.v1", "status": "PASS", "checks": checks,
+        report = {"schemaVersion": "alk-accounting-final-validation.v1", "status": "PREPARED", "checks": checks,
                 "blockers": [], "validatedProfileCount": 12, "acceptingReceipt": False,
-                "dataCandidate": True, "typedReceiptRequired": True,
+                "dataCandidate": False, "typedReceiptRequired": True,
                 "readBudgetChargedBytes": reader.charged_bytes + final["readBytes"],
                 "inputRefs": [refs[path] for path in sorted(refs)], "sourceComponents": core["sourceComponents"],
                 "ordinaryReviews": [list(row) for row in sorted({
@@ -356,13 +357,70 @@ def validate_final_profiles(repo_root: Path, manifest: Path, catalog: Path, prof
                     (item["resolverReceipt"]["reviewId"], item["resolver"]["receiptRef"]["sha256"])
                     for item in final["profiles"].values()})],
                 "dispatchEntitlement": False, "modelCallsStarted": False, "releaseReady": False}
-    except (LifecycleError, OSError, ValueError, KeyError, TypeError, RecursionError, StopIteration) as exc:
-        blockers.append({"code": getattr(exc, "code", "accounting-final-evidence-unavailable")})
-        return {"schemaVersion": "alk-accounting-final-validation.v1", "status": "FAIL", "checks": checks,
-                "blockers": blockers, "dataCandidate": False, "acceptingReceipt": False,
-                "dispatchEntitlement": False, "modelCallsStarted": False, "releaseReady": False}
+        return report, final
     finally:
         reader.close()
+
+
+def _refresh_final_profile_inputs(root: Path, profiles_root: Path, report: dict, first: dict, *,
+                                  extra_refs: list[dict] = (), extra_charged_bytes: int = 0) -> dict:
+    """Re-enumerate profiles/source, then reopen all remaining inputs once.
+
+    Overlapping profile inputs are verified from the fresh second snapshot;
+    no stale cache crosses snapshots and every actual read remains charged.
+    """
+    charged = report["readBudgetChargedBytes"] + extra_charged_bytes
+    if type(charged) is not int or not 0 < charged < TASK_BYTES:
+        _fail("accounting-final-read-budget-exceeded")
+    second = read_source_lifecycle_qualifications(
+        root, profiles_root, list(first["profiles"]), final=True, byte_limit=TASK_BYTES - charged,
+    )
+    _require_matching_final_profile_snapshots(first, second)
+    charged += second["readBytes"]
+    refs = {}
+    for ref in report["inputRefs"] + list(extra_refs):
+        if ref["path"] in refs and refs[ref["path"]] != ref:
+            _fail("accounting-final-snapshot-conflict")
+        refs[ref["path"]] = ref
+    fresh_refs = {ref["path"]: ref for ref in second["snapshotRefs"]}
+    reader = BoundedReader(TASK_BYTES - charged)
+    try:
+        for path, ref in refs.items():
+            if path in fresh_refs:
+                if fresh_refs[path] != ref:
+                    _fail("accounting-final-input-changed-after-validation")
+            else:
+                raw = reader.read(root, path, ARTIFACT_BYTES)
+                if len(raw) != ref["bytes"] or hashlib.sha256(raw).hexdigest() != ref["sha256"]:
+                    _fail("accounting-final-input-changed-after-validation")
+        return {**report, "status": "PASS", "dataCandidate": True,
+                "readBudgetChargedBytes": charged + reader.charged_bytes,
+                "inputRefs": [refs[path] for path in sorted(refs)]}
+    finally:
+        reader.close()
+
+
+def _final_failure(checks: list[dict], exc: Exception) -> dict:
+    return {"schemaVersion": "alk-accounting-final-validation.v1", "status": "FAIL", "checks": checks,
+            "blockers": [{"code": getattr(exc, "code", "accounting-final-evidence-unavailable")}],
+            "dataCandidate": False, "acceptingReceipt": False,
+            "dispatchEntitlement": False, "modelCallsStarted": False, "releaseReady": False}
+
+
+def validate_final_profiles(repo_root: Path, manifest: Path, catalog: Path, profiles_root: Path, *,
+                            state_path: str | None = None, run_id: str | None = None) -> dict:
+    """Standalone validation still requires two snapshots and all21 checks."""
+    root = repo_root.absolute()
+    manifest = manifest if manifest.is_absolute() else root / manifest
+    catalog = catalog if catalog.is_absolute() else root / catalog
+    profiles_root = profiles_root if profiles_root.is_absolute() else root / profiles_root
+    report = None
+    try:
+        report, first = _prepare_final_profiles(root, manifest, catalog, profiles_root,
+                                               state_path=state_path, run_id=run_id)
+        return _refresh_final_profile_inputs(root, profiles_root, report, first)
+    except (LifecycleError, OSError, ValueError, KeyError, TypeError, RecursionError, StopIteration) as exc:
+        return _final_failure(report["checks"] if report else [], exc)
 
 
 def _complete_payload(payload: dict, supplemental: dict | None, descriptor: dict) -> dict:
@@ -387,11 +445,12 @@ def _complete_payload(payload: dict, supplemental: dict | None, descriptor: dict
     return combined
 
 
-def emit_final_receipt(root: Path, manifest_path: Path, report: dict, output: Path, *,
+def _emit_prepared_final_receipt(root: Path, manifest_path: Path, report: dict, output: Path, *,
+                       profiles_root: Path, first: dict,
                        state_path: str | None = None, run_id: str | None = None,
                        supplemental_path: str | None = None) -> dict:
-    """Emit DECLARED data only after validation; the workflow performs acceptance."""
-    if (report["status"] != "PASS" or len(report["checks"]) != 21
+    """Complete a private preparation; the workflow still performs acceptance."""
+    if (report["status"] != "PREPARED" or len(report["checks"]) != 21
             or any(row["status"] != "PASS" for row in report["checks"])
             or not report.get("inputRefs") or not report.get("ordinaryReviews")):
         _fail("accounting-final-checks-not-passed")
@@ -450,22 +509,22 @@ def emit_final_receipt(root: Path, manifest_path: Path, report: dict, output: Pa
                                         "architecture": platform.machine(), "pythonVersion": platform.python_version()},
                            "commands": [{"commandDigest": canonical_digest(producer["command"]), "status": "PASS", "exitCode": 0,
                                          "cases": [{"id": r["id"], "status": r["status"]} for r in report["checks"]]}]}
-        _complete_payload(profile_payload, supplemental, descriptor)
+        complete = _complete_payload(profile_payload, supplemental, descriptor)
+        verify_native_observations(
+            root, complete, reader=reader, manifest=manifest, state=state, task=task,
+            candidate_digest=first["profiles"]["codex"]["joins"]["alkCandidateDigest"],
+        )
         for review_id, report_sha in report["ordinaryReviews"]:
             verified = verify_area_report(root, review_id=review_id)
             if (verified["reportSha256"] != report_sha or verified["nativeAllowed"] is not False
                     or verified["assurance"] != "PROCEDURAL_SAME_ACCOUNT"):
                 _fail("accounting-final-review-changed-after-validation")
-        # Reopen the full validated byte inventory immediately before writing.
-        # This includes the authority, source, profile, core and review copies.
-        with_fresh = BoundedReader(TASK_BYTES - charged - reader.charged_bytes)
-        try:
-            for ref in report["inputRefs"] + [result_raw_ref] + supplemental_refs:
-                raw_ref = with_fresh.read(root, ref["path"], ARTIFACT_BYTES)
-                if len(raw_ref) != ref["bytes"] or hashlib.sha256(raw_ref).hexdigest() != ref["sha256"]:
-                    _fail("accounting-final-input-changed-after-validation")
-        finally:
-            with_fresh.close()
+        # This is the second complete snapshot in the composed C21 command.
+        # It also re-enumerates candidate sources to catch newly added files.
+        report = _refresh_final_profile_inputs(
+            root, profiles_root, report, first, extra_refs=reader.snapshot_refs(root),
+            extra_charged_bytes=reader.charged_bytes,
+        )
         if datetime.now(UTC) >= deadline:
             _fail("accounting-final-task-deadline-expired")
         report_path = Path(output_relative + ".observations.json")
@@ -497,6 +556,28 @@ def emit_final_receipt(root: Path, manifest_path: Path, report: dict, output: Pa
         return receipt
     finally:
         reader.close()
+
+def emit_final_receipt(root: Path, manifest_path: Path, output: Path, *,
+                       catalog: Path, profiles_root: Path,
+                       state_path: str | None = None, run_id: str | None = None,
+                       supplemental_path: str | None = None) -> dict:
+    """Validate and emit with one composed two-snapshot boundary.
+
+    A caller-supplied validation report cannot substitute for preparation.
+    Standalone validation remains available as a nonaccepting diagnostic.
+    """
+    root = root.absolute()
+    manifest_path = manifest_path if manifest_path.is_absolute() else root / manifest_path
+    catalog = catalog if catalog.is_absolute() else root / catalog
+    profiles_root = profiles_root if profiles_root.is_absolute() else root / profiles_root
+    output = output if output.is_absolute() else root / output
+    report, first = _prepare_final_profiles(root, manifest_path, catalog, profiles_root,
+                                           state_path=state_path, run_id=run_id)
+    return _emit_prepared_final_receipt(
+        root, manifest_path, report, output, profiles_root=profiles_root, first=first,
+        state_path=state_path, run_id=run_id, supplemental_path=supplemental_path,
+    )
+
 
 def validate_catalog(repo_root: Path, manifest: Path, catalog: Path,
                      reader: BoundedReader | None = None) -> dict[str, Any]:
@@ -640,16 +721,14 @@ def main() -> int:
         root = args.repo_root.absolute()
         manifest = args.manifest if args.manifest.is_absolute() else root / args.manifest
         output = args.evidence if args.evidence.is_absolute() else root / args.evidence
-        report = validate_final_profiles(root, manifest, args.catalog, args.profiles_root,
-                                         state_path=args.state_file, run_id=args.run_id)
-        if report["status"] == "PASS":
-            try:
-                receipt = emit_final_receipt(root, manifest, report, output, state_path=args.state_file,
-                                             run_id=args.run_id, supplemental_path=args.supplemental_payload)
-                print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
-                return 0
-            except (LifecycleError, OSError, ValueError, KeyError, TypeError, StopIteration):
-                report.update(status="FAIL", dataCandidate=False, blockers=[{"code": "accounting-final-receipt-unavailable"}])
+        try:
+            receipt = emit_final_receipt(root, manifest, output, catalog=args.catalog, profiles_root=args.profiles_root,
+                                         state_path=args.state_file, run_id=args.run_id,
+                                         supplemental_path=args.supplemental_payload)
+            print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
+            return 0
+        except (LifecycleError, OSError, ValueError, KeyError, TypeError, RecursionError, StopIteration) as exc:
+            report = _final_failure([], exc)
         write_json_create(Path(str(output) + ".diagnostic.json"), report)
         print(json.dumps(report, sort_keys=True, separators=(",", ":")))
         return 2

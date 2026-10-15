@@ -23,6 +23,24 @@ _IDENTITY = ('runId', 'taskId', 'attemptId', 'operationId', 'routeId', 'requeste
              'finalPromptSha256', 'commandIdentityHash')
 _SOURCES = tuple(('src/agent_lifecycle/adapter_sessions/' + name for name in ('bootstrap_r11.py', 'codex_exact_prompt.py', 'launch_preflight.py', 'process.py', 'process_capture.py', 'process_control.py', 'process_groups.py', 'process_telemetry.py', 'attempt_authority.py', 'private_input.py', 'input_lifecycle.py', 'codex_input_diagnostics.py', 'codex_source_exposure.py', 'codex_source_subject.py', 'codex_prompt_preparation.py', 'source_review_contracts.py', 'source_review_inputs.py', 'source_review_roles.py', 'source_review_support.py', 'source_review_transcript.py', 'source_review_history.py', 'source_review_shards.py', 'source_review_preparation_records.py')))
 
+def _invocation_namespace(run_id: str, task_id: str, attempt_id: str,
+                          operation_id: str | None = None) -> Path:
+    """Keep workflow attempts intact; each operation owns a create-only child.
+
+    None selects the original layout for retained legacy artifacts. New prompt
+    preparation always supplies its already-bound operationId. Hashing permits
+    existing operation identifiers containing separators without path traversal.
+    """
+    for value in (run_id, task_id, attempt_id):
+        _require(isinstance(value, str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}', value) is not None,
+                 'r11-result-identity', 'attempt identity is not a path component')
+    path = Path(run_id) / task_id / attempt_id
+    if operation_id is not None:
+        _require(isinstance(operation_id, str) and bool(operation_id),
+                 'r11-result-identity', 'operation identity is missing')
+        path = path / 'operations' / canonical_digest({'operationId': operation_id})
+    return path
+
 def capture_attempt_authority(project_root: Path, *, lock_path: Path,
                               manifest_path: Path | None = None) -> dict[str, Any]:
     """Pin the implementation and lock that will own this attempt's result."""
@@ -132,8 +150,10 @@ def _intent(root: Path, intent_path: Path) -> tuple[dict[str, Any], bytes]:
     for key in ('runId', 'taskId', 'attemptId'):
         _require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}', value[key]) is not None,
                  'r11-result-identity', 'attempt identity is not a path component')
-    expected = root / _ROOT / value['runId'] / value['taskId'] / value['attemptId']
-    _require(path.parent == expected, 'r11-result-identity', 'intent belongs to a different attempt')
+    legacy = root / _ROOT / _invocation_namespace(value['runId'], value['taskId'], value['attemptId'])
+    expected = root / _ROOT / _invocation_namespace(
+        value['runId'], value['taskId'], value['attemptId'], value['operationId'])
+    _require(path.parent in (legacy, expected), 'r11-result-identity', 'intent belongs to a different operation')
     for key in ('planDigest', 'lockDigest', 'requestSha256', 'finalPromptSha256', 'commandIdentityHash'):
         _require(re.fullmatch(r'[0-9a-f]{64}', value[key]) is not None,
                  'r11-result-identity', f'{key} is not a SHA-256 digest')
@@ -168,6 +188,9 @@ def _positive_receipts(root: Path, directory: Path, intent: dict[str, Any], proc
     delivered, input_raw = _read(root, directory / 'process-input.json')
     transport, transport_raw = _read(root, directory / 'transport-equivalence.json')
     identity = ('runId', 'taskId', 'attemptId', 'finalPromptSha256')
+    if directory == root / _ROOT / _invocation_namespace(
+            intent['runId'], intent['taskId'], intent['attemptId'], intent['operationId']):
+        identity += ('operationId',)
     hashes = {'start': hashlib.sha256(start_raw).hexdigest(),
               'input': hashlib.sha256(input_raw).hexdigest(),
               'transport': hashlib.sha256(transport_raw).hexdigest()}

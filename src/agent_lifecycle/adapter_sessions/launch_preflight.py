@@ -569,7 +569,7 @@ def _managed_task(
             try:
                 if prepared is not None:
                     cleanup_prestart_raw(context.root, run_id=prepared["runId"], task_id=prepared["taskId"],
-                        attempt_id=prepared["attemptId"], staging_source=None, proven_no_start=True)
+                        attempt_id=prepared["attemptId"], operation_id=prepared.get("operationId"), staging_source=None, proven_no_start=True)
                     record_proven_no_start(context.root, prepared["startReceiptPath"])
                 else:
                     cleanup_no_start(context.root, None, input_request)
@@ -605,7 +605,7 @@ def _managed_task(
                 if dispatch.exists() or dispatch.is_symlink():
                     raise LifecycleError("codex-exact-start-uncertain", "existing dispatch forbids no-start cleanup")
                 cleanup_prestart_raw(context.root, run_id=prepared["runId"], task_id=prepared["taskId"],
-                    attempt_id=prepared["attemptId"], staging_source=None, proven_no_start=True)
+                    attempt_id=prepared["attemptId"], operation_id=prepared.get("operationId"), staging_source=None, proven_no_start=True)
                 record_proven_no_start(context.root, prepared["startReceiptPath"])
             except (LifecycleError, OSError, ValueError) as exc:
                 raise LifecycleError("codex-exact-start-uncertain", "owned no-start cleanup could not be persisted",
@@ -639,6 +639,8 @@ def _run_exact_managed_process(
 ) -> dict[str, Any]:
     try:
         require_no_strong_protection(immutable_input_request, expected_protection="NONE")
+        if prepared.get("operationId") != operation_id:
+            raise LifecycleError("codex-exact-operation-mismatch", "Prepared input belongs to another operation")
         if (immutable_input_context is None or type(immutable_input_inputs) is not dict
                 or set(immutable_input_inputs) != {"state_path", "manifest_path", "lock_path",
                                                    "task_id", "operation_id", "source_revision"}
@@ -677,7 +679,7 @@ def _run_exact_managed_process(
                 raise LifecycleError("codex-exact-start-uncertain", "existing dispatch forbids preflight no-start cleanup")
             cleanup_prestart_raw(
                 context.root, run_id=prepared["runId"], task_id=prepared["taskId"],
-                attempt_id=prepared["attemptId"], staging_source=None,
+                attempt_id=prepared["attemptId"], operation_id=prepared.get("operationId"), staging_source=None,
                 proven_no_start=True)
             record_proven_no_start(context.root, prepared["startReceiptPath"])
         except (LifecycleError, OSError, ValueError) as cleanup_exc:
@@ -711,13 +713,22 @@ def _run_exact_managed_process(
             raise LifecycleError("codex-exact-start-uncertain",
                                  "runner failed after possible child start; raw input and unknown cost retained",
                                  {"costStatus": "UNAVAILABLE", "retryAuthorized": False}) from exc
+    # Hash and expose only this closed observation. Full stdout/stderr stay
+    # internal to the runner; only its bounded redacted tails leave this sink.
+    result = {key: result[key] for key in (
+        "status", "exitCode", "timedOut", "cancelled", "processStarted",
+        "inputBytes", "outputBytes", "outputLimitExceeded", "stdoutTail", "stderrTail",
+        "stdoutRedacted", "stderrRedacted", "cleanup", "processReceipt", "blockers",
+        "deadlineMonotonicNs", "observerDisposition", "startObservation", "inputObservation",
+        "absoluteDeadlineMonotonicNs", "startedMonotonicNs",
+    ) if key in result}
     started = result["processStarted"]
     terminal = None
     if not started:
         try:
             cleanup_prestart_raw(
                 context.root, run_id=prepared["runId"], task_id=prepared["taskId"],
-                attempt_id=prepared["attemptId"], staging_source=None,
+                attempt_id=prepared["attemptId"], operation_id=prepared.get("operationId"), staging_source=None,
                 proven_no_start=True)
             record_proven_no_start(context.root, prepared["startReceiptPath"])
         except LifecycleError as exc:
@@ -785,6 +796,9 @@ def _run_exact_managed_process(
         "costStatus":"UNAVAILABLE" if started else "NOT_STARTED",
     }
     payload["modelCallsStarted"] = started
+    # This safe projection was hashed at terminal publication above.
+    # Exit zero alone cannot prove a native model completion.
+    payload["exactPrompt"]["observedProcessResult"] = result
     payload["receiptDigest"] = canonical_digest({k:v for k,v in payload.items() if k != "receiptDigest"})
     return payload
 

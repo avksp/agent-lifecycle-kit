@@ -1,5 +1,6 @@
 """Bounded local diagnostics and current ALK input-source checks for Codex."""
 from __future__ import annotations
+from agent_lifecycle.adapter_sessions.attempt_authority import _invocation_namespace
 
 import hashlib
 import json
@@ -302,7 +303,7 @@ def _observed_prompt_diagnostic(
     root: Path, executable: str, identity: dict[str, Any], *,
     snapshot: Path, model: str, role: str, run_id: str,
     task_id: str, attempt_id: str, final_sha: str,
-    process_env: dict[str, str],
+    process_env: dict[str, str], operation_id: str | None = None,
 ) -> dict[str, Any]:
     """Collect a private per-role candidate; never assert exec-stdin equivalence."""
     _require(role in {"worker", "validator", "auditor", "retry", "coordinator", "closing"},
@@ -316,6 +317,8 @@ def _observed_prompt_diagnostic(
              "codex-exact-config-unsafe", "diagnostic CODEX_HOME is not protected")
     tag = (f"ALK_DIAGNOSTIC role={role} run={run_id} task={task_id} "
            f"attempt={attempt_id} inputSha256={final_sha}")
+    if operation_id is not None:
+        tag += " operationSha256=" + canonical_digest({"operationId": operation_id})
     environment = {**process_env, "CODEX_HOME": str(snapshot)}
     raw = _private_diagnostic_output(root, binary, tag, snapshot, environment)
     _require(_file_sha(binary) == binary_sha,
@@ -329,7 +332,7 @@ def _observed_prompt_diagnostic(
              and all(isinstance(item, dict) for item in items),
              "codex-exact-diagnostic-invalid", "selected binary diagnostic items are invalid")
     private = (root / "work/release-2-16/private-details/codex-exact-prompt"
-               / run_id / task_id / attempt_id / "prompt-input.json")
+               / _invocation_namespace(run_id, task_id, attempt_id, operation_id) / "prompt-input.json")
     _write_exclusive(private, raw, root=root)
     return {"source": "SELECTED_BINARY_DEBUG_PROMPT_INPUT_CANDIDATE",
             "binarySha256": binary_sha, "model": model, "role": role,

@@ -11,7 +11,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from agent_lifecycle.adapter_sessions.attempt_authority import (
-    read_attempt_result, require_positive_attempt_result,
+    read_attempt_result, require_positive_attempt_result, _invocation_namespace,
 )
 from agent_lifecycle.adapter_sessions.private_input import (
     _require, _read_private, _write_exclusive, _verify_private_ancestors,
@@ -37,7 +37,7 @@ def stage_input_request(project_root: Path, request_id: str, request: dict[str, 
     _write_exclusive(path, canonical_bytes(request), root=root)
     return path
 
-def _seal_request(root: Path, source: Path, run_id: str, task_id: str, attempt_id: str) -> tuple[Path, dict[str, Any]]:
+def _seal_request(root: Path, source: Path, run_id: str, task_id: str, attempt_id: str, *, operation_id: str | None = None) -> tuple[Path, dict[str, Any]]:
     staging = root / "work/release-2-16/private-details/codex-exact-prompt/staging"
     source = Path(source).absolute()
     if source.name != "input-request.json" or source.parent.parent != staging:
@@ -50,14 +50,17 @@ def _seal_request(root: Path, source: Path, run_id: str, task_id: str, attempt_i
         raise LifecycleError("codex-exact-request-invalid", "private request is not JSON") from exc
     if not isinstance(request, dict) or "attemptId" in request:
         raise LifecycleError("codex-exact-request-invalid", "private request has invalid attempt binding")
+    if operation_id is not None:
+        _require(request.get("operationId") == operation_id, "codex-exact-request-binding-mismatch",
+                 "operation differs before sealing")
     request = {**request, "attemptId": attempt_id}
-    sealed = root / "work/release-2-16/private-details/codex-exact-prompt" / run_id / task_id / attempt_id / "input-request.json"
+    sealed = root / "work/release-2-16/private-details/codex-exact-prompt" / _invocation_namespace(run_id, task_id, attempt_id, operation_id) / "input-request.json"
     _write_exclusive(sealed, canonical_bytes(request), root=root)
     try:
         source.unlink()
         source.parent.rmdir()
     except OSError as exc:
-        _cleanup_sealed_no_start(root, sealed, source, run_id, task_id, attempt_id)
+        _cleanup_sealed_no_start(root, sealed, source, run_id, task_id, attempt_id, operation_id=operation_id)
         raise LifecycleError("codex-exact-request-staging-finalize-failed", "staging directory could not be finalized") from exc
     return sealed, request
 
@@ -69,10 +72,14 @@ def _cleanup_marker(root: Path, path: Path) -> tuple[Path, dict[str, str]]:
         request_id = _part(relative[1], "requestId")
         return (evidence / "prestart" / request_id / "raw-cleanup-pending.json",
                 {"requestId": request_id})
-    if len(relative) == 4 and relative[3] == "input-request.json":
+    if len(relative) in (4, 6) and relative[-1] == "input-request.json":
         run_id, task_id, attempt_id = (_part(value, "cleanupIdentity") for value in relative[:3])
-        return (evidence / run_id / task_id / attempt_id / "raw-cleanup-pending.json",
-                {"runId": run_id, "taskId": task_id, "attemptId": attempt_id})
+        identity = {"runId": run_id, "taskId": task_id, "attemptId": attempt_id}
+        if len(relative) == 6:
+            _require(relative[3] == "operations" and re.fullmatch(r"[0-9a-f]{64}", relative[4]) is not None,
+                     "codex-exact-private-path-unsafe", "operation input path is invalid")
+            identity["operationKey"] = relative[4]
+        return (evidence.joinpath(*relative[:-1]) / "raw-cleanup-pending.json", identity)
     raise LifecycleError("codex-exact-private-path-unsafe", "cleanup target is not an ALK input request")
 
 def _record_cleanup_pending(root: Path, path: Path) -> None:
@@ -139,6 +146,18 @@ def _assert_no_cleanup_blockers(root: Path) -> None:
                      and all(observed.get(key) == record.get(key)
                              for key in ("runId", "taskId", "attemptId")),
                      "codex-exact-start-uncertain", "pending raw details differ from child start")
+            namespace = _invocation_namespace(record.get("runId"), record.get("taskId"), record.get("attemptId"))
+            if marker.parent == evidence / namespace:
+                _require("operationId" not in record, "codex-exact-start-uncertain",
+                         "legacy pending marker has an unexpected operation binding")
+            else:
+                operation = record.get("operationId")
+                _require(isinstance(operation, str) and bool(operation)
+                         and marker.parent == evidence / _invocation_namespace(
+                             record["runId"], record["taskId"], record["attemptId"], operation)
+                         and isinstance(intent, dict)
+                         and observed.get("operationId") == intent.get("operationId") == operation,
+                         "codex-exact-start-uncertain", "pending raw operation binding differs")
             _require(_complete_started_input(root, marker.parent, intent),
                      "codex-exact-start-uncertain", "pending raw details lack a completed pipe receipt")
 
@@ -187,10 +206,17 @@ def reconcile_prelaunch_intents(
                         continue  # The existing sticky privacy blocker has priority.
                 _record_orphan_private_input(
                     root, path, evidence / "prestart" / request_id / "orphan-private-input.json")
-            _require(len(relative) == 4 and relative[3] == "input-request.json",
+            _require(len(relative) in (4, 6) and relative[-1] == "input-request.json",
                      "codex-exact-private-path-unsafe", "private input has an unexpected path")
             run_id, task_id, attempt_id = (_part(value, "orphanIdentity") for value in relative[:3])
-            attempt_evidence = evidence / run_id / task_id / attempt_id
+            if len(relative) == 6:
+                request = json.loads(_read_private(path, root=root))
+                _require(isinstance(request, dict) and isinstance(request.get("operationId"), str)
+                         and bool(request["operationId"])
+                         and Path(*relative[:-1]) == _invocation_namespace(
+                             run_id, task_id, attempt_id, request["operationId"]),
+                         "codex-exact-private-path-unsafe", "sealed operation identity differs")
+            attempt_evidence = evidence.joinpath(*relative[:-1])
             if not (attempt_evidence / "prelaunch-intent.json").exists():
                 cleanup_marker = attempt_evidence / "raw-cleanup-pending.json"
                 if cleanup_marker.exists():
@@ -288,15 +314,16 @@ def _cleanup_input_paths(root: Path, *paths: Path) -> None:
 
 def _cleanup_sealed_no_start(
     root: Path, sealed: Path, source: Path, run_id: str, task_id: str, attempt_id: str,
+    *, operation_id: str | None = None,
 ) -> None:
     """Only the sealing transaction may remove its newly created attempt copy."""
     source = _staging_request(root, source)
     expected = (root / "work/release-2-16/private-details/codex-exact-prompt"
-                / run_id / task_id / attempt_id / "input-request.json")
+                / _invocation_namespace(run_id, task_id, attempt_id, operation_id) / "input-request.json")
     _require(Path(sealed).absolute() == expected,
              "codex-exact-private-path-unsafe", "sealed cleanup identity differs")
     start = (root / "work/release-2-16/evidence/codex-exact-prompt"
-             / run_id / task_id / attempt_id / "process-start.json")
+             / _invocation_namespace(run_id, task_id, attempt_id, operation_id) / "process-start.json")
     _require(not start.exists() or start.stat().st_size == 0,
              "codex-exact-start-uncertain", "observed child start forbids sealed cleanup")
     _cleanup_input_paths(root, expected, source)

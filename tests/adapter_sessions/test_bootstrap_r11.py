@@ -256,8 +256,10 @@ class PreparedAttemptIntegrationTests(unittest.TestCase):
         self.manifest_path.write_bytes(canonical_bytes(self.manifest))
         self.lock = self.manifest_path.with_name('plan.lock.json')
         self.lock.write_bytes(b'{"fixture":true}')
-        self.evidence = self.root / 'work/release-2-16/evidence/codex-exact-prompt/run/task/1'
-        self.home = self.root / 'work/release-2-16/runtime-private/codex-exact-prompt/run/task/1/codex-home'
+        from agent_lifecycle.adapter_sessions.attempt_authority import _invocation_namespace
+        namespace = _invocation_namespace('run', 'task', '1', 'op')
+        self.evidence = self.root / 'work/release-2-16/evidence/codex-exact-prompt' / namespace
+        self.home = self.root / 'work/release-2-16/runtime-private/codex-exact-prompt' / namespace / 'codex-home'
         exact._private_dir(self.home, boundary=self.root)
         config = self.home / 'config.toml'
         config.write_text('model="fixture"\n')

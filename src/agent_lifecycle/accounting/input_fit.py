@@ -62,12 +62,25 @@ def _source_scope(contract: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate_context_ref_index(packet: dict[str, Any], contract: dict[str, Any]) -> dict[str, Any]:
-    """Require the exact ordered index; an index is never source evidence."""
+    """Keep the ordered source allow-list inside the full context index."""
 
     scope = _source_scope(contract)
     refs = packet.get("context", {}).get("refs") if isinstance(packet.get("context"), dict) else None
-    if refs != scope["orderedContextRefs"]:
-        raise LifecycleError("context-ref-index-mismatch", "task packet contextRefs differ from the frozen index")
+    allowed = scope["orderedContextRefs"]
+    if (
+        not isinstance(refs, list)
+        or any(not isinstance(ref, str) for ref in refs)
+        or len(set(refs)) != len(refs)
+        or [ref for ref in refs if ref in allowed] != allowed
+    ):
+        raise LifecycleError("context-ref-index-mismatch", "task context does not preserve the ordered source allow-list")
+    for ref in refs:
+        try:
+            normalized = normalize_repo_path(ref, label="context ref")
+        except LifecycleError as exc:
+            raise LifecycleError("context-ref-index-mismatch", "task context ref is not normalized") from exc
+        if normalized != ref:
+            raise LifecycleError("context-ref-index-mismatch", "task context ref is not normalized")
     result = {
         "schemaVersion": "alk-context-ref-index.v1",
         "status": "PENDING_SOURCE_SELECTION",
@@ -190,6 +203,13 @@ def _revalidate_selection(
         raise LifecycleError("source-selection-mismatch", "selected source receipt changed")
     if selection.get("contractDigest") != canonical_digest(contract):
         raise LifecycleError("source-selection-mismatch", "input-fit contract changed")
+    index = validate_context_ref_index(packet, contract)
+    if (
+        selection.get("contextRefIndexDigest") != index["indexDigest"]
+        or type(selection.get("indexOnlyCount")) is not int
+        or selection.get("indexOnlyCount") != index["count"]
+    ):
+        raise LifecycleError("source-selection-mismatch", "selected source context index changed")
     scope = _source_scope(contract)
     entries = selection.get("selected")
     if not isinstance(entries, list) or not entries or len(entries) > scope["maxExcerptsPerDispatch"]:

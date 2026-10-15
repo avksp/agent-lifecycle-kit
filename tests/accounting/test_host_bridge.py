@@ -27,6 +27,7 @@ from agent_lifecycle.adapter_sessions.launch_execution import (
     verify_final_source_accounting_profiles,
 )
 from agent_lifecycle.adapter_sessions.launcher import launch_from_local_profile
+from agent_lifecycle.adapter_sessions.immutable_input import planning_invocation_context
 from agent_lifecycle.adapter_sessions.planning_launch import run_planning_launch
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 
@@ -445,6 +446,16 @@ class SourceQualificationConsumerTests(unittest.TestCase):
         with patch("agent_lifecycle.adapter_sessions.launch_execution.verify_area_report", side_effect=mutate), self.assertRaises(LifecycleError):
             self.final()
 
+    def test_final_snapshot_reenumerates_and_refuses_new_candidate_source(self):
+        self.make_final()
+        def mutate(_root, review_id):
+            if review_id == "unit-resolver":
+                self.write(self.root, "src/new_candidate.py", {"new": "source"})
+            return self.final_reports[review_id]
+        with patch("agent_lifecycle.adapter_sessions.launch_execution.verify_area_report", side_effect=mutate), \
+                self.assertRaises(LifecycleError):
+            self.final()
+
 
 class AccountingDispatchRefusalTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -578,11 +589,15 @@ class AccountingDispatchRefusalTests(unittest.TestCase):
     def test_planning_refuses_request_and_replayed_allow_before_process(self):
         for request in (self.request, None, {"outcome": "ALLOW_CAPABILITY", "dispatchEntitlement": True}):
             with self.subTest(request=request), patch("agent_lifecycle.adapter_sessions.planning_launch.run_process") as run:
-                result = run_planning_launch(
+                launch_args = dict(
                     adapter_id="codex", session_id="s1", requested_mode="plan", task_text="private task",
                     input_source="text", argv=["never-run"], env={},
                     advisory={"accountingCapabilityRequest": request},
                 )
+                context = planning_invocation_context(
+                    **launch_args, request=None, timeout_seconds=300, process_cwd=None,
+                )
+                result = run_planning_launch(**launch_args, immutable_input_context=context)
                 run.assert_not_called()
                 self.assertEqual(result["processCalls"], 0)
                 self.assertFalse(result["hostLaunchStarted"])

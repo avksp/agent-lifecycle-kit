@@ -6,18 +6,18 @@
   "contractRefs": [
     {
       "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-      "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-      "bytes": 234020
+      "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+      "bytes": 180961
     },
     {
       "path": "tasks/release-2-16/h04-artifact-contracts.json",
-      "sha256": "0b728fd2bc770c8f16ddb6dc6b27377a0917f3cdc50eae0b17238f1f72ca1328",
-      "bytes": 65052
+      "sha256": "1118dd9c3b6e4bbfaf42265f8936bbdb8ff21177d03a56b5b72b61a87a1bf4ec",
+      "bytes": 42910
     },
     {
       "path": "tasks/release-2-16/alk-input-fit-contract.json",
-      "sha256": "888f7ec72393ebbe1be27884419a720bdd1e0344b36a21a27487d6ca7e7fa24e",
-      "bytes": 132948
+      "sha256": "b651e81f41f2feb4dfbdcd2b22dab67308273b3c4f746f83651391226c479e55",
+      "bytes": 119027
     }
   ],
   "profiles": [
@@ -118,8 +118,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -137,8 +137,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -154,8 +154,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -171,8 +171,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -188,8 +188,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -205,8 +205,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -222,8 +222,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -239,8 +239,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -256,8 +256,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -273,8 +273,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -290,8 +290,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -307,8 +307,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -324,8 +324,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -341,8 +341,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -446,8 +446,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -465,8 +465,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -482,8 +482,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -499,8 +499,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -516,8 +516,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -533,8 +533,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -550,8 +550,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -567,8 +567,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -584,8 +584,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -601,8 +601,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -618,8 +618,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -635,8 +635,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -652,8 +652,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -669,8 +669,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -774,8 +774,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -793,8 +793,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -810,8 +810,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -827,8 +827,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -844,8 +844,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -861,8 +861,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -878,8 +878,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -895,8 +895,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -912,8 +912,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -929,8 +929,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -946,8 +946,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -963,8 +963,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -980,8 +980,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -997,8 +997,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -1102,8 +1102,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -1121,8 +1121,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1138,8 +1138,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1155,8 +1155,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1172,8 +1172,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1189,8 +1189,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1206,8 +1206,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1223,8 +1223,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1240,8 +1240,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1257,8 +1257,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1274,8 +1274,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1291,8 +1291,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1308,8 +1308,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1325,8 +1325,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -1430,8 +1430,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -1449,8 +1449,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1466,8 +1466,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1483,8 +1483,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1500,8 +1500,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1517,8 +1517,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1534,8 +1534,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1551,8 +1551,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1568,8 +1568,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1585,8 +1585,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1602,8 +1602,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1619,8 +1619,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1636,8 +1636,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1653,8 +1653,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -1758,8 +1758,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -1777,8 +1777,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1794,8 +1794,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1811,8 +1811,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1828,8 +1828,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1845,8 +1845,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1862,8 +1862,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1879,8 +1879,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1896,8 +1896,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1913,8 +1913,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1930,8 +1930,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1947,8 +1947,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1964,8 +1964,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -1981,8 +1981,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -2086,8 +2086,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -2105,8 +2105,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2122,8 +2122,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2139,8 +2139,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2156,8 +2156,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2173,8 +2173,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2190,8 +2190,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2207,8 +2207,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2224,8 +2224,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2241,8 +2241,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2258,8 +2258,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2275,8 +2275,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2292,8 +2292,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2309,8 +2309,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -2414,8 +2414,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -2433,8 +2433,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2450,8 +2450,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2467,8 +2467,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2484,8 +2484,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2501,8 +2501,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2518,8 +2518,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2535,8 +2535,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2552,8 +2552,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2569,8 +2569,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2586,8 +2586,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2603,8 +2603,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2620,8 +2620,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2637,8 +2637,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -2742,8 +2742,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -2761,8 +2761,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2778,8 +2778,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2795,8 +2795,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2812,8 +2812,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2829,8 +2829,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2846,8 +2846,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2863,8 +2863,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2880,8 +2880,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2897,8 +2897,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2914,8 +2914,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2931,8 +2931,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2948,8 +2948,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -2965,8 +2965,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -3070,8 +3070,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -3089,8 +3089,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3106,8 +3106,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3123,8 +3123,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3140,8 +3140,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3157,8 +3157,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3174,8 +3174,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3191,8 +3191,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3208,8 +3208,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3225,8 +3225,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3242,8 +3242,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3259,8 +3259,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3276,8 +3276,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3293,8 +3293,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -3398,8 +3398,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -3417,8 +3417,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3434,8 +3434,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3451,8 +3451,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3468,8 +3468,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3485,8 +3485,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3502,8 +3502,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3519,8 +3519,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3536,8 +3536,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3553,8 +3553,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3570,8 +3570,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3587,8 +3587,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3604,8 +3604,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3621,8 +3621,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }
@@ -3726,8 +3726,8 @@
           "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
           "artifact": {
             "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-            "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-            "bytes": 234020
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
           },
           "versionApplicability": "Frozen expected version only; no runtime observation"
         }
@@ -3745,8 +3745,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3762,8 +3762,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3779,8 +3779,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3796,8 +3796,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3813,8 +3813,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3830,8 +3830,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3847,8 +3847,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3864,8 +3864,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3881,8 +3881,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3898,8 +3898,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3915,8 +3915,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3932,8 +3932,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         },
@@ -3949,8 +3949,8 @@
           "evidenceRefs": [
             {
               "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
-              "sha256": "f716bbc4af38337b6838679ece77adb5a335c27fb836a9f76843f88aeae3c121",
-              "bytes": 234020
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
             }
           ]
         }

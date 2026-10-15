@@ -1,5 +1,6 @@
 """Owned codex prompt preparation helpers."""
 from __future__ import annotations
+from agent_lifecycle.adapter_sessions.attempt_authority import _invocation_namespace
 from typing import Any
 from agent_lifecycle.contracts import LifecycleError
 from pathlib import Path
@@ -44,10 +45,10 @@ CLAIM = "ALK_CONTROLLED_OUTBOUND_INPUT_FIT"
 def _selected_host_evidence(root: Path, request: dict[str, Any], identity: dict[str, Any],
                             final_sha: str, run_id: str, task_id: str, attempt_id: str,
                             executable: str, process_env: dict[str, str],
-                            role: str) -> tuple[str, str, str, dict[str, Any], dict[str, Any], str]:
+                            role: str, *, operation_id: str | None = None) -> tuple[str, str, str, dict[str, Any], dict[str, Any], str]:
     """Create ALK prelaunch sources without claiming child internal equivalence."""
-    base = root / "work/release-2-16/evidence/codex-exact-prompt" / run_id / task_id / attempt_id
-    private = root / "work/release-2-16/private-details/codex-exact-prompt" / run_id / task_id / attempt_id
+    base = root / "work/release-2-16/evidence/codex-exact-prompt" / _invocation_namespace(run_id, task_id, attempt_id, operation_id)
+    private = root / "work/release-2-16/private-details/codex-exact-prompt" / _invocation_namespace(run_id, task_id, attempt_id, operation_id)
     selected = request.get("selectedHost")
     _require(isinstance(selected, dict), "codex-exact-host-proof-missing", "selected host proof is missing")
     model = selected.get("model")
@@ -62,7 +63,7 @@ def _selected_host_evidence(root: Path, request: dict[str, Any], identity: dict[
     _require(not any(key in selected for key in (
                  "configManifestSha256", "transportWitnessSha256", "diagnosticSha256")),
              "codex-exact-legacy-witness-refused", "caller-authored host PASS witnesses are not accepted")
-    snapshot = root / "work/release-2-16/runtime-private/codex-exact-prompt" / run_id / task_id / attempt_id / "codex-home"
+    snapshot = root / "work/release-2-16/runtime-private/codex-exact-prompt" / _invocation_namespace(run_id, task_id, attempt_id, operation_id) / "codex-home"
     _verify_private_ancestors(snapshot, root=root)
     info = snapshot.lstat()
     _require(stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700,
@@ -84,7 +85,7 @@ def _selected_host_evidence(root: Path, request: dict[str, Any], identity: dict[
     diagnostic = _observed_prompt_diagnostic(
         root, executable, identity, snapshot=snapshot, model=model, role=role,
         run_id=run_id, task_id=task_id, attempt_id=attempt_id,
-        final_sha=final_sha, process_env=process_env)
+        final_sha=final_sha, process_env=process_env, operation_id=operation_id)
     config_source = _raw_source_record(root, effective_config, "alk-config-source")
     manifest = {"schemaVersion": "alk-codex-config-source-manifest.v1",
                 "status": "OBSERVED_ALK_SOURCE", "routeId": ROUTE_ID,
@@ -116,7 +117,7 @@ def _raw_source_record(root: Path, path: Path, kind: str) -> dict[str, Any]:
 
 def _record_transport_witness(
     root: Path, evidence: Path, *, run_id: str, task_id: str,
-    attempt_id: str, role: str, final_sha: str,
+    attempt_id: str, role: str, final_sha: str, operation_id: str | None = None,
     config_manifest_sha: str, diagnostic: dict[str, Any],
     event: dict[str, Any],
 ) -> None:
@@ -140,6 +141,7 @@ def _record_transport_witness(
              and all(start.get(key) == value and observed_input.get(key) == value
                      for key, value in (("runId", run_id), ("taskId", task_id),
                                         ("attemptId", attempt_id), ("role", role)))
+             and (operation_id is None or start.get("operationId") == observed_input.get("operationId") == operation_id)
              and start.get("finalPromptSha256") == final_sha
              and observed_input.get("finalPromptSha256") == final_sha
              and all(observed_input.get(key) == value for key, value in event.items()),
@@ -159,6 +161,8 @@ def _record_transport_witness(
                  "observedPipe": event,
                  "childConsumption": "UNPROVEN",
                  "execStdinDiagnosticEquivalence": "UNPROVEN"}
+    if operation_id is not None:
+        transport["operationId"] = operation_id
     _write_exclusive(evidence / "transport-equivalence.json",
                      canonical_bytes(transport), root=root)
 
@@ -195,13 +199,14 @@ def _workflow_journal_identity(root: Path, state: dict[str, Any], run_id: str) -
 def create_prestart_raw_inventory(
     project_root: Path, *, run_id: str, task_id: str, attempt_id: str,
     sealed_request: Path, state: dict[str, Any], plan_digest: str,
+    operation_id: str | None = None,
 ) -> tuple[Path, Path, str]:
     """Seal all known raw and the whole child snapshot cleanup obligation before Popen."""
     root = Path(project_root).absolute()
     run_id, task_id, attempt_id = (_part(value, "rawInventoryIdentity")
                                    for value in (run_id, task_id, attempt_id))
     journal = _workflow_journal_identity(root, state, run_id)
-    private = root / "work/release-2-16/private-details/codex-exact-prompt" / run_id / task_id / attempt_id
+    private = root / "work/release-2-16/private-details/codex-exact-prompt" / _invocation_namespace(run_id, task_id, attempt_id, operation_id)
     expected_request = private / "input-request.json"
     _require(Path(sealed_request).absolute() == expected_request,
              "codex-exact-raw-inventory-invalid", "sealed request identity differs")
@@ -211,7 +216,7 @@ def create_prestart_raw_inventory(
         _raw_source_record(root, private / "effective-config.json", "effective-config"),
         *_snapshot_raw_sources(
             root, (root / "work/release-2-16/runtime-private/codex-exact-prompt"
-                   / run_id / task_id / attempt_id / "codex-home")),
+                   / _invocation_namespace(run_id, task_id, attempt_id, operation_id) / "codex-home")),
     ]
     inventory = {"schemaVersion": "alk-r68b-raw-inventory.v1", "runId": run_id,
                  "taskId": task_id, "attemptId": attempt_id, "planDigest": plan_digest,
@@ -222,9 +227,11 @@ def create_prestart_raw_inventory(
                  "rootPathSha256": journal["rootPathSha256"],
                  "rootFileIdentity": journal["rootFileIdentity"],
                  "workflowStateDigest": canonical_digest(state), "sources": sources}
+    if operation_id is not None:
+        inventory["operationId"] = operation_id
     inventory_path = private / "raw-inventory.json"
     pending_path = (root / "work/release-2-16/evidence/codex-exact-prompt"
-                    / run_id / task_id / attempt_id / "raw-cleanup-pending.json")
+                    / _invocation_namespace(run_id, task_id, attempt_id, operation_id) / "raw-cleanup-pending.json")
     _reserve(pending_path, root=root)
     _write_exclusive(inventory_path, canonical_bytes(inventory), root=root)
     inventory_sha = _sha(inventory_path.read_bytes())
@@ -234,6 +241,8 @@ def create_prestart_raw_inventory(
                "journalAuthorityKind": journal["kind"],
                "rootPathSha256": inventory["rootPathSha256"],
                "inventorySha256": inventory_sha}
+    if operation_id is not None:
+        pending["operationId"] = operation_id
     _replace_reserved(pending_path, pending, root=root)
     return inventory_path, pending_path, inventory_sha
 
@@ -260,10 +269,13 @@ def verify_prestart_raw_inventory(
     run_id = _part(inventory.get("runId"), "rawInventoryRunId")
     task_id = _part(inventory.get("taskId"), "rawInventoryTaskId")
     attempt_id = _part(inventory.get("attemptId"), "rawInventoryAttemptId")
+    operation_id = inventory.get("operationId")
+    _require("operationId" not in inventory or isinstance(operation_id, str) and bool(operation_id),
+             "codex-exact-raw-inventory-stale", "raw operation identity is invalid")
     private = (root / "work/release-2-16/private-details/codex-exact-prompt"
-               / run_id / task_id / attempt_id)
+               / _invocation_namespace(run_id, task_id, attempt_id, operation_id))
     evidence = (root / "work/release-2-16/evidence/codex-exact-prompt"
-                / run_id / task_id / attempt_id)
+                / _invocation_namespace(run_id, task_id, attempt_id, operation_id))
     _require(Path(inventory_path).absolute() == private / "raw-inventory.json"
              and Path(pending_path).absolute() == evidence / "raw-cleanup-pending.json",
              "codex-exact-raw-inventory-stale", "raw inventory paths changed")
@@ -280,7 +292,7 @@ def verify_prestart_raw_inventory(
         _raw_source_record(root, private / "effective-config.json", "effective-config"),
     ]
     snapshot = (root / "work/release-2-16/runtime-private/codex-exact-prompt"
-                / run_id / task_id / attempt_id / "codex-home")
+                / _invocation_namespace(run_id, task_id, attempt_id, operation_id) / "codex-home")
     if started:
         # The cleanup obligation covers the whole tree, including additions.
         # Its prestart digest is not a post-spawn whole-tree observation.
@@ -313,13 +325,14 @@ def verify_prestart_raw_inventory(
              and pending.get("inventorySha256") == _sha(raw)
              and pending.get("journalIdentity") == journal["journalIdentity"]
              and all(pending.get(key) == inventory.get(key)
-                     for key in ("runId", "taskId", "attemptId", "rootPathSha256")),
+                     for key in ("runId", "taskId", "attemptId", "operationId", "rootPathSha256")),
              "codex-exact-raw-inventory-stale", "raw source bytes or pending obligation changed")
     return _sha(raw)
 
 def cleanup_prestart_raw(
     project_root: Path, *, run_id: str, task_id: str, attempt_id: str,
     staging_source: Path | None, proven_no_start: bool,
+    operation_id: str | None = None,
 ) -> None:
     """Remove attempt raw only after an in-process, proven no-Popen outcome."""
     root = Path(project_root).absolute()
@@ -328,7 +341,7 @@ def cleanup_prestart_raw(
     run_id, task_id, attempt_id = (_part(value, "rawCleanupIdentity")
                                    for value in (run_id, task_id, attempt_id))
     evidence = (root / "work/release-2-16/evidence/codex-exact-prompt"
-                / run_id / task_id / attempt_id)
+                / _invocation_namespace(run_id, task_id, attempt_id, operation_id))
     start = evidence / "process-start.json"
     _require(not any((evidence / name).exists() or (evidence / name).is_symlink()
                      for name in ("attempt-result-terminal.json", "attempt-result-terminal.pending.json")),
@@ -336,7 +349,7 @@ def cleanup_prestart_raw(
     _require(not start.exists() or start.stat().st_size == 0,
              "codex-exact-start-uncertain", "observed child start forbids no-start cleanup")
     private = (root / "work/release-2-16/private-details/codex-exact-prompt"
-               / run_id / task_id / attempt_id)
+               / _invocation_namespace(run_id, task_id, attempt_id, operation_id))
     failed: list[str] = []
     for name in ("input-request.json", "prompt-input.json", "effective-config.json", "raw-inventory.json"):
         path = private / name
@@ -347,7 +360,7 @@ def cleanup_prestart_raw(
         except (OSError, LifecycleError):
             failed.append(_sha(os.fsencode(str(path))))
     snapshot = (root / "work/release-2-16/runtime-private/codex-exact-prompt"
-                / run_id / task_id / attempt_id / "codex-home")
+                / _invocation_namespace(run_id, task_id, attempt_id, operation_id) / "codex-home")
     try:
         _remove_snapshot_no_start(snapshot, root=root)
     except (OSError, LifecycleError):
@@ -373,6 +386,8 @@ def cleanup_prestart_raw(
               "status": "PRIVATE_CLEANUP_PENDING" if failed else "DONE",
               "runId": run_id, "taskId": task_id, "attemptId": attempt_id,
               "failedRawPathSha256": sorted(set(failed))}
+    if operation_id is not None:
+        record["operationId"] = operation_id
     temporary = marker.with_name(marker.name + ".tmp")
     _write_exclusive(temporary, canonical_bytes(record), root=root)
     os.replace(temporary, marker)
@@ -419,11 +434,11 @@ def _finish_exact_prelaunch(*, root, run_id, task_id, attempt_id, operation_id, 
         _replace_reserved(start_path, body, root=root)
 
     def on_input(event: dict[str, Any]) -> None:
-        body = {'schemaVersion': 'alk-codex-process-input.v1', 'runId': run_id, 'taskId': task_id, 'attemptId': attempt_id, 'role': request.get('role'), 'routeId': ROUTE_ID, 'requestedClaim': CLAIM, 'planDigest': plan_digest, 'packetSha256': request['packetSha256'], 'finalPromptSha256': final_sha, **event}
+        body = {'schemaVersion': 'alk-codex-process-input.v1', 'runId': run_id, 'taskId': task_id, 'attemptId': attempt_id, 'operationId': operation_id, 'role': request.get('role'), 'routeId': ROUTE_ID, 'requestedClaim': CLAIM, 'planDigest': plan_digest, 'packetSha256': request['packetSha256'], 'finalPromptSha256': final_sha, **event}
         _replace_reserved(input_path, body, root=root)
-        _record_transport_witness(root, evidence, run_id=run_id, task_id=task_id, attempt_id=attempt_id, role=str(request.get('role')), final_sha=final_sha, config_manifest_sha=config_manifest_sha, diagnostic=diagnostic, event=event)
+        _record_transport_witness(root, evidence, run_id=run_id, task_id=task_id, attempt_id=attempt_id, role=str(request.get('role')), final_sha=final_sha, config_manifest_sha=config_manifest_sha, diagnostic=diagnostic, event=event, operation_id=operation_id)
         _require(event['status'] == 'COMPLETE' and event['acceptedBytes'] == len(final_raw) and (event['acceptedSha256'] == final_sha) and (event['closeSucceeded'] is True), 'codex-exact-input-incomplete', 'OS pipe did not accept complete final prompt')
-    return {'argv': argv, 'stdinText': final_raw.decode('utf-8'), 'codexHome': codex_home, 'onStarted': on_started, 'onInput': on_input, 'verifyBeforeStart': verify_before_start, 'sealedRequest': sealed, 'sealedSha256': _sha(canonical_bytes(request)), 'finalPromptSha256': final_sha, 'fitReceiptDigest': fit['receiptDigest'], 'startReceiptPath': start_path, 'inputReceiptPath': input_path, 'intentPath': intent_path, 'rawInventoryPath': inventory_path, 'rawCleanupPendingPath': pending_path, 'runId': run_id, 'taskId': task_id, 'attemptId': attempt_id, 'role': request.get('role')}
+    return {'argv': argv, 'stdinText': final_raw.decode('utf-8'), 'codexHome': codex_home, 'onStarted': on_started, 'onInput': on_input, 'verifyBeforeStart': verify_before_start, 'sealedRequest': sealed, 'sealedSha256': _sha(canonical_bytes(request)), 'finalPromptSha256': final_sha, 'fitReceiptDigest': fit['receiptDigest'], 'startReceiptPath': start_path, 'inputReceiptPath': input_path, 'intentPath': intent_path, 'rawInventoryPath': inventory_path, 'rawCleanupPendingPath': pending_path, 'runId': run_id, 'taskId': task_id, 'attemptId': attempt_id, 'operationId': operation_id, 'role': request.get('role')}
 
 def prepare_exact_prompt(*, project_root: Path, input_request: Path | None, route_id: str | None, requested_claim: str | None, state: dict[str, Any], task: dict[str, Any], manifest: dict[str, Any], lock_path: Path, source_revision: str, operation_id: str, executable_identity: dict[str, Any], executable: str, process_env: dict[str, str] | None=None, state_path: Path | None=None, manifest_path: Path | None=None) -> dict[str, Any]:
     """Seal and check one task-bound ALK request before any child is started."""
@@ -438,11 +453,18 @@ def prepare_exact_prompt(*, project_root: Path, input_request: Path | None, rout
     sealed: Path | None = None
     reserved: list[Path] = []
     try:
+        _require(isinstance(operation_id, str) and bool(operation_id), 'codex-exact-request-binding-mismatch', 'operation identity is missing')
         reconcile_prelaunch_intents(root, active_staging_request=Path(input_request))
         _assert_no_cleanup_blockers(root)
-        attempt_evidence = root / 'work/release-2-16/evidence/codex-exact-prompt' / run_id / task_id / attempt_id
-        _require(not (attempt_evidence / 'prelaunch-intent.json').exists(), 'codex-exact-attempt-reused', 'this task attempt already has a prelaunch intent')
-        sealed, request = _seal_request(root, Path(input_request), run_id, task_id, attempt_id)
+        legacy = (root / 'work/release-2-16/evidence/codex-exact-prompt'
+                  / _invocation_namespace(run_id, task_id, attempt_id) / 'prelaunch-intent.json')
+        if legacy.exists() or legacy.is_symlink():
+            previous = json.loads(_read_private(legacy, root=root))
+            _require(previous.get('operationId') != operation_id, 'codex-exact-attempt-reused',
+                     'legacy operation cannot be rekeyed into the new namespace')
+        attempt_evidence = root / 'work/release-2-16/evidence/codex-exact-prompt' / _invocation_namespace(run_id, task_id, attempt_id, operation_id)
+        _require(not (attempt_evidence / 'prelaunch-intent.json').exists(), 'codex-exact-attempt-reused', 'this model operation already has a prelaunch intent')
+        sealed, request = _seal_request(root, Path(input_request), run_id, task_id, attempt_id, operation_id=operation_id)
         plan_digest = canonical_digest(manifest)
         lock_digest = _sha(Path(lock_path).read_bytes())
         for key, expected in (('routeId', ROUTE_ID), ('requestedClaim', CLAIM), ('runId', run_id), ('taskId', task_id), ('attemptId', attempt_id), ('planDigest', plan_digest), ('lockDigest', lock_digest), ('sourceRevision', source_revision), ('operationId', operation_id)):
@@ -472,11 +494,11 @@ def prepare_exact_prompt(*, project_root: Path, input_request: Path | None, rout
         _require(request.get('selectedSource') == selection['selected'] and fit['inputComponentDigests']['fullAlkModelInput'] == final_sha, 'codex-exact-final-prompt-mismatch', 'final prompt differs from fit receipt')
         _require(Path(executable).name == 'codex' and executable_identity.get('status') == 'PASS', 'codex-exact-binary-unavailable', 'selected Codex binary is unavailable')
         selected_env = dict(os.environ) if process_env is None else process_env
-        model, codex_home, snapshot_digest, catalog, diagnostic, config_manifest_sha = _selected_host_evidence(root, request, executable_identity, final_sha, run_id, task_id, attempt_id, executable, selected_env, str(request.get('role', '')))
-        inventory_path, pending_path, inventory_sha = create_prestart_raw_inventory(root, run_id=run_id, task_id=task_id, attempt_id=attempt_id, sealed_request=sealed, state=state, plan_digest=plan_digest)
+        model, codex_home, snapshot_digest, catalog, diagnostic, config_manifest_sha = _selected_host_evidence(root, request, executable_identity, final_sha, run_id, task_id, attempt_id, executable, selected_env, str(request.get('role', '')), operation_id=operation_id)
+        inventory_path, pending_path, inventory_sha = create_prestart_raw_inventory(root, run_id=run_id, task_id=task_id, attempt_id=attempt_id, sealed_request=sealed, state=state, plan_digest=plan_digest, operation_id=operation_id)
         selected_binary = _selected_binary_path(executable, executable_identity, selected_env)
         argv = [str(selected_binary), 'exec', '--json', '--ephemeral', '-m', model, '-C', str(root), '-']
-        evidence = root / 'work/release-2-16/evidence/codex-exact-prompt' / run_id / task_id / attempt_id
+        evidence = root / 'work/release-2-16/evidence/codex-exact-prompt' / _invocation_namespace(run_id, task_id, attempt_id, operation_id)
         start_path = evidence / 'process-start.json'
         input_path = evidence / 'process-input.json'
         _reserve(start_path, root=root)
@@ -490,5 +512,5 @@ def prepare_exact_prompt(*, project_root: Path, input_request: Path | None, rout
         else:
             for path in reserved:
                 path.unlink(missing_ok=True)
-            cleanup_prestart_raw(root, run_id=run_id, task_id=task_id, attempt_id=attempt_id, staging_source=Path(input_request), proven_no_start=True)
+            cleanup_prestart_raw(root, run_id=run_id, task_id=task_id, attempt_id=attempt_id, staging_source=Path(input_request), proven_no_start=True, operation_id=operation_id)
         raise

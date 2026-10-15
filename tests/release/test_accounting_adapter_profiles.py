@@ -24,6 +24,7 @@ from tools.release.validate_accounting_adapter_profiles import (
     _check_current_core,
     _check_resolver_observations,
     _read_current_run_state,
+    _emit_prepared_final_receipt,
     emit_final_receipt,
     exact_qualification_mutations,
     exact_resolver_requests,
@@ -279,7 +280,7 @@ class AccountingAdapterProfileTests(unittest.TestCase):
         refs = [self._ref(path, (self.root / path).read_bytes()) for path in (
             "tasks/release-2-16/plan.manifest.json", "tasks/release-2-16/h04-artifact-contracts.json",
             "tasks/release-2-16/h04-adapter-profile-cases.json", "work/state.json")]
-        report = {"status": "PASS", "checks": [{"id": r["id"], "status": "PASS"} for r in frozen["requiredCases"]],
+        report = {"status": "PREPARED", "checks": [{"id": r["id"], "status": "PASS"} for r in frozen["requiredCases"]],
                   "inputRefs": refs, "ordinaryReviews": [["shape-only", "d" * 64]], "readBudgetChargedBytes": 100,
                   "sourceComponents": [{k: c[k] for k in ("id", "commitOid", "contentDigest")} for c in subject["components"]]}
         verified = {"reportSha256": "d" * 64, "assurance": "PROCEDURAL_SAME_ACCOUNT", "nativeAllowed": False}
@@ -353,13 +354,17 @@ class AccountingAdapterProfileTests(unittest.TestCase):
             with self.subTest(mutation=mutation), patch(module + ".capture_task_change_set", return_value=snapshot), \
                     patch(module + "._expected_task_evidence_subject", side_effect=make_subject), \
                     patch(module + ".verify_area_report", side_effect=verify) as origin, \
-                    patch(module + "._validate_evidence_references"), patch(module + ".datetime") as clock:
+                    patch(module + ".read_source_lifecycle_qualifications", return_value={
+                        "profiles": {"codex": {"contentDigest": "shape-only", "joins": {"alkCandidateDigest": "a" * 64}}}, "snapshotRefs": [], "readBytes": 0}), \
+                    patch(module + ".verify_native_observations"), patch(module + "._validate_evidence_references"), patch(module + ".datetime") as clock:
                 clock.fromisoformat.side_effect = datetime.fromisoformat
                 clock.now.return_value = datetime(2026, 1, 1, tzinfo=UTC)
                 if mutation == "late":
                     clock.now.side_effect = [datetime(2026, 1, 1, tzinfo=UTC), datetime(3000, 1, 1, tzinfo=UTC)]
                 if mutation == "none":
-                    receipt = emit_final_receipt(self.root, self.manifest, report, output)
+                    receipt = _emit_prepared_final_receipt(
+                        self.root, self.manifest, report, output, profiles_root=self.evidence_root,
+                        first={"profiles": {"codex": {"contentDigest": "shape-only", "joins": {"alkCandidateDigest": "a" * 64}}}, "snapshotRefs": []})
                     self.assertEqual(validate_evidence_receipt_shape(receipt), receipt)
                     self.assertEqual(receipt["producer"]["guarantee"], "DECLARED")
                     self.assertEqual(len(receipt["payload"]["commands"][0]["cases"]), 21)
@@ -369,10 +374,119 @@ class AccountingAdapterProfileTests(unittest.TestCase):
                         existing.unlink()
                 else:
                     with self.assertRaises((LifecycleError, KeyError)):
-                        emit_final_receipt(self.root, self.manifest, report, output)
+                        _emit_prepared_final_receipt(
+                            self.root, self.manifest, report, output, profiles_root=self.evidence_root,
+                            first={"profiles": {"codex": {"contentDigest": "shape-only", "joins": {"alkCandidateDigest": "a" * 64}}}, "snapshotRefs": []})
                     self.assertFalse(output.exists())
                     if mutation in {"producer-aba", "missing-contract-ref", "duplicate-contract-ref"}:
                         origin.assert_not_called()
+
+    def test_composed_emitter_fits_two_real_large_snapshots_without_a_third(self):
+        """Core/Git/origin doubles isolate real IO and its unchanged25MiB bound."""
+        output, report, snapshot, subject, verified = self.emitter_fixture()
+        module = "tools.release.validate_accounting_adapter_profiles"
+        paths = ["evidence/large-a.bin", "evidence/large-b.bin"]
+        for path in paths:
+            self._put(self.root / path, b"x" * (5 * 1024 * 1024))
+        reads = []
+        def profile_snapshot(*_args, byte_limit, **_kwargs):
+            with closing(BoundedReader(byte_limit)) as reader:
+                for path in paths:
+                    reader.read(self.root, path, profile_validator.ARTIFACT_BYTES)
+                    reads.append(path)
+                return {"profiles": {"codex": {"contentDigest": "shape-only", "joins": {"alkCandidateDigest": "a" * 64}}},
+                        "snapshotRefs": reader.snapshot_refs(self.root), "readBytes": reader.charged_bytes}
+        first = profile_snapshot(byte_limit=profile_validator.TASK_BYTES)
+        report["inputRefs"].extend(first["snapshotRefs"])
+        report["readBudgetChargedBytes"] = first["readBytes"] + sum(
+            ref["bytes"] for ref in report["inputRefs"] if ref["path"] not in paths)
+        self.assertGreater(3 * first["readBytes"], profile_validator.TASK_BYTES)
+        def make_subject(_root, _state, _task, identity, *_args):
+            subject["taskBindings"][0]["resultDigest"] = identity["sha256"]
+            return subject
+        with patch(module + "._prepare_final_profiles", return_value=(report, first)) as prepare, \
+                patch(module + ".read_source_lifecycle_qualifications", side_effect=profile_snapshot) as fresh, \
+                patch(module + ".capture_task_change_set", return_value=snapshot), \
+                patch(module + "._expected_task_evidence_subject", side_effect=make_subject), \
+                patch(module + ".verify_area_report", return_value=verified), \
+                patch(module + ".verify_native_observations"), patch(module + "._validate_evidence_references"):
+            receipt = emit_final_receipt(self.root, self.manifest, output, catalog=self.catalog_path,
+                                         profiles_root=self.evidence_root)
+        self.assertEqual(prepare.call_count, 1)
+        self.assertEqual(fresh.call_count, 1)
+        self.assertEqual(reads, paths + paths)
+        observations = json.loads(Path(str(output) + ".observations.json").read_bytes())
+        self.assertEqual(observations["status"], "PASS")
+        self.assertGreaterEqual(observations["readBudgetChargedBytes"], 2 * first["readBytes"])
+        self.assertLessEqual(observations["readBudgetChargedBytes"], profile_validator.TASK_BYTES)
+        self.assertEqual(len(receipt["payload"]["commands"][0]["cases"]), 21)
+        self.assertFalse(observations.get("releaseReady", False))
+
+    def test_composed_emitter_checks_supplemental_membership_and_fresh_bytes_before_writes(self):
+        module = "tools.release.validate_accounting_adapter_profiles"
+        for mutation in ("missing", "native", "changed", "none"):
+            output, report, snapshot, subject, verified = self.emitter_fixture()
+            manifest = json.loads(self.manifest.read_bytes())
+            required = manifest["acceptance"]["evidence"][0]["validation"]["requirements"]
+            required["caseIds"].append("additional-real-observation")
+            required["commandDigests"].append("f" * 64)
+            self._json(self.manifest, manifest)
+            state = json.loads((self.root / "work/state.json").read_bytes())
+            state["planDigest"] = canonical_digest(manifest)
+            self._json(self.root / "work/state.json", state)
+            result_path = self.root / "work/result-1.json"
+            result = json.loads(result_path.read_bytes())
+            result["planDigest"] = state["planDigest"]
+            self._put(result_path, canonical_bytes(result) + b"\n")
+            subject["planDigest"] = state["planDigest"]
+            for i, ref in enumerate(report["inputRefs"]):
+                report["inputRefs"][i] = self._ref(ref["path"], (self.root / ref["path"]).read_bytes())
+            self._put(self.root / "work/supplemental.stdout", b"fixture observation\n")
+            self._put(self.root / "work/supplemental.stderr", b"")
+            stdout = self._ref("work/supplemental.stdout", b"fixture observation\n")
+            stderr = self._ref("work/supplemental.stderr", b"")
+            supplemental = {"schemaVersion": "agent-command-observation.v1",
+                            "platform": {"os": {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}[
+                                profile_validator.platform.system()],
+                                "architecture": profile_validator.platform.machine(),
+                                "pythonVersion": profile_validator.platform.python_version()},
+                            "commands": [{"commandDigest": "f" * 64, "status": "PASS", "exitCode": 0,
+                                          "stdout": stdout, "stderr": stderr,
+                                          "cases": [{"id": "additional-real-observation", "status": "PASS",
+                                                     "evidence": stdout}]}]}
+            supplemental_path = "work/supplemental.json"
+            self._json(self.root / supplemental_path, supplemental)
+            def verify(*_args, **_kwargs):
+                if mutation == "changed":
+                    self._put(self.root / supplemental_path, b"{}")
+                return verified
+            def make_subject(_root, _state, _task, identity, *_args):
+                subject["taskBindings"][0]["resultDigest"] = identity["sha256"]
+                return subject
+            first = {"profiles": {"codex": {"contentDigest": "shape-only", "joins": {"alkCandidateDigest": "a" * 64}}}, "snapshotRefs": [], "readBytes": 0}
+            with self.subTest(mutation=mutation), \
+                    patch(module + "._prepare_final_profiles", return_value=(report, first)), \
+                    patch(module + ".read_source_lifecycle_qualifications", return_value=first) as fresh, \
+                    patch(module + ".capture_task_change_set", return_value=snapshot), \
+                    patch(module + "._expected_task_evidence_subject", side_effect=make_subject), \
+                    patch(module + ".verify_area_report", side_effect=verify), \
+                    patch(module + ".verify_native_observations", side_effect=LifecycleError("limited-native-evidence-unavailable", "fixture native rejection") if mutation == "native" else None) as native_check, patch(module + "._validate_evidence_references"):
+                if mutation == "none":
+                    receipt = emit_final_receipt(self.root, self.manifest, output, catalog=self.catalog_path,
+                                                profiles_root=self.evidence_root, supplemental_path=supplemental_path)
+                    self.assertEqual(len(receipt["payload"]["commands"]), 2)
+                    for path in output.parent.glob(output.name + "*"):
+                        path.unlink()
+                else:
+                    with self.assertRaises(LifecycleError):
+                        emit_final_receipt(self.root, self.manifest, output, catalog=self.catalog_path,
+                                           profiles_root=self.evidence_root,
+                                           supplemental_path=None if mutation == "missing" else supplemental_path)
+                    self.assertFalse(list(output.parent.glob(output.name + "*")))
+                    if mutation in {"missing", "native"}:
+                        fresh.assert_not_called()
+                    if mutation == "native":
+                        native_check.assert_called_once()
 
     def ordinary_route_fixture(self):
         dispatch_path = "tasks/release-2-16/ordinary-release-dispatch-r89.json"

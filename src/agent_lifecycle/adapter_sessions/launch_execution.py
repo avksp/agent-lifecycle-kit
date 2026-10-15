@@ -41,16 +41,15 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_jso
 from agent_lifecycle.host_protocol.validation import validate_managed_launch_profile
 
 
-def verify_final_source_accounting_profiles(
-    *, project_root: Path, profiles_root: Path, adapter_ids: list[str], byte_limit: int = TASK_BYTES,
+def _read_reviewed_final_profile_snapshot(
+    *, project_root: Path, profiles_root: Path, adapter_ids: list[str], byte_limit: int,
 ) -> dict:
-    """Verify final contents and actual AREA origins with two shared snapshots.
+    """Read one bounded snapshot and its actual origins; not a final verdict.
 
-    The offline validator still checks every exact resolver mutation and retained
-    core witness. This supplies verified data, not a dispatch or release permit.
+    Callers must still compare a fresh, fully re-enumerated snapshot before
+    using these contents. Keeping this stage private prevents a supplied PASS
+    from replacing the final consumer's own validation.
     """
-    if type(byte_limit) is not int or not 0 < byte_limit <= TASK_BYTES:
-        raise LifecycleError(CAPABILITY_UNAVAILABLE, "Final accounting read budget is invalid")
     first = read_source_lifecycle_qualifications(project_root, profiles_root, adapter_ids, final=True, byte_limit=byte_limit)
     reports = {}
     prefix = profiles_root.absolute().relative_to(project_root.absolute()).as_posix()
@@ -74,13 +73,34 @@ def verify_final_source_accounting_profiles(
                     or subject not in report["coveredFiles"]
                     or any({**trace, "path": prefix + "/" + trace["path"]} not in report["coveredFiles"] for trace in traces)):
                 raise LifecycleError(CAPABILITY_UNAVAILABLE, "Final accounting evidence origin differs")
-    second = read_source_lifecycle_qualifications(
-        project_root, profiles_root, adapter_ids, final=True, byte_limit=byte_limit - first["readBytes"],
-    )
+    return first
+
+
+def _require_matching_final_profile_snapshots(first: dict, second: dict) -> None:
     if (second["snapshotRefs"] != first["snapshotRefs"]
+            or set(second["profiles"]) != set(first["profiles"])
             or any(second["profiles"][adapter]["contentDigest"] != item["contentDigest"]
                    for adapter, item in first["profiles"].items())):
         raise LifecycleError(CAPABILITY_UNAVAILABLE, "Final accounting evidence changed during verification")
+
+
+def verify_final_source_accounting_profiles(
+    *, project_root: Path, profiles_root: Path, adapter_ids: list[str], byte_limit: int = TASK_BYTES,
+) -> dict:
+    """Verify contents and actual AREA origins with two shared snapshots.
+
+    The offline validator also checks every exact resolver mutation and retained
+    core witness. This supplies data, not a dispatch or release permit.
+    """
+    if type(byte_limit) is not int or not 0 < byte_limit <= TASK_BYTES:
+        raise LifecycleError(CAPABILITY_UNAVAILABLE, "Final accounting read budget is invalid")
+    first = _read_reviewed_final_profile_snapshot(
+        project_root=project_root, profiles_root=profiles_root, adapter_ids=adapter_ids, byte_limit=byte_limit,
+    )
+    second = read_source_lifecycle_qualifications(
+        project_root, profiles_root, adapter_ids, final=True, byte_limit=byte_limit - first["readBytes"],
+    )
+    _require_matching_final_profile_snapshots(first, second)
     return {**first, "readBytes": first["readBytes"] + second["readBytes"],
             "assurance": "PROCEDURAL_SAME_ACCOUNT", "dispatchEntitlement": False}
 
