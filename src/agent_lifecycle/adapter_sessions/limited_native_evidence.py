@@ -91,17 +91,47 @@ def read_native_admission(root: Path, reader: BoundedReader, *, manifest: dict, 
             'Current finite native admission required')
     # This qualification is a separately reviewed procedural boundary, not host telemetry.
     capacity = _json(read_ref(root, admission['capacityQualificationRef'], reader, PROFILE_BYTES))
-    require(capacity['status'] == 'PASS' and capacity['scope'] == 'ALK_CONTROLLED_SELECTED_INVOCATIONS_104_105'
+    legacy_keys = {'status', 'scope', 'wholeHostUsageStatus', 'qualifiedPriorStarts',
+                   'qualifiedRemainingCapacity', 'planDigest', 'lockSha256', 'historyRefs'}
+    ceiling = 6
+    renewal_ref = None
+    if set(capacity) != legacy_keys:
+        require(set(capacity) == legacy_keys | {'aggregateSelectedInvocationCeiling',
+                                              'renewalAuthorizationRef'},
+                'Closed native capacity facts required')
+        renewal_ref = capacity['renewalAuthorizationRef']
+        renewal = _json(read_ref(root, renewal_ref, reader, PROFILE_BYTES))
+        expected = {
+            'schemaVersion': 'alk-r216-native-capacity-renewal.v1',
+            'authorizationKind': 'EXPLICIT_EXACT_COUNT_USER_GRANT', 'approved': True,
+            'runId': state['runId'], 'taskId': task['id'], 'attemptId': str(task['attempt']),
+            'planDigest': state['planDigest'], 'lockSha256': admission['lockSha256'],
+            'priorSelectedStarts': 6, 'additionalSelectedStarts': 6,
+            'aggregateSelectedStartCeiling': 12,
+            'retryAuthorized': False, 'paidResponsesApiAllowed': False,
+        }
+        require(isinstance(renewal, dict) and set(renewal) == set(expected) | {'userText'}
+                and all(type(renewal[k]) is type(v) and renewal[k] == v
+                        for k, v in expected.items())
+                and isinstance(renewal['userText'], str) and bool(renewal['userText'].strip())
+                and type(capacity['aggregateSelectedInvocationCeiling']) is int
+                and capacity['aggregateSelectedInvocationCeiling'] == 12
+                and type(capacity['qualifiedPriorStarts']) is int
+                and capacity['qualifiedPriorStarts'] == 6
+                and renewal_ref in capacity['historyRefs'],
+                'One current explicit six-start renewal retaining six consumed starts required')
+        ceiling = 12
+    expected_scope = ('ALK_CONTROLLED_SELECTED_INVOCATIONS_104_105' if renewal_ref is None
+                      else 'ALK_CONTROLLED_SELECTED_INVOCATIONS_104_105_AND_EXPLICIT_RENEWAL')
+    require(capacity['status'] == 'PASS' and capacity['scope'] == expected_scope
             and capacity['wholeHostUsageStatus'] == 'UNAVAILABLE_NOT_ZERO'
             and type(capacity['qualifiedPriorStarts']) is int and 0 <= capacity['qualifiedPriorStarts'] <= 6
             and type(capacity['qualifiedRemainingCapacity']) is int
-            and capacity['qualifiedRemainingCapacity'] == 6 - capacity['qualifiedPriorStarts']
+            and capacity['qualifiedRemainingCapacity'] == ceiling - capacity['qualifiedPriorStarts']
             and admission['maxSelectedCodexInvocations'] <= capacity['qualifiedRemainingCapacity']
             and capacity['planDigest'] == state['planDigest'] and capacity['lockSha256'] == admission['lockSha256']
-            and set(capacity) == {'status', 'scope', 'wholeHostUsageStatus', 'qualifiedPriorStarts',
-                                  'qualifiedRemainingCapacity', 'planDigest', 'lockSha256', 'historyRefs'}
             and type(capacity['historyRefs']) is list and bool(capacity['historyRefs']),
-            'Original104+105 controlled launch capacity remains unqualified')
+            'Current cumulative controlled launch capacity remains unqualified')
     # Facts never reference their covering review: both independent references
     # belong to the admission, avoiding a content-hash cycle.
     review_ref = admission['capacityReviewRef']
