@@ -6,13 +6,46 @@ import unittest
 from pathlib import Path
 
 from agent_lifecycle.audit import build_implementation_audit_report
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_json_create
+from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, write_json_create
 from agent_lifecycle.workflow import accept_task, commit_task_result, rework_task, start_task
 from agent_lifecycle.workflow.reviews import validate_task_review
 from agent_lifecycle.workflow.run import run_workflow_step
 
 
 class TaskAcceptanceImplementationAuditGateTests(unittest.TestCase):
+    def test_native_task_consumer_refuses_stronger_claims_before_committing(self) -> None:
+        claims = [({}, True), ({"reviewerProvenance": {"guarantee": "DECLARED", "attestation": None}}, True),
+                  ({"reviewerProvenance": {"guarantee": "ATTESTED", "attestation": None}}, False),
+                  ({"reviewerProvenance": {}}, False),
+                  ({"provenanceValidation": {"status": "PASS", "guarantee": "ATTESTED"}}, False)]
+        for claim, allowed in claims:
+            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                bundle = _write_bundle(root, phase="RUNNING", task_status="READY", audit_required=False)
+                start_task(bundle["statePath"], task_id="WS-01", operation_id="start",
+                           expected_revision=1, source_revision="source", reason="unit consumer")
+                result_path, review_path = _write_result_review(root, bundle)
+                commit_task_result(bundle["statePath"], task_id="WS-01", operation_id="result",
+                                   expected_revision=2, source_revision="source", result_path=result_path,
+                                   reason="unit consumer result")
+                review = json.loads((root / review_path).read_text())
+                review.update(claim)
+                (root / review_path).write_bytes(canonical_bytes(review) + b"\n")
+                before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                if allowed:
+                    accept_task(bundle["statePath"], task_id="WS-01", operation_id="accept",
+                                expected_revision=3, review_path=review_path,
+                                reason="unit ordinary acceptance")
+                    self.assertEqual(json.loads(bundle["statePath"].read_text())["tasks"][0]["status"], "ACCEPTED")
+                else:
+                    with self.assertRaises(LifecycleError) as caught:
+                        accept_task(bundle["statePath"], task_id="WS-01", operation_id="accept",
+                                    expected_revision=3, review_path=review_path,
+                                    reason="unit unsupported claim refusal")
+                    self.assertEqual(caught.exception.code, "review-provenance-invalid")
+                    self.assertEqual(before, {p.relative_to(root).as_posix(): p.read_bytes()
+                                              for p in root.rglob("*") if p.is_file()})
+
     def test_task_review_rejects_every_open_medium_plus_severity(self) -> None:
         state = {"runId": "run", "planDigest": "a" * 64}
         task = {

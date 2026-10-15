@@ -679,7 +679,7 @@ class AccountingAdapterProfileTests(unittest.TestCase):
         extra = {**base, "commands": commands[1:]}
         combined = profile_validator._complete_payload(base, extra, descriptor)
         self.assertEqual(sum(len(c["cases"]) for c in combined["commands"]), 85)
-        self.assertEqual(len(combined["commands"]), 5)
+        self.assertEqual(len(combined["commands"]), 29)
         for mutation in [None, {**extra, "commands": commands[1:-1]}, {**extra, "commands": commands},
                          {**extra, "platform": {"os": "linux"}}]:
             with self.subTest(mutation=mutation), self.assertRaises(LifecycleError):

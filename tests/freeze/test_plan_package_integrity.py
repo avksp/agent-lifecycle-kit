@@ -1,19 +1,57 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
-from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from agent_lifecycle.freeze import build_plan_lock_v2, verify_plan_package_integrity
+from agent_lifecycle.freeze.package_integrity import build_reviewed_plan_lock_v2
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "tests/freeze/fixtures/canonical-v2-plan-package"
 
 
 class PlanPackageIntegrityTests(unittest.TestCase):
+    def test_native_freeze_consumer_keeps_ordinary_and_refuses_stronger_claims_without_writes(self) -> None:
+        claims = [({}, True), ({"reviewerProvenance": {"guarantee": "DECLARED", "attestation": None}}, True),
+                  ({"reviewerProvenance": {"guarantee": "ATTESTED", "attestation": None}}, False),
+                  ({"reviewerProvenance": {}}, False),
+                  ({"provenanceValidation": {"status": "PASS", "guarantee": "ATTESTED"}}, False)]
+        with _temporary_fixture() as (root, package):
+            manifest, _ = _fixture_payload(root=root, package=package)
+            review_rel = (package / "review.json").relative_to(root).as_posix()
+            manifest["planFiles"].append(review_rel)
+            manifest["planReview"] = {"required": True, "report": review_rel,
+                                      "reviewedRevision": manifest["planRevision"], "verdict": "READY_TO_FREEZE"}
+            (package / "plan.manifest.json").write_bytes(canonical_bytes(manifest) + b"\n")
+            for claim, allowed in claims:
+                review = {"schemaVersion": "agent-plan-review.v1", "reviewId": "review",
+                          "reviewer": {"id": "reviewer", "runId": "review-run", "surface": "unit", "independent": True},
+                          "packageId": manifest["package"]["id"], "planRevision": manifest["planRevision"],
+                          "reviewedPlanHash": canonical_digest(manifest), "fullReview": True,
+                          "verdict": "READY_TO_FREEZE", "findings": [], **claim}
+                data = canonical_bytes(review) + b"\n"
+                (root / review_rel).write_bytes(data)
+                before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                with self.subTest(claim=claim):
+                    if allowed:
+                        lock = build_reviewed_plan_lock_v2(
+                            manifest, review, review_path=review_rel,
+                            review_sha256=hashlib.sha256(data).hexdigest(), repository_root=root)
+                        self.assertEqual(lock["schemaVersion"], "agent-plan-lock.v2")
+                    else:
+                        with self.assertRaises(LifecycleError) as caught:
+                            build_reviewed_plan_lock_v2(
+                                manifest, review, review_path=review_rel,
+                                review_sha256=hashlib.sha256(data).hexdigest(), repository_root=root)
+                        self.assertEqual(caught.exception.code, "review-provenance-invalid")
+                    self.assertEqual(before, {p.relative_to(root).as_posix(): p.read_bytes()
+                                              for p in root.rglob("*") if p.is_file()})
+
     def test_intact_fixture_passes_and_exposes_every_entry(self) -> None:
         manifest, lock = _fixture_payload()
 

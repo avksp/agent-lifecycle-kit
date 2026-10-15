@@ -9,6 +9,7 @@ from agent_lifecycle.changesets import capture_task_change_set, require_current_
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.authority_text import require_review_text
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids, validate_review_verdict
+from agent_lifecycle.review.validation import require_supported_review_provenance
 from agent_lifecycle.workflow.artifacts import require_artifact_identity
 from agent_lifecycle.workflow.state import validate_typed_blocker
 
@@ -290,6 +291,7 @@ def _validate_review_lineage(
     review: dict[str, Any],
 ) -> None:
     require_review_text(review)
+    require_supported_review_provenance(review, native_phase="task-review")
     result = task.get("result")
     if not isinstance(result, dict):
         raise LifecycleError("missing-task-result", "task review requires committed result")

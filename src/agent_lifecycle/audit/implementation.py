@@ -17,7 +17,8 @@ from agent_lifecycle.contracts.review_verdict import (
 from agent_lifecycle.planning.task_compatibility import (
     validate_task_plan_compatibility_receipt,
 )
-from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
+from agent_lifecycle.review.validation import require_supported_review_provenance
+from agent_lifecycle.workflow.artifacts import artifact_identity, package_root, require_artifact_identity
 from agent_lifecycle.workflow.implementation_audit_gate import (
     validate_final_task_evidence_reports,
     validate_task_evidence_paths,
@@ -226,6 +227,7 @@ def validate_implementation_audit_report(
     blockers: list[dict[str, Any]] = []
     compatibility_validation: dict[str, Any] | None = None
     require_review_text(report)
+    require_supported_review_provenance(report, native_phase="implementation-audit")
     if report.get("schemaVersion") != IMPLEMENTATION_AUDIT_SCHEMA:
         blockers.append(
             {"code": "implementation-audit-schema", "message": "unsupported implementation audit schemaVersion"}
@@ -369,6 +371,23 @@ def build_final_implementation_audit(
     ]
     for task_id in missing_task_ids:
         blockers.append({"code": "implementation-audit-report-missing", "taskId": task_id})
+    for task in state.get("tasks", []):
+        if task.get("status") != "ACCEPTED" or not isinstance(task.get("result"), dict):
+            continue
+        try:
+            result = require_artifact_identity(root, task["result"], label="accepted task result")
+        except LifecycleError as exc:
+            # Legacy declarations may lack a qualified author binding. Adopted
+            # packet sets already require current, complete artifact identities.
+            if task_result_freshness_required(state):
+                blockers.append({"code": exc.code, "taskId": task.get("id"), "message": str(exc)})
+            continue
+        if result.get("actor") == auditor_id:
+            blockers.append({
+                "code": "final-implementation-audit-author-collision",
+                "taskId": task.get("id"),
+                "message": "final auditor is an accepted-result author",
+            })
     if manifest.get("status") != "FROZEN":
         blockers.append({"code": "plan-not-frozen", "message": "final implementation audit requires a FROZEN plan"})
     try:
@@ -404,6 +423,7 @@ def validate_final_implementation_audit(
     audit: dict[str, Any], *, state: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     require_review_text(audit)
+    require_supported_review_provenance(audit, native_phase="final-audit")
     blockers: list[dict[str, Any]] = []
     if audit.get("schemaVersion") != FINAL_IMPLEMENTATION_AUDIT_SCHEMA:
         blockers.append(
