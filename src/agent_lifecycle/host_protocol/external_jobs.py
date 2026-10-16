@@ -80,20 +80,10 @@ def _check_terminal_children(
     blockers: list[dict[str, Any]],
 ) -> None:
     declared = {
-        (item.get("jobId"), item.get("attempt")): item
-        for item in parent.get("children", [])
-        if isinstance(item, dict)
+        (item.get("jobId"), item.get("attempt")): item for item in parent.get("children", []) if isinstance(item, dict)
     }
-    observed = {
-        (item.get("jobId"), item.get("attempt")): item
-        for item in child_statuses
-        if isinstance(item, dict)
-    }
-    requests = {
-        (item.get("jobId"), item.get("attempt")): item
-        for item in child_requests
-        if isinstance(item, dict)
-    }
+    observed = {(item.get("jobId"), item.get("attempt")): item for item in child_statuses if isinstance(item, dict)}
+    requests = {(item.get("jobId"), item.get("attempt")): item for item in child_requests if isinstance(item, dict)}
     if set(observed).difference(declared):
         blockers.append({"code": "external-job-terminal-child-unexpected"})
     if set(requests).difference(declared):

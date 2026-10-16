@@ -1,12 +1,18 @@
 """Internal provider-neutral field checks; no contract or execution authority."""
+
 from __future__ import annotations
 
 from typing import Any
+
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
 from agent_lifecycle.model_routing.profiles import ALLOWED_MODEL_CLASSES
 from agent_lifecycle.quality.cross_check import (
-    INDEPENDENCE_IDENTITY_FIELDS, MONEY_KEYS, RESOURCE_CAP_KEYS, USAGE_KEYS, _budget_blockers,
+    INDEPENDENCE_IDENTITY_FIELDS,
+    MONEY_KEYS,
+    RESOURCE_CAP_KEYS,
+    USAGE_KEYS,
+    _budget_blockers,
 )
 
 PROVIDER_MODEL_NAME_KEYS = {
@@ -35,10 +41,12 @@ def _validate_quorum_policy(value: Any, blockers: list[dict[str, Any]]) -> None:
     if threshold is not None and threshold not in {"LOW", "MEDIUM", "HIGH", "CRITICAL"}:
         blockers.append({"code": "review-mesh-quorum-threshold-invalid"})
 
+
 def _validate_modes(modes: list[str], code: str) -> None:
     unknown = sorted(set(modes).difference(REVIEW_MESH_MODE_IDS))
     if unknown:
         raise LifecycleError(code, "unknown Review Mesh mode", {"modes": unknown})
+
 
 def _model_classes(values: list[str]) -> list[str]:
     classes = _string_list(values, "invalid-review-mesh-profile", label="reviewerModelClasses")
@@ -49,6 +57,7 @@ def _model_classes(values: list[str]) -> list[str]:
         )
     return classes
 
+
 def _validate_model_classes(values: Any, blockers: list[dict[str, Any]]) -> None:
     if not isinstance(values, list) or not values:
         blockers.append({"code": "review-mesh-model-classes-invalid"})
@@ -56,6 +65,7 @@ def _validate_model_classes(values: Any, blockers: list[dict[str, Any]]) -> None
     unknown = sorted({item for item in values if not isinstance(item, str) or item not in ALLOWED_MODEL_CLASSES})
     if unknown:
         blockers.append({"code": "review-mesh-model-classes-unknown", "classes": unknown})
+
 
 def _validate_resource_cap(value: Any, blockers: list[dict[str, Any]], *, prefix: str) -> None:
     if not isinstance(value, dict) or not value:
@@ -68,6 +78,7 @@ def _validate_resource_cap(value: Any, blockers: list[dict[str, Any]], *, prefix
             blockers.append({"code": f"{prefix}-budget-cap-unsupported", "field": key})
         elif not isinstance(item, int) or isinstance(item, bool) or item <= 0:
             blockers.append({"code": f"{prefix}-budget-cap-value-invalid", "field": key})
+
 
 def _validate_budget_usage(
     value: Any, blockers: list[dict[str, Any]], *, prefix: str, allow_unknown: bool = False
@@ -85,6 +96,7 @@ def _validate_budget_usage(
         elif not (allow_unknown and item is None) and (type(item) is not int or item < 0):
             blockers.append({"code": f"{prefix}-budget-usage-value-invalid", "field": key})
 
+
 def _known_usage_budget_blockers(usage: Any, profile: Any) -> list[dict[str, Any]]:
     if not isinstance(usage, dict) or not isinstance(profile, dict):
         return []
@@ -94,6 +106,7 @@ def _known_usage_budget_blockers(usage: Any, profile: Any) -> list[dict[str, Any
     known = {key: value for key, value in usage.items() if key in USAGE_KEYS and type(value) is int and value >= 0}
     return _budget_blockers(known, cap)
 
+
 def _live_call_policy_blockers(started: Any, profile: Any) -> list[dict[str, Any]]:
     if type(started) is not bool:
         return [{"code": "review-mesh-result-live-calls-started-invalid"}]
@@ -101,6 +114,7 @@ def _live_call_policy_blockers(started: Any, profile: Any) -> list[dict[str, Any
     if started and isinstance(cross_profile, dict) and cross_profile.get("liveCallsAllowed") is not True:
         return [{"code": "cross-check-live-call-not-allowed"}]
     return []
+
 
 def _command_outcome_blockers(value: Any) -> list[dict[str, Any]]:
     if not isinstance(value, list):
@@ -123,6 +137,7 @@ def _command_outcome_blockers(value: Any) -> list[dict[str, Any]]:
             blockers.append({"code": "review-mesh-result-command-exit-status-mismatch"})
     return blockers
 
+
 def _money_key_blockers(value: Any, *, path: str = "") -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     if isinstance(value, dict):
@@ -135,6 +150,7 @@ def _money_key_blockers(value: Any, *, path: str = "") -> list[dict[str, Any]]:
         for index, item in enumerate(value):
             blockers.extend(_money_key_blockers(item, path=f"{path}[{index}]"))
     return blockers
+
 
 def _provider_model_name_blockers(value: Any, *, path: str = "") -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
@@ -149,8 +165,10 @@ def _provider_model_name_blockers(value: Any, *, path: str = "") -> list[dict[st
             blockers.extend(_provider_model_name_blockers(item, path=f"{path}[{index}]"))
     return blockers
 
+
 def _is_neutral_identity_field_mapping(path: str, key: str) -> bool:
     return path.endswith("identityFields") and key in INDEPENDENCE_IDENTITY_FIELDS
+
 
 def _object_or_blocker(value: Any, code: str, blockers: list[dict[str, Any]]) -> dict[str, Any]:
     if not isinstance(value, dict) or not value:
@@ -158,10 +176,12 @@ def _object_or_blocker(value: Any, code: str, blockers: list[dict[str, Any]]) ->
         return {}
     return value
 
+
 def _required_string(value: Any, code: str, *, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise LifecycleError(code, f"{label} is required")
     return value
+
 
 def _string_list(value: Any, code: str, *, label: str, allow_empty: bool = False) -> list[str]:
     if (
@@ -172,37 +192,45 @@ def _string_list(value: Any, code: str, *, label: str, allow_empty: bool = False
         raise LifecycleError(code, f"{label} must be a list of strings")
     return list(value)
 
+
 def _digest_list(value: Any, code: str, *, label: str) -> list[str]:
     values = _string_list(value, code, label=label)
     if any(len(item) != 64 for item in values):
         raise LifecycleError(code, f"{label} must contain 64-character digests")
     return values
 
+
 def _enum(value: Any, allowed: set[str], code: str, *, label: str) -> str:
     if value not in allowed:
         raise LifecycleError(code, f"{label} is unsupported", {label: value})
     return str(value)
+
 
 def _non_negative_int(value: Any, code: str, *, label: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise LifecycleError(code, f"{label} must be a non-negative integer")
     return value
 
+
 def _check_const(payload: dict[str, Any], field: str, expected: Any, code: str, blockers: list[dict[str, Any]]) -> None:
     if payload.get(field) != expected:
         blockers.append({"code": code})
+
 
 def _check_required_string(value: Any, code: str, blockers: list[dict[str, Any]]) -> None:
     if not isinstance(value, str) or not value:
         blockers.append({"code": code})
 
+
 def _check_digest(value: Any, code: str, blockers: list[dict[str, Any]]) -> None:
     if not isinstance(value, str) or len(value) != 64:
         blockers.append({"code": code})
 
+
 def _check_digest_list(value: Any, code: str, blockers: list[dict[str, Any]]) -> None:
     if not isinstance(value, list) or not value or not all(isinstance(item, str) and len(item) == 64 for item in value):
         blockers.append({"code": code})
+
 
 def _check_string_list(value: Any, code: str, blockers: list[dict[str, Any]], *, allow_empty: bool = False) -> None:
     if (
@@ -211,6 +239,7 @@ def _check_string_list(value: Any, code: str, blockers: list[dict[str, Any]], *,
         or not all(isinstance(item, str) and item for item in value)
     ):
         blockers.append({"code": code})
+
 
 def _check_object_list(value: Any, code: str, blockers: list[dict[str, Any]]) -> None:
     if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):

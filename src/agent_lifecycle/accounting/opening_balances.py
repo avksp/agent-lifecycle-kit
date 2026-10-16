@@ -6,6 +6,7 @@ import copy
 import json
 import sqlite3
 from dataclasses import asdict
+from typing import cast as _validated_cast
 
 from .closing_resource_recovery import _claim_in_transaction, _reserve_in_transaction
 from .contracts import (
@@ -21,6 +22,7 @@ from .contracts import (
     Operation,
     Permit,
     Projection,
+    _JournalStoragePort,
     canonical,
     digest,
     identity,
@@ -178,7 +180,7 @@ def compile_opening(scope: BudgetScope, policy: BudgetPolicy, value: OpeningImpo
             "profile_id": charge.profile_id,
         }
         if op.operation_class == "CLOSEOUT":
-            consumed[op.closeout_allocation_id] += min(op.upper_bound_tokens, amount)
+            consumed[_validated_cast(str, op.closeout_allocation_id)] += min(op.upper_bound_tokens, amount)
         bound_broken |= amount > op.upper_bound_tokens
     for pending in value.pending or ():
         op = pending.operation
@@ -196,7 +198,7 @@ def compile_opening(scope: BudgetScope, policy: BudgetPolicy, value: OpeningImpo
             reservation=0 if cancelled else op.upper_bound_tokens,
         )
         if op.operation_class == "CLOSEOUT" and not cancelled:
-            consumed[op.closeout_allocation_id] += op.upper_bound_tokens
+            consumed[_validated_cast(str, op.closeout_allocation_id)] += op.upper_bound_tokens
     protected, balances, known, protection_known, pending_known, complete, overflow = _opening_qualification(
         value, policy, opening, totals, consumed
     )
@@ -248,12 +250,14 @@ def compile_opening(scope: BudgetScope, policy: BudgetPolicy, value: OpeningImpo
 
 
 def _legacy_open_identity_bindings(
-    db: sqlite3.Connection, scope: str, revision: int, payload: dict, state: dict | None,
+    db: sqlite3.Connection,
+    scope: str,
+    revision: int,
+    payload: dict,
+    state: dict | None,
 ) -> list[list]:
     """Replay accepted OPEN keys, excluding only its immediate rejected shell."""
-    following = db.execute(
-        "SELECT * FROM events WHERE scope=? AND revision=?", (scope, revision + 1)
-    ).fetchone()
+    following = db.execute("SELECT * FROM events WHERE scope=? AND revision=?", (scope, revision + 1)).fetchone()
     rejected = False
     if following is not None:
         next_payload = _event_payload(following, revision + 1)
@@ -265,16 +269,25 @@ def _legacy_open_identity_bindings(
             if "opening" in evidence and shell.get("mode") != "COVERAGE_V2" and shell.get("gate") == "INCOMPLETE":
                 opening = copy.deepcopy(evidence["opening"])
                 opening["pending_operations"] = None
-                rejected = canonical({
-                    "scope": shell["scope"], "policy": shell["policy"], "opening": opening,
-                }) == canonical(payload)
+                rejected = canonical(
+                    {
+                        "scope": shell["scope"],
+                        "policy": shell["policy"],
+                        "opening": opening,
+                    }
+                ) == canonical(payload)
     if rejected:
         return []
     opening = payload["opening"]
-    declarations = [[
-        "opening", [scope, opening["opening_balance_id"]], scope,
-        opening["opening_balance_id"], digest(payload),
-    ]]
+    declarations = [
+        [
+            "opening",
+            [scope, opening["opening_balance_id"]],
+            scope,
+            opening["opening_balance_id"],
+            digest(payload),
+        ]
+    ]
     declarations.extend(
         ["source", [source, event], scope, "opening:" + opening["opening_balance_id"], digest(payload)]
         for source, event in opening["covered_source_events"]
@@ -289,23 +302,22 @@ def _public_closing_route_fenced(journal, scope: str, run_id: str, operation_id:
     if type(run_id) is not str or type(operation_class) is not str:
         return True
     db = journal._db
-    if db.execute(
-        "SELECT 1 FROM closing_operation_bindings WHERE budget_scope_id=? AND operation_id=?",
-        (scope, operation_id),
-    ).fetchone() is not None:
+    if (
+        db.execute(
+            "SELECT 1 FROM closing_operation_bindings WHERE budget_scope_id=? AND operation_id=?",
+            (scope, operation_id),
+        ).fetchone()
+        is not None
+    ):
         return True
-    if db.execute(
-        "SELECT 1 FROM closing_policy_effects WHERE run_id=? LIMIT 1", (run_id,)
-    ).fetchone() is not None:
+    if db.execute("SELECT 1 FROM closing_policy_effects WHERE run_id=? LIMIT 1", (run_id,)).fetchone() is not None:
         return True
     if operation_class != "CLOSEOUT":
         return False
-    return db.execute(
-        "SELECT 1 FROM workflow_bindings WHERE run_id=? LIMIT 1", (run_id,)
-    ).fetchone() is not None
+    return db.execute("SELECT 1 FROM workflow_bindings WHERE run_id=? LIMIT 1", (run_id,)).fetchone() is not None
 
 
-class JournalAdmissionMixin:
+class JournalAdmissionMixin(_JournalStoragePort):
     def open_scope(self, scope: BudgetScope, policy: BudgetPolicy, opening: OpeningBalance) -> str:
         # Frozen records can contain mutable mappings: revalidate at the write boundary.
         scope.__post_init__()
@@ -360,8 +372,11 @@ class JournalAdmissionMixin:
         operation.__post_init__()
         with self._transaction():
             if _public_closing_route_fenced(
-                self, operation.budget_scope_id, operation.run_id,
-                operation.operation_id, operation.operation_class,
+                self,
+                operation.budget_scope_id,
+                operation.run_id,
+                operation.operation_id,
+                operation.operation_class,
             ):
                 return "DENY"
             return _reserve_in_transaction(self, operation, expected_revision=expected_revision)
@@ -375,8 +390,11 @@ class JournalAdmissionMixin:
                 if native is not None:
                     binding = native.get("binding")
                     if type(binding) is not dict or _public_closing_route_fenced(
-                        self, scope, binding.get("run_id"), operation_id,
-                        binding.get("operation_class"),
+                        self,
+                        scope,
+                        _validated_cast(str, binding.get("run_id")),
+                        operation_id,
+                        _validated_cast(str, binding.get("operation_class")),
                     ):
                         return "DENY"
             return _claim_in_transaction(self, scope, operation_id, binding_digest, claim_id)
@@ -514,6 +532,7 @@ class JournalAdmissionMixin:
 
     def rebuild(self, scope: str) -> Projection:
         """Rebuild projection from immutable events; no implicit host redispatch."""
+        state: dict | None
         with self._transaction():
             closed = self._closed_scope(scope)
             if closed:
@@ -521,11 +540,14 @@ class JournalAdmissionMixin:
                     self._archive_state(scope, restore=True)
                 else:
                     state, revision, _, _ = self._live_facts(scope, restore=True)
-                    value = self.closed_run(closed["run_id"])
+                    value = _validated_cast(dict, self.closed_run(closed["run_id"]))
                     if digest(self._financial_state(state)) != value["summary"]["scopes"][scope]["financial_digest"]:
                         raise JournalUnavailable("Closed replay differs from closure seal")
                     self._db.execute(
-                        "INSERT INTO scope_state VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET revision=excluded.revision,data=excluded.data",
+                        (
+                            "INSERT INTO scope_state VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE "
+                            "SET revision=excluded.revision,data=excluded.data"
+                        ),
                         (scope, revision, canonical(state)),
                     )
                     self._exception_chain(closed["run_id"], restore=True)
@@ -542,11 +564,15 @@ class JournalAdmissionMixin:
                     except _BindingConflict as exc:
                         raise JournalUnavailable("Immutable replay index conflict") from exc
                 state = _apply(state, row["kind"], payload, revision=revision - 1)
+            state = _validated_cast(dict, state)
             self._db.execute(
-                "INSERT INTO scope_state VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET revision=excluded.revision,data=excluded.data",
+                (
+                    "INSERT INTO scope_state VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET "
+                    "revision=excluded.revision,data=excluded.data"
+                ),
                 (scope, len(rows), canonical(state)),
             )
-            expected_indexes = {table: set() for table in P02_TABLES}
+            expected_indexes: dict[str, set[str]] = {table: set() for table in P02_TABLES}
             for row in rows:
                 if row["kind"] in P02_EVENTS:
                     for item in json.loads(row["payload"]).get("indexes", []):
@@ -573,8 +599,9 @@ class JournalAdmissionMixin:
     @classmethod
     def _validate_v2_history(cls, db: sqlite3.Connection, version: int = 2) -> None:
         """Read-only legacy replay. Public rebuild intentionally has recovery effects."""
-        states, revisions = {}, {}
-        expected_indexes = {table: set() for table in P02_TABLES}
+        states: dict[str, dict] = {}
+        revisions: dict[str, int] = {}
+        expected_indexes: dict[str, set[str]] = {table: set() for table in P02_TABLES}
         for row in db.execute("SELECT * FROM events ORDER BY scope,revision,ordinal"):
             scope = row["scope"]
             revision = revisions.get(scope, 0) + 1
@@ -620,7 +647,11 @@ class JournalAdmissionMixin:
                 ]
             elif row["kind"] == "OPEN":
                 identity_bindings = _legacy_open_identity_bindings(
-                    db, scope, revision, payload, states.get(scope),
+                    db,
+                    scope,
+                    revision,
+                    payload,
+                    states.get(scope),
                 )
             for item in identity_bindings:
                 if not isinstance(item, list) or len(item) != 5:

@@ -17,17 +17,17 @@ def require_supported_review_provenance(review: dict[str, Any], *, native_phase:
         candidates.append({**review, "reviewer": review["auditor"]})
     for candidate in candidates:
         validation = validate_native_reviewer_provenance(candidate, native_phase=native_phase)
-        if validation["status"] == "FAIL" or (
-            "reviewerProvenance" in review and review["reviewerProvenance"] is None
-        ):
+        if validation["status"] == "FAIL" or ("reviewerProvenance" in review and review["reviewerProvenance"] is None):
             raise LifecycleError(
-                "review-provenance-invalid", "review provenance claim is malformed or unverified",
+                "review-provenance-invalid",
+                "review provenance claim is malformed or unverified",
                 {"validation": validation},
             )
     supplied = review.get("reviewerProvenance")
     if isinstance(supplied, dict) and supplied.get("guarantee") == "ATTESTED":
         raise LifecycleError(
-            "review-provenance-unsupported", "native ATTESTED reviewer provenance is unavailable",
+            "review-provenance-unsupported",
+            "native ATTESTED reviewer provenance is unavailable",
             {"validation": validation},
         )
 

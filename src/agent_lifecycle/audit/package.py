@@ -81,9 +81,7 @@ def build_package_audit(
     package_files = _package_file_check(package_dir, manifest=manifest, repository_root=repository_root)
     _capture_check_failure("package-files", package_files, findings, blockers)
 
-    authority_check = _run_check(
-        lambda: require_manifest_authority_paths(manifest, operation_root=repository_root)
-    )
+    authority_check = _run_check(lambda: require_manifest_authority_paths(manifest, operation_root=repository_root))
     _capture_check_failure("authority-paths", authority_check, findings, blockers)
 
     profile = _load_profile(completeness_profile_path)
@@ -180,7 +178,7 @@ def build_package_audit(
                 "packageFiles": package_files,
                 "manifest": manifest_check,
                 "completeness": completeness_check,
-            "authorityPaths": authority_check,
+                "authorityPaths": authority_check,
                 "lock": lock_check,
                 "acceptance": acceptance_check,
                 "references": references_check,

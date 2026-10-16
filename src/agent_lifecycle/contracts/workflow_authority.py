@@ -24,8 +24,14 @@ _GRANT_DOMAIN = b"agent-lifecycle-workflow-closing-grant-v1\x00"
 
 
 def validate_initial_authority_inputs(
-    binding: dict[str, Any], expected_binding_digest: str, expected_pin_digest: str,
-    pin_raw: bytes, qualification_raw: bytes, snapshot: dict[str, Any], *, observed_at: str,
+    binding: dict[str, Any],
+    expected_binding_digest: str,
+    expected_pin_digest: str,
+    pin_raw: bytes,
+    qualification_raw: bytes,
+    snapshot: dict[str, Any],
+    *,
+    observed_at: str,
 ) -> dict[str, Any]:
     """Check exact initial inputs before adoption; caller/root provenance is still unproved."""
     validate_runtime_binding(binding)
@@ -82,7 +88,10 @@ def _verified_signature(document: dict[str, Any], key_hex: str, domain: bytes, f
 
 
 def verify_signed_authority_snapshot(
-    pin: dict[str, Any], snapshot: dict[str, Any], *, observed_at: str,
+    pin: dict[str, Any],
+    snapshot: dict[str, Any],
+    *,
+    observed_at: str,
 ) -> dict[str, Any]:
     """Verify a pinned signature; caller qualification and journal history remain separate."""
     selected_pin = validate_bootstrap_pin(pin)
@@ -95,24 +104,37 @@ def verify_signed_authority_snapshot(
     now = utc_microseconds(observed_at)
     if not utc_microseconds(selected["validFrom"]) <= now < utc_microseconds(selected["expiresAt"]):
         raise LifecycleError("workflow-authority-invalid", "Snapshot is not valid at observation")
-    if not _verified_signature(selected, selected_pin["rootPublicKeyHex"], _SNAPSHOT_DOMAIN,
-                               selected_pin["rootFingerprint"]):
+    if not _verified_signature(
+        selected, selected_pin["rootPublicKeyHex"], _SNAPSHOT_DOMAIN, selected_pin["rootFingerprint"]
+    ):
         raise LifecycleError("workflow-authority-invalid", "Snapshot root signature is invalid")
-    return {"schemaVersion": "agent-workflow-snapshot-crypto-validation.v1", "status": "DATA_CANDIDATE",
-            "snapshotDigest": canonical_digest(selected), "signatureVerified": True,
-            "bootstrapQualified": False, "historyVerified": False, "nativePermissionGranted": False}
+    return {
+        "schemaVersion": "agent-workflow-snapshot-crypto-validation.v1",
+        "status": "DATA_CANDIDATE",
+        "snapshotDigest": canonical_digest(selected),
+        "signatureVerified": True,
+        "bootstrapQualified": False,
+        "historyVerified": False,
+        "nativePermissionGranted": False,
+    }
 
 
 def verify_signed_window_grant(
-    pin: dict[str, Any], issuance: dict[str, Any], current: dict[str, Any], grant: dict[str, Any],
-    *, expected_scope: dict[str, Any], observed_at: str,
+    pin: dict[str, Any],
+    issuance: dict[str, Any],
+    current: dict[str, Any],
+    grant: dict[str, Any],
+    *,
+    expected_scope: dict[str, Any],
+    observed_at: str,
 ) -> dict[str, Any]:
     """Verify signed bytes and current permission; no native nonce or claim authority."""
     selected_grant = validate_window_grant_shape(grant)
     verify_signed_authority_snapshot(pin, issuance, observed_at=selected_grant["validFrom"])
     verify_signed_authority_snapshot(pin, current, observed_at=observed_at)
-    if (selected_grant["issuedUnderEpoch"] != issuance["epoch"]
-            or selected_grant["issuedUnderSnapshotDigest"] != canonical_digest(issuance)):
+    if selected_grant["issuedUnderEpoch"] != issuance["epoch"] or selected_grant[
+        "issuedUnderSnapshotDigest"
+    ] != canonical_digest(issuance):
         raise LifecycleError("workflow-authority-invalid", "Grant issuance snapshot differs")
     key = (selected_grant["issuerId"], selected_grant["issuerGeneration"])
     issued = _selected_issuer(issuance, key)
@@ -120,7 +142,9 @@ def verify_signed_window_grant(
     if issued != active:
         raise LifecycleError("workflow-authority-invalid", "Issuer permission changed")
     if {"issuerId": key[0], "issuerGeneration": key[1]} in current["revokedIssuers"] or {
-        "issuerId": key[0], "issuerGeneration": key[1], "nonce": selected_grant["nonce"]
+        "issuerId": key[0],
+        "issuerGeneration": key[1],
+        "nonce": selected_grant["nonce"],
     } in current["revokedGrants"]:
         raise LifecycleError("workflow-authority-invalid", "Issuer or grant is revoked")
     validate_selected_grant_envelope(pin, issued, selected_grant, expected_scope, canonical_digest(issuance))
@@ -129,23 +153,33 @@ def verify_signed_window_grant(
         raise LifecycleError("workflow-authority-invalid", "Grant is not valid at observation")
     if not _verified_signature(selected_grant, issued["publicKeyHex"], _GRANT_DOMAIN, issued["fingerprint"]):
         raise LifecycleError("workflow-authority-invalid", "Grant issuer signature is invalid")
-    return {"schemaVersion": "agent-workflow-grant-crypto-validation.v1", "status": "DATA_CANDIDATE",
-            "grantDigest": canonical_digest(selected_grant), "signatureVerified": True,
-            "bootstrapQualified": False, "historyVerified": False, "nonceConsumed": False,
-            "nativePermissionGranted": False}
+    return {
+        "schemaVersion": "agent-workflow-grant-crypto-validation.v1",
+        "status": "DATA_CANDIDATE",
+        "grantDigest": canonical_digest(selected_grant),
+        "signatureVerified": True,
+        "bootstrapQualified": False,
+        "historyVerified": False,
+        "nonceConsumed": False,
+        "nativePermissionGranted": False,
+    }
 
 
 def _selected_issuer(snapshot: dict[str, Any], key: tuple[str, str]) -> dict[str, Any]:
-    matches = [issuer for issuer in snapshot["activeIssuers"]
-               if (issuer["issuerId"], issuer["issuerGeneration"]) == key]
+    matches = [
+        issuer for issuer in snapshot["activeIssuers"] if (issuer["issuerId"], issuer["issuerGeneration"]) == key
+    ]
     if len(matches) != 1:
         raise LifecycleError("workflow-authority-invalid", "Grant issuer is not active")
     return matches[0]
 
 
 def validate_selected_grant_envelope(
-    pin: dict[str, Any], issuer: dict[str, Any], grant: dict[str, Any],
-    expected_scope: dict[str, Any], selected_snapshot_digest: str,
+    pin: dict[str, Any],
+    issuer: dict[str, Any],
+    grant: dict[str, Any],
+    expected_scope: dict[str, Any],
+    selected_snapshot_digest: str,
 ) -> dict[str, Any]:
     """Refuse envelope drift without mistaking caller-supplied inputs for trust."""
     selected_pin = validate_bootstrap_pin(pin)
@@ -171,10 +205,9 @@ def validate_selected_grant_envelope(
         raise LifecycleError("workflow-authority-invalid", "Grant issuer, snapshot or approval digests differ")
     if not set(selected_grant["allowedActions"]).issubset(selected_issuer["allowedActions"]):
         raise LifecycleError("workflow-authority-invalid", "Grant expands issuer actions")
-    if (
-        utc_microseconds(selected_grant["validFrom"]) < utc_microseconds(selected_issuer["validFrom"])
-        or utc_microseconds(selected_grant["expiresAt"]) > utc_microseconds(selected_issuer["expiresAt"])
-    ):
+    if utc_microseconds(selected_grant["validFrom"]) < utc_microseconds(
+        selected_issuer["validFrom"]
+    ) or utc_microseconds(selected_grant["expiresAt"]) > utc_microseconds(selected_issuer["expiresAt"]):
         raise LifecycleError("workflow-authority-invalid", "Grant expands issuer validity interval")
     return {
         "schemaVersion": "agent-workflow-grant-envelope-check.v1",
@@ -188,6 +221,8 @@ def validate_selected_grant_envelope(
 
 
 __all__ = [
-    "validate_initial_authority_inputs", "validate_selected_grant_envelope",
-    "verify_signed_authority_snapshot", "verify_signed_window_grant",
+    "validate_initial_authority_inputs",
+    "validate_selected_grant_envelope",
+    "verify_signed_authority_snapshot",
+    "verify_signed_window_grant",
 ]

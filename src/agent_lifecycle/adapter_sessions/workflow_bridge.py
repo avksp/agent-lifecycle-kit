@@ -6,8 +6,6 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.accounting.source_usage_context import load_source_usage_context
-from agent_lifecycle.workflow.artifacts import package_root
-from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.adapter_sessions.contracts import build_adapter_session_receipt, build_resume_receipt
 from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor, managed_launch_profile
 from agent_lifecycle.adapter_sessions.session_store import create_session, load_session, update_session
@@ -17,6 +15,8 @@ from agent_lifecycle.policy.execution_strategy import deferred_execution_strateg
 from agent_lifecycle.policy.risk_execution import derive_risk_execution_profile
 from agent_lifecycle.resources import builtin_profile_path
 from agent_lifecycle.workflow import run_workflow_step
+from agent_lifecycle.workflow.artifacts import package_root
+from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.workflow.transition_contract import validate_action_catalog
 
 
@@ -68,8 +68,12 @@ def managed_adapter_run(
             source_revision=source_revision,
             requested_risk=risk_request,
             source_usage_context=load_source_usage_context(
-                root, manifest, state, find_task(state, task_id),
-                adapter_id, str(descriptor.get("host", "")),
+                root,
+                manifest,
+                state,
+                find_task(state, task_id),
+                adapter_id,
+                str(descriptor.get("host", "")),
             ),
             risk_policy=read_json_object(
                 risk_policy_path or builtin_profile_path("risk-execution-policy.v1.json"),

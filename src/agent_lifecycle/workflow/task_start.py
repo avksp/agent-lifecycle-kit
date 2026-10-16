@@ -73,13 +73,25 @@ def start_task(
             raise LifecycleError("a5-context-invalid", "Current plan identity is not verified")
         registry = None
         if "immutableInput" in manifest:
-            registry = read_json_object(root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 route boundaries")
+            registry = read_json_object(
+                root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 route boundaries"
+            )
         a5_decision = evaluate_task_admission(
-            manifest, state, task,
-            {"runId": state["runId"], "packageId": state["packageId"], "taskId": task_id,
-             "targetAttempt": attempt, "operationId": operation_id, "stateRevision": expected_revision,
-             "planDigest": state["planDigest"], "sourceRevision": source_revision},
-            immutable_input_request, registry=registry,
+            manifest,
+            state,
+            task,
+            {
+                "runId": state["runId"],
+                "packageId": state["packageId"],
+                "taskId": task_id,
+                "targetAttempt": attempt,
+                "operationId": operation_id,
+                "stateRevision": expected_revision,
+                "planDigest": state["planDigest"],
+                "sourceRevision": source_revision,
+            },
+            immutable_input_request,
+            registry=registry,
         )
 
     clear_task_risk_profile(task)
@@ -95,7 +107,9 @@ def start_task(
             source_revision=source_revision,
         )
         if risk_profile.get("schemaVersion") == "agent-risk-execution-profile.v2" and strategy_path is None:
-            raise LifecycleError("scoped-usage-strategy-required", "limited source risk requires exact strategy recomputation")
+            raise LifecycleError(
+                "scoped-usage-strategy-required", "limited source risk requires exact strategy recomputation"
+            )
         apply_task_risk_profile(task, risk_profile, profile_identity)
     strategy_identity = None
     if strategy_path is not None:
@@ -230,7 +244,12 @@ def _load_task_execution_strategy(
         project_profile_path=inputs["projectProfilePath"],
         repository_root=root,
         source_usage_context=load_source_usage_context(
-            root, manifest, state, task, lineage["adapterId"], lineage["adapterHost"],
+            root,
+            manifest,
+            state,
+            task,
+            lineage["adapterId"],
+            lineage["adapterHost"],
         ),
     )
     if strategy.get("strategyDigest") != expected_strategy.get("strategyDigest"):

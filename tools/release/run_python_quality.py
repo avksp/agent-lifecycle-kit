@@ -10,6 +10,7 @@ import platform
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -41,6 +42,9 @@ def run_quality(
     timeout = int(limits.get("maxWallSeconds", DEFAULT_TIMEOUT_SECONDS))
     output_limit = int(limits.get("maxOutputBytes", DEFAULT_OUTPUT_BYTES))
     work_root.mkdir(parents=True, exist_ok=True)
+    # Never reuse a previous invocation's database or raw tool output.
+    requested_work_root = work_root
+    work_root = Path(tempfile.mkdtemp(prefix="run-", dir=work_root)).resolve()
 
     commands: list[dict[str, Any]] = []
     blockers: list[dict[str, Any]] = []
@@ -107,7 +111,7 @@ def run_quality(
     )
     formatting = _run_tool(
         "ruff-format",
-        [sys.executable, "-m", "ruff", "format", package_root.as_posix(), "--check"],
+        [sys.executable, "-m", "ruff", "format", package_root.as_posix(), "--check", "--output-format", "json"],
         repository_root,
         work_root,
         timeout,
@@ -172,7 +176,7 @@ def run_quality(
         expected_exit_codes={0},
         env=coverage_env,
     )
-    if coverage_result["status"] == "PASS":
+    if coverage_file.is_file():
         json_result = _run_tool(
             "coverage-json",
             [sys.executable, "-m", "coverage", "json", "-o", coverage_json.as_posix()],
@@ -186,6 +190,8 @@ def run_quality(
         if json_result["status"] != "PASS":
             blockers.append({"code": "coverage-json-failed"})
         commands.append(json_result)
+    else:
+        blockers.append({"code": "coverage-data-missing"})
 
     for record in (correctness, migration, formatting, line_length, mypy_result, coverage_result):
         commands.append(record)
@@ -197,6 +203,8 @@ def run_quality(
         "schemaVersion": SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
         "sourceRevision": base_sha,
+        "workRoot": _relative(repository_root, requested_work_root),
+        "runDirectory": _relative(repository_root, work_root),
         "toolchain": {"ruff": ruff, "mypy": mypy, "coverage": coverage},
         "environment": {
             "os": platform.platform(),
@@ -208,10 +216,11 @@ def run_quality(
         "artifacts": {
             "ruffCorrectness": _relative(repository_root, work_root / "ruff-correctness.stdout.json"),
             "ruffMigration": _relative(repository_root, work_root / "ruff-migration.stdout.json"),
-            "ruffFormat": _relative(repository_root, work_root / "ruff-format.stdout.txt"),
+            "ruffFormat": _relative(repository_root, work_root / "ruff-format.stdout.json"),
             "ruffLineLength": _relative(repository_root, work_root / "ruff-line-length.stdout.json"),
             "mypy": _relative(repository_root, work_root / "mypy.stdout.txt"),
             "coverage": _relative(repository_root, coverage_json),
+            "coverageData": _relative(repository_root, coverage_file),
         },
         "blockers": blockers,
         "modelCallsStarted": False,

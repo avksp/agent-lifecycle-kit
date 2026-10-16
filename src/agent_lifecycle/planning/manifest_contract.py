@@ -310,7 +310,11 @@ def _validate_immutable_input_policy(manifest: dict[str, Any], blockers: list[di
             continue
         if not marked:
             if "immutableInput" in task:
-                blockers.append(_blocker("plan-a5-policy-without-marker", f"workstreams[{index}] has A5 policy without a plan marker"))
+                blockers.append(
+                    _blocker(
+                        "plan-a5-policy-without-marker", f"workstreams[{index}] has A5 policy without a plan marker"
+                    )
+                )
             continue
         if "immutableInput" not in task:
             blockers.append(_blocker("plan-a5-task-policy-missing", f"workstreams[{index}] lacks A5 policy"))
@@ -320,8 +324,14 @@ def _validate_immutable_input_policy(manifest: dict[str, Any], blockers: list[di
         except LifecycleError as exc:
             blockers.append(_blocker("plan-a5-task-policy-invalid", f"workstreams[{index}]: {exc.message}"))
             continue
-        if plan_policy is not None and plan_policy["defaultRequirement"] == "STRONG_A5" and policy["frozenTaskRequirement"] != "STRONG_A5":
-            blockers.append(_blocker("plan-a5-requirement-downgrade", f"workstreams[{index}] lowers the frozen A5 requirement"))
+        if (
+            plan_policy is not None
+            and plan_policy["defaultRequirement"] == "STRONG_A5"
+            and policy["frozenTaskRequirement"] != "STRONG_A5"
+        ):
+            blockers.append(
+                _blocker("plan-a5-requirement-downgrade", f"workstreams[{index}] lowers the frozen A5 requirement")
+            )
 
 
 def _validate_remediation_policy(value: Any, blockers: list[dict[str, Any]]) -> None:

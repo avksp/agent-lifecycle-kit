@@ -23,36 +23,100 @@ TRANSITION_REQUEST_V1 = "agent-workflow-transition-request.v1"
 COMMITTED_RESULT_V1 = "agent-workflow-committed-result.v1"
 PROJECTION_STATUS_V1 = "agent-workflow-projection-status.v1"
 
-_TRANSITION_FIELDS = frozenset({
-    "schemaVersion", "binding", "operationId", "requestDigest", "expectedWorkflowRevision",
-    "expectedAccountingRevisions", "action", "eventType", "nextStateRef", "eventBundleRef",
-    "semanticResultRef", "authorityContextRef", "activationEffect", "preparedProofInputRef",
-})
-_ACTIVATION_EFFECT_FIELDS = frozenset({
-    "closingWindowId", "authorityDomain", "issuerId", "issuerGeneration", "nonce",
-    "commitBoundAuthorityRef", "qualifiedPolicyEffectRef", "windowRequestRef",
-})
-_COMMITTED_RESULT_FIELDS = frozenset({
-    "schemaVersion", "runId", "operationId", "requestDigest", "beforeRevision", "afterRevision",
-    "stateDigest", "eventBundleDigest", "semanticResultRef", "closingWindowId", "policyEventId",
-    "projectionGeneration", "resultDigest", "authorityDecisionRef", "resourcePolicyEffectRef",
-    "deadlineDecisionRef", "clockObservationRef", "committedProofEnvelopeRef",
-})
-_PROJECTION_STATUS_FIELDS = frozenset({
-    "schemaVersion", "runId", "workflowRevision", "generation", "stateDigest",
-    "eventBundleDigest", "status", "ackRef", "committedProofEnvelopeRef",
-})
+_TRANSITION_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "binding",
+        "operationId",
+        "requestDigest",
+        "expectedWorkflowRevision",
+        "expectedAccountingRevisions",
+        "action",
+        "eventType",
+        "nextStateRef",
+        "eventBundleRef",
+        "semanticResultRef",
+        "authorityContextRef",
+        "activationEffect",
+        "preparedProofInputRef",
+    }
+)
+_ACTIVATION_EFFECT_FIELDS = frozenset(
+    {
+        "closingWindowId",
+        "authorityDomain",
+        "issuerId",
+        "issuerGeneration",
+        "nonce",
+        "commitBoundAuthorityRef",
+        "qualifiedPolicyEffectRef",
+        "windowRequestRef",
+    }
+)
+_COMMITTED_RESULT_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "runId",
+        "operationId",
+        "requestDigest",
+        "beforeRevision",
+        "afterRevision",
+        "stateDigest",
+        "eventBundleDigest",
+        "semanticResultRef",
+        "closingWindowId",
+        "policyEventId",
+        "projectionGeneration",
+        "resultDigest",
+        "authorityDecisionRef",
+        "resourcePolicyEffectRef",
+        "deadlineDecisionRef",
+        "clockObservationRef",
+        "committedProofEnvelopeRef",
+    }
+)
+_PROJECTION_STATUS_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "runId",
+        "workflowRevision",
+        "generation",
+        "stateDigest",
+        "eventBundleDigest",
+        "status",
+        "ackRef",
+        "committedProofEnvelopeRef",
+    }
+)
 
-_ADOPTION_INPUT_FIELDS = frozenset({
-    "schemaVersion", "operationId", "bindingRef", "legacyStateRef", "legacyEventLogRef",
-    "initialSnapshotRef", "accountingMode",
-})
-_ADOPTION_SELECTION_FIELDS = frozenset({
-    "schemaVersion", "expectedBindingDigest", "expectedPinDigest", "expectedInitialSnapshotDigest",
-    "expectedAccountingStateDigest", "expectedAccountingRevision", "expectedJournalIdentity",
-    "expectedBudgetScopeId", "expectedStorageProtocolVersion", "expectedWorkflowProtocolVersion",
-    "operatorQualificationRef", "quiescenceEvidenceRef", "writerInventoryRef",
-})
+_ADOPTION_INPUT_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "operationId",
+        "bindingRef",
+        "legacyStateRef",
+        "legacyEventLogRef",
+        "initialSnapshotRef",
+        "accountingMode",
+    }
+)
+_ADOPTION_SELECTION_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "expectedBindingDigest",
+        "expectedPinDigest",
+        "expectedInitialSnapshotDigest",
+        "expectedAccountingStateDigest",
+        "expectedAccountingRevision",
+        "expectedJournalIdentity",
+        "expectedBudgetScopeId",
+        "expectedStorageProtocolVersion",
+        "expectedWorkflowProtocolVersion",
+        "operatorQualificationRef",
+        "quiescenceEvidenceRef",
+        "writerInventoryRef",
+    }
+)
 _ADOPTION_REF_FIELDS = frozenset({"path", "sha256", "bytes"})
 
 
@@ -88,8 +152,12 @@ def validate_adoption_selection(value: Any) -> dict[str, Any]:
         raise LifecycleError("workflow-adoption-invalid", "AdoptionSelection has missing or unknown fields")
     if value["schemaVersion"] != ADOPTION_SELECTION_V1:
         raise LifecycleError("workflow-adoption-invalid", "Unsupported adoption selection")
-    for name in ("expectedBindingDigest", "expectedPinDigest", "expectedInitialSnapshotDigest",
-                 "expectedAccountingStateDigest"):
+    for name in (
+        "expectedBindingDigest",
+        "expectedPinDigest",
+        "expectedInitialSnapshotDigest",
+        "expectedAccountingStateDigest",
+    ):
         item = value[name]
         if type(item) is not str or re.fullmatch(r"[0-9a-f]{64}", item) is None:
             raise LifecycleError("workflow-adoption-invalid", f"Invalid {name}")
@@ -109,6 +177,7 @@ def validate_adoption_selection(value: Any) -> dict[str, Any]:
 
 def validate_transition_request(value: Any) -> dict[str, Any]:
     """Validate closed transition wire data without granting a native transition."""
+
     def invalid(detail: str) -> None:
         raise LifecycleError("workflow-transition-invalid", detail)
 
@@ -189,7 +258,11 @@ def _transition_revision(value: Any, label: str) -> None:
 
 def validate_committed_result(value: Any) -> dict[str, Any]:
     """Check immutable result data; publication and current permission stay separate."""
-    if type(value) is not dict or set(value) != _COMMITTED_RESULT_FIELDS or value["schemaVersion"] != COMMITTED_RESULT_V1:
+    if (
+        type(value) is not dict
+        or set(value) != _COMMITTED_RESULT_FIELDS
+        or value["schemaVersion"] != COMMITTED_RESULT_V1
+    ):
         raise LifecycleError("workflow-transition-invalid", "Invalid CommittedResult")
     for name in ("runId", "operationId"):
         if type(value[name]) is not str or not 1 <= len(value[name]) <= 256:
@@ -205,8 +278,13 @@ def validate_committed_result(value: Any) -> dict[str, Any]:
         item = value[name]
         if item is not None and (type(item) is not str or not 1 <= len(item) <= 256):
             raise LifecycleError("workflow-transition-invalid", f"Invalid {name}")
-    for name in ("authorityDecisionRef", "resourcePolicyEffectRef", "deadlineDecisionRef",
-                 "clockObservationRef", "committedProofEnvelopeRef"):
+    for name in (
+        "authorityDecisionRef",
+        "resourcePolicyEffectRef",
+        "deadlineDecisionRef",
+        "clockObservationRef",
+        "committedProofEnvelopeRef",
+    ):
         if value[name] is not None:
             _transition_artifact(value[name], name)
     if canonical_digest({k: v for k, v in value.items() if k != "resultDigest"}) != value["resultDigest"]:
@@ -216,7 +294,11 @@ def validate_committed_result(value: Any) -> dict[str, Any]:
 
 def validate_projection_status(value: Any) -> dict[str, Any]:
     """Validate publication metadata without asserting that files are actually ACKed."""
-    if type(value) is not dict or set(value) != _PROJECTION_STATUS_FIELDS or value["schemaVersion"] != PROJECTION_STATUS_V1:
+    if (
+        type(value) is not dict
+        or set(value) != _PROJECTION_STATUS_FIELDS
+        or value["schemaVersion"] != PROJECTION_STATUS_V1
+    ):
         raise LifecycleError("workflow-transition-invalid", "Invalid ProjectionStatus")
     if type(value["runId"]) is not str or not 1 <= len(value["runId"]) <= 256:
         raise LifecycleError("workflow-transition-invalid", "Invalid projection runId")
@@ -233,12 +315,28 @@ def validate_projection_status(value: Any) -> dict[str, Any]:
             _transition_artifact(value[name], name)
     return value
 
-_RUNTIME_BINDING_FIELDS = frozenset({
-    "schemaVersion", "bindingId", "runId", "packageId", "budgetScopeId", "canonicalStatePath",
-    "journalPath", "journalIdentity", "storageProtocolVersion", "workflowProtocolVersion",
-    "planDigest", "sourceRevision", "adoptionEpoch", "authorityMode", "workflowAuthorityPinRef",
-    "resourceInventoryRef", "deadlineInventoryRef",
-})
+
+_RUNTIME_BINDING_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "bindingId",
+        "runId",
+        "packageId",
+        "budgetScopeId",
+        "canonicalStatePath",
+        "journalPath",
+        "journalIdentity",
+        "storageProtocolVersion",
+        "workflowProtocolVersion",
+        "planDigest",
+        "sourceRevision",
+        "adoptionEpoch",
+        "authorityMode",
+        "workflowAuthorityPinRef",
+        "resourceInventoryRef",
+        "deadlineInventoryRef",
+    }
+)
 
 
 def validate_runtime_binding(value: Any) -> dict[str, Any]:
@@ -248,8 +346,12 @@ def validate_runtime_binding(value: Any) -> dict[str, Any]:
     if value["schemaVersion"] != RUNTIME_BINDING_V1 or value["authorityMode"] != "JOURNAL_REQUIRED":
         raise LifecycleError("invalid-runtime-binding", "Unsupported runtime binding mode")
     for name in _RUNTIME_BINDING_FIELDS - {
-        "schemaVersion", "authorityMode", "planDigest", "workflowAuthorityPinRef",
-        "resourceInventoryRef", "deadlineInventoryRef",
+        "schemaVersion",
+        "authorityMode",
+        "planDigest",
+        "workflowAuthorityPinRef",
+        "resourceInventoryRef",
+        "deadlineInventoryRef",
     }:
         item = value[name]
         limit = 4096 if name in {"canonicalStatePath", "journalPath"} else 256
@@ -268,6 +370,7 @@ def validate_runtime_binding(value: Any) -> dict[str, Any]:
         if type(ref["bytes"]) is not int or not 0 <= ref["bytes"] <= 8388608:
             raise LifecycleError("invalid-runtime-binding", f"Invalid {name}.bytes")
     return value
+
 
 RUN_PHASES = {
     "AWAITING_AUTHORIZATION",
@@ -295,20 +398,47 @@ TASK_STATUSES = {
 
 _DIGEST = {"type": "string", "minLength": 64, "maxLength": 64}
 _TASK_ID = {"type": "string", "minLength": 1, "maxLength": 256}
-_CLOSING_ACTIONS = frozenset({
-    "read-evidence", "assess-evidence", "report", "final-audit", "final-check",
-    "apply-final-outcome", "finalize", "accounting-closeout",
-})
-_CLOSING_FIELDS = frozenset({
-    "schemaVersion", "mode", "runId", "packageId", "planDigest", "sourceRevision",
-    "bindingId", "journalIdentity", "closingWindowId", "activationRevision",
-    "windowGrantDigest", "authorityDecisionDigest", "resourcePolicyEffectDigest",
-    "deadlineDecisionDigest", "originalDeadlineDigest", "originalOutcomeDigest",
-    "originalFinancialDigest", "validFrom", "expiresAt", "allowedActions", "contextDigest",
-})
+_CLOSING_ACTIONS = frozenset(
+    {
+        "read-evidence",
+        "assess-evidence",
+        "report",
+        "final-audit",
+        "final-check",
+        "apply-final-outcome",
+        "finalize",
+        "accounting-closeout",
+    }
+)
+_CLOSING_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "mode",
+        "runId",
+        "packageId",
+        "planDigest",
+        "sourceRevision",
+        "bindingId",
+        "journalIdentity",
+        "closingWindowId",
+        "activationRevision",
+        "windowGrantDigest",
+        "authorityDecisionDigest",
+        "resourcePolicyEffectDigest",
+        "deadlineDecisionDigest",
+        "originalDeadlineDigest",
+        "originalOutcomeDigest",
+        "originalFinancialDigest",
+        "validFrom",
+        "expiresAt",
+        "allowedActions",
+        "contextDigest",
+    }
+)
 
 _TRANSITION_ARTIFACT_SCHEMA = {
-    "type": "object", "additionalProperties": False,
+    "type": "object",
+    "additionalProperties": False,
     "required": ["path", "sha256", "bytes"],
     "properties": {
         "path": {"type": "string", "minLength": 1, "maxLength": 4096},
@@ -323,40 +453,74 @@ _TRANSITION_NULLABLE_REF_SCHEMA = {"anyOf": [{"$ref": "#/$defs/ArtifactRef"}, {"
 
 WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
     COMMITTED_RESULT_V1: {
-        "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": COMMITTED_RESULT_V1,
-        "type": "object", "additionalProperties": False,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": COMMITTED_RESULT_V1,
+        "type": "object",
+        "additionalProperties": False,
         "required": [
-            "schemaVersion", "runId", "operationId", "requestDigest", "beforeRevision", "afterRevision",
-            "stateDigest", "eventBundleDigest", "semanticResultRef", "closingWindowId", "policyEventId",
-            "projectionGeneration", "resultDigest", "authorityDecisionRef", "resourcePolicyEffectRef",
-            "deadlineDecisionRef", "clockObservationRef", "committedProofEnvelopeRef",
+            "schemaVersion",
+            "runId",
+            "operationId",
+            "requestDigest",
+            "beforeRevision",
+            "afterRevision",
+            "stateDigest",
+            "eventBundleDigest",
+            "semanticResultRef",
+            "closingWindowId",
+            "policyEventId",
+            "projectionGeneration",
+            "resultDigest",
+            "authorityDecisionRef",
+            "resourcePolicyEffectRef",
+            "deadlineDecisionRef",
+            "clockObservationRef",
+            "committedProofEnvelopeRef",
         ],
         "$defs": {"ArtifactRef": _TRANSITION_ARTIFACT_SCHEMA},
         "properties": {
             "schemaVersion": {"const": COMMITTED_RESULT_V1},
             **{name: _TRANSITION_TEXT_SCHEMA for name in ("runId", "operationId")},
-            **{name: _TRANSITION_DIGEST_SCHEMA for name in (
-                "requestDigest", "stateDigest", "eventBundleDigest", "resultDigest"
-            )},
-            **{name: _TRANSITION_REVISION_SCHEMA for name in (
-                "beforeRevision", "afterRevision", "projectionGeneration"
-            )},
+            **{
+                name: _TRANSITION_DIGEST_SCHEMA
+                for name in ("requestDigest", "stateDigest", "eventBundleDigest", "resultDigest")
+            },
+            **{
+                name: _TRANSITION_REVISION_SCHEMA
+                for name in ("beforeRevision", "afterRevision", "projectionGeneration")
+            },
             "semanticResultRef": {"$ref": "#/$defs/ArtifactRef"},
-            **{name: {"anyOf": [_TRANSITION_TEXT_SCHEMA, {"type": "null"}]} for name in (
-                "closingWindowId", "policyEventId"
-            )},
-            **{name: _TRANSITION_NULLABLE_REF_SCHEMA for name in (
-                "authorityDecisionRef", "resourcePolicyEffectRef", "deadlineDecisionRef",
-                "clockObservationRef", "committedProofEnvelopeRef"
-            )},
+            **{
+                name: {"anyOf": [_TRANSITION_TEXT_SCHEMA, {"type": "null"}]}
+                for name in ("closingWindowId", "policyEventId")
+            },
+            **{
+                name: _TRANSITION_NULLABLE_REF_SCHEMA
+                for name in (
+                    "authorityDecisionRef",
+                    "resourcePolicyEffectRef",
+                    "deadlineDecisionRef",
+                    "clockObservationRef",
+                    "committedProofEnvelopeRef",
+                )
+            },
         },
     },
     PROJECTION_STATUS_V1: {
-        "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": PROJECTION_STATUS_V1,
-        "type": "object", "additionalProperties": False,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": PROJECTION_STATUS_V1,
+        "type": "object",
+        "additionalProperties": False,
         "required": [
-            "schemaVersion", "runId", "workflowRevision", "generation", "stateDigest",
-            "eventBundleDigest", "status", "ackRef", "committedProofEnvelopeRef",
+            "schemaVersion",
+            "runId",
+            "workflowRevision",
+            "generation",
+            "stateDigest",
+            "eventBundleDigest",
+            "status",
+            "ackRef",
+            "committedProofEnvelopeRef",
         ],
         "$defs": {"ArtifactRef": _TRANSITION_ARTIFACT_SCHEMA},
         "properties": {
@@ -370,13 +534,16 @@ WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
         },
     },
     TRANSITION_REQUEST_V1: {
-        "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": TRANSITION_REQUEST_V1,
-        "type": "object", "additionalProperties": False,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": TRANSITION_REQUEST_V1,
+        "type": "object",
+        "additionalProperties": False,
         "required": sorted(_TRANSITION_FIELDS),
         "$defs": {
             "ArtifactRef": _TRANSITION_ARTIFACT_SCHEMA,
             "BindingRef": {
-                "type": "object", "additionalProperties": False,
+                "type": "object",
+                "additionalProperties": False,
                 "required": ["bindingId", "expectedBindingDigest"],
                 "properties": {
                     "bindingId": {"type": "string", "minLength": 1, "maxLength": 256},
@@ -384,7 +551,8 @@ WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
                 },
             },
             "AccountingRevision": {
-                "type": "object", "additionalProperties": False,
+                "type": "object",
+                "additionalProperties": False,
                 "required": ["budgetScopeId", "revision"],
                 "properties": {
                     "budgetScopeId": {"type": "string", "minLength": 1, "maxLength": 256},
@@ -392,18 +560,27 @@ WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
                 },
             },
             "ActivationEffect": {
-                "type": "object", "additionalProperties": False,
+                "type": "object",
+                "additionalProperties": False,
                 "required": [
-                    "closingWindowId", "authorityDomain", "issuerId", "issuerGeneration", "nonce",
-                    "commitBoundAuthorityRef", "qualifiedPolicyEffectRef", "windowRequestRef",
+                    "closingWindowId",
+                    "authorityDomain",
+                    "issuerId",
+                    "issuerGeneration",
+                    "nonce",
+                    "commitBoundAuthorityRef",
+                    "qualifiedPolicyEffectRef",
+                    "windowRequestRef",
                 ],
                 "properties": {
-                    **{name: {"type": "string", "minLength": 1, "maxLength": 256} for name in (
-                        "closingWindowId", "authorityDomain", "issuerId", "issuerGeneration", "nonce"
-                    )},
-                    **{name: {"$ref": "#/$defs/ArtifactRef"} for name in (
-                        "commitBoundAuthorityRef", "qualifiedPolicyEffectRef", "windowRequestRef"
-                    )},
+                    **{
+                        name: {"type": "string", "minLength": 1, "maxLength": 256}
+                        for name in ("closingWindowId", "authorityDomain", "issuerId", "issuerGeneration", "nonce")
+                    },
+                    **{
+                        name: {"$ref": "#/$defs/ArtifactRef"}
+                        for name in ("commitBoundAuthorityRef", "qualifiedPolicyEffectRef", "windowRequestRef")
+                    },
                 },
             },
         },
@@ -414,64 +591,89 @@ WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
             "requestDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "expectedWorkflowRevision": {"type": "integer", "minimum": 0, "maximum": 9_007_199_254_740_991},
             "expectedAccountingRevisions": {
-                "type": "array", "items": {"$ref": "#/$defs/AccountingRevision"},
-                "maxItems": 64, "uniqueItems": True,
+                "type": "array",
+                "items": {"$ref": "#/$defs/AccountingRevision"},
+                "maxItems": 64,
+                "uniqueItems": True,
             },
             "action": {"type": "string", "minLength": 1, "maxLength": 256},
             "eventType": {"type": "string", "minLength": 1, "maxLength": 256},
-            **{name: {"$ref": "#/$defs/ArtifactRef"} for name in (
-                "nextStateRef", "eventBundleRef", "semanticResultRef", "authorityContextRef"
-            )},
+            **{
+                name: {"$ref": "#/$defs/ArtifactRef"}
+                for name in ("nextStateRef", "eventBundleRef", "semanticResultRef", "authorityContextRef")
+            },
             "activationEffect": {"anyOf": [{"$ref": "#/$defs/ActivationEffect"}, {"type": "null"}]},
             "preparedProofInputRef": {"anyOf": [{"$ref": "#/$defs/ArtifactRef"}, {"type": "null"}]},
         },
     },
     ADOPTION_INPUT_V1: {
-        "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": ADOPTION_INPUT_V1,
-        "type": "object", "additionalProperties": False,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": ADOPTION_INPUT_V1,
+        "type": "object",
+        "additionalProperties": False,
         "required": sorted(_ADOPTION_INPUT_FIELDS),
-        "$defs": {"ArtifactRef": {
-            "type": "object", "additionalProperties": False, "required": sorted(_ADOPTION_REF_FIELDS),
-            "properties": {
-                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
-                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-                "bytes": {"type": "integer", "minimum": 0, "maximum": 8_388_608},
-            },
-        }},
+        "$defs": {
+            "ArtifactRef": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": sorted(_ADOPTION_REF_FIELDS),
+                "properties": {
+                    "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                    "bytes": {"type": "integer", "minimum": 0, "maximum": 8_388_608},
+                },
+            }
+        },
         "properties": {
             "schemaVersion": {"const": ADOPTION_INPUT_V1},
             "operationId": {"type": "string", "minLength": 1, "maxLength": 256},
-            **{name: {"$ref": "#/$defs/ArtifactRef"} for name in (
-                "bindingRef", "legacyStateRef", "initialSnapshotRef")},
+            **{
+                name: {"$ref": "#/$defs/ArtifactRef"} for name in ("bindingRef", "legacyStateRef", "initialSnapshotRef")
+            },
             "legacyEventLogRef": {"anyOf": [{"$ref": "#/$defs/ArtifactRef"}, {"type": "null"}]},
             "accountingMode": {"const": "EXISTING_QUALIFIED_SCOPE"},
         },
     },
     ADOPTION_SELECTION_V1: {
-        "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": ADOPTION_SELECTION_V1,
-        "type": "object", "additionalProperties": False,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": ADOPTION_SELECTION_V1,
+        "type": "object",
+        "additionalProperties": False,
         "required": sorted(_ADOPTION_SELECTION_FIELDS),
-        "$defs": {"ArtifactRef": {
-            "type": "object", "additionalProperties": False, "required": sorted(_ADOPTION_REF_FIELDS),
-            "properties": {
-                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
-                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-                "bytes": {"type": "integer", "minimum": 0, "maximum": 8_388_608},
-            },
-        }},
+        "$defs": {
+            "ArtifactRef": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": sorted(_ADOPTION_REF_FIELDS),
+                "properties": {
+                    "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                    "bytes": {"type": "integer", "minimum": 0, "maximum": 8_388_608},
+                },
+            }
+        },
         "properties": {
             "schemaVersion": {"const": ADOPTION_SELECTION_V1},
-            **{name: {"type": "string", "pattern": "^[0-9a-f]{64}$"} for name in (
-                "expectedBindingDigest", "expectedPinDigest", "expectedInitialSnapshotDigest",
-                "expectedAccountingStateDigest")},
-            "expectedAccountingRevision": {"type": "integer", "minimum": 0,
-                                           "maximum": 9_007_199_254_740_991},
-            **{name: {"type": "string", "minLength": 1, "maxLength": 256} for name in (
-                "expectedJournalIdentity", "expectedBudgetScopeId")},
+            **{
+                name: {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                for name in (
+                    "expectedBindingDigest",
+                    "expectedPinDigest",
+                    "expectedInitialSnapshotDigest",
+                    "expectedAccountingStateDigest",
+                )
+            },
+            "expectedAccountingRevision": {"type": "integer", "minimum": 0, "maximum": 9_007_199_254_740_991},
+            **{
+                name: {"type": "string", "minLength": 1, "maxLength": 256}
+                for name in ("expectedJournalIdentity", "expectedBudgetScopeId")
+            },
             "expectedStorageProtocolVersion": {"const": "5"},
             "expectedWorkflowProtocolVersion": {"const": "1"},
-            **{name: {"$ref": "#/$defs/ArtifactRef"} for name in (
-                "operatorQualificationRef", "quiescenceEvidenceRef", "writerInventoryRef")},
+            **{
+                name: {"$ref": "#/$defs/ArtifactRef"}
+                for name in ("operatorQualificationRef", "quiescenceEvidenceRef", "writerInventoryRef")
+            },
         },
     },
     RUNTIME_BINDING_V1: {
@@ -485,15 +687,26 @@ WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
             "authorityMode": {"const": "JOURNAL_REQUIRED"},
             "planDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             **{
-                name: {"type": "string", "minLength": 1, "maxLength": 4096 if name in {"canonicalStatePath", "journalPath"} else 256}
-                for name in _RUNTIME_BINDING_FIELDS - {
-                    "schemaVersion", "authorityMode", "planDigest", "workflowAuthorityPinRef",
-                    "resourceInventoryRef", "deadlineInventoryRef",
+                name: {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096 if name in {"canonicalStatePath", "journalPath"} else 256,
+                }
+                for name in _RUNTIME_BINDING_FIELDS
+                - {
+                    "schemaVersion",
+                    "authorityMode",
+                    "planDigest",
+                    "workflowAuthorityPinRef",
+                    "resourceInventoryRef",
+                    "deadlineInventoryRef",
                 }
             },
             **{
                 name: {
-                    "type": "object", "additionalProperties": False, "required": ["path", "sha256", "bytes"],
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["path", "sha256", "bytes"],
                     "properties": {
                         "path": {"type": "string", "minLength": 1, "maxLength": 4096},
                         "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
@@ -511,20 +724,36 @@ WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
         "additionalProperties": False,
         "required": sorted(_CLOSING_FIELDS),
         "properties": {
-            **{name: {"type": "string", "minLength": 1, "maxLength": 256} for name in (
-                "runId", "packageId", "sourceRevision", "bindingId", "journalIdentity", "closingWindowId"
-            )},
-            **{name: _DIGEST for name in (
-                "planDigest", "windowGrantDigest", "authorityDecisionDigest", "resourcePolicyEffectDigest",
-                "deadlineDecisionDigest", "originalDeadlineDigest", "originalOutcomeDigest",
-                "originalFinancialDigest", "contextDigest"
-            )},
+            **{
+                name: {"type": "string", "minLength": 1, "maxLength": 256}
+                for name in ("runId", "packageId", "sourceRevision", "bindingId", "journalIdentity", "closingWindowId")
+            },
+            **{
+                name: _DIGEST
+                for name in (
+                    "planDigest",
+                    "windowGrantDigest",
+                    "authorityDecisionDigest",
+                    "resourcePolicyEffectDigest",
+                    "deadlineDecisionDigest",
+                    "originalDeadlineDigest",
+                    "originalOutcomeDigest",
+                    "originalFinancialDigest",
+                    "contextDigest",
+                )
+            },
             "schemaVersion": {"const": CLOSING_CONTEXT_V1},
             "mode": {"const": "CLOSING_ONLY"},
             "activationRevision": {"type": "integer", "minimum": 1},
             "validFrom": {"type": "string", "minLength": 1},
             "expiresAt": {"type": "string", "minLength": 1},
-            "allowedActions": {"type": "array", "items": {"enum": sorted(_CLOSING_ACTIONS)}, "minItems": 1, "maxItems": 8, "uniqueItems": True},
+            "allowedActions": {
+                "type": "array",
+                "items": {"enum": sorted(_CLOSING_ACTIONS)},
+                "minItems": 1,
+                "maxItems": 8,
+                "uniqueItems": True,
+            },
         },
     },
     WORKFLOW_STATE_V4: open_object_schema(
@@ -642,9 +871,15 @@ def validate_closing_context(value: Any, *, state: dict[str, Any] | None = None)
         if type(field) is not str or not 1 <= len(field) <= 256:
             raise LifecycleError("closing-context-invalid", f"Invalid {name}")
     for name in (
-        "planDigest", "windowGrantDigest", "authorityDecisionDigest", "resourcePolicyEffectDigest",
-        "deadlineDecisionDigest", "originalDeadlineDigest", "originalOutcomeDigest",
-        "originalFinancialDigest", "contextDigest",
+        "planDigest",
+        "windowGrantDigest",
+        "authorityDecisionDigest",
+        "resourcePolicyEffectDigest",
+        "deadlineDecisionDigest",
+        "originalDeadlineDigest",
+        "originalOutcomeDigest",
+        "originalFinancialDigest",
+        "contextDigest",
     ):
         if type(value[name]) is not str or re.fullmatch(r"[0-9a-f]{64}", value[name]) is None:
             raise LifecycleError("closing-context-invalid", f"Invalid {name}")
@@ -653,9 +888,12 @@ def validate_closing_context(value: Any, *, state: dict[str, Any] | None = None)
         raise LifecycleError("closing-context-invalid", "Invalid activation revision")
     actions = value["allowedActions"]
     if (
-        type(actions) is not list or not actions or len(actions) > 8
+        type(actions) is not list
+        or not actions
+        or len(actions) > 8
         or any(type(action) is not str for action in actions)
-        or set(actions) - _CLOSING_ACTIONS or len(actions) != len(set(actions))
+        or set(actions) - _CLOSING_ACTIONS
+        or len(actions) != len(set(actions))
     ):
         raise LifecycleError("closing-context-invalid", "Invalid closing action set")
     if _closing_instant(value["validFrom"], "validFrom") >= _closing_instant(value["expiresAt"], "expiresAt"):

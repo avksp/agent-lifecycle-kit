@@ -29,6 +29,7 @@ def operator_claim_refusal(requested_claim: str | None) -> dict[str, str] | None
         raise LifecycleError("closing-request-claim-unsupported", "Unknown operator claim")
     return {"status": "DENY", "reason": "UNSUPPORTED_OPERATOR_ROUTE", "writeOutcome": "NOT_STARTED"}
 
+
 RETAINED_EVIDENCE_ASSESSMENT = "agent-retained-evidence-assessment.v1"
 
 MAX_RESOURCE = (1 << 63) - 1
@@ -58,23 +59,28 @@ RESOURCE_REFS = (
     "reservationRef",
 )
 
+
 def _invalid(message: str) -> NoReturn:
     raise LifecycleError("invalid-closing-window-data", message)
+
 
 def _record(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         _invalid(f"{label} must be an object")
     return value
 
+
 def _text(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value.strip() or len(value) > 4096:
         _invalid(f"{label} must be a nonempty bounded string")
     return value
 
+
 def _integer(value: Any, label: str) -> int:
     if type(value) is not int or not 0 <= value <= MAX_RESOURCE:
         _invalid(f"{label} must be a nonnegative bounded integer")
     return value
+
 
 def _timestamp(value: Any, label: str) -> datetime:
     _text(value, label)
@@ -84,10 +90,12 @@ def _timestamp(value: Any, label: str) -> datetime:
         raise LifecycleError("invalid-closing-window-data", f"{label} is invalid") from exc
     return _trusted_time(parsed)
 
+
 def _trusted_time(value: datetime) -> datetime:
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         _invalid("time must be explicitly supplied and timezone aware")
     return value.astimezone(UTC)
+
 
 def _strings(value: Any, label: str, *, empty: bool = False) -> list[str]:
     if not isinstance(value, list) or len(value) > 1024 or (not value and not empty):
@@ -97,6 +105,7 @@ def _strings(value: Any, label: str, *, empty: bool = False) -> list[str]:
     if len(set(value)) != len(value):
         _invalid(f"{label} contains duplicate identities")
     return value
+
 
 def _validate_resource_scopes(value: Any) -> list[dict[str, Any]]:
     """Validate shape; null quantities/qualification remain unknown, never zero."""
@@ -144,6 +153,7 @@ def _validate_resource_scopes(value: Any) -> list[dict[str, Any]]:
             if cap.get("policyRef") is not None:
                 _text(cap["policyRef"], "effective cap policyRef")
     return value
+
 
 def _validate_evidence_assessment(assessment: dict[str, Any]) -> None:
     """Validate structure; semantic unknowns are assessed separately."""

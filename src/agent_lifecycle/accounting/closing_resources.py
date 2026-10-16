@@ -9,39 +9,53 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import os
-import stat
 import json
 import math
+import os
 import sqlite3
+import stat
 import time
 import uuid
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import cast as _validated_cast
 
+from .closing_resource_admission import ClosureAdmissionMixin
 from .contracts import (
-    ROLES,
+    ROLES as ROLES,
+)
+from .contracts import (
     CleanupOutcome,
-    ClosureOutcome,
     EvidenceRef,
     MaintenanceRequest,
-    RunClosure,
     canonical,
     digest,
     identity,
-    uint,
     utc_instant,
+)
+from .contracts import (
+    ClosureOutcome as ClosureOutcome,
+)
+from .contracts import (
+    RunClosure as RunClosure,
+)
+from .contracts import (
+    uint as uint,
 )
 from .workflow_store import (
     DETAIL_TABLES,
     RETENTION_TABLES,
     JournalUnavailable,
-    RevisionConflict,
-    _BindingConflict,
 )
-from .closing_resource_admission import ClosureAdmissionMixin
+from .workflow_store import (
+    RevisionConflict as RevisionConflict,
+)
+from .workflow_store import (
+    _BindingConflict as _BindingConflict,
+)
 
 
 @contextmanager
@@ -52,9 +66,7 @@ def _raw_parent(root: Path, relative: str):
     if not isinstance(relative, str) or not relative:
         raise JournalUnavailable("Invalid private raw path")
     path = Path(relative)
-    if path.is_absolute() or any(
-        part in ("", ".", "..") for part in relative.split("/")
-    ):
+    if path.is_absolute() or any(part in ("", ".", "..") for part in relative.split("/")):
         raise JournalUnavailable("Invalid private raw path")
     descriptors = []
     try:
@@ -81,8 +93,13 @@ def _raw_read(parent: int, name: str, *, maximum: int = 16_777_216, links: int =
     fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent)
     try:
         before = os.fstat(fd)
-        if (not stat.S_ISREG(before.st_mode) or stat.S_IMODE(before.st_mode) != 0o600
-                or before.st_uid != os.geteuid() or before.st_nlink != links or before.st_size > maximum):
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or stat.S_IMODE(before.st_mode) != 0o600
+            or before.st_uid != os.geteuid()
+            or before.st_nlink != links
+            or before.st_size > maximum
+        ):
             raise JournalUnavailable("Private raw file must be bounded, owned, single-link and 0600")
         chunks, size = [], 0
         while chunk := os.read(fd, min(65_536, maximum + 1 - size)):
@@ -93,7 +110,11 @@ def _raw_read(parent: int, name: str, *, maximum: int = 16_777_216, links: int =
         after = os.fstat(fd)
         current = os.stat(name, dir_fd=parent, follow_symlinks=False)
         if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
-                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns
+            after.st_dev,
+            after.st_ino,
+            after.st_size,
+            after.st_mtime_ns,
+            after.st_ctime_ns,
         ) or (current.st_dev, current.st_ino) != (before.st_dev, before.st_ino):
             raise JournalUnavailable("Private raw file changed during read")
         return b"".join(chunks), {"device": before.st_dev, "inode": before.st_ino}
@@ -102,9 +123,14 @@ def _raw_read(parent: int, name: str, *, maximum: int = 16_777_216, links: int =
 
 
 def _raw_ref(root: Path, ref: dict):
-    if (not isinstance(ref, dict) or set(ref) != {"path", "sha256", "bytes"}
-            or type(ref["bytes"]) is not int or not 0 <= ref["bytes"] <= 1_048_576
-            or not isinstance(ref["sha256"], str) or len(ref["sha256"]) != 64):
+    if (
+        not isinstance(ref, dict)
+        or set(ref) != {"path", "sha256", "bytes"}
+        or type(ref["bytes"]) is not int
+        or not 0 <= ref["bytes"] <= 1_048_576
+        or not isinstance(ref["sha256"], str)
+        or len(ref["sha256"]) != 64
+    ):
         raise JournalUnavailable("Bounded sealed raw reference required")
     with _raw_parent(root, ref["path"]) as (parent, name):
         raw, file_id = _raw_read(parent, name, maximum=1_048_576)
@@ -114,7 +140,7 @@ def _raw_ref(root: Path, ref: dict):
 
 
 class JournalRetentionMixin(ClosureAdmissionMixin):
-
+    _maintenance_deadline: float | None
 
     def _checkpoint(self, stage: str) -> None:
         if self.fault_hook:
@@ -126,7 +152,7 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
         closed = self._closed_scope(scope)
         if closed is None:
             raise JournalUnavailable("Archive has no closed scope binding")
-        value = self.closed_run(closed["run_id"])
+        value = _validated_cast(dict, self.closed_run(closed["run_id"]))
         archive = self._retained("archive_records", scope)
         summary = value["summary"]["scopes"][scope]
         if (
@@ -356,7 +382,7 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
                     raise
                 # Preserve the structured refusal contract. This expired path
                 # cannot execute VACUUM; receipt admission may also be unavailable.
-                self._maintenance_deadline = min(self._maintenance_deadline, time.monotonic())
+                self._maintenance_deadline = min(_validated_cast(float, self._maintenance_deadline), time.monotonic())
                 return self._reclaim_storage(request)
         finally:
             self._maintenance_deadline = previous
@@ -376,7 +402,7 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
 
         before = metrics()
         duration = (utc_instant(request.work_deadline_utc) - utc_instant(request.now_utc)).total_seconds()
-        deadline = min(self._maintenance_deadline, time.monotonic() + min(duration, 60))
+        deadline = min(_validated_cast(float, self._maintenance_deadline), time.monotonic() + min(duration, 60))
 
         def progress():
             if self.fault_hook:
@@ -413,51 +439,83 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
     def _raw_authority(self, root: Path, authority_ref: dict) -> dict:
         raw, _ = _raw_ref(root, authority_ref)
         authority = json.loads(raw)
-        required = {"schemaVersion", "rootPathSha256", "rootFileIdentity", "journalPath",
-                    "journalFileIdentity", "journalIdentity", "storageVersion", "writerDigest",
-                    "planDigest", "manifestRef", "lockRef", "allowedAction"}
-        if (not isinstance(authority, dict) or set(authority) != required
-                or authority["schemaVersion"] != "alk-r68b-maintenance-authority.v1"
-                or authority["allowedAction"] != "RAW_RETENTION"):
+        required = {
+            "schemaVersion",
+            "rootPathSha256",
+            "rootFileIdentity",
+            "journalPath",
+            "journalFileIdentity",
+            "journalIdentity",
+            "storageVersion",
+            "writerDigest",
+            "planDigest",
+            "manifestRef",
+            "lockRef",
+            "allowedAction",
+        }
+        if (
+            not isinstance(authority, dict)
+            or set(authority) != required
+            or authority["schemaVersion"] != "alk-r68b-maintenance-authority.v1"
+            or authority["allowedAction"] != "RAW_RETENTION"
+        ):
             raise JournalUnavailable("Pinned raw maintenance authority required")
         info = root.lstat()
-        if (not root.is_absolute() or root.resolve() != root or root.is_symlink() or stat.S_IMODE(info.st_mode) != 0o700
-                or authority["rootPathSha256"] != hashlib.sha256(os.fsencode(str(root))).hexdigest()
-                or authority["rootFileIdentity"] != {"device": info.st_dev, "inode": info.st_ino}
-                or root / authority["journalPath"] != self._path
-                or authority["journalIdentity"] != self.journal_identity
-                or authority["storageVersion"] != self._storage_version
-                or authority["writerDigest"] != digest(asdict(self.writer))):
+        if (
+            not root.is_absolute()
+            or root.resolve() != root
+            or root.is_symlink()
+            or stat.S_IMODE(info.st_mode) != 0o700
+            or authority["rootPathSha256"] != hashlib.sha256(os.fsencode(str(root))).hexdigest()
+            or authority["rootFileIdentity"] != {"device": info.st_dev, "inode": info.st_ino}
+            or root / authority["journalPath"] != self._path
+            or authority["journalIdentity"] != self.journal_identity
+            or authority["storageVersion"] != self._storage_version
+            or authority["writerDigest"] != digest(asdict(self.writer))
+        ):
             raise JournalUnavailable("Raw maintenance root/journal/writer authority mismatch")
         with _raw_parent(root, authority["journalPath"]) as (parent, name):
             journal = os.stat(name, dir_fd=parent, follow_symlinks=False)
-            if (not stat.S_ISREG(journal.st_mode) or stat.S_IMODE(journal.st_mode) != 0o600
-                    or journal.st_uid != os.geteuid() or journal.st_nlink != 1
-                    or authority["journalFileIdentity"] != {"device": journal.st_dev, "inode": journal.st_ino}):
+            if (
+                not stat.S_ISREG(journal.st_mode)
+                or stat.S_IMODE(journal.st_mode) != 0o600
+                or journal.st_uid != os.geteuid()
+                or journal.st_nlink != 1
+                or authority["journalFileIdentity"] != {"device": journal.st_dev, "inode": journal.st_ino}
+            ):
                 raise JournalUnavailable("Raw maintenance journal file identity mismatch")
         manifest, _ = _raw_ref(root, authority["manifestRef"])
         lock, _ = _raw_ref(root, authority["lockRef"])
         from agent_lifecycle.contracts.errors import LifecycleError
         from agent_lifecycle.freeze import verify_plan_lock_envelope
+
         try:
             manifest, lock = json.loads(manifest), json.loads(lock)
-            if (not isinstance(manifest, dict) or manifest.get("status") != "FROZEN"
-                    or not isinstance(lock, dict) or lock.get("schemaVersion") != "agent-plan-lock.v2"
-                    or digest(manifest) != authority["planDigest"]):
+            if (
+                not isinstance(manifest, dict)
+                or manifest.get("status") != "FROZEN"
+                or not isinstance(lock, dict)
+                or lock.get("schemaVersion") != "agent-plan-lock.v2"
+                or digest(manifest) != authority["planDigest"]
+            ):
                 raise JournalUnavailable("Raw maintenance frozen plan mismatch")
             joined = verify_plan_lock_envelope(manifest, lock)
             declared = manifest.get("planFiles")
-            if (not isinstance(declared, list) or not all(isinstance(p, str) for p in declared)
-                    or len(declared) != len(set(declared))
-                    or {entry["path"] for entry in joined["entries"]} != set(declared)):
+            if (
+                not isinstance(declared, list)
+                or not all(isinstance(p, str) for p in declared)
+                or len(declared) != len(set(declared))
+                or {entry["path"] for entry in joined["entries"]} != set(declared)
+            ):
                 raise JournalUnavailable("Raw maintenance frozen inventory membership mismatch")
         except (ValueError, TypeError, KeyError, LifecycleError) as exc:
             raise JournalUnavailable("Raw maintenance lock/manifest lineage mismatch") from exc
         # This verifies sealed metadata joins, not all plan-member filesystem bytes.
         return authority
 
-    def register_raw_inventory(self, run_id: str, inventory_ref: dict, *, private_root: Path,
-                               authority_ref: dict) -> dict:
+    def register_raw_inventory(
+        self, run_id: str, inventory_ref: dict, *, private_root: Path, authority_ref: dict
+    ) -> dict:
         """Transfer one sealed attempt inventory before closure; no raw bodies in SQL."""
         identity(run_id)
         root = Path(private_root).absolute()
@@ -465,61 +523,112 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
             authority = self._raw_authority(root, authority_ref)
             raw, file_id = _raw_ref(root, inventory_ref)
             inventory = json.loads(raw)
-            required = {"schemaVersion", "runId", "taskId", "attemptId", "planDigest",
-                        "journalAuthorityKind", "journalIdentity", "eventLog", "eventLogFileIdentity",
-                        "rootPathSha256", "rootFileIdentity", "workflowStateDigest", "sources"}
+            required = {
+                "schemaVersion",
+                "runId",
+                "taskId",
+                "attemptId",
+                "planDigest",
+                "journalAuthorityKind",
+                "journalIdentity",
+                "eventLog",
+                "eventLogFileIdentity",
+                "rootPathSha256",
+                "rootFileIdentity",
+                "workflowStateDigest",
+                "sources",
+            }
             if isinstance(inventory, dict) and "operationId" in inventory:
                 required.add("operationId")
                 if not isinstance(inventory["operationId"], str) or not inventory["operationId"]:
                     raise JournalUnavailable("Raw inventory operation identity is invalid")
-            if (not isinstance(inventory, dict) or set(inventory) != required
-                    or inventory["schemaVersion"] != "alk-r68b-raw-inventory.v1"
-                    or inventory["runId"] != run_id or inventory["planDigest"] != authority["planDigest"]
-                    or inventory["journalIdentity"] != authority["journalIdentity"]
-                    or inventory["eventLog"] != authority["journalPath"]
-                    or inventory["eventLogFileIdentity"] != authority["journalFileIdentity"]
-                    or inventory["rootPathSha256"] != authority["rootPathSha256"]
-                    or inventory["rootFileIdentity"] != authority["rootFileIdentity"]):
+            if (
+                not isinstance(inventory, dict)
+                or set(inventory) != required
+                or inventory["schemaVersion"] != "alk-r68b-raw-inventory.v1"
+                or inventory["runId"] != run_id
+                or inventory["planDigest"] != authority["planDigest"]
+                or inventory["journalIdentity"] != authority["journalIdentity"]
+                or inventory["eventLog"] != authority["journalPath"]
+                or inventory["eventLogFileIdentity"] != authority["journalFileIdentity"]
+                or inventory["rootPathSha256"] != authority["rootPathSha256"]
+                or inventory["rootFileIdentity"] != authority["rootFileIdentity"]
+            ):
                 raise JournalUnavailable("Sealed raw inventory authority mismatch")
             identity(inventory["taskId"])
             identity(inventory["attemptId"])
             files = copy.deepcopy(inventory["sources"])
             if not isinstance(files, list) or not 1 <= len(files) <= 64:
                 raise JournalUnavailable("Bounded nonempty raw file inventory required")
-            forbidden = {authority_ref["path"], authority["journalPath"],
-                         authority["manifestRef"]["path"], authority["lockRef"]["path"], inventory_ref["path"]}
+            forbidden = {
+                authority_ref["path"],
+                authority["journalPath"],
+                authority["manifestRef"]["path"],
+                authority["lockRef"]["path"],
+                inventory_ref["path"],
+            }
             seen, total = set(), 0
             for entry in files:
-                if not isinstance(entry, dict) or set(entry) != {"kind", "path", "pathSha256", "fileIdentity", "sha256", "bytes"}:
+                if not isinstance(entry, dict) or set(entry) != {
+                    "kind",
+                    "path",
+                    "pathSha256",
+                    "fileIdentity",
+                    "sha256",
+                    "bytes",
+                }:
                     raise JournalUnavailable("Closed raw file declaration required")
-                if (entry["path"] in forbidden or entry["path"] in seen
-                        or Path(entry["path"]).name.startswith(".alk-delete-")):
+                if (
+                    entry["path"] in forbidden
+                    or entry["path"] in seen
+                    or Path(entry["path"]).name.startswith(".alk-delete-")
+                ):
                     raise JournalUnavailable("Duplicate or protected raw file declaration")
                 with _raw_parent(root, entry["path"]) as (parent, name):
                     body, current_id = _raw_read(parent, name)
-                if (type(entry["bytes"]) is not int or entry["bytes"] != len(body)
-                        or entry["fileIdentity"] != current_id
-                        or entry["sha256"] != hashlib.sha256(body).hexdigest()
-                        or entry["pathSha256"] != hashlib.sha256(os.fsencode(str(root / entry["path"]))).hexdigest()):
+                if (
+                    type(entry["bytes"]) is not int
+                    or entry["bytes"] != len(body)
+                    or entry["fileIdentity"] != current_id
+                    or entry["sha256"] != hashlib.sha256(body).hexdigest()
+                    or entry["pathSha256"] != hashlib.sha256(os.fsencode(str(root / entry["path"]))).hexdigest()
+                ):
                     raise JournalUnavailable("Raw file declaration changed")
                 seen.add(entry["path"])
                 total += len(body)
             if total > 16_777_216:
                 raise JournalUnavailable("Aggregate raw inventory exceeds bound")
-            files.append({"kind": "sealed-inventory", **inventory_ref, "fileIdentity": file_id,
-                          "pathSha256": hashlib.sha256(os.fsencode(str(root / inventory_ref["path"]))).hexdigest()})
+            files.append(
+                {
+                    "kind": "sealed-inventory",
+                    **inventory_ref,
+                    "fileIdentity": file_id,
+                    "pathSha256": hashlib.sha256(os.fsencode(str(root / inventory_ref["path"]))).hexdigest(),
+                }
+            )
             operation = [inventory["operationId"]] if "operationId" in inventory else []
             key = "raw-inventory:" + digest([run_id, inventory["taskId"], inventory["attemptId"], *operation])
-            payload = {"schemaVersion": "alk-r68b-per-run-raw-obligation.v1", "runId": run_id,
-                       "taskId": inventory["taskId"], "attemptId": inventory["attemptId"],
-                       "inventoryRef": inventory_ref, "authorityRef": authority_ref, "authority": authority,
-                       "files": files}
+            payload = {
+                "schemaVersion": "alk-r68b-per-run-raw-obligation.v1",
+                "runId": run_id,
+                "taskId": inventory["taskId"],
+                "attemptId": inventory["attemptId"],
+                "inventoryRef": inventory_ref,
+                "authorityRef": authority_ref,
+                "authority": authority,
+                "files": files,
+            }
             if operation:
                 payload["operationId"] = inventory["operationId"]
             old = self._retained("maintenance_receipts", key)
             if self.closed_run(run_id) is not None and old != payload:
                 raise JournalUnavailable("Cannot add raw obligations after full run closure")
-            if not self._db.execute("SELECT 1 FROM scope_state WHERE json_extract(data,'$.scope.run_id')=?", (run_id,)).fetchone() and old is None:
+            if (
+                not self._db.execute(
+                    "SELECT 1 FROM scope_state WHERE json_extract(data,'$.scope.run_id')=?", (run_id,)
+                ).fetchone()
+                and old is None
+            ):
                 raise JournalUnavailable("Authoritative run required before inventory transfer")
             self._retain("maintenance_receipts", key, run_id, "raw-obligation", payload)
             return {"status": "PENDING", "obligationId": key, "inventorySha256": inventory_ref["sha256"]}
@@ -529,21 +638,111 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
         identity(run_id)
         now, closed = utc_instant(now_utc), self.closed_run(run_id)
         values = []
-        for row in self._db.execute("SELECT key FROM maintenance_receipts WHERE scope=? AND owner='raw-obligation' ORDER BY key", (run_id,)):
-            payload = self._retained("maintenance_receipts", row[0])
+        for row in self._db.execute(
+            "SELECT key FROM maintenance_receipts WHERE scope=? AND owner='raw-obligation' ORDER BY key", (run_id,)
+        ):
+            payload = _validated_cast(dict, self._retained("maintenance_receipts", row[0]))
             done = self._retained("maintenance_receipts", "raw-done:" + digest(payload))
             eligible = closed["eligible_after"] if closed else None
-            status = "DONE" if done else "OVERDUE" if eligible and now > utc_instant(eligible) + timedelta(hours=2) else "PENDING"
-            values.append({"obligationId": row[0], "inventorySha256": payload["inventoryRef"]["sha256"],
-                           "taskId": payload["taskId"], "attemptId": payload["attemptId"], "status": status,
-                           "closureId": closed["closure"]["closure_id"] if closed else None,
-                           "summaryDigest": closed["summary_digest"] if closed else None, "eligibleAfter": eligible,
-                           "fileResults": done["fileResults"] if done else []})
+            status = (
+                "DONE"
+                if done
+                else "OVERDUE"
+                if eligible and now > utc_instant(eligible) + timedelta(hours=2)
+                else "PENDING"
+            )
+            values.append(
+                {
+                    "obligationId": row[0],
+                    "inventorySha256": payload["inventoryRef"]["sha256"],
+                    "taskId": payload["taskId"],
+                    "attemptId": payload["attemptId"],
+                    "status": status,
+                    "closureId": closed["closure"]["closure_id"] if closed else None,
+                    "summaryDigest": closed["summary_digest"] if closed else None,
+                    "eligibleAfter": eligible,
+                    "fileResults": done["fileResults"] if done else [],
+                }
+            )
         return values
 
-    def collect_raw_run(self, run_id: str, now_utc: str, *, private_root: Path,
-                        authority_ref: dict, candidate_limit: int = 32,
-                        work_deadline_utc: str | None = None) -> dict:
+    def _collect_raw_candidates(
+        self,
+        *,
+        root: Path,
+        run_id: str,
+        candidate_limit: int,
+        authority_ref: dict,
+        authority: dict,
+        require_live: Callable[[], None],
+        read_source: Callable[..., None],
+        present: Callable[[int, str], os.stat_result | None],
+    ) -> list[tuple[str, dict, str, list[dict]]]:
+        rows = self._db.execute(
+            (
+                "SELECT r.key FROM maintenance_receipts r WHERE r.scope=? AND "
+                "r.owner='raw-obligation' AND NOT EXISTS (SELECT 1 FROM maintenance_receipts d "
+                "WHERE d.key='raw-done:'||r.digest) ORDER BY r.key LIMIT ?"
+            ),
+            (run_id, candidate_limit),
+        ).fetchall()
+        completed = []
+        for row in rows:
+            payload = _validated_cast(dict, self._retained("maintenance_receipts", row[0]))
+            if payload["authorityRef"] != authority_ref or payload["authority"] != authority:
+                raise JournalUnavailable("Raw obligation pinned authority differs")
+            result_key = "raw-done:" + digest(payload)
+            if self._retained("maintenance_receipts", result_key):
+                continue
+            results = []
+            for index, entry in enumerate(payload["files"]):
+                self._checkpoint("before_raw_unlink")
+                require_live()
+                with _raw_parent(root, entry["path"]) as (parent, name):
+                    quarantine = ".alk-delete-" + digest([row[0], index])
+                    source, staged = (present(parent, name), present(parent, quarantine))
+                    if source is not None and staged is None:
+                        read_source(parent, name, entry)
+                        self._checkpoint("before_raw_stage")
+                        require_live()
+                        if os.link not in os.supports_dir_fd or os.link not in os.supports_follow_symlinks:
+                            raise JournalUnavailable("Atomic no-overwrite raw staging unavailable")
+                        try:
+                            os.link(name, quarantine, src_dir_fd=parent, dst_dir_fd=parent, follow_symlinks=False)
+                        except OSError as exc:
+                            raise JournalUnavailable("Raw staging collision or unavailable; original retained") from exc
+                        os.fsync(parent)
+                        self._checkpoint("after_raw_stage")
+                        source, staged = (present(parent, name), present(parent, quarantine))
+                    if source is not None and staged is not None:
+                        read_source(parent, name, entry, links=2)
+                        read_source(parent, quarantine, entry, links=2)
+                        require_live()
+                        os.unlink(name, dir_fd=parent)
+                        os.fsync(parent)
+                        self._checkpoint("after_raw_original_unlink")
+                    outcome = "alreadyAbsent"
+                    if staged is not None:
+                        read_source(parent, quarantine, entry)
+                        require_live()
+                        os.unlink(quarantine, dir_fd=parent)
+                        os.fsync(parent)
+                        outcome = "removed"
+                    results.append({"pathSha256": entry["pathSha256"], "sha256": entry["sha256"], "status": outcome})
+                self._checkpoint("after_raw_unlink")
+            completed.append((row[0], payload, result_key, results))
+        return completed
+
+    def collect_raw_run(
+        self,
+        run_id: str,
+        now_utc: str,
+        *,
+        private_root: Path,
+        authority_ref: dict,
+        candidate_limit: int = 32,
+        work_deadline_utc: str | None = None,
+    ) -> dict:
         """Collect sealed SQLite obligations under their registration/closure writer fence.
 
         ``now_utc`` is an as-of display value; only the runtime clock authorizes
@@ -557,27 +756,38 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
             raise JournalUnavailable("Bounded raw maintenance candidate limit required")
         started = time.monotonic()
         previous_utc, previous_mono = None, started
+
         def sample_clock():
             nonlocal previous_utc, previous_mono
             try:
                 value, mono = self._utc_clock(), time.monotonic()
-                if (not isinstance(value, datetime) or value.tzinfo is None
-                        or value.utcoffset() != timedelta(0) or not math.isfinite(mono)
-                        or mono < previous_mono or (previous_utc is not None and value < previous_utc)):
+                if (
+                    not isinstance(value, datetime)
+                    or value.tzinfo is None
+                    or value.utcoffset() != timedelta(0)
+                    or not math.isfinite(mono)
+                    or mono < previous_mono
+                    or (previous_utc is not None and value < previous_utc)
+                ):
                     raise ValueError("Unavailable or backward runtime clock")
-                if previous_utc is not None and abs(
-                        (value - previous_utc).total_seconds() - (mono - previous_mono)) > 5:
+                if (
+                    previous_utc is not None
+                    and abs((value - previous_utc).total_seconds() - (mono - previous_mono)) > 5
+                ):
                     raise ValueError("Inconsistent runtime clocks")
             except Exception as exc:
                 raise JournalUnavailable("Trusted raw maintenance clock unavailable or inconsistent") from exc
             previous_utc, previous_mono = value, mono
             return value, mono
+
         with self._transaction():
             authority = self._raw_authority(root, authority_ref)
             self._checkpoint("before_raw_eligibility")
             now, mono = sample_clock()
-            deadline = min(utc_instant(work_deadline_utc) if work_deadline_utc else now + timedelta(seconds=60),
-                           now + timedelta(seconds=60))
+            deadline = min(
+                utc_instant(work_deadline_utc) if work_deadline_utc else now + timedelta(seconds=60),
+                now + timedelta(seconds=60),
+            )
             monotonic_deadline = min(started + 60, mono + (deadline - now).total_seconds())
             if self._maintenance_deadline is not None:
                 monotonic_deadline = min(monotonic_deadline, self._maintenance_deadline)
@@ -589,106 +799,90 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
             if now < utc_instant(closed["eligible_after"]):
                 return {"status": "NOT_DUE", "obligations": self.raw_obligations(run_id, now_utc)}
             if self._exception_chain(run_id):
-                return {"status": "ACCOUNTING_RECONCILIATION_REQUIRED", "obligations": self.raw_obligations(run_id, now_utc)}
+                return {
+                    "status": "ACCOUNTING_RECONCILIATION_REQUIRED",
+                    "obligations": self.raw_obligations(run_id, now_utc),
+                }
             if self._retained("cleanup_receipts", run_id) is None:
                 raise JournalUnavailable("SQL collection must commit before raw unlink")
+
             def require_live():
-                if (self._raw_authority(root, authority_ref) != authority
-                        or self.closed_run(run_id) != closed or self._exception_chain(run_id)):
+                if (
+                    self._raw_authority(root, authority_ref) != authority
+                    or self.closed_run(run_id) != closed
+                    or self._exception_chain(run_id)
+                ):
                     raise JournalUnavailable("Raw retention eligibility changed under writer lock")
                 current_utc, current_mono = sample_clock()
                 if current_utc >= deadline or current_mono >= monotonic_deadline:
                     raise JournalUnavailable("Raw maintenance finite original deadline exhausted")
                 if current_utc < utc_instant(closed["eligible_after"]):
                     raise JournalUnavailable("Raw retention eligibility changed under writer lock")
+
             def read_source(parent, name, entry, *, links=1):
                 body, file_id = _raw_read(parent, name, links=links)
-                if (file_id != entry["fileIdentity"] or len(body) != entry["bytes"]
-                        or hashlib.sha256(body).hexdigest() != entry["sha256"]):
+                if (
+                    file_id != entry["fileIdentity"]
+                    or len(body) != entry["bytes"]
+                    or hashlib.sha256(body).hexdigest() != entry["sha256"]
+                ):
                     raise JournalUnavailable("Raw source identity mismatch; staging retained")
+
             def present(parent, name):
                 try:
                     return os.stat(name, dir_fd=parent, follow_symlinks=False)
                 except FileNotFoundError:
                     return None
-            rows = self._db.execute(
-                "SELECT r.key FROM maintenance_receipts r WHERE r.scope=? AND r.owner='raw-obligation' "
-                "AND NOT EXISTS (SELECT 1 FROM maintenance_receipts d WHERE d.key='raw-done:'||r.digest) "
-                "ORDER BY r.key LIMIT ?", (run_id, candidate_limit)
-            ).fetchall()
-            completed = []
-            for row in rows:
-                payload = self._retained("maintenance_receipts", row[0])
-                if payload["authorityRef"] != authority_ref or payload["authority"] != authority:
-                    raise JournalUnavailable("Raw obligation pinned authority differs")
-                result_key = "raw-done:" + digest(payload)
-                if self._retained("maintenance_receipts", result_key):
-                    continue
-                results = []
-                for index, entry in enumerate(payload["files"]):
-                    self._checkpoint("before_raw_unlink")
-                    require_live()
-                    with _raw_parent(root, entry["path"]) as (parent, name):
-                        quarantine = ".alk-delete-" + digest([row[0], index])
-                        source, staged = present(parent, name), present(parent, quarantine)
-                        if source is not None and staged is None:
-                            read_source(parent, name, entry)
-                            self._checkpoint("before_raw_stage")
-                            require_live()
-                            if os.link not in os.supports_dir_fd or os.link not in os.supports_follow_symlinks:
-                                raise JournalUnavailable("Atomic no-overwrite raw staging unavailable")
-                            try:
-                                os.link(name, quarantine, src_dir_fd=parent, dst_dir_fd=parent,
-                                        follow_symlinks=False)
-                            except OSError as exc:
-                                raise JournalUnavailable("Raw staging collision or unavailable; original retained") from exc
-                            os.fsync(parent)
-                            self._checkpoint("after_raw_stage")
-                            source, staged = present(parent, name), present(parent, quarantine)
-                        if source is not None and staged is not None:
-                            # Only the exact two-link intermediate left by this no-clobber move is recoverable.
-                            read_source(parent, name, entry, links=2)
-                            read_source(parent, quarantine, entry, links=2)
-                            require_live()
-                            os.unlink(name, dir_fd=parent)
-                            os.fsync(parent)
-                            self._checkpoint("after_raw_original_unlink")
-                        outcome = "alreadyAbsent"
-                        if staged is not None:
-                            read_source(parent, quarantine, entry)
-                            require_live()
-                            os.unlink(quarantine, dir_fd=parent)
-                            os.fsync(parent)
-                            outcome = "removed"
-                        results.append({"pathSha256": entry["pathSha256"], "sha256": entry["sha256"], "status": outcome})
-                    self._checkpoint("after_raw_unlink")
-                completed.append((row[0], payload, result_key, results))
+
+            completed = self._collect_raw_candidates(
+                root=root,
+                run_id=run_id,
+                candidate_limit=candidate_limit,
+                authority_ref=authority_ref,
+                authority=authority,
+                require_live=require_live,
+                read_source=read_source,
+                present=present,
+            )
             # Defer every DONE seal until all selected obligations have been deleted.
             # A later obligation must not recreate a name belonging to an earlier one.
             for _ in completed:
                 self._checkpoint("before_raw_done")
             require_live()
-            for key, payload, result_key, results in completed:
+            for key, payload, _result_key, _results in completed:
                 for index, entry in enumerate(payload["files"]):
                     with _raw_parent(root, entry["path"]) as (parent, name):
-                        if (present(parent, name) is not None
-                                or present(parent, ".alk-delete-" + digest([key, index])) is not None):
+                        if (
+                            present(parent, name) is not None
+                            or present(parent, ".alk-delete-" + digest([key, index])) is not None
+                        ):
                             raise JournalUnavailable("Raw names recreated before DONE; obligation remains pending")
             require_live()
-            for key, payload, result_key, results in completed:
-                self._retain("maintenance_receipts", result_key, run_id, "raw-result",
-                             {"closureId": closed["closure"]["closure_id"], "summaryDigest": closed["summary_digest"],
-                              "authoritySha256": authority_ref["sha256"], "fileResults": results})
+            for _key, _payload, result_key, results in completed:
+                self._retain(
+                    "maintenance_receipts",
+                    result_key,
+                    run_id,
+                    "raw-result",
+                    {
+                        "closureId": closed["closure"]["closure_id"],
+                        "summaryDigest": closed["summary_digest"],
+                        "authoritySha256": authority_ref["sha256"],
+                        "fileResults": results,
+                    },
+                )
             obligations = self.raw_obligations(run_id, now_utc)
-            return {"status": "DONE" if all(v["status"] == "DONE" for v in obligations) else "PENDING",
-                    "obligations": obligations}
+            return {
+                "status": "DONE" if all(v["status"] == "DONE" for v in obligations) else "PENDING",
+                "obligations": obligations,
+            }
 
     def history_metadata(self, scope: str) -> dict:
         closed = self._closed_scope(scope)
         if closed is None:
             state, revision = self._load(scope)
             return {"status": "LIVE" if state is not None else "NOT_FOUND", "revision": revision}
-        value = self.closed_run(closed["run_id"])
+        value = _validated_cast(dict, self.closed_run(closed["run_id"]))
         collected = self._retained("cleanup_receipts", closed["run_id"])
         return {
             "status": "DETAILS_COLLECTED" if collected else "CLOSED_DETAILS_RETAINED",
@@ -702,7 +896,8 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
     def _create_v4_schema(db: sqlite3.Connection, *, writer_version: int = 4) -> None:
         for table in RETENTION_TABLES:
             db.execute(
-                f"CREATE TABLE {table}(key TEXT PRIMARY KEY NOT NULL, scope TEXT NOT NULL, owner TEXT NOT NULL, digest TEXT NOT NULL, payload TEXT NOT NULL)"
+                f"CREATE TABLE {table}(key TEXT PRIMARY KEY NOT NULL, scope "
+                "TEXT NOT NULL, owner TEXT NOT NULL, digest TEXT NOT NULL, payload TEXT NOT NULL)"
             )
             for action in ("UPDATE", "DELETE"):
                 db.execute(
@@ -710,16 +905,21 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
                     "BEGIN SELECT RAISE(ABORT,'immutable financial archive'); END"
                 )
         db.execute(
-            "CREATE TABLE closed_scopes(scope TEXT PRIMARY KEY NOT NULL, run_id TEXT NOT NULL, closure_id TEXT NOT NULL, revision INTEGER NOT NULL, summary_digest TEXT NOT NULL)"
+            "CREATE TABLE closed_scopes(scope TEXT PRIMARY KEY NOT NULL, run_id TEXT NOT "
+            "NULL, closure_id TEXT NOT NULL, revision INTEGER NOT NULL, summary_digest TEXT "
+            "NOT NULL)"
         )
         db.execute(
-            "CREATE TABLE exception_heads(run_id TEXT PRIMARY KEY NOT NULL, ordinal INTEGER NOT NULL, digest TEXT NOT NULL)"
+            "CREATE TABLE exception_heads(run_id TEXT PRIMARY KEY NOT NULL, ordinal INTEGER "
+            "NOT NULL, digest TEXT NOT NULL)"
         )
         db.execute(
-            "CREATE TABLE retention_metadata(singleton INTEGER PRIMARY KEY CHECK(singleton=1), journal_id TEXT NOT NULL)"
+            "CREATE TABLE retention_metadata(singleton INTEGER PRIMARY KEY "
+            "CHECK(singleton=1), journal_id TEXT NOT NULL)"
         )
         db.execute(
-            "CREATE TRIGGER protect_exception_heads_delete BEFORE DELETE ON exception_heads BEGIN SELECT RAISE(ABORT,'immutable exception head'); END"
+            "CREATE TRIGGER protect_exception_heads_delete BEFORE DELETE ON exception_heads "
+            "BEGIN SELECT RAISE(ABORT,'immutable exception head'); END"
         )
         for action in ("INSERT", "UPDATE"):
             db.execute(

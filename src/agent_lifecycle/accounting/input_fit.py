@@ -10,6 +10,7 @@ import hashlib
 import re
 from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.context.rendering import render_context
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
@@ -73,7 +74,9 @@ def validate_context_ref_index(packet: dict[str, Any], contract: dict[str, Any])
         or len(set(refs)) != len(refs)
         or [ref for ref in refs if ref in allowed] != allowed
     ):
-        raise LifecycleError("context-ref-index-mismatch", "task context does not preserve the ordered source allow-list")
+        raise LifecycleError(
+            "context-ref-index-mismatch", "task context does not preserve the ordered source allow-list"
+        )
     for ref in refs:
         try:
             normalized = normalize_repo_path(ref, label="context ref")
@@ -106,8 +109,8 @@ def select_source_excerpts(
 
     index = validate_context_ref_index(packet, contract)
     scope = _source_scope(contract)
-    plan = packet.get("plan") if isinstance(packet.get("plan"), dict) else {}
-    task = packet.get("task") if isinstance(packet.get("task"), dict) else {}
+    plan = _validated_cast(dict[str, Any], packet.get("plan")) if isinstance(packet.get("plan"), dict) else {}
+    task = _validated_cast(dict[str, Any], packet.get("task")) if isinstance(packet.get("task"), dict) else {}
     plan_digest = _digest(plan.get("planDigest"), "planDigest")
     task_id = _identity(task.get("id"), "taskId")
     _identity(run_id, "runId")
@@ -126,7 +129,7 @@ def select_source_excerpts(
     for request in requests:
         if request.get("candidateDigest") != candidate_digest or request.get("estimatorId") != estimator_id:
             raise LifecycleError("source-selection-identity-mismatch", "candidate or estimator changed")
-        path = normalize_repo_path(request.get("path"), label="selected source")
+        path = normalize_repo_path(_validated_cast(str, request.get("path")), label="selected source")
         if path not in scope["orderedContextRefs"]:
             raise LifecycleError("undeclared-source", "selected source is absent from contextRefs")
         if len(path.encode("utf-8")) > scope["maxSourcePathUtf8Bytes"]:
@@ -225,8 +228,8 @@ def _revalidate_selection(
         current_binding.get(key) != value for key, value in expected.items()
     ):
         raise LifecycleError("input-fit-binding-mismatch", "current dispatch identity differs from source selection")
-    plan = packet.get("plan") if isinstance(packet.get("plan"), dict) else {}
-    task = packet.get("task") if isinstance(packet.get("task"), dict) else {}
+    plan = _validated_cast(dict[str, Any], packet.get("plan")) if isinstance(packet.get("plan"), dict) else {}
+    task = _validated_cast(dict[str, Any], packet.get("task")) if isinstance(packet.get("task"), dict) else {}
     if selection.get("planDigest") != plan.get("planDigest") or selection.get("taskId") != task.get("id"):
         raise LifecycleError("source-selection-mismatch", "selected source lineage mismatch")
     if selection.get("estimatorId") != estimator_id:

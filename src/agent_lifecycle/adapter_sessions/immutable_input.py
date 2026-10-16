@@ -1,4 +1,5 @@
 """A5 request checks. Ordinary classification grants no dispatch authority."""
+
 from __future__ import annotations
 
 import hashlib
@@ -18,7 +19,9 @@ from agent_lifecycle.freeze import verify_plan_package_integrity
 
 def normalize_invocation_request(value: Any = None) -> dict[str, Any]:
     """Omission is a request for NONE, never proof of a frozen requirement."""
-    request = {"schemaVersion": "agent-a5-invocation-request.v1", "requestedProtection": "NONE"} if value is None else value
+    request = (
+        {"schemaVersion": "agent-a5-invocation-request.v1", "requestedProtection": "NONE"} if value is None else value
+    )
     return dict(validate_a5_invocation_request(request))
 
 
@@ -53,56 +56,100 @@ def validate_current_invocation(context: Any, request: Any, *, current_context: 
 
 
 def invocation_context(
-    *, operation: str, adapter_id: str, session_id: str, request: Any,
-    input_identity: Any, profile_digest: str | None,
+    *,
+    operation: str,
+    adapter_id: str,
+    session_id: str,
+    request: Any,
+    input_identity: Any,
+    profile_digest: str | None,
     workflow_subject: dict[str, Any] | None = None,
     authority_refs: list[dict[str, str]] | None = None,
-    policy: dict[str, Any] | None = None, expected_protection: str = "NONE",
+    policy: dict[str, Any] | None = None,
+    expected_protection: str = "NONE",
 ) -> dict[str, Any]:
     """Bind actual inputs for comparison; this record never authorizes dispatch."""
     normalized = require_no_strong_protection(request, expected_protection=expected_protection)
-    origins = {"PLANNING_TASK": "EXPLICIT_PLANNING_CALL",
-               "PLANNING_QUALIFICATION": "FIXED_QUALIFICATION_CALL",
-               "MANAGED_TASK": "FROZEN_WORKFLOW_TASK", "VERSION_PREFLIGHT": "VERSION_ONLY_PREFLIGHT"}
+    origins = {
+        "PLANNING_TASK": "EXPLICIT_PLANNING_CALL",
+        "PLANNING_QUALIFICATION": "FIXED_QUALIFICATION_CALL",
+        "MANAGED_TASK": "FROZEN_WORKFLOW_TASK",
+        "VERSION_PREFLIGHT": "VERSION_ONLY_PREFLIGHT",
+    }
     if operation not in origins:
         raise LifecycleError("a5-context-invalid", "Unknown invocation operation")
     body = {
-        "schemaVersion": "agent-a5-invocation-context.v1", "invocationId": session_id,
-        "operation": operation, "origin": origins[operation],
-        "workflowSubject": workflow_subject, "frozenAuthorityRefs": authority_refs or [],
-        "adapterId": adapter_id, "sessionId": session_id,
-        "requestedProtection": normalized["requestedProtection"], "expectedProtection": expected_protection,
+        "schemaVersion": "agent-a5-invocation-context.v1",
+        "invocationId": session_id,
+        "operation": operation,
+        "origin": origins[operation],
+        "workflowSubject": workflow_subject,
+        "frozenAuthorityRefs": authority_refs or [],
+        "adapterId": adapter_id,
+        "sessionId": session_id,
+        "requestedProtection": normalized["requestedProtection"],
+        "expectedProtection": expected_protection,
         "policyDigest": policy["policyDigest"] if policy else None,
         "boundaryRecordDigest": policy["boundaryRecordDigest"] if policy else None,
         "normalizedRequestDigest": canonical_digest(normalized),
         "taskInputDigest": canonical_digest(input_identity) if input_identity is not None else None,
-        "profileDigest": profile_digest, "strongProtectionGranted": False,
+        "profileDigest": profile_digest,
+        "strongProtectionGranted": False,
     }
     return validate_a5_invocation_context({**body, "contextDigest": canonical_digest(body)})
 
 
 def planning_invocation_context(
-    *, adapter_id: str, session_id: str, request: Any, requested_mode: str,
-    task_text: str, input_source: str, argv: list[str], env: dict[str, str],
-    advisory: dict[str, Any] | None, timeout_seconds: float, process_cwd: Path | None,
-    profile_digest: str | None = None, qualification_binding: dict[str, Any] | None = None,
+    *,
+    adapter_id: str,
+    session_id: str,
+    request: Any,
+    requested_mode: str,
+    task_text: str,
+    input_source: str,
+    argv: list[str],
+    env: dict[str, str],
+    advisory: dict[str, Any] | None,
+    timeout_seconds: float,
+    process_cwd: Path | None,
+    profile_digest: str | None = None,
+    qualification_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return invocation_context(
         operation="PLANNING_QUALIFICATION" if qualification_binding is not None else "PLANNING_TASK",
-        adapter_id=adapter_id, session_id=session_id, request=request, profile_digest=profile_digest,
-        input_identity={"textSha256": hashlib.sha256(task_text.encode("utf-8")).hexdigest(),
-                        "mode": requested_mode, "inputSource": input_source, "explicitLaunch": True,
-                        "argv": argv, "environmentDigest": canonical_digest(env), "advisory": advisory or {},
-                        "timeoutSeconds": timeout_seconds,
-                        "processCwd": str(process_cwd.absolute()) if process_cwd is not None else str(Path.cwd()),
-                        "qualification": qualification_binding},
+        adapter_id=adapter_id,
+        session_id=session_id,
+        request=request,
+        profile_digest=profile_digest,
+        input_identity={
+            "textSha256": hashlib.sha256(task_text.encode("utf-8")).hexdigest(),
+            "mode": requested_mode,
+            "inputSource": input_source,
+            "explicitLaunch": True,
+            "argv": argv,
+            "environmentDigest": canonical_digest(env),
+            "advisory": advisory or {},
+            "timeoutSeconds": timeout_seconds,
+            "processCwd": str(process_cwd.absolute()) if process_cwd is not None else str(Path.cwd()),
+            "qualification": qualification_binding,
+        },
     )
 
 
 def current_managed_invocation(
-    *, project_root: Path, state_path: Path, manifest_path: Path, lock_path: Path,
-    task_id: str, operation_id: str, source_revision: str, adapter_id: str,
-    session_id: str, request: Any, profile: dict[str, Any], profile_digest: str,
+    *,
+    project_root: Path,
+    state_path: Path,
+    manifest_path: Path,
+    lock_path: Path,
+    task_id: str,
+    operation_id: str,
+    source_revision: str,
+    adapter_id: str,
+    session_id: str,
+    request: Any,
+    profile: dict[str, Any],
+    profile_digest: str,
     risk_profile: dict[str, Any],
 ) -> dict[str, Any]:
     """Reopen actual frozen inputs at the sink; a supplied context is not evidence."""
@@ -116,11 +163,16 @@ def current_managed_invocation(
         raise LifecycleError("a5-context-invalid", "Workflow inputs changed during A5 comparison")
     selected = [t for t in manifest.get("workstreams", []) if t.get("id") == task_id]
     runtime = [t for t in state.get("tasks", []) if t.get("id") == task_id]
-    if (manifest.get("status") != "FROZEN" or len(selected) != 1 or len(runtime) != 1
-            or state.get("planDigest") != canonical_digest(manifest)
-            or state.get("sourceRevision") != source_revision
-            or state.get("packageId") != manifest.get("package", {}).get("id")
-            or state.get("phase") != "RUNNING" or runtime[0].get("status") != "RUNNING"):
+    if (
+        manifest.get("status") != "FROZEN"
+        or len(selected) != 1
+        or len(runtime) != 1
+        or state.get("planDigest") != canonical_digest(manifest)
+        or state.get("sourceRevision") != source_revision
+        or state.get("packageId") != manifest.get("package", {}).get("id")
+        or state.get("phase") != "RUNNING"
+        or runtime[0].get("status") != "RUNNING"
+    ):
         raise LifecycleError("a5-context-invalid", "Current running task and frozen authority differ")
     task, actual_task = selected[0], runtime[0]
     policy = task.get("immutableInput")
@@ -133,24 +185,46 @@ def current_managed_invocation(
         validate_a5_policy(policy)
         if policy["adapterId"] != adapter_id:
             raise LifecycleError("a5-context-invalid", "Frozen task adapter differs")
-        registry = validate_a5_boundary_registry(read_json_object(
-            project_root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 boundaries"))
+        registry = validate_a5_boundary_registry(
+            read_json_object(
+                project_root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 boundaries"
+            )
+        )
         matches = [row for row in registry["records"] if row["adapterId"] == adapter_id]
-        if len(matches) != 1 or any(policy[field] != matches[0][field]
-                                    for field in ("expectationId", "targetVersion", "boundaryRecordDigest")):
+        if len(matches) != 1 or any(
+            policy[field] != matches[0][field] for field in ("expectationId", "targetVersion", "boundaryRecordDigest")
+        ):
             raise LifecycleError("a5-context-invalid", "Frozen boundary identity differs")
         if "STRONG_A5" in (plan_policy["defaultRequirement"], policy["frozenTaskRequirement"]):
             expected = "STRONG_A5"
     elif policy is not None:
         raise LifecycleError("a5-context-invalid", "Task policy lacks a frozen plan policy")
-    refs = [{"path": path.absolute().relative_to(project_root.absolute()).as_posix(),
-             "sha256": hashlib.sha256(data).hexdigest()} for path, data in zip(paths, raw, strict=True)]
-    subject = {"runId": state["runId"], "packageId": state["packageId"], "taskId": task_id,
-               "targetAttempt": actual_task["attempt"], "operationId": operation_id,
-               "stateRevision": state["stateRevision"], "planDigest": state["planDigest"],
-               "sourceRevision": source_revision}
-    return invocation_context(operation="MANAGED_TASK", adapter_id=adapter_id, session_id=session_id,
-                              request=request, profile_digest=profile_digest,
-                              workflow_subject=subject, authority_refs=refs, policy=policy,
-                              expected_protection=expected,
-                              input_identity={"task": task, "profile": profile, "riskProfile": risk_profile})
+    refs = [
+        {
+            "path": path.absolute().relative_to(project_root.absolute()).as_posix(),
+            "sha256": hashlib.sha256(data).hexdigest(),
+        }
+        for path, data in zip(paths, raw, strict=True)
+    ]
+    subject = {
+        "runId": state["runId"],
+        "packageId": state["packageId"],
+        "taskId": task_id,
+        "targetAttempt": actual_task["attempt"],
+        "operationId": operation_id,
+        "stateRevision": state["stateRevision"],
+        "planDigest": state["planDigest"],
+        "sourceRevision": source_revision,
+    }
+    return invocation_context(
+        operation="MANAGED_TASK",
+        adapter_id=adapter_id,
+        session_id=session_id,
+        request=request,
+        profile_digest=profile_digest,
+        workflow_subject=subject,
+        authority_refs=refs,
+        policy=policy,
+        expected_protection=expected,
+        input_identity={"task": task, "profile": profile, "riskProfile": risk_profile},
+    )

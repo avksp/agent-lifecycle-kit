@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any
+from typing import Any, NoReturn
 
 from agent_lifecycle.contracts.canonical import canonical_bytes
 from agent_lifecycle.contracts.errors import LifecycleError
@@ -17,59 +17,131 @@ _DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 _SIGNATURE = re.compile(r"[0-9a-f]{128}\Z")
 _TIME = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\Z")
 _PHASES = {"plan-review", "task-review", "final-review"}
-_CLAIM_FIELDS = {"schemaVersion", "issuerId", "actorId", "sessionId", "phase", "assignmentId",
-                 "assignmentDigest", "subjectDigest", "trustRootDigest", "nonce", "issuedAt", "expiresAt"}
+_CLAIM_FIELDS = {
+    "schemaVersion",
+    "issuerId",
+    "actorId",
+    "sessionId",
+    "phase",
+    "assignmentId",
+    "assignmentDigest",
+    "subjectDigest",
+    "trustRootDigest",
+    "nonce",
+    "issuedAt",
+    "expiresAt",
+}
 _ISSUER_FIELDS = {"issuerId", "fingerprint", "publicKeyHex", "actorIds", "phases"}
 
 
 def _schema(schema_id: str, fields: dict[str, Any]) -> dict[str, Any]:
-    return {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": schema_id,
-            "type": "object", "additionalProperties": False, "required": list(fields), "properties": fields}
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": schema_id,
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(fields),
+        "properties": fields,
+    }
 
 
 _TEXT = {"type": "string", "minLength": 1, "maxLength": 128}
 _HEX = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
 _UTC = {"type": "string", "pattern": r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}
 REVIEWER_IDENTITY_SCHEMAS = {
-    TRUST_ROOT_V1: _schema(TRUST_ROOT_V1, {
-        "schemaVersion": {"const": TRUST_ROOT_V1}, "revision": {"type": "integer", "minimum": 1},
-        "authorizedIssuers": {"type": "array", "minItems": 1, "maxItems": 64,
-                              "items": _schema("agent-reviewer-authorized-issuer.v1", {
-                                  "issuerId": _TEXT, "fingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
-                                  "publicKeyHex": _HEX,
-                                  "actorIds": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": True, "items": _TEXT},
-                                  "phases": {"type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": True,
-                                             "items": {"enum": sorted(_PHASES)}},
-                              })},
-    }),
-    CLAIMS_V1: _schema(CLAIMS_V1, {
-        "schemaVersion": {"const": CLAIMS_V1},
-        **{name: _TEXT for name in ("issuerId", "actorId", "sessionId", "assignmentId")},
-        "phase": {"enum": sorted(_PHASES)},
-        **{name: _HEX for name in ("assignmentDigest", "subjectDigest", "trustRootDigest", "nonce")},
-        "issuedAt": _UTC, "expiresAt": _UTC,
-    }),
-    ATTESTATION_V1: _schema(ATTESTATION_V1, {
-        "schemaVersion": {"const": ATTESTATION_V1}, "claims": {"$ref": CLAIMS_V1},
-        "signer": _schema("agent-reviewer-signer.v1", {
-            "algorithm": {"const": "Ed25519"}, "fingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
-        }), "signature": {"type": "string", "pattern": "^[0-9a-f]{128}$"},
-    }),
-    PROVENANCE_VALIDATION_V1: _schema(PROVENANCE_VALIDATION_V1, {
-        "schemaVersion": {"const": PROVENANCE_VALIDATION_V1},
-        "status": {"enum": ["PASS", "FAIL", "UNSUPPORTED"]},
-        "guarantee": {"enum": ["ATTESTED", "UNAVAILABLE"]},
-        **{name: {"type": ["string", "null"]} for name in (
-            "attestationDigest", "claimsDigest", "trustRootDigest", "assignmentDigest", "subjectDigest"
-        )},
-        "blockers": {"type": "array", "maxItems": 64, "items": _schema("agent-reviewer-provenance-blocker.v1", {
-            "code": _TEXT, "field": _TEXT,
-        })},
-    }),
+    TRUST_ROOT_V1: _schema(
+        TRUST_ROOT_V1,
+        {
+            "schemaVersion": {"const": TRUST_ROOT_V1},
+            "revision": {"type": "integer", "minimum": 1},
+            "authorizedIssuers": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 64,
+                "items": _schema(
+                    "agent-reviewer-authorized-issuer.v1",
+                    {
+                        "issuerId": _TEXT,
+                        "fingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
+                        "publicKeyHex": _HEX,
+                        "actorIds": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 64,
+                            "uniqueItems": True,
+                            "items": _TEXT,
+                        },
+                        "phases": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 3,
+                            "uniqueItems": True,
+                            "items": {"enum": sorted(_PHASES)},
+                        },
+                    },
+                ),
+            },
+        },
+    ),
+    CLAIMS_V1: _schema(
+        CLAIMS_V1,
+        {
+            "schemaVersion": {"const": CLAIMS_V1},
+            **{name: _TEXT for name in ("issuerId", "actorId", "sessionId", "assignmentId")},
+            "phase": {"enum": sorted(_PHASES)},
+            **{name: _HEX for name in ("assignmentDigest", "subjectDigest", "trustRootDigest", "nonce")},
+            "issuedAt": _UTC,
+            "expiresAt": _UTC,
+        },
+    ),
+    ATTESTATION_V1: _schema(
+        ATTESTATION_V1,
+        {
+            "schemaVersion": {"const": ATTESTATION_V1},
+            "claims": {"$ref": CLAIMS_V1},
+            "signer": _schema(
+                "agent-reviewer-signer.v1",
+                {
+                    "algorithm": {"const": "Ed25519"},
+                    "fingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
+                },
+            ),
+            "signature": {"type": "string", "pattern": "^[0-9a-f]{128}$"},
+        },
+    ),
+    PROVENANCE_VALIDATION_V1: _schema(
+        PROVENANCE_VALIDATION_V1,
+        {
+            "schemaVersion": {"const": PROVENANCE_VALIDATION_V1},
+            "status": {"enum": ["PASS", "FAIL", "UNSUPPORTED"]},
+            "guarantee": {"enum": ["ATTESTED", "UNAVAILABLE"]},
+            **{
+                name: {"type": ["string", "null"]}
+                for name in (
+                    "attestationDigest",
+                    "claimsDigest",
+                    "trustRootDigest",
+                    "assignmentDigest",
+                    "subjectDigest",
+                )
+            },
+            "blockers": {
+                "type": "array",
+                "maxItems": 64,
+                "items": _schema(
+                    "agent-reviewer-provenance-blocker.v1",
+                    {
+                        "code": _TEXT,
+                        "field": _TEXT,
+                    },
+                ),
+            },
+        },
+    ),
 }
 
 
-def _invalid(field: str) -> None:
+def _invalid(field: str) -> NoReturn:
     raise LifecycleError("reviewer-provenance-shape-invalid", f"Invalid {field}")
 
 
@@ -147,7 +219,11 @@ def validate_reviewer_attestation_shape(value: Any) -> dict[str, Any]:
     parse_reviewer_utc(claims["issuedAt"])
     parse_reviewer_utc(claims["expiresAt"])
     signer = _closed(attestation["signer"], {"algorithm", "fingerprint"}, "signer")
-    if signer["algorithm"] != "Ed25519" or type(signer["fingerprint"]) is not str or not signer["fingerprint"].startswith("ed25519:"):
+    if (
+        signer["algorithm"] != "Ed25519"
+        or type(signer["fingerprint"]) is not str
+        or not signer["fingerprint"].startswith("ed25519:")
+    ):
         _invalid("signer")
     _digest(signer["fingerprint"][8:], "signer fingerprint")
     if type(attestation["signature"]) is not str or _SIGNATURE.fullmatch(attestation["signature"]) is None:
@@ -158,7 +234,12 @@ def validate_reviewer_attestation_shape(value: Any) -> dict[str, Any]:
 
 
 __all__ = [
-    "ATTESTATION_V1", "CLAIMS_V1", "PROVENANCE_VALIDATION_V1", "REVIEWER_IDENTITY_SCHEMAS",
-    "TRUST_ROOT_V1", "parse_reviewer_utc", "validate_reviewer_attestation_shape",
+    "ATTESTATION_V1",
+    "CLAIMS_V1",
+    "PROVENANCE_VALIDATION_V1",
+    "REVIEWER_IDENTITY_SCHEMAS",
+    "TRUST_ROOT_V1",
+    "parse_reviewer_utc",
+    "validate_reviewer_attestation_shape",
     "validate_reviewer_trust_root",
 ]

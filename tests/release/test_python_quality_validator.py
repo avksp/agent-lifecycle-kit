@@ -45,7 +45,8 @@ def _run_receipt() -> dict:
         "status": "PASS",
         "toolchain": {"ruff": "0.16.3", "mypy": "1.17.1", "coverage": "7.10.6"},
         "changedPaths": [],
-        "commands": [],
+        "commands": [{"id": "ruff-format", "status": "PASS", "returncode": 0,
+                      "timedOut": False, "outputLimited": False}],
         "artifacts": {
             "ruffCorrectness": "work/raw/ruff-correctness.stdout.json",
             "ruffMigration": "work/raw/ruff-migration.stdout.json",
@@ -58,6 +59,74 @@ def _run_receipt() -> dict:
 
 
 class PythonQualityValidatorTests(unittest.TestCase):
+    def test_format_json_legacy_exit_join_and_invalid_output_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "src/example.py"
+            source.parent.mkdir()
+            source.write_text("value = 1\n")
+            raw = root / "work/raw"
+            raw.mkdir(parents=True)
+            for name in ("ruff-correctness.stdout.json", "ruff-migration.stdout.json", "ruff-line-length.stdout.json"):
+                (raw / name).write_text("[]\n")
+            (raw / "mypy.stdout.txt").write_text("Success: no issues found\n")
+            (raw / "coverage.json").write_text(json.dumps({"totals": {"percent_covered": 80.0}}))
+            policy = _policy(_digest(source))
+            policy["ruff"]["formatBaseline"] = [
+                {"path": "src/example.py", "code": "FORMAT", "count": 1, "sourceDigest": _digest(source)}
+            ]
+            policy_path = root / "policy.json"
+            policy_path.write_text(json.dumps(policy))
+            run_path = root / "run.json"
+            finding = {"filename": str(source), "code": "unformatted"}
+            cases = (
+                ("[]", 0, None),
+                (json.dumps([finding]), 1, None),
+                ("1 file already formatted\n", 0, None),
+                ("Would reformat: src/example.py\n1 file would be reformatted\n", 1, None),
+                ("Would reformat: src/example.py\n2 files would be reformatted\n", 1,
+                 "quality-format-artifact-invalid"),
+                ("Would reformat: src/example.py\n", 1, "quality-format-artifact-invalid"),
+                ("Would reformat: src/example.py\n1 file already formatted\n", 1,
+                 "quality-format-artifact-invalid"),
+                ("1 file already formatted\n1 file already formatted\n", 0,
+                 "quality-format-artifact-invalid"),
+                ("[]", 1, "quality-format-exit-findings-mismatch"),
+                (json.dumps([finding]), 0, "quality-format-exit-findings-mismatch"),
+                ("new unrecognized display\n", 0, "quality-format-artifact-invalid"),
+                ("[", 1, "quality-format-artifact-invalid"),
+                (json.dumps({"diagnostics": []}), 0, "quality-format-artifact-invalid"),
+                (json.dumps([{**finding, "code": "unknown"}]), 1, "quality-format-artifact-invalid"),
+                (json.dumps([{**finding, "filename": "src/../../outside.py"}]), 1,
+                 "quality-format-artifact-invalid"),
+                (json.dumps([finding, finding]), 1, "quality-format-artifact-invalid"),
+            )
+            for text, code, expected in cases:
+                with self.subTest(output=text, exit=code):
+                    (raw / "ruff-format.stdout.txt").write_text(text)
+                    run = _run_receipt()
+                    run["commands"][0]["returncode"] = code
+                    run_path.write_text(json.dumps(run))
+                    result = validate_quality(repository_root=root, policy_path=policy_path,
+                                              run_receipt_path=run_path, work_root=root / "work")
+                    if expected is None:
+                        self.assertEqual(result["status"], "PASS", result["blockers"])
+                    else:
+                        self.assertEqual(result["status"], "FAIL")
+                        self.assertIn(expected, {row["code"] for row in result["blockers"]})
+            # A declared fresh invocation cannot select older invocation output.
+            current = root / "work/run-current"
+            current.mkdir()
+            (raw / "ruff-format.stdout.txt").write_text("[]")
+            run = _run_receipt()
+            run["runDirectory"] = "work/run-current"
+            run["artifacts"]["coverageData"] = "work/run-current/coverage.data"
+            run_path.write_text(json.dumps(run))
+            result = validate_quality(repository_root=root, policy_path=policy_path,
+                                      run_receipt_path=run_path, work_root=root / "work")
+            self.assertEqual(result["status"], "FAIL")
+            self.assertIn("quality-artifact-outside-current-run", {row["code"] for row in result["blockers"]})
+
     def test_validator_accepts_bound_clean_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

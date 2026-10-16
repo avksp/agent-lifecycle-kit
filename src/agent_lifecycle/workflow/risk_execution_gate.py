@@ -56,21 +56,26 @@ def validate_task_risk_profile(
 
     limited = profile.get("schemaVersion") == "agent-risk-execution-profile.v2"
     if not limited and {"usageMode", "sourceUsagePolicyDigest"}.intersection(profile):
-        raise LifecycleError("risk-profile-reserved-limited-fields",
-                             "v1 risk authority cannot carry limited-mode selectors")
+        raise LifecycleError(
+            "risk-profile-reserved-limited-fields", "v1 risk authority cannot carry limited-mode selectors"
+        )
     if limited:
         from agent_lifecycle.contracts.scoped_usage_schemas import validate_limited_risk_profile_shape
         from agent_lifecycle.workflow.limited_usage import load_frozen_source_policy
 
         validate_limited_risk_profile_shape(profile)
         if repository_root is None:
-            raise LifecycleError("scoped-usage-policy-context-required", "v2 risk profile requires actual frozen context")
+            raise LifecycleError(
+                "scoped-usage-policy-context-required", "v2 risk profile requires actual frozen context"
+            )
         selected = load_frozen_source_policy(repository_root, state, task, adapter_id=profile["adapterId"])
         if selected is None or selected["policyDigest"] != profile["sourceUsagePolicyDigest"]:
             raise LifecycleError("scoped-usage-policy-mismatch", "risk profile selects another limited policy")
         if profile["modelRoute"].get("modelClass") not in selected["policy"]["allowedModelClasses"]:
             raise LifecycleError("scoped-usage-model-scope-mismatch", "risk model class is outside the frozen scope")
-    if (not limited and profile.get("schemaVersion") != RISK_EXECUTION_PROFILE_SCHEMA) or profile.get("status") != "PASS":
+    if (not limited and profile.get("schemaVersion") != RISK_EXECUTION_PROFILE_SCHEMA) or profile.get(
+        "status"
+    ) != "PASS":
         raise LifecycleError("risk-profile-invalid", "risk execution profile must be a PASS v1 profile")
     expected_digest = canonical_digest({key: value for key, value in profile.items() if key != "profileDigest"})
     if profile.get("profileDigest") != expected_digest:
@@ -183,7 +188,10 @@ def clear_task_risk_profile(task: dict[str, Any]) -> None:
 
 
 def validate_attempt_risk_usage(
-    task: dict[str, Any], receipt: dict[str, Any], *, limited_validation: dict[str, Any] | None = None,
+    task: dict[str, Any],
+    receipt: dict[str, Any],
+    *,
+    limited_validation: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Enforce risk or adopted-strategy caps after usage validation succeeds."""
 
@@ -198,20 +206,34 @@ def validate_attempt_risk_usage(
         return None
     if receipt.get("schemaVersion") == "agent-lifecycle-model-usage-receipt.v2":
         assurance = (limited_validation or {}).get("usageAssurance", {})
-        if (not isinstance(limited_validation, dict) or limited_validation.get("status") != "PASS"
-                or assurance.get("policyDigest") != binding.get("sourceUsagePolicyDigest")
-                or binding.get("usageMode") != "SOURCE_AUTHORING_LIMITED"):
-            raise LifecycleError("scoped-usage-policy-mismatch", "limited caps require current validated frozen selection")
+        if (
+            not isinstance(limited_validation, dict)
+            or limited_validation.get("status") != "PASS"
+            or assurance.get("policyDigest") != binding.get("sourceUsagePolicyDigest")
+            or binding.get("usageMode") != "SOURCE_AUTHORING_LIMITED"
+        ):
+            raise LifecycleError(
+                "scoped-usage-policy-mismatch", "limited caps require current validated frozen selection"
+            )
         caps = binding.get("resourceCaps")
         if not isinstance(caps, dict):
             raise LifecycleError("risk-profile-caps-missing", "limited resource caps are missing")
-        body = {"schemaVersion": "agent-risk-execution-usage-validation.v2", "status": "PASS",
-                "profileDigest": binding.get("profileDigest"), "strategyDigest": binding.get("strategyDigest"),
-                "actualCapConformance": "UNAVAILABLE", "usageMode": "SOURCE_AUTHORING_LIMITED",
-                "checks": [{"id": "risk-cap-" + metric, "status": "UNAVAILABLE", "value": None,
-                            "limit": caps[field]} for metric, field in (
-                                ("billableTokens", "maxBillableTokens"),
-                                ("invocations", "maxInvocations"), ("wallSeconds", "maxWallSeconds"))]}
+        body = {
+            "schemaVersion": "agent-risk-execution-usage-validation.v2",
+            "status": "PASS",
+            "profileDigest": binding.get("profileDigest"),
+            "strategyDigest": binding.get("strategyDigest"),
+            "actualCapConformance": "UNAVAILABLE",
+            "usageMode": "SOURCE_AUTHORING_LIMITED",
+            "checks": [
+                {"id": "risk-cap-" + metric, "status": "UNAVAILABLE", "value": None, "limit": caps[field]}
+                for metric, field in (
+                    ("billableTokens", "maxBillableTokens"),
+                    ("invocations", "maxInvocations"),
+                    ("wallSeconds", "maxWallSeconds"),
+                )
+            ],
+        }
         return {**body, "validationDigest": canonical_digest(body)}
     usage = receipt.get("usage")
     if not isinstance(usage, dict):

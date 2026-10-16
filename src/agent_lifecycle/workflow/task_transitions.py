@@ -5,6 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.ownership_paths import (
@@ -357,7 +358,7 @@ def rework_task(
             "finding IDs must exactly match the open findings in the REWORK evidence",
             {"missing": missing, "omitted": omitted, "available": sorted(available)},
         )
-    task.setdefault("attemptHistory", []).append(
+    _validated_cast(list[dict[str, Any]], task.setdefault("attemptHistory", [])).append(
         {
             "schemaVersion": "agent-task-attempt-history-entry.v1",
             "runId": state.get("runId"),
@@ -426,7 +427,10 @@ def _mutable_state(state_path: Path, operation_id: str, expected_revision: int) 
 
 
 def _require_current_a5_admission(
-    state_path: Path, state: dict[str, Any], task: dict[str, Any], operation_id: str,
+    state_path: Path,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    operation_id: str,
 ) -> None:
     from agent_lifecycle.workflow.events import event_log_path, read_events
     from agent_lifecycle.workflow.immutable_input import (
@@ -441,14 +445,30 @@ def _require_current_a5_admission(
     manifest, lock, verification = _current_plan_envelope(root, state)
     if verification.get("manifestHash") != state["planDigest"] or lock.get("manifestHash") != state["planDigest"]:
         raise LifecycleError("a5-context-invalid", "A5 consumer plan identity is not verified")
-    registry = (read_json_object(root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 route boundaries")
-                if "immutableInput" in manifest else None)
-    require_task_consumer_admission(manifest, state, task,
-        {"runId": state["runId"], "packageId": state["packageId"], "taskId": task["id"],
-         "targetAttempt": task["attempt"], "operationId": operation_id, "stateRevision": state["stateRevision"],
-         "planDigest": state["planDigest"], "sourceRevision": state["sourceRevision"]}, registry=registry,
+    registry = (
+        read_json_object(root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 route boundaries")
+        if "immutableInput" in manifest
+        else None
+    )
+    require_task_consumer_admission(
+        manifest,
+        state,
+        task,
+        {
+            "runId": state["runId"],
+            "packageId": state["packageId"],
+            "taskId": task["id"],
+            "targetAttempt": task["attempt"],
+            "operationId": operation_id,
+            "stateRevision": state["stateRevision"],
+            "planDigest": state["planDigest"],
+            "sourceRevision": state["sourceRevision"],
+        },
+        registry=registry,
         trusted_original_admission=original_admission_from_events(
-            state, task, list(read_events(event_log_path(state_path, state)))))
+            state, task, list(read_events(event_log_path(state_path, state)))
+        ),
+    )
 
 
 def _read_budget_targets(root: Path, budget_targets_path: str | None) -> dict[str, Any] | None:
@@ -707,7 +727,11 @@ def _validate_control_post_action(
         )
     pre_action = task.get("lifecycleControlPreAction")
     if not isinstance(pre_action, dict):
-        pre_action = evidence.get("preAction") if isinstance(evidence.get("preAction"), dict) else None
+        pre_action = (
+            _validated_cast(dict[str, Any], evidence.get("preAction"))
+            if isinstance(evidence.get("preAction"), dict)
+            else None
+        )
     gate = evaluate_post_action_gate(
         pre_action=pre_action or {},
         repository_root=root,
@@ -719,7 +743,9 @@ def _validate_control_post_action(
             "taskId": task.get("id"),
         },
         actual_status="PASS",
-        event=evidence.get("postEvent") if isinstance(evidence.get("postEvent"), dict) else None,
+        event=_validated_cast(dict[str, Any], evidence.get("postEvent"))
+        if isinstance(evidence.get("postEvent"), dict)
+        else None,
         policy=policy,
     )
     require_lifecycle_gate_pass(gate, gate_type="post-action")
@@ -739,7 +765,11 @@ def _require_control_task_acceptance(state: dict[str, Any], task: dict[str, Any]
         return
     post_action = task.get("lifecycleControlPostAction")
     if not isinstance(post_action, dict):
-        post_action = evidence.get("postAction") if isinstance(evidence.get("postAction"), dict) else None
+        post_action = (
+            _validated_cast(dict[str, Any], evidence.get("postAction"))
+            if isinstance(evidence.get("postAction"), dict)
+            else None
+        )
     if (
         not isinstance(post_action, dict)
         or post_action.get("status") != "PASS"

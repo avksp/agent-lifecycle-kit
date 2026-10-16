@@ -314,7 +314,8 @@ def _write_strategy_start_bundle(
         "schemaVersion": "agent-plan-manifest.v1",
         "status": "FROZEN",
         "planRevision": 1,
-        "package": {"id": "package", "title": "Strategy task"},
+        "package": {"id": "package", "title": "Strategy task",
+                    "planArtifactRoot": "tasks/strategy", "artifactRoot": "work"},
         "specification": {
             "tier": "S2",
             "requirements": [{"id": "R-1", "description": "Use exact strategy"}],

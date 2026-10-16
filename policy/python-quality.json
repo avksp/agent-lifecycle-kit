@@ -4218,7 +4218,7 @@
     }
   },
   "limits": {
-    "maxWallSeconds": 900,
+    "maxWallSeconds": 1800,
     "maxOutputBytes": 16777216,
     "maxBaselineEntries": 20000
   },

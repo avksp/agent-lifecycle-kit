@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from agent_lifecycle.contracts import LifecycleError, load_json_object
-from agent_lifecycle.adapter_sessions.task_intake import ADAPTER_TASK_RUN_REQUEST_SCHEMA
 
 from agent_lifecycle.adapter_sessions.start_receipts import (
     _blocker_summaries,
@@ -15,6 +13,8 @@ from agent_lifecycle.adapter_sessions.start_receipts import (
     _session_input,
     _source_input,
 )
+from agent_lifecycle.adapter_sessions.task_intake import ADAPTER_TASK_RUN_REQUEST_SCHEMA
+from agent_lifecycle.contracts import LifecycleError, load_json_object
 
 __all__ = [
     "_blocker_summaries",
@@ -34,6 +34,7 @@ _LINEAGE_STRING_FIELDS = ("runId", "packageId", "planDigest", "sourceRevision", 
 
 _LINEAGE_INTEGER_FIELDS = ("planRevision", "stateRevision")
 
+
 def _session_blockers(session: dict[str, Any], *, session_id: str, adapter_id: str) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     if session.get("schemaVersion") != _SESSION_STATE_SCHEMA:
@@ -48,7 +49,9 @@ def _session_blockers(session: dict[str, Any], *, session_id: str, adapter_id: s
     if not isinstance(identity, dict):
         blockers.append({"code": "start-resume-lineage-invalid"})
         return blockers
-    missing = [field for field in _LINEAGE_STRING_FIELDS if not isinstance(identity.get(field), str) or not identity.get(field)]
+    missing = [
+        field for field in _LINEAGE_STRING_FIELDS if not isinstance(identity.get(field), str) or not identity.get(field)
+    ]
     for field in _LINEAGE_INTEGER_FIELDS:
         value = identity.get(field)
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
@@ -68,6 +71,7 @@ def _session_blockers(session: dict[str, Any], *, session_id: str, adapter_id: s
     ):
         blockers.append({"code": "start-resume-proof-mismatch"})
     return blockers
+
 
 def _inspect_task_source(
     *,
@@ -97,11 +101,13 @@ def _inspect_task_source(
         raise LifecycleError("start-task-input-too-large", "task exceeds the input byte limit")
     return _source_input("FILE", task_file.name, data), _parse_payload(data), data
 
+
 def _parse_payload(data: bytes) -> dict[str, Any] | None:
     try:
         return load_json_object(data, label="lifecycle start input")
     except LifecycleError:
         return None
+
 
 def _is_frozen_input(payload: dict[str, Any] | None) -> bool:
     if not isinstance(payload, dict):
@@ -110,4 +116,5 @@ def _is_frozen_input(payload: dict[str, Any] | None) -> bool:
         return True
     return payload.get("schemaVersion") == "agent-plan-manifest.v1" and payload.get("status") == "FROZEN"
 
-__all__ += ['_inspect_task_source', '_is_frozen_input', '_parse_payload', '_session_blockers']
+
+__all__ += ["_inspect_task_source", "_is_frozen_input", "_parse_payload", "_session_blockers"]

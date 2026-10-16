@@ -10,6 +10,7 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.canonical import canonical_digest, load_json_object
@@ -182,7 +183,7 @@ def _state_delta(before: dict | None, after: dict) -> dict:
     """Encode only changed dictionary paths; arrays remain atomic JSON values."""
     if (before is not None and not isinstance(before, dict)) or not isinstance(after, dict):
         raise JournalUnavailable("Scope state must be a dictionary")
-    changes = []
+    changes: list[dict[str, Any]] = []
 
     def visit(old: dict, new: dict, path: list[str]) -> None:
         for key in sorted(old.keys() | new.keys()):
@@ -285,8 +286,12 @@ class WorkflowStore:
 
     @staticmethod
     def adopt_run(
-        journal: object, adoption_input: dict, selection: dict,
-        *, artifact_root: Path, observed_at: str,
+        journal: object,
+        adoption_input: dict,
+        selection: dict,
+        *,
+        artifact_root: Path,
+        observed_at: str,
     ) -> dict:
         """Refuse protected adoption until an independent operator route exists.
 
@@ -331,7 +336,8 @@ class WorkflowStore:
             db.execute("BEGIN")
             row = db.execute("SELECT version FROM schema_metadata WHERE singleton=1").fetchone()
             if (
-                row is None or row[0] != journal._storage_version
+                row is None
+                or row[0] != journal._storage_version
                 or journal.journal_identity != self._binding["journalIdentity"]
             ):
                 raise JournalUnavailable("Workflow journal version or identity changed", write_outcome="NOT_STARTED")
@@ -348,7 +354,11 @@ class WorkflowStore:
     def _require_binding(self, db: sqlite3.Connection) -> None:
         run_id = self._binding["runId"]
         saved = db.execute("SELECT binding_digest,payload FROM workflow_bindings WHERE run_id=?", (run_id,)).fetchone()
-        if saved is None or saved["binding_digest"] != self._binding_digest or saved["payload"] != canonical(self._binding):
+        if (
+            saved is None
+            or saved["binding_digest"] != self._binding_digest
+            or saved["payload"] != canonical(self._binding)
+        ):
             raise JournalUnavailable("Pinned workflow binding is absent or changed", write_outcome="NOT_STARTED")
 
     def _read_authoritative_state(self, db: sqlite3.Connection) -> tuple[dict, sqlite3.Row]:
@@ -473,25 +483,36 @@ class WorkflowStore:
                 raise JournalUnavailable("Existing accounting replay differs", write_outcome="NOT_STARTED")
             projection = _projection(replay, revision)
             if (
-                not replay.get("opening_complete") or not replay.get("qualified")
-                or replay.get("unresolved_reasons") or replay.get("input_unavailable")
-                or projection.spent is None or projection.active_reservations is None
+                not replay.get("opening_complete")
+                or not replay.get("qualified")
+                or replay.get("unresolved_reasons")
+                or replay.get("input_unavailable")
+                or projection.spent is None
+                or projection.active_reservations is None
                 or projection.protected_closeout is None
                 or projection.gate_status not in {"READY", "BOUND_BROKEN"}
             ):
-                raise JournalUnavailable("Existing accounting scope is not fully qualified", write_outcome="NOT_STARTED")
+                raise JournalUnavailable(
+                    "Existing accounting scope is not fully qualified", write_outcome="NOT_STARTED"
+                )
             return {
                 "schemaVersion": "agent-workflow-adoption-accounting-candidate.v1",
-                "status": "DATA_CANDIDATE", "budgetScopeId": scope,
-                "runId": self._binding["runId"], "unitDefinitionId": replay["scope"]["unit_definition_id"],
-                "revision": revision, "stateDigest": digest(replay),
+                "status": "DATA_CANDIDATE",
+                "budgetScopeId": scope,
+                "runId": self._binding["runId"],
+                "unitDefinitionId": replay["scope"]["unit_definition_id"],
+                "revision": revision,
+                "stateDigest": digest(replay),
                 "knownSpent": projection.known_spent,
                 "activeReservations": projection.active_reservations,
                 "protectedCloseout": projection.protected_closeout,
                 "gateStatus": projection.gate_status,
-                "accountingReplayVerified": True, "accountingHistoryQualified": False,
-                "operatorQualified": False, "quiescenceQualified": False,
-                "financialAdmission": False, "nativePermissionGranted": False,
+                "accountingReplayVerified": True,
+                "accountingHistoryQualified": False,
+                "operatorQualified": False,
+                "quiescenceQualified": False,
+                "financialAdmission": False,
+                "nativePermissionGranted": False,
             }
 
     def read_current_authority_candidate(self, authority_input: dict) -> dict:
@@ -519,14 +540,15 @@ class WorkflowStore:
         if current_digest != current_row["snapshot_digest"]:
             raise JournalUnavailable("Current authority snapshot differs", write_outcome="NOT_STARTED")
         issuance_rows = db.execute(
-            "SELECT epoch FROM workflow_authority_snapshots "
-            "WHERE binding_id=? AND snapshot_digest=? LIMIT 2",
+            "SELECT epoch FROM workflow_authority_snapshots WHERE binding_id=? AND snapshot_digest=? LIMIT 2",
             (self._binding["bindingId"], authority_input["issuanceSnapshotDigest"]),
         ).fetchall()
         if len(issuance_rows) != 1 or issuance_rows[0]["epoch"] > current_row["epoch"]:
             raise JournalUnavailable("Grant issuance snapshot is absent or newer", write_outcome="NOT_STARTED")
         issuance, issuance_digest = _snapshot_row(
-            db, self._binding["bindingId"], issuance_rows[0]["epoch"],
+            db,
+            self._binding["bindingId"],
+            issuance_rows[0]["epoch"],
         )
         if issuance_digest != authority_input["issuanceSnapshotDigest"]:
             raise JournalUnavailable("Grant issuance snapshot differs", write_outcome="NOT_STARTED")
@@ -543,7 +565,8 @@ class WorkflowStore:
             for expected_epoch, row in enumerate(chain):
                 selected, selected_digest = _snapshot_row(db, self._binding["bindingId"], expected_epoch)
                 if (
-                    row["epoch"] != expected_epoch or selected["epoch"] != expected_epoch
+                    row["epoch"] != expected_epoch
+                    or selected["epoch"] != expected_epoch
                     or row["snapshot_digest"] != selected_digest
                     or row["predecessor_digest"] != previous_digest
                     or selected["previousSnapshotDigest"] != previous_digest
@@ -558,20 +581,28 @@ class WorkflowStore:
             raise JournalUnavailable("Persisted authority history differs", write_outcome="NOT_STARTED") from exc
         candidate = {
             "schemaVersion": "agent-workflow-authority-sql-candidate.v1",
-            "status": "DATA_CANDIDATE", "bindingId": self._binding["bindingId"],
+            "status": "DATA_CANDIDATE",
+            "bindingId": self._binding["bindingId"],
             "pinDigest": authority_input["pinDigest"],
             "issuanceSnapshotDigest": issuance_digest,
             "currentSnapshotDigest": current_digest,
             "currentEpoch": current_row["epoch"],
-            "persistedSignaturesVerified": True, "historyCryptoVerified": True,
-            "rootQualificationVerified": False, "historyQualified": False,
-            "clockQualified": False, "grantQualified": False,
-            "nonceConsumed": False, "nativePermissionGranted": False,
+            "persistedSignaturesVerified": True,
+            "historyCryptoVerified": True,
+            "rootQualificationVerified": False,
+            "historyQualified": False,
+            "clockQualified": False,
+            "grantQualified": False,
+            "nonceConsumed": False,
+            "nativePermissionGranted": False,
         }
         return candidate, pin, issuance, current
 
     def _signed_grant_data_in_transaction(
-        self, authority_input: dict, grant_raw: bytes, clock_observation: dict,
+        self,
+        authority_input: dict,
+        grant_raw: bytes,
+        clock_observation: dict,
     ) -> dict:
         """Fixture-only data join under an admitted writer transaction; never a permit."""
         db = self._journal._db
@@ -581,7 +612,8 @@ class WorkflowStore:
         state, state_row = self._read_authoritative_state(db)
         ref = authority_input["grantRef"]
         if (
-            type(grant_raw) is not bytes or len(grant_raw) != ref["bytes"]
+            type(grant_raw) is not bytes
+            or len(grant_raw) != ref["bytes"]
             or hashlib.sha256(grant_raw).hexdigest() != ref["sha256"]
         ):
             raise JournalUnavailable("Signed grant raw bytes differ from ref", write_outcome="NOT_STARTED")
@@ -597,7 +629,8 @@ class WorkflowStore:
                 (self._binding["bindingId"],),
             ).fetchone()
             if (
-                high is None or selected is None
+                high is None
+                or selected is None
                 or observation["journalIdentity"] != self._binding["journalIdentity"]
                 or observation["previousAcceptedUtc"] != high["accepted_utc"]
                 or utc_microseconds(observation["observedAt"]) < utc_microseconds(selected["accepted_utc"])
@@ -614,24 +647,38 @@ class WorkflowStore:
             ):
                 raise ValueError("Grant plan or workflow revision differs from current SQL state")
             signed = verify_signed_window_grant(
-                pin, issuance, current, grant, expected_scope=grant["scope"],
+                pin,
+                issuance,
+                current,
+                grant,
+                expected_scope=grant["scope"],
                 observed_at=observation["observedAt"],
             )
         except (KeyError, TypeError, ValueError, LifecycleError) as exc:
             raise JournalUnavailable("Signed grant data join differs", write_outcome="NOT_STARTED") from exc
         return {
-            **candidate, "schemaVersion": "agent-workflow-signed-grant-data-candidate.v1",
-            "grantDigest": signed["grantDigest"], "rawGrantRefVerified": True,
-            "grantSignatureVerifiedAtSuppliedTime": True, "clockDataConsistent": True,
-            "effectivePlanVerified": True, "workflowRevisionVerified": True,
-            "artifactPathVerified": False, "workflowScopeVerified": False,
-            "rootQualificationVerified": False, "historyQualified": False,
-            "clockQualified": False, "grantQualified": False,
-            "nonceConsumed": False, "nativePermissionGranted": False,
+            **candidate,
+            "schemaVersion": "agent-workflow-signed-grant-data-candidate.v1",
+            "grantDigest": signed["grantDigest"],
+            "rawGrantRefVerified": True,
+            "grantSignatureVerifiedAtSuppliedTime": True,
+            "clockDataConsistent": True,
+            "effectivePlanVerified": True,
+            "workflowRevisionVerified": True,
+            "artifactPathVerified": False,
+            "workflowScopeVerified": False,
+            "rootQualificationVerified": False,
+            "historyQualified": False,
+            "clockQualified": False,
+            "grantQualified": False,
+            "nonceConsumed": False,
+            "nativePermissionGranted": False,
         }
 
     def _read_acknowledged_closing_authority_data_in_transaction(
-        self, sidecar: dict, authority_input: dict,
+        self,
+        sidecar: dict,
+        authority_input: dict,
     ) -> dict:
         """Join saved operation and signed current epoch; never qualify its host."""
         operation_data = _read_acknowledged_closing_operation_data(self, sidecar)
@@ -639,17 +686,25 @@ class WorkflowStore:
         if authority_data["currentEpoch"] != sidecar["expectedAuthorityEpoch"]:
             raise JournalUnavailable("Closing operation authority epoch is stale", write_outcome="NOT_STARTED")
         return {
-            **operation_data, "authorityData": authority_data,
+            **operation_data,
+            "authorityData": authority_data,
             "authorityEpoch": authority_data["currentEpoch"],
             "authorityHistoryCryptoVerified": True,
-            "rootQualificationVerified": False, "clockQualified": False,
-            "grantQualified": False, "financialAdmission": False,
+            "rootQualificationVerified": False,
+            "clockQualified": False,
+            "grantQualified": False,
+            "financialAdmission": False,
             "nativePermissionGranted": False,
         }
 
     def _activation_intent_data_in_transaction(
-        self, transition_request: dict, authority_input: dict, authority_input_raw: bytes,
-        grant_raw: bytes, window_request_raw: bytes, clock_observation: dict,
+        self,
+        transition_request: dict,
+        authority_input: dict,
+        authority_input_raw: bytes,
+        grant_raw: bytes,
+        window_request_raw: bytes,
+        clock_observation: dict,
     ) -> dict:
         """Join signed activation intent bytes without accepting a closing request or transition."""
         candidate = self._signed_grant_data_in_transaction(authority_input, grant_raw, clock_observation)
@@ -661,10 +716,10 @@ class WorkflowStore:
             if (
                 request["binding"]["bindingId"] != self._binding["bindingId"]
                 or request["binding"]["expectedBindingDigest"] != self._binding_digest
-                or request["expectedWorkflowRevision"] != self._read_authoritative_state(self._journal._db)[1]["revision"]
-                or request["requestDigest"] != canonical_digest({
-                    name: value for name, value in request.items() if name != "requestDigest"
-                })
+                or request["expectedWorkflowRevision"]
+                != self._read_authoritative_state(self._journal._db)[1]["revision"]
+                or request["requestDigest"]
+                != canonical_digest({name: value for name, value in request.items() if name != "requestDigest"})
                 or effect["commitBoundAuthorityRef"] != authority_input["grantRef"]
                 or effect["windowRequestRef"] != authority_input["windowRequestRef"]
             ):
@@ -690,28 +745,38 @@ class WorkflowStore:
                 or window.get("closingWindowId") != grant["closingWindowId"]
                 or window.get("nonce") != grant["nonce"]
                 or candidate["grantDigest"] != canonical_digest(grant)
-                or grant["windowIntentDigest"] != canonical_digest({
-                    name: value for name, value in window.items() if name != "ownerPermissionRef"
-                })
+                or grant["windowIntentDigest"]
+                != canonical_digest({name: value for name, value in window.items() if name != "ownerPermissionRef"})
             ):
                 raise ValueError("Signed closing intent differs from selected window bytes")
             for effect_field, grant_field in (
-                ("closingWindowId", "closingWindowId"), ("authorityDomain", "authorityDomain"),
-                ("issuerId", "issuerId"), ("issuerGeneration", "issuerGeneration"), ("nonce", "nonce"),
+                ("closingWindowId", "closingWindowId"),
+                ("authorityDomain", "authorityDomain"),
+                ("issuerId", "issuerId"),
+                ("issuerGeneration", "issuerGeneration"),
+                ("nonce", "nonce"),
             ):
                 if effect[effect_field] != grant[grant_field]:
                     raise ValueError("Activation effect differs from signed grant")
         except (KeyError, TypeError, ValueError, RecursionError, LifecycleError) as exc:
             raise JournalUnavailable("Activation intent data join differs", write_outcome="NOT_STARTED") from exc
         return {
-            **candidate, "schemaVersion": "agent-workflow-activation-intent-data-candidate.v1",
-            "transitionRequestDigestVerified": True, "authorityContextRawRefVerified": True,
-            "activationGrantAndWindowRefsVerified": True, "windowRawRefVerified": True,
-            "windowOwnerPermissionDigestVerified": True, "windowIntentDigestVerified": True,
-            "windowRequestShapeVerified": False, "artifactPathVerified": False,
-            "resourcePolicyEffectRefVerified": False, "resourceApprovalRefVerified": False,
-            "allowedWritesRefVerified": False, "deadlineInputRefVerified": False,
-            "grantQualified": False, "nativePermissionGranted": False,
+            **candidate,
+            "schemaVersion": "agent-workflow-activation-intent-data-candidate.v1",
+            "transitionRequestDigestVerified": True,
+            "authorityContextRawRefVerified": True,
+            "activationGrantAndWindowRefsVerified": True,
+            "windowRawRefVerified": True,
+            "windowOwnerPermissionDigestVerified": True,
+            "windowIntentDigestVerified": True,
+            "windowRequestShapeVerified": False,
+            "artifactPathVerified": False,
+            "resourcePolicyEffectRefVerified": False,
+            "resourceApprovalRefVerified": False,
+            "allowedWritesRefVerified": False,
+            "deadlineInputRefVerified": False,
+            "grantQualified": False,
+            "nativePermissionGranted": False,
         }
 
     def read_current_closing_resources(self, closing_window_id: str) -> dict:
@@ -747,7 +812,9 @@ class WorkflowStore:
                 ):
                     raise ValueError("Transition result digest mismatch")
             except (TypeError, ValueError, RecursionError) as exc:
-                raise JournalUnavailable("Invalid authoritative transition result", write_outcome="NOT_STARTED") from exc
+                raise JournalUnavailable(
+                    "Invalid authoritative transition result", write_outcome="NOT_STARTED"
+                ) from exc
             try:
                 publication_status = self._publication_status(db, state_row)
             except JournalUnavailable:
@@ -790,7 +857,11 @@ class WorkflowStore:
         with self._journal._transaction():
             self._require_binding(self._journal._db)
             return install_successor_snapshot(
-                self._journal._db, self._binding, self._binding_digest,
-                selected, selected_request["operationId"], selected_request["expectedAuthorityEpoch"],
+                self._journal._db,
+                self._binding,
+                self._binding_digest,
+                selected,
+                selected_request["operationId"],
+                selected_request["expectedAuthorityEpoch"],
                 revocation_only=True,
             )

@@ -18,10 +18,10 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, NoReturn
+from typing import cast as _validated_cast
 
 from agent_lifecycle.accounting.profile_schema import matches_profile_schema
-
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.paths import normalize_repo_path
@@ -40,7 +40,7 @@ _REF_KEYS = {"path", "sha256", "bytes"}
 _CEILING_KEYS = ("dimension", "guarantee", "unitId", "limitKind", "boundMethodId")
 
 
-def _fail(code: str) -> None:
+def _fail(code: str) -> NoReturn:
     raise LifecycleError(code, "Accounting profile input check refused")
 
 
@@ -55,8 +55,9 @@ def _no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 def _json(raw: bytes) -> dict[str, Any]:
     try:
-        value = json.loads(raw, object_pairs_hook=_no_duplicates,
-                           parse_constant=lambda _value: _fail("accounting-json-invalid"))
+        value = json.loads(
+            raw, object_pairs_hook=_no_duplicates, parse_constant=lambda _value: _fail("accounting-json-invalid")
+        )
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise LifecycleError("accounting-json-invalid", "Accounting input is invalid JSON") from exc
     if not isinstance(value, dict):
@@ -86,7 +87,7 @@ class BoundedReader:
 
     def snapshot_refs(self, root: Path) -> list[dict]:
         """Expose the bytes actually read, normalized to one repository root."""
-        refs = {}
+        refs: dict[str, dict] = {}
         for (source_root, path), raw in self.cache.items():
             relative = (Path(source_root) / path).relative_to(root.absolute()).as_posix()
             ref = {"path": relative, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
@@ -170,17 +171,22 @@ def _read(root: Path, relative: str, limit: int, reader: BoundedReader | None = 
     return (reader if reader is not None else BoundedReader()).read(root, relative, limit)
 
 
-def _refs(value: Any, depth: int = 0, *, _schema_metadata: bool = False,
-          _schema_definitions: bool = False) -> list[dict[str, Any]]:
+def _refs(
+    value: Any, depth: int = 0, *, _schema_metadata: bool = False, _schema_definitions: bool = False
+) -> list[dict[str, Any]]:
     """Find data references without interpreting schema declarations as data."""
     if depth > 64:
         _fail("accounting-json-depth-exceeded")
     if isinstance(value, dict):
         if not _schema_metadata and set(value) == _REF_KEYS:
             return [value]
-        return [ref for key, item in value.items() for ref in _refs(
-            item, depth + 1,
-            _schema_metadata=_schema_metadata or (_schema_definitions and key == "$defs"))]
+        return [
+            ref
+            for key, item in value.items()
+            for ref in _refs(
+                item, depth + 1, _schema_metadata=_schema_metadata or (_schema_definitions and key == "$defs")
+            )
+        ]
     if isinstance(value, list):
         return [ref for item in value for ref in _refs(item, depth + 1, _schema_metadata=_schema_metadata)]
     return []
@@ -189,8 +195,9 @@ def _refs(value: Any, depth: int = 0, *, _schema_metadata: bool = False,
 class EvidenceGraph:
     """Verify bounded static file references; assign no provenance or authority."""
 
-    def __init__(self, root: Path, reader: BoundedReader | None = None, *,
-                 schema_refs: list[dict[str, Any]] | None = None) -> None:
+    def __init__(
+        self, root: Path, reader: BoundedReader | None = None, *, schema_refs: list[dict[str, Any]] | None = None
+    ) -> None:
         if root.is_symlink():
             _fail("accounting-evidence-root-symlink")
         self.root = root
@@ -253,9 +260,12 @@ class EvidenceGraph:
             _fail("accounting-reference-invalid")
         path, digest, size = ref["path"], ref["sha256"], ref["bytes"]
         if (
-            not isinstance(path, str) or not isinstance(digest, str) or len(digest) != 64
+            not isinstance(path, str)
+            or not isinstance(digest, str)
+            or len(digest) != 64
             or any(c not in "0123456789abcdef" for c in digest)
-            or type(size) is not int or not 0 <= size <= ARTIFACT_BYTES
+            or type(size) is not int
+            or not 0 <= size <= ARTIFACT_BYTES
         ):
             _fail("accounting-reference-invalid")
         if path in self.active:
@@ -339,10 +349,19 @@ def _source_qualification_authority(reader: BoundedReader, repo_root: Path) -> t
     """Read and verify the existing frozen H04 authorities before profile data."""
     authority_refs = {}
     authority = {}
-    for name in ("plan.manifest.json", "plan.lock.json", "h04-artifact-contracts.json", "h04-adapter-profile-cases.json"):
+    for name in (
+        "plan.manifest.json",
+        "plan.lock.json",
+        "h04-artifact-contracts.json",
+        "h04-adapter-profile-cases.json",
+    ):
         path = "tasks/release-2-16/" + name
         raw_authority = reader.read(repo_root, path, ARTIFACT_BYTES)
-        authority_refs[name] = {"path": path, "sha256": hashlib.sha256(raw_authority).hexdigest(), "bytes": len(raw_authority)}
+        authority_refs[name] = {
+            "path": path,
+            "sha256": hashlib.sha256(raw_authority).hexdigest(),
+            "bytes": len(raw_authority),
+        }
         authority[name] = _json(raw_authority)
     manifest, lock = authority["plan.manifest.json"], authority["plan.lock.json"]
     contracts, expected = authority["h04-artifact-contracts.json"], authority["h04-adapter-profile-cases.json"]
@@ -360,8 +379,118 @@ def _source_qualification_authority(reader: BoundedReader, repo_root: Path) -> t
     return authority_refs, manifest, contracts, expected
 
 
+def _validate_source_qualification_observations(
+    qualification: dict, payload: dict, entry: dict, sources: dict, roles: dict
+) -> None:
+    observations = {o["observationId"]: o for o in qualification["observations"]}
+    if len(observations) != len(qualification["observations"]):
+        _fail("accounting-qualification-observation-duplicate")
+    for observation in observations.values():
+        if (
+            observation["kind"] != "DOCUMENTED_LIMITATION"
+            or observation["claimIds"]
+            or observation["actualBinding"] != payload["binding"]
+            or observation["usageStatus"] != "UNAVAILABLE"
+            or observation["usage"] is not None
+            or observation["priorPermitRef"] is not None
+            or observation["reuseApplicabilityRef"] is not None
+            or observation["recipeId"] != entry["qualificationRecipe"]["recipeId"]
+            or set(observation["sourceIds"]) - set(sources)
+            or set(observation["routeIds"]) - set(roles)
+        ):
+            _fail("accounting-source-observation-invalid")
+    dispositions = {d["candidateId"]: d for d in qualification["candidateDispositions"]}
+    candidates = entry["candidateRequirements"]
+    if len(dispositions) != len(qualification["candidateDispositions"]) or set(dispositions) != {
+        c["candidateId"] for c in candidates
+    }:
+        _fail("accounting-qualification-candidate-inventory-invalid")
+    for candidate in candidates:
+        disposition = dispositions[candidate["candidateId"]]
+        selected_observations = [observations.get(oid) for oid in disposition["observationIds"]]
+        if (
+            disposition["disposition"] not in {"QUALIFIED_LIMITATION", "REVIEWED_EXCLUSION"}
+            or disposition["claimIds"]
+            or not selected_observations
+            or any(o is None for o in selected_observations)
+            or any(_validated_cast(dict, o)["unitId"] != candidate["unitId"] for o in selected_observations)
+            or not set(candidate["sourceIds"])
+            <= {sid for o in selected_observations for sid in _validated_cast(dict, o)["sourceIds"]}
+        ):
+            _fail("accounting-qualification-candidate-unresolved")
+
+
+def _read_final_source_qualification_data(
+    final: bool,
+    reader: BoundedReader,
+    profiles_root: Path,
+    adapter_id: str,
+    contracts: dict,
+    payload: dict,
+    checked: dict,
+    qref: dict,
+    graph: EvidenceGraph,
+    joins: dict,
+    prefix: str,
+) -> dict:
+    final_data = {}
+    if final:
+        profile_raw = reader.read(profiles_root, adapter_id + "/profile.json", PROFILE_BYTES)
+        envelope = _json(profile_raw)
+        _profile_schema(envelope, contracts["$defs"], "profile")
+        if (
+            envelope["payload"] != payload
+            or envelope["profileDigest"] != checked["profileDigest"]
+            or envelope["qualificationRef"] != qref
+            or envelope["resolverEvidenceRef"]["path"] != adapter_id + "/resolver-evidence.json"
+        ):
+            _fail("accounting-final-profile-binding-mismatch")
+        resolver = graph.document(envelope["resolverEvidenceRef"])
+        _profile_schema(resolver, contracts["$defs"], "resolverEvidence")
+        if any(
+            resolver[key] != joins[key]
+            for key in ("profileDigest", "expectationDigest", "planDigest", "alkCandidateDigest")
+        ):
+            _fail("accounting-resolver-evidence-binding-mismatch")
+        producer = next(p for p in contracts["producers"] if p["id"] == "P-EXACT-PROFILE-RESOLVER")
+        if resolver["commandDigest"] != digest(producer["command"]):
+            _fail("accounting-resolver-command-mismatch")
+        ids = [row["caseId"] for row in resolver["observations"]]
+        if len(ids) != len(set(ids)):
+            _fail("accounting-resolver-observation-duplicate")
+        for ref in _refs(envelope):
+            graph.verify(ref)
+        final_data = {
+            "profile": envelope,
+            "resolver": resolver,
+            "resolverReceipt": graph.document(resolver["receiptRef"]),
+            "resolverTraces": {
+                row["rawTraceRef"]["path"]: graph.document(row["rawTraceRef"]) for row in resolver["observations"]
+            },
+        }
+        resolver_subject_path = adapter_id + "/resolver-subject.json"
+        resolver_subject_raw = reader.read(profiles_root, resolver_subject_path, PROFILE_BYTES)
+        resolver_projection = {
+            "schemaVersion": "alk-accounting-resolver-subject.v1",
+            "resolverDigest": digest({k: v for k, v in resolver.items() if k != "receiptRef"}),
+        }
+        if _json(resolver_subject_raw) != resolver_projection:
+            _fail("accounting-resolver-subject-mismatch")
+        final_data["resolverSubjectRef"] = {
+            "path": prefix + "/" + resolver_subject_path,
+            "sha256": hashlib.sha256(resolver_subject_raw).hexdigest(),
+            "bytes": len(resolver_subject_raw),
+        }
+    return final_data
+
+
 def _read_source_lifecycle_qualification(
-    reader: BoundedReader, repo_root: Path, profiles_root: Path, adapter_id: str, *, final: bool,
+    reader: BoundedReader,
+    repo_root: Path,
+    profiles_root: Path,
+    adapter_id: str,
+    *,
+    final: bool,
 ) -> dict:
     prefix = profiles_root.absolute().relative_to(repo_root.absolute()).as_posix()
     normalize_repo_path(prefix, label="profiles root")
@@ -373,40 +502,52 @@ def _read_source_lifecycle_qualification(
     entry = selected[0]
     payload = _json(reader.read(profiles_root, adapter_id + "/profile-payload.json", PROFILE_BYTES))
     checked = validate_profile_payload(payload)
-    if (payload["expectationId"] != entry["expectationId"]
-            or payload["binding"]["adapterId"] != adapter_id
-            or payload["binding"]["hostVersion"] != entry["target"]["version"]):
+    if (
+        payload["expectationId"] != entry["expectationId"]
+        or payload["binding"]["adapterId"] != adapter_id
+        or payload["binding"]["hostVersion"] != entry["target"]["version"]
+    ):
         _fail("accounting-profile-binding-mismatch")
-    if (payload["binding"]["evidenceMode"] != "SOURCE_BOUND_LIMITATION"
-            or payload["modes"] != ["LIFECYCLE_ONLY"] or payload["claims"] or payload["completeFinancialRun"]):
+    if (
+        payload["binding"]["evidenceMode"] != "SOURCE_BOUND_LIMITATION"
+        or payload["modes"] != ["LIFECYCLE_ONLY"]
+        or payload["claims"]
+        or payload["completeFinancialRun"]
+    ):
         _fail("accounting-qualified-mode-unavailable")
     roles = {rid: rid.split(".")[0] for rid in entry["roleInventory"]}
-    if ({r["routeId"]: r["role"] for r in payload["routes"]} != roles
-            or any(r["state"] != "EXCLUDED" for r in payload["routes"])):
+    if {r["routeId"]: r["role"] for r in payload["routes"]} != roles or any(
+        r["state"] != "EXCLUDED" for r in payload["routes"]
+    ):
         _fail("accounting-qualified-route-inventory-invalid")
     cases = {r["sourceCaseId"]: r["sourceCaseSha256"] for r in entry["sourceCaseRequirements"]}
-    if ({r["sourceCaseId"]: r["sourceCaseSha256"] for r in payload["sourceCaseDispositions"]} != cases
-            or any(r["disposition"] not in {"QUALIFIED_LIMITATION", "NOT_APPLICABLE_TO_SELECTED_GUARANTEE"}
-                   for r in payload["sourceCaseDispositions"])):
+    if {r["sourceCaseId"]: r["sourceCaseSha256"] for r in payload["sourceCaseDispositions"]} != cases or any(
+        r["disposition"] not in {"QUALIFIED_LIMITATION", "NOT_APPLICABLE_TO_SELECTED_GUARANTEE"}
+        for r in payload["sourceCaseDispositions"]
+    ):
         _fail("accounting-qualified-source-cases-unresolved")
     sources = {s["sourceId"]: s for s in payload["sources"]}
     if set(sources) != {s["sourceId"] for s in entry["sources"]}:
         _fail("accounting-qualified-source-inventory-invalid")
-    graph = EvidenceGraph(profiles_root, reader,
-                          schema_refs=[authority_refs["h04-artifact-contracts.json"]])
+    graph = EvidenceGraph(profiles_root, reader, schema_refs=[authority_refs["h04-artifact-contracts.json"]])
     for frozen in entry["sources"]:
         source = sources[frozen["sourceId"]]
         # Frozen capture kinds and payload source kinds use different
         # vocabularies. Archive bytes prove a source-bound input, not a
         # current runtime observation or an independent review publication.
         origins = frozen["origins"] or [frozen["artifact"]["path"]]
-        if (source["kind"] in {"RUNTIME_OBSERVATION", "INDEPENDENT_REVIEW"}
-                or source["origin"] not in origins
-                or source["versionApplicability"] != entry["target"]["version"]
-                or any(source["artifact"][k] != frozen["artifact"][k] for k in ("sha256", "bytes"))):
+        if (
+            source["kind"] in {"RUNTIME_OBSERVATION", "INDEPENDENT_REVIEW"}
+            or source["origin"] not in origins
+            or source["versionApplicability"] != entry["target"]["version"]
+            or any(source["artifact"][k] != frozen["artifact"][k] for k in ("sha256", "bytes"))
+        ):
             _fail("accounting-qualified-source-binding-invalid")
         original = reader.read(repo_root, frozen["artifact"]["path"], ARTIFACT_BYTES)
-        if len(original) != frozen["artifact"]["bytes"] or hashlib.sha256(original).hexdigest() != frozen["artifact"]["sha256"]:
+        if (
+            len(original) != frozen["artifact"]["bytes"]
+            or hashlib.sha256(original).hexdigest() != frozen["artifact"]["sha256"]
+        ):
             _fail("accounting-frozen-source-changed")
     raw = reader.read(profiles_root, adapter_id + "/qualification.json", ARTIFACT_BYTES)
     qref = {"path": adapter_id + "/qualification.json", "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
@@ -416,102 +557,94 @@ def _read_source_lifecycle_qualification(
         graph.verify(ref)
     candidate_rows = _candidate_sources(reader, repo_root)
     candidate_digest = digest(candidate_rows)
-    joins = {"profileDigest": checked["profileDigest"], "expectationDigest": digest(entry),
-             "planDigest": digest(manifest), "alkCandidateDigest": candidate_digest, "binding": payload["binding"]}
+    joins = {
+        "profileDigest": checked["profileDigest"],
+        "expectationDigest": digest(entry),
+        "planDigest": digest(manifest),
+        "alkCandidateDigest": candidate_digest,
+        "binding": payload["binding"],
+    }
     if any(qualification[key] != value for key, value in joins.items()):
         _fail("accounting-qualification-binding-mismatch")
-    observations = {o["observationId"]: o for o in qualification["observations"]}
-    if len(observations) != len(qualification["observations"]):
-        _fail("accounting-qualification-observation-duplicate")
-    for observation in observations.values():
-        if (observation["kind"] != "DOCUMENTED_LIMITATION" or observation["claimIds"]
-                or observation["actualBinding"] != payload["binding"]
-                or observation["usageStatus"] != "UNAVAILABLE" or observation["usage"] is not None
-                or observation["priorPermitRef"] is not None or observation["reuseApplicabilityRef"] is not None
-                or observation["recipeId"] != entry["qualificationRecipe"]["recipeId"]
-                or set(observation["sourceIds"]) - set(sources)
-                or set(observation["routeIds"]) - set(roles)):
-            _fail("accounting-source-observation-invalid")
-    dispositions = {d["candidateId"]: d for d in qualification["candidateDispositions"]}
-    candidates = entry["candidateRequirements"]
-    if len(dispositions) != len(qualification["candidateDispositions"]) or set(dispositions) != {c["candidateId"] for c in candidates}:
-        _fail("accounting-qualification-candidate-inventory-invalid")
-    for candidate in candidates:
-        disposition = dispositions[candidate["candidateId"]]
-        selected_observations = [observations.get(oid) for oid in disposition["observationIds"]]
-        if (disposition["disposition"] not in {"QUALIFIED_LIMITATION", "REVIEWED_EXCLUSION"}
-                or disposition["claimIds"] or not selected_observations or any(o is None for o in selected_observations)
-                or any(o["unitId"] != candidate["unitId"] for o in selected_observations)
-                or not set(candidate["sourceIds"]) <= {sid for o in selected_observations for sid in o["sourceIds"]}):
-            _fail("accounting-qualification-candidate-unresolved")
+    _validate_source_qualification_observations(qualification, payload, entry, sources, roles)
     subject_path = adapter_id + "/qualification-subject.json"
     subject_raw = reader.read(profiles_root, subject_path, PROFILE_BYTES)
-    projection = {"schemaVersion": "alk-accounting-qualification-subject.v1", "profileDigest": checked["profileDigest"],
-                  "qualificationDigest": digest({k: v for k, v in qualification.items() if k != "reviewEvidenceRef"})}
+    projection = {
+        "schemaVersion": "alk-accounting-qualification-subject.v1",
+        "profileDigest": checked["profileDigest"],
+        "qualificationDigest": digest({k: v for k, v in qualification.items() if k != "reviewEvidenceRef"}),
+    }
     if _json(subject_raw) != projection:
         _fail("accounting-qualification-review-subject-mismatch")
-    subject_ref = {"path": prefix + "/" + subject_path, "sha256": hashlib.sha256(subject_raw).hexdigest(), "bytes": len(subject_raw)}
+    subject_ref = {
+        "path": prefix + "/" + subject_path,
+        "sha256": hashlib.sha256(subject_raw).hexdigest(),
+        "bytes": len(subject_raw),
+    }
     review = graph.document(qualification["reviewEvidenceRef"])
-    final_data = {}
-    if final:
-        profile_raw = reader.read(profiles_root, adapter_id + "/profile.json", PROFILE_BYTES)
-        envelope = _json(profile_raw)
-        _profile_schema(envelope, contracts["$defs"], "profile")
-        if (envelope["payload"] != payload or envelope["profileDigest"] != checked["profileDigest"]
-                or envelope["qualificationRef"] != qref
-                or envelope["resolverEvidenceRef"]["path"] != adapter_id + "/resolver-evidence.json"):
-            _fail("accounting-final-profile-binding-mismatch")
-        resolver = graph.document(envelope["resolverEvidenceRef"])
-        _profile_schema(resolver, contracts["$defs"], "resolverEvidence")
-        if any(resolver[key] != joins[key] for key in ("profileDigest", "expectationDigest", "planDigest", "alkCandidateDigest")):
-            _fail("accounting-resolver-evidence-binding-mismatch")
-        producer = next(p for p in contracts["producers"] if p["id"] == "P-EXACT-PROFILE-RESOLVER")
-        if resolver["commandDigest"] != digest(producer["command"]):
-            _fail("accounting-resolver-command-mismatch")
-        ids = [row["caseId"] for row in resolver["observations"]]
-        if len(ids) != len(set(ids)):
-            _fail("accounting-resolver-observation-duplicate")
-        for ref in _refs(envelope):
-            graph.verify(ref)
-        final_data = {"profile": envelope, "resolver": resolver,
-                      "resolverReceipt": graph.document(resolver["receiptRef"]),
-                      "resolverTraces": {row["rawTraceRef"]["path"]: graph.document(row["rawTraceRef"])
-                                         for row in resolver["observations"]}}
-        resolver_subject_path = adapter_id + "/resolver-subject.json"
-        resolver_subject_raw = reader.read(profiles_root, resolver_subject_path, PROFILE_BYTES)
-        resolver_projection = {"schemaVersion": "alk-accounting-resolver-subject.v1",
-                               "resolverDigest": digest({k: v for k, v in resolver.items() if k != "receiptRef"})}
-        if _json(resolver_subject_raw) != resolver_projection:
-            _fail("accounting-resolver-subject-mismatch")
-        final_data["resolverSubjectRef"] = {"path": prefix + "/" + resolver_subject_path,
-                                          "sha256": hashlib.sha256(resolver_subject_raw).hexdigest(), "bytes": len(resolver_subject_raw)}
-    return {**final_data, "payload": payload, "qualification": qualification, "review": review,
-            "reviewRef": qualification["reviewEvidenceRef"], "joins": joins,
-            "subjectRef": subject_ref, "authorityRefs": authority_refs,
-            "contentDigest": digest({"payload": payload, "qualification": qualification,
-                                     "authorityRefs": authority_refs, "subjectRef": subject_ref, "finalData": final_data,
-                                     "candidateSources": candidate_rows, "refs": sorted(graph.verified.values(), key=lambda r: r["path"])}),
-            "readBytes": reader.charged_bytes}
+    final_data = _read_final_source_qualification_data(
+        final, reader, profiles_root, adapter_id, contracts, payload, checked, qref, graph, joins, prefix
+    )
+    return {
+        **final_data,
+        "payload": payload,
+        "qualification": qualification,
+        "review": review,
+        "reviewRef": qualification["reviewEvidenceRef"],
+        "joins": joins,
+        "subjectRef": subject_ref,
+        "authorityRefs": authority_refs,
+        "contentDigest": digest(
+            {
+                "payload": payload,
+                "qualification": qualification,
+                "authorityRefs": authority_refs,
+                "subjectRef": subject_ref,
+                "finalData": final_data,
+                "candidateSources": candidate_rows,
+                "refs": sorted(graph.verified.values(), key=lambda r: r["path"]),
+            }
+        ),
+        "readBytes": reader.charged_bytes,
+    }
 
 
 def read_source_lifecycle_qualifications(
-    repo_root: Path, profiles_root: Path, adapter_ids: list[str], *, byte_limit: int = TASK_BYTES, final: bool = False,
+    repo_root: Path,
+    profiles_root: Path,
+    adapter_ids: list[str],
+    *,
+    byte_limit: int = TASK_BYTES,
+    final: bool = False,
 ) -> dict:
     """Read a batch with one immutable cache/budget; never grant authority."""
-    if not isinstance(adapter_ids, list) or not 1 <= len(adapter_ids) <= 12 or len(set(adapter_ids)) != len(adapter_ids):
+    if (
+        not isinstance(adapter_ids, list)
+        or not 1 <= len(adapter_ids) <= 12
+        or len(set(adapter_ids)) != len(adapter_ids)
+    ):
         _fail("accounting-profile-batch-invalid")
     reader = BoundedReader(byte_limit)
     try:
-        profiles = {adapter: _read_source_lifecycle_qualification(reader, repo_root, profiles_root, adapter, final=final)
-                    for adapter in adapter_ids}
-        return {"profiles": profiles, "readBytes": reader.charged_bytes,
-                "snapshotRefs": reader.snapshot_refs(repo_root)}
+        profiles = {
+            adapter: _read_source_lifecycle_qualification(reader, repo_root, profiles_root, adapter, final=final)
+            for adapter in adapter_ids
+        }
+        return {
+            "profiles": profiles,
+            "readBytes": reader.charged_bytes,
+            "snapshotRefs": reader.snapshot_refs(repo_root),
+        }
     finally:
         reader.close()
 
 
 def read_source_lifecycle_qualification(
-    repo_root: Path, profiles_root: Path, adapter_id: str, *, byte_limit: int = TASK_BYTES,
+    repo_root: Path,
+    profiles_root: Path,
+    adapter_id: str,
+    *,
+    byte_limit: int = TASK_BYTES,
 ) -> dict:
     """Read staged contents; the upper layer must verify actual observed review.
 
@@ -544,7 +677,12 @@ def accounting_request_blocker() -> dict:
 
 
 def resolve_accounting_capability(
-    profile: dict, request: dict, *, expectation_digest: str, plan_digest: str, candidate_digest: str,
+    profile: dict,
+    request: dict,
+    *,
+    expectation_digest: str,
+    plan_digest: str,
+    candidate_digest: str,
 ) -> dict:
     """Return exact structural refusals, never promote pending evidence to ALLOW.
 
@@ -554,19 +692,24 @@ def resolve_accounting_capability(
     """
     try:
         request_digest = digest(request)
-        if (not isinstance(profile, dict)
-                or set(profile) != {"schemaVersion", "payload", "profileDigest", "qualificationRef", "resolverEvidenceRef"}
-                or profile["schemaVersion"] != "alk-accounting-profile.v1"):
+        if (
+            not isinstance(profile, dict)
+            or set(profile) != {"schemaVersion", "payload", "profileDigest", "qualificationRef", "resolverEvidenceRef"}
+            or profile["schemaVersion"] != "alk-accounting-profile.v1"
+        ):
             raise ValueError("Closed profile envelope required")
         payload = profile["payload"]
         profile_digest = digest(payload)
         if profile["profileDigest"] != profile_digest:
             raise ValueError("Profile digest mismatch")
         matched = match_requested_claims(
-            payload, request, expectation_digest=expectation_digest,
-            plan_digest=plan_digest, candidate_digest=candidate_digest,
+            payload,
+            request,
+            expectation_digest=expectation_digest,
+            plan_digest=plan_digest,
+            candidate_digest=candidate_digest,
         )
-        detail = (matched["detail"] if matched["status"] == "MISMATCH" else "UNQUALIFIED_EVIDENCE")
+        detail = matched["detail"] if matched["status"] == "MISMATCH" else "UNQUALIFIED_EVIDENCE"
         if matched["status"] == "MATCH_PENDING_EVIDENCE" and (
             request["requestedModes"] != ["LIFECYCLE_ONLY"] or request["requiredClaims"]
         ):
@@ -581,14 +724,24 @@ def resolve_accounting_capability(
         # digests identify a fixed invalid-input marker, never an accepted input.
         request_digest = profile_digest = digest({"invalidInput": True})
         detail = "INVALID_INPUT"
-    if (not isinstance(expectation_digest, str) or len(expectation_digest) != 64
-            or any(char not in "0123456789abcdef" for char in expectation_digest)):
+    if (
+        not isinstance(expectation_digest, str)
+        or len(expectation_digest) != 64
+        or any(char not in "0123456789abcdef" for char in expectation_digest)
+    ):
         expectation_digest = digest({"invalidExpectation": True})
         detail = "INVALID_INPUT"
-    return {"schemaVersion": "alk-accounting-capability-result.v1",
-            "requestDigest": request_digest, "profileDigest": profile_digest,
-            "expectationDigest": expectation_digest, "outcome": "DENY", "reason": CAPABILITY_UNAVAILABLE,
-            "detail": detail, "matchedClaimIds": [], "dispatchEntitlement": False}
+    return {
+        "schemaVersion": "alk-accounting-capability-result.v1",
+        "requestDigest": request_digest,
+        "profileDigest": profile_digest,
+        "expectationDigest": expectation_digest,
+        "outcome": "DENY",
+        "reason": CAPABILITY_UNAVAILABLE,
+        "detail": detail,
+        "matchedClaimIds": [],
+        "dispatchEntitlement": False,
+    }
 
 
 class _MaintenanceJournal(Journal):
@@ -616,10 +769,13 @@ class _MaintenanceJournal(Journal):
 
 
 def _require_raw_platform() -> None:
-    if (os.name != "posix" or not getattr(os, "O_NOFOLLOW", 0)
-            or not getattr(os, "O_DIRECTORY", 0)
-            or any(fn not in os.supports_dir_fd for fn in (os.open, os.stat, os.link, os.unlink))
-            or os.link not in os.supports_follow_symlinks):
+    if (
+        os.name != "posix"
+        or not getattr(os, "O_NOFOLLOW", 0)
+        or not getattr(os, "O_DIRECTORY", 0)
+        or any(fn not in os.supports_dir_fd for fn in (os.open, os.stat, os.link, os.unlink))
+        or os.link not in os.supports_follow_symlinks
+    ):
         raise LifecycleError("retention-platform-unsupported", "Safe private raw maintenance is unavailable")
 
 
@@ -632,8 +788,9 @@ def _read_object(raw: bytes) -> dict:
             value[key] = item
         return value
 
-    value = json.loads(raw, object_pairs_hook=unique,
-                       parse_constant=lambda _: (_ for _ in ()).throw(ValueError("Nonfinite authority")))
+    value = json.loads(
+        raw, object_pairs_hook=unique, parse_constant=lambda _: (_ for _ in ()).throw(ValueError("Nonfinite authority"))
+    )
     if not isinstance(value, dict):
         raise ValueError("Authority object required")
     canonical(value)
@@ -641,9 +798,13 @@ def _read_object(raw: bytes) -> dict:
 
 
 def _open_authority(path: Path, expected_sha: str) -> tuple[Path, dict, dict, EvidenceRef]:
-    if (not path.is_absolute() or path.resolve(strict=True) != path
-            or not isinstance(expected_sha, str) or len(expected_sha) != 64
-            or any(char not in "0123456789abcdef" for char in expected_sha)):
+    if (
+        not path.is_absolute()
+        or path.resolve(strict=True) != path
+        or not isinstance(expected_sha, str)
+        or len(expected_sha) != 64
+        or any(char not in "0123456789abcdef" for char in expected_sha)
+    ):
         raise ValueError("Canonical absolute authority and SHA-256 required")
     root = path.parent
     with _raw_parent(root, path.name) as (parent, name):
@@ -661,20 +822,23 @@ def _open_authority(path: Path, expected_sha: str) -> tuple[Path, dict, dict, Ev
         raise ValueError("Pinned maintenance writer mismatch")
     # Reuse the journal's complete root/file/plan/lock validator on a read-only
     # connection before the writable Journal constructor can touch the database.
-    with _raw_parent(root, authority.get("journalPath")) as (parent, name):
+    with _raw_parent(root, _validated_cast(str, authority.get("journalPath"))) as (parent, name):
         info = os.stat(name, dir_fd=parent, follow_symlinks=False)
-        if (not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600
-                or info.st_uid != os.geteuid() or info.st_nlink != 1
-                or authority.get("journalFileIdentity") != {"device": info.st_dev, "inode": info.st_ino}):
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or stat.S_IMODE(info.st_mode) != 0o600
+            or info.st_uid != os.geteuid()
+            or info.st_nlink != 1
+            or authority.get("journalFileIdentity") != {"device": info.st_dev, "inode": info.st_ino}
+        ):
             raise ValueError("Pinned journal file changed")
     journal_path = root / authority["journalPath"]
     db = sqlite3.connect(journal_path.as_uri() + "?mode=ro", uri=True)
     try:
         identity = db.execute("SELECT journal_id FROM retention_metadata WHERE singleton=1").fetchone()[0]
         version = db.execute("SELECT version FROM schema_metadata WHERE singleton=1").fetchone()[0]
-        probe = SimpleNamespace(_path=journal_path, writer=writer,
-                                _storage_version=version, journal_identity=identity)
-        JournalRetentionMixin._raw_authority(probe, root, ref)
+        probe = SimpleNamespace(_path=journal_path, writer=writer, _storage_version=version, journal_identity=identity)
+        JournalRetentionMixin._raw_authority(_validated_cast(JournalRetentionMixin, probe), root, ref)
     finally:
         db.close()
     return root, authority, ref, writer
@@ -688,7 +852,8 @@ def _pending_runs(journal: Journal, limit: int) -> list[str]:
         "WHERE r.owner='raw-obligation' AND NOT EXISTS "
         "(SELECT 1 FROM maintenance_receipts d WHERE d.key='raw-done:'||r.digest) "
         "ORDER BY EXISTS(SELECT 1 FROM financial_exceptions e WHERE e.scope=r.scope), "
-        "c.key IS NULL, json_extract(c.payload,'$.eligible_after'),r.scope LIMIT ?", (limit,)
+        "c.key IS NULL, json_extract(c.payload,'$.eligible_after'),r.scope LIMIT ?",
+        (limit,),
     ).fetchall()
     return [row[0] for row in rows]
 
@@ -700,11 +865,15 @@ def _next_pending_due(journal: Journal) -> str | None:
         "(SELECT 1 FROM maintenance_receipts d WHERE d.key='raw-done:'||r.digest) "
         "ORDER BY json_extract(c.payload,'$.eligible_after'),r.scope LIMIT 1"
     ).fetchone()
-    return journal.closed_run(row[0])["eligible_after"] if row else None
+    return _validated_cast(dict, journal.closed_run(row[0]))["eligible_after"] if row else None
 
 
 def maintain_raw_details(
-    authority_path: Path, authority_sha: str, *, candidate_limit: int, deadline_utc: str,
+    authority_path: Path,
+    authority_sha: str,
+    *,
+    candidate_limit: int,
+    deadline_utc: str,
 ) -> dict:
     """Delete eligible closed-run details; retain summaries, dedup and open runs.
 
@@ -725,9 +894,13 @@ def maintain_raw_details(
         if datetime.now(UTC) >= utc_instant(deadline_utc) or time.monotonic() >= stop:
             raise JournalUnavailable("Original maintenance deadline exhausted", write_outcome="NOT_STARTED")
         rows, failure = [], False
-        with _MaintenanceJournal(root / authority["journalPath"], writer,
-                                 storage_version=authority["storageVersion"], stop=stop,
-                                 deadline_utc=deadline_utc) as journal:
+        with _MaintenanceJournal(
+            root / authority["journalPath"],
+            writer,
+            storage_version=authority["storageVersion"],
+            stop=stop,
+            deadline_utc=deadline_utc,
+        ) as journal:
             journal._maintenance_deadline = stop
             with journal._transaction():
                 journal._raw_authority(root, ref)
@@ -741,25 +914,43 @@ def maintain_raw_details(
                         if closed is not None:
                             journal.collect_closed_run(run_id, datetime.now(UTC).isoformat())
                     result = journal.collect_raw_run(
-                        run_id, datetime.now(UTC).isoformat(), private_root=root,
-                        authority_ref=ref, candidate_limit=candidate_limit, work_deadline_utc=deadline_utc,
+                        run_id,
+                        datetime.now(UTC).isoformat(),
+                        private_root=root,
+                        authority_ref=ref,
+                        candidate_limit=candidate_limit,
+                        work_deadline_utc=deadline_utc,
                     )
                     outcome = result["status"]
                 except (JournalUnavailable, OSError):
                     outcome, failure = "REFUSED", True
                 after = journal.raw_obligations(run_id, datetime.now(UTC).isoformat())
-                rows.append({"runIdSha256": hashlib.sha256(run_id.encode()).hexdigest(),
-                             "status": outcome, "before": [v["status"] for v in before],
-                             "after": [v["status"] for v in after]})
+                rows.append(
+                    {
+                        "runIdSha256": hashlib.sha256(run_id.encode()).hexdigest(),
+                        "status": outcome,
+                        "before": [v["status"] for v in before],
+                        "after": [v["status"] for v in after],
+                    }
+                )
                 if time.monotonic() >= stop:
                     failure = True
                     break
             _raw_ref(root, ref)
-            return {"schemaVersion": "alk-raw-maintenance-result.v1", "status": "PARTIAL" if failure else "COMPLETE",
-                    "authoritySha256": authority_sha, "journalIdentity": journal.journal_identity,
-                    "startedAt": started.isoformat(), "finishedAt": datetime.now(UTC).isoformat(),
-                    "outcomes": rows, "nextDueAt": _next_pending_due(journal),
-                    "failure": "retention-refused" if failure else None,
-                    "retentionDays": 30, "assurance": "PROCEDURAL_SAME_ACCOUNT"}
+            return {
+                "schemaVersion": "alk-raw-maintenance-result.v1",
+                "status": "PARTIAL" if failure else "COMPLETE",
+                "authoritySha256": authority_sha,
+                "journalIdentity": journal.journal_identity,
+                "startedAt": started.isoformat(),
+                "finishedAt": datetime.now(UTC).isoformat(),
+                "outcomes": rows,
+                "nextDueAt": _next_pending_due(journal),
+                "failure": "retention-refused" if failure else None,
+                "retentionDays": 30,
+                "assurance": "PROCEDURAL_SAME_ACCOUNT",
+            }
     except (ValueError, KeyError, TypeError, IndexError, OSError, sqlite3.Error, JournalUnavailable) as exc:
-        raise LifecycleError("retention-authority-refused", "Pinned maintenance authority is unavailable or invalid") from exc
+        raise LifecycleError(
+            "retention-authority-refused", "Pinned maintenance authority is unavailable or invalid"
+        ) from exc

@@ -1,7 +1,8 @@
 """Closed scoped usage envelopes and unchanged strict legacy receipt behavior."""
 from copy import deepcopy
-import importlib
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -139,13 +140,24 @@ class ScopedUsageSchemaTests(unittest.TestCase):
                 for name, original in group.items():
                     self.assertEqual(canonical_digest(original), canonical_digest(schemas.get_schema(name)))
         with self.subTest(case='duplicate-schema-ID-refused'):
-            existing = next(iter(CONTEXT_MODEL_SCHEMAS))
-            try:
-                with patch.dict(SCOPED_USAGE_SCHEMAS, {existing: CONTEXT_MODEL_SCHEMAS[existing]}):
-                    with self.assertRaisesRegex(RuntimeError, 'duplicate schema ids'):
-                        importlib.reload(schemas)
-            finally:
-                importlib.reload(schemas)
+            # Reload only in a child: callers may hold the canonical get_schema
+            # binding, which must not be replaced by this negative import test.
+            code = '''
+import importlib
+import unittest
+from unittest.mock import patch
+from agent_lifecycle.contracts import schemas
+from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
+from agent_lifecycle.contracts.scoped_usage_schemas import SCOPED_USAGE_SCHEMAS
+existing = next(iter(CONTEXT_MODEL_SCHEMAS))
+with patch.dict(SCOPED_USAGE_SCHEMAS, {existing: CONTEXT_MODEL_SCHEMAS[existing]}):
+    with unittest.TestCase().assertRaisesRegex(RuntimeError, 'duplicate schema ids'):
+        importlib.reload(schemas)
+'''
+            completed = subprocess.run(
+                [sys.executable, '-c', code], capture_output=True, text=True, timeout=30, check=False
+            )
+            self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
 
     def test_r564_public_v2_schema_rejects_inherited_bad_types_model_classes_and_ref_bounds(self):
         from jsonschema import Draft202012Validator

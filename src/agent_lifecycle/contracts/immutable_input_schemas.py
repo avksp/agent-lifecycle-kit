@@ -7,7 +7,8 @@ context explicitly records that continuous host input protection is unproven.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, NoReturn
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest, load_json_object
 from agent_lifecycle.contracts.errors import LifecycleError
@@ -49,7 +50,7 @@ _LIMITS = {
 }
 
 
-def _fail(detail: str) -> None:
+def _fail(detail: str) -> NoReturn:
     raise LifecycleError("a5-context-invalid", detail)
 
 
@@ -403,10 +404,16 @@ def _validate_a5_state(state: dict[str, Any]) -> None:
         if "immutableInput" not in task:
             raise LifecycleError("a5-context-invalid", "Marked state has a task without A5 policy")
         policy = validate_a5_policy(task["immutableInput"])
-        if plan_policy["defaultRequirement"] == "STRONG_A5" and policy["frozenTaskRequirement"] != "STRONG_A5":
+        if (
+            _validated_cast(dict[str, Any], plan_policy)["defaultRequirement"] == "STRONG_A5"
+            and policy["frozenTaskRequirement"] != "STRONG_A5"
+        ):
             raise LifecycleError("a5-context-invalid", "Task policy lowers the frozen A5 default")
         if policy["frozenTaskRequirement"] == "STRONG_A5" and task.get("status") in {
-            "RUNNING", "VERIFYING", "REWORK", "ACCEPTED"
+            "RUNNING",
+            "VERIFYING",
+            "REWORK",
+            "ACCEPTED",
         }:
             raise LifecycleError("a5-context-invalid", "Unproven strong A5 task cannot have an executed outcome")
         admission = None

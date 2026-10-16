@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, NoReturn
 
 from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest, load_json_object
 from agent_lifecycle.contracts.errors import LifecycleError
@@ -19,153 +19,338 @@ _DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 _COMMIT = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 _MAX_INT = 9_007_199_254_740_991
 _MAX_REF = 8_388_608
-_KINDS = {"command-observation": COMMAND_V1, "composite-applicability": COMPOSITE_V1,
-          "async-observation": ASYNC_V1}
+_KINDS = {"command-observation": COMMAND_V1, "composite-applicability": COMPOSITE_V1, "async-observation": ASYNC_V1}
 _STATUS = {"PASS", "FAIL", "SKIPPED"}
 
 
 def _schema(schema_id: str, required: list[str], properties: dict[str, Any]) -> dict[str, Any]:
-    return {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": schema_id,
-            "type": "object", "required": required, "additionalProperties": False, "properties": properties}
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": schema_id,
+        "type": "object",
+        "required": required,
+        "additionalProperties": False,
+        "properties": properties,
+    }
 
 
 _ID_SCHEMA = {"type": "string", "minLength": 1, "maxLength": 128}
 _HEX_SCHEMA = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-_REF_SCHEMA = _schema("agent-release-artifact-ref.v1", ["path", "sha256", "bytes"], {
-    "path": {"type": "string", "minLength": 1, "maxLength": 1024},
-    "sha256": _HEX_SCHEMA, "bytes": {"type": "integer", "minimum": 0, "maximum": _MAX_REF},
-})
+_REF_SCHEMA = _schema(
+    "agent-release-artifact-ref.v1",
+    ["path", "sha256", "bytes"],
+    {
+        "path": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "sha256": _HEX_SCHEMA,
+        "bytes": {"type": "integer", "minimum": 0, "maximum": _MAX_REF},
+    },
+)
 _PATH_SCHEMA = {"type": "string", "minLength": 1, "maxLength": 1024}
 _UINT_SCHEMA = {"type": "integer", "minimum": 0, "maximum": _MAX_INT}
-_EXPECTED_COMPONENT_SCHEMA = _schema("agent-expected-evidence-component.v1", [
-    "id", "repositoryPath", "configurationPaths", "oraclePaths", "buildArtifactPath",
-], {
-    "id": _ID_SCHEMA, "repositoryPath": _PATH_SCHEMA,
-    "configurationPaths": {"type": "array", "maxItems": 64, "uniqueItems": True, "items": _PATH_SCHEMA},
-    "oraclePaths": {"type": "array", "maxItems": 64, "uniqueItems": True, "items": _PATH_SCHEMA},
-    "buildArtifactPath": {"anyOf": [_PATH_SCHEMA, {"type": "null"}]},
-})
-_SUBJECT_COMPONENT_SCHEMA = _schema("agent-evidence-subject-component.v1", [
-    "id", "commitOid", "contentDigest", "buildDigest", "configurationDigest", "oracleDigest",
-], {
-    "id": _ID_SCHEMA, "commitOid": {"anyOf": [{"type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"}, {"type": "null"}]},
-    **{key: _HEX_SCHEMA for key in ("contentDigest", "buildDigest", "configurationDigest", "oracleDigest")},
-})
-_TASK_BINDING_SCHEMA = _schema("agent-evidence-task-binding.v1", ["taskId", "attempt", "resultDigest", "snapshotHash"], {
-    "taskId": _ID_SCHEMA, "attempt": {"type": "integer", "minimum": 1, "maximum": _MAX_INT},
-    "resultDigest": _HEX_SCHEMA, "snapshotHash": _HEX_SCHEMA,
-})
-_SUBJECT_SCHEMA = _schema("agent-evidence-subject.v1", [
-    "packageId", "runId", "planRevision", "planDigest", "sourceRevision", "scope", "taskBindings", "components",
-], {
-    "packageId": _ID_SCHEMA, "runId": _ID_SCHEMA, "planRevision": {"type": "integer", "minimum": 1, "maximum": _MAX_INT},
-    "planDigest": _HEX_SCHEMA, "sourceRevision": _ID_SCHEMA, "scope": {"enum": ["TASK", "FINAL"]},
-    "taskBindings": {"type": "array", "minItems": 1, "maxItems": 1024, "items": _TASK_BINDING_SCHEMA},
-    "components": {"type": "array", "minItems": 1, "maxItems": 64, "items": _SUBJECT_COMPONENT_SCHEMA},
-})
-_PRODUCER_SCHEMA = _schema("agent-evidence-producer.v1", ["actorId", "sessionId", "guarantee", "attestation"], {
-    "actorId": _ID_SCHEMA, "sessionId": _ID_SCHEMA, "guarantee": {"enum": ["DECLARED", "ATTESTED"]},
-    "attestation": {"anyOf": [_REF_SCHEMA, {"type": "null"}]},
-})
-_CASE_SCHEMA = _schema("agent-command-case.v1", ["id", "status", "evidence"], {
-    "id": _ID_SCHEMA, "status": {"enum": sorted(_STATUS)},
-    "evidence": {"anyOf": [_REF_SCHEMA, {"type": "null"}]},
-})
-_COMMAND_SCHEMA = _schema("agent-command-entry.v1", ["commandDigest", "status", "exitCode", "stdout", "stderr", "cases"], {
-    "commandDigest": _HEX_SCHEMA, "status": {"enum": sorted(_STATUS)},
-    "exitCode": {"anyOf": [{"type": "integer", "minimum": -2_147_483_648, "maximum": 4_294_967_295}, {"type": "null"}]},
-    "stdout": _REF_SCHEMA, "stderr": _REF_SCHEMA,
-    "cases": {"type": "array", "maxItems": 1024, "items": _CASE_SCHEMA},
-})
-_BOUNDARY_SCHEMA = {"oneOf": [
-    _schema("agent-async-duration-boundary.v1", ["kind", "atMs"], {"kind": {"const": "duration"}, "atMs": _UINT_SCHEMA}),
-    _schema("agent-async-event-boundary.v1", ["kind", "eventId", "atMs"], {
-        "kind": {"const": "event"}, "eventId": _ID_SCHEMA, "atMs": _UINT_SCHEMA,
-    }),
-]}
-EVIDENCE_RECEIPT_SCHEMAS = {
-    EXPECTED_V1: _schema(EXPECTED_V1, ["schemaVersion", "kind", "scope", "components", "producerRequirement", "requirements"], {
-        "schemaVersion": {"const": EXPECTED_V1}, "kind": {"enum": sorted(_KINDS)},
+_EXPECTED_COMPONENT_SCHEMA = _schema(
+    "agent-expected-evidence-component.v1",
+    [
+        "id",
+        "repositoryPath",
+        "configurationPaths",
+        "oraclePaths",
+        "buildArtifactPath",
+    ],
+    {
+        "id": _ID_SCHEMA,
+        "repositoryPath": _PATH_SCHEMA,
+        "configurationPaths": {"type": "array", "maxItems": 64, "uniqueItems": True, "items": _PATH_SCHEMA},
+        "oraclePaths": {"type": "array", "maxItems": 64, "uniqueItems": True, "items": _PATH_SCHEMA},
+        "buildArtifactPath": {"anyOf": [_PATH_SCHEMA, {"type": "null"}]},
+    },
+)
+_SUBJECT_COMPONENT_SCHEMA = _schema(
+    "agent-evidence-subject-component.v1",
+    [
+        "id",
+        "commitOid",
+        "contentDigest",
+        "buildDigest",
+        "configurationDigest",
+        "oracleDigest",
+    ],
+    {
+        "id": _ID_SCHEMA,
+        "commitOid": {"anyOf": [{"type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"}, {"type": "null"}]},
+        **{key: _HEX_SCHEMA for key in ("contentDigest", "buildDigest", "configurationDigest", "oracleDigest")},
+    },
+)
+_TASK_BINDING_SCHEMA = _schema(
+    "agent-evidence-task-binding.v1",
+    ["taskId", "attempt", "resultDigest", "snapshotHash"],
+    {
+        "taskId": _ID_SCHEMA,
+        "attempt": {"type": "integer", "minimum": 1, "maximum": _MAX_INT},
+        "resultDigest": _HEX_SCHEMA,
+        "snapshotHash": _HEX_SCHEMA,
+    },
+)
+_SUBJECT_SCHEMA = _schema(
+    "agent-evidence-subject.v1",
+    [
+        "packageId",
+        "runId",
+        "planRevision",
+        "planDigest",
+        "sourceRevision",
+        "scope",
+        "taskBindings",
+        "components",
+    ],
+    {
+        "packageId": _ID_SCHEMA,
+        "runId": _ID_SCHEMA,
+        "planRevision": {"type": "integer", "minimum": 1, "maximum": _MAX_INT},
+        "planDigest": _HEX_SCHEMA,
+        "sourceRevision": _ID_SCHEMA,
         "scope": {"enum": ["TASK", "FINAL"]},
-        "components": {"type": "array", "minItems": 1, "maxItems": 64, "items": _EXPECTED_COMPONENT_SCHEMA},
-        "producerRequirement": {"enum": ["DECLARED", "ATTESTED"]},
-        "requirements": {"oneOf": [
-            _schema("agent-evidence-command-requirements.v1", ["commandDigests", "caseIds"], {
-                "commandDigests": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": True, "items": _HEX_SCHEMA},
-                "caseIds": {"type": "array", "minItems": 1, "maxItems": 1024, "uniqueItems": True, "items": _ID_SCHEMA},
-            }),
-            _schema("agent-evidence-composite-requirements.v1", ["allowHistoryOnlyChange"], {
-                "allowHistoryOnlyChange": {"const": True},
-            }),
-            _schema("agent-evidence-async-requirements.v1", ["surfaceId", "readinessId", "boundary"], {
-                "surfaceId": _ID_SCHEMA, "readinessId": _ID_SCHEMA,
-                "boundary": {"oneOf": [
-                    _schema("agent-evidence-duration-requirement.v1", ["kind", "minimumMilliseconds"], {
-                        "kind": {"const": "duration"}, "minimumMilliseconds": {"type": "integer", "minimum": 1, "maximum": _MAX_INT},
-                    }),
-                    _schema("agent-evidence-event-requirement.v1", ["kind", "eventId"], {
-                        "kind": {"const": "event"}, "eventId": _ID_SCHEMA,
-                    }),
-                ]},
-            }),
-        ]},
-    }),
-    RECEIPT_V1: _schema(RECEIPT_V1, ["schemaVersion", "evidenceId", "subject", "producer", "payload", "payloadDigest", "receiptDigest"], {
-        "schemaVersion": {"const": RECEIPT_V1}, "evidenceId": _ID_SCHEMA,
-        "subject": _SUBJECT_SCHEMA, "producer": _PRODUCER_SCHEMA,
-        "payload": {"type": "object"}, "payloadDigest": _HEX_SCHEMA, "receiptDigest": _HEX_SCHEMA,
-    }),
-    COMMAND_V1: _schema(COMMAND_V1, ["schemaVersion", "platform", "commands"], {
-        "schemaVersion": {"const": COMMAND_V1},
-        "platform": _schema("agent-command-platform.v1", ["os", "architecture", "pythonVersion"], {
-            "os": {"enum": ["linux", "macos", "windows"]}, "architecture": _ID_SCHEMA, "pythonVersion": _ID_SCHEMA,
-        }),
-        "commands": {"type": "array", "minItems": 1, "maxItems": 64, "items": _COMMAND_SCHEMA},
-    }),
-    COMPOSITE_V1: _schema(COMPOSITE_V1, ["schemaVersion", "previousReceipt", "previousSubjectDigest", "currentSubjectDigest", "componentIds"], {
-        "schemaVersion": {"const": COMPOSITE_V1}, "previousReceipt": _REF_SCHEMA,
-        "previousSubjectDigest": _HEX_SCHEMA, "currentSubjectDigest": _HEX_SCHEMA,
-        "componentIds": {"type": "array", "minItems": 1, "maxItems": 64, "items": _ID_SCHEMA},
-    }),
-    ASYNC_V1: _schema(ASYNC_V1, ["schemaVersion", "surfaceId", "readinessId", "clockId", "readyAtMs",
-                                "coverageStartMs", "coverageEndMs", "boundary", "violationCount", "observationArtifact"], {
-        "schemaVersion": {"const": ASYNC_V1},
-        **{key: _ID_SCHEMA for key in ("surfaceId", "readinessId", "clockId")},
-        **{key: _UINT_SCHEMA for key in
-           ("readyAtMs", "coverageStartMs", "coverageEndMs", "violationCount")},
-        "boundary": _BOUNDARY_SCHEMA, "observationArtifact": _REF_SCHEMA,
-    }),
+        "taskBindings": {"type": "array", "minItems": 1, "maxItems": 1024, "items": _TASK_BINDING_SCHEMA},
+        "components": {"type": "array", "minItems": 1, "maxItems": 64, "items": _SUBJECT_COMPONENT_SCHEMA},
+    },
+)
+_PRODUCER_SCHEMA = _schema(
+    "agent-evidence-producer.v1",
+    ["actorId", "sessionId", "guarantee", "attestation"],
+    {
+        "actorId": _ID_SCHEMA,
+        "sessionId": _ID_SCHEMA,
+        "guarantee": {"enum": ["DECLARED", "ATTESTED"]},
+        "attestation": {"anyOf": [_REF_SCHEMA, {"type": "null"}]},
+    },
+)
+_CASE_SCHEMA = _schema(
+    "agent-command-case.v1",
+    ["id", "status", "evidence"],
+    {
+        "id": _ID_SCHEMA,
+        "status": {"enum": sorted(_STATUS)},
+        "evidence": {"anyOf": [_REF_SCHEMA, {"type": "null"}]},
+    },
+)
+_COMMAND_SCHEMA = _schema(
+    "agent-command-entry.v1",
+    ["commandDigest", "status", "exitCode", "stdout", "stderr", "cases"],
+    {
+        "commandDigest": _HEX_SCHEMA,
+        "status": {"enum": sorted(_STATUS)},
+        "exitCode": {
+            "anyOf": [{"type": "integer", "minimum": -2_147_483_648, "maximum": 4_294_967_295}, {"type": "null"}]
+        },
+        "stdout": _REF_SCHEMA,
+        "stderr": _REF_SCHEMA,
+        "cases": {"type": "array", "maxItems": 1024, "items": _CASE_SCHEMA},
+    },
+)
+_BOUNDARY_SCHEMA = {
+    "oneOf": [
+        _schema(
+            "agent-async-duration-boundary.v1", ["kind", "atMs"], {"kind": {"const": "duration"}, "atMs": _UINT_SCHEMA}
+        ),
+        _schema(
+            "agent-async-event-boundary.v1",
+            ["kind", "eventId", "atMs"],
+            {
+                "kind": {"const": "event"},
+                "eventId": _ID_SCHEMA,
+                "atMs": _UINT_SCHEMA,
+            },
+        ),
+    ]
+}
+EVIDENCE_RECEIPT_SCHEMAS = {
+    EXPECTED_V1: _schema(
+        EXPECTED_V1,
+        ["schemaVersion", "kind", "scope", "components", "producerRequirement", "requirements"],
+        {
+            "schemaVersion": {"const": EXPECTED_V1},
+            "kind": {"enum": sorted(_KINDS)},
+            "scope": {"enum": ["TASK", "FINAL"]},
+            "components": {"type": "array", "minItems": 1, "maxItems": 64, "items": _EXPECTED_COMPONENT_SCHEMA},
+            "producerRequirement": {"enum": ["DECLARED", "ATTESTED"]},
+            "requirements": {
+                "oneOf": [
+                    _schema(
+                        "agent-evidence-command-requirements.v1",
+                        ["commandDigests", "caseIds"],
+                        {
+                            "commandDigests": {
+                                "type": "array",
+                                "minItems": 1,
+                                "maxItems": 64,
+                                "uniqueItems": True,
+                                "items": _HEX_SCHEMA,
+                            },
+                            "caseIds": {
+                                "type": "array",
+                                "minItems": 1,
+                                "maxItems": 1024,
+                                "uniqueItems": True,
+                                "items": _ID_SCHEMA,
+                            },
+                        },
+                    ),
+                    _schema(
+                        "agent-evidence-composite-requirements.v1",
+                        ["allowHistoryOnlyChange"],
+                        {
+                            "allowHistoryOnlyChange": {"const": True},
+                        },
+                    ),
+                    _schema(
+                        "agent-evidence-async-requirements.v1",
+                        ["surfaceId", "readinessId", "boundary"],
+                        {
+                            "surfaceId": _ID_SCHEMA,
+                            "readinessId": _ID_SCHEMA,
+                            "boundary": {
+                                "oneOf": [
+                                    _schema(
+                                        "agent-evidence-duration-requirement.v1",
+                                        ["kind", "minimumMilliseconds"],
+                                        {
+                                            "kind": {"const": "duration"},
+                                            "minimumMilliseconds": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": _MAX_INT,
+                                            },
+                                        },
+                                    ),
+                                    _schema(
+                                        "agent-evidence-event-requirement.v1",
+                                        ["kind", "eventId"],
+                                        {
+                                            "kind": {"const": "event"},
+                                            "eventId": _ID_SCHEMA,
+                                        },
+                                    ),
+                                ]
+                            },
+                        },
+                    ),
+                ]
+            },
+        },
+    ),
+    RECEIPT_V1: _schema(
+        RECEIPT_V1,
+        ["schemaVersion", "evidenceId", "subject", "producer", "payload", "payloadDigest", "receiptDigest"],
+        {
+            "schemaVersion": {"const": RECEIPT_V1},
+            "evidenceId": _ID_SCHEMA,
+            "subject": _SUBJECT_SCHEMA,
+            "producer": _PRODUCER_SCHEMA,
+            "payload": {"type": "object"},
+            "payloadDigest": _HEX_SCHEMA,
+            "receiptDigest": _HEX_SCHEMA,
+        },
+    ),
+    COMMAND_V1: _schema(
+        COMMAND_V1,
+        ["schemaVersion", "platform", "commands"],
+        {
+            "schemaVersion": {"const": COMMAND_V1},
+            "platform": _schema(
+                "agent-command-platform.v1",
+                ["os", "architecture", "pythonVersion"],
+                {
+                    "os": {"enum": ["linux", "macos", "windows"]},
+                    "architecture": _ID_SCHEMA,
+                    "pythonVersion": _ID_SCHEMA,
+                },
+            ),
+            "commands": {"type": "array", "minItems": 1, "maxItems": 64, "items": _COMMAND_SCHEMA},
+        },
+    ),
+    COMPOSITE_V1: _schema(
+        COMPOSITE_V1,
+        ["schemaVersion", "previousReceipt", "previousSubjectDigest", "currentSubjectDigest", "componentIds"],
+        {
+            "schemaVersion": {"const": COMPOSITE_V1},
+            "previousReceipt": _REF_SCHEMA,
+            "previousSubjectDigest": _HEX_SCHEMA,
+            "currentSubjectDigest": _HEX_SCHEMA,
+            "componentIds": {"type": "array", "minItems": 1, "maxItems": 64, "items": _ID_SCHEMA},
+        },
+    ),
+    ASYNC_V1: _schema(
+        ASYNC_V1,
+        [
+            "schemaVersion",
+            "surfaceId",
+            "readinessId",
+            "clockId",
+            "readyAtMs",
+            "coverageStartMs",
+            "coverageEndMs",
+            "boundary",
+            "violationCount",
+            "observationArtifact",
+        ],
+        {
+            "schemaVersion": {"const": ASYNC_V1},
+            **{key: _ID_SCHEMA for key in ("surfaceId", "readinessId", "clockId")},
+            **{key: _UINT_SCHEMA for key in ("readyAtMs", "coverageStartMs", "coverageEndMs", "violationCount")},
+            "boundary": _BOUNDARY_SCHEMA,
+            "observationArtifact": _REF_SCHEMA,
+        },
+    ),
 }
 _REQUIREMENT_VARIANTS = EVIDENCE_RECEIPT_SCHEMAS[EXPECTED_V1]["properties"]["requirements"]["oneOf"]
-EVIDENCE_RECEIPT_SCHEMAS[EXPECTED_V2] = _schema(EXPECTED_V2, [
-    "schemaVersion", "kind", "scope", "components", "producerRequirement", "requirements", "originValidation",
-], {
-    **EVIDENCE_RECEIPT_SCHEMAS[EXPECTED_V1]["properties"],
-    "schemaVersion": {"const": EXPECTED_V2},
-    "kind": {"const": "composite-applicability"},
-    "requirements": _REQUIREMENT_VARIANTS[1],
-    "originValidation": {"allOf": [EVIDENCE_RECEIPT_SCHEMAS[EXPECTED_V1], {
-        "properties": {"kind": {"enum": ["command-observation", "async-observation"]}},
-    }]},
-})
+EVIDENCE_RECEIPT_SCHEMAS[EXPECTED_V2] = _schema(
+    EXPECTED_V2,
+    [
+        "schemaVersion",
+        "kind",
+        "scope",
+        "components",
+        "producerRequirement",
+        "requirements",
+        "originValidation",
+    ],
+    {
+        **EVIDENCE_RECEIPT_SCHEMAS[EXPECTED_V1]["properties"],
+        "schemaVersion": {"const": EXPECTED_V2},
+        "kind": {"const": "composite-applicability"},
+        "requirements": _REQUIREMENT_VARIANTS[1],
+        "originValidation": {
+            "allOf": [
+                EVIDENCE_RECEIPT_SCHEMAS[EXPECTED_V1],
+                {
+                    "properties": {"kind": {"enum": ["command-observation", "async-observation"]}},
+                },
+            ]
+        },
+    },
+)
 EVIDENCE_RECEIPT_SCHEMAS[EXPECTED_V1]["allOf"] = [
-    {"if": {"properties": {"kind": {"const": kind}}},
-     "then": {"properties": {"requirements": _REQUIREMENT_VARIANTS[index]}}}
+    {
+        "if": {"properties": {"kind": {"const": kind}}},
+        "then": {"properties": {"requirements": _REQUIREMENT_VARIANTS[index]}},
+    }
     for index, kind in enumerate(("command-observation", "composite-applicability", "async-observation"))
 ]
 _PRODUCER_SCHEMA["allOf"] = [
-    {"if": {"properties": {"guarantee": {"const": "DECLARED"}}},
-     "then": {"properties": {"attestation": {"type": "null"}}}},
-    {"if": {"properties": {"guarantee": {"const": "ATTESTED"}}},
-     "then": {"properties": {"attestation": _REF_SCHEMA}}},
+    {
+        "if": {"properties": {"guarantee": {"const": "DECLARED"}}},
+        "then": {"properties": {"attestation": {"type": "null"}}},
+    },
+    {"if": {"properties": {"guarantee": {"const": "ATTESTED"}}}, "then": {"properties": {"attestation": _REF_SCHEMA}}},
 ]
-_COMMAND_SCHEMA["allOf"] = [{"if": {"properties": {"status": {"const": "PASS"}}},
-                              "then": {"properties": {"exitCode": {"const": 0}}}}]
-_SUBJECT_SCHEMA["allOf"] = [{"if": {"properties": {"scope": {"const": "TASK"}}},
-                              "then": {"properties": {"taskBindings": {"maxItems": 1}}}}]
+_COMMAND_SCHEMA["allOf"] = [
+    {"if": {"properties": {"status": {"const": "PASS"}}}, "then": {"properties": {"exitCode": {"const": 0}}}}
+]
+_SUBJECT_SCHEMA["allOf"] = [
+    {"if": {"properties": {"scope": {"const": "TASK"}}}, "then": {"properties": {"taskBindings": {"maxItems": 1}}}}
+]
 
 
-def _invalid(field: str) -> None:
+def _invalid(field: str) -> NoReturn:
     raise LifecycleError("evidence-receipt-invalid", f"Invalid {field}")
 
 
@@ -256,8 +441,11 @@ def validate_expected_evidence(value: Any) -> dict[str, Any]:
         common["schemaVersion"] = EXPECTED_V1
         validate_expected_evidence(common)
         origin = _object(record["originValidation"], fields, "V1 origin")
-        if (origin["schemaVersion"] != EXPECTED_V1 or type(origin["kind"]) is not str
-                or origin["kind"] not in {"command-observation", "async-observation"}):
+        if (
+            origin["schemaVersion"] != EXPECTED_V1
+            or type(origin["kind"]) is not str
+            or origin["kind"] not in {"command-observation", "async-observation"}
+        ):
             _invalid("noncomposite V1 origin")
         validate_expected_evidence(origin)
         if any(record[key] != origin[key] for key in ("scope", "components", "producerRequirement")):
@@ -267,8 +455,13 @@ def validate_expected_evidence(value: Any) -> dict[str, Any]:
     _tree(record)
     if record["schemaVersion"] != EXPECTED_V1 or type(record["kind"]) is not str or record["kind"] not in _KINDS:
         _invalid("expected evidence version or kind")
-    if type(record["scope"]) is not str or record["scope"] not in {"TASK", "FINAL"} or (
-        type(record["producerRequirement"]) is not str or record["producerRequirement"] not in {"DECLARED", "ATTESTED"}
+    if (
+        type(record["scope"]) is not str
+        or record["scope"] not in {"TASK", "FINAL"}
+        or (
+            type(record["producerRequirement"]) is not str
+            or record["producerRequirement"] not in {"DECLARED", "ATTESTED"}
+        )
     ):
         _invalid("expected scope or producer requirement")
     components = record["components"]
@@ -276,7 +469,11 @@ def validate_expected_evidence(value: Any) -> dict[str, Any]:
         _invalid("expected components")
     ids: set[str] = set()
     for component in components:
-        item = _object(component, {"id", "repositoryPath", "configurationPaths", "oraclePaths", "buildArtifactPath"}, "expected component")
+        item = _object(
+            component,
+            {"id", "repositoryPath", "configurationPaths", "oraclePaths", "buildArtifactPath"},
+            "expected component",
+        )
         component_id = _id(item["id"], "component id")
         if component_id in ids:
             _invalid("duplicate component")
@@ -328,7 +525,16 @@ def validate_expected_evidence(value: Any) -> dict[str, Any]:
 
 
 def _subject(value: Any) -> dict[str, Any]:
-    fields = {"packageId", "runId", "planRevision", "planDigest", "sourceRevision", "scope", "taskBindings", "components"}
+    fields = {
+        "packageId",
+        "runId",
+        "planRevision",
+        "planDigest",
+        "sourceRevision",
+        "scope",
+        "taskBindings",
+        "components",
+    }
     subject = _object(value, fields, "evidence subject")
     for name in ("packageId", "runId", "sourceRevision"):
         _id(subject[name], name)
@@ -353,9 +559,15 @@ def _subject(value: Any) -> dict[str, Any]:
         _invalid("subject components")
     component_ids = []
     for component in components:
-        item = _object(component, {"id", "commitOid", "contentDigest", "buildDigest", "configurationDigest", "oracleDigest"}, "subject component")
+        item = _object(
+            component,
+            {"id", "commitOid", "contentDigest", "buildDigest", "configurationDigest", "oracleDigest"},
+            "subject component",
+        )
         component_ids.append(_id(item["id"], "component id"))
-        if item["commitOid"] is not None and (type(item["commitOid"]) is not str or _COMMIT.fullmatch(item["commitOid"]) is None):
+        if item["commitOid"] is not None and (
+            type(item["commitOid"]) is not str or _COMMIT.fullmatch(item["commitOid"]) is None
+        ):
             _invalid("component commit")
         for name in ("contentDigest", "buildDigest", "configurationDigest", "oracleDigest"):
             _hex(item[name], name)
@@ -406,15 +618,29 @@ def _command_payload(payload: dict[str, Any]) -> None:
 
 
 def _async_payload(payload: dict[str, Any]) -> None:
-    fields = {"schemaVersion", "surfaceId", "readinessId", "clockId", "readyAtMs", "coverageStartMs",
-              "coverageEndMs", "boundary", "violationCount", "observationArtifact"}
+    fields = {
+        "schemaVersion",
+        "surfaceId",
+        "readinessId",
+        "clockId",
+        "readyAtMs",
+        "coverageStartMs",
+        "coverageEndMs",
+        "boundary",
+        "violationCount",
+        "observationArtifact",
+    }
     _object(payload, fields, "async payload")
     for name in ("surfaceId", "readinessId", "clockId"):
         _id(payload[name], name)
     for name in ("readyAtMs", "coverageStartMs", "coverageEndMs", "violationCount"):
         _int(payload[name], name)
     boundary = payload["boundary"]
-    if type(boundary) is not dict or type(boundary.get("kind")) is not str or boundary["kind"] not in {"duration", "event"}:
+    if (
+        type(boundary) is not dict
+        or type(boundary.get("kind")) is not str
+        or boundary["kind"] not in {"duration", "event"}
+    ):
         _invalid("async boundary")
     fields = {"kind", "atMs"} if boundary["kind"] == "duration" else {"kind", "eventId", "atMs"}
     _object(boundary, fields, "async boundary")
@@ -451,7 +677,11 @@ def validate_evidence_receipt_shape(value: Any) -> dict[str, Any]:
     if version == COMMAND_V1:
         _command_payload(payload)
     elif version == COMPOSITE_V1:
-        _object(payload, {"schemaVersion", "previousReceipt", "previousSubjectDigest", "currentSubjectDigest", "componentIds"}, "composite payload")
+        _object(
+            payload,
+            {"schemaVersion", "previousReceipt", "previousSubjectDigest", "currentSubjectDigest", "componentIds"},
+            "composite payload",
+        )
         validate_artifact_ref(payload["previousReceipt"])
         _hex(payload["previousSubjectDigest"], "previous subject")
         _hex(payload["currentSubjectDigest"], "current subject")
@@ -464,7 +694,9 @@ def validate_evidence_receipt_shape(value: Any) -> dict[str, Any]:
     _hex(receipt["receiptDigest"], "receipt digest")
     if receipt["payloadDigest"] != canonical_digest(payload):
         _invalid("payload digest binding")
-    if receipt["receiptDigest"] != canonical_digest({key: item for key, item in receipt.items() if key != "receiptDigest"}):
+    if receipt["receiptDigest"] != canonical_digest(
+        {key: item for key, item in receipt.items() if key != "receiptDigest"}
+    ):
         _invalid("receipt digest binding")
     return receipt
 
@@ -483,7 +715,11 @@ def classify_evidence_candidate(
     value = validate_evidence_receipt_shape(receipt)
     _id(evidence_id, "expected evidence id")
     subject = _subject(expected_subject)
-    if value["evidenceId"] != evidence_id or value["subject"] != subject or value["subject"]["scope"] != expected["scope"]:
+    if (
+        value["evidenceId"] != evidence_id
+        or value["subject"] != subject
+        or value["subject"]["scope"] != expected["scope"]
+    ):
         _invalid("independently expected evidence subject")
     if value["payload"]["schemaVersion"] != _KINDS[expected["kind"]]:
         _invalid("expected payload kind")
@@ -498,7 +734,9 @@ def classify_evidence_candidate(
         if set(item["commandDigest"] for item in commands) != set(requirements["commandDigests"]):
             _invalid("expected command set")
         cases = [case for command in commands for case in command["cases"]]
-        if set(case["id"] for case in cases) != set(requirements["caseIds"]) or len(cases) != len(requirements["caseIds"]):
+        if set(case["id"] for case in cases) != set(requirements["caseIds"]) or len(cases) != len(
+            requirements["caseIds"]
+        ):
             _invalid("expected case set")
         if any(item["status"] != "PASS" or item["exitCode"] != 0 for item in commands):
             _invalid("required command outcome")
@@ -506,8 +744,7 @@ def classify_evidence_candidate(
             _invalid("required case outcome")
     elif expected["kind"] == "composite-applicability":
         if expected["schemaVersion"] != EXPECTED_V2:
-            return {"status": "UNSUPPORTED", "reason": "predecessor-expectations-unbound",
-                    "acceptanceAuthority": False}
+            return {"status": "UNSUPPORTED", "reason": "predecessor-expectations-unbound", "acceptanceAuthority": False}
         if payload["currentSubjectDigest"] != canonical_digest(subject):
             _invalid("current composite subject")
         if payload["componentIds"] != [item["id"] for item in subject["components"]]:
@@ -524,8 +761,18 @@ def classify_evidence_candidate(
             _invalid("async minimum duration")
         if boundary["kind"] == "event" and boundary["eventId"] != wanted["eventId"]:
             _invalid("async expected event")
-    return {"status": "DATA_CANDIDATE", "reason": "references-and-current-source-unverified", "acceptanceAuthority": False}
+    return {
+        "status": "DATA_CANDIDATE",
+        "reason": "references-and-current-source-unverified",
+        "acceptanceAuthority": False,
+    }
 
 
-__all__ = ["EVIDENCE_RECEIPT_SCHEMAS", "classify_evidence_candidate", "load_evidence_receipt_bytes",
-           "validate_artifact_ref", "validate_evidence_receipt_shape", "validate_expected_evidence"]
+__all__ = [
+    "EVIDENCE_RECEIPT_SCHEMAS",
+    "classify_evidence_candidate",
+    "load_evidence_receipt_bytes",
+    "validate_artifact_ref",
+    "validate_evidence_receipt_shape",
+    "validate_expected_evidence",
+]

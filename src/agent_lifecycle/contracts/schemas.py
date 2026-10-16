@@ -1,7 +1,10 @@
 """Built-in JSON schema registry for portable lifecycle envelopes."""
+
 from __future__ import annotations
+
 from copy import deepcopy
 from typing import Any
+
 from agent_lifecycle.contracts.adapter_contract_schemas import ADAPTER_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.adapter_event_schemas import ADAPTER_EVENT_SCHEMAS
 from agent_lifecycle.contracts.adapter_session_schemas import ADAPTER_SESSION_SCHEMAS
@@ -73,7 +76,8 @@ from agent_lifecycle.contracts.runner_worktree_schemas import WORKTREE_SUPPORT_S
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 from agent_lifecycle.contracts.scoped_usage_schemas import (
-    SCOPED_USAGE_SCHEMAS, populate_scoped_usage_schema_fields,
+    SCOPED_USAGE_SCHEMAS,
+    populate_scoped_usage_schema_fields,
 )
 from agent_lifecycle.contracts.security_analysis_schemas import SECURITY_ANALYSIS_SCHEMAS
 from agent_lifecycle.contracts.statistical_evidence_schemas import STATISTICAL_EVIDENCE_SCHEMAS
@@ -91,6 +95,7 @@ from agent_lifecycle.contracts.workflow_continuation_schemas import WORKFLOW_CON
 from agent_lifecycle.contracts.workflow_economics_schemas import WORKFLOW_ECONOMICS_SCHEMAS
 from agent_lifecycle.contracts.workflow_run_schemas import WORKFLOW_RUN_SCHEMAS
 from agent_lifecycle.contracts.workflow_state_schemas import WORKFLOW_STATE_SCHEMAS
+
 SCHEMA_INDEX_VERSION = "agent-lifecycle-schema-index.v1"
 LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-lifecycle-start-receipt.v1": open_object_schema(
@@ -468,6 +473,8 @@ RISK_EXECUTION_SCHEMAS: dict[str, dict[str, Any]] = {
         },
     ),
 }
+
+
 def _closed_schema(schema_id: str, required: list[str], properties: dict[str, Any]) -> dict[str, Any]:
     schema = open_object_schema(schema_id, required=required, properties=properties)
     schema["additionalProperties"] = False
@@ -707,7 +714,7 @@ _LIFECYCLE_CONTROL_SCHEMAS: dict[str, dict[str, Any]] = {
 
 populate_scoped_usage_schema_fields(RISK_EXECUTION_SCHEMAS["agent-risk-execution-profile.v1"])
 
-_SCHEMA_GROUPS = (
+_SCHEMA_GROUPS: tuple[dict[str, dict[str, Any]], ...] = (
     CORE_SCHEMAS,
     AUDIT_SCHEMAS,
     AUDIT_OPTIMIZATION_SCHEMAS,
@@ -735,7 +742,10 @@ _SCHEMA_GROUPS = (
     WORKFLOW_CONTINUATION_BATCH_SCHEMAS,
     WORKFLOW_CONTINUATION_SCHEMAS,
     WORKFLOW_ECONOMICS_SCHEMAS,
-    WORKFLOW_STATE_SCHEMAS, DEADLINE_SCHEMAS, WORKFLOW_AUTHORITY_SCHEMAS, REVIEWER_IDENTITY_SCHEMAS,
+    WORKFLOW_STATE_SCHEMAS,
+    DEADLINE_SCHEMAS,
+    WORKFLOW_AUTHORITY_SCHEMAS,
+    REVIEWER_IDENTITY_SCHEMAS,
     EVIDENCE_RECEIPT_SCHEMAS,
     CLOSING_RESOURCE_SCHEMAS,
     CLOSING_WINDOW_SCHEMAS,

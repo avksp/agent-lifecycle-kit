@@ -889,7 +889,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="first result",
             )
             review_1_path = "work/WS-01/attempt-1/task-review.json"
-            review_1 = _review(attempt=1, result_hash=canonical_digest(result_1))
+            review_1 = _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=1, result_hash=canonical_digest(result_1))
             review_1["verdict"] = "REWORK"
             review_1["findings"] = [
                 {"id": "F-REWORK-1", "severity": "HIGH", "status": "open", "message": "revise implementation"}
@@ -951,7 +951,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="fresh second result",
             )
             review_2_path = "work/WS-01/attempt-2/task-review.json"
-            review_2 = _review(attempt=2, result_hash=canonical_digest(result_2))
+            review_2 = _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=2, result_hash=canonical_digest(result_2))
             write_json_create(root / review_2_path, review_2)
             accepted = accept_task(
                 state_path,
@@ -1269,7 +1269,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="done",
             )
             review_path = "work/WS-01/attempt-1/task-review.json"
-            write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+            write_json_create(root / review_path, _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=1, result_hash=canonical_digest(result)))
 
             accepted = accept_task(
                 state_path,
@@ -1327,7 +1327,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="done",
             )
             review_path = "work/WS-01/attempt-1/task-review.json"
-            write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+            write_json_create(root / review_path, _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=1, result_hash=canonical_digest(result)))
 
             accepted = accept_task(
                 state_path,
@@ -1419,7 +1419,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="done",
             )
             review_path = "work/WS-01/attempt-1/task-review.json"
-            write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+            write_json_create(root / review_path, _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=1, result_hash=canonical_digest(result)))
 
             with self.assertRaises(LifecycleError) as raised:
                 accept_task(

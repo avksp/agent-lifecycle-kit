@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, NoReturn
 
 from agent_lifecycle.contracts.canonical import canonical_bytes
 from agent_lifecycle.contracts.errors import LifecycleError
@@ -18,54 +18,109 @@ CLAIM_REQUEST_V1 = "agent-closing-claim-request.v1"
 _REVISION = {"type": "integer", "minimum": 0, "maximum": (1 << 53) - 1}
 _TEXT256 = {"type": "string", "minLength": 1, "maxLength": 256}
 _ACTION_ORDER = (
-    "read-evidence", "assess-evidence", "report", "final-audit", "final-check",
-    "apply-final-outcome", "finalize", "accounting-closeout",
+    "read-evidence",
+    "assess-evidence",
+    "report",
+    "final-audit",
+    "final-check",
+    "apply-final-outcome",
+    "finalize",
+    "accounting-closeout",
 )
 _ACTIONS = frozenset(_ACTION_ORDER)
 _CAP_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": CAP_BINDING_V1,
     "oneOf": [
-        {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "ABSENT"}}, "additionalProperties": False},
-        {"type": "object", "required": ["kind", "value"], "properties": {"kind": {"const": "FINITE"}, "value": _UINT}, "additionalProperties": False},
+        {
+            "type": "object",
+            "required": ["kind"],
+            "properties": {"kind": {"const": "ABSENT"}},
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "required": ["kind", "value"],
+            "properties": {"kind": {"const": "FINITE"}, "value": _UINT},
+            "additionalProperties": False,
+        },
     ],
 }
 _OWNER_SCHEMA = {
-    "type": "object", "required": ["scopeKind", "taskId"], "additionalProperties": False,
-    "properties": {"scopeKind": {"enum": ["RUN", "TASK"]},
-                   "taskId": {"anyOf": [_TEXT256, {"type": "null"}]}},
+    "type": "object",
+    "required": ["scopeKind", "taskId"],
+    "additionalProperties": False,
+    "properties": {"scopeKind": {"enum": ["RUN", "TASK"]}, "taskId": {"anyOf": [_TEXT256, {"type": "null"}]}},
 }
 _ARTIFACT_SCHEMA = {
-    "type": "object", "required": ["path", "sha256", "bytes"], "additionalProperties": False,
-    "properties": {"path": {"type": "string", "minLength": 1, "maxLength": 4096},
-                   "sha256": _DIGEST, "bytes": {"type": "integer", "minimum": 1, "maximum": 1048576}},
+    "type": "object",
+    "required": ["path", "sha256", "bytes"],
+    "additionalProperties": False,
+    "properties": {
+        "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+        "sha256": _DIGEST,
+        "bytes": {"type": "integer", "minimum": 1, "maximum": 1048576},
+    },
 }
 _UNIT_SCHEMA = {
-    "type": "object", "required": ["metric", "unitDefinitionId", "definitionDigest", "sourceQualificationDigest"],
+    "type": "object",
+    "required": ["metric", "unitDefinitionId", "definitionDigest", "sourceQualificationDigest"],
     "additionalProperties": False,
-    "properties": {"metric": {"const": "reportedTokens"}, "unitDefinitionId": _TEXT256,
-                   "definitionDigest": _DIGEST, "sourceQualificationDigest": _DIGEST},
+    "properties": {
+        "metric": {"const": "reportedTokens"},
+        "unitDefinitionId": _TEXT256,
+        "definitionDigest": _DIGEST,
+        "sourceQualificationDigest": _DIGEST,
+    },
 }
 _OPERATION_FIELDS = (
-    "schemaVersion", "bindingId", "runId", "budgetScopeId", "closingWindowId",
-    "policyEffectDigest", "operationId", "nativeOperationRef", "nativeOperationDigest",
-    "action", "owner", "unit", "upperBound", "expectedJournalRevision",
-    "expectedWorkflowRevision", "expectedAuthorityEpoch", "expectedGuardStateDigest",
+    "schemaVersion",
+    "bindingId",
+    "runId",
+    "budgetScopeId",
+    "closingWindowId",
+    "policyEffectDigest",
+    "operationId",
+    "nativeOperationRef",
+    "nativeOperationDigest",
+    "action",
+    "owner",
+    "unit",
+    "upperBound",
+    "expectedJournalRevision",
+    "expectedWorkflowRevision",
+    "expectedAuthorityEpoch",
+    "expectedGuardStateDigest",
 )
 _CLAIM_FIELDS = (
-    "schemaVersion", "bindingId", "budgetScopeId", "closingWindowId", "operationId",
-    "closingOperationDigest", "claimId", "expectedJournalRevision",
-    "expectedWorkflowRevision", "expectedAuthorityEpoch",
+    "schemaVersion",
+    "bindingId",
+    "budgetScopeId",
+    "closingWindowId",
+    "operationId",
+    "closingOperationDigest",
+    "claimId",
+    "expectedJournalRevision",
+    "expectedWorkflowRevision",
+    "expectedAuthorityEpoch",
 )
-CLOSING_RESOURCE_SCHEMAS = {
+CLOSING_RESOURCE_SCHEMAS: dict[str, dict[str, Any]] = {
     CAP_BINDING_V1: _CAP_SCHEMA,
     LIMIT_PROPOSAL_V1: {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": LIMIT_PROPOSAL_V1,
         "type": "object",
         "additionalProperties": False,
-        "required": ["scope", "participation", "oldCap", "knownSpentAtAnchor", "approvedAdditional",
-                     "prospectiveCumulativeCeiling", "capDisposition", "priorViolationSetDigest"],
+        "required": [
+            "scope",
+            "participation",
+            "oldCap",
+            "knownSpentAtAnchor",
+            "approvedAdditional",
+            "prospectiveCumulativeCeiling",
+            "capDisposition",
+            "priorViolationSetDigest",
+        ],
         "properties": {
             "scope": _OWNER_SCHEMA,
             "participation": {"enum": ["CLOSING_ENABLED", "RETAIN_ONLY"]},
@@ -78,33 +133,47 @@ CLOSING_RESOURCE_SCHEMAS = {
         },
     },
     OPERATION_BINDING_V1: {
-        "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": OPERATION_BINDING_V1,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": OPERATION_BINDING_V1,
         "$defs": {"ArtifactRef": _ARTIFACT_SCHEMA, "Owner": _OWNER_SCHEMA, "Unit": _UNIT_SCHEMA},
-        "type": "object", "required": list(_OPERATION_FIELDS), "additionalProperties": False,
+        "type": "object",
+        "required": list(_OPERATION_FIELDS),
+        "additionalProperties": False,
         "properties": {
             "schemaVersion": {"const": OPERATION_BINDING_V1},
             **{name: _TEXT256 for name in ("bindingId", "runId", "budgetScopeId", "closingWindowId", "operationId")},
             **{name: _DIGEST for name in ("policyEffectDigest", "nativeOperationDigest", "expectedGuardStateDigest")},
             "nativeOperationRef": {"$ref": "#/$defs/ArtifactRef"},
-            "action": {"enum": list(_ACTION_ORDER)}, "owner": {"$ref": "#/$defs/Owner"},
-            "unit": {"$ref": "#/$defs/Unit"}, "upperBound": _UINT,
-            **{name: _REVISION for name in ("expectedJournalRevision", "expectedWorkflowRevision", "expectedAuthorityEpoch")},
+            "action": {"enum": list(_ACTION_ORDER)},
+            "owner": {"$ref": "#/$defs/Owner"},
+            "unit": {"$ref": "#/$defs/Unit"},
+            "upperBound": _UINT,
+            **{
+                name: _REVISION
+                for name in ("expectedJournalRevision", "expectedWorkflowRevision", "expectedAuthorityEpoch")
+            },
         },
     },
     CLAIM_REQUEST_V1: {
-        "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": CLAIM_REQUEST_V1,
-        "type": "object", "required": list(_CLAIM_FIELDS), "additionalProperties": False,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": CLAIM_REQUEST_V1,
+        "type": "object",
+        "required": list(_CLAIM_FIELDS),
+        "additionalProperties": False,
         "properties": {
             "schemaVersion": {"const": CLAIM_REQUEST_V1},
             **{name: _TEXT256 for name in ("bindingId", "budgetScopeId", "closingWindowId", "operationId", "claimId")},
             "closingOperationDigest": _DIGEST,
-            **{name: _REVISION for name in ("expectedJournalRevision", "expectedWorkflowRevision", "expectedAuthorityEpoch")},
+            **{
+                name: _REVISION
+                for name in ("expectedJournalRevision", "expectedWorkflowRevision", "expectedAuthorityEpoch")
+            },
         },
     },
 }
 
 
-def _invalid(detail: str) -> None:
+def _invalid(detail: str) -> NoReturn:
     raise LifecycleError("closing-resource-invalid", detail)
 
 
@@ -167,7 +236,9 @@ def validate_closing_operation_binding(value: Any) -> dict[str, Any]:
         _text(owner["taskId"], "task owner")
     else:
         _invalid("Closing owner kind is unsupported")
-    unit = _closed(item["unit"], ("metric", "unitDefinitionId", "definitionDigest", "sourceQualificationDigest"), "unit")
+    unit = _closed(
+        item["unit"], ("metric", "unitDefinitionId", "definitionDigest", "sourceQualificationDigest"), "unit"
+    )
     if unit["metric"] != "reportedTokens":
         _invalid("Closing resource metric is unsupported")
     _text(unit["unitDefinitionId"], "unit definition")
@@ -213,18 +284,28 @@ def validate_limit_proposal(value: Any) -> dict[str, Any]:
     if type(scope) is not dict or set(scope) != {"scopeKind", "taskId"}:
         _invalid("LimitProposal owner is malformed")
     kind, task = scope["scopeKind"], scope["taskId"]
-    if (kind == "RUN" and task is not None) or (kind == "TASK" and (type(task) is not str or not 1 <= len(task) <= 256)):
+    if (kind == "RUN" and task is not None) or (
+        kind == "TASK" and (type(task) is not str or not 1 <= len(task) <= 256)
+    ):
         _invalid("LimitProposal owner kind and task differ")
     if kind not in {"RUN", "TASK"}:
         _invalid("LimitProposal owner kind is unsupported")
     old = validate_cap_binding(value["oldCap"])
     spent = _uint(value["knownSpentAtAnchor"], "anchor spend")
-    if type(value["priorViolationSetDigest"]) is not str or re.fullmatch(r"[0-9a-f]{64}", value["priorViolationSetDigest"]) is None:
+    if (
+        type(value["priorViolationSetDigest"]) is not str
+        or re.fullmatch(r"[0-9a-f]{64}", value["priorViolationSetDigest"]) is None
+    ):
         _invalid("Prior violation digest is invalid")
     participation = value["participation"]
     disposition = value["capDisposition"]
     if participation == "RETAIN_ONLY":
-        if kind != "TASK" or disposition != "RETAIN_BINDING" or value["approvedAdditional"] is not None or value["prospectiveCumulativeCeiling"] is not None:
+        if (
+            kind != "TASK"
+            or disposition != "RETAIN_BINDING"
+            or value["approvedAdditional"] is not None
+            or value["prospectiveCumulativeCeiling"] is not None
+        ):
             _invalid("Retained task cannot receive new-window entitlement")
         return value
     if participation != "CLOSING_ENABLED" or disposition not in {"RETAIN_BINDING", "SUPERSEDE_BY_CLOSING_POLICY"}:
@@ -243,8 +324,14 @@ def evaluate_ordinary_headroom(proposal: dict[str, Any], frame: dict[str, Any], 
     selected = validate_limit_proposal(proposal)
     if selected["participation"] != "CLOSING_ENABLED":
         _invalid("Retained owner has no new-window operation entitlement")
-    fields = {"cumulativeSpent", "activeReservations", "protectedCloseout", "windowSpent",
-              "windowReservations", "windowProtectedCloseout"}
+    fields = {
+        "cumulativeSpent",
+        "activeReservations",
+        "protectedCloseout",
+        "windowSpent",
+        "windowReservations",
+        "windowProtectedCloseout",
+    }
     if type(frame) is not dict or set(frame) != fields:
         _invalid("Headroom frame is incomplete")
     amounts = {key: _uint(frame[key], key) for key in fields}
@@ -265,7 +352,9 @@ def evaluate_ordinary_headroom(proposal: dict[str, Any], frame: dict[str, Any], 
     retained_cap = old["value"] if selected["capDisposition"] == "RETAIN_BINDING" else cap
     return {
         "schemaVersion": "agent-closing-headroom-classification.v1",
-        "disposition": "DATA_CANDIDATE" if cumulative <= min(cap, retained_cap) and window <= selected["approvedAdditional"] else "REFUSED",
+        "disposition": "DATA_CANDIDATE"
+        if cumulative <= min(cap, retained_cap) and window <= selected["approvedAdditional"]
+        else "REFUSED",
         "cumulativeAfterUpperBound": cumulative,
         "windowAfterUpperBound": window,
         "financialAdmission": False,
@@ -274,8 +363,11 @@ def evaluate_ordinary_headroom(proposal: dict[str, Any], frame: dict[str, Any], 
 
 
 def evaluate_nested_ordinary_headroom(
-    run_proposal: dict[str, Any], run_frame: dict[str, Any], task_id: str | None,
-    task_proposal: dict[str, Any] | None, task_frame: dict[str, Any] | None,
+    run_proposal: dict[str, Any],
+    run_frame: dict[str, Any],
+    task_id: str | None,
+    task_proposal: dict[str, Any] | None,
+    task_frame: dict[str, Any] | None,
     upper_bound: int,
 ) -> dict[str, Any]:
     """Apply one bound to run and its exact task projection without adding two charges."""
@@ -307,15 +399,24 @@ def evaluate_nested_ordinary_headroom(
 
 
 def evaluate_own_closeout_headroom(
-    proposal: dict[str, Any], frame: dict[str, Any], upper_bound: int,
-    own_protected: int, own_window_protected: int,
+    proposal: dict[str, Any],
+    frame: dict[str, Any],
+    upper_bound: int,
+    own_protected: int,
+    own_window_protected: int,
 ) -> dict[str, Any]:
     """Classify one same-owner protection transfer; never consume the pool."""
     selected = validate_limit_proposal(proposal)
     if selected["participation"] != "CLOSING_ENABLED":
         _invalid("Retained owner has no closeout entitlement")
-    required = {"cumulativeSpent", "activeReservations", "protectedCloseout", "windowSpent",
-                "windowReservations", "windowProtectedCloseout"}
+    required = {
+        "cumulativeSpent",
+        "activeReservations",
+        "protectedCloseout",
+        "windowSpent",
+        "windowReservations",
+        "windowProtectedCloseout",
+    }
     if type(frame) is not dict or set(frame) != required:
         _invalid("Closeout frame is incomplete")
     amounts = {key: _uint(frame[key], key) for key in required}
@@ -332,8 +433,7 @@ def evaluate_own_closeout_headroom(
     ):
         _invalid("Closeout owner pools exceed their parent balances")
     if upper > owner_pool or upper > own_window_pool:
-        return {"disposition": "REFUSED", "financialAdmission": False,
-                "requiresSameOwnerAtomicTransfer": True}
+        return {"disposition": "REFUSED", "financialAdmission": False, "requiresSameOwnerAtomicTransfer": True}
     cumulative = sum(amounts[key] for key in ("cumulativeSpent", "activeReservations", "protectedCloseout"))
     window = sum(amounts[key] for key in ("windowSpent", "windowReservations", "windowProtectedCloseout"))
     if max(cumulative, window) > _MAX:
@@ -352,14 +452,22 @@ def evaluate_own_closeout_headroom(
 
 
 def evaluate_claim_headroom(
-    proposal: dict[str, Any], frame: dict[str, Any], upper_bound: int,
+    proposal: dict[str, Any],
+    frame: dict[str, Any],
+    upper_bound: int,
 ) -> dict[str, Any]:
     """Classify supplied aggregate totals; operation membership remains unproven."""
     selected = validate_limit_proposal(proposal)
     if selected["participation"] != "CLOSING_ENABLED":
         _invalid("Retained owner has no new-window claim entitlement")
-    fields = {"cumulativeSpent", "activeReservations", "protectedCloseout", "windowSpent",
-              "windowReservations", "windowProtectedCloseout"}
+    fields = {
+        "cumulativeSpent",
+        "activeReservations",
+        "protectedCloseout",
+        "windowSpent",
+        "windowReservations",
+        "windowProtectedCloseout",
+    }
     if type(frame) is not dict or set(frame) != fields:
         _invalid("Claim frame is incomplete")
     amounts = {key: _uint(frame[key], key) for key in fields}
@@ -377,26 +485,28 @@ def evaluate_claim_headroom(
         _invalid("Claim headroom arithmetic overflows the supported domain")
     cap = selected["prospectiveCumulativeCeiling"]
     retained_cap = selected["oldCap"]["value"] if selected["capDisposition"] == "RETAIN_BINDING" else cap
-    reservation_observed = (
-        upper <= amounts["activeReservations"] and upper <= amounts["windowReservations"]
-    )
+    reservation_observed = upper <= amounts["activeReservations"] and upper <= amounts["windowReservations"]
     candidate = (
-        reservation_observed and cumulative <= min(cap, retained_cap)
-        and window <= selected["approvedAdditional"]
+        reservation_observed and cumulative <= min(cap, retained_cap) and window <= selected["approvedAdditional"]
     )
     return {
         "schemaVersion": "agent-closing-claim-headroom-classification.v1",
         "disposition": "DATA_CANDIDATE" if candidate else "REFUSED",
-        "currentCumulativeBound": cumulative, "currentWindowBound": window,
+        "currentCumulativeBound": cumulative,
+        "currentWindowBound": window,
         "aggregateReservationCoversUpperBound": reservation_observed,
-        "financialAdmission": False, "requiresCurrentOperationMembership": True,
+        "financialAdmission": False,
+        "requiresCurrentOperationMembership": True,
         "requiresQualifiedCurrentAuthorityGuardRouteAndAtomicClaim": True,
     }
 
 
 def evaluate_nested_claim_headroom(
-    run_proposal: dict[str, Any], run_frame: dict[str, Any], task_id: str | None,
-    task_proposal: dict[str, Any] | None, task_frame: dict[str, Any] | None,
+    run_proposal: dict[str, Any],
+    run_frame: dict[str, Any],
+    task_id: str | None,
+    task_proposal: dict[str, Any] | None,
+    task_frame: dict[str, Any] | None,
     upper_bound: int,
 ) -> dict[str, Any]:
     """Recheck run and exact task projections of one already reserved operation."""
@@ -419,15 +529,27 @@ def evaluate_nested_claim_headroom(
     return {
         "schemaVersion": "agent-closing-nested-claim-headroom-classification.v1",
         "disposition": "DATA_CANDIDATE" if candidate else "REFUSED",
-        "run": run_result, "task": task_result,
-        "upperBoundCountedOnce": True, "financialAdmission": False,
+        "run": run_result,
+        "task": task_result,
+        "upperBoundCountedOnce": True,
+        "financialAdmission": False,
         "requiresQualifiedCurrentAuthorityGuardRouteAndAtomicClaim": True,
     }
 
 
 __all__ = [
-    "CAP_BINDING_V1", "CLAIM_REQUEST_V1", "CLOSING_RESOURCE_SCHEMAS", "LIMIT_PROPOSAL_V1", "OPERATION_BINDING_V1",
-    "evaluate_claim_headroom", "evaluate_nested_claim_headroom", "evaluate_nested_ordinary_headroom",
-    "evaluate_ordinary_headroom", "evaluate_own_closeout_headroom",
-    "validate_cap_binding", "validate_closing_claim_request", "validate_closing_operation_binding", "validate_limit_proposal",
+    "CAP_BINDING_V1",
+    "CLAIM_REQUEST_V1",
+    "CLOSING_RESOURCE_SCHEMAS",
+    "LIMIT_PROPOSAL_V1",
+    "OPERATION_BINDING_V1",
+    "evaluate_claim_headroom",
+    "evaluate_nested_claim_headroom",
+    "evaluate_nested_ordinary_headroom",
+    "evaluate_ordinary_headroom",
+    "evaluate_own_closeout_headroom",
+    "validate_cap_binding",
+    "validate_closing_claim_request",
+    "validate_closing_operation_binding",
+    "validate_limit_proposal",
 ]

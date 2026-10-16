@@ -30,15 +30,17 @@ MULTI_RUN_VIEW_SCHEMAS: dict[str, dict[str, Any]] = {
         ],
         properties={
             "itemId": {"type": "string", "minLength": 1, "maxLength": 256},
-            "reasonCode": {"enum": [
-                "BLOCKER_PRESENT",
-                "USER_ACTION_REQUIRED",
-                "PENDING_REVIEW",
-                "STALE_ATTEMPT",
-                "FAILED_EVIDENCE",
-                "TERMINAL_RUN",
-                "SOURCE_UNAVAILABLE",
-            ]},
+            "reasonCode": {
+                "enum": [
+                    "BLOCKER_PRESENT",
+                    "USER_ACTION_REQUIRED",
+                    "PENDING_REVIEW",
+                    "STALE_ATTEMPT",
+                    "FAILED_EVIDENCE",
+                    "TERMINAL_RUN",
+                    "SOURCE_UNAVAILABLE",
+                ]
+            },
             "severity": {"enum": ["HIGH", "MEDIUM", "LOW", "INFO"]},
             "runId": {"type": "string", "minLength": 1},
             "packageId": {"type": ["string", "null"]},

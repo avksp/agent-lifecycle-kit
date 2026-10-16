@@ -65,6 +65,8 @@ def validate_quality(
 
     format_path = _artifact_path(repository_root, run, "ruffFormat")
     format_current = _format_counts(format_path, repository_root, blockers)
+    blockers.extend(_format_command_blockers(run, format_current))
+    blockers.extend(_run_directory_blockers(repository_root, work_root, run))
     format_items = ruff.get("formatBaseline", [])
     format_baseline = _baseline_counts(format_items, repository_root, blockers, "format")
     blockers.extend(_source_digest_blockers(format_items, format_current, repository_root, changed_paths, "format"))
@@ -203,14 +205,85 @@ def _format_counts(path: Path | None, root: Path, blockers: list[dict[str, Any]]
         blockers.append({"code": "quality-artifact-missing", "artifact": "format"})
         return Counter()
     counts: Counter[tuple[str, str]] = Counter()
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        if "Would reformat:" not in line:
-            continue
-        raw = line.split("Would reformat:", 1)[1].strip()
-        path_value = _normal_path(raw, root)
-        if path_value:
-            counts[(path_value, "FORMAT")] += 1
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+        if not text:
+            raise ValueError("Empty format output is not a recognized result")
+        if text.startswith(("[", "{")):
+            rows = json.loads(text)
+            if not isinstance(rows, list):
+                raise ValueError("Format JSON must be a list")
+            names = []
+            for row in rows:
+                if not isinstance(row, dict) or row.get("code") != "unformatted":
+                    raise ValueError("Unrecognized format diagnostic")
+                names.append(row.get("filename"))
+        else:
+            names = []
+            summary_count: int | None = None
+            for line in text.splitlines():
+                if summary_count is not None:
+                    raise ValueError("Legacy format rows must precede one final summary")
+                if line.startswith("Would reformat: "):
+                    names.append(line.removeprefix("Would reformat: ").strip())
+                elif re.fullmatch(r"\d+ files? (?:already formatted|left unchanged)", line):
+                    summary_count = 0
+                else:
+                    summary = re.fullmatch(
+                        r"(\d+) files? would be reformatted"
+                        r"(?:, \d+ files? (?:already formatted|left unchanged))?", line
+                    )
+                    if summary is None:
+                        raise ValueError("Unrecognized legacy format output")
+                    summary_count = int(summary.group(1))
+            if summary_count is None or summary_count != len(names):
+                raise ValueError("Legacy format summary does not match diagnostic rows")
+        for name in names:
+            path_value = _normal_path(name, root)
+            if path_value is None or ".." in Path(path_value).parts:
+                raise ValueError("Invalid format diagnostic path")
+            key = (path_value, "FORMAT")
+            if key in counts:
+                raise ValueError("Duplicate format diagnostic path")
+            counts[key] = 1
+    except (OSError, UnicodeError, ValueError, TypeError) as exc:
+        blockers.append({"code": "quality-format-artifact-invalid", "message": str(exc)})
     return counts
+
+
+def _format_command_blockers(run: dict[str, Any], counts: Counter[tuple[str, str]]) -> list[dict[str, Any]]:
+    commands = [row for row in run.get("commands", []) if isinstance(row, dict) and row.get("id") == "ruff-format"]
+    if len(commands) != 1:
+        return [{"code": "quality-format-command-missing-or-ambiguous"}]
+    command = commands[0]
+    code = command.get("returncode")
+    if (type(code) is not int or code not in (0, 1) or command.get("status") != "PASS"
+            or command.get("timedOut") or command.get("outputLimited")):
+        return [{"code": "quality-format-command-invalid"}]
+    if (code == 1) != bool(sum(counts.values())):
+        return [{"code": "quality-format-exit-findings-mismatch"}]
+    return []
+
+
+def _run_directory_blockers(root: Path, work_root: Path, run: dict[str, Any]) -> list[dict[str, Any]]:
+    # Known historical v1 receipts have no run-directory metadata. Current
+    # runner receipts must keep every artifact in their unique invocation.
+    if "runDirectory" not in run:
+        return []
+    value = run["runDirectory"]
+    if not isinstance(value, str) or not value or Path(value).is_absolute() or ".." in Path(value).parts:
+        return [{"code": "quality-run-directory-invalid"}]
+    directory = root / value
+    if (directory.is_symlink() or not directory.is_dir() or not directory.name.startswith("run-")
+            or directory.resolve().parent != work_root.resolve()):
+        return [{"code": "quality-run-directory-invalid"}]
+    for key in run.get("artifacts", {}):
+        path = _artifact_path(root, run, key)
+        if path is None or path.parent != directory.resolve():
+            return [{"code": "quality-artifact-outside-current-run", "artifact": key}]
+    if _artifact_path(root, run, "coverageData") != directory.resolve() / "coverage.data":
+        return [{"code": "quality-coverage-database-identity-invalid"}]
+    return []
 
 
 def _mypy_counts(path: Path | None, root: Path, blockers: list[dict[str, Any]]) -> Counter[tuple[str, str]]:

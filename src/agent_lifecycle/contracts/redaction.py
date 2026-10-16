@@ -58,13 +58,14 @@ _BARE_TOKEN = re.compile(
     r")(?![A-Za-z0-9_-])"
 )
 _SENSITIVE_ASSIGNMENT_KEY = (
-    "(?:" + "|".join(re.escape(key).replace("_", "[-_]") for key in sorted(_SENSITIVE_EXACT_KEYS))
+    "(?:"
+    + "|".join(re.escape(key).replace("_", "[-_]") for key in sorted(_SENSITIVE_EXACT_KEYS))
     + "|[A-Za-z][A-Za-z0-9_.-]*(?:"
-    + "|".join(re.escape(suffix).replace("_", "[-_]") for suffix in _SENSITIVE_SUFFIXES) + "))"
+    + "|".join(re.escape(suffix).replace("_", "[-_]") for suffix in _SENSITIVE_SUFFIXES)
+    + "))"
 )
 _KEY_VALUE = re.compile(
-    r"(?<![A-Za-z0-9_.-])(?P<key>(?:\\*[\"'])?" + _SENSITIVE_ASSIGNMENT_KEY
-    + r"(?:\\*[\"'])?)(?P<separator>\s*[:=]\s*)"
+    r"(?<![A-Za-z0-9_.-])(?P<key>(?:\\*[\"'])?" + _SENSITIVE_ASSIGNMENT_KEY + r"(?:\\*[\"'])?)(?P<separator>\s*[:=]\s*)"
     r"(?P<value>(?:Bearer|Basic)\s+[^\s,;}\]]+|"
     r"(?P<escaped_quote>\\+[\"'])(?:\\.|[^\\])*?(?P=escaped_quote)|"
     r"\"(?:\\.|[^\"])*\"|'(?:\\.|[^'])*'|[^\s,;}\]]+)",
@@ -228,9 +229,9 @@ def _redact_sensitive_assignments(value: str, *, structured_only: bool = False) 
             except (ValueError, RecursionError, MemoryError):
                 # An ambiguous container boundary cannot safely retain a tail.
                 end = len(value)
-        if replacement != value[match.start():end]:
+        if replacement != value[match.start() : end]:
             count += 1
-        parts.extend((value[cursor:match.start()], replacement))
+        parts.extend((value[cursor : match.start()], replacement))
         cursor = end
 
     parts.append(value[cursor:])
@@ -362,7 +363,7 @@ def _redact_nested_http_urls(value: str, *, depth: int, decode_passes: int = 0) 
     count = 0
     for match in matches:
         prefix, prefix_count = _redact_nested_http_urls(
-            value[cursor:match.start()], depth=depth, decode_passes=decode_passes
+            value[cursor : match.start()], depth=depth, decode_passes=decode_passes
         )
         redacted_url, removed = _redact_http_url(match.group(0), depth=depth + 1)
         if redacted_url == REDACTED_VALUE:

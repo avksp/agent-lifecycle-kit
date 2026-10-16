@@ -8,6 +8,7 @@ import re
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts.authority_io import read_authority_bytes, resolve_authority_anchor
 from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest, load_json_object
@@ -65,9 +66,7 @@ def _create_v4_writer_guards(db: sqlite3.Connection, writer_version: int, detail
     for table in detail_tables:
         # Active baseline recomputation remains valid; closed scopes require the same retention context.
         condition = (
-            "EXISTS(SELECT 1 FROM archive_records WHERE scope=OLD.scope) AND "
-            if table == "source_baselines"
-            else ""
+            "EXISTS(SELECT 1 FROM archive_records WHERE scope=OLD.scope) AND " if table == "source_baselines" else ""
         )
         db.execute(
             f"CREATE TRIGGER protect_{table}_delete BEFORE DELETE ON {table} WHEN "
@@ -90,7 +89,7 @@ def _retarget_v4_writer_guards(db: sqlite3.Connection, writer_version: int, deta
 
 def _retarget_workflow_guards(db: sqlite3.Connection, tables: dict, writer_version: int) -> None:
     for table, (_, mutable) in tables.items():
-        for action in (("INSERT", "UPDATE") if mutable else ("INSERT",)):
+        for action in ("INSERT", "UPDATE") if mutable else ("INSERT",):
             db.execute(f"DROP TRIGGER guard_{table}_{action.lower()}")
             db.execute(
                 f"CREATE TRIGGER guard_{table}_{action.lower()} BEFORE {action} ON {table} "
@@ -132,9 +131,7 @@ def create_v6_workflow_extension(db: sqlite3.Connection) -> None:
         "old_schema_digest TEXT, new_schema_digest TEXT NOT NULL, "
         "accounting_snapshot_digest TEXT NOT NULL, writer_identity_digest TEXT NOT NULL)"
     )
-    for table in (
-        "workflow_run_output_anchors", "workflow_proof_body_stage", "workflow_storage_migrations"
-    ):
+    for table in ("workflow_run_output_anchors", "workflow_proof_body_stage", "workflow_storage_migrations"):
         db.execute(
             f"CREATE TRIGGER guard_{table}_insert BEFORE INSERT ON {table} WHEN "
             "alk_storage_writer_version() IS NOT 6 OR "
@@ -164,9 +161,18 @@ def create_v6_workflow_extension(db: sqlite3.Connection) -> None:
         "BEGIN SELECT RAISE(ABORT,'invalid proof body stage'); END"
     )
     unchanged = (
-        "run_id", "producer_operation_id", "producer_request_digest", "anchor_digest",
-        "prepared_input_bytes", "prepared_input_length", "prepared_input_sha256", "body_bytes",
-        "body_sha256", "body_length", "authority_decision_ref", "deadline_decision_ref",
+        "run_id",
+        "producer_operation_id",
+        "producer_request_digest",
+        "anchor_digest",
+        "prepared_input_bytes",
+        "prepared_input_length",
+        "prepared_input_sha256",
+        "body_bytes",
+        "body_sha256",
+        "body_length",
+        "authority_decision_ref",
+        "deadline_decision_ref",
         "clock_observation_ref",
     )
     changed = " OR ".join(f"NEW.{name} IS NOT OLD.{name}" for name in unchanged)
@@ -193,7 +199,8 @@ def create_v6_workflow_extension(db: sqlite3.Connection) -> None:
 
 def _storage_schema_digest(db: sqlite3.Connection) -> str:
     objects = [
-        list(row) for row in db.execute(
+        list(row)
+        for row in db.execute(
             "SELECT type,name,tbl_name,sql FROM sqlite_master "
             "WHERE type IN ('table','index','trigger') AND name NOT LIKE 'sqlite_%' "
             "ORDER BY type,name,tbl_name,sql"
@@ -220,15 +227,22 @@ def _anchor_row_matches(raw: object, *columns: object) -> int:
     if _anchor_digest(raw) is None:
         return 0
     try:
-        value = load_json_object(raw, label="run output anchor")
+        value = load_json_object(_validated_cast(bytes, raw), label="run output anchor")
     except (LifecycleError, TypeError, ValueError, RecursionError):
         return 0
     root = value["artifactAuthorityRootIdentity"]
     expected = (
-        value["runId"], value["bindingDigest"], value["adoptedStateDigest"],
-        value["journalIdentity"], value["artifactAuthorityRootPath"],
-        root["platform"], root["volumeId"], root["fileId"], value["packageRoot"],
-        value["eventLog"], value["runOutputRootRelativePath"],
+        value["runId"],
+        value["bindingDigest"],
+        value["adoptedStateDigest"],
+        value["journalIdentity"],
+        value["artifactAuthorityRootPath"],
+        root["platform"],
+        root["volumeId"],
+        root["fileId"],
+        value["packageRoot"],
+        value["eventLog"],
+        value["runOutputRootRelativePath"],
     )
     return int(columns == expected)
 
@@ -242,17 +256,26 @@ def _load_run_output_anchor_data(db: sqlite3.Connection, binding: dict, binding_
     ).fetchone()
     if saved is None or saved["binding_digest"] != binding_digest or saved["payload"] != canonical(binding):
         raise JournalUnavailable("Pinned workflow binding is absent or changed", write_outcome="NOT_STARTED")
-    row = db.execute(
-        "SELECT * FROM workflow_run_output_anchors WHERE run_id=?", (binding["runId"],)
-    ).fetchone()
+    row = db.execute("SELECT * FROM workflow_run_output_anchors WHERE run_id=?", (binding["runId"],)).fetchone()
     if row is None:
         raise JournalUnavailable("Pinned run output anchor is absent", write_outcome="NOT_STARTED")
     raw = row["canonical_anchor_bytes"]
-    columns = tuple(row[name] for name in (
-        "run_id", "binding_digest", "adopted_state_digest", "journal_identity",
-        "artifact_root_path", "root_platform", "root_volume_id", "root_file_id",
-        "package_root", "event_log", "output_root_relative_path",
-    ))
+    columns = tuple(
+        row[name]
+        for name in (
+            "run_id",
+            "binding_digest",
+            "adopted_state_digest",
+            "journal_identity",
+            "artifact_root_path",
+            "root_platform",
+            "root_volume_id",
+            "root_file_id",
+            "package_root",
+            "event_log",
+            "output_root_relative_path",
+        )
+    )
     if (
         row["storage_version"] != 6
         or _anchor_digest(raw) != row["anchor_digest"]
@@ -283,21 +306,26 @@ def _canonical_json_sha256(raw: object) -> str | None:
 def _financial_snapshot_digest(db: sqlite3.Connection) -> str:
     """Hash every retained financial row, independent of SQLite row iteration order."""
     tables = [
-        row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-        if not row[0].startswith(("workflow_", "sqlite_")) and row[0] != "schema_metadata"
-        and not row[0].startswith(("closing_policy_", "closing_operation_", "closing_resource_",
-                                   "closing_protection_"))
+        row[0]
+        for row in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        if not row[0].startswith(("workflow_", "sqlite_"))
+        and row[0] != "schema_metadata"
+        and not row[0].startswith(("closing_policy_", "closing_operation_", "closing_resource_", "closing_protection_"))
     ]
     rows = []
     for table in tables:
         values = []
         for row in db.execute(f"SELECT * FROM {table}"):
             record = [
-                ["blob", item.hex()] if isinstance(item, bytes) else
-                ["null", None] if item is None else
-                ["integer", item] if type(item) is int else
-                ["text", item] if type(item) is str else
-                ["unsupported", type(item).__name__]
+                ["blob", item.hex()]
+                if isinstance(item, bytes)
+                else ["null", None]
+                if item is None
+                else ["integer", item]
+                if type(item) is int
+                else ["text", item]
+                if type(item) is str
+                else ["unsupported", type(item).__name__]
                 for item in row
             ]
             if any(item[0] == "unsupported" for item in record):
@@ -341,8 +369,16 @@ def validate_legacy_adoption_history(state: dict, events: list[dict]) -> dict:
     if len(events) != revision - 1 or len(ledger) != len(events):
         raise LifecycleError("workflow-adoption-invalid", "Event and operation history are incomplete")
     seen: set[str] = set()
-    fields = {"schemaVersion", "runId", "packageId", "stateRevision", "operationId",
-              "eventType", "payload", "recordedAt"}
+    fields = {
+        "schemaVersion",
+        "runId",
+        "packageId",
+        "stateRevision",
+        "operationId",
+        "eventType",
+        "payload",
+        "recordedAt",
+    }
     for expected_revision, event in enumerate(events, start=2):
         if type(event) is not dict or set(event) != fields:
             raise LifecycleError("workflow-adoption-invalid", "Legacy event has missing or unknown fields")
@@ -376,11 +412,17 @@ def validate_legacy_adoption_history(state: dict, events: list[dict]) -> dict:
         ):
             raise LifecycleError("workflow-adoption-invalid", "Operation ledger differs from event history")
         seen.add(operation_id)
-    return {"schemaVersion": "agent-workflow-legacy-history-check.v1", "status": "DATA_CANDIDATE",
-            "stateDigest": canonical_digest(state), "historyDigest": canonical_digest(events),
-            "eventCount": len(events), "operationIds": sorted(seen),
-            "quiescenceQualified": False, "accountingHistoryQualified": False,
-            "nativePermissionGranted": False}
+    return {
+        "schemaVersion": "agent-workflow-legacy-history-check.v1",
+        "status": "DATA_CANDIDATE",
+        "stateDigest": canonical_digest(state),
+        "historyDigest": canonical_digest(events),
+        "eventCount": len(events),
+        "operationIds": sorted(seen),
+        "quiescenceQualified": False,
+        "accountingHistoryQualified": False,
+        "nativePermissionGranted": False,
+    }
 
 
 def _adoption_artifact(root: Path, ref: dict) -> bytes:
@@ -392,7 +434,11 @@ def _adoption_artifact(root: Path, ref: dict) -> bytes:
 
 
 def prepare_legacy_adoption_candidate(
-    adoption_input: dict, selection: dict, *, artifact_root: Path, observed_at: str,
+    adoption_input: dict,
+    selection: dict,
+    *,
+    artifact_root: Path,
+    observed_at: str,
 ) -> dict:
     """Read exact legacy inputs; no caller provenance, accounting authority or write is inferred."""
     validate_adoption_input(adoption_input)
@@ -460,23 +506,38 @@ def prepare_legacy_adoption_candidate(
     for name in ("operatorQualificationRef", "quiescenceEvidenceRef", "writerInventoryRef"):
         _adoption_artifact(root, selection[name])
     authority = validate_initial_authority_inputs(
-        binding, selection["expectedBindingDigest"], selection["expectedPinDigest"],
-        pin_raw, qualification_raw, snapshot, observed_at=observed_at,
+        binding,
+        selection["expectedBindingDigest"],
+        selection["expectedPinDigest"],
+        pin_raw,
+        qualification_raw,
+        snapshot,
+        observed_at=observed_at,
     )
     if authority["snapshotDigest"] != selection["expectedInitialSnapshotDigest"]:
         raise LifecycleError("workflow-adoption-invalid", "Selected initial snapshot differs")
     return {
-        "schemaVersion": "agent-workflow-adoption-candidate.v1", "status": "DATA_CANDIDATE",
-        "runId": binding["runId"], "budgetScopeId": binding["budgetScopeId"],
+        "schemaVersion": "agent-workflow-adoption-candidate.v1",
+        "status": "DATA_CANDIDATE",
+        "runId": binding["runId"],
+        "budgetScopeId": binding["budgetScopeId"],
         "operationId": adoption_input["operationId"],
-        "inputDigest": canonical_digest(adoption_input), "selectionDigest": canonical_digest(selection),
-        "bindingDigest": authority["bindingDigest"], "pinDigest": authority["pinDigest"],
-        "snapshotDigest": authority["snapshotDigest"], "stateDigest": history["stateDigest"],
-        "historyDigest": history["historyDigest"], "eventCount": history["eventCount"],
-        "operationIds": history["operationIds"], "expectedAccountingRevision": selection["expectedAccountingRevision"],
+        "inputDigest": canonical_digest(adoption_input),
+        "selectionDigest": canonical_digest(selection),
+        "bindingDigest": authority["bindingDigest"],
+        "pinDigest": authority["pinDigest"],
+        "snapshotDigest": authority["snapshotDigest"],
+        "stateDigest": history["stateDigest"],
+        "historyDigest": history["historyDigest"],
+        "eventCount": history["eventCount"],
+        "operationIds": history["operationIds"],
+        "expectedAccountingRevision": selection["expectedAccountingRevision"],
         "expectedAccountingStateDigest": selection["expectedAccountingStateDigest"],
-        "operatorQualified": False, "quiescenceQualified": False, "accountingHistoryQualified": False,
-        "financialAdmission": False, "nativePermissionGranted": False,
+        "operatorQualified": False,
+        "quiescenceQualified": False,
+        "accountingHistoryQualified": False,
+        "financialAdmission": False,
+        "nativePermissionGranted": False,
     }
 
 
@@ -505,8 +566,10 @@ def _loaded_root(db: sqlite3.Connection, binding: dict, binding_digest: str) -> 
         if value["qualificationDigest"] != pin["qualificationRef"]["sha256"]:
             raise ValueError("Root qualification digest mismatch")
         for left, right in (
-            ("bindingId", "bindingId"), ("runId", "runId"),
-            ("budgetScopeId", "budgetScopeId"), ("journalIdentity", "journalIdentity"),
+            ("bindingId", "bindingId"),
+            ("runId", "runId"),
+            ("budgetScopeId", "budgetScopeId"),
+            ("journalIdentity", "journalIdentity"),
         ):
             if pin[left] != binding[right]:
                 raise ValueError("Root identity differs from runtime binding")
@@ -536,12 +599,8 @@ def _monotonic_successor(previous: dict, next_snapshot: dict) -> bool:
     new_issuers = {(x["issuerId"], x["issuerGeneration"]): x for x in next_snapshot["activeIssuers"]}
     revoked_issuers = {(x["issuerId"], x["issuerGeneration"]) for x in next_snapshot["revokedIssuers"]}
     old_revoked_issuers = {(x["issuerId"], x["issuerGeneration"]) for x in previous["revokedIssuers"]}
-    revoked_grants = {
-        (x["issuerId"], x["issuerGeneration"], x["nonce"]) for x in next_snapshot["revokedGrants"]
-    }
-    old_revoked_grants = {
-        (x["issuerId"], x["issuerGeneration"], x["nonce"]) for x in previous["revokedGrants"]
-    }
+    revoked_grants = {(x["issuerId"], x["issuerGeneration"], x["nonce"]) for x in next_snapshot["revokedGrants"]}
+    old_revoked_grants = {(x["issuerId"], x["issuerGeneration"], x["nonce"]) for x in previous["revokedGrants"]}
     return (
         old_revoked_issuers <= revoked_issuers
         and old_revoked_grants <= revoked_grants
@@ -553,34 +612,37 @@ def _monotonic_successor(previous: dict, next_snapshot: dict) -> bool:
 def _revocation_only_successor(previous: dict, next_snapshot: dict) -> bool:
     """Allow safety revocation without issuing a new or longer-lived authority."""
     fixed = (
-        "schemaVersion", "authorityDomain", "rootId", "rootGeneration", "bindingId",
-        "journalIdentity", "validFrom", "expiresAt",
+        "schemaVersion",
+        "authorityDomain",
+        "rootId",
+        "rootGeneration",
+        "bindingId",
+        "journalIdentity",
+        "validFrom",
+        "expiresAt",
     )
     if any(previous[key] != next_snapshot[key] for key in fixed):
         return False
     old_issuers = {(x["issuerId"], x["issuerGeneration"]): x for x in previous["activeIssuers"]}
     new_issuers = {(x["issuerId"], x["issuerGeneration"]): x for x in next_snapshot["activeIssuers"]}
-    if not new_issuers.keys() <= old_issuers.keys() or any(
-        new_issuers[key] != old_issuers[key] for key in new_issuers
-    ):
+    if not new_issuers.keys() <= old_issuers.keys() or any(new_issuers[key] != old_issuers[key] for key in new_issuers):
         return False
     old_revoked_issuers = {(x["issuerId"], x["issuerGeneration"]) for x in previous["revokedIssuers"]}
     new_revoked_issuers = {(x["issuerId"], x["issuerGeneration"]) for x in next_snapshot["revokedIssuers"]}
-    old_revoked_grants = {
-        (x["issuerId"], x["issuerGeneration"], x["nonce"]) for x in previous["revokedGrants"]
-    }
-    new_revoked_grants = {
-        (x["issuerId"], x["issuerGeneration"], x["nonce"]) for x in next_snapshot["revokedGrants"]
-    }
-    return (
-        old_revoked_issuers < new_revoked_issuers
-        or old_revoked_grants < new_revoked_grants
-    )
+    old_revoked_grants = {(x["issuerId"], x["issuerGeneration"], x["nonce"]) for x in previous["revokedGrants"]}
+    new_revoked_grants = {(x["issuerId"], x["issuerGeneration"], x["nonce"]) for x in next_snapshot["revokedGrants"]}
+    return old_revoked_issuers < new_revoked_issuers or old_revoked_grants < new_revoked_grants
 
 
 def install_successor_snapshot(
-    db: sqlite3.Connection, binding: dict, binding_digest: str, snapshot: dict,
-    operation_id: str, expected_epoch: int, *, revocation_only: bool = False,
+    db: sqlite3.Connection,
+    binding: dict,
+    binding_digest: str,
+    snapshot: dict,
+    operation_id: str,
+    expected_epoch: int,
+    *,
+    revocation_only: bool = False,
 ) -> dict:
     """Commit a successor under the already qualified root, on the caller's Journal transaction."""
     pin = _loaded_root(db, binding, binding_digest)
@@ -596,11 +658,14 @@ def install_successor_snapshot(
         raise JournalUnavailable("Initial authority snapshot is absent", write_outcome="NOT_STARTED")
     saved = db.execute(
         "SELECT snapshot_digest,install_operation_id,payload FROM workflow_authority_snapshots "
-        "WHERE binding_id=? AND epoch=?", (binding["bindingId"], snapshot["epoch"]),
+        "WHERE binding_id=? AND epoch=?",
+        (binding["bindingId"], snapshot["epoch"]),
     ).fetchone()
     if saved is not None:
         if (saved["snapshot_digest"], saved["install_operation_id"], saved["payload"]) == (
-            selected_digest, operation_id, selected_bytes,
+            selected_digest,
+            operation_id,
+            selected_bytes,
         ):
             return {"status": "INSTALLED_REPLAY", "snapshotDigest": selected_digest, "nativePermissionGranted": False}
         return {"status": "CONFLICT"}

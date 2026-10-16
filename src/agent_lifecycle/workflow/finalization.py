@@ -1,9 +1,11 @@
 """Terminal workflow finalization."""
+
 from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.contracts.goal_validation import validate_goal_record
@@ -25,15 +27,17 @@ from agent_lifecycle.specification import (
     validate_completion_check_receipt,
     validate_completion_signal,
 )
-from agent_lifecycle.workflow.audit_evidence import (
-    _validate_release_full_validation,
-    _capture_release_current_tree,
-)
 from agent_lifecycle.workflow.artifacts import (
     artifact_identity,
     next_available_attempt,
     package_root,
     validate_attempt_history,
+)
+from agent_lifecycle.workflow.audit_evidence import (
+    _capture_release_current_tree as _capture_release_current_tree,
+)
+from agent_lifecycle.workflow.audit_evidence import (
+    _validate_release_full_validation,
 )
 from agent_lifecycle.workflow.closing_policy import require_native_closing_action
 from agent_lifecycle.workflow.final_proof_integrity import validate_final_proof_integrity
@@ -368,7 +372,8 @@ def finalize_run(
         "reason": reason,
     }
     from agent_lifecycle.workflow.limited_usage import (
-        aggregate_source_usage_assurance, require_task_source_frontier_current,
+        aggregate_source_usage_assurance,
+        require_task_source_frontier_current,
     )
 
     source_assurance = aggregate_source_usage_assurance(root, state)
@@ -492,8 +497,16 @@ def _evaluate_lifecycle_control_stop(
     level, policy, evidence = lifecycle_control_selection(state)
     if level == "OFF":
         return None
-    pre_action = evidence.get("finalizePreAction") if isinstance(evidence.get("finalizePreAction"), dict) else None
-    post_action = evidence.get("finalizePostAction") if isinstance(evidence.get("finalizePostAction"), dict) else None
+    pre_action = (
+        _validated_cast(dict[str, Any], evidence.get("finalizePreAction"))
+        if isinstance(evidence.get("finalizePreAction"), dict)
+        else None
+    )
+    post_action = (
+        _validated_cast(dict[str, Any], evidence.get("finalizePostAction"))
+        if isinstance(evidence.get("finalizePostAction"), dict)
+        else None
+    )
     gate = evaluate_stop_gate(
         state=state,
         final_audit=final_audit,
@@ -510,7 +523,9 @@ def _evaluate_lifecycle_control_stop(
 def _validate_review_mesh_final_quorum(
     root: Path, state: dict[str, Any], quorum_receipt_paths: list[str]
 ) -> dict[str, Any] | None:
-    config = state.get("reviewMesh") if isinstance(state.get("reviewMesh"), dict) else None
+    config = (
+        _validated_cast(dict[str, Any], state.get("reviewMesh")) if isinstance(state.get("reviewMesh"), dict) else None
+    )
     receipt_path = quorum_receipt_paths[0] if quorum_receipt_paths else None
     gate = validate_review_mesh_quorum_path(
         root=root,
@@ -634,8 +649,11 @@ def _validate_proof_integrity(
 
 
 def _validate_final_implementation_audit(
-    state_path: Path, state: dict[str, Any], root: Path,
-    *, final_implementation_audit_path: str | None,
+    state_path: Path,
+    state: dict[str, Any],
+    root: Path,
+    *,
+    final_implementation_audit_path: str | None,
 ) -> dict[str, Any] | None:
     if final_implementation_audit_path is None:
         if final_implementation_audit_required(state_path, state):
@@ -657,10 +675,6 @@ def _validate_final_implementation_audit(
     validate_final_task_evidence_reports(state_path, state, audit)
     identity = artifact_identity(root, rel, audit)
     return {"audit": identity, "validation": validation}
-
-
-
-
 
 
 def _proof_body(

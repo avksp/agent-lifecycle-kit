@@ -3,6 +3,7 @@
 Only the internal profile consumer uses this subset. Schema authority remains
 the frozen package lock; matching a schema never grants a capability.
 """
+
 from __future__ import annotations
 
 import re
@@ -14,11 +15,30 @@ from agent_lifecycle.accounting.contracts import canonical
 _MAX_DEPTH = 64
 _MAX_REFERENCES = 64
 _MAX_VISITS = 65536
-_KEYWORDS = frozenset({
-    "$ref", "type", "const", "enum", "properties", "required", "additionalProperties",
-    "items", "minItems", "maxItems", "uniqueItems", "minLength", "maxLength", "pattern",
-    "minimum", "maximum", "allOf", "anyOf", "if", "then",
-})
+_KEYWORDS = frozenset(
+    {
+        "$ref",
+        "type",
+        "const",
+        "enum",
+        "properties",
+        "required",
+        "additionalProperties",
+        "items",
+        "minItems",
+        "maxItems",
+        "uniqueItems",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "minimum",
+        "maximum",
+        "allOf",
+        "anyOf",
+        "if",
+        "then",
+    }
+)
 _TYPES = frozenset({"null", "boolean", "integer", "number", "string", "array", "object"})
 
 
@@ -54,8 +74,15 @@ def _json_key(value: Any, budget: _Budget, depth: int = 0, active: frozenset = f
     if isinstance(value, list):
         return ("array", tuple(_json_key(v, budget, depth + 1, active) for v in value))
     if isinstance(value, dict) and all(isinstance(k, str) for k in value):
-        return ("object", tuple(sorted((_json_key(k, budget, depth + 1, active),
-                                       _json_key(v, budget, depth + 1, active)) for k, v in value.items())))
+        return (
+            "object",
+            tuple(
+                sorted(
+                    (_json_key(k, budget, depth + 1, active), _json_key(v, budget, depth + 1, active))
+                    for k, v in value.items()
+                )
+            ),
+        )
     raise _Refusal("Expected canonical JSON without floats")
 
 
@@ -63,7 +90,7 @@ def _reference(schema: dict, definitions: dict) -> str:
     value = schema["$ref"]
     if not isinstance(value, str) or not value.startswith("#/$defs/"):
         raise _Refusal("Only local H04 definition references are supported")
-    name = value[len("#/$defs/"):]
+    name = value[len("#/$defs/") :]
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", name) or name not in definitions:
         raise _Refusal("Unknown local H04 definition")
     return name
@@ -74,8 +101,7 @@ def _check_keyword_shapes(schema: dict, budget: _Budget) -> None:
         raise _Refusal("Unsupported H04 schema keyword")
     if "type" in schema:
         kinds = schema["type"] if isinstance(schema["type"], list) else [schema["type"]]
-        if (not kinds or any(not isinstance(k, str) or k not in _TYPES for k in kinds)
-                or len(set(kinds)) != len(kinds)):
+        if not kinds or any(not isinstance(k, str) or k not in _TYPES for k in kinds) or len(set(kinds)) != len(kinds):
             raise _Refusal("Malformed schema type")
     for key in ("minItems", "maxItems", "minLength", "maxLength"):
         if key in schema and (type(schema[key]) is not int or schema[key] < 0):
@@ -92,8 +118,11 @@ def _check_keyword_shapes(schema: dict, budget: _Budget) -> None:
         re.compile(schema["pattern"])
     if "required" in schema:
         required = schema["required"]
-        if (not isinstance(required, list) or any(not isinstance(k, str) for k in required)
-                or len(set(required)) != len(required)):
+        if (
+            not isinstance(required, list)
+            or any(not isinstance(k, str) for k in required)
+            or len(set(required)) != len(required)
+        ):
             raise _Refusal("Malformed required properties")
     if "const" in schema:
         _json_key(schema["const"], budget)
@@ -106,8 +135,7 @@ def _check_keyword_shapes(schema: dict, budget: _Budget) -> None:
             raise _Refusal("Duplicate schema enum value")
 
 
-def _check_schema(schema: Any, definitions: dict, budget: _Budget, *,
-                  depth: int = 0, references: tuple = ()) -> None:
+def _check_schema(schema: Any, definitions: dict, budget: _Budget, *, depth: int = 0, references: tuple = ()) -> None:
     budget.visit(depth, max(0, len(references) - 1))
     if type(schema) is bool:
         return
@@ -118,7 +146,7 @@ def _check_schema(schema: Any, definitions: dict, budget: _Budget, *,
         name = _reference(schema, definitions)
         if name in references:
             raise _Refusal("Cyclic schema reference")
-        _check_schema(definitions[name], definitions, budget, depth=depth + 1, references=references + (name,))
+        _check_schema(definitions[name], definitions, budget, depth=depth + 1, references=(*references, name))
     properties = schema.get("properties", {})
     if not isinstance(properties, dict) or any(not isinstance(k, str) for k in properties):
         raise _Refusal("Malformed schema properties")
@@ -138,9 +166,12 @@ def _check_schema(schema: Any, definitions: dict, budget: _Budget, *,
 
 def _has_type(value: Any, kind: str) -> bool:
     return {
-        "null": value is None, "boolean": type(value) is bool,
-        "integer": type(value) is int, "number": type(value) is int,
-        "string": isinstance(value, str), "array": isinstance(value, list),
+        "null": value is None,
+        "boolean": type(value) is bool,
+        "integer": type(value) is int,
+        "number": type(value) is int,
+        "string": isinstance(value, str),
+        "array": isinstance(value, list),
         "object": isinstance(value, dict),
     }[kind]
 
@@ -159,19 +190,18 @@ def _scalar_matches(value: Any, schema: dict, budget: _Budget) -> bool:
             return False
         if "pattern" in schema and re.search(schema["pattern"], value) is None:
             return False
-    if type(value) is int:
-        if value < schema.get("minimum", value) or value > schema.get("maximum", value):
-            return False
-    return True
+    return not (type(value) is int and (value < schema.get("minimum", value) or value > schema.get("maximum", value)))
 
 
-def _matches(value: Any, schema: Any, definitions: dict, budget: _Budget, *,
-             depth: int = 0, references: int = 0) -> bool:
+def _matches(
+    value: Any, schema: Any, definitions: dict, budget: _Budget, *, depth: int = 0, references: int = 0
+) -> bool:
     budget.visit(depth, references)
     if type(schema) is bool:
         return schema
-    if "$ref" in schema and not _matches(value, definitions[_reference(schema, definitions)], definitions,
-                                         budget, depth=depth, references=references + 1):
+    if "$ref" in schema and not _matches(
+        value, definitions[_reference(schema, definitions)], definitions, budget, depth=depth, references=references + 1
+    ):
         return False
     if not _scalar_matches(value, schema, budget):
         return False
@@ -195,17 +225,20 @@ def _matches(value: Any, schema: Any, definitions: dict, budget: _Budget, *,
             for child in value:
                 if not _matches(child, schema["items"], definitions, budget, depth=depth + 1, references=references):
                     return False
-    if "allOf" in schema and not all(_matches(value, child, definitions, budget, depth=depth,
-                                              references=references) for child in schema["allOf"]):
+    if "allOf" in schema and not all(
+        _matches(value, child, definitions, budget, depth=depth, references=references) for child in schema["allOf"]
+    ):
         return False
-    if "anyOf" in schema and not any(_matches(value, child, definitions, budget, depth=depth,
-                                              references=references) for child in schema["anyOf"]):
+    if "anyOf" in schema and not any(
+        _matches(value, child, definitions, budget, depth=depth, references=references) for child in schema["anyOf"]
+    ):
         return False
-    if "if" in schema and _matches(value, schema["if"], definitions, budget, depth=depth, references=references):
-        if "then" in schema and not _matches(value, schema["then"], definitions, budget,
-                                             depth=depth, references=references):
-            return False
-    return True
+    return not (
+        "if" in schema
+        and _matches(value, schema["if"], definitions, budget, depth=depth, references=references)
+        and "then" in schema
+        and not _matches(value, schema["then"], definitions, budget, depth=depth, references=references)
+    )
 
 
 def matches_profile_schema(value: Any, definitions: dict, name: str) -> bool:

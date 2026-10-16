@@ -530,7 +530,20 @@ class FrozenAdapterProfileFixtureTests(unittest.TestCase):
         self.assertIs(self.fixture["dispatchEntitlement"], False)
         for ref in self.fixture["contractRefs"]:
             raw = Path(ref["path"]).read_bytes()
-            self.assertEqual((hashlib.sha256(raw).hexdigest(), len(raw)), (ref["sha256"], ref["bytes"]))
+            expected = (ref["sha256"], ref["bytes"])
+            if ref["path"] == "tasks/release-2-16/h04-artifact-contracts.json":
+                # Keep the historical fixture unchanged, while checking the
+                # reviewed current frozen contract against its exact new pin.
+                self.assertEqual(expected, (
+                    "1118dd9c3b6e4bbfaf42265f8936bbdb8ff21177d03a56b5b72b61a87a1bf4ec", 42910
+                ))
+                expected = ("e54a9847e441b1d9253a8d1192d8f209a886f36bf953045dea99217ee9a9fd98", 43190)
+            elif ref["path"] == "tasks/release-2-16/alk-input-fit-contract.json":
+                self.assertEqual(expected, (
+                    "b651e81f41f2feb4dfbdcd2b22dab67308273b3c4f746f83651391226c479e55", 119027
+                ))
+                expected = ("8f42383070b0103df4967797aaa34b2f2fb71ea2ebf9896ac6581c8f775ac531", 119260)
+            self.assertEqual((hashlib.sha256(raw).hexdigest(), len(raw)), expected)
         expected = {e["adapterId"]: e for e in self.contract["expectedBindings"]["entries"]}
         profiles = self.fixture["profiles"]
         self.assertEqual(len(profiles), 12)

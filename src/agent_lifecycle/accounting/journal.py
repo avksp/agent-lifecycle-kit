@@ -21,6 +21,7 @@ from contextlib import contextmanager, suppress
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast as _validated_cast
 
 from .closing_resource_recovery import closed_financial_totals
 from .closing_resources import JournalRetentionMixin
@@ -68,11 +69,17 @@ from .workflow_store import (
 )
 
 
-class Journal(JournalHandle, JournalStoreMixin, JournalRetentionMixin, JournalAdmissionMixin, JournalNormalizationMixin):
+class Journal(
+    JournalHandle, JournalStoreMixin, JournalRetentionMixin, JournalAdmissionMixin, JournalNormalizationMixin
+):
     _compile_opening = staticmethod(compile_opening)
 
     def __init__(
-        self, path: str | Path, writer: EvidenceRef, *, fault_hook: Callable[[str], None] | None = None,
+        self,
+        path: str | Path,
+        writer: EvidenceRef,
+        *,
+        fault_hook: Callable[[str], None] | None = None,
         storage_version: int = STORAGE_SCHEMA_VERSION,
         utc_clock: Callable[[], datetime] | None = None,
     ) -> None:
@@ -94,16 +101,27 @@ class Journal(JournalHandle, JournalStoreMixin, JournalRetentionMixin, JournalAd
         self._queue = _WriteQueue(self._path)
         self._admission_depth = 0
         self.last_write_admission: dict = {}
-        self._maintenance_deadline = None
-        self._observation_scope = None
+        self._maintenance_deadline: float | None = None
+        self._observation_scope: str | None = None
         self.fault_hook = fault_hook
-        options = {"isolation_level": None, "timeout": 1.0, "check_same_thread": True}
-        if sys.version_info >= (3, 12):
-            options["autocommit"] = sqlite3.LEGACY_TRANSACTION_CONTROL
         self._db = None
         try:
             with self._write_admission():
-                self._db = sqlite3.connect(str(self._path), **options)
+                if sys.version_info >= (3, 12):
+                    self._db = sqlite3.connect(
+                        str(self._path),
+                        isolation_level=None,
+                        timeout=1.0,
+                        check_same_thread=True,
+                        autocommit=sqlite3.LEGACY_TRANSACTION_CONTROL,
+                    )
+                else:
+                    self._db = sqlite3.connect(
+                        str(self._path),
+                        isolation_level=None,
+                        timeout=1.0,
+                        check_same_thread=True,
+                    )
                 self._db.row_factory = sqlite3.Row
                 self._schema_ready = False
                 self._retention_scopes = frozenset()
@@ -312,7 +330,10 @@ class Journal(JournalHandle, JournalStoreMixin, JournalRetentionMixin, JournalAd
         else:
             encoded_state = canonical(_apply(state, kind, payload, revision=revision))
         self._db.execute(
-            "INSERT INTO scope_state VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET revision=excluded.revision,data=excluded.data",
+            (
+                "INSERT INTO scope_state VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET "
+                "revision=excluded.revision,data=excluded.data"
+            ),
             (scope, next_revision, encoded_state),
         )
         if self.fault_hook:
@@ -348,7 +369,8 @@ class Journal(JournalHandle, JournalStoreMixin, JournalRetentionMixin, JournalAd
         )
 
     def _preflight_supplied_finals(self, scope: str, receipts: list[dict]) -> None:
-        seen, affected, problems = {}, {scope}, []
+        seen: dict[str, str] = {}
+        affected, problems = {scope}, []
         for receipt in receipts:
             affected.add(receipt["budget_scope_id"])
             try:
@@ -553,11 +575,11 @@ class Journal(JournalHandle, JournalStoreMixin, JournalRetentionMixin, JournalAd
                 target = (
                     scope.budget_scope_id
                     if self._closed_scope(scope.budget_scope_id)
-                    else self.closed_run(scope.run_id)["closure"]["scope_revisions"][0][0]
+                    else _validated_cast(dict, self.closed_run(scope.run_id))["closure"]["scope_revisions"][0][0]
                 )
                 if self._observed_candidates(target, value):
                     self._closed_evidence(target, value)
-                return UsageOutcome("CLOSED", self._closed_scope(target)["revision"])
+                return UsageOutcome("CLOSED", _validated_cast(sqlite3.Row, self._closed_scope(target))["revision"])
             existing, revision = self._load(scope.budget_scope_id)
             value = json.loads(canonical(asdict(opening_import)))
             if existing is not None:
@@ -582,7 +604,9 @@ class Journal(JournalHandle, JournalStoreMixin, JournalRetentionMixin, JournalAd
                 data["opening"]["pending_operations"] = None
                 revision = self._record(scope.budget_scope_id, None, 0, "OPEN", data)
                 existing, _ = self._load(scope.budget_scope_id)
-                return self._v2_unavailable(scope.budget_scope_id, existing, revision, str(exc), value)
+                return self._v2_unavailable(
+                    scope.budget_scope_id, _validated_cast(dict, existing), revision, str(exc), value
+                )
             self._db.execute("SAVEPOINT v2_import")
             try:
                 entries, keys = self._import_entries(scope.budget_scope_id, after)
@@ -612,7 +636,10 @@ class Journal(JournalHandle, JournalStoreMixin, JournalRetentionMixin, JournalAd
 
     def _live_facts(self, scope: str, *, restore: bool = False) -> tuple[dict, int, list, list]:
         """Pure per-scope replay; closure must not repair its own admission evidence."""
-        state, revision, indexes, identities = None, 0, {}, {}
+        state: dict | None = None
+        revision = 0
+        indexes: dict[tuple[str, str], dict] = {}
+        identities: dict[tuple[str, str], list] = {}
         for row in self._db.execute("SELECT * FROM events WHERE scope=? ORDER BY revision,ordinal", (scope,)):
             self._checkpoint("archive_replay")
             revision += 1
@@ -640,7 +667,7 @@ class Journal(JournalHandle, JournalStoreMixin, JournalRetentionMixin, JournalAd
                     )
                 ]
             elif row["kind"] == "CLAIM":
-                op = state["operations"][payload["operation_id"]]
+                op = _validated_cast(dict, state)["operations"][payload["operation_id"]]
                 declarations = [
                     ["claim", op["binding"]["permit_id"], scope, payload["operation_id"], digest(payload["claim_id"])]
                 ]

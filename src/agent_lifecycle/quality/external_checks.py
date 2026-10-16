@@ -34,9 +34,7 @@ def normalize_external_check_result(
     """
 
     require_external_check_pass(validate_external_check_descriptor(descriptor), "descriptor")
-    require_external_check_pass(
-        validate_external_check_invocation(invocation, descriptor=descriptor), "invocation"
-    )
+    require_external_check_pass(validate_external_check_invocation(invocation, descriptor=descriptor), "invocation")
     if not isinstance(payload, dict):
         payload = {}
     blockers = _safe_blockers(payload.get("blockers"))

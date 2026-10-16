@@ -59,25 +59,7 @@ def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
     raise LifecycleError("command-not-implemented", "lifecycle command is not implemented")
 
 
-def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
-    if args.workflow_command in {"adopt-plan", "finalize", "continue"}:
-        refusal = operator_claim_refusal(getattr(args, "requested_claim", None))
-        if refusal is not None:
-            raise LifecycleError(
-                refusal["reason"], "Protected adoption and closing have no qualified native operator route",
-                refusal,
-            )
-    if args.workflow_command == "maintenance":
-        if args.maintenance_journal_override is not None or args.maintenance_root_override is not None:
-            raise LifecycleError("retention-override-forbidden", "Journal and private root are fixed by authority")
-        from agent_lifecycle.accounting.host_bridge import maintain_raw_details
-
-        return maintain_raw_details(
-            Path(args.authority), args.authority_sha,
-            candidate_limit=args.candidate_limit, deadline_utc=args.deadline,
-        )
-    if args.workflow_command == "budget-policy-check":
-        return validate_budget_exceeded_policy(read_json_object(Path(args.policy), label="budget policy"))
+def _dispatch_workflow_initialization(args: argparse.Namespace) -> dict[str, Any]:
     if args.workflow_command == "init":
         return initialize_workflow_state(
             Path(args.state),
@@ -102,6 +84,33 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             expected_sha256=args.expected_sha256,
             max_input_bytes=args.max_input_bytes,
         )
+    raise LifecycleError("command-not-implemented", "unknown workflow initialization command")
+
+
+def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
+    if args.workflow_command in {"adopt-plan", "finalize", "continue"}:
+        refusal = operator_claim_refusal(getattr(args, "requested_claim", None))
+        if refusal is not None:
+            raise LifecycleError(
+                refusal["reason"],
+                "Protected adoption and closing have no qualified native operator route",
+                refusal,
+            )
+    if args.workflow_command == "maintenance":
+        if args.maintenance_journal_override is not None or args.maintenance_root_override is not None:
+            raise LifecycleError("retention-override-forbidden", "Journal and private root are fixed by authority")
+        from agent_lifecycle.accounting.host_bridge import maintain_raw_details
+
+        return maintain_raw_details(
+            Path(args.authority),
+            args.authority_sha,
+            candidate_limit=args.candidate_limit,
+            deadline_utc=args.deadline,
+        )
+    if args.workflow_command == "budget-policy-check":
+        return validate_budget_exceeded_policy(read_json_object(Path(args.policy), label="budget policy"))
+    if args.workflow_command in {"init", "state-migrate", "migrate-runner-artifact"}:
+        return _dispatch_workflow_initialization(args)
     state_path = Path(args.state)
     if args.workflow_command == "status":
         return status(state_path, full=args.full)

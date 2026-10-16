@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 
@@ -121,7 +122,11 @@ def build_cross_check_receipt(
 
     profile_validation = validate_cross_check_profile(profile)
     usage = _budget_usage(budget_usage, code="invalid-cross-check-receipt")
-    cap = profile.get("budgetCap") if isinstance(profile, dict) and isinstance(profile.get("budgetCap"), dict) else {}
+    cap = (
+        _validated_cast(dict[str, Any], profile.get("budgetCap"))
+        if isinstance(profile, dict) and isinstance(profile.get("budgetCap"), dict)
+        else {}
+    )
     cap_blockers = _budget_blockers(usage, cap)
     if live_calls_started and profile.get("liveCallsAllowed") is not True:
         cap_blockers.append({"code": "cross-check-live-call-not-allowed"})

@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.accounting.source_usage_context import load_source_usage_context
-from agent_lifecycle.workflow.artifacts import package_root
-from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.adapter_sessions.launcher import load_adapter_descriptor
 from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
 from agent_lifecycle.policy.execution_strategy import resolve_execution_strategy
+from agent_lifecycle.workflow.artifacts import package_root
+from agent_lifecycle.workflow.selectors import find_task
 
 
 def dispatch_strategy(args: argparse.Namespace) -> dict[str, Any]:
@@ -37,8 +37,12 @@ def dispatch_strategy(args: argparse.Namespace) -> dict[str, Any]:
         requested_risk=args.risk,
         repository_root=root,
         source_usage_context=load_source_usage_context(
-            root, manifest, state, find_task(state, args.task),
-            args.adapter, str(descriptor.get("host", "")),
+            root,
+            manifest,
+            state,
+            find_task(state, args.task),
+            args.adapter,
+            str(descriptor.get("host", "")),
         ),
         risk_policy=read_json_object(Path(args.risk_policy), label="risk execution policy"),
         routing_profile=read_json_object(Path(args.routing_profile), label="model routing profile"),

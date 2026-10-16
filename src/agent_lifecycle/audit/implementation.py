@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.audit.ownership import build_ownership_report, report_has_category
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
@@ -35,6 +36,44 @@ from agent_lifecycle.workflow.state import load_state
 
 IMPLEMENTATION_AUDIT_SCHEMA = "agent-implementation-audit-report.v1"
 FINAL_IMPLEMENTATION_AUDIT_SCHEMA = "agent-final-implementation-audit.v1"
+
+
+def _implementation_external_receipts(
+    *,
+    root: Path,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    sandbox_receipt_paths: list[str] | None,
+    review_mesh_quorum_paths: list[str] | None,
+    findings: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    sandbox = _sandbox_summary(root, state, task, sandbox_receipt_paths or [])
+    if sandbox["validation"]["status"] != "PASS":
+        for blocker in sandbox["validation"]["blockers"]:
+            _add_finding(
+                findings,
+                blockers,
+                code=str(blocker.get("code") or "sandbox-evidence-failed"),
+                severity="HIGH",
+                category="sandbox",
+                message="required sandbox evidence did not pass",
+                context=blocker,
+            )
+
+    review_mesh = _review_mesh_summary(root, state, task, review_mesh_quorum_paths or [])
+    if review_mesh["validation"]["status"] != "PASS":
+        for blocker in review_mesh["validation"]["blockers"]:
+            _add_finding(
+                findings,
+                blockers,
+                code=str(blocker.get("code") or "review-mesh-quorum-failed"),
+                severity="HIGH",
+                category="review-mesh",
+                message="required Review Mesh quorum evidence did not pass",
+                context=blocker,
+            )
+    return sandbox, review_mesh
 
 
 def build_implementation_audit_report(
@@ -83,7 +122,15 @@ def build_implementation_audit_report(
     )
 
     evidence = _collect_evidence_summary(
-        root, manifest, state, task, result_identity, snapshot_evidence, evidence_paths or [], findings, blockers,
+        root,
+        manifest,
+        state,
+        task,
+        result_identity,
+        snapshot_evidence,
+        evidence_paths or [],
+        findings,
+        blockers,
     )
     for missing in evidence["missingEvidenceIds"]:
         _add_finding(
@@ -96,31 +143,15 @@ def build_implementation_audit_report(
             context={"evidenceId": missing},
         )
 
-    sandbox = _sandbox_summary(root, state, task, sandbox_receipt_paths or [])
-    if sandbox["validation"]["status"] != "PASS":
-        for blocker in sandbox["validation"]["blockers"]:
-            _add_finding(
-                findings,
-                blockers,
-                code=str(blocker.get("code") or "sandbox-evidence-failed"),
-                severity="HIGH",
-                category="sandbox",
-                message="required sandbox evidence did not pass",
-                context=blocker,
-            )
-
-    review_mesh = _review_mesh_summary(root, state, task, review_mesh_quorum_paths or [])
-    if review_mesh["validation"]["status"] != "PASS":
-        for blocker in review_mesh["validation"]["blockers"]:
-            _add_finding(
-                findings,
-                blockers,
-                code=str(blocker.get("code") or "review-mesh-quorum-failed"),
-                severity="HIGH",
-                category="review-mesh",
-                message="required Review Mesh quorum evidence did not pass",
-                context=blocker,
-            )
+    sandbox, review_mesh = _implementation_external_receipts(
+        root=root,
+        state=state,
+        task=task,
+        sandbox_receipt_paths=sandbox_receipt_paths,
+        review_mesh_quorum_paths=review_mesh_quorum_paths,
+        findings=findings,
+        blockers=blockers,
+    )
 
     coverage = _coverage_summary(task, result, review)
     for missing in coverage["missingAcceptanceIds"]:
@@ -383,16 +414,21 @@ def build_final_implementation_audit(
                 blockers.append({"code": exc.code, "taskId": task.get("id"), "message": str(exc)})
             continue
         if result.get("actor") == auditor_id:
-            blockers.append({
-                "code": "final-implementation-audit-author-collision",
-                "taskId": task.get("id"),
-                "message": "final auditor is an accepted-result author",
-            })
+            blockers.append(
+                {
+                    "code": "final-implementation-audit-author-collision",
+                    "taskId": task.get("id"),
+                    "message": "final auditor is an accepted-result author",
+                }
+            )
     if manifest.get("status") != "FROZEN":
         blockers.append({"code": "plan-not-frozen", "message": "final implementation audit requires a FROZEN plan"})
     try:
         validate_final_task_evidence_reports(
-            state_path, state, {"reports": reports, "missingTaskIds": missing_task_ids}, manifest=manifest,
+            state_path,
+            state,
+            {"reports": reports, "missingTaskIds": missing_task_ids},
+            manifest=manifest,
         )
     except LifecycleError as exc:
         blockers.append({"code": exc.code, "message": str(exc)})
@@ -571,21 +607,42 @@ def _result_changed_files(result: dict[str, Any]) -> list[str]:
 
 
 def _collect_evidence_summary(
-    root: Path, manifest: dict[str, Any], state: dict[str, Any], task: dict[str, Any],
-    result_identity: dict[str, Any], snapshots: list[dict[str, Any]], evidence_paths: list[str],
-    findings: list[dict[str, Any]], blockers: list[dict[str, Any]],
+    root: Path,
+    manifest: dict[str, Any],
+    state: dict[str, Any],
+    task: dict[str, Any],
+    result_identity: dict[str, Any],
+    snapshots: list[dict[str, Any]],
+    evidence_paths: list[str],
+    findings: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
 ) -> dict[str, Any]:
     try:
         return validate_task_evidence_paths(
-            root, manifest, state, task, result_identity, snapshots[0] if snapshots else None, evidence_paths,
+            root,
+            manifest,
+            state,
+            task,
+            result_identity,
+            snapshots[0] if snapshots else None,
+            evidence_paths,
         )
     except LifecycleError as exc:
         _add_finding(
-            findings, blockers, code=exc.code, severity="HIGH", category="evidence",
-            message="required typed evidence did not validate", context={"taskId": task.get("id")},
+            findings,
+            blockers,
+            code=exc.code,
+            severity="HIGH",
+            category="evidence",
+            message="required typed evidence did not validate",
+            context={"taskId": task.get("id")},
         )
-        return {"requiredEvidenceIds": task.get("evidenceIds", []), "suppliedEvidence": [],
-                "missingEvidenceIds": task.get("evidenceIds", []), "validationError": exc.code}
+        return {
+            "requiredEvidenceIds": task.get("evidenceIds", []),
+            "suppliedEvidence": [],
+            "missingEvidenceIds": task.get("evidenceIds", []),
+            "validationError": exc.code,
+        }
 
 
 def _sandbox_summary(
@@ -613,7 +670,11 @@ def _sandbox_summary(
 def _review_mesh_summary(
     root: Path, state: dict[str, Any], task: dict[str, Any], quorum_receipt_paths: list[str]
 ) -> dict[str, Any]:
-    config = task.get("reviewMesh") if isinstance(task.get("reviewMesh"), dict) else state.get("reviewMesh")
+    config = (
+        _validated_cast(dict[str, Any], task.get("reviewMesh"))
+        if isinstance(task.get("reviewMesh"), dict)
+        else state.get("reviewMesh")
+    )
     receipt_path = quorum_receipt_paths[0] if quorum_receipt_paths else None
     validation = validate_review_mesh_quorum_path(
         root=root,

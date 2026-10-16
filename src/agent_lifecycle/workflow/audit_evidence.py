@@ -7,7 +7,9 @@ import stat
 import subprocess
 from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
+from agent_lifecycle.changesets.snapshot import capture_task_change_set
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.canonical import sha256_hex
 from agent_lifecycle.contracts.evidence_receipt_schemas import (
@@ -16,7 +18,6 @@ from agent_lifecycle.contracts.evidence_receipt_schemas import (
     validate_expected_evidence,
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file
-from agent_lifecycle.changesets.snapshot import capture_task_change_set
 from agent_lifecycle.quality.validation_ladder import require_release_full_validation_receipt
 from agent_lifecycle.workflow.artifacts import artifact_identity
 
@@ -44,8 +45,11 @@ def validate_task_evidence_paths(
         for path in evidence_paths:
             rel = normalize_repo_path(path, label="evidence")
             supplied.append(artifact_identity(root, rel, read_json_object(root / rel, label="evidence")))
-        return {"requiredEvidenceIds": required, "suppliedEvidence": supplied,
-                "missingEvidenceIds": required if required and not supplied else []}
+        return {
+            "requiredEvidenceIds": required,
+            "suppliedEvidence": supplied,
+            "missingEvidenceIds": required if required and not supplied else [],
+        }
     workstreams = manifest.get("workstreams")
     if isinstance(workstreams, list):
         owners = [item for item in workstreams if isinstance(item, dict) and item.get("id") == task.get("id")]
@@ -87,11 +91,21 @@ def validate_task_evidence_paths(
         if candidate["status"] != "DATA_CANDIDATE":
             raise LifecycleError("evidence-provenance-unsupported", "required producer guarantee is unsupported")
         _validate_evidence_references(root, receipt, descriptor=descriptor)
-        supplied.append({"path": rel, "sha256": sha256_hex(raw), "bytes": len(raw),
-                         "evidenceId": evidence_id, "receiptDigest": receipt["receiptDigest"],
-                         "validationStatus": "PASS"})
-    return {"requiredEvidenceIds": required, "suppliedEvidence": supplied,
-            "missingEvidenceIds": sorted(set(required) - seen)}
+        supplied.append(
+            {
+                "path": rel,
+                "sha256": sha256_hex(raw),
+                "bytes": len(raw),
+                "evidenceId": evidence_id,
+                "receiptDigest": receipt["receiptDigest"],
+                "validationStatus": "PASS",
+            }
+        )
+    return {
+        "requiredEvidenceIds": required,
+        "suppliedEvidence": supplied,
+        "missingEvidenceIds": sorted(set(required) - seen),
+    }
 
 
 def _validate_command_inventory(manifest: dict[str, Any], descriptor: dict[str, Any]) -> None:
@@ -110,17 +124,31 @@ def _validate_command_inventory(manifest: dict[str, Any], descriptor: dict[str, 
 
 
 def _expected_task_evidence_subject(
-    root: Path, state: dict[str, Any], task: dict[str, Any],
-    result_identity: dict[str, Any], snapshot: dict[str, Any], descriptor: dict[str, Any],
+    root: Path,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    result_identity: dict[str, Any],
+    snapshot: dict[str, Any],
+    descriptor: dict[str, Any],
 ) -> dict[str, Any]:
-    components = [_current_evidence_component(root, item, snapshot["changedFiles"])
-                  for item in descriptor["components"]]
+    components = [
+        _current_evidence_component(root, item, snapshot["changedFiles"]) for item in descriptor["components"]
+    ]
     return {
-        "packageId": state["packageId"], "runId": state["runId"],
-        "planRevision": state["planRevision"], "planDigest": state["planDigest"],
-        "sourceRevision": state["sourceRevision"], "scope": "TASK",
-        "taskBindings": [{"taskId": task["id"], "attempt": task["attempt"],
-                          "resultDigest": result_identity["sha256"], "snapshotHash": snapshot["snapshotHash"]}],
+        "packageId": state["packageId"],
+        "runId": state["runId"],
+        "planRevision": state["planRevision"],
+        "planDigest": state["planDigest"],
+        "sourceRevision": state["sourceRevision"],
+        "scope": "TASK",
+        "taskBindings": [
+            {
+                "taskId": task["id"],
+                "attempt": task["attempt"],
+                "resultDigest": result_identity["sha256"],
+                "snapshotHash": snapshot["snapshotHash"],
+            }
+        ],
         "components": sorted(components, key=lambda item: item["id"]),
     }
 
@@ -128,15 +156,19 @@ def _expected_task_evidence_subject(
 def _current_evidence_component(root: Path, descriptor: dict[str, Any], changed: list[str]) -> dict[str, Any]:
     component_root = descriptor["repositoryPath"]
     try:
-        command = subprocess.run(["git", "ls-files", "-z", "--cached"], cwd=root, capture_output=True,
-                                 check=False, timeout=20)
+        command = subprocess.run(
+            ["git", "ls-files", "-z", "--cached"], cwd=root, capture_output=True, check=False, timeout=20
+        )
         tracked = {item.decode("utf-8") for item in command.stdout.split(b"\0") if item}
     except (OSError, subprocess.TimeoutExpired, UnicodeDecodeError):
         raise LifecycleError("evidence-subject-mismatch", "tracked source inventory is unavailable") from None
     if command.returncode or len(command.stdout) > 8_388_608:
         raise LifecycleError("evidence-subject-mismatch", "tracked source inventory is unavailable")
-    paths = sorted(path for path in tracked.union(changed) if component_root == "." or
-                   path == component_root or path.startswith(component_root + "/"))
+    paths = sorted(
+        path
+        for path in tracked.union(changed)
+        if component_root == "." or path == component_root or path.startswith(component_root + "/")
+    )
     if len(paths) > 10_000:
         raise LifecycleError("evidence-subject-mismatch", "source inventory exceeds file limit")
     inventory = []
@@ -159,8 +191,7 @@ def _current_evidence_component(root: Path, descriptor: dict[str, Any], changed:
             data = os.fsencode(target)
             entry_mode = "120000"
         elif stat.S_ISREG(mode):
-            data = read_stable_repository_file(root, normalized, max_bytes=64 * 1024 * 1024,
-                                               label="evidence source")
+            data = read_stable_repository_file(root, normalized, max_bytes=64 * 1024 * 1024, label="evidence source")
             entry_mode = "100755" if mode & stat.S_IXUSR else "100644"
         else:
             raise LifecycleError("evidence-subject-mismatch", "unsupported source inventory file")
@@ -171,9 +202,14 @@ def _current_evidence_component(root: Path, descriptor: dict[str, Any], changed:
     content = canonical_digest(inventory)
     build_path = descriptor["buildArtifactPath"]
     return {
-        "id": descriptor["id"], "commitOid": _current_git_commit(root), "contentDigest": content,
-        "buildDigest": sha256_hex(read_stable_repository_file(root, build_path,
-            max_bytes=64 * 1024 * 1024, label="evidence build")) if build_path is not None else content,
+        "id": descriptor["id"],
+        "commitOid": _current_git_commit(root),
+        "contentDigest": content,
+        "buildDigest": sha256_hex(
+            read_stable_repository_file(root, build_path, max_bytes=64 * 1024 * 1024, label="evidence build")
+        )
+        if build_path is not None
+        else content,
         "configurationDigest": _path_inventory_digest(root, descriptor["configurationPaths"]),
         "oracleDigest": _path_inventory_digest(root, descriptor["oraclePaths"]),
     }
@@ -181,8 +217,9 @@ def _current_evidence_component(root: Path, descriptor: dict[str, Any], changed:
 
 def _current_git_commit(root: Path) -> str:
     try:
-        process = subprocess.run(["git", "rev-parse", "--verify", "HEAD"], cwd=root, capture_output=True,
-                                 check=False, timeout=20)
+        process = subprocess.run(
+            ["git", "rev-parse", "--verify", "HEAD"], cwd=root, capture_output=True, check=False, timeout=20
+        )
         value = process.stdout.decode("ascii").strip()
     except (OSError, subprocess.TimeoutExpired, UnicodeDecodeError):
         raise LifecycleError("evidence-subject-mismatch", "component commit is unavailable") from None
@@ -192,16 +229,28 @@ def _current_git_commit(root: Path) -> str:
 
 
 def _path_inventory_digest(root: Path, paths: list[str]) -> str:
-    return canonical_digest([
-        {"path": path, "sha256": sha256_hex(read_stable_repository_file(
-            root, path, max_bytes=64 * 1024 * 1024, label="evidence configuration or oracle"
-        ))} for path in paths
-    ])
+    return canonical_digest(
+        [
+            {
+                "path": path,
+                "sha256": sha256_hex(
+                    read_stable_repository_file(
+                        root, path, max_bytes=64 * 1024 * 1024, label="evidence configuration or oracle"
+                    )
+                ),
+            }
+            for path in paths
+        ]
+    )
 
 
 def _validate_evidence_references(
-    root: Path, receipt: dict[str, Any], *, descriptor: dict[str, Any] | None = None,
-    _depth: int = 0, _origin: dict[str, Any] | None = None,
+    root: Path,
+    receipt: dict[str, Any],
+    *,
+    descriptor: dict[str, Any] | None = None,
+    _depth: int = 0,
+    _origin: dict[str, Any] | None = None,
 ) -> None:
     # Bound inherited chains as well as each individual referenced artifact.
     if _depth > 32:
@@ -223,11 +272,12 @@ def _validate_evidence_references(
             # Each intervening subject is hash-bound and compared below against its
             # parent. Thus this historic subject differs from the current independently
             # computed subject only by commitOid before it reaches this leaf.
-            candidate = classify_evidence_candidate(receipt, descriptor=_origin,
-                evidence_id=receipt["evidenceId"], expected_subject=receipt["subject"])
+            candidate = classify_evidence_candidate(
+                receipt, descriptor=_origin, evidence_id=receipt["evidenceId"], expected_subject=receipt["subject"]
+            )
             if candidate["status"] != "DATA_CANDIDATE":
                 raise LifecycleError("evidence-provenance-unsupported", "unsupported inherited evidence")
-    refs = []
+    refs: list[dict[str, Any]] = []
     if kind == "agent-command-observation.v1":
         for command in payload["commands"]:
             refs.extend((command["stdout"], command["stderr"]))
@@ -238,15 +288,14 @@ def _validate_evidence_references(
         refs.append(payload["observationArtifact"])
     previous_raw = None
     for ref in refs:
-        raw = read_stable_repository_file(root, ref["path"], max_bytes=8_388_608,
-                                          label="evidence referenced artifact")
+        raw = read_stable_repository_file(root, ref["path"], max_bytes=8_388_608, label="evidence referenced artifact")
         if len(raw) != ref["bytes"] or sha256_hex(raw) != ref["sha256"]:
             raise LifecycleError("evidence-artifact-invalid", "referenced evidence bytes differ")
         if kind == "agent-composite-applicability.v1":
             previous_raw = raw
     if kind != "agent-composite-applicability.v1":
         return
-    previous = load_evidence_receipt_bytes(previous_raw)
+    previous = load_evidence_receipt_bytes(_validated_cast(bytes, previous_raw))
     if previous["evidenceId"] != receipt["evidenceId"]:
         raise LifecycleError("evidence-subject-mismatch", "inherited evidence id differs")
     if payload["currentSubjectDigest"] != canonical_digest(receipt["subject"]):
@@ -259,10 +308,12 @@ def _validate_evidence_references(
     prior = previous["subject"]
     current_lineage = {key: value for key, value in current.items() if key != "components"}
     prior_lineage = {key: value for key, value in prior.items() if key != "components"}
-    current_components = [{key: value for key, value in item.items() if key != "commitOid"}
-                          for item in current["components"]]
-    prior_components = [{key: value for key, value in item.items() if key != "commitOid"}
-                        for item in prior["components"]]
+    current_components = [
+        {key: value for key, value in item.items() if key != "commitOid"} for item in current["components"]
+    ]
+    prior_components = [
+        {key: value for key, value in item.items() if key != "commitOid"} for item in prior["components"]
+    ]
     if current_lineage != prior_lineage or current_components != prior_components:
         raise LifecycleError("evidence-subject-mismatch", "composite changed more than history")
     _validate_evidence_references(root, previous, _depth=_depth + 1, _origin=_origin)

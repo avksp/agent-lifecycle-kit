@@ -1,6 +1,8 @@
 """Private input storage with bounded reads and exact filesystem checks."""
+
 from __future__ import annotations
 
+import contextlib
 import os
 import stat
 from pathlib import Path
@@ -14,31 +16,32 @@ def _private_dir(path: Path, *, boundary: Path) -> None:
     if path == boundary:
         return
     _private_dir(path.parent, boundary=boundary)
-    try:
+    with contextlib.suppress(FileExistsError):
         path.mkdir(mode=0o700)
-    except FileExistsError:
-        pass
     info = path.lstat()
     relative = path.relative_to(boundary).parts
-    shared_parent = relative in {("work",), ("work", "release-2-16"),
-                                 ("work", "release-2-16", "evidence")}
+    shared_parent = relative in {("work",), ("work", "release-2-16"), ("work", "release-2-16", "evidence")}
     if not stat.S_ISDIR(info.st_mode) or (not shared_parent and stat.S_IMODE(info.st_mode) != 0o700):
         raise LifecycleError("codex-exact-private-path-unsafe", "private directory is not mode 0700")
 
+
 def _verify_private_ancestors(path: Path, *, root: Path) -> None:
     """Refuse an existing snapshot reached through a symlink or open parent."""
-    _require(path.is_relative_to(root) and path != root,
-             "codex-exact-private-path-unsafe", "private path lies outside root")
+    _require(
+        path.is_relative_to(root) and path != root, "codex-exact-private-path-unsafe", "private path lies outside root"
+    )
     current = path.parent
     while current != root:
         info = current.lstat()
         relative = current.relative_to(root).parts
-        shared = relative in {("work",), ("work", "release-2-16"),
-                              ("work", "release-2-16", "evidence")}
-        _require(stat.S_ISDIR(info.st_mode)
-                 and (shared or stat.S_IMODE(info.st_mode) == 0o700),
-                 "codex-exact-private-path-unsafe", "snapshot ancestor is unsafe")
+        shared = relative in {("work",), ("work", "release-2-16"), ("work", "release-2-16", "evidence")}
+        _require(
+            stat.S_ISDIR(info.st_mode) and (shared or stat.S_IMODE(info.st_mode) == 0o700),
+            "codex-exact-private-path-unsafe",
+            "snapshot ancestor is unsafe",
+        )
         current = current.parent
+
 
 def _write_exclusive(path: Path, raw: bytes, *, root: Path) -> None:
     if len(raw) > _MAX_REQUEST_BYTES:
@@ -59,8 +62,12 @@ def _write_exclusive(path: Path, raw: bytes, *, root: Path) -> None:
         path.unlink(missing_ok=True)
         raise
 
+
 def _read_private(
-    path: Path, *, root: Path, allowed_modes: tuple[int, ...] = (0o600,),
+    path: Path,
+    *,
+    root: Path,
+    allowed_modes: tuple[int, ...] = (0o600,),
     max_bytes: int = _MAX_REQUEST_BYTES,
 ) -> bytes:
     if not path.is_relative_to(root):
@@ -69,8 +76,7 @@ def _read_private(
     while current != root:
         info = current.lstat()
         relative = current.relative_to(root).parts
-        shared_parent = relative in {("work",), ("work", "release-2-16"),
-                                     ("work", "release-2-16", "evidence")}
+        shared_parent = relative in {("work",), ("work", "release-2-16"), ("work", "release-2-16", "evidence")}
         if not stat.S_ISDIR(info.st_mode) or (not shared_parent and stat.S_IMODE(info.st_mode) != 0o700):
             raise LifecycleError("codex-exact-private-path-unsafe", "private parent is not mode 0700")
         current = current.parent
@@ -81,7 +87,10 @@ def _read_private(
     fd = os.open(path, flags)
     with os.fdopen(fd, "rb") as stream:
         opened = os.fstat(stream.fileno())
-        identity = lambda item: (item.st_dev, item.st_ino, item.st_mode, item.st_size, item.st_mtime_ns)
+
+        def identity(item: os.stat_result) -> tuple[int, int, int, int, int]:
+            return (item.st_dev, item.st_ino, item.st_mode, item.st_size, item.st_mtime_ns)
+
         if identity(opened) != identity(info):
             raise LifecycleError("codex-exact-private-path-unsafe", "private file changed before reading")
         raw = stream.read(max_bytes + 1)
@@ -90,6 +99,7 @@ def _read_private(
     if len(raw) > max_bytes:
         raise LifecycleError("codex-exact-private-overflow", "private artifact exceeds byte limit")
     return raw
+
 
 def _require(value: bool, code: str, message: str) -> None:
     if not value:

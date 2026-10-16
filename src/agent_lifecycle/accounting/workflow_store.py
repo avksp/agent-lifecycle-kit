@@ -21,12 +21,15 @@ from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from dataclasses import asdict
 from pathlib import Path
+from typing import TYPE_CHECKING, Protocol
+from typing import cast as _validated_cast
 
 from .closing_resource_policy import _apply_closing_policy
 from .contracts import (
     PROTECTED_STORAGE_SCHEMA_VERSION,
     STORAGE_SCHEMA_VERSION,
     EvidenceRef,
+    _JournalStoragePort,
     _local_identity,
     _refresh_v2,
     canonical,
@@ -179,9 +182,21 @@ def _apply(state: dict | None, kind: str, payload: dict, *, revision: int | None
 
 BASE_STATEMENTS = [
     "CREATE TABLE schema_metadata(singleton INTEGER PRIMARY KEY CHECK(singleton=1), version INTEGER NOT NULL)",
-    "CREATE TABLE scope_state(scope TEXT PRIMARY KEY NOT NULL, revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=0), data TEXT NOT NULL)",
-    "CREATE TABLE events(event_id TEXT NOT NULL UNIQUE, scope TEXT NOT NULL, revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>0), ordinal INTEGER NOT NULL CHECK(ordinal=0), transaction_id TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, payload TEXT NOT NULL, digest TEXT NOT NULL, writer TEXT NOT NULL, observed_at TEXT NOT NULL, UNIQUE(scope,revision,ordinal))",
-    "CREATE TABLE identities(kind TEXT NOT NULL, key TEXT NOT NULL, scope TEXT NOT NULL, owner TEXT NOT NULL, digest TEXT NOT NULL, PRIMARY KEY(kind,key))",
+    (
+        "CREATE TABLE scope_state(scope TEXT PRIMARY KEY NOT NULL, revision INTEGER NOT NULL "
+        "CHECK(typeof(revision)='integer' AND revision>=0), data TEXT NOT NULL)"
+    ),
+    (
+        "CREATE TABLE events(event_id TEXT NOT NULL UNIQUE, scope TEXT NOT NULL, revision "
+        "INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>0), ordinal INTEGER NOT "
+        "NULL CHECK(ordinal=0), transaction_id TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, payload "
+        "TEXT NOT NULL, digest TEXT NOT NULL, writer TEXT NOT NULL, observed_at TEXT NOT NULL, "
+        "UNIQUE(scope,revision,ordinal))"
+    ),
+    (
+        "CREATE TABLE identities(kind TEXT NOT NULL, key TEXT NOT NULL, scope TEXT NOT NULL, "
+        "owner TEXT NOT NULL, digest TEXT NOT NULL, PRIMARY KEY(kind,key))"
+    ),
 ]
 P02_TABLES = ("input_evidence", "source_profiles", "coverage_atoms", "source_observations", "corroborating_finals")
 P02_EVENTS = frozenset(
@@ -253,6 +268,14 @@ if hasattr(os, "register_at_fork"):
     )
 
 
+if TYPE_CHECKING:
+
+    class _WindowsFileLock(Protocol):
+        LK_NBLCK: int
+
+        def locking(self, fd: int, mode: int, nbytes: int) -> None: ...
+
+
 class _Lease:
     def __init__(self, path: Path, flags: int = 0) -> None:
         self.pid = os.getpid()
@@ -294,7 +317,8 @@ class _Lease:
                 import msvcrt
 
                 os.lseek(self.fd, 0, os.SEEK_SET)
-                msvcrt.locking(self.fd, msvcrt.LK_NBLCK, 1)
+                windows_lock = _validated_cast("_WindowsFileLock", msvcrt)
+                windows_lock.locking(self.fd, windows_lock.LK_NBLCK, 1)
             else:
                 raise JournalUnavailable("Local lease platform unsupported", write_outcome="NOT_STARTED")
             return True
@@ -339,7 +363,7 @@ class _WriteQueue:
             lease.close()
 
     def _live(self) -> list[str]:
-        entries = []
+        entries: list[Path] = []
         for path in self.directory.iterdir():
             if path.name == "guard":
                 continue
@@ -407,7 +431,7 @@ class _WriteQueue:
                     observation["cleanup"] = "DEFERRED_STALE_LEASE"
 
 
-class JournalStoreMixin:
+class JournalStoreMixin(_JournalStoragePort):
     def _create_schema(self) -> None:
         version = getattr(self, "_storage_version", STORAGE_SCHEMA_VERSION)
         with self._transaction():
@@ -427,13 +451,18 @@ class JournalStoreMixin:
             if version == PROTECTED_STORAGE_SCHEMA_VERSION:
                 self._db.execute(
                     "INSERT INTO workflow_storage_migrations VALUES(1,'init-v6',NULL,6,NULL,?,?,?)",
-                    (_storage_schema_digest(self._db), _financial_snapshot_digest(self._db), digest(asdict(self.writer))),
+                    (
+                        _storage_schema_digest(self._db),
+                        _financial_snapshot_digest(self._db),
+                        digest(asdict(self.writer)),
+                    ),
                 )
 
     def _create_v2_schema(self) -> None:
         for table in P02_TABLES:
             self._db.execute(
-                f"CREATE TABLE {table}(key TEXT PRIMARY KEY NOT NULL, scope TEXT NOT NULL, owner TEXT NOT NULL, digest TEXT NOT NULL, payload TEXT NOT NULL)"
+                f"CREATE TABLE {table}(key TEXT PRIMARY KEY NOT NULL, scope "
+                "TEXT NOT NULL, owner TEXT NOT NULL, digest TEXT NOT NULL, payload TEXT NOT NULL)"
             )
             for action in ("UPDATE", "DELETE"):
                 self._db.execute(
@@ -441,7 +470,8 @@ class JournalStoreMixin:
                     "BEGIN SELECT RAISE(ABORT,'immutable journal record'); END"
                 )
         self._db.execute(
-            "CREATE TABLE source_baselines(scope TEXT NOT NULL, key TEXT NOT NULL, revision INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY(scope,key))"
+            "CREATE TABLE source_baselines(scope TEXT NOT NULL, key TEXT NOT NULL, revision "
+            "INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY(scope,key))"
         )
 
     @staticmethod
@@ -531,9 +561,10 @@ class JournalStoreMixin:
             if row[0] != STORAGE_SCHEMA_VERSION:
                 raise JournalUnavailable("Migration accepts exactly v5")
             cls._validate_schema(db, STORAGE_SCHEMA_VERSION)
-            if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok" or db.execute(
-                "PRAGMA foreign_key_check"
-            ).fetchone() is not None:
+            if (
+                db.execute("PRAGMA integrity_check").fetchone()[0] != "ok"
+                or db.execute("PRAGMA foreign_key_check").fetchone() is not None
+            ):
                 raise JournalUnavailable("Existing Journal integrity failed")
             for table in (*WORKFLOW_TABLES, *AUTHORITY_TABLES):
                 if db.execute(f"SELECT EXISTS(SELECT 1 FROM {table})").fetchone()[0]:
@@ -557,9 +588,10 @@ class JournalStoreMixin:
             if fault_hook:
                 fault_hook("after_receipt")
             cls._validate_schema(db, PROTECTED_STORAGE_SCHEMA_VERSION)
-            if _financial_snapshot_digest(db) != accounting or db.execute(
-                "PRAGMA foreign_key_check"
-            ).fetchone() is not None:
+            if (
+                _financial_snapshot_digest(db) != accounting
+                or db.execute("PRAGMA foreign_key_check").fetchone() is not None
+            ):
                 raise JournalUnavailable("Migration changed accepted financial history")
             if fault_hook:
                 fault_hook("before_commit")
@@ -590,7 +622,7 @@ class JournalStoreMixin:
             if row is None or row[0] != 1:
                 raise JournalUnavailable("Migration accepts exactly v1")
             cls._validate_schema(db, 1)
-            revisions = {}
+            revisions: dict[str, int] = {}
             for event in db.execute("SELECT * FROM events ORDER BY scope,revision,ordinal"):
                 revision = revisions.get(event["scope"], 0) + 1
                 if (

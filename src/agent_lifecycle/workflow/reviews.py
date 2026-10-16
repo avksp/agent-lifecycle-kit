@@ -63,7 +63,10 @@ def validate_task_result(
             "task result packet hash mismatch",
         )
     non_accepting = _validate_non_accepting_outcome(
-        state, task, result, allowed=allow_non_accepting_outcome,
+        state,
+        task,
+        result,
+        allowed=allow_non_accepting_outcome,
     )
     _validate_attempt_baseline(task, result)
     item_outcomes = result.get("itemOutcomes")
@@ -94,7 +97,11 @@ def validate_task_result(
 
 
 def _validate_non_accepting_outcome(
-    state: dict[str, Any], task: dict[str, Any], result: dict[str, Any], *, allowed: bool,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    allowed: bool,
 ) -> bool:
     blocker, change = result.get("blocker"), result.get("contractChangeRequest")
     if blocker is None and change is None:
@@ -164,12 +171,12 @@ def _validate_commands(result: dict[str, Any], *, allow_failed: bool = False) ->
             raise LifecycleError("task-result-invalid", "task result command entries must be objects")
         status = command.get("status")
         exit_code = command.get("exitCode")
-        failed_outcome = status in ("FAIL", "FAILED") or (
-            type(exit_code) is int and exit_code != 0
-        )
+        failed_outcome = status in ("FAIL", "FAILED") or (type(exit_code) is int and exit_code != 0)
         unproven_outcome = (
-            not isinstance(status, str) or status not in {"PASS", "PASSED"}
-            or type(exit_code) is not int or exit_code != 0
+            not isinstance(status, str)
+            or status not in {"PASS", "PASSED"}
+            or type(exit_code) is not int
+            or exit_code != 0
         )
         if failed_outcome or (not allow_failed and unproven_outcome):
             failed.append(command.get("id") or command.get("command") or "<unknown>")

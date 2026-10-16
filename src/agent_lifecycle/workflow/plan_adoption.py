@@ -6,6 +6,7 @@ import copy
 import hashlib
 from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
@@ -77,10 +78,11 @@ def adopt_plan(
                 task["usageTotals"] = copy.deepcopy(unresolved[task["id"]]["cumulativeUsageTotals"])
             else:
                 task.pop("usageTotals", None)
-            task["priorFinancialObligations"] = copy.deepcopy(previous.get("priorFinancialObligations",
-                unresolved[task["id"]].get("financialObligations", previous)))
-    original_admissions = {}
-    original_legacy_plans = {}
+            task["priorFinancialObligations"] = copy.deepcopy(
+                previous.get("priorFinancialObligations", unresolved[task["id"]].get("financialObligations", previous))
+            )
+    original_admissions: dict[str, dict[str, Any]] = {}
+    original_legacy_plans: dict[str, str] = {}
     if preserve_accepted_compatible:
         if not reset_tasks:
             raise LifecycleError(
@@ -88,8 +90,9 @@ def adopt_plan(
                 "preserving accepted tasks requires resetTasks",
             )
         if any(task.get("status") == "ACCEPTED" for task in state["tasks"]):
-            original_admissions, original_legacy_plans = _reconcile_previous_a5_authority(state_path, state,
-                legacy_start_required={task["id"] for task in tasks if "immutableInput" in task})
+            original_admissions, original_legacy_plans = _reconcile_previous_a5_authority(
+                state_path, state, legacy_start_required={task["id"] for task in tasks if "immutableInput" in task}
+            )
         tasks = _preserve_accepted_tasks(
             state,
             tasks,
@@ -127,7 +130,11 @@ def adopt_plan(
     if incompatibilities:
         state["unresolvedPlanIncompatibilities"] = incompatibilities
         state["phase"] = "BLOCKED"
-        state["blocker"] = {"code": "plan-drift", "reason": "Accepted A5 evidence is incompatible; bounded disposition is required", "resumePhase": "READY"}
+        state["blocker"] = {
+            "code": "plan-drift",
+            "reason": "Accepted A5 evidence is incompatible; bounded disposition is required",
+            "resumePhase": "READY",
+        }
     plan_root = manifest["package"]["planArtifactRoot"]
     frozen_lock = read_json_object(root / plan_root / "plan.lock.json", label="plan lock")
     verify_plan_lock_envelope(manifest, frozen_lock)
@@ -211,7 +218,11 @@ def _verify_frozen_manifest(root: Path, manifest: dict[str, Any]) -> str:
         raise LifecycleError("invalid-plan-manifest", "package.planArtifactRoot is required")
     lock = read_json_object(root / plan_root / "plan.lock.json", label="plan lock")
     verify_plan_package_integrity(manifest, lock, repository_root=root)
-    review_mesh = manifest.get("reviewMesh") if isinstance(manifest.get("reviewMesh"), dict) else None
+    review_mesh = (
+        _validated_cast(dict[str, Any], manifest.get("reviewMesh"))
+        if isinstance(manifest.get("reviewMesh"), dict)
+        else None
+    )
     require_review_mesh_quorum_gate_pass(
         validate_review_mesh_quorum_path(
             root=root,
@@ -278,38 +289,38 @@ def _build_tasks(
         task_id = workstream["id"]
         depends_on = list(workstream.get("dependsOn", []))
         task = {
-                "id": task_id,
-                "title": workstream.get("title"),
-                "owner": workstream.get("owner"),
-                "dependsOn": depends_on,
-                "writes": list(workstream.get("writes", [])),
-                "reviewer": workstream.get("reviewer"),
-                "launchGate": workstream.get("launchGate"),
-                "capabilityHints": list(workstream.get("capabilityHints", [])),
-                "requiredTools": list(workstream.get("requiredTools", [])),
-                "contextRefs": list(workstream.get("contextRefs", [])),
-                "acceptanceIds": list(workstream.get("acceptanceIds", [])),
-                "evidenceIds": list(workstream.get("evidenceIds", [])),
-                "executionPolicy": workstream.get("executionPolicy", {}),
-                "modelRoute": dict(workstream.get("modelRoute", {}))
-                if isinstance(workstream.get("modelRoute"), dict)
-                else None,
-                "reviewMesh": dict(workstream.get("reviewMesh", {}))
-                if isinstance(workstream.get("reviewMesh"), dict)
-                else None,
-                "artifactPaths": workstream.get("artifactPaths", _default_artifacts(manifest, task_id)),
-                "controllerGates": _task_gates(gates, task_id),
-                "packet": packets.get(task_id),
-                "required": workstream.get("required", True),
-                "status": "READY" if not depends_on else "PENDING",
-                "attempt": 0,
-                "attemptHistory": [],
-                "usageIterations": [],
-                "usageTotals": {"iterations": 0, "reportedTokens": 0, "toolCalls": 0},
-                "validationRuns": 0,
-                "controllerGateReceipts": [],
-                "remediationFindingIds": [],
-            }
+            "id": task_id,
+            "title": workstream.get("title"),
+            "owner": workstream.get("owner"),
+            "dependsOn": depends_on,
+            "writes": list(workstream.get("writes", [])),
+            "reviewer": workstream.get("reviewer"),
+            "launchGate": workstream.get("launchGate"),
+            "capabilityHints": list(workstream.get("capabilityHints", [])),
+            "requiredTools": list(workstream.get("requiredTools", [])),
+            "contextRefs": list(workstream.get("contextRefs", [])),
+            "acceptanceIds": list(workstream.get("acceptanceIds", [])),
+            "evidenceIds": list(workstream.get("evidenceIds", [])),
+            "executionPolicy": workstream.get("executionPolicy", {}),
+            "modelRoute": dict(workstream.get("modelRoute", {}))
+            if isinstance(workstream.get("modelRoute"), dict)
+            else None,
+            "reviewMesh": dict(workstream.get("reviewMesh", {}))
+            if isinstance(workstream.get("reviewMesh"), dict)
+            else None,
+            "artifactPaths": workstream.get("artifactPaths", _default_artifacts(manifest, task_id)),
+            "controllerGates": _task_gates(gates, task_id),
+            "packet": packets.get(task_id),
+            "required": workstream.get("required", True),
+            "status": "READY" if not depends_on else "PENDING",
+            "attempt": 0,
+            "attemptHistory": [],
+            "usageIterations": [],
+            "usageTotals": {"iterations": 0, "reportedTokens": 0, "toolCalls": 0},
+            "validationRuns": 0,
+            "controllerGateReceipts": [],
+            "remediationFindingIds": [],
+        }
         if security_analysis is not None:
             # Keep the extension advisory until the authoritative acceptance gate
             # reads the copy materialized into this adopted task.
@@ -363,31 +374,50 @@ def _preserve_accepted_tasks(
         accepted = previous.get(task.get("id"))
         if not accepted or not task_contracts_compatible(accepted, task):
             continue
-        if not policies_compatible_for_adoption(accepted, task,
-                previous_plan_policy=previous_state.get("immutableInput"),
-                current_plan_policy=current_plan_policy):
-            task["planIncompatibility"] = {"taskId": task["id"], "code": "a5-policy-incompatible",
-                "previousPlanDigest": previous_state["planDigest"], "previousAttempt": accepted["attempt"],
-                "originalEvidenceArchived": True, "automaticRetryAuthorized": False,
-                **({"cumulativeUsageTotals": copy.deepcopy(accepted["usageTotals"])}
-                   if "usageTotals" in accepted else {}),
-                "financialObligations": copy.deepcopy(accepted)}
+        if not policies_compatible_for_adoption(
+            accepted,
+            task,
+            previous_plan_policy=previous_state.get("immutableInput"),
+            current_plan_policy=current_plan_policy,
+        ):
+            task["planIncompatibility"] = {
+                "taskId": task["id"],
+                "code": "a5-policy-incompatible",
+                "previousPlanDigest": previous_state["planDigest"],
+                "previousAttempt": accepted["attempt"],
+                "originalEvidenceArchived": True,
+                "automaticRetryAuthorized": False,
+                **(
+                    {"cumulativeUsageTotals": copy.deepcopy(accepted["usageTotals"])}
+                    if "usageTotals" in accepted
+                    else {}
+                ),
+                "financialObligations": copy.deepcopy(accepted),
+            }
             task["priorFinancialObligations"] = copy.deepcopy(accepted)
             if "usageTotals" in accepted:
                 task["usageTotals"] = copy.deepcopy(accepted["usageTotals"])
             else:
                 task.pop("usageTotals", None)
             continue
-        identity = {key: current_plan.get(key) for key in ("runId", "packageId", "planRevision", "planDigest", "sourceRevision")}
+        identity = {
+            key: current_plan.get(key) for key in ("runId", "packageId", "planRevision", "planDigest", "sourceRevision")
+        }
         compatibility_receipt = build_task_plan_compatibility_receipt(
             previous_state=previous_state,
             current_plan=identity,
             previous_task=accepted,
             current_task=task,
         )
-        a5_binding = adoption_binding(previous_state, accepted, task, identity, compatibility_receipt,
+        a5_binding = adoption_binding(
+            previous_state,
+            accepted,
+            task,
+            identity,
+            compatibility_receipt,
             trusted_original_admission=(original_admissions or {}).get(task["id"]),
-            trusted_legacy_plan_digest=(original_legacy_plans or {}).get(task["id"]))
+            trusted_legacy_plan_digest=(original_legacy_plans or {}).get(task["id"]),
+        )
         _copy_accepted_runtime(task, accepted)
         task["adoptedFromPlanDigest"] = prior_digest
         task["adoptedFromPlanRevision"] = prior_revision
@@ -398,7 +428,10 @@ def _preserve_accepted_tasks(
 
 
 def _reconcile_previous_a5_authority(
-    state_path: Path, state: dict[str, Any], *, legacy_start_required: set[str] | None = None,
+    state_path: Path,
+    state: dict[str, Any],
+    *,
+    legacy_start_required: set[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, str]]:
     from agent_lifecycle.workflow.immutable_input import (
         is_unadopted_ordinary_context,
@@ -409,24 +442,38 @@ def _reconcile_previous_a5_authority(
 
     accepted = [task for task in state["tasks"] if task.get("status") == "ACCEPTED"]
     events = list(read_events(event_log_path(state_path, state)))
-    original_admissions = {task["id"]: original_admission_from_events(state, task, events,
-        require_legacy_start=task["id"] in (legacy_start_required or set())) for task in accepted}
-    original_legacy_plans = {task["id"]: original_legacy_plan_from_history(state, task, events)
-        for task in accepted if original_admissions[task["id"]] is None
-        and task["id"] in (legacy_start_required or set())}
+    original_admissions = {
+        task["id"]: original_admission_from_events(
+            state, task, events, require_legacy_start=task["id"] in (legacy_start_required or set())
+        )
+        for task in accepted
+    }
+    original_legacy_plans = {
+        task["id"]: original_legacy_plan_from_history(state, task, events)
+        for task in accepted
+        if original_admissions[task["id"]] is None and task["id"] in (legacy_start_required or set())
+    }
     if all(is_unadopted_ordinary_context(state, task) for task in accepted):
         return original_admissions, original_legacy_plans
     root = package_root(state_path, state)
-    matches = [event for event in events if event.get("eventType") == "plan-adopted"
-               and event.get("runId") == state["runId"] and event.get("packageId") == state["packageId"]
-               and event.get("payload", {}).get("planDigest") == state["planDigest"]
-               and "frozenPlanAuthority" in event.get("payload", {})]
+    matches = [
+        event
+        for event in events
+        if event.get("eventType") == "plan-adopted"
+        and event.get("runId") == state["runId"]
+        and event.get("packageId") == state["packageId"]
+        and event.get("payload", {}).get("planDigest") == state["planDigest"]
+        and "frozenPlanAuthority" in event.get("payload", {})
+    ]
     if matches:
         event = matches[-1]
         operation = state.get("operationLedger", {}).get(event.get("operationId"))
-        if (not isinstance(operation, dict) or operation.get("eventType") != "plan-adopted"
-                or operation.get("stateRevision") != event.get("stateRevision")
-                or event["stateRevision"] > state["stateRevision"]):
+        if (
+            not isinstance(operation, dict)
+            or operation.get("eventType") != "plan-adopted"
+            or operation.get("stateRevision") != event.get("stateRevision")
+            or event["stateRevision"] > state["stateRevision"]
+        ):
             raise LifecycleError("a5-context-invalid", "Previous frozen authority lacks its native adoption")
         authority = event["payload"]["frozenPlanAuthority"]
         if not isinstance(authority, dict) or set(authority) != {"manifest", "lock"}:
@@ -440,19 +487,34 @@ def _reconcile_previous_a5_authority(
         manifest = read_json_object(root / state["manifestPath"], label="previous frozen manifest")
         if _verify_frozen_manifest(root, manifest) != state["planDigest"]:
             raise LifecycleError("a5-context-invalid", "Previous frozen authority is unavailable")
-    registry = (read_json_object(root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 route boundaries")
-                if "immutableInput" in manifest else None)
+    registry = (
+        read_json_object(root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 route boundaries")
+        if "immutableInput" in manifest
+        else None
+    )
     original_admissions = {}
     for task in accepted:
         for role in ("result", "review", "implementationAuditReport"):
             if isinstance(task.get(role), dict):
                 require_artifact_identity(root, task[role], label="preserved " + role)
         original = original_admission_from_events(state, task, events)
-        require_task_consumer_admission(manifest, state, task,
-            {"runId": state["runId"], "packageId": state["packageId"], "taskId": task["id"],
-             "targetAttempt": task["attempt"], "operationId": "preservation-check",
-             "stateRevision": state["stateRevision"], "planDigest": state["planDigest"],
-             "sourceRevision": state["sourceRevision"]}, registry=registry, trusted_original_admission=original)
+        require_task_consumer_admission(
+            manifest,
+            state,
+            task,
+            {
+                "runId": state["runId"],
+                "packageId": state["packageId"],
+                "taskId": task["id"],
+                "targetAttempt": task["attempt"],
+                "operationId": "preservation-check",
+                "stateRevision": state["stateRevision"],
+                "planDigest": state["planDigest"],
+                "sourceRevision": state["sourceRevision"],
+            },
+            registry=registry,
+            trusted_original_admission=original,
+        )
         original_admissions[task["id"]] = original
     return original_admissions, original_legacy_plans
 

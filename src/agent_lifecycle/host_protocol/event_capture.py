@@ -286,9 +286,8 @@ def validate_event_capture_receipt(
         if observed["status"] == "FAIL":
             blockers.extend(_tag_blockers(observed["blockers"], "action-evidence"))
         action_evidence = _common_action_evidence(events)
-        if (
-            action_evidence is None
-            or receipt.get("actionEvidenceDigest") != action_evidence.get("actionEvidenceDigest")
+        if action_evidence is None or receipt.get("actionEvidenceDigest") != action_evidence.get(
+            "actionEvidenceDigest"
         ):
             blockers.append({"code": "adapter-action-evidence-receipt-lineage-mismatch"})
     if events:
@@ -318,9 +317,7 @@ def validate_event_capture_receipt(
         "streamValidation": stream_validation,
         "blockers": blockers,
         "evidenceLevel": "OBSERVED" if observed["status"] == "PASS" else "LEGACY",
-        "actionEvidenceDigest": (
-            _common_action_evidence(events) or {}
-        ).get("actionEvidenceDigest"),
+        "actionEvidenceDigest": (_common_action_evidence(events) or {}).get("actionEvidenceDigest"),
         "productionPromotionClaimed": False,
     }
     return {**body, "validationDigest": canonical_digest(body)}
@@ -405,14 +402,10 @@ def _prepare_action_evidence(
         capability_digest=cast(str, value.get("capabilityDigest")),
         permission_decision=cast(
             dict[str, Any] | str,
-            value.get("permissionDecision")
-            if isinstance(value.get("permissionDecision"), (dict, str))
-            else {},
+            value.get("permissionDecision") if isinstance(value.get("permissionDecision"), (dict, str)) else {},
         ),
         tool_category=cast(str, value.get("toolCategory")),
-        result_link=cast(
-            dict[str, Any], value.get("resultLink") if isinstance(value.get("resultLink"), dict) else {}
-        ),
+        result_link=cast(dict[str, Any], value.get("resultLink") if isinstance(value.get("resultLink"), dict) else {}),
     )
     validation = validate_adapter_action_evidence(prepared, expected_lineage=expected_lineage)
     if validation["status"] != "PASS":

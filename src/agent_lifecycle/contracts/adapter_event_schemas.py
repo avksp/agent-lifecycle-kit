@@ -47,9 +47,7 @@ _ACTION_EVIDENCE = {
                 "decisionDigest": _ACTION_DIGEST,
             },
         },
-        "toolCategory": {
-            "enum": ["command", "filesystem", "process", "model", "review", "workflow", "other"]
-        },
+        "toolCategory": {"enum": ["command", "filesystem", "process", "model", "review", "workflow", "other"]},
         "resultLink": {
             "type": "object",
             "additionalProperties": False,

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.process_execution_schemas import validate_process_execution_receipt
@@ -60,7 +60,9 @@ def validate_task_model_usage_receipt(
         raise LifecycleError("unexpected-model-usage-receipt", "task attempt does not require a model usage receipt")
     if receipt.get("schemaVersion") == "agent-lifecycle-model-usage-receipt.v2":
         if repository_root is None:
-            raise LifecycleError("scoped-usage-policy-context-required", "v2 requires independently bound repository context")
+            raise LifecycleError(
+                "scoped-usage-policy-context-required", "v2 requires independently bound repository context"
+            )
         validate_attempt_model_route({"modelRoute": route})
         from agent_lifecycle.workflow.limited_usage import validate_limited_source_usage
 
@@ -134,12 +136,30 @@ def bounded_process_retry_decision(
         raise LifecycleError("invalid-process-retry-cap", "max_retries must not be negative")
     cleanup_status = receipt.get("cleanup", {}).get("status") if isinstance(receipt.get("cleanup"), dict) else None
     if cleanup_status != "PASS":
-        return {"decision": "BLOCKED", "retry": False, "reason": "cleanup-unverified", "attempt": attempt, "maxRetries": max_retries}
+        return {
+            "decision": "BLOCKED",
+            "retry": False,
+            "reason": "cleanup-unverified",
+            "attempt": attempt,
+            "maxRetries": max_retries,
+        }
     if receipt.get("status") == "PASS":
-        return {"decision": "ACCEPT", "retry": False, "reason": "process-passed", "attempt": attempt, "maxRetries": max_retries}
+        return {
+            "decision": "ACCEPT",
+            "retry": False,
+            "reason": "process-passed",
+            "attempt": attempt,
+            "maxRetries": max_retries,
+        }
     retry = attempt <= max_retries
     reason = "timeout" if receipt.get("timedOut") else "cancelled" if receipt.get("cancelled") else "process-failed"
-    return {"decision": "RETRY" if retry else "BLOCKED", "retry": retry, "reason": reason, "attempt": attempt, "maxRetries": max_retries}
+    return {
+        "decision": "RETRY" if retry else "BLOCKED",
+        "retry": retry,
+        "reason": reason,
+        "attempt": attempt,
+        "maxRetries": max_retries,
+    }
 
 
 def _attempt_route(task: dict[str, Any]) -> dict[str, Any] | None:

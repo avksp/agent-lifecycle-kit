@@ -95,23 +95,43 @@ def run_planning_launch(
         if immutable_input_context is None and not explicit_launch:
             raise LifecycleError("a5-context-invalid", "Planning sink lacks an explicit bound invocation")
         current = planning_invocation_context(
-            adapter_id=adapter_id, session_id=session_id, request=request, requested_mode=requested_mode,
-            task_text=task_text, input_source=input_source, argv=argv, env=env, advisory=advisory,
-            timeout_seconds=min(timeout_seconds, MAX_PLANNING_WALL_SECONDS), process_cwd=process_cwd,
-            profile_digest=profile_digest, qualification_binding=qualification_binding,
+            adapter_id=adapter_id,
+            session_id=session_id,
+            request=request,
+            requested_mode=requested_mode,
+            task_text=task_text,
+            input_source=input_source,
+            argv=argv,
+            env=env,
+            advisory=advisory,
+            timeout_seconds=min(timeout_seconds, MAX_PLANNING_WALL_SECONDS),
+            process_cwd=process_cwd,
+            profile_digest=profile_digest,
+            qualification_binding=qualification_binding,
         )
-        validate_current_invocation(immutable_input_context if immutable_input_context is not None else current,
-                                    request, current_context=current)
+        validate_current_invocation(
+            immutable_input_context if immutable_input_context is not None else current,
+            request,
+            current_context=current,
+        )
     except LifecycleError as exc:
         return _receipt(
-            adapter_id=adapter_id, session_id=session_id, requested_mode=requested_mode,
-            input_identity=_input_identity(task_text, input_source), process=None, result=None,
+            adapter_id=adapter_id,
+            session_id=session_id,
+            requested_mode=requested_mode,
+            input_identity=_input_identity(task_text, input_source),
+            process=None,
+            result=None,
             blockers=[{"code": exc.code, "message": exc.message}],
         )
     if isinstance(advisory, dict) and "accountingCapabilityRequest" in advisory:
         return _receipt(
-            adapter_id=adapter_id, session_id=session_id, requested_mode=requested_mode,
-            input_identity=_input_identity(task_text, input_source), process=None, result=None,
+            adapter_id=adapter_id,
+            session_id=session_id,
+            requested_mode=requested_mode,
+            input_identity=_input_identity(task_text, input_source),
+            process=None,
+            result=None,
             blockers=[accounting_request_blocker()],
         )
     try:
@@ -202,9 +222,7 @@ def _receipt(
         "inputBytes": process.get("inputBytes", 0) if process else 0,
         "outputBytes": process.get("outputBytes", 0) if process else 0,
         "outputLimitExceeded": bool(process and process.get("outputLimitExceeded")),
-        "redactionApplied": bool(
-            process and (process.get("stdoutRedacted") or process.get("stderrRedacted"))
-        ),
+        "redactionApplied": bool(process and (process.get("stdoutRedacted") or process.get("stderrRedacted"))),
         "rawOutputStored": False,
     }
     usage = _usage_evidence(result)
@@ -246,12 +264,14 @@ def _usage_evidence(result: dict[str, Any] | None) -> dict[str, Any]:
     # Planning JSON is model-authored content, including its usage claims.
     # Preserve those claims in result; only separately observed host telemetry
     # may supply attested token counts to the qualification boundary.
+    _ = (result,)
     return {
         "confidence": "MISSING",
         "inputTokens": None,
         "outputTokens": None,
         "moneyFieldsCanonical": False,
     }
+
 
 def _sanitize(value: Any) -> Any:
     if isinstance(value, str):

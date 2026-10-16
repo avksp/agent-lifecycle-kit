@@ -28,8 +28,10 @@ def dispatch_host_launch(args: argparse.Namespace) -> dict[str, Any]:
         payload = launch_from_local_profile(profile_path=Path(args.profile), operation="preflight")
     elif args.host_launch_command == "accounting-check":
         payload = resolve_accounting_capability(
-            read_accounting_input(Path(args.profile)), read_accounting_input(Path(args.request)),
-            expectation_digest=args.expectation_digest, plan_digest=args.plan_digest,
+            read_accounting_input(Path(args.profile)),
+            read_accounting_input(Path(args.request)),
+            expectation_digest=args.expectation_digest,
+            plan_digest=args.plan_digest,
             candidate_digest=args.candidate_digest,
         )
         if args.out:
@@ -37,7 +39,9 @@ def dispatch_host_launch(args: argparse.Namespace) -> dict[str, Any]:
         raise LifecycleError(CAPABILITY_UNAVAILABLE, "Accounting capability was refused", payload)
     elif args.host_launch_command == "qualification-check":
         payload = resolve_qualified_accounting_capability(
-            project_root=Path.cwd(), profiles_root=Path(args.profiles_root), adapter_id=args.adapter,
+            project_root=Path.cwd(),
+            profiles_root=Path(args.profiles_root),
+            adapter_id=args.adapter,
             request=read_accounting_input(Path(args.request)),
         )
         if payload["outcome"] == "DENY":

@@ -1,27 +1,33 @@
 """Closed-run admission and retained financial evidence for the journal."""
+
 from __future__ import annotations
-from .workflow_store import JournalUnavailable
-from .workflow_store import RETENTION_TABLES
-from .contracts import ROLES
-from .workflow_store import RevisionConflict
-from .workflow_store import _BindingConflict
-from dataclasses import asdict
-from .contracts import canonical
+
 import copy
-from .contracts import digest
-from .contracts import identity
 import json
+from dataclasses import asdict
 from datetime import timedelta
-from .contracts import uint
-from .contracts import utc_instant
-from .contracts import ClosureOutcome
-from .contracts import RunClosure
+from typing import Any
+from typing import cast as _validated_cast
+
+from .contracts import (
+    ROLES,
+    ClosureOutcome,
+    RunClosure,
+    _JournalStoragePort,
+    canonical,
+    digest,
+    identity,
+    uint,
+    utc_instant,
+)
+from .workflow_store import RETENTION_TABLES, JournalUnavailable, RevisionConflict, _BindingConflict
 
 
-class ClosureAdmissionMixin:
+class ClosureAdmissionMixin(_JournalStoragePort):
     @property
     def journal_identity(self) -> str:
         return self._db.execute("SELECT journal_id FROM retention_metadata WHERE singleton=1").fetchone()[0]
+
     def _retained(self, table: str, key: str) -> dict | None:
         if table not in RETENTION_TABLES:
             raise ValueError("Unknown retention table")
@@ -35,6 +41,7 @@ class ClosureAdmissionMixin:
             return value
         except (ValueError, TypeError, RecursionError) as exc:
             raise JournalUnavailable("Invalid retained financial record") from exc
+
     def _retain(self, table: str, key: str, scope: str, owner: str, payload: dict) -> None:
         old = self._retained(table, key)
         if old is not None:
@@ -45,8 +52,10 @@ class ClosureAdmissionMixin:
         self._db.execute(
             f"INSERT INTO {table} VALUES(?,?,?,?,?)", (key, scope, owner, digest(payload), canonical(payload))
         )
+
     def _closed_scope(self, scope: str):
         return self._db.execute("SELECT * FROM closed_scopes WHERE scope=?", (scope,)).fetchone()
+
     def closed_run(self, run_id: str) -> dict | None:
         identity(run_id)
         value = self._retained("run_closures", run_id)
@@ -65,6 +74,7 @@ class ClosureAdmissionMixin:
         ):
             raise JournalUnavailable("Closed scope registry mismatch")
         return value
+
     def close_run(self, closure: RunClosure, now_utc: str) -> ClosureOutcome:
         closure.__post_init__()
         now = utc_instant(now_utc)
@@ -85,7 +95,8 @@ class ClosureAdmissionMixin:
             }
             if set(inventory) != {s for s, _ in closure.scope_revisions}:
                 raise JournalUnavailable("Full-run scope inventory mismatch")
-            summaries, states = {}, {}
+            summaries: dict[str, dict[str, Any]] = {}
+            states = {}
             for scope, expected_revision in closure.scope_revisions:
                 state, revision, _, _ = self._live_facts(scope)
                 if revision != expected_revision or revision != inventory[scope]["revision"]:
@@ -108,7 +119,7 @@ class ClosureAdmissionMixin:
                     "financial_digest": digest(self._financial_state(after)),
                 }
                 states[scope] = (state, revision, after)
-            summary = {
+            summary: dict[str, Any] = {
                 "scopes": summaries,
                 "known_spent": sum(v["totals"]["known_spent"] for v in summaries.values()),
                 "roles": {role: sum(v["totals"]["roles"][role] for v in summaries.values()) for role in ROLES},
@@ -139,6 +150,7 @@ class ClosureAdmissionMixin:
             if self.fault_hook:
                 self.fault_hook("after_run_closure")
             return self._closure_outcome(value, "CLOSED")
+
     @staticmethod
     def _binding_equal(left: dict, right: dict) -> bool:
         if left.get("ambiguous") or right.get("ambiguous"):
@@ -147,9 +159,11 @@ class ClosureAdmissionMixin:
         if any(left.get(k) != right.get(k) for k in fields):
             return False
         return left["namespace"] != "raw" or all(left.get(k) == right.get(k) for k in ("raw_digest", "finals"))
+
     @staticmethod
     def _binding_scopes(binding: dict) -> set[str]:
         return {c["scope"] for c in binding["ambiguous"]} if binding.get("ambiguous") else {binding["scope"]}
+
     def _observed_lookup(self, namespace: str, key: str) -> dict | None:
         candidates = []
         if namespace == "final":
@@ -223,9 +237,10 @@ class ClosureAdmissionMixin:
             if canonical(first) != canonical(other) and not self._binding_equal(first, other):
                 raise JournalUnavailable("Disagreeing global observation representations")
         return first
+
     def _exception_chain(self, run_id: str, *, restore: bool = False) -> list[dict]:
         records = [
-            self._retained("financial_exceptions", r[0])
+            _validated_cast(dict, self._retained("financial_exceptions", r[0]))
             for r in self._db.execute("SELECT key FROM financial_exceptions WHERE scope=?", (run_id,))
         ]
         records.sort(key=lambda r: r["ordinal"])
@@ -235,7 +250,7 @@ class ClosureAdmissionMixin:
             if (
                 record["ordinal"] != ordinal
                 or record["previous_digest"] != previous
-                or record["closure_id"] != closure["closure"]["closure_id"]
+                or record["closure_id"] != _validated_cast(dict, closure)["closure"]["closure_id"]
             ):
                 raise JournalUnavailable("Broken immutable financial exception chain")
             previous = digest(record)
@@ -259,10 +274,13 @@ class ClosureAdmissionMixin:
             not records and head is not None
         ):
             raise JournalUnavailable("Financial exception head mismatch")
-        actual = {r[0] for r in self._db.execute("SELECT key FROM exception_identity_keys WHERE scope=?", (run_id,))}
-        if actual != set(declarations):
+        actual_keys = {
+            r[0] for r in self._db.execute("SELECT key FROM exception_identity_keys WHERE scope=?", (run_id,))
+        }
+        if actual_keys != set(declarations):
             raise JournalUnavailable("Undeclared financial exception identity")
         return records
+
     def _append_exception(self, scope: str, evidence: dict, reason: str) -> str:
         closed = self._closed_scope(scope)
         if closed is None:
@@ -275,7 +293,8 @@ class ClosureAdmissionMixin:
             return event_id
         origin = self._observation_scope or scope
         candidates = self._observed_candidates(origin, evidence)
-        groups, affected, declarations, claims = {}, {scope}, [], []
+        groups: dict[tuple[str, str], dict[str, dict]] = {}
+        affected, declarations, claims = {scope}, [], []
         for candidate in candidates:
             groups.setdefault((candidate["namespace"], candidate["key"]), {})[canonical(candidate)] = candidate
             affected.update(self._binding_scopes(candidate))
@@ -352,9 +371,11 @@ class ClosureAdmissionMixin:
         if self.fault_hook:
             self.fault_hook("after_exception_quarantine")
         return event_id
+
     def _closed_evidence(self, scope: str, evidence: dict) -> str:
         self._exception_chain(self._closed_scope(scope)["run_id"])
-        state, _ = self._load(scope)
+        loaded_state, _ = self._load(scope)
+        state = _validated_cast(dict, loaded_state)
         candidates = self._observed_candidates(scope, evidence)
         conflicts = {scope}
         problems = []

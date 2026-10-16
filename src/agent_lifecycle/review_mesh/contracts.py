@@ -12,10 +12,20 @@ from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS a
 from agent_lifecycle.model_routing.profiles import ALLOWED_MODEL_CLASSES as ALLOWED_MODEL_CLASSES
 from agent_lifecycle.quality.cross_check import (
     INDEPENDENCE_IDENTITY_FIELDS as INDEPENDENCE_IDENTITY_FIELDS,
+)
+from agent_lifecycle.quality.cross_check import (
     MONEY_KEYS as MONEY_KEYS,
+)
+from agent_lifecycle.quality.cross_check import (
     RESOURCE_CAP_KEYS as RESOURCE_CAP_KEYS,
+)
+from agent_lifecycle.quality.cross_check import (
     USAGE_KEYS as USAGE_KEYS,
+)
+from agent_lifecycle.quality.cross_check import (
     _budget_blockers as _budget_blockers,
+)
+from agent_lifecycle.quality.cross_check import (
     build_cross_check_profile,
     build_cross_check_receipt,
     validate_cross_check_profile,
@@ -25,33 +35,80 @@ from agent_lifecycle.review_mesh.independence import (
     quorum_independence_blockers,
     result_independence_blockers,
 )
-
 from agent_lifecycle.review_mesh.validation_helpers import (
     PROVIDER_MODEL_NAME_KEYS as PROVIDER_MODEL_NAME_KEYS,
-    _validate_quorum_policy as _validate_quorum_policy,
-    _validate_modes as _validate_modes,
-    _model_classes as _model_classes,
-    _validate_model_classes as _validate_model_classes,
-    _validate_resource_cap as _validate_resource_cap,
-    _validate_budget_usage as _validate_budget_usage,
-    _known_usage_budget_blockers as _known_usage_budget_blockers,
-    _live_call_policy_blockers as _live_call_policy_blockers,
-    _command_outcome_blockers as _command_outcome_blockers,
-    _money_key_blockers as _money_key_blockers,
-    _provider_model_name_blockers as _provider_model_name_blockers,
-    _is_neutral_identity_field_mapping as _is_neutral_identity_field_mapping,
-    _object_or_blocker as _object_or_blocker,
-    _required_string as _required_string,
-    _string_list as _string_list,
-    _digest_list as _digest_list,
-    _enum as _enum,
-    _non_negative_int as _non_negative_int,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
     _check_const as _check_const,
-    _check_required_string as _check_required_string,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
     _check_digest as _check_digest,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
     _check_digest_list as _check_digest_list,
-    _check_string_list as _check_string_list,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
     _check_object_list as _check_object_list,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _check_required_string as _check_required_string,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _check_string_list as _check_string_list,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _command_outcome_blockers as _command_outcome_blockers,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _digest_list as _digest_list,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _enum as _enum,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _is_neutral_identity_field_mapping as _is_neutral_identity_field_mapping,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _known_usage_budget_blockers as _known_usage_budget_blockers,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _live_call_policy_blockers as _live_call_policy_blockers,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _model_classes as _model_classes,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _money_key_blockers as _money_key_blockers,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _non_negative_int as _non_negative_int,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _object_or_blocker as _object_or_blocker,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _provider_model_name_blockers as _provider_model_name_blockers,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _required_string as _required_string,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _string_list as _string_list,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _validate_budget_usage as _validate_budget_usage,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _validate_model_classes as _validate_model_classes,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _validate_modes as _validate_modes,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _validate_quorum_policy as _validate_quorum_policy,
+)
+from agent_lifecycle.review_mesh.validation_helpers import (
+    _validate_resource_cap as _validate_resource_cap,
 )
 
 REVIEW_MESH_PROFILE_SCHEMA = "agent-review-mesh-profile.v1"
@@ -371,10 +428,14 @@ def _imported_independence_claimed(result: dict[str, Any]) -> bool:
         and any(isinstance(item, dict) and item.get("code") == "cross-check-independence-not-proven" for item in items)
         for items in blocker_lists
     )
-    imported = "import" in result or (
-        isinstance(participation, dict)
-        and participation.get("reasonCode") == "review-verdict-and-terminal-job-required"
-    ) or explicitly_unproven
+    imported = (
+        "import" in result
+        or (
+            isinstance(participation, dict)
+            and participation.get("reasonCode") == "review-verdict-and-terminal-job-required"
+        )
+        or explicitly_unproven
+    )
     independence = result.get("independence")
     return imported and isinstance(independence, dict) and independence.get("status") == "INDEPENDENT"
 
@@ -747,5 +808,3 @@ def _cross_check_subject(subject: dict[str, Any]) -> dict[str, Any]:
 
 def _subject_has_blocking_opt_in(subject: dict[str, Any]) -> bool:
     return subject.get("reviewMeshBlockingOptIn") is True or subject.get("blockingCrossCheckRequired") is True
-
-

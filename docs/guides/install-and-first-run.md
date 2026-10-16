@@ -3,6 +3,9 @@
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
+These instructions target ALK v2.16.0. Verify frozen plans before execution
+with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
+
 ## Upgrading to 2.15
 
 Before reusing existing plans, read the

@@ -16,9 +16,18 @@ from agent_lifecycle.contracts.reviewer_identity_schemas import (
 )
 
 _CONTEXT_FIELDS = {
-    "trustRoot", "expectedTrustRootDigest", "expectedIssuerId", "expectedActorId",
-    "expectedSessionId", "expectedPhase", "expectedAssignmentId", "expectedAssignmentDigest",
-    "expectedSubjectDigest", "workerActorId", "workerSessionId", "referenceTime",
+    "trustRoot",
+    "expectedTrustRootDigest",
+    "expectedIssuerId",
+    "expectedActorId",
+    "expectedSessionId",
+    "expectedPhase",
+    "expectedAssignmentId",
+    "expectedAssignmentDigest",
+    "expectedSubjectDigest",
+    "workerActorId",
+    "workerSessionId",
+    "referenceTime",
 }
 _PREFIX = b"agent-lifecycle-reviewer-attestation-v1\x00"
 _NATIVE_PHASES = {
@@ -89,8 +98,11 @@ def verify_reviewer_attestation(attestation: Any, *, trusted_context: Any) -> di
         context, issuer, root_digest = _context(trusted_context)
     except (LifecycleError, TypeError, ValueError):
         return _result("UNSUPPORTED", "trustedContext")
-    bound = {"trustRootDigest": root_digest, "assignmentDigest": context["expectedAssignmentDigest"],
-             "subjectDigest": context["expectedSubjectDigest"]}
+    bound = {
+        "trustRootDigest": root_digest,
+        "assignmentDigest": context["expectedAssignmentDigest"],
+        "subjectDigest": context["expectedSubjectDigest"],
+    }
     if context["workerActorId"] == context["expectedActorId"] or (
         context["workerSessionId"] is not None and context["workerSessionId"] == context["expectedSessionId"]
     ):
@@ -102,20 +114,28 @@ def verify_reviewer_attestation(attestation: Any, *, trusted_context: Any) -> di
     claims = proof["claims"]
     bound.update(attestationDigest=canonical_digest(proof), claimsDigest=canonical_digest(claims))
     expected = {
-        "issuerId": context["expectedIssuerId"], "actorId": context["expectedActorId"],
-        "sessionId": context["expectedSessionId"], "phase": context["expectedPhase"],
+        "issuerId": context["expectedIssuerId"],
+        "actorId": context["expectedActorId"],
+        "sessionId": context["expectedSessionId"],
+        "phase": context["expectedPhase"],
         "assignmentId": context["expectedAssignmentId"],
         "assignmentDigest": context["expectedAssignmentDigest"],
-        "subjectDigest": context["expectedSubjectDigest"], "trustRootDigest": root_digest,
+        "subjectDigest": context["expectedSubjectDigest"],
+        "trustRootDigest": root_digest,
     }
     if any(claims[key] != value for key, value in expected.items()):
         return _result("FAIL", "claims", **bound)
-    nonce = canonical_digest({
-        "domain": "agent-reviewer-challenge.v1", "phase": context["expectedPhase"],
-        "assignmentDigest": context["expectedAssignmentDigest"],
-        "subjectDigest": context["expectedSubjectDigest"], "actorId": context["expectedActorId"],
-        "sessionId": context["expectedSessionId"], "trustRootDigest": root_digest,
-    })
+    nonce = canonical_digest(
+        {
+            "domain": "agent-reviewer-challenge.v1",
+            "phase": context["expectedPhase"],
+            "assignmentDigest": context["expectedAssignmentDigest"],
+            "subjectDigest": context["expectedSubjectDigest"],
+            "actorId": context["expectedActorId"],
+            "sessionId": context["expectedSessionId"],
+            "trustRootDigest": root_digest,
+        }
+    )
     if claims["nonce"] != nonce:
         return _result("FAIL", "nonce", **bound)
     issued = parse_reviewer_utc(claims["issuedAt"])
@@ -140,8 +160,10 @@ def validate_native_reviewer_provenance(
         return _result("FAIL", "nativePhase")
     supplied = review.get("reviewerProvenance")
     if supplied is not None and (
-        type(supplied) is not dict or set(supplied) != {"guarantee", "attestation"}
-        or type(supplied["guarantee"]) is not str or supplied["guarantee"] not in {"DECLARED", "ATTESTED"}
+        type(supplied) is not dict
+        or set(supplied) != {"guarantee", "attestation"}
+        or type(supplied["guarantee"]) is not str
+        or supplied["guarantee"] not in {"DECLARED", "ATTESTED"}
         or (supplied["guarantee"] == "DECLARED" and supplied["attestation"] is not None)
     ):
         return _result("FAIL", "reviewerProvenance")
@@ -150,7 +172,9 @@ def validate_native_reviewer_provenance(
     if any(key in review for key in ("reviewerGuarantee", "reviewerAttestation", "provenanceValidation")):
         return _result("FAIL", "reviewerProvenance")
     reviewer = review.get("reviewer")
-    if isinstance(reviewer, dict) and any(key in reviewer for key in ("guarantee", "attestation", "provenanceValidation")):
+    if isinstance(reviewer, dict) and any(
+        key in reviewer for key in ("guarantee", "attestation", "provenanceValidation")
+    ):
         return _result("FAIL", "reviewerProvenance")
     if supplied is not None and supplied["guarantee"] == "ATTESTED":
         try:

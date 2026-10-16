@@ -6,6 +6,7 @@ import copy
 import json
 import sqlite3
 from dataclasses import asdict
+from typing import TYPE_CHECKING, TypedDict, cast
 
 from .contracts import (
     AuthoritativeReceipt,
@@ -18,11 +19,19 @@ from .contracts import (
     SourceProfile,
     UsageObservation,
     UsageOutcome,
+    _JournalStoragePort,
     canonical,
     digest,
     uint,
 )
 from .workflow_store import _apply, _BindingConflict, _operation, _projection, _refresh_v2
+
+if TYPE_CHECKING:
+
+    class _CounterSlice(TypedDict):
+        atom: dict
+        start: int
+        end: int
 
 
 class UsageUnavailable(ValueError):
@@ -95,7 +104,7 @@ def semantic_final(
             raise UsageConflict("Atom attribution mismatch")
         if a.amount is None:
             raise UsageUnavailable("Unknown atom amount")
-    if sum(a.amount for a in atoms) != receipt.reported_tokens:
+    if sum(cast(int, a.amount) for a in atoms) != receipt.reported_tokens:
         raise UsageConflict("Final amount differs from complete atom partition")
     if receipt.coverage.digest != coverage_digest(atoms):
         raise UsageConflict("Final coverage proof binding mismatch")
@@ -113,7 +122,7 @@ def component_total(profile: SourceProfile, observation: UsageObservation) -> in
     if parts:
         if parts.get("input") is None or parts.get("output") is None:
             raise UsageUnavailable("Incomplete input/output components")
-        computed = parts["input"] + parts["output"]
+        computed = cast(int, parts["input"]) + cast(int, parts["output"])
         for name, subset, parent in (
             ("cached", profile.cached_is_subset, "input"),
             ("reasoning", profile.reasoning_is_subset, "output"),
@@ -121,10 +130,10 @@ def component_total(profile: SourceProfile, observation: UsageObservation) -> in
             if name in parts:
                 if parts[name] is None:
                     raise UsageUnavailable("Unknown component")
-                if subset and parts[name] > parts[parent]:
+                if subset and cast(int, parts[name]) > cast(int, parts[parent]):
                     raise UsageConflict("Subset exceeds parent component")
                 if not subset:
-                    computed += parts[name]
+                    computed += cast(int, parts[name])
             elif not subset:
                 raise UsageUnavailable("Required disjoint component absent")
         if total is not None and computed != total:
@@ -150,7 +159,7 @@ def counter_interval(
     frontier = baseline.get("frontier")
     if frontier is None:
         raise UsageUnavailable("Counter frontier requires explicit provenance", kind="SOURCE_BOUNDARY")
-    incoming = {
+    incoming: dict[str, _CounterSlice] = {
         key: {"atom": atom_semantics(atoms[key], profile), "start": m.start_sequence, "end": m.end_sequence}
         for key, m in members.items()
     }
@@ -216,7 +225,7 @@ def normalize(profile: SourceProfile, observation: UsageObservation, snapshot: d
         raise UsageConflict("Duplicate atom identity")
     if any(a.epoch != observation.epoch for a in observation.atoms):
         raise UsageConflict("Atom epoch mismatch")
-    amount = sum(a.amount for a in observation.atoms)
+    amount = sum(cast(int, a.amount) for a in observation.atoms)
     baseline = snapshot.get("baseline")
     advance = None
     if profile.counter_mode == "CUMULATIVE":
@@ -225,7 +234,7 @@ def normalize(profile: SourceProfile, observation: UsageObservation, snapshot: d
         if total != amount:
             raise UsageConflict("Parent/final total differs from complete partition")
         late = False
-    groups = {}
+    groups: dict[str, list[CoverageAtom]] = {}
     for atom in observation.atoms:
         groups.setdefault(atom.operation_id, []).append(atom)
     finals = {v.operation_id: v for v in observation.receipts}
@@ -255,7 +264,7 @@ def normalize(profile: SourceProfile, observation: UsageObservation, snapshot: d
                 source_event_id=event,
                 source_schema_version=profile.schema_version,
                 unit_definition_id=op.unit_definition_id,
-                reported_tokens=sum(a.amount for a in atoms),
+                reported_tokens=sum(cast(int, a.amount) for a in atoms),
                 coverage=EvidenceRef("derived:partition", coverage_digest(atom_tuple)),
                 raw_evidence=observation.raw_evidence,
                 attestation=profile.qualification_ref,
@@ -300,7 +309,7 @@ def _validate_import_identity(scope: str, original: dict, completed: dict) -> No
         raise _BindingConflict("Original pending inventory changed", (scope,))
 
 
-class JournalNormalizationMixin:
+class JournalNormalizationMixin(_JournalStoragePort):
     def register_source_profile(self, scope: str, profile: SourceProfile) -> UsageOutcome:
         profile.__post_init__()
         with self._transaction():
@@ -340,7 +349,9 @@ class JournalNormalizationMixin:
         raw_data = json.loads(canonical(asdict(observation)))
         with self._transaction(scope):
             if self._closed_scope(scope):
-                return UsageOutcome(self._closed_evidence(scope, raw_data), self._closed_scope(scope)["revision"])
+                return UsageOutcome(
+                    self._closed_evidence(scope, raw_data), cast(sqlite3.Row, self._closed_scope(scope))["revision"]
+                )
             affected, problems = {scope}, []
             for candidate in self._observed_candidates(scope, raw_data):
                 affected.update(self._binding_scopes(candidate))
@@ -489,7 +500,7 @@ class JournalNormalizationMixin:
             # Raw event and final keys share one collision domain even for
             # aggregate observations with no single final owner.
             row = self._db.execute("SELECT * FROM identities WHERE kind='source' AND key=?", (raw_key,)).fetchone()
-            if row and (row["scope"] != scope or raw_binding["finals"].get(row["owner"]) != row["digest"]):
+            if row and (row["scope"] != scope or cast(dict, raw_binding["finals"]).get(row["owner"]) != row["digest"]):
                 raise _BindingConflict("Raw/final source collision", (scope, row["scope"]))
             for final in candidate["finals"]:
                 receipt = final["receipt"]

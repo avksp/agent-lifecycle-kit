@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any
+from typing import Any, NoReturn
 
 from agent_lifecycle.contracts.deadline_schemas import utc_microseconds
 from agent_lifecycle.contracts.errors import LifecycleError
@@ -22,57 +22,160 @@ ISSUER_PERMISSION_V1 = "agent-workflow-issuer-permission.v1"
 _HEX = re.compile(r"[0-9a-f]{64}\Z")
 _SIGNATURE_HEX = re.compile(r"[0-9a-f]{128}\Z")
 _FINGERPRINT = re.compile(r"ed25519:[0-9a-f]{64}\Z")
-_ACTIONS = frozenset({
-    "read-evidence", "assess-evidence", "report", "final-audit", "final-check",
-    "apply-final-outcome", "finalize", "accounting-closeout",
-})
+_ACTIONS = frozenset(
+    {
+        "read-evidence",
+        "assess-evidence",
+        "report",
+        "final-audit",
+        "final-check",
+        "apply-final-outcome",
+        "finalize",
+        "accounting-closeout",
+    }
+)
 _SCOPE_TEXT = ("runId", "packageId", "budgetScopeId", "journalIdentity", "bindingId", "sourceRevision")
 _SCOPE_DIGEST = ("originalPlanDigest", "effectivePlanDigest", "evidenceSubjectDigest")
 _PIN_TEXT = ("authorityDomain", "rootId", "rootGeneration", "bindingId", "runId", "budgetScopeId", "journalIdentity")
-_PIN_FIELDS = {"schemaVersion", *_PIN_TEXT, "rootPublicKeyHex", "rootFingerprint", "expectedInitialSnapshotDigest",
-               "clockPolicy", "qualificationRef", "trustMode"}
+_PIN_FIELDS = {
+    "schemaVersion",
+    *_PIN_TEXT,
+    "rootPublicKeyHex",
+    "rootFingerprint",
+    "expectedInitialSnapshotDigest",
+    "clockPolicy",
+    "qualificationRef",
+    "trustMode",
+}
 _GRANT_TEXT = ("authorityDomain", "rootId", "rootGeneration", "issuerId", "issuerGeneration", "closingWindowId")
-_GRANT_DIGEST = ("nonce", "windowIntentDigest", "originalAuthorizationDigest", "originalDeadlineDigest",
-                 "originalBlockerDigest", "allowedWritesDigest", "resourceApprovalDigest", "issuedUnderSnapshotDigest")
-_GRANT_FIELDS = {"schemaVersion", *_GRANT_TEXT, *_GRANT_DIGEST, "scope", "permission", "expectedWorkflowRevision",
-                 "allowedActions", "validFrom", "expiresAt", "issuedUnderEpoch", "signature"}
-_ISSUER_FIELDS = {"issuerId", "issuerGeneration", "publicKeyHex", "fingerprint", "validFrom", "expiresAt",
-                  "scope", "permissions", "allowedActions", "resourceApprovalDigest", "allowedWritesDigest"}
-_SNAPSHOT_FIELDS = {"schemaVersion", "authorityDomain", "rootId", "rootGeneration", "bindingId",
-                    "journalIdentity", "epoch", "previousSnapshotDigest", "validFrom", "expiresAt",
-                    "activeIssuers", "revokedIssuers", "revokedGrants", "signature"}
+_GRANT_DIGEST = (
+    "nonce",
+    "windowIntentDigest",
+    "originalAuthorizationDigest",
+    "originalDeadlineDigest",
+    "originalBlockerDigest",
+    "allowedWritesDigest",
+    "resourceApprovalDigest",
+    "issuedUnderSnapshotDigest",
+)
+_GRANT_FIELDS = {
+    "schemaVersion",
+    *_GRANT_TEXT,
+    *_GRANT_DIGEST,
+    "scope",
+    "permission",
+    "expectedWorkflowRevision",
+    "allowedActions",
+    "validFrom",
+    "expiresAt",
+    "issuedUnderEpoch",
+    "signature",
+}
+_ISSUER_FIELDS = {
+    "issuerId",
+    "issuerGeneration",
+    "publicKeyHex",
+    "fingerprint",
+    "validFrom",
+    "expiresAt",
+    "scope",
+    "permissions",
+    "allowedActions",
+    "resourceApprovalDigest",
+    "allowedWritesDigest",
+}
+_SNAPSHOT_FIELDS = {
+    "schemaVersion",
+    "authorityDomain",
+    "rootId",
+    "rootGeneration",
+    "bindingId",
+    "journalIdentity",
+    "epoch",
+    "previousSnapshotDigest",
+    "validFrom",
+    "expiresAt",
+    "activeIssuers",
+    "revokedIssuers",
+    "revokedGrants",
+    "signature",
+}
 _AUTHORITY_INPUT_FIELDS = {
-    "schemaVersion", "bindingId", "pinDigest", "grantRef", "issuanceSnapshotDigest",
-    "expectedCurrentEpoch", "windowRequestRef", "resourceApprovalRef", "allowedWritesRef",
+    "schemaVersion",
+    "bindingId",
+    "pinDigest",
+    "grantRef",
+    "issuanceSnapshotDigest",
+    "expectedCurrentEpoch",
+    "windowRequestRef",
+    "resourceApprovalRef",
+    "allowedWritesRef",
     "deadlineInputRef",
 }
 _AUTHORITY_DECISION_FIELDS = {
-    "schemaVersion", "decisionId", "bindingId", "journalIdentity", "authorityDomain",
-    "rootFingerprint", "issuerId", "issuerGeneration", "nonce", "grantDigest",
-    "currentSnapshotDigest", "authorityEpoch", "operationId", "requestDigest",
-    "expectedWorkflowRevision", "authorizedAt", "expiresAt", "permission",
-    "windowIntentDigest", "resourceApprovalDigest", "allowedWritesDigest", "decisionKind",
-    "claimId", "action", "clockObservationDigest",
+    "schemaVersion",
+    "decisionId",
+    "bindingId",
+    "journalIdentity",
+    "authorityDomain",
+    "rootFingerprint",
+    "issuerId",
+    "issuerGeneration",
+    "nonce",
+    "grantDigest",
+    "currentSnapshotDigest",
+    "authorityEpoch",
+    "operationId",
+    "requestDigest",
+    "expectedWorkflowRevision",
+    "authorizedAt",
+    "expiresAt",
+    "permission",
+    "windowIntentDigest",
+    "resourceApprovalDigest",
+    "allowedWritesDigest",
+    "decisionKind",
+    "claimId",
+    "action",
+    "clockObservationDigest",
 }
 _TEXT_SCHEMA = {"type": "string", "minLength": 1, "maxLength": 256}
 _DIGEST_SCHEMA = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
 
 
 def _schema(name: str, props: dict[str, Any]) -> dict[str, Any]:
-    return {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": name, "type": "object",
-            "additionalProperties": False, "required": list(props), "properties": props}
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": name,
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(props),
+        "properties": props,
+    }
 
 
-_RUN_OUTPUT_ANCHOR_FIELDS = frozenset({
-    "schemaVersion", "bindingDigest", "runId", "adoptedStateDigest", "journalIdentity",
-    "storageProtocolVersion", "artifactAuthorityRootPath", "artifactAuthorityRootIdentity",
-    "canonicalStatePath", "packageRoot", "resolvedPackageRootRelativePath", "eventLog",
-    "runOutputRootRelativePath",
-})
+_RUN_OUTPUT_ANCHOR_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "bindingDigest",
+        "runId",
+        "adoptedStateDigest",
+        "journalIdentity",
+        "storageProtocolVersion",
+        "artifactAuthorityRootPath",
+        "artifactAuthorityRootIdentity",
+        "canonicalStatePath",
+        "packageRoot",
+        "resolvedPackageRootRelativePath",
+        "eventLog",
+        "runOutputRootRelativePath",
+    }
+)
 
 
 def validate_run_output_anchor(value: Any) -> dict[str, Any]:
     """Validate anchored data shape; root custody and path identity need separate proof."""
+
     def invalid(name: str) -> None:
         raise LifecycleError("workflow-output-anchor-invalid", f"Invalid {name}")
 
@@ -83,10 +186,16 @@ def validate_run_output_anchor(value: Any) -> dict[str, Any]:
     for name in ("bindingDigest", "adoptedStateDigest"):
         if type(value[name]) is not str or re.fullmatch(r"[0-9a-f]{64}", value[name]) is None:
             invalid(name)
-    for name, limit in (("runId", 256), ("journalIdentity", 256),
-                        ("artifactAuthorityRootPath", 4096), ("canonicalStatePath", 4096),
-                        ("packageRoot", 4096), ("resolvedPackageRootRelativePath", 4096),
-                        ("eventLog", 4096), ("runOutputRootRelativePath", 4096)):
+    for name, limit in (
+        ("runId", 256),
+        ("journalIdentity", 256),
+        ("artifactAuthorityRootPath", 4096),
+        ("canonicalStatePath", 4096),
+        ("packageRoot", 4096),
+        ("resolvedPackageRootRelativePath", 4096),
+        ("eventLog", 4096),
+        ("runOutputRootRelativePath", 4096),
+    ):
         item = value[name]
         if type(item) is not str or not 1 <= len(item) <= limit:
             invalid(name)
@@ -103,12 +212,23 @@ def validate_run_output_anchor(value: Any) -> dict[str, Any]:
 
 WORKFLOW_AUTHORITY_SCHEMAS = {
     RUN_OUTPUT_ANCHOR_V1: {
-        "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": RUN_OUTPUT_ANCHOR_V1,
-        "type": "object", "additionalProperties": False,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": RUN_OUTPUT_ANCHOR_V1,
+        "type": "object",
+        "additionalProperties": False,
         "required": [
-            "schemaVersion", "bindingDigest", "runId", "adoptedStateDigest", "journalIdentity",
-            "storageProtocolVersion", "artifactAuthorityRootPath", "artifactAuthorityRootIdentity",
-            "canonicalStatePath", "packageRoot", "resolvedPackageRootRelativePath", "eventLog",
+            "schemaVersion",
+            "bindingDigest",
+            "runId",
+            "adoptedStateDigest",
+            "journalIdentity",
+            "storageProtocolVersion",
+            "artifactAuthorityRootPath",
+            "artifactAuthorityRootIdentity",
+            "canonicalStatePath",
+            "packageRoot",
+            "resolvedPackageRootRelativePath",
+            "eventLog",
             "runOutputRootRelativePath",
         ],
         "properties": {
@@ -120,7 +240,8 @@ WORKFLOW_AUTHORITY_SCHEMAS = {
             "storageProtocolVersion": {"const": "6"},
             "artifactAuthorityRootPath": {"type": "string", "minLength": 1, "maxLength": 4096},
             "artifactAuthorityRootIdentity": {
-                "type": "object", "additionalProperties": False,
+                "type": "object",
+                "additionalProperties": False,
                 "required": ["platform", "volumeId", "fileId"],
                 "properties": {
                     "platform": {"enum": ["POSIX", "WINDOWS"]},
@@ -128,69 +249,127 @@ WORKFLOW_AUTHORITY_SCHEMAS = {
                     "fileId": {"type": "string", "minLength": 1, "maxLength": 256},
                 },
             },
-            **{name: {"type": "string", "minLength": 1, "maxLength": 4096} for name in (
-                "canonicalStatePath", "packageRoot", "resolvedPackageRootRelativePath", "eventLog",
-                "runOutputRootRelativePath",
-            )},
+            **{
+                name: {"type": "string", "minLength": 1, "maxLength": 4096}
+                for name in (
+                    "canonicalStatePath",
+                    "packageRoot",
+                    "resolvedPackageRootRelativePath",
+                    "eventLog",
+                    "runOutputRootRelativePath",
+                )
+            },
         },
     },
     AUTHORITY_DECISION_V1: {
-        **_schema(AUTHORITY_DECISION_V1, {
-            "schemaVersion": {"const": AUTHORITY_DECISION_V1},
-            **{name: _TEXT_SCHEMA for name in (
-                "decisionId", "bindingId", "journalIdentity", "authorityDomain"
-            )},
-            "rootFingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
-            "issuerId": _TEXT_SCHEMA, "issuerGeneration": _TEXT_SCHEMA,
-            **{name: _DIGEST_SCHEMA for name in ("nonce", "grantDigest", "currentSnapshotDigest")},
-            "authorityEpoch": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
-            "operationId": _TEXT_SCHEMA, "requestDigest": _DIGEST_SCHEMA,
-            "expectedWorkflowRevision": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
-            **{name: {
-                "type": "string", "format": "date-time",
-                "pattern": r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$",
-            } for name in ("authorizedAt", "expiresAt")},
-            "permission": {"const": "closing.activate"},
-            **{name: _DIGEST_SCHEMA for name in (
-                "windowIntentDigest", "resourceApprovalDigest", "allowedWritesDigest"
-            )},
-            "decisionKind": {"enum": ["ACTIVATION", "CLAIM", "PRODUCE_PROOF", "FINALIZE"]},
-            "claimId": {"anyOf": [_TEXT_SCHEMA, {"type": "null"}]},
-            "action": {"anyOf": [{"enum": [
-                "read-evidence", "assess-evidence", "report", "final-audit", "final-check",
-                "apply-final-outcome", "finalize", "accounting-closeout",
-            ]}, {"type": "null"}]},
-            "clockObservationDigest": _DIGEST_SCHEMA,
-        }),
+        **_schema(
+            AUTHORITY_DECISION_V1,
+            {
+                "schemaVersion": {"const": AUTHORITY_DECISION_V1},
+                **{name: _TEXT_SCHEMA for name in ("decisionId", "bindingId", "journalIdentity", "authorityDomain")},
+                "rootFingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
+                "issuerId": _TEXT_SCHEMA,
+                "issuerGeneration": _TEXT_SCHEMA,
+                **{name: _DIGEST_SCHEMA for name in ("nonce", "grantDigest", "currentSnapshotDigest")},
+                "authorityEpoch": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
+                "operationId": _TEXT_SCHEMA,
+                "requestDigest": _DIGEST_SCHEMA,
+                "expectedWorkflowRevision": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
+                **{
+                    name: {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$",
+                    }
+                    for name in ("authorizedAt", "expiresAt")
+                },
+                "permission": {"const": "closing.activate"},
+                **{
+                    name: _DIGEST_SCHEMA
+                    for name in ("windowIntentDigest", "resourceApprovalDigest", "allowedWritesDigest")
+                },
+                "decisionKind": {"enum": ["ACTIVATION", "CLAIM", "PRODUCE_PROOF", "FINALIZE"]},
+                "claimId": {"anyOf": [_TEXT_SCHEMA, {"type": "null"}]},
+                "action": {
+                    "anyOf": [
+                        {
+                            "enum": [
+                                "read-evidence",
+                                "assess-evidence",
+                                "report",
+                                "final-audit",
+                                "final-check",
+                                "apply-final-outcome",
+                                "finalize",
+                                "accounting-closeout",
+                            ]
+                        },
+                        {"type": "null"},
+                    ]
+                },
+                "clockObservationDigest": _DIGEST_SCHEMA,
+            },
+        ),
         "allOf": [
-            {"if": {"properties": {"decisionKind": {"const": "ACTIVATION"}}},
-             "then": {"properties": {"claimId": {"type": "null"}, "action": {"type": "null"}}}},
-            {"if": {"properties": {"decisionKind": {"const": "CLAIM"}}},
-             "then": {"properties": {"claimId": _TEXT_SCHEMA, "action": {"enum": [
-                 "read-evidence", "assess-evidence", "report", "final-audit", "final-check",
-                 "apply-final-outcome", "finalize", "accounting-closeout",
-             ]}}}},
-            {"if": {"properties": {"decisionKind": {"enum": ["PRODUCE_PROOF", "FINALIZE"]}}},
-             "then": {"properties": {"claimId": {"type": "null"}, "action": {"const": "finalize"}}}},
+            {
+                "if": {"properties": {"decisionKind": {"const": "ACTIVATION"}}},
+                "then": {"properties": {"claimId": {"type": "null"}, "action": {"type": "null"}}},
+            },
+            {
+                "if": {"properties": {"decisionKind": {"const": "CLAIM"}}},
+                "then": {
+                    "properties": {
+                        "claimId": _TEXT_SCHEMA,
+                        "action": {
+                            "enum": [
+                                "read-evidence",
+                                "assess-evidence",
+                                "report",
+                                "final-audit",
+                                "final-check",
+                                "apply-final-outcome",
+                                "finalize",
+                                "accounting-closeout",
+                            ]
+                        },
+                    }
+                },
+            },
+            {
+                "if": {"properties": {"decisionKind": {"enum": ["PRODUCE_PROOF", "FINALIZE"]}}},
+                "then": {"properties": {"claimId": {"type": "null"}, "action": {"const": "finalize"}}},
+            },
         ],
     },
     AUTHORITY_INPUT_BUNDLE_V1: {
-        "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": AUTHORITY_INPUT_BUNDLE_V1,
-        "type": "object", "additionalProperties": False,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": AUTHORITY_INPUT_BUNDLE_V1,
+        "type": "object",
+        "additionalProperties": False,
         "required": [
-            "schemaVersion", "bindingId", "pinDigest", "grantRef", "issuanceSnapshotDigest",
-            "expectedCurrentEpoch", "windowRequestRef", "resourceApprovalRef", "allowedWritesRef",
+            "schemaVersion",
+            "bindingId",
+            "pinDigest",
+            "grantRef",
+            "issuanceSnapshotDigest",
+            "expectedCurrentEpoch",
+            "windowRequestRef",
+            "resourceApprovalRef",
+            "allowedWritesRef",
             "deadlineInputRef",
         ],
-        "$defs": {"ArtifactRef": {
-            "type": "object", "additionalProperties": False,
-            "required": ["path", "sha256", "bytes"],
-            "properties": {
-                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
-                "sha256": _DIGEST_SCHEMA,
-                "bytes": {"type": "integer", "minimum": 1, "maximum": 1_048_576},
-            },
-        }},
+        "$defs": {
+            "ArtifactRef": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["path", "sha256", "bytes"],
+                "properties": {
+                    "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                    "sha256": _DIGEST_SCHEMA,
+                    "bytes": {"type": "integer", "minimum": 1, "maximum": 1_048_576},
+                },
+            }
+        },
         "properties": {
             "schemaVersion": {"const": AUTHORITY_INPUT_BUNDLE_V1},
             "bindingId": _TEXT_SCHEMA,
@@ -198,84 +377,148 @@ WORKFLOW_AUTHORITY_SCHEMAS = {
             "grantRef": {"$ref": "#/$defs/ArtifactRef"},
             "issuanceSnapshotDigest": _DIGEST_SCHEMA,
             "expectedCurrentEpoch": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
-            **{name: {"$ref": "#/$defs/ArtifactRef"} for name in (
-                "windowRequestRef", "resourceApprovalRef", "allowedWritesRef", "deadlineInputRef"
-            )},
+            **{
+                name: {"$ref": "#/$defs/ArtifactRef"}
+                for name in ("windowRequestRef", "resourceApprovalRef", "allowedWritesRef", "deadlineInputRef")
+            },
         },
     },
-    INSTALL_SNAPSHOT_REQUEST_V1: _schema(INSTALL_SNAPSHOT_REQUEST_V1, {
-        "schemaVersion": {"const": INSTALL_SNAPSHOT_REQUEST_V1},
-        "bindingId": _TEXT_SCHEMA,
-        "operationId": _TEXT_SCHEMA,
-        "expectedAuthorityEpoch": {"anyOf": [
-            {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1}, {"type": "null"},
-        ]},
-        "snapshotRef": {"type": "object", "additionalProperties": False,
-                        "required": ["path", "sha256", "bytes"],
-                        "properties": {"path": {"type": "string", "minLength": 1, "maxLength": 4096},
-                                       "sha256": _DIGEST_SCHEMA,
-                                       "bytes": {"type": "integer", "minimum": 1, "maximum": 1_048_576}}},
-    }),
-    PERMISSION_SCOPE_V1: _schema(PERMISSION_SCOPE_V1, {
-        **{name: _TEXT_SCHEMA for name in _SCOPE_TEXT}, **{name: _DIGEST_SCHEMA for name in _SCOPE_DIGEST},
-    }),
-    SIGNATURE_V1: _schema(SIGNATURE_V1, {
-        "algorithm": {"const": "Ed25519"}, "signerFingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
-        "valueHex": {"type": "string", "pattern": "^[0-9a-f]{128}$"},
-    }),
-    ISSUER_PERMISSION_V1: _schema(ISSUER_PERMISSION_V1, {
-        "issuerId": _TEXT_SCHEMA, "issuerGeneration": _TEXT_SCHEMA,
-        "publicKeyHex": _DIGEST_SCHEMA,
-        "fingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
-        "validFrom": {"type": "string"}, "expiresAt": {"type": "string"},
-        "scope": {"$ref": PERMISSION_SCOPE_V1},
-        "permissions": {"type": "array", "items": {"const": "closing.activate"}, "minItems": 1, "maxItems": 1},
-        "allowedActions": {"type": "array", "items": {"enum": sorted(_ACTIONS)}, "minItems": 1,
-                           "maxItems": 8, "uniqueItems": True},
-        "resourceApprovalDigest": _DIGEST_SCHEMA, "allowedWritesDigest": _DIGEST_SCHEMA,
-    }),
-    BOOTSTRAP_PIN_V1: _schema(BOOTSTRAP_PIN_V1, {
-        "schemaVersion": {"const": BOOTSTRAP_PIN_V1}, **{name: _TEXT_SCHEMA for name in _PIN_TEXT},
-        "rootPublicKeyHex": _DIGEST_SCHEMA,
-        "rootFingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
-        "expectedInitialSnapshotDigest": _DIGEST_SCHEMA,
-        "clockPolicy": {"const": "QUALIFIED_HOST_UTC_NONDECREASING"},
-        "qualificationRef": {"type": "object"}, "trustMode": {"const": "QUALIFIED_LOCAL_OPERATOR"},
-    }),
-    AUTHORITY_SNAPSHOT_V1: _schema(AUTHORITY_SNAPSHOT_V1, {
-        "schemaVersion": {"const": AUTHORITY_SNAPSHOT_V1},
-        **{name: _TEXT_SCHEMA for name in ("authorityDomain", "rootId", "rootGeneration", "bindingId",
-                                              "journalIdentity")},
-        "epoch": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
-        "previousSnapshotDigest": {"anyOf": [_DIGEST_SCHEMA, {"type": "null"}]},
-        "validFrom": {"type": "string"}, "expiresAt": {"type": "string"},
-        "activeIssuers": {"type": "array", "maxItems": 256, "items": {"$ref": ISSUER_PERMISSION_V1}},
-        "revokedIssuers": {"type": "array", "maxItems": 4096, "items": {
-            "type": "object", "required": ["issuerId", "issuerGeneration"], "additionalProperties": False,
-            "properties": {"issuerId": _TEXT_SCHEMA, "issuerGeneration": _TEXT_SCHEMA},
-        }},
-        "revokedGrants": {"type": "array", "maxItems": 4096, "items": {
-            "type": "object", "required": ["issuerId", "issuerGeneration", "nonce"],
-            "additionalProperties": False,
-            "properties": {"issuerId": _TEXT_SCHEMA, "issuerGeneration": _TEXT_SCHEMA, "nonce": _DIGEST_SCHEMA},
-        }},
-        "signature": {"$ref": SIGNATURE_V1},
-    }),
-    WINDOW_GRANT_V1: _schema(WINDOW_GRANT_V1, {
-        "schemaVersion": {"const": WINDOW_GRANT_V1}, **{name: _TEXT_SCHEMA for name in _GRANT_TEXT},
-        **{name: _DIGEST_SCHEMA for name in _GRANT_DIGEST},
-        "scope": {"$ref": PERMISSION_SCOPE_V1}, "permission": {"const": "closing.activate"},
-        "expectedWorkflowRevision": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
-        "allowedActions": {"type": "array", "items": {"enum": sorted(_ACTIONS)},
-                           "minItems": 1, "maxItems": 8, "uniqueItems": True},
-        "validFrom": {"type": "string"}, "expiresAt": {"type": "string"},
-        "issuedUnderEpoch": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
-        "signature": {"$ref": SIGNATURE_V1},
-    }),
+    INSTALL_SNAPSHOT_REQUEST_V1: _schema(
+        INSTALL_SNAPSHOT_REQUEST_V1,
+        {
+            "schemaVersion": {"const": INSTALL_SNAPSHOT_REQUEST_V1},
+            "bindingId": _TEXT_SCHEMA,
+            "operationId": _TEXT_SCHEMA,
+            "expectedAuthorityEpoch": {
+                "anyOf": [
+                    {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
+                    {"type": "null"},
+                ]
+            },
+            "snapshotRef": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["path", "sha256", "bytes"],
+                "properties": {
+                    "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                    "sha256": _DIGEST_SCHEMA,
+                    "bytes": {"type": "integer", "minimum": 1, "maximum": 1_048_576},
+                },
+            },
+        },
+    ),
+    PERMISSION_SCOPE_V1: _schema(
+        PERMISSION_SCOPE_V1,
+        {
+            **{name: _TEXT_SCHEMA for name in _SCOPE_TEXT},
+            **{name: _DIGEST_SCHEMA for name in _SCOPE_DIGEST},
+        },
+    ),
+    SIGNATURE_V1: _schema(
+        SIGNATURE_V1,
+        {
+            "algorithm": {"const": "Ed25519"},
+            "signerFingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
+            "valueHex": {"type": "string", "pattern": "^[0-9a-f]{128}$"},
+        },
+    ),
+    ISSUER_PERMISSION_V1: _schema(
+        ISSUER_PERMISSION_V1,
+        {
+            "issuerId": _TEXT_SCHEMA,
+            "issuerGeneration": _TEXT_SCHEMA,
+            "publicKeyHex": _DIGEST_SCHEMA,
+            "fingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
+            "validFrom": {"type": "string"},
+            "expiresAt": {"type": "string"},
+            "scope": {"$ref": PERMISSION_SCOPE_V1},
+            "permissions": {"type": "array", "items": {"const": "closing.activate"}, "minItems": 1, "maxItems": 1},
+            "allowedActions": {
+                "type": "array",
+                "items": {"enum": sorted(_ACTIONS)},
+                "minItems": 1,
+                "maxItems": 8,
+                "uniqueItems": True,
+            },
+            "resourceApprovalDigest": _DIGEST_SCHEMA,
+            "allowedWritesDigest": _DIGEST_SCHEMA,
+        },
+    ),
+    BOOTSTRAP_PIN_V1: _schema(
+        BOOTSTRAP_PIN_V1,
+        {
+            "schemaVersion": {"const": BOOTSTRAP_PIN_V1},
+            **{name: _TEXT_SCHEMA for name in _PIN_TEXT},
+            "rootPublicKeyHex": _DIGEST_SCHEMA,
+            "rootFingerprint": {"type": "string", "pattern": "^ed25519:[0-9a-f]{64}$"},
+            "expectedInitialSnapshotDigest": _DIGEST_SCHEMA,
+            "clockPolicy": {"const": "QUALIFIED_HOST_UTC_NONDECREASING"},
+            "qualificationRef": {"type": "object"},
+            "trustMode": {"const": "QUALIFIED_LOCAL_OPERATOR"},
+        },
+    ),
+    AUTHORITY_SNAPSHOT_V1: _schema(
+        AUTHORITY_SNAPSHOT_V1,
+        {
+            "schemaVersion": {"const": AUTHORITY_SNAPSHOT_V1},
+            **{
+                name: _TEXT_SCHEMA
+                for name in ("authorityDomain", "rootId", "rootGeneration", "bindingId", "journalIdentity")
+            },
+            "epoch": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
+            "previousSnapshotDigest": {"anyOf": [_DIGEST_SCHEMA, {"type": "null"}]},
+            "validFrom": {"type": "string"},
+            "expiresAt": {"type": "string"},
+            "activeIssuers": {"type": "array", "maxItems": 256, "items": {"$ref": ISSUER_PERMISSION_V1}},
+            "revokedIssuers": {
+                "type": "array",
+                "maxItems": 4096,
+                "items": {
+                    "type": "object",
+                    "required": ["issuerId", "issuerGeneration"],
+                    "additionalProperties": False,
+                    "properties": {"issuerId": _TEXT_SCHEMA, "issuerGeneration": _TEXT_SCHEMA},
+                },
+            },
+            "revokedGrants": {
+                "type": "array",
+                "maxItems": 4096,
+                "items": {
+                    "type": "object",
+                    "required": ["issuerId", "issuerGeneration", "nonce"],
+                    "additionalProperties": False,
+                    "properties": {"issuerId": _TEXT_SCHEMA, "issuerGeneration": _TEXT_SCHEMA, "nonce": _DIGEST_SCHEMA},
+                },
+            },
+            "signature": {"$ref": SIGNATURE_V1},
+        },
+    ),
+    WINDOW_GRANT_V1: _schema(
+        WINDOW_GRANT_V1,
+        {
+            "schemaVersion": {"const": WINDOW_GRANT_V1},
+            **{name: _TEXT_SCHEMA for name in _GRANT_TEXT},
+            **{name: _DIGEST_SCHEMA for name in _GRANT_DIGEST},
+            "scope": {"$ref": PERMISSION_SCOPE_V1},
+            "permission": {"const": "closing.activate"},
+            "expectedWorkflowRevision": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
+            "allowedActions": {
+                "type": "array",
+                "items": {"enum": sorted(_ACTIONS)},
+                "minItems": 1,
+                "maxItems": 8,
+                "uniqueItems": True,
+            },
+            "validFrom": {"type": "string"},
+            "expiresAt": {"type": "string"},
+            "issuedUnderEpoch": {"type": "integer", "minimum": 0, "maximum": (1 << 63) - 1},
+            "signature": {"$ref": SIGNATURE_V1},
+        },
+    ),
 }
 
 
-def _invalid(detail: str) -> None:
+def _invalid(detail: str) -> NoReturn:
     raise LifecycleError("workflow-authority-invalid", detail)
 
 
@@ -325,13 +568,28 @@ def validate_authority_decision_shape(value: Any) -> dict[str, Any]:
     selected = _closed(value, _AUTHORITY_DECISION_FIELDS, "AuthorityDecision")
     if selected["schemaVersion"] != AUTHORITY_DECISION_V1 or selected["permission"] != "closing.activate":
         _invalid("AuthorityDecision protocol is unsupported")
-    for name in ("decisionId", "bindingId", "journalIdentity", "authorityDomain", "issuerId",
-                 "issuerGeneration", "operationId"):
+    for name in (
+        "decisionId",
+        "bindingId",
+        "journalIdentity",
+        "authorityDomain",
+        "issuerId",
+        "issuerGeneration",
+        "operationId",
+    ):
         _text(selected[name], name)
     if type(selected["rootFingerprint"]) is not str or _FINGERPRINT.fullmatch(selected["rootFingerprint"]) is None:
         _invalid("Root fingerprint is invalid")
-    for name in ("nonce", "grantDigest", "currentSnapshotDigest", "requestDigest",
-                 "windowIntentDigest", "resourceApprovalDigest", "allowedWritesDigest", "clockObservationDigest"):
+    for name in (
+        "nonce",
+        "grantDigest",
+        "currentSnapshotDigest",
+        "requestDigest",
+        "windowIntentDigest",
+        "resourceApprovalDigest",
+        "allowedWritesDigest",
+        "clockObservationDigest",
+    ):
         _hex(selected[name], name)
     for name in ("authorityEpoch", "expectedWorkflowRevision"):
         item = selected[name]
@@ -366,14 +624,24 @@ def validate_permission_scope(value: Any) -> dict[str, Any]:
 
 def validate_signature_shape(value: Any) -> dict[str, Any]:
     signature = _closed(value, {"algorithm", "signerFingerprint", "valueHex"}, "Signature")
-    if signature["algorithm"] != "Ed25519" or type(signature["signerFingerprint"]) is not str or _FINGERPRINT.fullmatch(signature["signerFingerprint"]) is None or type(signature["valueHex"]) is not str or _SIGNATURE_HEX.fullmatch(signature["valueHex"]) is None:
+    if (
+        signature["algorithm"] != "Ed25519"
+        or type(signature["signerFingerprint"]) is not str
+        or _FINGERPRINT.fullmatch(signature["signerFingerprint"]) is None
+        or type(signature["valueHex"]) is not str
+        or _SIGNATURE_HEX.fullmatch(signature["valueHex"]) is None
+    ):
         _invalid("Signature shape is unsupported")
     return signature
 
 
 def validate_bootstrap_pin(value: Any) -> dict[str, Any]:
     pin = _closed(value, _PIN_FIELDS, "BootstrapPin")
-    if pin["schemaVersion"] != BOOTSTRAP_PIN_V1 or pin["clockPolicy"] != "QUALIFIED_HOST_UTC_NONDECREASING" or pin["trustMode"] != "QUALIFIED_LOCAL_OPERATOR":
+    if (
+        pin["schemaVersion"] != BOOTSTRAP_PIN_V1
+        or pin["clockPolicy"] != "QUALIFIED_HOST_UTC_NONDECREASING"
+        or pin["trustMode"] != "QUALIFIED_LOCAL_OPERATOR"
+    ):
         _invalid("BootstrapPin protocol is unsupported")
     for name in _PIN_TEXT:
         _text(pin[name], name)
@@ -388,7 +656,8 @@ def validate_bootstrap_pin(value: Any) -> dict[str, Any]:
 
 def validate_install_snapshot_request(value: Any) -> dict[str, Any]:
     request = _closed(
-        value, {"schemaVersion", "bindingId", "operationId", "expectedAuthorityEpoch", "snapshotRef"},
+        value,
+        {"schemaVersion", "bindingId", "operationId", "expectedAuthorityEpoch", "snapshotRef"},
         "InstallSnapshotRequest",
     )
     if request["schemaVersion"] != INSTALL_SNAPSHOT_REQUEST_V1:
@@ -416,7 +685,14 @@ def validate_window_grant_shape(value: Any) -> dict[str, Any]:
         if type(grant[name]) is not int or not 0 <= grant[name] <= (1 << 63) - 1:
             _invalid(f"{name} is invalid")
     actions = grant["allowedActions"]
-    if type(actions) is not list or not actions or len(actions) > 8 or any(type(action) is not str for action in actions) or len(set(actions)) != len(actions) or set(actions) - _ACTIONS:
+    if (
+        type(actions) is not list
+        or not actions
+        or len(actions) > 8
+        or any(type(action) is not str for action in actions)
+        or len(set(actions)) != len(actions)
+        or set(actions) - _ACTIONS
+    ):
         _invalid("WindowGrant action set is invalid")
     if utc_microseconds(grant["validFrom"]) >= utc_microseconds(grant["expiresAt"]):
         _invalid("WindowGrant interval is invalid")
@@ -435,7 +711,14 @@ def validate_issuer_permission_shape(value: Any) -> dict[str, Any]:
     if issuer["permissions"] != ["closing.activate"]:
         _invalid("Issuer has unsupported permission")
     actions = issuer["allowedActions"]
-    if type(actions) is not list or not actions or len(actions) > 8 or any(type(action) is not str for action in actions) or len(set(actions)) != len(actions) or set(actions) - _ACTIONS:
+    if (
+        type(actions) is not list
+        or not actions
+        or len(actions) > 8
+        or any(type(action) is not str for action in actions)
+        or len(set(actions)) != len(actions)
+        or set(actions) - _ACTIONS
+    ):
         _invalid("Issuer action set is invalid")
     for key in ("resourceApprovalDigest", "allowedWritesDigest"):
         _hex(issuer[key], key)
@@ -463,8 +746,14 @@ def validate_authority_snapshot_shape(value: Any) -> dict[str, Any]:
     issuers = snapshot["activeIssuers"]
     revoked_issuers = snapshot["revokedIssuers"]
     revoked_grants = snapshot["revokedGrants"]
-    if (type(issuers) is not list or len(issuers) > 256 or type(revoked_issuers) is not list
-            or len(revoked_issuers) > 4096 or type(revoked_grants) is not list or len(revoked_grants) > 4096):
+    if (
+        type(issuers) is not list
+        or len(issuers) > 256
+        or type(revoked_issuers) is not list
+        or len(revoked_issuers) > 4096
+        or type(revoked_grants) is not list
+        or len(revoked_grants) > 4096
+    ):
         _invalid("AuthoritySnapshot list limit is invalid")
     active_keys = []
     for issuer in issuers:
@@ -483,16 +772,33 @@ def validate_authority_snapshot_shape(value: Any) -> dict[str, Any]:
         _text(item["issuerGeneration"], "issuerGeneration")
         _hex(item["nonce"], "nonce")
         grant_keys.append((item["issuerId"], item["issuerGeneration"], item["nonce"]))
-    if (len(set(active_keys)) != len(active_keys) or len(set(revoked_keys)) != len(revoked_keys)
-            or len(set(grant_keys)) != len(grant_keys) or set(active_keys) & set(revoked_keys)):
+    if (
+        len(set(active_keys)) != len(active_keys)
+        or len(set(revoked_keys)) != len(revoked_keys)
+        or len(set(grant_keys)) != len(grant_keys)
+        or set(active_keys) & set(revoked_keys)
+    ):
         _invalid("AuthoritySnapshot identities are duplicated or revoked")
     validate_signature_shape(snapshot["signature"])
     return snapshot
 
 
 __all__ = [
-    "AUTHORITY_SNAPSHOT_V1", "BOOTSTRAP_PIN_V1", "INSTALL_SNAPSHOT_REQUEST_V1", "ISSUER_PERMISSION_V1", "PERMISSION_SCOPE_V1",
-    "RUN_OUTPUT_ANCHOR_V1", "SIGNATURE_V1", "WINDOW_GRANT_V1", "WORKFLOW_AUTHORITY_SCHEMAS", "validate_authority_snapshot_shape",
-    "validate_bootstrap_pin", "validate_install_snapshot_request", "validate_issuer_permission_shape",
-    "validate_permission_scope", "validate_run_output_anchor", "validate_signature_shape", "validate_window_grant_shape",
+    "AUTHORITY_SNAPSHOT_V1",
+    "BOOTSTRAP_PIN_V1",
+    "INSTALL_SNAPSHOT_REQUEST_V1",
+    "ISSUER_PERMISSION_V1",
+    "PERMISSION_SCOPE_V1",
+    "RUN_OUTPUT_ANCHOR_V1",
+    "SIGNATURE_V1",
+    "WINDOW_GRANT_V1",
+    "WORKFLOW_AUTHORITY_SCHEMAS",
+    "validate_authority_snapshot_shape",
+    "validate_bootstrap_pin",
+    "validate_install_snapshot_request",
+    "validate_issuer_permission_shape",
+    "validate_permission_scope",
+    "validate_run_output_anchor",
+    "validate_signature_shape",
+    "validate_window_grant_shape",
 ]

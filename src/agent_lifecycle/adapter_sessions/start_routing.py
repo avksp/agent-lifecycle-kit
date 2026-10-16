@@ -84,7 +84,12 @@ def resolve_managed_execution_strategy(
         project_profile_path=_repo_relative(root, profile_file, label="project profile"),
         repository_root=root,
         source_usage_context=load_source_usage_context(
-            root, manifest, state, task, adapter_id, str(descriptor.get("host", "")),
+            root,
+            manifest,
+            state,
+            task,
+            adapter_id,
+            str(descriptor.get("host", "")),
         ),
     )
     return {

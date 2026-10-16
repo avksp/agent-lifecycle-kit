@@ -23,7 +23,8 @@ _SMALL_CONTEXT_PROFILE = builtin_profile_path("small-context-profile.v1.json")
 
 def _add_operator_claim_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--requested-claim", choices=[ORDINARY_OPERATOR_CLAIM, PROTECTED_OPERATOR_CLAIM],
+        "--requested-claim",
+        choices=[ORDINARY_OPERATOR_CLAIM, PROTECTED_OPERATOR_CLAIM],
         help="request an ordinary or protected operator route; unavailable protected routes refuse",
     )
 
