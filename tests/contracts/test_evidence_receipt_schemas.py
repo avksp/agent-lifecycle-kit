@@ -142,10 +142,35 @@ class EvidenceReceiptSchemaTests(unittest.TestCase):
 
     def test_frozen_release_descriptors_use_the_published_closed_contract(self) -> None:
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        published_ids = {
+            "EV216-SCHEMA",
+            "EV216-BINDING",
+            "EV216-RECEIPT",
+            "EV216-PROVENANCE",
+            "EV216-IMPORT",
+            "EV216-PUBLICATION",
+            "EV216-ACCOUNTING-CORE",
+            "EV216-ACCOUNTING-ENFORCEMENT",
+            "EV216-FINALIZATION-RECOVERY",
+            "EV216-CLOSING-WINDOW",
+            "EV216-CLOSING-POLICY",
+            "EV216-WORKFLOW-STORE",
+            "EV216-WORKFLOW-AUTHORITY",
+            "EV216-CLOSING-RESOURCES",
+            "EV216-DEADLINE-CONTRACT",
+            "EV216-SOURCE-USAGE",
+        }
         entries = manifest["acceptance"]["evidence"]
-        self.assertEqual(len(entries), 16)
+        published = [entry for entry in entries if entry["id"] in published_ids]
+        self.assertEqual(len(published), 16)
+        self.assertEqual({entry["id"] for entry in published}, published_ids)
+        internal = [entry for entry in entries if entry["id"] not in published_ids]
+        self.assertLessEqual(len(internal), 1)
+        for entry in internal:
+            self.assertEqual(entry["id"], "EV216-NATIVE-RENEWAL")
         for entry in entries:
             with self.subTest(evidence_id=entry["id"]):
+                self.assertIn("validation", entry)
                 validate_expected_evidence(entry["validation"])
 
     def test_descriptor_rejects_unsorted_and_unexpected_requirements(self) -> None:

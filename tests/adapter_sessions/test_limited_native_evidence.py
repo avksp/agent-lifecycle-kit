@@ -227,23 +227,23 @@ class LimitedNativeEvidenceTests(unittest.TestCase):
         self.capacity_verified.update(report=report, reportSha256=review_ref['sha256'],
                                       snapshotRefs=report['coveredFiles'])
 
-    def renewal_capacity_fixture(self, **changes):
+    def renewal_capacity_fixture(self, *, qualified_prior=6, aggregate_ceiling=12, **changes):
         capacity = json.loads((self.root / self.admission['capacityQualificationRef']['path']).read_bytes())
         renewal = {
             'schemaVersion': 'alk-r216-native-capacity-renewal.v1',
             'authorizationKind': 'EXPLICIT_EXACT_COUNT_USER_GRANT', 'approved': True,
             'runId': self.state['runId'], 'taskId': self.task['id'], 'attemptId': str(self.task['attempt']),
             'planDigest': self.state['planDigest'], 'lockSha256': self.lock_ref['sha256'],
-            'priorSelectedStarts': 6, 'additionalSelectedStarts': 6,
-            'aggregateSelectedStartCeiling': 12,
+            'priorSelectedStarts': qualified_prior, 'additionalSelectedStarts': 6,
+            'aggregateSelectedStartCeiling': aggregate_ceiling,
             'retryAuthorized': False, 'paidResponsesApiAllowed': False,
-            'userText': 'Synthetic local fixture: approve exactly six additional starts; retain prior six.',
+            'userText': f'Synthetic local fixture: approve exactly six additional starts; retain prior {qualified_prior}.',
         }
         renewal.update(changes)
         renewal_ref = self.put('work/release-2-16/explicit-native-renewal.json', renewal)
         capacity.update(scope='ALK_CONTROLLED_SELECTED_INVOCATIONS_104_105_AND_EXPLICIT_RENEWAL',
-                        qualifiedPriorStarts=6, qualifiedRemainingCapacity=6,
-                        aggregateSelectedInvocationCeiling=12, renewalAuthorizationRef=renewal_ref)
+                        qualifiedPriorStarts=qualified_prior, qualifiedRemainingCapacity=6,
+                        aggregateSelectedInvocationCeiling=aggregate_ceiling, renewalAuthorizationRef=renewal_ref)
         capacity['historyRefs'] = [r for r in capacity['historyRefs'] if r['path'] != renewal_ref['path']]
         capacity['historyRefs'].append(renewal_ref)
         self.replace_capacity_fixture(capacity)
@@ -296,6 +296,82 @@ class LimitedNativeEvidenceTests(unittest.TestCase):
                     native.read_native_admission(self.root, reader, manifest=self.manifest,
                                                  state=self.state, task=self.task, live=True)
         self.replace_capacity_fixture(capacity)
+        self.admission['maxSelectedCodexInvocations'] = 7
+        self.put(native.ADMISSION_PATH, self.admission)
+        with closing(BoundedReader()) as reader, self.assertRaises(LifecycleError):
+            native.read_native_admission(self.root, reader, manifest=self.manifest,
+                                         state=self.state, task=self.task, live=True)
+
+    def test_second_exact_renewal_retains_twelve_and_charges_all_history(self):
+        previous = self.put('work/release-2-16/previous-twelve.json',
+                            {'localFixtureOnly': True, 'priorStarts': 6, 'newStarts': 6})
+        facts = json.loads((self.root / self.admission['capacityQualificationRef']['path']).read_bytes())
+        facts['historyRefs'].append(previous)
+        self.replace_capacity_fixture(facts)
+        capacity, renewal_ref = self.renewal_capacity_fixture(qualified_prior=12, aggregate_ceiling=18)
+        before = {str(p): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+        with closing(BoundedReader()) as reader:
+            admitted, _ = native.read_native_admission(self.root, reader, manifest=self.manifest,
+                                                       state=self.state, task=self.task, live=True)
+            self.assertEqual(admitted['maxSelectedCodexInvocations'], 6)
+            self.assertTrue(all(ref in reader.snapshot_refs(self.root)
+                                for ref in capacity['historyRefs']))
+            self.assertIn(previous, reader.snapshot_refs(self.root))
+            self.assertIn(renewal_ref, reader.snapshot_refs(self.root))
+            charged = reader.charged_bytes
+        self.assertEqual((capacity['qualifiedPriorStarts'], capacity['qualifiedRemainingCapacity'],
+                          capacity['aggregateSelectedInvocationCeiling']), (12, 6, 18))
+        with closing(BoundedReader(limit=charged - 1)) as reader, self.assertRaises(LifecycleError):
+            native.read_native_admission(self.root, reader, manifest=self.manifest,
+                                         state=self.state, task=self.task, live=True)
+        self.assertEqual(before, {str(p): p.read_bytes() for p in self.root.rglob('*') if p.is_file()})
+
+    def test_second_renewal_rejects_reset_mismatch_and_unapproved_third_grant(self):
+        mutations = [('priorSelectedStarts', 6), ('priorSelectedStarts', True),
+                     ('additionalSelectedStarts', 7), ('additionalSelectedStarts', True),
+                     ('aggregateSelectedStartCeiling', 12), ('aggregateSelectedStartCeiling', 24),
+                     ('authorizationKind', 'GOAL_OR_BUDGET_APPROVAL'), ('approved', 1),
+                     ('retryAuthorized', True), ('paidResponsesApiAllowed', True)]
+        for field, value in mutations:
+            with self.subTest(grantField=field, value=value):
+                self.renewal_capacity_fixture(qualified_prior=12, aggregate_ceiling=18,
+                                              **{field: value})
+                with closing(BoundedReader()) as reader, self.assertRaises(LifecycleError):
+                    native.read_native_admission(self.root, reader, manifest=self.manifest,
+                                                 state=self.state, task=self.task, live=True)
+        for field, value in [('qualifiedPriorStarts', 0), ('qualifiedPriorStarts', 6),
+                             ('qualifiedPriorStarts', 11), ('qualifiedPriorStarts', 13),
+                             ('qualifiedPriorStarts', True), ('qualifiedRemainingCapacity', 7),
+                             ('qualifiedRemainingCapacity', True),
+                             ('aggregateSelectedInvocationCeiling', 12),
+                             ('aggregateSelectedInvocationCeiling', 24)]:
+            with self.subTest(capacityField=field, value=value):
+                capacity, _ = self.renewal_capacity_fixture(qualified_prior=12, aggregate_ceiling=18)
+                self.replace_capacity_fixture(dict(capacity, **{field: value}))
+                with closing(BoundedReader()) as reader, self.assertRaises(LifecycleError):
+                    native.read_native_admission(self.root, reader, manifest=self.manifest,
+                                                 state=self.state, task=self.task, live=True)
+        self.renewal_capacity_fixture(qualified_prior=18, aggregate_ceiling=24)
+        with closing(BoundedReader()) as reader, self.assertRaises(LifecycleError):
+            native.read_native_admission(self.root, reader, manifest=self.manifest,
+                                         state=self.state, task=self.task, live=True)
+
+    def test_second_renewal_requires_current_reviewed_authorization_and_six_only(self):
+        _, renewal_ref = self.renewal_capacity_fixture(qualified_prior=12, aggregate_ceiling=18)
+        (self.root / renewal_ref['path']).write_bytes(b'changed authorization')
+        with closing(BoundedReader()) as reader, self.assertRaises(LifecycleError):
+            native.read_native_admission(self.root, reader, manifest=self.manifest,
+                                         state=self.state, task=self.task, live=True)
+        capacity, _ = self.renewal_capacity_fixture(qualified_prior=12, aggregate_ceiling=18)
+        self.capacity_verified['report']['coveredFiles'] = [self.admission['capacityQualificationRef']]
+        self.admission['capacityReviewRef'] = self.put(self.admission['capacityReviewRef']['path'],
+                                                       self.capacity_verified['report'])
+        self.capacity_verified['reportSha256'] = self.admission['capacityReviewRef']['sha256']
+        self.put(native.ADMISSION_PATH, self.admission)
+        with closing(BoundedReader()) as reader, self.assertRaises(LifecycleError):
+            native.read_native_admission(self.root, reader, manifest=self.manifest,
+                                         state=self.state, task=self.task, live=True)
+        self.renewal_capacity_fixture(qualified_prior=12, aggregate_ceiling=18)
         self.admission['maxSelectedCodexInvocations'] = 7
         self.put(native.ADMISSION_PATH, self.admission)
         with closing(BoundedReader()) as reader, self.assertRaises(LifecycleError):

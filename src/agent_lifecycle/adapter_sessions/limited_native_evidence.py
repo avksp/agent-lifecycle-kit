@@ -144,9 +144,9 @@ def read_native_admission(
             "attemptId": str(task["attempt"]),
             "planDigest": state["planDigest"],
             "lockSha256": admission["lockSha256"],
-            "priorSelectedStarts": 6,
+            "priorSelectedStarts": capacity["qualifiedPriorStarts"],
             "additionalSelectedStarts": 6,
-            "aggregateSelectedStartCeiling": 12,
+            "aggregateSelectedStartCeiling": capacity["aggregateSelectedInvocationCeiling"],
             "retryAuthorized": False,
             "paidResponsesApiAllowed": False,
         }
@@ -157,13 +157,14 @@ def read_native_admission(
             and isinstance(renewal["userText"], str)
             and bool(renewal["userText"].strip())
             and type(capacity["aggregateSelectedInvocationCeiling"]) is int
-            and capacity["aggregateSelectedInvocationCeiling"] == 12
+            and capacity["aggregateSelectedInvocationCeiling"] in (12, 18)
             and type(capacity["qualifiedPriorStarts"]) is int
-            and capacity["qualifiedPriorStarts"] == 6
+            and capacity["qualifiedPriorStarts"] == capacity["aggregateSelectedInvocationCeiling"] - 6
             and renewal_ref in capacity["historyRefs"],
-            "One current explicit six-start renewal retaining six consumed starts required",
+            "Exact six-start renewal retaining all prior starts required",
         )
-        ceiling = 12
+        ceiling = capacity["aggregateSelectedInvocationCeiling"]
+    prior_ceiling = max(6, ceiling - 6)
     expected_scope = (
         "ALK_CONTROLLED_SELECTED_INVOCATIONS_104_105"
         if renewal_ref is None
@@ -174,7 +175,7 @@ def read_native_admission(
         and capacity["scope"] == expected_scope
         and capacity["wholeHostUsageStatus"] == "UNAVAILABLE_NOT_ZERO"
         and type(capacity["qualifiedPriorStarts"]) is int
-        and 0 <= capacity["qualifiedPriorStarts"] <= 6
+        and 0 <= capacity["qualifiedPriorStarts"] <= prior_ceiling
         and type(capacity["qualifiedRemainingCapacity"]) is int
         and capacity["qualifiedRemainingCapacity"] == ceiling - capacity["qualifiedPriorStarts"]
         and admission["maxSelectedCodexInvocations"] <= capacity["qualifiedRemainingCapacity"]
