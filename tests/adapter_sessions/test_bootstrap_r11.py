@@ -30,6 +30,42 @@ from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.adapter_sessions.process import run_process
 
 
+
+def _current_disabled_r11_binding():
+    """Only a verified installed ordinary/disabled plan can retire old positives.
+
+    This Release2.16 fixture has no applicability decision for another route.
+    Unknown, missing, inconsistent or enabled authority fails instead of skips.
+    """
+    from agent_lifecycle.freeze import verify_plan_package_integrity
+    root = Path(__file__).resolve().parents[2]
+    plan = root / 'tasks/release-2-16'
+    manifest_raw = (plan / 'plan.manifest.json').read_bytes()
+    lock_raw = (plan / 'plan.lock.json').read_bytes()
+    manifest, lock = json.loads(manifest_raw), json.loads(lock_raw)
+    verify_plan_package_integrity(manifest, lock, repository_root=root)
+    route = json.loads((plan / 'route-bootstrap-contract.json').read_bytes())
+    delivery = manifest['runtimePolicy']['reviewDelivery']
+    if (manifest['status'] != 'FROZEN' or manifest['package']['id'] != 'release-2-16'
+            or {**delivery, 'ordinaryWorkflowAdmissionContract':
+                'tasks/release-2-16/ordinary-release-contract-r88.md'} != route['auditJoin']['delivery']
+            or delivery.get('mode') != 'ORDINARY_INDEPENDENT_SOURCE_AUDIT'
+            or delivery.get('experimentalR11') != 'DISABLED'):
+        raise AssertionError('No approved test applicability decision for this authority/route')
+    return {'planDigest': canonical_digest(manifest), 'lockSha256': hashlib.sha256(lock_raw).hexdigest()}
+
+
+def _retired_r11_positive(method):
+    """Keep old assertions available; never report a retired positive as PASS."""
+    from functools import wraps
+    @wraps(method)
+    def observed(self):
+        binding = _current_disabled_r11_binding()
+        self.skipTest('NOT_RUN_BY_APPLICABILITY: valid frozen ordinary/R11=DISABLED; '
+                      'legacy positive retained; plan=' + binding['planDigest'] + '; lock=' + binding['lockSha256'])
+    return observed
+
+
 @contextmanager
 def bound_current_invocation_fixture(root, *, task_id="task", operation_id="op",
                                      source_revision="revision", state_path=None,
@@ -833,6 +869,7 @@ def _r11_fresh_metadata_fixture(self,f,c):
 
 
 class R11BootstrapTests(unittest.TestCase):
+    @_retired_r11_positive
     def test_parent_fail_and_all_shards_join_only_after_exact_closure(self) -> None:
         m=bootstrap_r11
         for close_parent in (False,True):
@@ -1027,6 +1064,62 @@ class ImplicitSubmoduleDependencyTests(unittest.TestCase):
 class RoleProjectionContractTests(unittest.TestCase):
     """Role-local proofs only; host/content/funding/composite gates remain separate."""
 
+    def _check_generic_role_schema_values(self):
+        strict = bootstrap_r11._r11_role_schema_matches
+        cases = [
+            (True, {'type': 'integer', 'enum': [1]}, False),
+            (1, {'type': 'integer', 'enum': [1]}, True),
+            (1.0, {'type': 'integer'}, False),
+            ('a' * 64 + '\n', {'type': 'string', 'pattern': '^[0-9a-f]{64}$'}, False),
+            ('a' * 64, {'type': 'string', 'pattern': '^[0-9a-f]{64}$'}, True),
+            ('ё' * 129, {'type': 'string', 'maxLength': 256}, False),
+            ('ё' * 128, {'type': 'string', 'maxLength': 256}, True),
+            ('2028-02-29T12:00:00Z', {'type': 'string', 'format': 'date-time'}, True),
+            ('2026-02-29T12:00:00Z', {'type': 'string', 'format': 'date-time'}, False),
+            ('2028-02-29T12:00:00+03:00', {'type': 'string', 'format': 'date-time'}, False),
+            ('20280229T120000Z', {'type': 'string', 'format': 'date-time'}, False),
+            ({}, {'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': False}, True),
+            ({'extra': 1}, {'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': False}, False),
+            ({}, {'type': 'object', 'properties': {'id': {'type': 'string'}}, 'required': ['id'], 'additionalProperties': False}, False),
+            ('a', {'type': 'string', 'unimplementedConstraint': True}, False),
+        ]
+        for value, schema, expected in cases:
+            with self.subTest(value=value, schema=schema):
+                self.assertIs(strict(value, schema), expected)
+
+    def _check_literal_role_source_fixture(self):
+        # Full literal code survives rendering, including non-ASCII bytes.
+        # Complete AST units and canonical extents are independently checked.
+        path = 'src/agent_lifecycle/role_fixture.py'
+        raw = 'def first():\n    return "ёж"\n\ndef second():\n    return first()\n'.encode()
+        key = ('CURRENT', path)
+        sources = {key: raw}
+        rows = bootstrap_r11._r11_coverage_rows(sources, {key: [(0, len(raw))]})
+        parts = bootstrap_r11._r11_role_source_content(sources, rows)
+        self.assertEqual(parts, [{'extent': rows[0], 'content': raw.decode()}])
+        self.assertEqual(parts[0]['content'].encode(), raw)
+        partial = bootstrap_r11._r11_coverage_rows(sources, {key: [(0, raw.index(b'    return'))]})
+        split_utf8 = bootstrap_r11._r11_coverage_rows(sources, {key: [(0, raw.index('ё'.encode()) + 1)]})
+        bad_hash = copy.deepcopy(rows); bad_hash[0]['sha256'] = '0' * 64
+        foreign = copy.deepcopy(rows); foreign[0]['path'] = 'src/foreign.py'
+        bad_version = copy.deepcopy(rows); bad_version[0]['version'] = []
+        negative = copy.deepcopy(rows); negative[0]['start'] = -1
+        for variant in (rows + rows, partial, split_utf8, bad_hash, foreign, bad_version, negative):
+            with self.subTest(sourceMutation=variant):
+                with self.assertRaises(LifecycleError):
+                    bootstrap_r11._r11_role_source_content(sources, variant)
+        data = {('CURRENT', 'policy/role.json'): b'{"role":1}\n'}
+        partial_data = bootstrap_r11._r11_coverage_rows(data, {next(iter(data)): [(0, 2)]})
+        with self.assertRaises(LifecycleError):
+            bootstrap_r11._r11_role_source_content(data, partial_data)
+
+        return parts, rows
+
+    def test_generic_role_schema_and_literal_extents_remain_unconditional(self):
+        self._check_generic_role_schema_values()
+        self._check_literal_role_source_fixture()
+
+    @_retired_r11_positive
     def test_shared_source_role_exposure_is_exact(self):
         self._check_role_reconstruction()
         # Real locked package and raw schema reads, with isolated copies for
@@ -1056,24 +1149,9 @@ class RoleProjectionContractTests(unittest.TestCase):
             # a validator; bool cannot pass integer1; string caps count UTF-8.
             strict = bootstrap_r11._r11_role_schema_matches
             cases = [
-                (True, {'type': 'integer', 'enum': [1]}, False),
-                (1, {'type': 'integer', 'enum': [1]}, True),
-                (1.0, {'type': 'integer'}, False),
-                ('a' * 64 + '\n', {'type': 'string', 'pattern': '^[0-9a-f]{64}$'}, False),
-                ('a' * 64, {'type': 'string', 'pattern': '^[0-9a-f]{64}$'}, True),
-                ('ё' * 129, {'type': 'string', 'maxLength': 256}, False),
-                ('ё' * 128, {'type': 'string', 'maxLength': 256}, True),
-                ('2028-02-29T12:00:00Z', {'type': 'string', 'format': 'date-time'}, True),
-                ('2026-02-29T12:00:00Z', {'type': 'string', 'format': 'date-time'}, False),
-                ('2028-02-29T12:00:00+03:00', {'type': 'string', 'format': 'date-time'}, False),
-                ('20280229T120000Z', {'type': 'string', 'format': 'date-time'}, False),
                 (720000, schemas['fundingBatch']['properties']['tokenCap'], True),
                 (720001, schemas['fundingBatch']['properties']['tokenCap'], False),
                 (11880001, schemas['fundingBatch']['properties']['tokenCap'], False),
-                ({}, {'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': False}, True),
-                ({'extra': 1}, {'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': False}, False),
-                ({}, {'type': 'object', 'properties': {'id': {'type': 'string'}}, 'required': ['id'], 'additionalProperties': False}, False),
-                ('a', {'type': 'string', 'unimplementedConstraint': True}, False),
                 (['OBSERVER_TERMINAL', 'OBSERVER_TERMINAL'], schemas['roleSubject']['properties']['requiredIntegrationScopes'], False),
                 (None, schemas['roleSubject']['properties']['sharedEvidenceSha256'], True),
                 ([], schemas['reviewerBody']['properties']['closedParentFindingIds'], True),
@@ -1083,30 +1161,7 @@ class RoleProjectionContractTests(unittest.TestCase):
                 with self.subTest(value=value, schema=schema):
                     self.assertIs(strict(value, schema), expected)
 
-            # Full literal code survives rendering, including non-ASCII bytes.
-            # Complete AST units and canonical extents are independently checked.
-            path = 'src/agent_lifecycle/role_fixture.py'
-            raw = 'def first():\n    return "ёж"\n\ndef second():\n    return first()\n'.encode()
-            key = ('CURRENT', path)
-            sources = {key: raw}
-            rows = bootstrap_r11._r11_coverage_rows(sources, {key: [(0, len(raw))]})
-            parts = bootstrap_r11._r11_role_source_content(sources, rows)
-            self.assertEqual(parts, [{'extent': rows[0], 'content': raw.decode()}])
-            self.assertEqual(parts[0]['content'].encode(), raw)
-            partial = bootstrap_r11._r11_coverage_rows(sources, {key: [(0, raw.index(b'    return'))]})
-            split_utf8 = bootstrap_r11._r11_coverage_rows(sources, {key: [(0, raw.index('ё'.encode()) + 1)]})
-            bad_hash = copy.deepcopy(rows); bad_hash[0]['sha256'] = '0' * 64
-            foreign = copy.deepcopy(rows); foreign[0]['path'] = 'src/foreign.py'
-            bad_version = copy.deepcopy(rows); bad_version[0]['version'] = []
-            negative = copy.deepcopy(rows); negative[0]['start'] = -1
-            for variant in (rows + rows, partial, split_utf8, bad_hash, foreign, bad_version, negative):
-                with self.subTest(sourceMutation=variant):
-                    with self.assertRaises(LifecycleError):
-                        bootstrap_r11._r11_role_source_content(sources, variant)
-            data = {('CURRENT', 'policy/role.json'): b'{"role":1}\n'}
-            partial_data = bootstrap_r11._r11_coverage_rows(data, {next(iter(data)): [(0, 2)]})
-            with self.assertRaises(LifecycleError):
-                bootstrap_r11._r11_role_source_content(data, partial_data)
+            parts, rows = self._check_literal_role_source_fixture()
 
             subject = {'schemaVersion': 'alk-r11-role-subject.v1', 'reviewId': 'review-local',
                        'baseSha256': 'a' * 64, 'roleInventorySha256': 'b' * 64,
@@ -1261,6 +1316,67 @@ class RoleProjectionContractTests(unittest.TestCase):
         prefix = 'src/agent_lifecycle/adapter_sessions/'
         core = {('CURRENT', prefix + name): (root / (prefix + name)).read_bytes() for name in
                 ('bootstrap_r11.py', 'process.py', 'codex_exact_prompt.py', 'launch_preflight.py')}
+        with self.assertRaises(LifecycleError) as refused:
+            bootstrap_r11._r11_required_interaction_scopes(core)
+        self.assertEqual(refused.exception.code, 'r11-shard-interaction')
+        # Disclosed archival monolith, AST data only: these complete provider
+        # bodies retain their bytes but use a conceptual historical namespace.
+        # This does not prove current source closure; it is never executed.
+        import inspect
+        import importlib
+        refs = []
+        for namespace_file in ('bootstrap_r11.py', 'process.py', 'codex_exact_prompt.py', 'launch_preflight.py'):
+            namespace = importlib.import_module('agent_lifecycle.adapter_sessions.' + namespace_file[:-3])
+            chosen = {}
+            for alias, value in vars(namespace).items():
+                provider_name = getattr(value, '__module__', '')
+                name = getattr(value, '__name__', '')
+                if not (inspect.isfunction(value) or inspect.isclass(value)) or not provider_name.startswith('agent_lifecycle.'):
+                    continue
+                # Resolve duplicate imported names through this namespace's
+                # actual final binding, never by an oracle-generated stub.
+                if name in vars(namespace) and vars(namespace)[name] is not value:
+                    continue
+                if name in chosen:
+                    continue
+                provider = Path(inspect.getsourcefile(value)).resolve()
+                if not provider.is_relative_to(root / 'src'):
+                    raise AssertionError('Conceptual fixture source escaped this checkout')
+                unit_lines, first = inspect.getsourcelines(value)
+                raw = ''.join(unit_lines).encode()
+                actual = b''.join(provider.read_bytes().splitlines(keepends=True)[first-1:first-1+len(unit_lines)])
+                self.assertEqual(raw, actual)
+                chosen[name] = raw
+                refs.append({'namespace': namespace_file, 'symbol': name,
+                             'path': provider.relative_to(root).as_posix(), 'firstLine': first,
+                             'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()})
+            # Include complete private provider units too: ordinary facades
+            # intentionally do not re-export every former monolithic helper.
+            import ast
+            patterns = {'bootstrap_r11.py': ['source_review_*.py'],
+                        'process.py': ['process*.py'],
+                        'codex_exact_prompt.py': ['codex_*.py', 'ordinary_*.py'],
+                        'launch_preflight.py': ['launch*.py', 'managed_process.py']}
+            providers = {p for pattern in patterns[namespace_file] for p in (root / prefix).glob(pattern)}
+            if namespace_file == 'bootstrap_r11.py':
+                providers.update((root / 'src/agent_lifecycle/accounting').glob('declared_ledger*.py'))
+            for provider in sorted(providers):
+                raw_lines = provider.read_bytes().splitlines(keepends=True)
+                for unit in ast.parse(b''.join(raw_lines)).body:
+                    if not isinstance(unit, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        continue
+                    if unit.name in chosen:
+                        continue
+                    first = min([unit.lineno] + [d.lineno for d in unit.decorator_list])
+                    raw = b''.join(raw_lines[first-1:unit.end_lineno])
+                    chosen[unit.name] = raw
+                    refs.append({'namespace': namespace_file, 'symbol': unit.name,
+                                 'path': provider.relative_to(root).as_posix(), 'firstLine': first,
+                                 'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()})
+            core[('CURRENT', prefix + namespace_file)] = b'\n\n'.join(chosen.values())
+        self._legacy_ast_provenance = {'kind': 'CONCEPTUAL_ARCHIVAL_NAMESPACE_COMPLETE_AST_UNITS_ONLY',
+                                       'importedOrExecuted': False, 'currentSourceClosureProof': False,
+                                       'providerUnitRefs': refs}
         a, b = ('CURRENT', 'src/caller_fixture.py'), ('CURRENT', 'src/target_fixture.py')
         old = ('PARENT', 'src/caller_fixture.py')
         document = ('CURRENT', 'src/fixture.txt')
@@ -1653,6 +1769,7 @@ class RoleProjectionContractTests(unittest.TestCase):
                     with self.subTest(fresh='late-process-receipt-refuses'),self.assertRaises(LifecycleError):m.verify_source_review_fresh_gate(root,audit=audit,intent_path=intent_path)
                 finally:result.write_bytes(old)
 
+    @_retired_r11_positive
     def test_fresh_gate_reopens_shared_and_every_source_thread(self):
         self._check_completed_role_assignment(section='fresh')
         self._check_completed_role_assignment(section='fresh-worker')
@@ -1890,15 +2007,18 @@ class RoleProjectionContractTests(unittest.TestCase):
             self.assertLessEqual(count[0],262144)
         self.assertEqual(body.read_bytes(),canonical_bytes({'fixture':'preserved'}))
 
+    @_retired_r11_positive
     def test_composite_v6_exact_roles_and_no_native_promotion(self):
         self._check_completed_role_assignment(section='composite')
         self._check_composite_inventory_limit()
 
+    @_retired_r11_positive
     def test_parent_closure_requires_both_designated_integration_roles(self):
         self._check_completed_role_assignment(section='closure')
         self._check_completed_role_assignment(section='findings')
         self._check_completed_role_assignment(section='eligibility')
 
+    @_retired_r11_positive
     def test_role_hash_dag_and_realized_assignment_reconstruct(self):
         self._check_completed_role_assignment(section='assignment')
         # Ancestor/request cases retain their independent component boundaries.
@@ -1970,6 +2090,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         self.assertEqual(base['limits']['perRoleProtectedCloseoutTokens'], 100000)
         self._check_role_request_reservation()
 
+    @_retired_r11_positive
     def test_shared_receipt_required_before_source_dispatch(self):
         self._check_accepted_shared()
         self._check_source_reservation_predecessor()
@@ -2030,6 +2151,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         with self.subTest(refusal='changedLiteral'), self.assertRaises(LifecycleError):
             build(content={**source, 'sourceContent': []})
 
+    @_retired_r11_positive
     def test_complete_envelope_limits_refuse_before_model_start(self):
         self._check_role_inventory_preparation()
         self._check_role_source_assembly()
@@ -2417,10 +2539,13 @@ class RoleProjectionContractTests(unittest.TestCase):
                     with self.assertRaises(LifecycleError): build()
                 finally: private(path,saved)
 
-    def test_funding_batch_preserves_prefixes_and_all_unknown_holds(self):
+    @_retired_r11_positive
+    def test_legacy_role_funding_contract_primitives(self):
         self._check_v6_cost_primitives_after_retirement()
         self._check_role_cost_prefixes()
         self._check_global_role_funding()
+
+    def test_funding_batch_preserves_prefixes_and_all_unknown_holds(self):
         # Real writer/archive/private origin reader in an isolated Git primary.
         # This covers coordinator-prefix ancestry; role batch admission, reuse
         # and settlement remain separate obligations of this planned case.
@@ -2434,7 +2559,18 @@ class RoleProjectionContractTests(unittest.TestCase):
             seed_path.write_bytes((primary / bootstrap_r11._R11_COORDINATOR_SEED).read_bytes())
             seed = bootstrap_r11.advance_coordinator_cost_head(root, source_path=bootstrap_r11._R11_COORDINATOR_SEED)
             review_id = 'coordinator-prefix-fixture'
-            bootstrap_r11.import_source_review_opening(root, review_id=review_id)
+            # The public experimental importer must remain refused. Seed
+            # immutable historical opening DATA only, then exercise the real
+            # current coordinator writer, ancestry and private origin reader.
+            with self.assertRaises(LifecycleError) as disabled:
+                bootstrap_r11.import_source_review_opening(root, review_id=review_id)
+            self.assertEqual(disabled.exception.code, 'r11-experimental-disabled')
+            directory = bootstrap_r11._r11_review_directory(root, review_id)
+            self.assertFalse(directory.exists())
+            receipt = {key: seed[key] for key in ('schemaVersion', 'status', 'primaryCheckout', 'head',
+                'headSha256', 'measurementQualified', 'wholeHistoryComplete', 'hardCapClaim')}
+            _write_exclusive(directory / 'cost-opening.json', seed['sourceRaw'], root=root)
+            _write_exclusive(directory / 'cost-opening-origin.json', canonical_bytes(receipt), root=root)
             opening = bootstrap_r11.read_source_review_opening_origin(root, review_id=review_id, role_delivery=True)
             anchor = seed['headSha256']
             head_path = root / bootstrap_r11._R11_COORDINATOR_HEAD
@@ -2554,7 +2690,8 @@ class RoleProjectionContractTests(unittest.TestCase):
                         bootstrap_r11.read_source_review_opening_origin(root, review_id=review_id, role_delivery=True)
                 finally: receipt.write_bytes(saved)
             with self.subTest(prefix='archive-stability-reread-required'):
-                original_read = bootstrap_r11.read_authority_bytes;seen = 0
+                from agent_lifecycle.accounting import declared_ledger as coordinator_ledger
+                original_read = coordinator_ledger.read_authority_bytes;seen = 0
                 def changing(path, **kw):
                     nonlocal seen
                     if path == archived:
@@ -2562,7 +2699,7 @@ class RoleProjectionContractTests(unittest.TestCase):
                         if seen == 2: archived.write_bytes(archived_raw+b' ')
                     return original_read(path, **kw)
                 try:
-                    with patch.object(bootstrap_r11, 'read_authority_bytes', side_effect=changing), self.assertRaises(LifecycleError): read()
+                    with patch.object(coordinator_ledger, 'read_authority_bytes', side_effect=changing), self.assertRaises(LifecycleError): read()
                 finally: archived.write_bytes(archived_raw)
             self.assertEqual(bootstrap_r11.read_coordinator_cost_head(root), final)
             self.assertEqual(bootstrap_r11.read_source_review_opening_origin(root, review_id=review_id, role_delivery=True), opening)
@@ -3589,6 +3726,7 @@ class RoleProjectionContractTests(unittest.TestCase):
                  'binarySha256':'d'*64,'transportSourceSha256':'e'*64}
         return root,authority,base,inventory,funding,shared,source,directory,binding
 
+    @_retired_r11_positive
     def test_every_role_raw_transport_and_terminal_joins(self):
         self._check_v6_producer_after_retirement()
         self._check_v6_rpc_after_retirement()
@@ -3760,6 +3898,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         self._check_role_rpc_sender()
 
 
+    @_retired_r11_positive
     def test_role_failure_preserves_successful_evidence_without_retry(self):
         self._check_retired_v5_auxiliaries()
         self._check_retired_v5_runtime()

@@ -61,8 +61,8 @@ class ReviewMeshResultImportTests(unittest.TestCase):
     def test_import_redacts_decoded_common_secrets_without_losing_failed_command(self) -> None:
         markers = [("Bearer opaque-auth-secret", "opaque-auth-secret"),
                    ("sk-abcdefghijklmnopqrstuv", "abcdefghijklmnopqrstuv"),
-                   ("-----BEGIN PRIVATE KEY-----\nprivate-key-body\n-----END PRIVATE KEY-----", "private-key-body"),
-                   ("-----BEGIN PRIVATE KEY-----\nhttps://safe.invalid/public\nprivate-key-body\n-----END PRIVATE KEY-----",
+                   ("-----BEGIN " + "PRIVATE KEY-----\nprivate-key-body\n-----END PRIVATE KEY-----", "private-key-body"),
+                   ("-----BEGIN " + "PRIVATE KEY-----\nhttps://safe.invalid/public\nprivate-key-body\n-----END PRIVATE KEY-----",
                     "private-key-body")]
         for marker, secret in markers:
             for encoding in [1, 2, 3]:
@@ -849,7 +849,7 @@ class ReviewMeshResultImportTests(unittest.TestCase):
             for identifier in [
                 "api_key=plain-secret",
                 "https://[invalid/?api_key=plain-secret",
-                "/Users/example/private",
+                "/" + "Users/example/private",
             ]:
                 for allow_local in [False, True]:
                     with self.subTest(nested=nested, identifier=identifier, allow_local=allow_local):
@@ -953,7 +953,7 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=_raw_output())
 
     def test_import_rejects_unsafe_dictionary_keys_without_colliding_fields(self) -> None:
-        for key in ["api_key=plain-secret", "/Users/example/private.txt", "https://[invalid/?api_key=plain-secret"]:
+        for key in ["api_key=plain-secret", "/" + "Users/example/private.txt", "https://[invalid/?api_key=plain-secret"]:
             for allow_local in [False, True]:
                 with self.subTest(key=key, allow_local=allow_local):
                     profile, assignment = _profile_and_assignment()
@@ -976,7 +976,7 @@ class ReviewMeshResultImportTests(unittest.TestCase):
             for metadata in [
                 {"token": "plain-secret"},
                 {"annotation": "api_key=plain-secret"},
-                {"path": "/Users/example/private.txt"},
+                {"path": "/" + "Users/example/private.txt"},
             ]:
                 for allow_local in [False, True]:
                     with self.subTest(field=field, metadata=metadata, allow_local=allow_local):

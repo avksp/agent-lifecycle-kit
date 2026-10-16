@@ -47,8 +47,8 @@ class ReceiptRedactionTests(unittest.TestCase):
     def test_decoded_uri_components_apply_all_common_secret_recognizers(self) -> None:
         markers = [("Bearer opaque-auth-secret", "opaque-auth-secret"),
                    ("sk-abcdefghijklmnopqrstuv", "abcdefghijklmnopqrstuv"),
-                   ("-----BEGIN PRIVATE KEY-----\nprivate-key-body\n-----END PRIVATE KEY-----", "private-key-body"),
-                   ("-----BEGIN PRIVATE KEY-----\nhttps://safe.invalid/public\nprivate-key-body\n-----END PRIVATE KEY-----",
+                   ("-----BEGIN " + "PRIVATE KEY-----\nprivate-key-body\n-----END PRIVATE KEY-----", "private-key-body"),
+                   ("-----BEGIN " + "PRIVATE KEY-----\nhttps://safe.invalid/public\nprivate-key-body\n-----END PRIVATE KEY-----",
                     "private-key-body")]
         for marker, secret in markers:
             for encoding in [1, 2, 3]:

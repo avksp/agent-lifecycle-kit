@@ -27,7 +27,7 @@
         ]
       },
       "name": "Route identity, stale/forged qualification",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Current exact OS/source/config/Journal/root/clock route is unsupported; stale, missing or task-selected positive qualification denies.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -77,7 +77,7 @@
         ]
       },
       "name": "Direct adoption refusal",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Direct CLI and Python adopt_run attempts deny before Journal/legacy/outbox write; old scope/history stays byte-identical.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -128,7 +128,7 @@
         ]
       },
       "name": "Root and epoch-zero refusal",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Owner-root/issuer/epoch-0 publication denies before key, pin, authority or Journal mutation.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -178,7 +178,7 @@
         ]
       },
       "name": "Closing activation refusal",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Protected activation denies before state/Journal/outbox write or process start; no READY/grant is claimed.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -229,7 +229,7 @@
         ]
       },
       "name": "Old deadline remains",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Old execution deadline and evidence freshness/failure remain; refusal never refreshes or erases them.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -280,7 +280,7 @@
         ]
       },
       "name": "Malformed protected request",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Malformed, unauthorized or mismatched protected request denies before any relevant mutation.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -331,7 +331,7 @@
         ]
       },
       "name": "Replay of denied request",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Same or conflicting denied request after retry/restart remains denied with no nonce, grant or policy effect.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -381,7 +381,7 @@
         ]
       },
       "name": "Unqualified route guard",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Unknown/unqualified route refuses even with apparent time/tokens; no silent ordinary downgrade.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -432,7 +432,7 @@
         ]
       },
       "name": "No protected allowance",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "No closing allocation/prospective cap is issued; original cap, reservations, costs and overrun persist.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -484,7 +484,7 @@
         ]
       },
       "name": "Unknown financial history",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Unknown/incomplete cumulative history blocks protected admission while legitimate late actual settlement remains recordable.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -536,7 +536,7 @@
         ]
       },
       "name": "Old evidence and late settlement",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Accepted evidence persists; no fabricated protected proof; actual late expense/violation records once under original scope.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -587,7 +587,7 @@
         ]
       },
       "name": "Expiry during requested proof",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Expiry during a denied protected request does not start work; actual late facts persist and remain blocked for new work.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -638,7 +638,7 @@
         ]
       },
       "name": "Other finalization guards",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Original unrelated finalization failures stay blocking; route refusal does not suppress them.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -688,7 +688,7 @@
         ]
       },
       "name": "Crash/recovery of denial",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Restart/replay of denied request cannot recover a nonexistent grant, window, reservation or dispatch.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -738,7 +738,7 @@
         ]
       },
       "name": "No protected finalization",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Protected COMPLETE outcome cannot be claimed; ordinary authorized finalization remains separately eligible.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -789,7 +789,7 @@
         ]
       },
       "name": "No manual fallback",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "No fabricated task, manual state edit or silent ordinary fallback follows protected denial.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -844,7 +844,7 @@
         ]
       },
       "name": "All dispatch entry points",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Direct CLI/Python, continuation, managedTask preflight and configured closing consumers deny protected launch before host/process start; zero dispatch.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -895,7 +895,7 @@
       },
       "mustNotCountProtectedDenialAsOrdinaryPass": true,
       "name": "Ordinary route preservation",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Guarded ORDINARY_LIMITED task may proceed under exact H04/A5/financial/ownership/deadline profile; stronger protected request cannot downgrade.",
       "owner": "WS216-02",
       "positiveOrdinaryObservationRequired": true,
@@ -952,7 +952,7 @@
       },
       "mustNotCountUnrelatedPhaseOrMissingFileRefusal": true,
       "name": "Final consumer applicability",
-      "nativeCallBindingRef": "/Volumes/Work/Work/1.My/agent-lifecycle-kit/work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
+      "nativeCallBindingRef": "work/release-2-16/enforcement-decision/r1093-native-case-input-preparation/SEVEN-NATIVE-ENTRYPOINT-INPUT-BINDINGS.json",
       "oracle": "Final audit rejects absent, stale, wrong-route/claim/source or worker-selected applicability and missing negative receipts; positives stay NOT_RUN.",
       "owner": "WS216-02",
       "proofKind": "NATIVE_EXACT_SOURCE",
@@ -1418,37 +1418,37 @@
   "sourceContractRefs": [
     {
       "bytes": 152725,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/plan.manifest.json",
+      "path": "tasks/release-2-16/plan.manifest.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "6e5e0194715f2dfd1922ea4569af1b14bcb9ef22ceaa78af9632427fc1fc60dc"
     },
     {
       "bytes": 19870,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/accounting-and-recovery-cases.json",
+      "path": "tasks/release-2-16/accounting-and-recovery-cases.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "9dab0dc17a6889df8d9af22aea670fdc90025a955e6037403b53fc6b6bef9b62"
     },
     {
       "bytes": 8834,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/cf01-a5-capability-scope.json",
+      "path": "tasks/release-2-16/cf01-a5-capability-scope.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "afc8c917e47598f81e579ae9fdd851753f45202fa612351a987a1d936a61817d"
     },
     {
       "bytes": 76468,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/cf01-a5-implementation-contract.json",
+      "path": "tasks/release-2-16/cf01-a5-implementation-contract.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "b4720a9eb297d9d84c59040fd80df3aca05a836489228a745e4bf478a8c536b7"
     },
     {
       "bytes": 23584,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/closing-write-inventory.json",
+      "path": "tasks/release-2-16/closing-write-inventory.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "d8091e1a2db1a17140d6741549653d21d093f2490c5aa971f58fdb5e6fe4dacd"
     },
     {
       "bytes": 16893,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/cf-d-window-request-contract.json",
+      "path": "tasks/release-2-16/cf-d-window-request-contract.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "1eacd18002f6daba4755a8f978e6145eef76ea7d3ac9b4c9f0279cad206e75c8"
     }

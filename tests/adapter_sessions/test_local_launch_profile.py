@@ -345,6 +345,7 @@ def _prepared_launch(root: Path) -> dict:
 def _exact_launch(context, prepared, deadline) -> dict:
     actual, args, invocation = _bound_launch_context(context, context.root)
     prepared['taskId'] = args['task_id']
+    prepared['operationId'] = args['operation_id']
     inputs = {k:v for k,v in args.items() if k in {'state_path','manifest_path','lock_path','task_id','operation_id','source_revision'}}
     return launch_preflight._run_exact_managed_process(actual, prepared=prepared,
         audit={'auditSha256': 'd' * 64}, session_id=args['session_id'], risk_profile=args['risk_profile'],

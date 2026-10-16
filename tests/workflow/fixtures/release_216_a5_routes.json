@@ -370,37 +370,37 @@
   "sourceContractRefs": [
     {
       "bytes": 152725,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/plan.manifest.json",
+      "path": "tasks/release-2-16/plan.manifest.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "6e5e0194715f2dfd1922ea4569af1b14bcb9ef22ceaa78af9632427fc1fc60dc"
     },
     {
       "bytes": 19870,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/accounting-and-recovery-cases.json",
+      "path": "tasks/release-2-16/accounting-and-recovery-cases.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "9dab0dc17a6889df8d9af22aea670fdc90025a955e6037403b53fc6b6bef9b62"
     },
     {
       "bytes": 8834,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/cf01-a5-capability-scope.json",
+      "path": "tasks/release-2-16/cf01-a5-capability-scope.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "afc8c917e47598f81e579ae9fdd851753f45202fa612351a987a1d936a61817d"
     },
     {
       "bytes": 76468,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/cf01-a5-implementation-contract.json",
+      "path": "tasks/release-2-16/cf01-a5-implementation-contract.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "b4720a9eb297d9d84c59040fd80df3aca05a836489228a745e4bf478a8c536b7"
     },
     {
       "bytes": 23584,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/closing-write-inventory.json",
+      "path": "tasks/release-2-16/closing-write-inventory.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "d8091e1a2db1a17140d6741549653d21d093f2490c5aa971f58fdb5e6fe4dacd"
     },
     {
       "bytes": 16893,
-      "path": "/Volumes/Work/Work/1.My/agent-lifecycle-kit-r216-main94/tasks/release-2-16/cf-d-window-request-contract.json",
+      "path": "tasks/release-2-16/cf-d-window-request-contract.json",
       "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
       "sha256": "1eacd18002f6daba4755a8f978e6145eef76ea7d3ac9b4c9f0279cad206e75c8"
     }

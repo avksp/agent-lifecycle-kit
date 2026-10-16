@@ -20,7 +20,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-import jsonschema
+from agent_lifecycle.accounting.profile_schema import matches_profile_schema
 
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
@@ -331,17 +331,12 @@ def _candidate_sources(reader: BoundedReader, root: Path) -> list[dict]:
 
 
 def _profile_schema(value: dict, definitions: dict, name: str) -> None:
-    canonical(value)  # Contract numeric values are integers, never floats/bools as amounts.
-    validator = jsonschema.Draft202012Validator({"$defs": definitions, "$ref": "#/$defs/" + name})
-    if next(validator.iter_errors(value), None) is not None:
+    if not matches_profile_schema(value, definitions, name):
         _fail("accounting-qualification-schema-invalid")
 
 
-def _read_source_lifecycle_qualification(
-    reader: BoundedReader, repo_root: Path, profiles_root: Path, adapter_id: str, *, final: bool,
-) -> dict:
-    prefix = profiles_root.absolute().relative_to(repo_root.absolute()).as_posix()
-    normalize_repo_path(prefix, label="profiles root")
+def _source_qualification_authority(reader: BoundedReader, repo_root: Path) -> tuple[dict, dict, dict, dict]:
+    """Read and verify the existing frozen H04 authorities before profile data."""
     authority_refs = {}
     authority = {}
     for name in ("plan.manifest.json", "plan.lock.json", "h04-artifact-contracts.json", "h04-adapter-profile-cases.json"):
@@ -362,6 +357,15 @@ def _read_source_lifecycle_qualification(
         pinned = [row for row in lock["entries"] if row.get("path") == ref["path"]]
         if pinned != [ref]:
             _fail("accounting-frozen-authority-mismatch")
+    return authority_refs, manifest, contracts, expected
+
+
+def _read_source_lifecycle_qualification(
+    reader: BoundedReader, repo_root: Path, profiles_root: Path, adapter_id: str, *, final: bool,
+) -> dict:
+    prefix = profiles_root.absolute().relative_to(repo_root.absolute()).as_posix()
+    normalize_repo_path(prefix, label="profiles root")
+    authority_refs, manifest, contracts, expected = _source_qualification_authority(reader, repo_root)
     entries = expected["expectedBindings"]["entries"]
     selected = [entry for entry in entries if entry["adapterId"] == adapter_id]
     if len(selected) != 1:

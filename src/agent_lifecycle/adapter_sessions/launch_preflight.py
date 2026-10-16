@@ -5,20 +5,17 @@ from __future__ import annotations
 import hashlib
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.adapter_sessions.bootstrap_r11 import (
     claim_attempt_start,
     publish_attempt_result,
-    record_uncertain_attempt,
     require_positive_attempt_result,
+    record_uncertain_attempt,
 )
 from agent_lifecycle.adapter_sessions.codex_exact_prompt import require_bootstrap_audit
-from agent_lifecycle.adapter_sessions.codex_prompt_preparation import CLAIM as CODEX_SCOPED_CLAIM
-from agent_lifecycle.adapter_sessions.codex_prompt_preparation import ROUTE_ID as CODEX_EXACT_ROUTE
 from agent_lifecycle.adapter_sessions.codex_prompt_preparation import cleanup_prestart_raw, prepare_exact_prompt
 from agent_lifecycle.adapter_sessions.contracts import (
     build_launch_receipt,
@@ -53,6 +50,12 @@ from agent_lifecycle.adapter_sessions.local_launch_profile import (
 from agent_lifecycle.adapter_sessions.ordinary_audit import verify_fresh_task_gate
 from agent_lifecycle.adapter_sessions.planning_launch import run_planning_launch
 from agent_lifecycle.adapter_sessions.process import run_process
+from agent_lifecycle.adapter_sessions.managed_process import (
+    CODEX_SCOPED_CLAIM as CODEX_SCOPED_CLAIM, CODEX_EXACT_ROUTE as CODEX_EXACT_ROUTE,
+    _LaunchContext as _LaunchContext, _original_attempt_deadline as _managed_original_attempt_deadline,
+    _optional_receipt_sha as _optional_receipt_sha, _requires_exact_route,
+    _finish_exact_process, _finish_managed_process, _cleanup_owned_no_start,
+)
 from agent_lifecycle.adapter_sessions.qualification import (
     build_qualification_receipt,
     require_planning_qualification_receipt,
@@ -66,18 +69,8 @@ from agent_lifecycle.workflow.risk_execution_gate import validate_task_risk_prof
 from agent_lifecycle.workflow.closing_window import PROTECTED_OPERATOR_CLAIM, operator_claim_refusal
 
 
-@dataclass(frozen=True)
-class _LaunchContext:
-    root: Path
-    relative: Path
-    profile: dict[str, Any]
-    profile_digest: str
-    profile_adapter: str
-    env: dict[str, str]
-    env_receipt: dict[str, Any]
-    timeout_seconds: float
-    shipped_digest: str | None
-    runner: Callable[..., dict[str, Any]]
+def _original_attempt_deadline(state: dict[str, Any], task: dict[str, Any]) -> int:
+    return _managed_original_attempt_deadline(state, task, clock=datetime)
 
 
 def launch_from_local_profile(
@@ -422,26 +415,6 @@ def _no_start_cleanup_blockers(
     return blockers
 
 
-def _original_attempt_deadline(state: dict[str, Any], task: dict[str, Any]) -> int:
-    """Bridge the earlier immutable UTC deadline once, conservatively, before preparation."""
-    mono = time.monotonic_ns()
-    now = datetime.now(timezone.utc)
-    try:
-        deadlines = [datetime.fromisoformat(value.replace("Z", "+00:00")) for value in
-                     (state.get("runDeadlineAt"), task.get("attemptDeadlineAt"))
-                     if isinstance(value, str)]
-        if len(deadlines) != 2 or any(value.utcoffset() is None or value.utcoffset().total_seconds() != 0
-                                      for value in deadlines):
-            raise ValueError("original UTC deadlines required")
-        remaining = min(deadlines) - now
-        ns = ((remaining.days * 86_400 + remaining.seconds) * 1_000_000 + remaining.microseconds) * 1_000
-        if ns <= 0:
-            raise ValueError("original deadline expired")
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise LifecycleError("codex-exact-deadline-unavailable", "original run/attempt deadline is missing or expired") from exc
-    return mono + ns
-
-
 class _ExactPrestartRefusal(dict):
     """Internal result: context refused before touching prepared authority."""
 
@@ -507,37 +480,12 @@ def _managed_task(
     audit: dict[str, Any] | None = None
     absolute_deadline_monotonic_ns: int | None = None
     try:
-        manifest = read_json_object(manifest_path, label="frozen plan manifest")
-        state = read_json_object(state_path, label="workflow state")
-        lock = read_json_object(lock_path, label="plan lock")
-        verify_plan_package_integrity(manifest, lock, repository_root=context.root)
-        if manifest.get("status") != "FROZEN":
-            raise LifecycleError("local-launch-frozen-plan-required", "local launch requires a frozen plan")
-        task = _state_task(state, task_id)
-        a5_inputs = {"state_path": state_path, "manifest_path": manifest_path, "lock_path": lock_path,
-                     "task_id": task_id, "operation_id": operation_id, "source_revision": source_revision}
-        current = current_managed_invocation(
-            project_root=context.root, adapter_id=context.profile_adapter, session_id=session_id,
-            request=immutable_input_request, profile=context.profile, profile_digest=context.profile_digest,
-            risk_profile=risk_profile, **a5_inputs,
-        )
-        validate_current_invocation(immutable_input_context if immutable_input_context is not None else current,
-                                    immutable_input_request, current_context=current)
-        validate_task_risk_profile(
-            state, task, risk_profile, operation_id=operation_id, source_revision=source_revision
-        )
-        exact_required = (
-            manifest.get("package", {}).get("id") == "release-2-16"
-            and isinstance(manifest.get("runtimePolicy", {}).get("preExecutionBootstrap"), dict)
-            and context.profile_adapter == "codex"
-        )
-        if exact_required or any(value is not None for value in (route_id, requested_claim, input_request)):
-            if context.profile_adapter != "codex":
-                raise LifecycleError("codex-exact-adapter-mismatch", "exact prompt route requires Codex")
-            if route_id != CODEX_EXACT_ROUTE or requested_claim != CODEX_SCOPED_CLAIM or input_request is None:
-                raise LifecycleError("codex-exact-route-required", "explicit limited route request is required")
-            if context.runner is not run_process:
-                raise LifecycleError("codex-exact-runner-unobserved", "selected runner cannot prove child-start boundary")
+        manifest, state, task, current, a5_inputs = _managed_authority(
+            context, session_id=session_id, state_path=state_path, manifest_path=manifest_path,
+            lock_path=lock_path, task_id=task_id, operation_id=operation_id,
+            source_revision=source_revision, risk_profile=risk_profile,
+            immutable_input_request=immutable_input_request, immutable_input_context=immutable_input_context)
+        if _requires_exact_route(context, manifest, route_id, requested_claim, input_request, run_process=run_process):
             absolute_deadline_monotonic_ns = _original_attempt_deadline(state, task)
             prepared = prepare_exact_prompt(
                 project_root=context.root, input_request=input_request,
@@ -564,7 +512,7 @@ def _managed_task(
         exc = caught if isinstance(caught, LifecycleError) else LifecycleError(
             "codex-exact-preflight-unavailable", "exact route preflight could not read its evidence")
         if exc.code == "codex-exact-start-uncertain":
-            raise exc
+            raise
         if input_request is not None:
             try:
                 if prepared is not None:
@@ -600,16 +548,8 @@ def _managed_task(
         if isinstance(result, _ExactPrestartRefusal):
             # This owner created and validated prepared before calling the sink.
             # An unbound direct sink call cannot trigger this cleanup boundary.
-            try:
-                dispatch = prepared["startReceiptPath"].with_name("attempt-result-dispatched.json")
-                if dispatch.exists() or dispatch.is_symlink():
-                    raise LifecycleError("codex-exact-start-uncertain", "existing dispatch forbids no-start cleanup")
-                cleanup_prestart_raw(context.root, run_id=prepared["runId"], task_id=prepared["taskId"],
-                    attempt_id=prepared["attemptId"], operation_id=prepared.get("operationId"), staging_source=None, proven_no_start=True)
-                record_proven_no_start(context.root, prepared["startReceiptPath"])
-            except (LifecycleError, OSError, ValueError) as exc:
-                raise LifecycleError("codex-exact-start-uncertain", "owned no-start cleanup could not be persisted",
-                    {"costStatus": "UNAVAILABLE", "retryAuthorized": False}) from exc
+            _cleanup_owned_no_start(context, prepared, cleanup_prestart_raw=cleanup_prestart_raw,
+                record_proven_no_start=record_proven_no_start)
             return dict(result)
         return result
     return _run_managed_process(
@@ -672,7 +612,7 @@ def _run_exact_managed_process(
         exc = caught if isinstance(caught, LifecycleError) else LifecycleError(
             "codex-exact-raw-inventory-stale", "prelaunch source recheck failed")
         if exc.code == "codex-exact-start-uncertain":
-            raise exc
+            raise
         try:
             dispatch = prepared["startReceiptPath"].with_name("attempt-result-dispatched.json")
             if dispatch.exists() or dispatch.is_symlink():
@@ -686,7 +626,7 @@ def _run_exact_managed_process(
             exc = cleanup_exc if isinstance(cleanup_exc, LifecycleError) else LifecycleError(
                 "codex-exact-start-uncertain", "preflight no-start proof could not be persisted")
         if exc.code == "codex-exact-start-uncertain":
-            raise exc
+            raise exc from caught
         return _blocked_local_launch(
             adapter_id="codex", session_id=session_id,
             timeout_seconds=context.timeout_seconds, env_receipt=context.env_receipt,
@@ -713,102 +653,13 @@ def _run_exact_managed_process(
             raise LifecycleError("codex-exact-start-uncertain",
                                  "runner failed after possible child start; raw input and unknown cost retained",
                                  {"costStatus": "UNAVAILABLE", "retryAuthorized": False}) from exc
-    # Hash and expose only this closed observation. Full stdout/stderr stay
-    # internal to the runner; only its bounded redacted tails leave this sink.
-    result = {key: result[key] for key in (
-        "status", "exitCode", "timedOut", "cancelled", "processStarted",
-        "inputBytes", "outputBytes", "outputLimitExceeded", "stdoutTail", "stderrTail",
-        "stdoutRedacted", "stderrRedacted", "cleanup", "processReceipt", "blockers",
-        "deadlineMonotonicNs", "observerDisposition", "startObservation", "inputObservation",
-        "absoluteDeadlineMonotonicNs", "startedMonotonicNs",
-    ) if key in result}
-    started = result["processStarted"]
-    terminal = None
-    if not started:
-        try:
-            cleanup_prestart_raw(
-                context.root, run_id=prepared["runId"], task_id=prepared["taskId"],
-                attempt_id=prepared["attemptId"], operation_id=prepared.get("operationId"), staging_source=None,
-                proven_no_start=True)
-            record_proven_no_start(context.root, prepared["startReceiptPath"])
-        except LifecycleError as exc:
-            if exc.code == "codex-exact-start-uncertain":
-                raise
-            result = {**result, "status":"BLOCKED",
-                      "blockers":[*result.get("blockers",[]), {"code":exc.code}]}
-    if started and result.get("status") == "PASS":
-        try:
-            start = read_json_object(prepared["startReceiptPath"], label="observed process start")
-            delivered = read_json_object(prepared["inputReceiptPath"], label="observed process input")
-            if (start.get("stdinStatus") != "PENDING"
-                    or delivered.get("status") != "COMPLETE"
-                    or delivered.get("acceptedSha256") != prepared["finalPromptSha256"]):
-                raise LifecycleError("codex-exact-process-join-invalid", "process start/input receipts differ")
-        except (LifecycleError, OSError) as exc:
-            code = exc.code if isinstance(exc, LifecycleError) else "codex-exact-process-join-missing"
-            result = {**result, "status":"FAIL",
-                      "blockers":[*result.get("blockers",[]), {"code":code,"costStatus":"UNAVAILABLE"}]}
-    if started:
-        try:
-            terminal = publish_attempt_result(context.root, intent_path=prepared["intentPath"],
-                                              process_result=result)
-            if result["status"] == "PASS":
-                terminal = require_positive_attempt_result(
-                    context.root, intent_path=prepared["intentPath"], process_result=result)
-        except (LifecycleError, OSError, ValueError, TypeError) as exc:
-            terminal = None
-            code = exc.code if isinstance(exc, LifecycleError) else "r11-result-publication-failed"
-            blockers = [*result.get("blockers", []), {"code": code, "costStatus": "UNAVAILABLE"}]
-            try:
-                record_uncertain_attempt(context.root, intent_path=prepared["intentPath"])
-            except (LifecycleError, OSError, ValueError):
-                blockers.append({"code": "r11-result-uncertain-marker-failed", "costStatus": "UNAVAILABLE"})
-            result = {**result, "status": "BLOCKED", "blockers": blockers}
-    payload = build_launch_receipt(
-        status=str(result["status"]), adapter_id="codex", session_id=session_id,
-        launch_mode="managedTask", argv=prepared["argv"],
-        timeout_seconds=context.timeout_seconds, env=context.env_receipt,
-        exit_code=result.get("exitCode"), timed_out=bool(result.get("timedOut")),
-        stdout_tail=str(result.get("stdoutTail", "")),
-        stderr_tail=str(result.get("stderrTail", "")),
-        stdout_redacted=bool(result.get("stdoutRedacted")),
-        stderr_redacted=bool(result.get("stderrRedacted")),
-        host_launch_started=started, blockers=list(result.get("blockers", [])),
-        profile_digest=context.profile_digest,
-        risk_profile_digest=str(risk_profile["profileDigest"]),
-        receipt_argv=["codex", "exec", "--json", "--ephemeral", "-m", "<model>", "-C", "<cwd>", "-"],
-        host_identity=host_identity,
-    )
-    payload["exactPrompt"] = {
-        "routeId":CODEX_EXACT_ROUTE, "requestedClaim":CODEX_SCOPED_CLAIM,
-        "scope":"ALK_CONTROLLED_OUTBOUND_INPUT_FIT", "hostOwnedInput":"UNAVAILABLE",
-        "wholeCallUpperBoundU":"UNAVAILABLE", "fullFinancial":False,
-        "sealedRequestSha256":prepared["sealedSha256"],
-        "finalPromptSha256":prepared["finalPromptSha256"],
-        "fitReceiptDigest":prepared["fitReceiptDigest"],
-        "bootstrapAuditSha256":audit["auditSha256"],
-        "startReceiptSha256":_optional_receipt_sha(prepared["startReceiptPath"]) if started else None,
-        "inputReceiptSha256":_optional_receipt_sha(prepared["inputReceiptPath"]) if started else None,
-        "terminalResultSha256":_optional_receipt_sha(
-            prepared["intentPath"].with_name("attempt-result-terminal.json")) if terminal else None,
-        "terminalStatus":terminal["status"] if terminal else ("START_UNCERTAIN" if started else "NOT_STARTED"),
-        "retryAuthorized":False,
-        "costStatus":"UNAVAILABLE" if started else "NOT_STARTED",
-    }
-    payload["modelCallsStarted"] = started
-    # This safe projection was hashed at terminal publication above.
-    # Exit zero alone cannot prove a native model completion.
-    payload["exactPrompt"]["observedProcessResult"] = result
-    payload["receiptDigest"] = canonical_digest({k:v for k,v in payload.items() if k != "receiptDigest"})
-    return payload
-
-
-def _optional_receipt_sha(path: Path) -> str | None:
-    try:
-        data = path.read_bytes()
-    except OSError:
-        return None
-    return hashlib.sha256(data).hexdigest() if data else None
+    return _finish_exact_process(context, prepared=prepared, audit=audit, result=result,
+        session_id=session_id, risk_profile=risk_profile, host_identity=host_identity,
+        publish_attempt_result=publish_attempt_result, require_positive_attempt_result=require_positive_attempt_result,
+        record_uncertain_attempt=record_uncertain_attempt, cleanup_prestart_raw=cleanup_prestart_raw,
+        record_proven_no_start=record_proven_no_start, build_launch_receipt=build_launch_receipt,
+        read_json_object=read_json_object, canonical_digest=canonical_digest,
+        receipt_sha=_optional_receipt_sha)
 
 
 def _run_managed_process(
@@ -865,38 +716,10 @@ def _run_managed_process(
             risk_profile=risk_profile,
             host_identity=host_identity,
         )
-    try:
-        result = context.runner(argv, env=context.env, timeout_seconds=context.timeout_seconds)
-        if not isinstance(result, dict) or type(result.get("processStarted")) is not bool or (
-            result["processStarted"] is False and (result.get("status") == "PASS"
-                or result.get("startedFailure") is True or result.get("processReceipt") is not None)
-        ):
-            raise ValueError("runner did not establish a consistent physical start")
-    except Exception as exc:
-        raise LifecycleError("local-launch-start-uncertain", "runner result cannot establish physical start",
-                             {"costStatus": "UNAVAILABLE", "retryAuthorized": False}) from exc
-    payload = build_launch_receipt(
-        status=str(result["status"]),
-        adapter_id=context.profile_adapter,
-        session_id=session_id,
-        launch_mode="managedTask",
-        argv=argv,
-        timeout_seconds=context.timeout_seconds,
-        env=context.env_receipt,
-        exit_code=result.get("exitCode"),
-        timed_out=bool(result.get("timedOut")),
-        stdout_tail=str(result.get("stdoutTail", "")),
-        stderr_tail=str(result.get("stderrTail", "")),
-        stdout_redacted=bool(result.get("stdoutRedacted")),
-        stderr_redacted=bool(result.get("stderrRedacted")),
-        host_launch_started=result["processStarted"],
-        blockers=list(result.get("blockers", [])),
-        profile_digest=context.profile_digest,
-        risk_profile_digest=str(risk_profile["profileDigest"]),
-        receipt_argv=local_receipt_argv(context.profile),
-        host_identity=host_identity,
-    )
-    return _attach_qualification_receipt(payload, qualification_receipt)
+    return _finish_managed_process(context, argv=argv, session_id=session_id,
+        risk_profile=risk_profile, qualification_receipt=qualification_receipt, host_identity=host_identity,
+        build_launch_receipt=build_launch_receipt, local_receipt_argv=local_receipt_argv,
+        _attach_qualification_receipt=_attach_qualification_receipt)
 
 
 def _identity(context: _LaunchContext, *, strict: bool) -> dict[str, Any]:
@@ -910,3 +733,31 @@ def _identity(context: _LaunchContext, *, strict: bool) -> dict[str, Any]:
 
 
 __all__ = ["launch_from_local_profile"]
+
+
+def _managed_authority(
+    context: _LaunchContext, *, session_id: str, state_path: Path, manifest_path: Path,
+    lock_path: Path, task_id: str, operation_id: str, source_revision: str, risk_profile: dict[str, Any],
+    immutable_input_request: dict[str, Any] | None, immutable_input_context: dict[str, Any] | None,
+) -> tuple[dict, dict, dict, dict, dict]:
+    """Reopen and validate the same current authority before preparing any input."""
+    manifest = read_json_object(manifest_path, label="frozen plan manifest")
+    state = read_json_object(state_path, label="workflow state")
+    lock = read_json_object(lock_path, label="plan lock")
+    verify_plan_package_integrity(manifest, lock, repository_root=context.root)
+    if manifest.get("status") != "FROZEN":
+        raise LifecycleError("local-launch-frozen-plan-required", "local launch requires a frozen plan")
+    task = _state_task(state, task_id)
+    a5_inputs = {"state_path": state_path, "manifest_path": manifest_path, "lock_path": lock_path,
+                 "task_id": task_id, "operation_id": operation_id, "source_revision": source_revision}
+    current = current_managed_invocation(
+        project_root=context.root, adapter_id=context.profile_adapter, session_id=session_id,
+        request=immutable_input_request, profile=context.profile, profile_digest=context.profile_digest,
+        risk_profile=risk_profile, **a5_inputs,
+    )
+    validate_current_invocation(immutable_input_context if immutable_input_context is not None else current,
+                                immutable_input_request, current_context=current)
+    validate_task_risk_profile(
+        state, task, risk_profile, operation_id=operation_id, source_revision=source_revision
+    )
+    return manifest, state, task, current, a5_inputs

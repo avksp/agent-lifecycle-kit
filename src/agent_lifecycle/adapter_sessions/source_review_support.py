@@ -1,9 +1,7 @@
 """Owned source review support helpers."""
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any
+from typing import Any, Protocol
 
-if TYPE_CHECKING:
-    from agent_lifecycle.adapter_sessions.source_review_transcript import SourceReviewTranscript
 from agent_lifecycle.contracts import LifecycleError
 from pathlib import Path
 from agent_lifecycle.accounting.declared_ledger_legacy import _R11_REVIEW_ROOT
@@ -36,6 +34,11 @@ from agent_lifecycle.adapter_sessions.source_review_contracts import _r11_role_m
 from agent_lifecycle.adapter_sessions.source_review_inputs import _r11_source_inputs
 from agent_lifecycle.adapter_sessions.source_review_contracts import _r11_utc
 from agent_lifecycle.adapter_sessions.source_review_contracts import _r11_wip
+
+
+class _TranscriptReceiver(Protocol):
+    def receive(self, raw: bytes) -> None: ...
+
 
 
 def _r11_support_authority(root: Path, *, role_delivery: bool = False) -> tuple[dict, dict, dict, dict[str, str]]:
@@ -387,7 +390,7 @@ class _R11AppServerPipe:
             self.failed = True
             raise
 
-    def receive(self, transcript: SourceReviewTranscript | None = None) -> tuple[bytes, dict[str, Any]]:
+    def receive(self, transcript: _TranscriptReceiver | None = None) -> tuple[bytes, dict[str, Any]]:
         raise LifecycleError('r11-experimental-disabled', 'Experimental R11 review route is disabled; use ordinary independent audit')
         try:
             while b'\n' not in self.buffer:
@@ -682,7 +685,8 @@ class _R11PreparationReplay(_R11AppServerPipe):
     def take(self, kind: str) -> bytes:
         _require(self.cursor < len(self.groups) and self.groups[self.cursor]['kind'] == kind,
                  'r11-thread-wire', 'missing, reordered or extra preparation IO')
-        raw = self.groups[self.cursor]['raw']; self.cursor += 1
+        raw = self.groups[self.cursor]['raw']
+        self.cursor += 1
         return raw
 
     def send_bootstrap(self, value: dict[str, Any]) -> None:
@@ -703,7 +707,9 @@ class _R11PreparationReplay(_R11AppServerPipe):
             self.buffer.extend(chunk)
             _require(len(self.buffer.split(b'\n', 1)[0]) < 2_097_152,
                      'r11-thread-wire', 'preparation response too large')
-        line, _, rest = self.buffer.partition(b'\n'); self.buffer[:] = rest
-        raw = bytes(line) + b'\n'; value = _r11_json(raw, limit=2_097_152)
+        line, _, rest = self.buffer.partition(b'\n')
+        self.buffer[:] = rest
+        raw = bytes(line) + b'\n'
+        value = _r11_json(raw, limit=2_097_152)
         _require('jsonrpc' not in value or value['jsonrpc'] == '2.0', 'r11-thread-wire', 'invalid RPC version')
         return raw, value
