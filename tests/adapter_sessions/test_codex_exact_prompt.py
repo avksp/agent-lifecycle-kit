@@ -1106,6 +1106,23 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
         self.assertFalse(_review_findings_match_v4({**clean, "coverageComplete": False}))
         self.assertFalse(_matches_closed_schema({**clean, "unreviewed": True}, body_schema))
 
+    def test_review_finding_parser_bounds_malformed_repeated_slashes(self) -> None:
+        body = {"coverageComplete": True, "verdict": "FAIL",
+                "reviewText": "- [P1] F1 | " + "!/" * 8000,
+                "findings": [{}]}
+        program = (
+            "import json,sys; "
+            "from agent_lifecycle.adapter_sessions.codex_source_subject "
+            "import _review_findings_match_v4; "
+            "print(_review_findings_match_v4(json.loads(sys.stdin.read())))"
+        )
+        observed = subprocess.run(
+            [sys.executable, "-B", "-c", program], input=json.dumps(body),
+            text=True, capture_output=True, timeout=5, check=False,
+        )
+        self.assertEqual(observed.returncode, 0, observed.stderr)
+        self.assertEqual(observed.stdout.strip(), "False")
+
     def test_local_app_server_fresh_read_uses_only_documented_read_protocol(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

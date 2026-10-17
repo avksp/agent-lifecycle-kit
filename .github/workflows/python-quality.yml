@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python }}
+      - name: Restore versioned release test fixture
+        run: python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
       - name: Install locked quality environment
         run: |
           python -m pip install --disable-pip-version-check uv==0.12.5

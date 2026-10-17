@@ -31,6 +31,16 @@ from agent_lifecycle.adapter_sessions.process import run_process
 
 
 
+def _coordinator_seed_fixture_bytes():
+    """Read only the exact pinned immutable test seed, never a live cost ledger."""
+    path = (Path(__file__).resolve().parents[2] / "fixtures" / "accounting"
+            / "r11-coordinator-seed-cost.json")
+    raw = path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != bootstrap_r11._R11_COORDINATOR_SEED_SHA:
+        raise AssertionError("Coordinator test seed differs from the pinned source anchor")
+    return raw
+
+
 def _current_disabled_r11_binding():
     """Only a verified installed ordinary/disabled plan can retire old positives.
 
@@ -2556,7 +2566,7 @@ class RoleProjectionContractTests(unittest.TestCase):
             primary = bootstrap_r11._r11_coordinator_root(Path(__file__).parents[2])
             seed_path = root / bootstrap_r11._R11_COORDINATOR_SEED
             seed_path.parent.mkdir(parents=True)
-            seed_path.write_bytes((primary / bootstrap_r11._R11_COORDINATOR_SEED).read_bytes())
+            seed_path.write_bytes(_coordinator_seed_fixture_bytes())
             seed = bootstrap_r11.advance_coordinator_cost_head(root, source_path=bootstrap_r11._R11_COORDINATOR_SEED)
             review_id = 'coordinator-prefix-fixture'
             # The public experimental importer must remain refused. Seed
@@ -2905,7 +2915,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         primary = bootstrap_r11._r11_coordinator_root(Path(__file__).parents[2])
         seed_path = root / bootstrap_r11._R11_COORDINATOR_SEED
         seed_path.parent.mkdir(parents=True)
-        seed_path.write_bytes((primary / bootstrap_r11._R11_COORDINATOR_SEED).read_bytes())
+        seed_path.write_bytes(_coordinator_seed_fixture_bytes())
         seed = bootstrap_r11.advance_coordinator_cost_head(root, source_path=bootstrap_r11._R11_COORDINATOR_SEED)
         review_id = base['reviewId']
         bootstrap_r11.import_source_review_opening(root, review_id=review_id)
@@ -3112,7 +3122,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         subprocess.run(['git','init','-q',str(root)],check=True,capture_output=True,timeout=10)
         primary=bootstrap_r11._r11_coordinator_root(Path(__file__).parents[2])
         seed_path=root/bootstrap_r11._R11_COORDINATOR_SEED;seed_path.parent.mkdir(parents=True)
-        seed_path.write_bytes((primary/bootstrap_r11._R11_COORDINATOR_SEED).read_bytes())
+        seed_path.write_bytes(_coordinator_seed_fixture_bytes())
         seed=bootstrap_r11.advance_coordinator_cost_head(root,source_path=bootstrap_r11._R11_COORDINATOR_SEED)
         head_path=root/bootstrap_r11._R11_COORDINATOR_HEAD
         def head():return bootstrap_r11.read_coordinator_cost_head(root)
@@ -3541,7 +3551,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         subprocess.run(['git','init','-q',str(root)],check=True,capture_output=True,timeout=10)
         primary = bootstrap_r11._r11_coordinator_root(Path(__file__).parents[2])
         seed_path = root/bootstrap_r11._R11_COORDINATOR_SEED;seed_path.parent.mkdir(parents=True)
-        seed_path.write_bytes((primary/bootstrap_r11._R11_COORDINATOR_SEED).read_bytes())
+        seed_path.write_bytes(_coordinator_seed_fixture_bytes())
         bootstrap_r11.advance_coordinator_cost_head(root,source_path=bootstrap_r11._R11_COORDINATOR_SEED)
         def head():return bootstrap_r11.read_coordinator_cost_head(root)
         def declare(review):
@@ -3705,7 +3715,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         root=root.resolve();subprocess.run(['git','init','-q',str(root)],check=True,capture_output=True,timeout=10)
         primary=bootstrap_r11._r11_coordinator_root(Path(__file__).parents[2])
         seed_path=root/bootstrap_r11._R11_COORDINATOR_SEED;seed_path.parent.mkdir(parents=True)
-        seed_path.write_bytes((primary/bootstrap_r11._R11_COORDINATOR_SEED).read_bytes())
+        seed_path.write_bytes(_coordinator_seed_fixture_bytes())
         prior=bootstrap_r11.advance_coordinator_cost_head(root,source_path=bootstrap_r11._R11_COORDINATOR_SEED)
         review=base['reviewId'];bootstrap_r11.import_source_review_opening(root,review_id=review)
         origin=bootstrap_r11.read_source_review_opening_origin(root,review_id=review,role_delivery=True)
@@ -4254,7 +4264,7 @@ class RoleProjectionContractTests(unittest.TestCase):
             from datetime import datetime,timedelta,timezone
             subprocess.run(['git','init','-q',str(root)],check=True,capture_output=True,timeout=10)
             primary=m._r11_coordinator_root(Path(__file__).parents[2]);seed_path=root/m._R11_COORDINATOR_SEED
-            seed_path.parent.mkdir(parents=True);seed_path.write_bytes((primary/m._R11_COORDINATOR_SEED).read_bytes())
+            seed_path.parent.mkdir(parents=True);seed_path.write_bytes(_coordinator_seed_fixture_bytes())
             head=m.advance_coordinator_cost_head(root,source_path=m._R11_COORDINATOR_SEED)
             origin=m.import_source_review_opening(root,review_id=base['reviewId'])
             origin=m.read_source_review_opening_origin(root,review_id=base['reviewId'],role_delivery=True)

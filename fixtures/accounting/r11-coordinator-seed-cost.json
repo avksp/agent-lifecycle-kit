@@ -1,0 +1,18 @@
+{
+  "status": "UNAVAILABLE_FULL_HOLD_RETAINED",
+  "tokenCap": 40000,
+  "protectedCloseoutTokens": 10000,
+  "actualInputTokens": null,
+  "actualTokens": null,
+  "costStatus": "UNAVAILABLE",
+  "priorUnknownHolds": 112770000,
+  "unknownHoldsIncludingThisWindow": 112810000,
+  "priorLedgerLowerBound": 116626844,
+  "ledgerLowerBoundIncludingThisHold": 116666844,
+  "priorUnreconciledObserverTurn": "UNAVAILABLE_NOT_ZERO",
+  "priorBudgetResumed": false,
+  "scope": "Independent raw host-wire/prelude, transcript and supervisor identity/deadline joins; combine with per-shard held cost. Local fixtures only, no model/native call.",
+  "modelRequestCount": 0,
+  "priorUnknownHoldsReleased": 0,
+  "goalComplete": false
+}
