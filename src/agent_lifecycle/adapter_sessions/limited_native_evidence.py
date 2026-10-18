@@ -289,7 +289,9 @@ def _verify_positive_native_transport(
     require(
         type(index) is int
         and 0 <= index < admission["maxSelectedCodexInvocations"]
-        and (slot_ref["path"] == str(Path(expected_path).parent.parent / "capacity-slots" / f"slot-{index}.json"))
+        and (
+            slot_ref["path"] == (Path(expected_path).parent.parent / "capacity-slots" / f"slot-{index}.json").as_posix()
+        )
         and (
             slot
             == {

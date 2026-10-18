@@ -32,6 +32,7 @@ from agent_lifecycle.accounting.opening_balances import compile_opening
 
 from .test_journal import PROOF, operation, receipt
 from .test_normalization import atom, observation, profile
+from contextlib import closing
 
 
 def import_data(scope='run', *, historical=(), pending=(), spent=0, protected=None,
@@ -477,7 +478,7 @@ class OpeningTests(unittest.TestCase):
     def test_v07_explicit_migration_failure_and_preservation(self):
         for fail_at in (None,'before_version','after_version'):
             path=Path(self.temp.name)/('migration-'+str(fail_at)+'.db')
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db, db:
                 for stmt in BASE_STATEMENTS:db.execute(stmt)
                 db.execute('INSERT INTO schema_metadata VALUES(1,1)')
                 for table in ('events','identities'):
@@ -493,7 +494,7 @@ class OpeningTests(unittest.TestCase):
                       ('CLAIM',{'operation_id':'op','claim_id':'old-claim'}),
                       ('SETTLE',{'operation_id':'op','receipt':asdict(oldreceipt)})]
             oldstate=None
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db, db:
                 for revision,(kind,payload) in enumerate(payloads,1):
                     payload=json.loads(canonical(payload));oldstate=_apply(oldstate,kind,payload)
                     db.execute('INSERT INTO events VALUES(?,?,?,?,?,?,?,?,?,?)',
@@ -511,7 +512,7 @@ class OpeningTests(unittest.TestCase):
                 if point==fail_at:raise RuntimeError('migration failure')
             if fail_at:
                 with self.assertRaises(RuntimeError):Journal.migrate_v1(path,PROOF,fault_hook=fault)
-                with sqlite3.connect(path) as db:
+                with closing(sqlite3.connect(path)) as db, db:
                     self.assertEqual(db.execute('SELECT version FROM schema_metadata').fetchone()[0],1)
                     self.assertIsNone(db.execute("SELECT name FROM sqlite_master WHERE name='coverage_atoms'").fetchone())
             Journal.migrate_v1(path,PROOF)
@@ -1211,7 +1212,7 @@ class StorageV3RetentionMigrationTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.path = Path(self.temp.name) / 'golden.db'
-        data = json.loads((Path(__file__).parent / 'fixtures/release_216_accounting.json').read_text())
+        data = json.loads((Path(__file__).parent / 'fixtures/release_216_accounting.json').read_text(encoding='utf-8'))
         self.golden = data['storageV3Golden']
 
     def tearDown(self):
@@ -1302,7 +1303,7 @@ class StorageMigrationTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.path = Path(self.temp.name) / 'golden.db'
-        data = json.loads((Path(__file__).parent / 'fixtures/release_216_accounting.json').read_text())
+        data = json.loads((Path(__file__).parent / 'fixtures/release_216_accounting.json').read_text(encoding='utf-8'))
         self.golden = data['storageV2Golden']
 
     def tearDown(self):
@@ -1311,7 +1312,7 @@ class StorageMigrationTests(unittest.TestCase):
     def restore(self, data=None, name='golden.db'):
         path = Path(self.temp.name) / name
         data = data or self.golden
-        with sqlite3.connect(path) as db:
+        with closing(sqlite3.connect(path)) as db, db:
             for row in data['schema']:
                 if row['type'] == 'table':
                     db.execute(row['sql'])
@@ -1363,7 +1364,7 @@ class StorageMigrationTests(unittest.TestCase):
         for case in ('unknown_version', 'corrupt_projection', 'valid_v2'):
             with self.subTest(case=case):
                 path = self.restore(name='wal-' + case + '.db')
-                with sqlite3.connect(path) as db:
+                with closing(sqlite3.connect(path)) as db, db:
                     self.assertEqual(db.execute('PRAGMA journal_mode=WAL').fetchone()[0], 'wal')
                     if case == 'unknown_version':
                         db.execute('UPDATE schema_metadata SET version=99')
@@ -1374,7 +1375,7 @@ class StorageMigrationTests(unittest.TestCase):
                 with self.assertRaises(JournalUnavailable):
                     Journal.migrate_v2(path, PROOF)
                 self.assertEqual(path.read_bytes(), before)
-                with sqlite3.connect(path) as db:
+                with closing(sqlite3.connect(path)) as db, db:
                     self.assertEqual(db.execute('PRAGMA journal_mode').fetchone()[0], 'wal')
 
     def test_storage_review_f01_all_claimed_key_bindings_are_required(self):
@@ -1412,7 +1413,7 @@ class StorageMigrationTests(unittest.TestCase):
             with self.subTest(kind=key[0], key=key[1]):
                 corrupted = Path(self.temp.name) / f'ordinary-key-{index}.db'
                 corrupted.write_bytes(old_bytes)
-                with sqlite3.connect(corrupted) as db:
+                with closing(sqlite3.connect(corrupted)) as db, db:
                     trigger = db.execute("SELECT sql FROM sqlite_master WHERE name='protect_identities_delete'").fetchone()[0]
                     db.execute('DROP TRIGGER protect_identities_delete')
                     db.execute('DELETE FROM identities WHERE kind=? AND key=?', key[:2])
@@ -1507,7 +1508,7 @@ class StorageMigrationTests(unittest.TestCase):
             before = list(j._db.iterdump())
         with self.assertRaises(JournalUnavailable):
             Journal.migrate_v2(self.path, PROOF)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             self.assertEqual(list(db.iterdump()), before)
 
     def test_storage_v2_migration_faults_and_stale_open_connection(self):
@@ -1521,7 +1522,7 @@ class StorageMigrationTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     Journal.migrate_v2(path, PROOF, fault_hook=fault)
                 self.assertEqual(path.read_bytes(), before_bytes)
-                with sqlite3.connect(path) as db:
+                with closing(sqlite3.connect(path)) as db, db:
                     self.assertEqual(self.rows(db), {k: sorted(v['rows']) for k, v in self.golden['tables'].items()})
                     self.assertIsNone(db.execute("SELECT name FROM sqlite_master WHERE name='require_storage_writer'").fetchone())
         self.restore()

@@ -12,7 +12,8 @@ import time
 import unittest
 from contextlib import ExitStack, contextmanager
 from dataclasses import replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from tests.windows_test_support import install_windows_fixture_process
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -112,7 +113,6 @@ def bound_current_invocation_fixture(root, *, task_id="task", operation_id="op",
         yield {"immutable_input_context": invocation, "immutable_input_inputs": inputs}
 
 
-@unittest.skipUnless(os.name == 'posix', 'durable directory fixture uses POSIX descriptors')
 class AttemptResultTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -238,13 +238,37 @@ class AttemptResultTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'r11-result-identity')
 
     def test_concurrent_publishers_cannot_overwrite_each_other(self) -> None:
+        from agent_lifecycle.adapter_sessions import attempt_authority
+
         self.reserve()
+        # Both publishers reach the exclusive pending claim before either
+        # completes. Windows legitimately denies overlapping directory readers
+        # and writers; coordinate at the claim to test no-overwrite directly.
         barrier = threading.Barrier(2)
+        claim_created = threading.Event()
+        loser_done = threading.Event()
+        claim_lock = threading.Lock()
+        original_write = attempt_authority._write
         published = []
         refused = []
 
+        def claim(root, path, value):
+            barrier.wait(timeout=10)
+            if claim_lock.acquire(blocking=False):
+                try:
+                    original_write(root, path, value)
+                    claim_created.set()
+                    self.assertTrue(loser_done.wait(10))
+                finally:
+                    claim_lock.release()
+            else:
+                self.assertTrue(claim_created.wait(10))
+                try:
+                    original_write(root, path, value)
+                finally:
+                    loser_done.set()
+
         def publish(status: str) -> None:
-            barrier.wait(timeout=2)
             try:
                 result = publish_attempt_result(self.root, intent_path=self.path,
                                                 process_result={**self.result, 'status': status})
@@ -253,12 +277,13 @@ class AttemptResultTests(unittest.TestCase):
                 refused.append(exc)
 
         workers = [threading.Thread(target=publish, args=(status,)) for status in ('FAIL', 'BLOCKED')]
-        for worker in workers:
-            worker.start()
-        for worker in workers:
-            worker.join(2)
-            self.assertFalse(worker.is_alive())
-        self.assertEqual(len(published), 1)
+        with patch.object(attempt_authority, '_write', side_effect=claim):
+            for worker in workers:
+                worker.start()
+            for worker in workers:
+                worker.join(15)
+                self.assertFalse(worker.is_alive())
+        self.assertEqual(len(published), 1, refused)
         self.assertEqual(len(refused), 1)
         self.assertEqual(self.read(), published[0])
 
@@ -281,11 +306,11 @@ class AttemptResultTests(unittest.TestCase):
             self.publish()
 
 
-@unittest.skipUnless(os.name == 'posix', 'managed-child fixture uses POSIX descriptors')
 class PreparedAttemptIntegrationTests(unittest.TestCase):
     """Real prepared callbacks and local Python child; host fit is a fixture."""
 
     def setUp(self) -> None:
+        install_windows_fixture_process(self)
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).resolve()
@@ -308,14 +333,14 @@ class PreparedAttemptIntegrationTests(unittest.TestCase):
         self.home = self.root / 'work/release-2-16/runtime-private/codex-exact-prompt' / namespace / 'codex-home'
         exact._private_dir(self.home, boundary=self.root)
         config = self.home / 'config.toml'
-        config.write_text('model="fixture"\n')
+        config.write_text('model="fixture"\n', encoding="utf-8", newline="\n")
         config.chmod(0o400)
         snapshot_digest = exact._snapshot_digest(self.home, root=self.root)
         config_manifest = b'{"fixture":"config"}'
         _write_exclusive(self.evidence / 'config-snapshot-manifest.json', config_manifest, root=self.root)
         self.binary = self.root / 'bin/codex'
         self.binary.parent.mkdir()
-        self.binary.write_text('#!' + sys.executable + '\nimport sys\nsys.stdin.buffer.read()\n')
+        self.binary.write_text('#!' + sys.executable + '\nimport sys\nsys.stdin.buffer.read()\n', encoding="utf-8", newline="\n")
         self.binary.chmod(0o700)
         selected = {'selected': []}
         model_input = {'renderedEnvelope': {}, 'selectedSource': [], 'instruction': 'fixture', 'schema': {}}
@@ -965,7 +990,7 @@ class ImplicitSubmoduleDependencyTests(unittest.TestCase):
             for name, content in data.items():
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(content)
+                path.write_text(content, encoding='utf-8', newline='\n')
             raw = (root / _R411_ENTRY).read_bytes()
             partition = {'partitionSha256': 'a' * 64, 'rows': [{'path': _R411_ENTRY, 'partition': 'C',
                 'beforeExists': False, 'sha256': hashlib.sha256(raw).hexdigest(), 'bytes': len(raw)}]}
@@ -2269,7 +2294,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         key = ('CURRENT','src/sample.py')
         literal = {key: source}
         extents = bootstrap_r11._r11_coverage_rows(literal, {key:[(0,len(source))]})
-        kwargs = dict(root=Path('/legacy-fixture'), sources=literal, rows=extents,
+        kwargs = dict(root=PurePosixPath('/legacy-fixture'), sources=literal, rows=extents,
             shared={'currentSubjectSha256':'a'*64,'parentSubjectSha256':'b'*64}, calls=[], schema={'type':'object'},
             shard_id='r11-01', inventory_sha='c'*64, thread_id='thread', request_id=1)
         request = bootstrap_r11._r11_shard_request(**kwargs)
@@ -2563,7 +2588,6 @@ class RoleProjectionContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
             subprocess.run(['git', 'init', '-q', str(root)], check=True, capture_output=True, timeout=10)
-            primary = bootstrap_r11._r11_coordinator_root(Path(__file__).parents[2])
             seed_path = root / bootstrap_r11._R11_COORDINATOR_SEED
             seed_path.parent.mkdir(parents=True)
             seed_path.write_bytes(_coordinator_seed_fixture_bytes())
@@ -2597,7 +2621,7 @@ class RoleProjectionContractTests(unittest.TestCase):
                 path = root / relative;path.parent.mkdir();path.write_bytes(canonical_bytes(value))
                 return relative, value
             def close(relative, value):
-                target = str(Path(relative).with_name('cost.json'))
+                target = (Path(relative).with_name('cost.json')).as_posix()
                 (root / target).write_bytes(canonical_bytes({**value, 'status': 'UNAVAILABLE_FULL_HOLD_RETAINED'}))
                 return bootstrap_r11.advance_coordinator_cost_head(root, source_path=target)
             def read():
@@ -3241,7 +3265,7 @@ class RoleProjectionContractTests(unittest.TestCase):
             with self.assertRaises(LifecycleError):publish('open-window')
             self.assertFalse((open_dir/'role-funding-origin.pending.json').exists())
             self.assertEqual(head()['headSha256'],open_head['headSha256'])
-        close_relative=str(Path(relative).with_name('cost.json'))
+        close_relative=(Path(relative).with_name('cost.json')).as_posix()
         (root/close_relative).write_bytes(canonical_bytes({**window,'status':'UNAVAILABLE_FULL_HOLD_RETAINED'}))
         bootstrap_r11.advance_coordinator_cost_head(root,source_path=close_relative)
         with self.subTest(globalFunding='ordinary-append-preserves-funding-and-role-prefix'):
@@ -3439,7 +3463,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         settlement_path=path.with_name('settlement.json');_write_exclusive(settlement_path,canonical_bytes(settlement),root=root)
         with self.subTest(globalPrefix='open-coordinator-window-cannot-be-split'),self.assertRaises(LifecycleError):publish()
         self.assertFalse((directory/'role-cost-prefix.pending.json').exists())
-        close_relative=str(Path(relative).with_name('cost.json'))
+        close_relative=(Path(relative).with_name('cost.json')).as_posix()
         (root/close_relative).write_bytes(canonical_bytes({**window,'status':'UNAVAILABLE_FULL_HOLD_RETAINED'}))
         bootstrap_r11.advance_coordinator_cost_head(root,source_path=close_relative)
         with self.subTest(globalPrefix='uncertain-close-anchors-full-hold-and-unused-tail'):
@@ -3924,7 +3948,7 @@ class RoleProjectionContractTests(unittest.TestCase):
             cost=bootstrap_r11.read_source_review_cost(root,review_id=review,role_delivery=True)
             for name in bootstrap_r11._R11_VALIDATION_ROOTS:(root/name).mkdir(parents=True,exist_ok=True)
             worker=root/'src/role_fixture.py'
-            worker.write_text("import sys,json,time,hashlib\nfrom pathlib import Path\nv=json.loads(Path(sys.argv[1]).read_bytes())\nr=Path(v['reservation']).read_bytes()\nassert hashlib.sha256(r).hexdigest()==v['reservationSha256']\nh=json.loads(Path(v['head']).read_bytes())\nassert h['sourcePath']==v['globalPrefixPath']\nPath(v['marker']).write_text('prestart reservation and global prefix present')\nif v['outcome']=='TIMEOUT':time.sleep(3)\nsys.exit(7 if v['outcome']=='FAILED' else 0)\n")
+            worker.write_text("import sys,json,time,hashlib\nfrom pathlib import Path\nv=json.loads(Path(sys.argv[1]).read_bytes())\nr=Path(v['reservation']).read_bytes()\nassert hashlib.sha256(r).hexdigest()==v['reservationSha256']\nh=json.loads(Path(v['head']).read_bytes())\nassert h['sourcePath']==v['globalPrefixPath']\nPath(v['marker']).write_text('prestart reservation and global prefix present')\nif v['outcome']=='TIMEOUT':time.sleep(3)\nsys.exit(7 if v['outcome']=='FAILED' else 0)\n", encoding="utf-8", newline="\n")
             instruction=directory/'fixture-worker.json';marker=root/'fixture-started.txt'
             value={'reservation':str(directory/'role-cost/shared-01/reservation.json'),'reservationSha256':canonical_digest(reservation),
                 'head':str(root/bootstrap_r11._R11_COORDINATOR_HEAD),'globalPrefixPath':bootstrap_r11.read_coordinator_cost_head(root)['head']['sourcePath'],
@@ -4094,7 +4118,7 @@ class RoleProjectionContractTests(unittest.TestCase):
         with self.subTest(allEnvelopes='current-catalog-too-small'),self.assertRaises(LifecycleError):
             joined(selected={**catalog,'selected':{'catalogWindowTokens':100}})
         def mutate_source(*args,**kwargs):
-            (r/'src/changed.py').write_text('# changed after initial snapshot\n');return rebuilt
+            (r/'src/changed.py').write_text('# changed after initial snapshot\n', encoding="utf-8", newline="\n");return rebuilt
         with self.subTest(allEnvelopes='source-changed-during-reconstruction'):
             with patch.object(bootstrap_r11,'reconstruct_source_review',side_effect=mutate_source), \
                  patch.object(bootstrap_r11,'read_source_review_catalog',return_value=catalog),self.assertRaises(LifecycleError):
@@ -4890,7 +4914,7 @@ class RoleProjectionContractTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as temporary,self.subTest(absoluteWorker=outcome):
                 root=Path(temporary).resolve()
                 for name in m._R11_VALIDATION_ROOTS:(root/name).mkdir(parents=True,exist_ok=True)
-                worker=root/'src/fixture_worker.py';worker.write_text('import time\ntime.sleep(5)\n' if outcome=='timeout' else 'pass\n')
+                worker=root/'src/fixture_worker.py';worker.write_text('import time\ntime.sleep(5)\n' if outcome=='timeout' else 'pass\n', encoding="utf-8", newline="\n")
                 deadline=time.monotonic_ns()+(200_000_000 if outcome=='timeout' else 3_000_000_000)
                 value={'schemaVersion':'alk-r11-thread-preparation-input.v2-role','operationDeadlineMonotonicNs':deadline}
                 instruction=root/m._R11_REVIEW_ROOT/'reviews/fixture-review/input.json';m._write(root,instruction,value)
@@ -4904,7 +4928,7 @@ class RoleProjectionContractTests(unittest.TestCase):
                 terminal=m._supervise_source_review_worker(root,**options,absolute_deadline_monotonic_ns=deadline)
                 self.assertEqual(terminal,m.read_source_review_worker(root,binding=binding));self.assertEqual(terminal['heldUnknownTokens'],360000)
                 self.assertFalse(terminal['retryAuthorized']);self.assertFalse(terminal['producerQualified']);self.assertFalse(terminal['firstNativeBootstrapEligible'])
-                directory=m._r11_worker_directory(root,binding);result=json.loads((directory/'process-result.json').read_text());reserved=json.loads((directory/'reservation.json').read_text())
+                directory=m._r11_worker_directory(root,binding);result=json.loads((directory/'process-result.json').read_text(encoding="utf-8"));reserved=json.loads((directory/'reservation.json').read_text(encoding="utf-8"))
                 self.assertEqual(reserved['absoluteDeadlineMonotonicNs'],deadline);self.assertEqual(result['deadlineMonotonicNs'],deadline)
                 if outcome=='finished':
                     self.assertEqual(terminal['status'],'WORKER_PROCESS_FINISHED')

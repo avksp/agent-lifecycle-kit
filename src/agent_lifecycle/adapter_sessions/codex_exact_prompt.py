@@ -462,7 +462,12 @@ def _receive_codex_metadata_response(
         events = selector.select(max(0.0, deadline - time.monotonic()))
         _require(bool(events), "codex-exact-bootstrap-review-unavailable", "local App Server timed out")
         try:
-            chunk = os.read(stdout.fileno(), 65536)
+            if os.name == "nt":
+                from .windows_pipe import read_pipe
+
+                chunk = read_pipe(stdout.fileno(), 65536)
+            else:
+                chunk = os.read(stdout.fileno(), 65536)
         except BlockingIOError:
             continue
         _require(bool(chunk), "codex-exact-bootstrap-review-unavailable", "local App Server closed before responding")
@@ -494,7 +499,7 @@ def read_codex_app_server_thread(
     )
     _require(
         selected.is_file()
-        and selected.name == "codex"
+        and selected.name in ({"codex", "codex.exe"} if os.name == "nt" else {"codex"})
         and isinstance(thread_id, str)
         and 0 < len(thread_id) <= _APP_SERVER_MAX_REQUEST_BYTES,
         "codex-exact-bootstrap-review-unavailable",
@@ -533,6 +538,7 @@ def read_codex_app_server_thread(
             cwd=root,
             env=environment,
             bufsize=0,
+            creationflags=0x08000000 if os.name == "nt" else 0,  # CREATE_NO_WINDOW
         )
     except OSError as exc:
         raise LifecycleError("codex-exact-bootstrap-review-unavailable", "local App Server could not start") from exc
@@ -547,9 +553,17 @@ def read_codex_app_server_thread(
         )
         stdin = _validated_cast("IO[bytes]", process.stdin)
         stdout = _validated_cast("IO[bytes]", process.stdout)
-        os.set_blocking(stdin.fileno(), False)
-        os.set_blocking(stdout.fileno(), False)
-        with selectors.DefaultSelector() as selector, selectors.DefaultSelector() as writer:
+        selector_type: type[selectors.BaseSelector] = selectors.DefaultSelector
+        if os.name == "nt":
+            from .windows_pipe import PipeSelector, configure_pipe
+
+            configure_pipe(stdin.fileno())
+            configure_pipe(stdout.fileno())
+            selector_type = PipeSelector
+        else:
+            os.set_blocking(stdin.fileno(), False)
+            os.set_blocking(stdout.fileno(), False)
+        with selector_type() as selector, selector_type() as writer:
             selector.register(stdout, selectors.EVENT_READ)
             writer.register(stdin, selectors.EVENT_WRITE)
 
@@ -564,7 +578,12 @@ def read_codex_app_server_thread(
                     )
                     _require_codex_metadata_time(deadline=deadline)
                     try:
-                        written = os.write(stdin.fileno(), pending)
+                        if os.name == "nt":
+                            from .windows_pipe import write_pipe
+
+                            written = write_pipe(stdin.fileno(), pending)
+                        else:
+                            written = os.write(stdin.fileno(), pending)
                     except BlockingIOError:
                         continue
                     _require(

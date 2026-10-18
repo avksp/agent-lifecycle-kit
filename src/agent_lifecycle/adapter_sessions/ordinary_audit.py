@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import os
 import re
-import stat
 import time
 from datetime import UTC, datetime, timedelta
 from datetime import timezone as timezone
@@ -37,6 +36,7 @@ from agent_lifecycle.contracts.bounded_json import (
 from agent_lifecycle.contracts.bounded_json import (
     matches_closed_schema as _r11_role_schema_matches,
 )
+from agent_lifecycle.contracts.private_storage import private_fingerprint, private_mode
 from agent_lifecycle.freeze.package_integrity import verify_plan_package_integrity
 
 _PLAN = "tasks/release-2-16/"
@@ -112,6 +112,7 @@ class _Reads:
         self.root = Path(root).absolute()
         self.records: dict[str, tuple[bytes, int, bool]] = {}
         self.absent: set[str] = set()
+        self.security_fingerprints: dict[str, str] = {}
 
     def require_absent(self, relative: str) -> None:
         name = normalize_authority_path(relative)
@@ -127,14 +128,19 @@ class _Reads:
         try:
             if private:
                 _require(name.startswith(_STORE), "private input is outside the fixed audit store")
+                fingerprint = private_fingerprint(path) if os.name == "nt" else None
                 with open_authority_read(path, root=self.root) as stream:
                     info = os.fstat(stream.fileno())
                     _require(
-                        stat.S_IMODE(info.st_mode) == 0o600 and info.st_size <= cap,
+                        private_mode(path, info, (0o600,)) and info.st_size <= cap,
                         "private input must be bounded mode0600",
                     )
                     raw = stream.read(cap + 1)
                 _require(len(raw) <= cap, "private input exceeds its byte limit")
+                if fingerprint is not None:
+                    _require(private_fingerprint(path) == fingerprint, "private access policy changed during reading")
+                    previous_policy = self.security_fingerprints.setdefault(name, fingerprint)
+                    _require(previous_policy == fingerprint, "private access policy changed within the read interval")
             else:
                 raw = read_authority_bytes(path, root=self.root, max_bytes=cap)
         except OSError as exc:

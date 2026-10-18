@@ -570,12 +570,19 @@ def advance_coordinator_cost_head(project_root: Path, *, source_path: str) -> di
     temporary = path.with_suffix(".next.json")
 
     def exclusive(target: Path, raw: bytes) -> None:
+        if os.name == "nt":
+            from agent_lifecycle.contracts.authority_io import create_authority_bytes
+
+            create_authority_bytes(target, raw, root=primary, private=True)
+            return
         fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, "wb") as stream:
             stream.write(raw)
             stream.flush()
             os.fsync(stream.fileno())
 
+    # Refuse unsupported durability before creating a sticky claim.
+    _sync_directory(path.parent)
     exclusive(pending, canonical_bytes(head))
     _sync_directory(path.parent)
     if (
@@ -589,7 +596,12 @@ def advance_coordinator_cost_head(project_root: Path, *, source_path: str) -> di
         raise LifecycleError("r11-opening-stale", "source/head changed after update claim")
     if previous_raw is not None:
         archive = path.parent / "coordinator-cost-head-history"
-        archive.mkdir(mode=0o700, exist_ok=True)
+        if os.name == "nt":
+            from agent_lifecycle.contracts.private_storage import ensure_private_directory
+
+            ensure_private_directory(archive, boundary=path.parent)
+        else:
+            archive.mkdir(mode=0o700, exist_ok=True)
         _require(stat.S_ISDIR(archive.lstat().st_mode), "r11-opening-origin", "head archive is indirect")
         archived = archive / (hashlib.sha256(previous_raw).hexdigest() + ".json")
         if archived.exists():
@@ -611,6 +623,11 @@ def advance_coordinator_cost_head(project_root: Path, *, source_path: str) -> di
 
 
 def _sync_directory(path: Path) -> None:
+    if os.name == "nt":
+        from agent_lifecycle.contracts.authority_io import sync_authority_directory
+
+        sync_authority_directory(path)
+        return
     _require(
         hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
         "r11-durable-storage-unavailable",

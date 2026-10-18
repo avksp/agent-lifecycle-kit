@@ -659,10 +659,10 @@ class RawRetentionWitnessTests(unittest.TestCase):
                                   (self.journal_path, 0o644, 0o600),
                                   (self.sources["attempt-1"][0], 0o644, 0o600)):
             with self.subTest(path=str(path)):
-                path.chmod(bad)
-                with self.assertRaises(JournalUnavailable):
-                    self._collect_raw(closed.eligible_after)
-                path.chmod(restore)
+                from tests.contracts.test_private_storage import unsafe_private_access
+                with unsafe_private_access(path):
+                    with self.assertRaises(JournalUnavailable):
+                        self._collect_raw(closed.eligible_after)
         self.assertNotEqual(self.j.raw_obligations("run", closed.eligible_after)[0]["status"], "DONE")
         self.assertTrue(all(p.exists() for p in self.sources["attempt-1"]))
 

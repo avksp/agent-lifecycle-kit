@@ -1,61 +1,89 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import os
-import signal
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 import time
 import unittest
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from agent_lifecycle.adapter_sessions import codex_exact_prompt as exact_prompt_module
+from agent_lifecycle.accounting.contracts import RunClosure
+from agent_lifecycle.accounting.input_fit import assess_local_input_fit, select_source_excerpts
+from agent_lifecycle.accounting.journal import Journal
 from agent_lifecycle.adapter_sessions import bootstrap_r11
+from agent_lifecycle.adapter_sessions import codex_exact_prompt as exact_prompt_module
 from agent_lifecycle.adapter_sessions import codex_source_exposure as source_exposure_module
 from agent_lifecycle.adapter_sessions import codex_source_subject as source_subject_module
 from agent_lifecycle.adapter_sessions.codex_exact_prompt import (
-    CLAIM, ROUTE_ID, _observed_bundled_catalog, _observed_prompt_diagnostic,
-    _record_transport_witness, _selected_binary_path, _selected_host_evidence,
-    _recheck_alk_fit_sources, _recheck_active_workflow_state, _require_current_manifest,
-    _require_fresh_catalog,
-    _recompute_bootstrap_subject, _source_test_ids,
-    _build_source_exposure_packet, _check_source_exposure, _r69h_codex_exposure,
-    _r69h_check_test_dependency_closure,
-    _matches_closed_schema, _single_turn_projection,
-    _review_findings_match_v4,
-    _remove_snapshot_no_start, _snapshot_digest,
+    CLAIM,
+    ROUTE_ID,
+    _build_source_exposure_packet,
+    _check_source_exposure,
+    _matches_closed_schema,
+    _observed_bundled_catalog,
+    _observed_prompt_diagnostic,
     _private_dir,
+    _r69h_check_test_dependency_closure,
+    _r69h_codex_exposure,
+    _recheck_active_workflow_state,
+    _recheck_alk_fit_sources,
+    _recompute_bootstrap_subject,
+    _record_transport_witness,
+    _remove_snapshot_no_start,
+    _require_current_manifest,
+    _require_fresh_catalog,
+    _review_findings_match_v4,
+    _selected_binary_path,
+    _selected_host_evidence,
+    _single_turn_projection,
+    _snapshot_digest,
+    _source_test_ids,
     _write_exclusive,
     assess_retention_pre_fixture,
     assess_single_turn_bootstrap_context_fit,
     build_single_turn_bootstrap_review_request,
-    cleanup_no_start, cleanup_prestart_raw,
-    create_prestart_raw_inventory, prepare_exact_prompt,
-    read_codex_app_server_thread, reconcile_prelaunch_intents, record_proven_no_start,
+    cleanup_no_start,
+    cleanup_prestart_raw,
+    create_prestart_raw_inventory,
+    prepare_exact_prompt,
+    read_codex_app_server_thread,
+    reconcile_prelaunch_intents,
+    record_proven_no_start,
     require_bootstrap_audit,
     stage_input_request,
     verify_prestart_raw_inventory,
 )
 from agent_lifecycle.adapter_sessions.launch_preflight import (
-    _managed_task, _run_exact_managed_process, launch_from_local_profile,
+    _managed_task,
+    _run_exact_managed_process,
+    launch_from_local_profile,
 )
 from agent_lifecycle.adapter_sessions.process import run_process
 from agent_lifecycle.adapter_sessions.unified_start import start_lifecycle
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
+from agent_lifecycle.contracts.private_storage import PinnedPrivateDirectory
 from agent_lifecycle.contracts.process_execution_schemas import command_identity_hash
-from agent_lifecycle.accounting.contracts import RunClosure
-from agent_lifecycle.accounting.journal import Journal
-from agent_lifecycle.accounting.input_fit import assess_local_input_fit, select_source_excerpts
 from tests.accounting.test_journal import PROOF
 from tests.accounting.test_opening_balances import import_data
-
 from tests.adapter_sessions.test_bootstrap_r11 import bound_current_invocation_fixture
+from tests.adapter_sessions.test_windows_pipe import (
+    assert_private_path,
+    install_windows_fixture_process,
+    process_is_running,
+)
+from tests.contracts.test_private_storage import unsafe_private_access
+
+_CODEX_FIXTURE_NAME = "codex.exe" if os.name == "nt" else "codex"
+
 
 
 class ExactPromptPrivateInputTests(unittest.TestCase):
@@ -469,7 +497,16 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
                     raise OSError("snapshot unlink refused")
                 original_unlink(path, *args, **kwargs)
 
-            with patch.object(Path, "unlink", refuse_snapshot):
+            original_pinned_unlink = PinnedPrivateDirectory.unlink
+
+            def refuse_pinned(parent, name):
+                if parent.directory.path / name == config:
+                    raise OSError("snapshot unlink refused")
+                return original_pinned_unlink(parent, name)
+
+            injected = patch.object(PinnedPrivateDirectory, "unlink", refuse_pinned) \
+                if os.name == "nt" else patch.object(Path, "unlink", refuse_snapshot)
+            with injected:
                 with self.assertRaises(LifecycleError) as raised:
                     cleanup_prestart_raw(root, run_id="run-1", task_id="task-1", attempt_id="1",
                                          staging_source=None, proven_no_start=True)
@@ -754,7 +791,7 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
             marker = (root / "work/release-2-16/evidence/codex-exact-prompt/prestart"
                       / "request-1/raw-cleanup-pending.json")
             self.assertEqual(json.loads(marker.read_text())["status"], "PRIVATE_CLEANUP_PENDING")
-            self.assertEqual(marker.stat().st_mode & 0o777, 0o600)
+            assert_private_path(self, marker, 0o600)
 
             second = stage_input_request(root, "request-2", {"routeId": ROUTE_ID})
             with self.assertRaises(LifecycleError) as blocked:
@@ -780,8 +817,8 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
                 "routeId":ROUTE_ID, "requestedClaim":CLAIM,
                 "runId":"run-1", "taskId":"task-1", "planDigest":"wrong",
             })
-            self.assertEqual(source.stat().st_mode & 0o777, 0o600)
-            self.assertEqual(source.parent.stat().st_mode & 0o777, 0o700)
+            assert_private_path(self, source, 0o600)
+            assert_private_path(self, source.parent, 0o700)
             lock = root / "plan.lock.json"
             lock.write_text("{}")
             with self.assertRaises(LifecycleError) as raised:
@@ -1124,9 +1161,10 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
         self.assertEqual(observed.stdout.strip(), "False")
 
     def test_local_app_server_fresh_read_uses_only_documented_read_protocol(self) -> None:
+        install_windows_fixture_process(self)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            executable = root / "codex"
+            executable = root / _CODEX_FIXTURE_NAME
             executable.write_text(
                 f"#!{sys.executable}\n"
                 "import json,sys\n"
@@ -1149,9 +1187,16 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
             self.assertEqual(response["thread"]["id"], "review-thread")
             self.assertEqual((root / "methods.log").read_text().splitlines(),
                              ["initialize", "initialized", "thread/read"])
-            path_response = read_codex_app_server_thread(
-                root, executable="codex", expected_binary_sha256=digest,
-                thread_id="review-thread", process_env={**os.environ, "PATH": str(root)})
+            # A text Python fixture is not an executable PE image. Inject its
+            # selected path on Windows and still check the exact resolver input.
+            resolution = patch.object(exact_prompt_module.shutil, "which", return_value=str(executable)) \
+                if os.name == "nt" else nullcontext()
+            with resolution as resolver:
+                path_response = read_codex_app_server_thread(
+                    root, executable="codex", expected_binary_sha256=digest,
+                    thread_id="review-thread", process_env={**os.environ, "PATH": str(root)})
+            if os.name == "nt":
+                resolver.assert_called_once_with("codex", path=str(root))
             self.assertEqual(path_response["thread"]["id"], "review-thread")
             with self.assertRaises(LifecycleError) as wrong_binary:
                 read_codex_app_server_thread(root, executable=str(executable),
@@ -1161,6 +1206,7 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
                              "codex-exact-bootstrap-review-unavailable")
 
     def test_app_server_rejects_ambiguous_json_and_response_id_types(self) -> None:
+        install_windows_fixture_process(self)
         invalid = [
             ("initialize", '{"id":true,"result":{}}'),
             ("initialize", '{"id":1.0,"result":{}}'),
@@ -1174,7 +1220,7 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
         for method, response in invalid:
             with self.subTest(method=method, response=response), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
-                executable = root / "codex"
+                executable = root / _CODEX_FIXTURE_NAME
                 executable.write_text(
                     f"#!{sys.executable}\nimport json,sys\n"
                     "for line in sys.stdin:\n"
@@ -1191,7 +1237,7 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
                 self.assertEqual(error.exception.code, "codex-exact-bootstrap-review-unavailable")
 
     def _app_server_io_fixture(self, root: Path, *, stall: bool = False) -> Path:
-        executable = root / "codex"
+        executable = root / _CODEX_FIXTURE_NAME
         executable.write_text(
             f"#!{sys.executable}\n"
             "import json,os,sys,time\n"
@@ -1209,6 +1255,7 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
         return executable
 
     def test_app_server_rejects_expiry_during_decode_hash_or_cleanup_and_reaps_child(self) -> None:
+        install_windows_fixture_process(self)
         for mode in ["matching-decode", "notification-decode", "final-hash", "cleanup"]:
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
@@ -1263,10 +1310,10 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
                                                 expected_binary_sha256=digest, thread_id="late")
                 self.assertEqual(error.exception.code, "codex-exact-bootstrap-review-unavailable")
                 self.assertIn("timed out", str(error.exception))
-                with self.assertRaises(ProcessLookupError):
-                    os.kill(int((root / "child.pid").read_text()), 0)
+                self.assertFalse(process_is_running(int((root / "child.pid").read_text())))
 
     def test_app_server_rejects_oversized_requests_before_start(self) -> None:
+        install_windows_fixture_process(self)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             executable = self._app_server_io_fixture(root)
@@ -1281,6 +1328,7 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
                     start.assert_not_called()
 
     def test_app_server_stalled_request_write_times_out_and_reaps_child(self) -> None:
+        install_windows_fixture_process(self)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             executable = self._app_server_io_fixture(root, stall=True)
@@ -1297,14 +1345,18 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
             self.assertLess(time.monotonic() - started, 3.0)
             self.assertEqual(start.call_count, 1)
             self.assertTrue((root / "child.pid").is_file())
-            with self.assertRaises(ProcessLookupError):
-                os.kill(int((root / "child.pid").read_text()), 0)
+            self.assertFalse(process_is_running(int((root / "child.pid").read_text())))
 
     def test_app_server_delivers_short_writes_and_retries_would_block(self) -> None:
+        install_windows_fixture_process(self)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             executable = self._app_server_io_fixture(root)
-            real_write = os.write
+            from agent_lifecycle.adapter_sessions import windows_pipe
+
+            target = windows_pipe if os.name == "nt" else exact_prompt_module.os
+            operation = "write_pipe" if os.name == "nt" else "write"
+            real_write = getattr(target, operation)
             calls = []
 
             def short_write(fd, data):
@@ -1313,7 +1365,7 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
                     raise BlockingIOError()
                 return real_write(fd, data[:3])
 
-            with patch.object(exact_prompt_module.os, "write", side_effect=short_write):
+            with patch.object(target, operation, side_effect=short_write):
                 response = read_codex_app_server_thread(
                     root, executable=str(executable),
                     expected_binary_sha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
@@ -1425,12 +1477,13 @@ class ExactPromptPublicGateTests(unittest.TestCase):
             self.assertFalse(source.exists())
 
     def test_rb12_dynamic_catalog_change_refuses_with_same_binary(self) -> None:
+        install_windows_fixture_process(self)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
             catalog_file = root / "catalog.json"
             catalog_file.write_text(json.dumps({
                 "models": [{"slug": "test-model", "context_window": 32768}]}))
-            binary = root / "codex"
+            binary = root / _CODEX_FIXTURE_NAME
             binary.write_text(
                 f"#!{sys.executable}\n"
                 "import sys\nfrom pathlib import Path\n"
@@ -1548,9 +1601,10 @@ class ExactPromptPublicGateTests(unittest.TestCase):
             self.assertEqual(missing.exception.code, "codex-exact-plan-stale")
 
     def test_selected_binary_path_refuses_changed_bytes_before_start(self) -> None:
+        install_windows_fixture_process(self)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            binary = root / "codex"
+            binary = root / _CODEX_FIXTURE_NAME
             binary.write_bytes(b"first")
             identity = {"status": "PASS",
                         "resolvedPathSha256": hashlib.sha256(os.fsencode(str(binary))).hexdigest(),
@@ -1704,9 +1758,10 @@ class ExactPromptPublicGateTests(unittest.TestCase):
             self.assertNotEqual(terminal["processResultSha256"], canonical_digest(changed))
 
     def test_prelaunch_sources_config_and_diagnostic_without_caller_pass(self) -> None:
+        install_windows_fixture_process(self)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            binary = root / "codex"
+            binary = root / _CODEX_FIXTURE_NAME
             binary.write_text(
                 f"#!{sys.executable}\n"
                 "import json, sys\n"
@@ -1739,7 +1794,7 @@ class ExactPromptPublicGateTests(unittest.TestCase):
                        / "run-1/task-1/1")
             config = json.loads((private / "effective-config.json").read_text())
             self.assertEqual(config["childInternalEffectiveConfig"], "UNPROVEN")
-            self.assertEqual((private / "prompt-input.json").stat().st_mode & 0o777, 0o600)
+            assert_private_path(self, (private / "prompt-input.json"), 0o600)
             evidence = (root / "work/release-2-16/evidence/codex-exact-prompt"
                         / "run-1/task-1/1")
             manifest = json.loads((evidence / "config-snapshot-manifest.json").read_text())
@@ -1753,9 +1808,10 @@ class ExactPromptPublicGateTests(unittest.TestCase):
             self.assertEqual(legacy.exception.code, "codex-exact-legacy-witness-refused")
 
     def test_per_role_diagnostic_is_private_and_only_a_candidate(self) -> None:
+        install_windows_fixture_process(self)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
-            binary = root / "codex"
+            binary = root / _CODEX_FIXTURE_NAME
             binary.write_text(
                 f"#!{sys.executable}\n"
                 "import json, os, sys\n"
@@ -1771,7 +1827,11 @@ class ExactPromptPublicGateTests(unittest.TestCase):
                 "elif scenario == 'symlink':\n"
                 "    p.unlink(); p.symlink_to(home / 'config.toml')\n"
                 "elif scenario == 'hardlink': os.link(p, home / 'metadata-copy')\n"
-                "elif scenario == 'other-mode': p.chmod(0o640)\n"
+                "elif scenario == 'other-mode':\n"
+                "    if os.name == 'nt':\n"
+                "        import subprocess\n"
+                "        subprocess.run(['icacls', str(p), '/grant', '*S-1-1-0:F'], check=True, capture_output=True)\n"
+                "    else: p.chmod(0o640)\n"
                 "elif scenario == 'config': (home / 'config.toml').write_bytes(b'changed')\n"
                 "elif scenario == 'config-replacement':\n"
                 "    c = home / 'config.toml'; t = home / 'replacement'\n"
@@ -1790,6 +1850,7 @@ class ExactPromptPublicGateTests(unittest.TestCase):
             cases = [("absent", 0o600), ("reset", 0o600), ("reset", 0o400),
                      ("unchanged", 0o600), ("contents", 0o600), ("replacement", 0o600),
                      ("symlink", 0o600), ("hardlink", 0o600), ("other-mode", 0o600),
+                     ("other-mode", 0o400), ("failed-command", 0o400),
                      ("config", 0o600), ("config-replacement", 0o600),
                      ("directory-add", 0o600), ("directory-remove", 0o600),
                      ("unexpected-file", 0o600), ("failed-command", 0o600)]
@@ -1806,6 +1867,7 @@ class ExactPromptPublicGateTests(unittest.TestCase):
                     if scenario != "absent":
                         metadata.write_bytes(b"a" * 36)
                         metadata.chmod(mode)
+                    actual_before_mode = metadata.stat().st_mode & 0o777 if metadata.exists() else None
                     before = _snapshot_digest(snapshot, root=root)
                     run_id = f"run-{index}"
                     raw = (root / "work/release-2-16/private-details/codex-exact-prompt"
@@ -1818,7 +1880,7 @@ class ExactPromptPublicGateTests(unittest.TestCase):
                         observed = _observed_prompt_diagnostic(root, str(binary), identity, **arguments)
                         self.assertEqual(_snapshot_digest(snapshot, root=root), before)
                         self.assertEqual(observed["rawSha256"], hashlib.sha256(raw.read_bytes()).hexdigest())
-                        self.assertEqual(raw.stat().st_mode & 0o777, 0o600)
+                        assert_private_path(self, raw, 0o600)
                         self.assertEqual(observed["itemCount"], 1)
                         self.assertEqual(observed["execStdinEquivalence"], "UNPROVEN")
                         self.assertNotIn("private model input", raw.read_text())
@@ -1829,23 +1891,26 @@ class ExactPromptPublicGateTests(unittest.TestCase):
                         if scenario == "failed-command":
                             self.assertEqual(_snapshot_digest(snapshot, root=root), before)
                     if scenario in {"reset", "unchanged", "failed-command"}:
-                        self.assertEqual(metadata.stat().st_mode & 0o777, mode)
+                        self.assertEqual(metadata.stat().st_mode & 0o777, actual_before_mode)
             snapshot = root / "foreign-metadata"
             snapshot.mkdir(mode=0o700)
             metadata = snapshot / "installation_id"
             metadata.write_bytes(b"a" * 36)
             metadata.chmod(0o600)
-            with patch.object(exact_prompt_module.os, "getuid", return_value=os.getuid() + 1), \
-                    self.assertRaises(LifecycleError):
+            private_access = unsafe_private_access(metadata) if os.name == "nt" else nullcontext()
+            owner_change = nullcontext() if os.name == "nt" else patch.object(
+                exact_prompt_module.os, "getuid", return_value=os.getuid() + 1)
+            with private_access, owner_change, self.assertRaises(LifecycleError):
                 _observed_prompt_diagnostic(
                     root, str(binary), identity, snapshot=snapshot, model="test-model",
                     role="worker", run_id="foreign-run", task_id="task-1", attempt_id="1",
                     final_sha="a" * 64, process_env=dict(os.environ))
 
     def test_selected_binary_bundled_catalog_is_observed_and_bounded(self) -> None:
+        install_windows_fixture_process(self)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            binary = root / "codex"
+            binary = root / _CODEX_FIXTURE_NAME
             binary.write_text(
                 f"#!{sys.executable}\n"
                 "import json, sys\n"

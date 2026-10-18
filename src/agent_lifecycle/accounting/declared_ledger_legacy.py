@@ -32,6 +32,13 @@ def _read_private(
     allowed_modes: tuple[int, ...] = (0o600,),
     max_bytes: int = _MAX_REQUEST_BYTES,
 ) -> bytes:
+    if os.name == "nt":
+        from agent_lifecycle.contracts.private_storage import read_private_bytes
+
+        try:
+            return read_private_bytes(path, root=root, modes=allowed_modes, max_bytes=max_bytes)
+        except LifecycleError as exc:
+            raise LifecycleError("codex-exact-private-path-unsafe", exc.message) from exc
     if not path.is_relative_to(root):
         raise LifecycleError("codex-exact-private-path-unsafe", "private artifact lies outside root")
     current = path.parent

@@ -22,12 +22,14 @@ from agent_lifecycle.adapter_sessions.attempt_authority import _invocation_names
 from agent_lifecycle.adapter_sessions.input_lifecycle import _sha, _snapshot_digest
 from agent_lifecycle.adapter_sessions.private_input import (
     _MAX_REQUEST_BYTES,
+    _read_private,
     _require,
     _verify_private_ancestors,
     _write_exclusive,
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, read_json_object
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
+from agent_lifecycle.contracts.private_storage import private_mode
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,7 +171,12 @@ def _bounded_codex_debug_output(
 ) -> bytes:
     """Run a local no-model diagnostic with a wall-clock and output bound."""
     process = None
-    selector = selectors.DefaultSelector()
+    selector_type: type[selectors.BaseSelector] = selectors.DefaultSelector
+    if os.name == "nt":
+        from .windows_pipe import PipeSelector
+
+        selector_type = PipeSelector
+    selector = selector_type()
     try:
         process = subprocess.Popen(
             [str(binary), *args],
@@ -178,16 +185,34 @@ def _bounded_codex_debug_output(
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
+            creationflags=0x08000000 if os.name == "nt" else 0,  # CREATE_NO_WINDOW
         )
         assert process.stdout is not None
+        if os.name == "nt":
+            from .windows_pipe import configure_pipe
+
+            configure_pipe(process.stdout.fileno())
         selector.register(process.stdout, selectors.EVENT_READ)
         deadline = time.monotonic() + 15.0
         chunks: list[bytes] = []
         total = 0
         while True:
+            _require(
+                time.monotonic() < deadline,
+                "codex-exact-catalog-unavailable",
+                "selected binary diagnostic timed out",
+            )
             ready = selector.select(max(0.0, deadline - time.monotonic()))
             _require(bool(ready), "codex-exact-catalog-unavailable", "selected binary diagnostic timed out")
-            chunk = os.read(process.stdout.fileno(), 65_536)
+            try:
+                if os.name == "nt":
+                    from .windows_pipe import read_pipe
+
+                    chunk = read_pipe(process.stdout.fileno(), 65_536)
+                else:
+                    chunk = os.read(process.stdout.fileno(), 65_536)
+            except BlockingIOError:
+                continue
             if not chunk:
                 break
             total += len(chunk)
@@ -441,6 +466,35 @@ def _snapshot_identity_inventory(snapshot: Path) -> list[tuple[str, int, int, in
     return sorted(rows)
 
 
+def _windows_private_diagnostic_output(
+    root: Path, binary: Path, tag: str, snapshot: Path, environment: dict[str, str]
+) -> bytes:
+    from agent_lifecycle.contracts.private_storage import private_fingerprint, restore_private_readonly
+
+    before_digest = _snapshot_digest(snapshot, root=root)
+    before_identities = _snapshot_identity_inventory(snapshot)
+    path = snapshot / "installation_id"
+    before = path.lstat() if path.exists() else None
+    body = _read_private(path, root=root, allowed_modes=(0o400, 0o600)) if before else None
+    fingerprint = private_fingerprint(path) if before else None
+    try:
+        return _bounded_codex_debug_output(
+            binary, ("debug", "prompt-input", tag), root=root, process_env=environment, limit=_MAX_REQUEST_BYTES
+        )
+    finally:
+        if before is not None and getattr(before, "st_file_attributes", 0) & 1:
+            current = path.lstat()
+            if not getattr(current, "st_file_attributes", 0) & 1:
+                assert body is not None and fingerprint is not None
+                restore_private_readonly(path, before, body, fingerprint, root=root)
+        _require(
+            _snapshot_digest(snapshot, root=root) == before_digest
+            and _snapshot_identity_inventory(snapshot) == before_identities,
+            "codex-exact-config-unsafe",
+            "diagnostic snapshot or its access policy changed",
+        )
+
+
 def _private_diagnostic_output(
     root: Path,
     binary: Path,
@@ -449,6 +503,8 @@ def _private_diagnostic_output(
     environment: dict[str, str],
 ) -> bytes:
     """Restore only an unchanged, pre-existing installation_id permission reset."""
+    if os.name == "nt":
+        return _windows_private_diagnostic_output(root, binary, tag, snapshot, environment)
     before_digest = _snapshot_digest(snapshot, root=root)
     before_identities = _snapshot_identity_inventory(snapshot)
     path = snapshot / "installation_id"
@@ -568,7 +624,7 @@ def _observed_prompt_diagnostic(
     binary = _selected_binary_path(executable, identity, process_env)
     binary_sha = identity["executableContentSha256"]
     _require(
-        snapshot.is_relative_to(root) and snapshot.is_dir() and stat.S_IMODE(snapshot.lstat().st_mode) == 0o700,
+        snapshot.is_relative_to(root) and snapshot.is_dir() and private_mode(snapshot, snapshot.lstat(), (0o700,)),
         "codex-exact-config-unsafe",
         "diagnostic CODEX_HOME is not protected",
     )

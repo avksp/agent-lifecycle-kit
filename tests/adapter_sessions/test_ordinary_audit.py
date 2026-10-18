@@ -167,6 +167,8 @@ class OrdinaryAuditTests(unittest.TestCase):
         # Exercise real storage writes: complete bytes remain visible when
         # either the file fsync or its parent-directory fsync fails.
         real_sync = os.fsync
+        from agent_lifecycle.contracts.authority_io import _Directory
+        real_directory_sync = _Directory.sync
         for target in ('report.json', 'publication.json'):
             for directory in (False, True):
                 with self.subTest(target=target, directory=directory):
@@ -182,8 +184,13 @@ class OrdinaryAuditTests(unittest.TestCase):
                         if _active[0] == _target and stat.S_ISDIR(os.fstat(fd).st_mode) == _directory:
                             raise OSError('injected final publication sync failure')
                         return real_sync(fd)
+                    def directory_sync(held, _active=active, _target=target, _directory=directory):
+                        if os.name == 'nt' and _directory and _active[0] == _target:
+                            raise OSError('injected Windows final directory sync failure')
+                        return real_directory_sync(held)
                     with patch.object(audit, 'create_authority_bytes', side_effect=write), \
-                            patch('agent_lifecycle.contracts.authority_io.os.fsync', side_effect=sync):
+                            patch('agent_lifecycle.contracts.authority_io.os.fsync', side_effect=sync), \
+                            patch.object(_Directory, 'sync', directory_sync):
                         with self.assertRaises(LifecycleError):
                             self.publish()
                     self._assert_pending_refuses()

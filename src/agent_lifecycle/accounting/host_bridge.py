@@ -13,20 +13,31 @@ import sqlite3
 import stat
 import time
 import weakref
-from contextlib import contextmanager, suppress
+from contextlib import ExitStack, contextmanager, suppress
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, NoReturn
+from typing import Any, BinaryIO, NoReturn
 from typing import cast as _validated_cast
 
 from agent_lifecycle.accounting.profile_schema import matches_profile_schema
 from agent_lifecycle.contracts import LifecycleError
-from agent_lifecycle.contracts.authority_io import read_authority_bytes
+from agent_lifecycle.contracts.authority_io import (
+    hold_authority_directory,
+    open_authority_read,
+    read_authority_bytes,
+)
 from agent_lifecycle.contracts.paths import normalize_repo_path
 
-from .closing_resources import JournalRetentionMixin, _raw_parent, _raw_read, _raw_ref
+from .closing_resources import (
+    JournalRetentionMixin,
+    _raw_parent,
+    _raw_private_file,
+    _raw_read,
+    _raw_ref,
+    _raw_stat,
+)
 from .contracts import EvidenceRef, JournalUnavailable, canonical, digest, utc_instant
 from .journal import Journal
 from .support_profiles import match_requested_claims, validate_profile_payload
@@ -73,14 +84,19 @@ class BoundedReader:
         self.charged_bytes = 0
         self.cache: dict[tuple[str, str], bytes] = {}
         self.roots: dict[str, int] = {}
-        self.finalizer = weakref.finalize(self, self._close_roots, self.roots)
+        self.root_guards: dict[str, ExitStack] = {}
+        self.finalizer = weakref.finalize(self, self._close_roots, self.roots, self.root_guards)
 
     @staticmethod
-    def _close_roots(roots: dict[str, int]) -> None:
+    def _close_roots(roots: dict[str, int], guards: dict[str, ExitStack]) -> None:
         for fd in roots.values():
-            with suppress(OSError):
-                os.close(fd)
+            if fd >= 0:
+                with suppress(OSError):
+                    os.close(fd)
         roots.clear()
+        for guard in guards.values():
+            guard.close()
+        guards.clear()
 
     def close(self) -> None:
         self.finalizer()
@@ -105,6 +121,16 @@ class BoundedReader:
         key = str(absolute_root)
         if key in self.roots:
             return key, self.roots[key]
+        if os.name == "nt":
+            guard = ExitStack()
+            try:
+                guard.enter_context(hold_authority_directory(absolute_root))
+            except BaseException:
+                guard.close()
+                raise
+            self.root_guards[key] = guard
+            self.roots[key] = -1  # Windows uses held HANDLE guards, never a POSIX fd.
+            return key, -1
         flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
         parent = os.open(absolute_root.anchor, flags)
         try:
@@ -123,9 +149,9 @@ class BoundedReader:
     def read(self, root: Path, relative: str, limit: int) -> bytes:
         if normalize_repo_path(relative, label="accounting artifact") != relative:
             _fail("accounting-artifact-path-invalid")
-        if not all(hasattr(os, name) for name in ("O_NOFOLLOW", "O_DIRECTORY", "O_NONBLOCK")):
+        if os.name != "nt" and not all(hasattr(os, name) for name in ("O_NOFOLLOW", "O_DIRECTORY", "O_NONBLOCK")):
             _fail("accounting-safe-read-unavailable")
-        if os.open not in os.supports_dir_fd:
+        if os.name != "nt" and os.open not in os.supports_dir_fd:
             _fail("accounting-safe-read-unavailable")
         root_key, root_fd = self._root(root)
         key = (root_key, relative)
@@ -136,6 +162,14 @@ class BoundedReader:
             return raw
         if self.charged_bytes >= self.limit:
             _fail("accounting-reference-budget-exceeded")
+        if os.name == "nt":
+            try:
+                with open_authority_read(root / relative, root=root) as stream:
+                    raw = self._consume(stream, limit)
+            except OSError as exc:
+                raise LifecycleError("accounting-artifact-open-refused", "Accounting artifact read refused") from exc
+            self.cache[key] = raw
+            return raw
         directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
         # Hold every parent while opening its child: a concurrent directory
         # rename cannot redirect a later leaf open through an outside symlink.
@@ -147,23 +181,27 @@ class BoundedReader:
                 parent = child
             fd = os.open(Path(relative).name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
             with os.fdopen(fd, "rb", buffering=0) as stream:
-                before = os.fstat(stream.fileno())
-                if not stat.S_ISREG(before.st_mode) or before.st_size > limit:
-                    _fail("accounting-artifact-size-invalid")
-                if before.st_size > self.limit - self.charged_bytes:
-                    _fail("accounting-reference-budget-exceeded")
-                # Reserve before IO; failed reads and failed hash checks retain it.
-                self.charged_bytes += before.st_size
-                raw = stream.read(before.st_size)
-                after = os.fstat(stream.fileno())
+                raw = self._consume(stream, limit)
         except OSError as exc:
             raise LifecycleError("accounting-artifact-open-refused", "Accounting artifact read refused") from exc
         finally:
             os.close(parent)
+        self.cache[key] = raw
+        return raw
+
+    def _consume(self, stream: BinaryIO, limit: int) -> bytes:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size > limit:
+            _fail("accounting-artifact-size-invalid")
+        if before.st_size > self.limit - self.charged_bytes:
+            _fail("accounting-reference-budget-exceeded")
+        # Reserve before IO; failed reads and failed hash checks retain it.
+        self.charged_bytes += before.st_size
+        raw = stream.read(before.st_size)
+        after = os.fstat(stream.fileno())
         fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
         if any(getattr(before, f) != getattr(after, f) for f in fields) or len(raw) != before.st_size:
             _fail("accounting-artifact-changed-during-read")
-        self.cache[key] = raw
         return raw
 
 
@@ -295,11 +333,11 @@ class EvidenceGraph:
 def _candidate_sources(reader: BoundedReader, root: Path) -> list[dict]:
     """Fingerprint current ALK Python source; never let a report select its files."""
     _, anchor = reader._root(root)
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    flags = 0 if os.name == "nt" else os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     paths: list[str] = []
     entries_seen = 0
 
-    def visit(fd: int, prefix: str, depth: int) -> None:
+    def visit(fd: int | Path, prefix: str, depth: int) -> None:
         nonlocal entries_seen
         if depth > 64:
             _fail("accounting-source-inventory-overflow")
@@ -312,24 +350,33 @@ def _candidate_sources(reader: BoundedReader, root: Path) -> list[dict]:
                     continue
                 relative = prefix + "/" + entry.name
                 info = entry.stat(follow_symlinks=False)
-                if stat.S_ISLNK(info.st_mode):
+                if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
                     _fail("accounting-source-symlink")
                 if stat.S_ISDIR(info.st_mode):
-                    child = os.open(entry.name, flags, dir_fd=fd)
-                    try:
-                        visit(child, relative, depth + 1)
-                    finally:
-                        os.close(child)
+                    if isinstance(fd, Path):
+                        child_path = fd / entry.name
+                        with hold_authority_directory(child_path):
+                            visit(child_path, relative, depth + 1)
+                    else:
+                        child = os.open(entry.name, flags, dir_fd=fd)
+                        try:
+                            visit(child, relative, depth + 1)
+                        finally:
+                            os.close(child)
                 elif relative.endswith(".py"):
                     if not stat.S_ISREG(info.st_mode) or len(paths) >= 4096:
                         _fail("accounting-source-inventory-overflow")
                     paths.append(relative)
 
-    src = os.open("src", flags, dir_fd=anchor)
-    try:
-        visit(src, "src", 0)
-    finally:
-        os.close(src)
+    if os.name == "nt":
+        with hold_authority_directory(root / "src"):
+            visit(root / "src", "src", 0)
+    else:
+        src = os.open("src", flags, dir_fd=anchor)
+        try:
+            visit(src, "src", 0)
+        finally:
+            os.close(src)
     paths.append("tools/release/validate_accounting_adapter_profiles.py")
     rows = []
     for path in sorted(set(paths)):
@@ -769,6 +816,10 @@ class _MaintenanceJournal(Journal):
 
 
 def _require_raw_platform() -> None:
+    if os.name == "nt":
+        # The selected private Windows context checks real ACLs and flushes;
+        # a platform label alone does not authorize any deletion.
+        return
     if (
         os.name != "posix"
         or not getattr(os, "O_NOFOLLOW", 0)
@@ -823,11 +874,10 @@ def _open_authority(path: Path, expected_sha: str) -> tuple[Path, dict, dict, Ev
     # Reuse the journal's complete root/file/plan/lock validator on a read-only
     # connection before the writable Journal constructor can touch the database.
     with _raw_parent(root, _validated_cast(str, authority.get("journalPath"))) as (parent, name):
-        info = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        info = _raw_stat(parent, name)
         if (
             not stat.S_ISREG(info.st_mode)
-            or stat.S_IMODE(info.st_mode) != 0o600
-            or info.st_uid != os.geteuid()
+            or not _raw_private_file(parent, name, info)
             or info.st_nlink != 1
             or authority.get("journalFileIdentity") != {"device": info.st_dev, "inode": info.st_ino}
         ):

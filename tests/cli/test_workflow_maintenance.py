@@ -112,7 +112,9 @@ class WorkflowMaintenanceTests(unittest.TestCase):
         self.assertFalse((self.f.root / "unrelated").exists())
 
     def test_unsupported_filesystem_refuses_before_authority_or_journal_read(self):
-        with patch("agent_lifecycle.accounting.host_bridge.os.supports_dir_fd", set()), \
+        from agent_lifecycle.contracts import LifecycleError
+        with patch("agent_lifecycle.accounting.host_bridge._require_raw_platform",
+                   side_effect=LifecycleError("retention-platform-unsupported", "injected unavailable filesystem")), \
                 patch("agent_lifecycle.accounting.host_bridge._open_authority") as opened:
             code, result = self._call()
             self.assertEqual(code, 2)

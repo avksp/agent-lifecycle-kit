@@ -27,6 +27,7 @@ from agent_lifecycle.adapter_sessions.source_review_contracts import (
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.authority_io import normalize_authority_path, read_authority_bytes
 from agent_lifecycle.contracts.bounded_json import load_bounded_json as _r11_json
+from agent_lifecycle.contracts.private_storage import private_mode
 
 
 def _r11_source_inputs(
@@ -642,14 +643,14 @@ def _r11_read_parent_file(root: Path, path: Path) -> bytes:
                 ("work", "release-2-16", "evidence"),
             }
             _require(
-                stat.S_ISDIR(info.st_mode) and (shared or stat.S_IMODE(info.st_mode) == 0o700),
+                stat.S_ISDIR(info.st_mode) and (shared or private_mode(current, info, (0o700,))),
                 "r11-parent-archive",
                 "parent archive directory is not private and regular",
             )
             current = current.parent
         info = path.lstat()
         _require(
-            stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o600,
+            stat.S_ISREG(info.st_mode) and private_mode(path, info, (0o600,)),
             "r11-parent-archive",
             "parent archive file is not private and regular",
         )
@@ -691,7 +692,7 @@ def _r11_parent_snapshot(root: Path) -> tuple[dict[str, bytes], dict[str, Any]]:
                     mode = path.lstat().st_mode
                     if stat.S_ISDIR(mode):
                         _require(
-                            name in expected_dirs and stat.S_IMODE(mode) == 0o700,
+                            name in expected_dirs and private_mode(path, path.lstat(), (0o700,)),
                             "r11-parent-archive",
                             "unexpected or nonprivate parent archive directory",
                         )
@@ -699,7 +700,9 @@ def _r11_parent_snapshot(root: Path) -> tuple[dict[str, bytes], dict[str, Any]]:
                         pending.append(path)
                     else:
                         _require(
-                            stat.S_ISREG(mode) and stat.S_IMODE(mode) == 0o600 and name in expected_files,
+                            stat.S_ISREG(mode)
+                            and private_mode(path, path.lstat(), (0o600,))
+                            and name in expected_files,
                             "r11-parent-archive",
                             "unexpected or indirect parent archive file",
                         )
@@ -873,14 +876,14 @@ def _r11_review_parent_sources(root: Path, partition: dict[str, Any]) -> dict[st
             mode = path.lstat().st_mode
             if stat.S_ISDIR(mode):
                 _require(
-                    name in expected_dirs and stat.S_IMODE(mode) == 0o700,
+                    name in expected_dirs and private_mode(path, path.lstat(), (0o700,)),
                     "r11-review-parent-source",
                     "unexpected or indirect before-source directory",
                 )
                 dirs.add(name)
             else:
                 _require(
-                    stat.S_ISREG(mode) and stat.S_IMODE(mode) == 0o600 and name in wanted,
+                    stat.S_ISREG(mode) and private_mode(path, path.lstat(), (0o600,)) and name in wanted,
                     "r11-review-parent-source",
                     "unexpected or indirect before-source file",
                 )

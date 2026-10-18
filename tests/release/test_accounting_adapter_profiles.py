@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import closing
+from contextlib import closing, nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -50,7 +50,7 @@ class AccountingAdapterProfileTests(unittest.TestCase):
         self.catalog_path = self.root / "profiles/accounting-adapter-capabilities.v1.json"
         self.evidence_root = self.root / "evidence"
         self.evidence_root.mkdir()
-        self.catalog = json.loads(CATALOG.read_text())
+        self.catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
         # Replace archived bytes only inside this disposable structural fixture.
         for entry in self.catalog["entries"]:
             for source in entry["sources"]:
@@ -84,7 +84,7 @@ class AccountingAdapterProfileTests(unittest.TestCase):
         entry = self.catalog["entries"][0]
         adapter = entry["adapterId"]
         raw_ref = self._json(self.evidence_root / "raw.json", {"fixture": True})
-        original = json.loads((REPO / "tests/accounting/fixtures/release_216_adapter_profiles.json").read_text())
+        original = json.loads((REPO / "tests/accounting/fixtures/release_216_adapter_profiles.json").read_text(encoding="utf-8"))
         payload = copy.deepcopy(next(x for x in original["profiles"] if x["binding"]["adapterId"] == adapter))
         payload["expectationId"] = entry["expectationId"]
         payload["binding"]["hostVersion"] = entry["target"]["version"]
@@ -323,7 +323,7 @@ class AccountingAdapterProfileTests(unittest.TestCase):
                 report["readBudgetChargedBytes"] = 25_165_824 - 2 * total + 1
             elif mutation == "noncanonical-result":
                 result_path = self.root / "work/result-1.json"
-                result_path.write_text(json.dumps(json.loads(result_path.read_bytes()), indent=2))
+                result_path.write_text(json.dumps(json.loads(result_path.read_bytes()), indent=2), encoding="utf-8", newline="\n")
             elif mutation == "producer-aba":
                 contracts = json.loads(original_contracts_raw)
                 producer = next(p for p in contracts["producers"] if p["id"] == "P-FINAL-VALIDATOR")
@@ -738,10 +738,10 @@ class AccountingAdapterProfileTests(unittest.TestCase):
                 if "--profiles-root" in mode and "--preflight" not in mode:
                     self.assertFalse(out.exists())
                     diagnostic = Path(str(out) + ".diagnostic.json")
-                    self.assertFalse(json.loads(diagnostic.read_text())["dataCandidate"])
+                    self.assertFalse(json.loads(diagnostic.read_text(encoding="utf-8"))["dataCandidate"])
                 else:
                     diagnostic = out
-                self.assertFalse(json.loads(diagnostic.read_text())["acceptingReceipt"])
+                self.assertFalse(json.loads(diagnostic.read_text(encoding="utf-8"))["acceptingReceipt"])
 
     def test_directory_swap_cannot_redirect_held_parent_leaf(self) -> None:
         original = b"inside"
@@ -750,19 +750,37 @@ class AccountingAdapterProfileTests(unittest.TestCase):
         self._put(outside / "leaf.txt", b"outside")
         real_open = os.open
         swapped = False
+        rename_denied = []
 
-        def swapping_open(path, flags, *args, **kwargs):
+        def swap():
             nonlocal swapped
-            if path == "leaf.txt" and not swapped:
+            try:
                 (self.evidence_root / "nested").rename(self.evidence_root / "held")
+            except PermissionError as exc:
+                self.assertEqual(os.name, "nt")
+                self.assertIn(exc.winerror, (5, 32))
+                rename_denied.append(exc.winerror)
+            else:
                 (self.evidence_root / "nested").symlink_to(outside, target_is_directory=True)
                 swapped = True
+
+        def swapping_open(path, flags, *args, **kwargs):
+            if path == "leaf.txt" and not swapped:
+                swap()
             return real_open(path, flags, *args, **kwargs)
 
+        from agent_lifecycle.contracts.authority_io import _Directory
+        real_child = _Directory.open_child
+        def swapping_child(held, name):
+            if name == "leaf.txt" and not swapped:
+                swap()
+            return real_child(held, name)
+
         supported = os.supports_dir_fd | {swapping_open}
-        with patch.object(os, "supports_dir_fd", supported), patch.object(os, "open", swapping_open):
-            raw = BoundedReader().read(self.evidence_root, "nested/leaf.txt", 100)
-        self.assertTrue(swapped)
+        with patch.object(os, "supports_dir_fd", supported), patch.object(os, "open", swapping_open), \
+                patch.object(_Directory, "open_child", swapping_child), closing(BoundedReader()) as reader:
+            raw = reader.read(self.evidence_root, "nested/leaf.txt", 100)
+        self.assertTrue(swapped or rename_denied)
         self.assertEqual(raw, original)
 
     def test_document_interpretation_uses_verified_snapshot_after_replacement(self) -> None:
@@ -821,7 +839,7 @@ class AccountingAdapterProfileTests(unittest.TestCase):
             with self.subTest(value=value):
                 profile, entry = self._profile()
                 path = self.evidence_root / f"{entry['adapterId']}/qualification.json"
-                qualification = json.loads(path.read_text())
+                qualification = json.loads(path.read_text(encoding="utf-8"))
                 qualification["candidateDispositions"][0] = value
                 profile["qualificationRef"] = self._json(path, qualification)
                 self._json(self.evidence_root / f"{entry['adapterId']}/profile.json", profile)
@@ -842,7 +860,7 @@ class AccountingAdapterProfileTests(unittest.TestCase):
         self._put(outside / "value.txt", raw)
         self.evidence_root.rename(self.root / "original-root")
         self.evidence_root.symlink_to(outside, target_is_directory=True)
-        with self.assertRaises(OSError):
+        with self.assertRaises((OSError, LifecycleError)):
             graph.verify(self._ref("value.txt", raw))
         self.assertEqual(graph.reader.charged_bytes, 0)
 
@@ -850,14 +868,21 @@ class AccountingAdapterProfileTests(unittest.TestCase):
         original = self._json(self.evidence_root / "resolver.txt", {"bound": "original"})
         graph = EvidenceGraph(self.evidence_root)
         graph.verify(original)
-        self.evidence_root.rename(self.root / "held-root")
+        held = self.root / "held-root"
+        try:
+            self.evidence_root.rename(held)
+        except PermissionError as exc:
+            self.assertEqual(os.name, "nt")
+            self.assertIn(exc.winerror, (5, 32))
+            held = self.evidence_root
         outside = self.root / "replacement-root"
         self._json(outside / "resolver.txt", {"bound": "replacement"})
-        self.evidence_root.symlink_to(outside, target_is_directory=True)
+        if held != self.evidence_root:
+            self.evidence_root.symlink_to(outside, target_is_directory=True)
         self.assertEqual(graph.document(original), {"bound": "original"})
         # A new path still uses the held original root rather than resolving the
         # replacement, and an opaque document never needs a second read.
-        (self.root / "held-root/new.txt").write_bytes(b"inside")
+        (held / "new.txt").write_bytes(b"inside")
         (outside / "new.txt").write_bytes(b"outside")
         graph.verify(self._ref("new.txt", b"inside"))
         self.assertEqual(graph.raw_bytes["new.txt"], b"inside")
@@ -868,7 +893,9 @@ class AccountingAdapterProfileTests(unittest.TestCase):
         real_fdopen = os.fdopen
         consumed = []
         buffer_modes = []
+        growth_denied = []
 
+        self_test = self
         class GrowDuringRead:
             def __init__(self, stream):
                 self.stream = stream
@@ -883,8 +910,16 @@ class AccountingAdapterProfileTests(unittest.TestCase):
                 return self.stream.fileno()
 
             def read(self, size):
-                with path.open("ab") as writer:
-                    writer.write(b"x" * 16_384)
+                try:
+                    with path.open("ab") as writer:
+                        writer.write(b"x" * 16_384)
+                except PermissionError as exc:
+                    self_test.assertEqual(os.name, "nt")
+                    self_test.assertTrue(
+                        exc.winerror in (5, 32)
+                        or (exc.winerror is None and exc.errno == 13)
+                    )
+                    growth_denied.append(exc.winerror)
                 raw = self.stream.read(size)
                 underlying = getattr(self.stream, "raw", self.stream)
                 consumed.append(underlying.tell())
@@ -895,8 +930,12 @@ class AccountingAdapterProfileTests(unittest.TestCase):
             return GrowDuringRead(real_fdopen(*args, **kwargs))
 
         reader = BoundedReader(6)
-        with patch.object(os, "fdopen", growing_fdopen), self.assertRaises(LifecycleError):
-            reader.read(self.evidence_root, "growing.txt", 100_000)
+        failure = self.assertRaises(LifecycleError) if os.name != "nt" else nullcontext()
+        with patch.object(os, "fdopen", growing_fdopen), failure:
+            value = reader.read(self.evidence_root, "growing.txt", 100_000)
+        if os.name == "nt":
+            self.assertTrue(growth_denied)
+            self.assertEqual(value, b"before")
         self.assertEqual(buffer_modes, [0])
         self.assertEqual(consumed, [6])
         self.assertEqual(reader.charged_bytes, 6)

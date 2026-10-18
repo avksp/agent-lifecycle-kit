@@ -13,6 +13,16 @@ _MAX_REQUEST_BYTES = 131_072
 
 
 def _private_dir(path: Path, *, boundary: Path) -> None:
+    if os.name == "nt":
+        from agent_lifecycle.contracts.private_storage import ensure_private_directory
+
+        try:
+            ensure_private_directory(path, boundary=boundary)
+        except LifecycleError as exc:
+            if exc.code == "private-storage-unsafe":
+                raise LifecycleError("codex-exact-private-path-unsafe", exc.message) from exc
+            raise
+        return
     if path == boundary:
         return
     _private_dir(path.parent, boundary=boundary)
@@ -27,6 +37,16 @@ def _private_dir(path: Path, *, boundary: Path) -> None:
 
 def _verify_private_ancestors(path: Path, *, root: Path) -> None:
     """Refuse an existing snapshot reached through a symlink or open parent."""
+    if os.name == "nt":
+        from agent_lifecycle.contracts.private_storage import verify_private_ancestors
+
+        try:
+            verify_private_ancestors(path, root=root)
+        except LifecycleError as exc:
+            if exc.code == "private-storage-unsafe":
+                raise LifecycleError("codex-exact-private-path-unsafe", exc.message) from exc
+            raise
+        return
     _require(
         path.is_relative_to(root) and path != root, "codex-exact-private-path-unsafe", "private path lies outside root"
     )
@@ -46,6 +66,18 @@ def _verify_private_ancestors(path: Path, *, root: Path) -> None:
 def _write_exclusive(path: Path, raw: bytes, *, root: Path) -> None:
     if len(raw) > _MAX_REQUEST_BYTES:
         raise LifecycleError("codex-exact-private-overflow", "private artifact exceeds byte limit")
+    if os.name == "nt":
+        from agent_lifecycle.contracts.private_storage import create_private_bytes
+
+        try:
+            create_private_bytes(path, raw, root=root)
+        except OSError as exc:
+            raise LifecycleError("codex-exact-private-create-failed", "private artifact cannot be created") from exc
+        except LifecycleError as exc:
+            if exc.code == "private-storage-unsafe":
+                raise LifecycleError("codex-exact-private-path-unsafe", exc.message) from exc
+            raise
+        return
     _private_dir(path.parent, boundary=root)
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     flags |= getattr(os, "O_NOFOLLOW", 0)
@@ -70,6 +102,13 @@ def _read_private(
     allowed_modes: tuple[int, ...] = (0o600,),
     max_bytes: int = _MAX_REQUEST_BYTES,
 ) -> bytes:
+    if os.name == "nt":
+        from agent_lifecycle.contracts.private_storage import read_private_bytes
+
+        try:
+            return read_private_bytes(path, root=root, modes=allowed_modes, max_bytes=max_bytes)
+        except LifecycleError as exc:
+            raise LifecycleError("codex-exact-private-path-unsafe", exc.message) from exc
     if not path.is_relative_to(root):
         raise LifecycleError("codex-exact-private-path-unsafe", "private artifact lies outside root")
     current = path.parent

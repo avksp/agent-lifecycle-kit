@@ -8,6 +8,7 @@ from agent_lifecycle.adapter_sessions import bootstrap_r11 as legacy
 from agent_lifecycle.adapter_sessions import codex_exact_prompt as exact
 from agent_lifecycle.adapter_sessions import private_input
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
+from tests.windows_test_support import unsafe_private_access
 
 
 class ExtractedAttemptAuthorityTests(unittest.TestCase):
@@ -52,10 +53,9 @@ class ExtractedAttemptAuthorityTests(unittest.TestCase):
             path = root / 'private/input.raw'
             private_input._write_exclusive(path, b'abc', root=root)
             self.assertEqual(private_input._read_private(path, root=root), b'abc')
-            path.chmod(0o644)
-            with self.assertRaises(LifecycleError):
-                private_input._read_private(path, root=root)
-            path.chmod(0o600)
+            with unsafe_private_access(path):
+                with self.assertRaises(LifecycleError):
+                    private_input._read_private(path, root=root)
             with self.assertRaises(LifecycleError):
                 private_input._read_private(path, root=root, max_bytes=2)
             link = path.with_name('alias.raw')

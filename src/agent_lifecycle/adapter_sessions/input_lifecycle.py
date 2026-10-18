@@ -23,6 +23,7 @@ from agent_lifecycle.adapter_sessions.private_input import (
     _write_exclusive,
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
+from agent_lifecycle.contracts.private_storage import private_fingerprint, private_mode, private_tree_paths
 
 _PART = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 
@@ -476,21 +477,31 @@ def _snapshot_digest(snapshot: Path, *, root: Path) -> str:
     _verify_private_ancestors(snapshot, root=root)
     info = snapshot.lstat()
     _require(
-        stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700,
+        stat.S_ISDIR(info.st_mode) and private_mode(snapshot, info, (0o700,)),
         "codex-exact-config-unsafe",
         "private CODEX_HOME is not protected",
     )
     rows: list[dict[str, Any]] = []
+    if os.name == "nt":
+        rows.append({"path": ".", "kind": "directory", "securitySha256": private_fingerprint(snapshot)})
     total = 0
-    for path in sorted(snapshot.rglob("*")):
+    for path in private_tree_paths(snapshot) if os.name == "nt" else sorted(snapshot.rglob("*")):
         info = path.lstat()
         if stat.S_ISDIR(info.st_mode):
             _require(
-                stat.S_IMODE(info.st_mode) == 0o700, "codex-exact-config-unsafe", "snapshot directory mode is unsafe"
+                private_mode(path, info, (0o700,)), "codex-exact-config-unsafe", "snapshot directory mode is unsafe"
             )
+            if os.name == "nt":
+                rows.append(
+                    {
+                        "path": path.relative_to(snapshot).as_posix(),
+                        "kind": "directory",
+                        "securitySha256": private_fingerprint(path),
+                    }
+                )
             continue
         _require(
-            stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode) in {0o400, 0o600},
+            stat.S_ISREG(info.st_mode) and private_mode(path, info, (0o400, 0o600)),
             "codex-exact-config-unsafe",
             "snapshot has unsafe file or symlink",
         )
@@ -498,7 +509,11 @@ def _snapshot_digest(snapshot: Path, *, root: Path) -> str:
         _require(
             len(rows) < 128 and total <= 8_388_608, "codex-exact-config-overflow", "snapshot exceeds inventory limit"
         )
-        data = path.read_bytes()
+        data = (
+            _read_private(path, root=root, allowed_modes=(0o400, 0o600), max_bytes=8_388_608)
+            if os.name == "nt"
+            else path.read_bytes()
+        )
         rows.append(
             {
                 "path": path.relative_to(snapshot).as_posix(),
@@ -507,6 +522,8 @@ def _snapshot_digest(snapshot: Path, *, root: Path) -> str:
                 "mode": stat.S_IMODE(info.st_mode),
             }
         )
+        if os.name == "nt":
+            rows[-1]["securitySha256"] = private_fingerprint(path)
     return canonical_digest(rows)
 
 
@@ -514,23 +531,27 @@ def _snapshot_raw_sources(root: Path, snapshot: Path) -> list[dict[str, Any]]:
     """Inventory the whole child CODEX_HOME tree and every prestart file."""
     info = snapshot.lstat()
     _require(
-        stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700,
+        stat.S_ISDIR(info.st_mode) and private_mode(snapshot, info, (0o700,)),
         "codex-exact-config-unsafe",
         "private CODEX_HOME is not protected",
     )
     tree_digest = _snapshot_digest(snapshot, root=root)
     sources: list[dict[str, Any]] = []
     total = 0
-    for path in sorted(snapshot.rglob("*")):
+    for path in private_tree_paths(snapshot) if os.name == "nt" else sorted(snapshot.rglob("*")):
         file_info = path.lstat()
         if stat.S_ISDIR(file_info.st_mode):
             continue
         _require(
-            stat.S_ISREG(file_info.st_mode) and stat.S_IMODE(file_info.st_mode) in {0o400, 0o600},
+            stat.S_ISREG(file_info.st_mode) and private_mode(path, file_info, (0o400, 0o600)),
             "codex-exact-config-unsafe",
             "snapshot contains an unsafe raw file",
         )
-        raw = path.read_bytes()
+        raw = (
+            _read_private(path, root=root, allowed_modes=(0o400, 0o600), max_bytes=8_388_608)
+            if os.name == "nt"
+            else path.read_bytes()
+        )
         _require(
             len(raw) == file_info.st_size, "codex-exact-raw-inventory-invalid", "snapshot file changed during inventory"
         )
@@ -546,6 +567,8 @@ def _snapshot_raw_sources(root: Path, snapshot: Path) -> list[dict[str, Any]]:
                 "mode": stat.S_IMODE(file_info.st_mode),
             }
         )
+        if os.name == "nt":
+            sources[-1]["securitySha256"] = private_fingerprint(path)
     _require(
         _snapshot_digest(snapshot, root=root) == tree_digest,
         "codex-exact-raw-inventory-invalid",
@@ -570,6 +593,11 @@ def _remove_snapshot_no_start(snapshot: Path, *, root: Path) -> None:
     if not snapshot.exists() and not snapshot.is_symlink():
         return
     _verify_private_ancestors(snapshot, root=root)
+    if os.name == "nt":
+        from agent_lifecycle.contracts.private_storage import remove_private_tree
+
+        remove_private_tree(snapshot)
+        return
     info = snapshot.lstat()
     _require(
         stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700,

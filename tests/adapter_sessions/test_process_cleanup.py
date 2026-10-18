@@ -17,6 +17,12 @@ from agent_lifecycle.contracts import canonical_digest
 
 
 class ProcessCleanupTests(unittest.TestCase):
+    @staticmethod
+    def _write_operation() -> str:
+        if os.name == "nt":
+            return "agent_lifecycle.adapter_sessions.windows_pipe.write_pipe"
+        return "agent_lifecycle.adapter_sessions.process.os.write"
+
     def test_popen_failure_has_no_start_or_input_observation(self) -> None:
         events: list[str] = []
         with tempfile.TemporaryDirectory() as temporary:
@@ -32,7 +38,6 @@ class ProcessCleanupTests(unittest.TestCase):
         self.assertIsNone(result.get("startObservation"))
         self.assertIsNone(result.get("inputObservation"))
 
-    @unittest.skipUnless(os.name == "posix", "observed OS pipe uses POSIX descriptor readiness")
     def test_observed_start_precedes_complete_stdin_receipt(self) -> None:
         events: list[tuple[str, dict]] = []
         child_env = dict(os.environ)
@@ -51,7 +56,6 @@ class ProcessCleanupTests(unittest.TestCase):
         self.assertEqual(events[1][1]["acceptedBytes"], len(b"exact prompt"))
         self.assertFalse(events[1][1]["hostConsumptionProven"])
 
-    @unittest.skipUnless(os.name == "posix", "observed OS pipe uses POSIX descriptor readiness")
     def test_start_observer_time_consumes_stdin_deadline(self) -> None:
         inputs: list[dict] = []
 
@@ -426,7 +430,6 @@ class ProcessCleanupTests(unittest.TestCase):
         self.assertIsNotNone(lease)
         lease.process_finished()
 
-    @unittest.skipUnless(os.name == "posix", "observed OS pipe uses POSIX descriptor readiness")
     def test_r69h_blocked_input_observer_preserves_timeout_after_child_exit(self) -> None:
         release = threading.Event()
         entered = threading.Event()
@@ -455,7 +458,6 @@ class ProcessCleanupTests(unittest.TestCase):
         finally:
             release.set()
 
-    @unittest.skipUnless(os.name == "posix", "observed OS pipe uses POSIX descriptor readiness")
     def test_r69h_input_cancellation_keeps_failure_cause(self) -> None:
         cancelled = threading.Event()
         inputs: list[dict] = []
@@ -475,7 +477,7 @@ class ProcessCleanupTests(unittest.TestCase):
         self.assertEqual(result["cleanup"]["status"], "PASS")
         self.assertEqual(inputs[0]["errorType"], "cancelled")
 
-    @unittest.skipUnless(os.name == "posix", "observed OS pipe uses POSIX descriptor readiness")
+    @unittest.skipUnless(os.name == "posix", "Injects the POSIX select syscall failure")
     def test_r69h_select_value_error_cleans_started_child(self) -> None:
         inputs: list[dict] = []
         with patch("agent_lifecycle.adapter_sessions.process.select.select",
@@ -492,7 +494,6 @@ class ProcessCleanupTests(unittest.TestCase):
         self.assertEqual(inputs[0]["status"], "PARTIAL_OR_FAILED")
         self.assertEqual(inputs[0]["errorType"], "ValueError")
 
-    @unittest.skipUnless(os.name == "posix", "observed OS pipe uses POSIX descriptor readiness")
     def test_start_observation_failure_is_started_failure(self) -> None:
         collectors: list[ProcessTelemetry] = []
 
@@ -519,10 +520,9 @@ class ProcessCleanupTests(unittest.TestCase):
         self.assertEqual(len(collectors), 1)
         self.assertGreaterEqual(collectors[0]._sample_count, 2)
 
-    @unittest.skipUnless(os.name == "posix", "observed OS pipe uses POSIX descriptor readiness")
     def test_broken_pipe_retains_partial_input_and_started_cost(self) -> None:
         events: list[dict] = []
-        with patch("agent_lifecycle.adapter_sessions.process.os.write", side_effect=BrokenPipeError):
+        with patch(self._write_operation(), side_effect=BrokenPipeError):
             result = run_process(
                 [sys.executable, "-c", "import time; time.sleep(30)"],
                 env=dict(os.environ), timeout_seconds=5, stdin_text="private",
@@ -534,7 +534,6 @@ class ProcessCleanupTests(unittest.TestCase):
         self.assertEqual(events[0]["acceptedBytes"], 0)
         self.assertEqual(result["blockers"][-1]["costStatus"], "UNAVAILABLE")
 
-    @unittest.skipUnless(os.name == "posix", "observed OS pipe uses POSIX descriptors")
     def test_stdin_close_error_after_full_write_is_started_failure(self) -> None:
         real_popen = subprocess.Popen
 
@@ -573,9 +572,8 @@ class ProcessCleanupTests(unittest.TestCase):
         self.assertEqual(events[0]["status"], "PARTIAL_OR_FAILED")
         self.assertEqual(result["blockers"][-1]["costStatus"], "UNAVAILABLE")
 
-    @unittest.skipUnless(os.name == "posix", "observed OS pipe uses POSIX descriptor readiness")
     def test_short_write_and_input_receipt_failure_remain_started(self) -> None:
-        with patch("agent_lifecycle.adapter_sessions.process.os.write", return_value=0):
+        with patch(self._write_operation(), return_value=0):
             short = run_process(
                 [sys.executable, "-c", "import time; time.sleep(30)"],
                 env=dict(os.environ), timeout_seconds=5, stdin_text="private",

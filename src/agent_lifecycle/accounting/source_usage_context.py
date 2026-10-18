@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from typing import cast as _validated_cast
 
@@ -63,7 +63,7 @@ def _load_frozen_source_context(
     if not isinstance(runtime, dict) or "sourceUsageCompletion" not in runtime:
         return None
     policy = validate_source_usage_policy_shape(runtime["sourceUsageCompletion"])
-    lock_path = str(Path(path).with_name("plan.lock.json"))
+    lock_path = str(PurePosixPath(path).with_name("plan.lock.json"))
     lock = load_json_object(
         read_authority_bytes(root / lock_path, root=root, max_bytes=1_048_576), label="current frozen lock"
     )
@@ -96,7 +96,7 @@ def _load_frozen_source_context(
         "registry prefix selects another opening",
     )
     registry_byte_limit = MAX_SOURCE_USAGE_BYTES
-    capacity_path = str(Path(path).with_name("source-usage-registry-capacity.json"))
+    capacity_path = str(PurePosixPath(path).with_name("source-usage-registry-capacity.json"))
     if capacity_path in entries:
         _require(
             capacity_path in manifest.get("planFiles", []),
@@ -181,14 +181,14 @@ def _declared_context(selection: dict[str, Any]):
 
 def _load_source_recovery(selection: dict[str, Any], entries: dict[str, Any], path: str) -> None:
     """Select independently authorized groups; no eligibility effects during loading."""
-    recovery_path = str(Path(path).with_name("source-usage-conflict-recovery.json"))
+    recovery_path = str(PurePosixPath(path).with_name("source-usage-conflict-recovery.json"))
     if recovery_path not in entries:
         _require(
             not (selection["root"] / recovery_path).exists() and not (selection["root"] / recovery_path).is_symlink(),
             "scoped-usage-recovery-unbound",
             "unlisted recovery selector exists",
         )
-        annotation_path = str(Path(path).with_name("source-invalid-annotation-recovery.json"))
+        annotation_path = str(PurePosixPath(path).with_name("source-invalid-annotation-recovery.json"))
         _require(
             annotation_path not in entries
             and not (selection["root"] / annotation_path).exists()
@@ -249,7 +249,7 @@ def _load_source_recovery(selection: dict[str, Any], entries: dict[str, Any], pa
 
 
 def _load_invalid_annotation_policy(selection, entries, path, original_policy, conflict_windows):
-    annotation_path = str(Path(path).with_name("source-invalid-annotation-recovery.json"))
+    annotation_path = str(PurePosixPath(path).with_name("source-invalid-annotation-recovery.json"))
     root = selection["root"]
     if annotation_path not in entries:
         _require(

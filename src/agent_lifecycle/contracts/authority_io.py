@@ -7,6 +7,7 @@ import os
 import stat
 import sys
 import tempfile
+import threading
 import uuid
 from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager, suppress
@@ -144,16 +145,21 @@ def _require_regular(info: os.stat_result) -> None:
 
 
 class _Directory:
-    def __init__(self, path: Path, fd: int | None, handle: int | None = None) -> None:
+    def __init__(self, path: Path, fd: int | None, handle: int | None = None, *, writable: bool = False) -> None:
         self.path = path
         self.fd = fd
         self.handle = handle
+        self.writable = writable
+        self.owner_thread = threading.current_thread()
+        self.identity = path.lstat() if handle is not None else None
 
     def close(self) -> None:
         if self.fd is not None:
-            os.close(self.fd)
+            fd, self.fd = self.fd, None
+            os.close(fd)
         if self.handle is not None:
-            _windows_close(self.handle)
+            handle, self.handle = self.handle, None
+            _windows_close(handle)
 
     def stat_child(self, name: str) -> os.stat_result:
         if self.fd is not None:
@@ -170,11 +176,15 @@ class _Directory:
             flags = os.O_WRONLY | os.O_NOFOLLOW | os.O_NONBLOCK
             flags |= os.O_APPEND if append else os.O_CREAT | os.O_EXCL
             return os.open(name, flags, mode, dir_fd=self.fd)
-        return _windows_file(self.path / name, operation="append" if append else "create")
+        return _windows_file(self.path / name, operation="append" if append else "create", private=mode == 0o600)
 
     def mkdir_child(self, name: str, mode: int) -> None:
         if self.fd is not None:
             os.mkdir(name, mode, dir_fd=self.fd)
+        elif mode == 0o700:
+            from .windows_security import create_private_directory
+
+            create_private_directory(str(self.path / name))
         else:
             (self.path / name).mkdir(mode=mode)
 
@@ -193,11 +203,60 @@ class _Directory:
     def sync(self) -> None:
         if self.fd is not None:
             os.fsync(self.fd)
+        elif self.handle is not None:
+            if not self.writable:
+                raise LifecycleError("authority-io-unavailable", "Directory write authority is required")
+            from ctypes import wintypes
+
+            api = _windows_api()
+            api.FlushFileBuffers.argtypes = [wintypes.HANDLE]
+            api.FlushFileBuffers.restype = wintypes.BOOL
+            if not api.FlushFileBuffers(self.handle):
+                raise LifecycleError("authority-durability-unavailable", "Directory durability barrier failed")
+        else:
+            raise LifecycleError("authority-io-unavailable", "Directory handle is unavailable")
+
+
+def _held_windows_directory(
+    path: Path, *, writable: bool, held_directories: dict[Path, _Directory] | None
+) -> _Directory:
+    held = (held_directories or {}).get(path)
+    if held is None:
+        handle = _windows_directory(path, writable=writable)
+        try:
+            return _Directory(path, None, handle, writable=writable)
+        except BaseException:
+            _windows_close(handle)
+            raise
+    if (
+        held.path != path
+        or held.owner_thread is not threading.current_thread()
+        or held.handle is None
+        or held.identity is None
+        or (writable and not held.writable)
+    ):
+        raise LifecycleError("authority-io-unavailable", "Held directory capability is unavailable or insufficient")
+    _same_identity(held.identity, path.lstat())
+    from .windows_security import duplicate_directory_handle
+
+    handle = duplicate_directory_handle(held.handle)
+    try:
+        return _Directory(path, None, handle, writable=writable)
+    except BaseException:
+        _windows_close(handle)
+        raise
 
 
 @contextmanager
 def _parent(
-    root: Path, relative_name: str, *, create: bool = False, private: bool = False, private_existing: bool = True
+    root: Path,
+    relative_name: str,
+    *,
+    create: bool = False,
+    private: bool = False,
+    private_existing: bool = True,
+    writable: bool = False,
+    held_directories: dict[Path, _Directory] | None = None,
 ) -> Iterator[tuple[_Directory, str]]:
     _require_primitives()
     authority_depth = len(root.parts) - 1
@@ -205,12 +264,15 @@ def _parent(
     root = Path(root.anchor)
     with ExitStack() as stack:
         if os.name == "nt":
-            current = _Directory(root, None, _windows_directory(root))
+            current = _held_windows_directory(
+                root, writable=writable and len(parts) == 1, held_directories=held_directories
+            )
         else:
             fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
             current = _Directory(root, fd)
         stack.callback(current.close)
         bindings: list[tuple[_Directory, str, os.stat_result]] = []
+        security_bindings: list[tuple[int, str]] = []
         root_info = root.stat(follow_symlinks=False)
         if current.fd is not None:
             _same_identity(root_info, os.fstat(current.fd))
@@ -231,7 +293,11 @@ def _parent(
             if not stat.S_ISDIR(before.st_mode) or getattr(before, "st_file_attributes", 0) & 0x400:
                 raise LifecycleError("authority-input-symlink", "authority directory must not be a link")
             if current.fd is None:
-                child = _Directory(current.path / part, None, _windows_directory(current.path / part))
+                child = _held_windows_directory(
+                    current.path / part,
+                    writable=writable and index == len(parts) - 2,
+                    held_directories=held_directories,
+                )
             else:
                 fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=current.fd)
                 child = _Directory(current.path / part, fd)
@@ -244,17 +310,43 @@ def _parent(
             if private and private_started and child.fd is not None:
                 os.fchmod(child.fd, 0o700)
                 before = os.fstat(child.fd)
+            elif private and private_started and child.handle is not None:
+                from .windows_security import private_handle_fingerprint
+
+                security_bindings.append((child.handle, private_handle_fingerprint(child.handle)))
             bindings.append((current, part, before))
             current = child
         _check_bindings(root, root_info, bindings)
         yield current, parts[-1]
         _check_bindings(root, root_info, bindings)
+        if security_bindings:
+            from .windows_security import private_handle_fingerprint
+
+            for handle, fingerprint in security_bindings:
+                if private_handle_fingerprint(handle) != fingerprint:
+                    raise LifecycleError("authority-input-changed", "Private directory access policy changed")
 
 
 def _check_bindings(root: Path, info: os.stat_result, bindings: list[tuple[_Directory, str, os.stat_result]]) -> None:
     _same_identity(info, root.stat(follow_symlinks=False))
     for parent, name, before in bindings:
         _same_identity(before, parent.stat_child(name))
+
+
+@contextmanager
+def hold_authority_directory(
+    path: Path, *, writable: bool = False, held_directories: dict[Path, _Directory] | None = None
+) -> Iterator[_Directory]:
+    """Pin a directory and all ancestors, without inventing a leaf artifact."""
+    root, name = authority_location(path / ".directory-check")
+    with _parent(root, name, writable=writable, held_directories=held_directories) as (directory, _):
+        yield directory
+
+
+def sync_authority_directory(path: Path) -> None:
+    """Require a real directory durability barrier on the selected platform."""
+    with hold_authority_directory(path, writable=True) as directory:
+        directory.sync()
 
 
 @contextmanager
@@ -269,7 +361,7 @@ def open_authority_read(path: Path, *, root: Path | None = None) -> Iterator[Bin
             found = True
             _require_regular(before_path)
             fd = parent.open_child(leaf)
-            with os.fdopen(fd, "rb") as handle:
+            with os.fdopen(fd, "rb", buffering=0) as handle:
                 before = os.fstat(handle.fileno())
                 _require_regular(before)
                 _same_identity(before_path, before, content=True)
@@ -328,7 +420,7 @@ def create_authority_bytes(path: Path, data: bytes, *, root: Path | None = None,
     root, name = authority_location(path, root=root)
     mode = 0o600 if private else 0o644
     try:
-        with _parent(root, name, create=True, private=private) as (parent, leaf):
+        with _parent(root, name, create=True, private=private, writable=True) as (parent, leaf):
             with suppress(FileNotFoundError):
                 _require_regular(parent.stat_child(leaf))
             fd = parent.write_child(leaf, append=False, mode=mode)
@@ -347,7 +439,7 @@ def replace_authority_bytes(path: Path, data: bytes, *, root: Path | None = None
     root, name = authority_location(path, root=root)
     temporary = f".authority-{uuid.uuid4().hex}.tmp"
     try:
-        with _parent(root, name, create=True, private=True) as (parent, leaf):
+        with _parent(root, name, create=True, private=True, writable=True) as (parent, leaf):
             with suppress(FileNotFoundError):
                 _require_regular(parent.stat_child(leaf))
             created = False
@@ -371,7 +463,7 @@ def append_authority_bytes(path: Path, data: bytes, *, root: Path | None = None)
 
     root, name = authority_location(path, root=root)
     try:
-        with _parent(root, name, create=True, private=True, private_existing=False) as (parent, leaf):
+        with _parent(root, name, create=True, private=True, private_existing=False, writable=True) as (parent, leaf):
             try:
                 before = parent.stat_child(leaf)
             except FileNotFoundError:
@@ -414,7 +506,7 @@ def _windows_api() -> Any:
     return api
 
 
-def _windows_open(path: Path, *, directory: bool, operation: str = "read") -> int:
+def _windows_open(path: Path, *, directory: bool, operation: str = "read", private: bool = False) -> int:
     if sys.platform != "win32":
         raise LifecycleError("authority-io-unavailable", "Windows authority I/O is unavailable")
     import ctypes
@@ -422,16 +514,34 @@ def _windows_open(path: Path, *, directory: bool, operation: str = "read") -> in
 
     api = _windows_api()
     # Hold read access and exclude both rename and in-place reparse writers.
-    access = {"read": 0x80000000, "create": 0x40000000, "append": 0x40000000, "rename": 0x00010000}[operation]
-    handle = api.CreateFileW(
-        str(path),
-        0x80000000 if directory else access,
-        1,
-        None,
-        1 if operation == "create" else 3,
-        0x00200000 | (0x02000000 if directory else 0),
-        None,
-    )
+    access = {
+        "read": 0x80000000,
+        "create": 0x40000000,
+        "append": 0x40000000,
+        "rename": 0x00010000,
+        "sync": 0xC0000000,
+        "security": 0x00020000,
+        "delete": 0x80010000,
+    }[operation]
+
+    def create(attributes: Any = None) -> Any:
+        return api.CreateFileW(
+            str(path),
+            access,
+            7 if operation == "security" else 1,
+            attributes,
+            1 if operation == "create" else 3,
+            0x00200000 | (0x02000000 if directory else 0),
+            None,
+        )
+
+    if private and operation == "create":
+        from .windows_security import private_creation_attributes
+
+        with private_creation_attributes(directory=False) as attributes:
+            handle = create(attributes)
+    else:
+        handle = create()
     if handle == ctypes.c_void_p(-1).value:
         error = ctypes.get_last_error()
         if error in {2, 3}:
@@ -451,8 +561,53 @@ def _windows_open(path: Path, *, directory: bool, operation: str = "read") -> in
     return handle
 
 
-def _windows_directory(path: Path) -> int:
-    return _windows_open(path, directory=True)
+def _windows_directory(path: Path, *, writable: bool = False) -> int:
+    return _windows_open(path, directory=True, operation="sync" if writable else "read")
+
+
+def _windows_link(parent: _Directory, source_fd: int, destination: str) -> None:
+    """Create a non-replacing hard link through the held source and parent."""
+    if sys.platform != "win32":
+        raise LifecycleError("authority-io-unavailable", "Windows authority I/O is unavailable")
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+
+    if parent.handle is None or not parent.writable:
+        raise LifecycleError("authority-io-unavailable", "Held writable directory is required")
+    name = destination.encode("utf-16-le")
+
+    class LinkInfo(ctypes.Structure):
+        _fields_ = [
+            ("ReplaceIfExists", wintypes.DWORD),
+            ("RootDirectory", wintypes.HANDLE),
+            ("FileNameLength", wintypes.DWORD),
+            ("FileName", wintypes.WCHAR * (len(name) // 2 + 1)),
+        ]
+
+    class IoStatus(ctypes.Structure):
+        _fields_ = [("StatusOrPointer", ctypes.c_void_p), ("Information", ctypes.c_size_t)]
+
+    # FILE_LINK_INFORMATION requires NULL for a link in the source's own
+    # directory. Its simple name is resolved relative to that held source;
+    # the separately held parent continues to deny write/rename reopening.
+    info = LinkInfo(0, None, len(name))
+    ctypes.memmove(ctypes.addressof(info) + LinkInfo.FileName.offset, name, len(name))
+    api = ctypes.WinDLL("ntdll")
+    api.NtSetInformationFile.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(IoStatus),
+        wintypes.LPVOID,
+        wintypes.ULONG,
+        ctypes.c_int,
+    ]
+    api.NtSetInformationFile.restype = wintypes.LONG
+    io_status = IoStatus()
+    status = api.NtSetInformationFile(
+        msvcrt.get_osfhandle(source_fd), ctypes.byref(io_status), ctypes.byref(info), ctypes.sizeof(info), 11
+    )
+    if status != 0:
+        raise OSError(status & 0xFFFFFFFF, "Private staging failed; original retained")
 
 
 def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
@@ -503,12 +658,12 @@ def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
         _windows_close(handle)
 
 
-def _windows_file(path: Path, *, operation: str = "read") -> int:
+def _windows_file(path: Path, *, operation: str = "read", private: bool = False) -> int:
     if sys.platform != "win32":
         raise LifecycleError("authority-io-unavailable", "Windows authority I/O is unavailable")
     import msvcrt
 
-    handle = _windows_open(path, directory=False, operation=operation)
+    handle = _windows_open(path, directory=False, operation=operation, private=private)
     try:
         flags = os.O_RDONLY if operation == "read" else os.O_WRONLY
         if operation == "append":

@@ -52,6 +52,7 @@ from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical
 from agent_lifecycle.contracts.authority_io import normalize_authority_path, read_authority_bytes
 from agent_lifecycle.contracts.bounded_json import load_bounded_json as _r11_json
 from agent_lifecycle.contracts.bounded_json import matches_closed_schema as _r11_role_schema_matches
+from agent_lifecycle.contracts.private_storage import private_mode
 
 
 def _r11_role_thread_preparation_basis(root: Path, review_id: str, role_id: str, timeout: int) -> dict[str, Any]:
@@ -283,7 +284,11 @@ def _r11_composite_inventory(root: Path, review_id: str, role_ids: list[str], *,
         try:
             mode = path.lstat().st_mode
             if stat.S_ISDIR(mode):
-                _require(stat.S_IMODE(mode) == 0o700, "r11-composite-inventory", "private directory mode differs")
+                _require(
+                    private_mode(path, path.lstat(), (0o700,)),
+                    "r11-composite-inventory",
+                    "private directory mode differs",
+                )
                 children = []
                 for child in path.iterdir():
                     children.append(child)

@@ -23,6 +23,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import cast as _validated_cast
 
+from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.contracts.private_storage import PinnedPrivateDirectory, private_mode, private_windows_parent
+
 from .closing_resource_admission import ClosureAdmissionMixin
 from .contracts import (
     ROLES as ROLES,
@@ -59,8 +62,16 @@ from .workflow_store import (
 
 
 @contextmanager
-def _raw_parent(root: Path, relative: str):
+def _raw_parent(root: Path, relative: str, *, writable: bool = False, held_parent=None):
     """Pin each private parent without following links; unsupported platforms refuse."""
+    if os.name == "nt":
+        try:
+            held = held_parent if isinstance(held_parent, PinnedPrivateDirectory) else None
+            with private_windows_parent(root, relative, writable=writable, held_parent=held) as parent:
+                yield parent
+        except (OSError, LifecycleError) as exc:
+            raise JournalUnavailable("Private raw path is unavailable or unsafe") from exc
+        return
     if os.name != "posix" or not hasattr(os, "O_NOFOLLOW") or os.unlink not in os.supports_dir_fd:
         raise JournalUnavailable("Safe private raw deletion unavailable on this platform")
     if not isinstance(relative, str) or not relative:
@@ -89,7 +100,12 @@ def _raw_parent(root: Path, relative: str):
             os.close(fd)
 
 
-def _raw_read(parent: int, name: str, *, maximum: int = 16_777_216, links: int = 1):
+def _raw_read(parent: int | PinnedPrivateDirectory, name: str, *, maximum: int = 16_777_216, links: int = 1):
+    if isinstance(parent, PinnedPrivateDirectory):
+        try:
+            return parent.read(name, maximum=maximum, links=links)
+        except LifecycleError as exc:
+            raise JournalUnavailable("Private raw file is unavailable or unsafe") from exc
     fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent)
     try:
         before = os.fstat(fd)
@@ -122,7 +138,42 @@ def _raw_read(parent: int, name: str, *, maximum: int = 16_777_216, links: int =
         os.close(fd)
 
 
-def _raw_ref(root: Path, ref: dict):
+def _raw_stat(parent, name: str) -> os.stat_result:
+    if isinstance(parent, PinnedPrivateDirectory):
+        return parent.stat(name)
+    return os.stat(name, dir_fd=parent, follow_symlinks=False)
+
+
+def _raw_private_file(parent, name: str, info: os.stat_result) -> bool:
+    if isinstance(parent, PinnedPrivateDirectory):
+        return parent.private_file(name, info)
+    return stat.S_IMODE(info.st_mode) == 0o600 and info.st_uid == os.geteuid()
+
+
+def _raw_link(parent, name: str, destination: str) -> None:
+    if isinstance(parent, PinnedPrivateDirectory):
+        parent.link(name, destination)
+        return
+    if os.link not in os.supports_dir_fd or os.link not in os.supports_follow_symlinks:
+        raise JournalUnavailable("Atomic no-overwrite raw staging unavailable")
+    os.link(name, destination, src_dir_fd=parent, dst_dir_fd=parent, follow_symlinks=False)
+
+
+def _raw_unlink(parent, name: str) -> None:
+    if isinstance(parent, PinnedPrivateDirectory):
+        parent.unlink(name)
+    else:
+        os.unlink(name, dir_fd=parent)
+
+
+def _raw_sync(parent) -> None:
+    if isinstance(parent, PinnedPrivateDirectory):
+        parent.sync()
+    else:
+        os.fsync(parent)
+
+
+def _raw_ref(root: Path, ref: dict, *, held_parent=None):
     if (
         not isinstance(ref, dict)
         or set(ref) != {"path", "sha256", "bytes"}
@@ -132,7 +183,7 @@ def _raw_ref(root: Path, ref: dict):
         or len(ref["sha256"]) != 64
     ):
         raise JournalUnavailable("Bounded sealed raw reference required")
-    with _raw_parent(root, ref["path"]) as (parent, name):
+    with _raw_parent(root, ref["path"], held_parent=held_parent) as (parent, name):
         raw, file_id = _raw_read(parent, name, maximum=1_048_576)
     if len(raw) != ref["bytes"] or hashlib.sha256(raw).hexdigest() != ref["sha256"]:
         raise JournalUnavailable("Sealed raw reference changed")
@@ -436,8 +487,8 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
             result["receipt_error"] = str(exc)
         return result
 
-    def _raw_authority(self, root: Path, authority_ref: dict) -> dict:
-        raw, _ = _raw_ref(root, authority_ref)
+    def _raw_authority(self, root: Path, authority_ref: dict, *, held_parent=None) -> dict:
+        raw, _ = _raw_ref(root, authority_ref, held_parent=held_parent)
         authority = json.loads(raw)
         required = {
             "schemaVersion",
@@ -465,7 +516,11 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
             not root.is_absolute()
             or root.resolve() != root
             or root.is_symlink()
-            or stat.S_IMODE(info.st_mode) != 0o700
+            or not (
+                held_parent.private_directory(root, info)
+                if isinstance(held_parent, PinnedPrivateDirectory)
+                else private_mode(root, info, (0o700,))
+            )
             or authority["rootPathSha256"] != hashlib.sha256(os.fsencode(str(root))).hexdigest()
             or authority["rootFileIdentity"] != {"device": info.st_dev, "inode": info.st_ino}
             or root / authority["journalPath"] != self._path
@@ -474,18 +529,17 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
             or authority["writerDigest"] != digest(asdict(self.writer))
         ):
             raise JournalUnavailable("Raw maintenance root/journal/writer authority mismatch")
-        with _raw_parent(root, authority["journalPath"]) as (parent, name):
-            journal = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        with _raw_parent(root, authority["journalPath"], held_parent=held_parent) as (parent, name):
+            journal = _raw_stat(parent, name)
             if (
                 not stat.S_ISREG(journal.st_mode)
-                or stat.S_IMODE(journal.st_mode) != 0o600
-                or journal.st_uid != os.geteuid()
+                or not _raw_private_file(parent, name, journal)
                 or journal.st_nlink != 1
                 or authority["journalFileIdentity"] != {"device": journal.st_dev, "inode": journal.st_ino}
             ):
                 raise JournalUnavailable("Raw maintenance journal file identity mismatch")
-        manifest, _ = _raw_ref(root, authority["manifestRef"])
-        lock, _ = _raw_ref(root, authority["lockRef"])
+        manifest, _ = _raw_ref(root, authority["manifestRef"], held_parent=held_parent)
+        lock, _ = _raw_ref(root, authority["lockRef"], held_parent=held_parent)
         from agent_lifecycle.contracts.errors import LifecycleError
         from agent_lifecycle.freeze import verify_plan_lock_envelope
 
@@ -674,7 +728,7 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
         candidate_limit: int,
         authority_ref: dict,
         authority: dict,
-        require_live: Callable[[], None],
+        require_live: Callable[..., None],
         read_source: Callable[..., None],
         present: Callable[[int, str], os.stat_result | None],
     ) -> list[tuple[str, dict, str, list[dict]]]:
@@ -698,35 +752,33 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
             for index, entry in enumerate(payload["files"]):
                 self._checkpoint("before_raw_unlink")
                 require_live()
-                with _raw_parent(root, entry["path"]) as (parent, name):
+                with _raw_parent(root, entry["path"], writable=True) as (parent, name):
                     quarantine = ".alk-delete-" + digest([row[0], index])
                     source, staged = (present(parent, name), present(parent, quarantine))
                     if source is not None and staged is None:
                         read_source(parent, name, entry)
                         self._checkpoint("before_raw_stage")
-                        require_live()
-                        if os.link not in os.supports_dir_fd or os.link not in os.supports_follow_symlinks:
-                            raise JournalUnavailable("Atomic no-overwrite raw staging unavailable")
+                        require_live(parent)
                         try:
-                            os.link(name, quarantine, src_dir_fd=parent, dst_dir_fd=parent, follow_symlinks=False)
+                            _raw_link(parent, name, quarantine)
                         except OSError as exc:
                             raise JournalUnavailable("Raw staging collision or unavailable; original retained") from exc
-                        os.fsync(parent)
+                        _raw_sync(parent)
                         self._checkpoint("after_raw_stage")
                         source, staged = (present(parent, name), present(parent, quarantine))
                     if source is not None and staged is not None:
                         read_source(parent, name, entry, links=2)
                         read_source(parent, quarantine, entry, links=2)
-                        require_live()
-                        os.unlink(name, dir_fd=parent)
-                        os.fsync(parent)
+                        require_live(parent)
+                        _raw_unlink(parent, name)
+                        _raw_sync(parent)
                         self._checkpoint("after_raw_original_unlink")
                     outcome = "alreadyAbsent"
                     if staged is not None:
                         read_source(parent, quarantine, entry)
-                        require_live()
-                        os.unlink(quarantine, dir_fd=parent)
-                        os.fsync(parent)
+                        require_live(parent)
+                        _raw_unlink(parent, quarantine)
+                        _raw_sync(parent)
                         outcome = "removed"
                     results.append({"pathSha256": entry["pathSha256"], "sha256": entry["sha256"], "status": outcome})
                 self._checkpoint("after_raw_unlink")
@@ -806,9 +858,9 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
             if self._retained("cleanup_receipts", run_id) is None:
                 raise JournalUnavailable("SQL collection must commit before raw unlink")
 
-            def require_live():
+            def require_live(held_parent=None):
                 if (
-                    self._raw_authority(root, authority_ref) != authority
+                    self._raw_authority(root, authority_ref, held_parent=held_parent) != authority
                     or self.closed_run(run_id) != closed
                     or self._exception_chain(run_id)
                 ):
@@ -830,7 +882,7 @@ class JournalRetentionMixin(ClosureAdmissionMixin):
 
             def present(parent, name):
                 try:
-                    return os.stat(name, dir_fd=parent, follow_symlinks=False)
+                    return _raw_stat(parent, name)
                 except FileNotFoundError:
                     return None
 

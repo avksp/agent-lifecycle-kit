@@ -103,7 +103,7 @@ class DeclaredFixture:
             })
             self.manifest['planFiles'] = sorted([*self.manifest['planFiles'], capacity_path])
         self.state_path = _write_state(root, phase='RUNNING', max_attempts=max_attempts)
-        self.state = json.loads(self.state_path.read_text())
+        self.state = json.loads(self.state_path.read_text(encoding="utf-8"))
         self.state.update(packageId=self.manifest['package']['id'], sourceRevision=self.revision, manifestPath='tasks/strategy/plan.manifest.json',
                           runStartedAt=datetime.now(UTC).isoformat())
         self.task = self.state['tasks'][0]
@@ -201,7 +201,7 @@ class DeclaredFixture:
                      closedAtUtc=datetime.now(UTC).isoformat())
         if mutate:
             mutate(value)
-        path = str(Path(current['head']['sourcePath']).with_name('cost.json'))
+        path = (Path(current['head']['sourcePath']).with_name('cost.json')).as_posix()
         put(self.root, path, value)
         advance_coordinator_cost_head(self.root, source_path=path)
 
@@ -1331,7 +1331,7 @@ def controller_gate_fixture(directory):
     cfg['wipBeforeInventoryRef']=put(repair,package+'/SOURCE-BEFORE.json',{'sourceRevision':f.revision,'sourceSnapshots':snapshots,'wipBeforeRefs':refs})
     deprefs=[]
     for path in sorted(p for p in (old/'src').rglob('*') if p.is_file()):
-        data=path.read_bytes();deprefs.append({'path':str(path.relative_to(old)),'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)})
+        data=path.read_bytes();deprefs.append({'path':(path.relative_to(old)).as_posix(),'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)})
     put(repair,package+'/old-finance-dependencies.json',{'references':deprefs})
     put(repair,package+'/repair-authority-inputs.json',cfg)
     names=['plan.manifest.json','controller_repair_gate.py','SPECIFICATION.json','SPECIFICATION-REVIEW.json',
@@ -1380,7 +1380,7 @@ try:
  elif action=='apply':g.apply(root,window,window/'SOURCE-REPLACEMENTS.json')
  else:g.pre_effect(root,window,'TEST')
 except Exception as e:print(type(e).__name__+': '+str(e),file=sys.stderr);sys.exit(2)
-""")
+""", encoding="utf-8", newline="\n")
     def call(action='issue',hook='',target=None):
         env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1');env.pop('PYTHONPATH',None)
         return subprocess.run([sys.executable,str(wrapper),str(repair/package/'controller_repair_gate.py'),str(old),str(primary),str(repair),str(target or window),action,hook],env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=45)
@@ -1390,7 +1390,25 @@ except Exception as e:print(type(e).__name__+': '+str(e),file=sys.stderr);sys.ex
 class ControllerRepairGateRefusalTests(unittest.TestCase):
     """Actual gate function executions in isolated fixtures; no runtime assurance."""
     def test_recovery_prospective_gate_negatives_preserve_effect_boundary(self):
-        import sys,shutil
+        import os,sys,shutil
+        if os.name != 'posix':
+            # This exact archived repair gate uses fcntl and refuses non-POSIX.
+            # Exercise that refusal; never port or replace its frozen bytes.
+            with tempfile.TemporaryDirectory() as directory:
+                g = controller_gate_fixture(directory)
+                root, primary, old = g['root'], g['primary'], g['old']
+                before_sources = {p: (root/p).read_bytes() for p in g['cfg']['onlyWritePaths']}
+                financial_path = primary/BASE/'COORDINATOR-COST-HEAD.json'
+                financial_before = financial_path.read_bytes()
+                old_state = (old/'work/release-2-16/run.state.json').read_bytes()
+                result = g['call']()
+                self.assertEqual(2, result.returncode, result.stdout+result.stderr)
+                self.assertIn('CONTROLLER_REPAIR_DENIED: unsupported controller platform', result.stderr)
+                self.assertEqual(financial_before, financial_path.read_bytes())
+                self.assertEqual(old_state, (old/'work/release-2-16/run.state.json').read_bytes())
+                self.assertEqual(before_sources, {p: (root/p).read_bytes() for p in g['cfg']['onlyWritePaths']})
+                self.assertFalse(g['window'].exists())
+            return
         names=['no-independent-freeze','stale-source-before','expired-admission','reused-operation',
             'concurrent-grant','running-repair-workspace','out-of-scope-product-input',
             'edited-admission-grant-disposition','invocation-excess','edited-original-financial-record',
@@ -1416,7 +1434,7 @@ class ControllerRepairGateRefusalTests(unittest.TestCase):
                     put(primary,BASE+'/r799-other/GRANT.json',{'schemaVersion':'alk-source-conflict-controller-repair-grant.v1','repairPackageId':'other','planRef':{'sha256':'b'*64},'absoluteDeadlineUtc':(datetime.now(UTC)+timedelta(days=1)).isoformat()})
                 elif name=='running-repair-workspace':put(root,'work/release-2-16/run.state.json',{'phase':'RUNNING'})
                 elif name=='out-of-scope-product-input':
-                    action='apply';put(primary,str(window.relative_to(primary))+'/SOURCE-REPLACEMENTS.json',{'sourceChanges':[{'path':'src/example.py','beforeSha256':'0'*64,'afterText':'unauthorized'}]})
+                    action='apply';put(primary,(window.relative_to(primary)).as_posix()+'/SOURCE-REPLACEMENTS.json',{'sourceChanges':[{'path':'src/example.py','beforeSha256':'0'*64,'afterText':'unauthorized'}]})
                 elif name=='edited-admission-grant-disposition':
                     (window/'DISPOSITION.json').write_bytes((window/'DISPOSITION.json').read_bytes()+b' ')
                 elif name=='invocation-excess':
@@ -1432,7 +1450,7 @@ class ControllerRepairGateRefusalTests(unittest.TestCase):
                 elif name.startswith('second-window-'):
                     target=window.with_name('r701-second-controller-repair');action='issue'
                     if name.endswith('expiration'):hook='future'
-                    else:put(primary,str(window.relative_to(primary))+'/cost.json',{'fixtureClosed':True})
+                    else:put(primary,(window.relative_to(primary)).as_posix()+'/cost.json',{'fixtureClosed':True})
                 elif name=='missing-primary-mirror':(primary/package/'SPECIFICATION.json').unlink()
                 elif name=='different-primary-mirror':
                     p=primary/package/'SPECIFICATION.json';p.write_bytes(p.read_bytes()+b' ')
@@ -1440,7 +1458,7 @@ class ControllerRepairGateRefusalTests(unittest.TestCase):
                     action='apply';(window/'SOURCE-REPLACEMENTS.json').write_bytes(b' '*(8388608+1))
                 elif name=='unstable-replacement-input':
                     action='apply';hook=name
-                    put(primary,str(window.relative_to(primary))+'/SOURCE-REPLACEMENTS.json',{'sourceChanges':[{'path':g['cfg']['onlyWritePaths'][0],'beforeSha256':hashlib.sha256((root/g['cfg']['onlyWritePaths'][0]).read_bytes()).hexdigest(),'afterText':'change'}]})
+                    put(primary,(window.relative_to(primary)).as_posix()+'/SOURCE-REPLACEMENTS.json',{'sourceChanges':[{'path':g['cfg']['onlyWritePaths'][0],'beforeSha256':hashlib.sha256((root/g['cfg']['onlyWritePaths'][0]).read_bytes()).hexdigest(),'afterText':'change'}]})
                 elif name=='failure-after-financial-advance-then-second-window':
                     before=read_coordinator_cost_head(primary)['headSha256']
                     interrupted=call(hook='interrupt-after-financial-advance');self.assertEqual(2,interrupted.returncode)
@@ -1679,7 +1697,7 @@ class SourceMultiConflictRecoveryTests(unittest.TestCase):
     def test_prepublication_operation_preflight_denies_reuse_and_preserves_all_bytes(self):
         from agent_lifecycle.workflow.limited_usage import require_source_operation_unused
         f=self.fixture();selection=f.selection()
-        originals={str(p.relative_to(f.root)):p.read_bytes() for p in f.root.rglob('*') if p.is_file() and '.git' not in p.relative_to(f.root).parts}
+        originals={(p.relative_to(f.root)).as_posix():p.read_bytes() for p in f.root.rglob('*') if p.is_file() and '.git' not in p.relative_to(f.root).parts}
         binding=deepcopy(json.loads((f.root/f.admission_ref['path']).read_bytes())['sourceUsageBinding'])
         binding['originalWindowId']=BASE+'/r405-fixture'
         new_binding=deepcopy(binding);new_binding['semanticOperationId']='genuinely-new-phase'
@@ -1708,7 +1726,7 @@ class SourceMultiConflictRecoveryTests(unittest.TestCase):
                     self.assertEqual('scoped-usage-window-conflict',caught.exception.code)
         invalid=deepcopy(binding);invalid['attempt']=True
         with self.assertRaises(LifecycleError):require_source_operation_unused(selection,invalid)
-        self.assertEqual(originals,{str(p.relative_to(f.root)):p.read_bytes() for p in f.root.rglob('*') if p.is_file() and '.git' not in p.relative_to(f.root).parts})
+        self.assertEqual(originals,{(p.relative_to(f.root)).as_posix():p.read_bytes() for p in f.root.rglob('*') if p.is_file() and '.git' not in p.relative_to(f.root).parts})
 
     def test_legacy_policy_cannot_select_otherwise_valid_v2_disposition(self):
         f=self.fixture()

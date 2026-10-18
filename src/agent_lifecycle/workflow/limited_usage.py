@@ -12,7 +12,7 @@ import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 from datetime import timezone as timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from typing import cast as _validated_cast
 
@@ -261,7 +261,7 @@ def _project_financial_record_chain(
             head_path = policy["openingRef"]["path"]
             head_raw = _read_ref(selection["root"], policy["openingRef"], limit=MAX_SOURCE_USAGE_BYTES)
         else:
-            head_path = str(Path(_HEAD_PATH).parent / "coordinator-cost-head-history" / (head_sha + ".json"))
+            head_path = str(PurePosixPath(_HEAD_PATH).parent / "coordinator-cost-head-history" / (head_sha + ".json"))
             head_raw = read_authority_bytes(primary / head_path, root=primary, max_bytes=131_072)
         _require(
             hashlib.sha256(head_raw).hexdigest() == head_sha,

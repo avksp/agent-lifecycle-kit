@@ -1022,7 +1022,12 @@ def _write_observed_stdin(
     else:
         try:
             fd = stream.fileno()
-            os.set_blocking(fd, False)
+            if os.name == "nt":
+                from .windows_pipe import configure_pipe
+
+                configure_pipe(fd)
+            else:
+                os.set_blocking(fd, False)
             while count < len(data):
                 if cancel_event is not None and cancel_event.is_set():
                     error = "cancelled"
@@ -1030,11 +1035,21 @@ def _write_observed_stdin(
                 if time.monotonic() >= deadline:
                     error = "timeout"
                     break
-                if not select.select([], [fd], [], min(0.02, max(0.0, deadline - time.monotonic())))[1]:
+                if (
+                    os.name != "nt"
+                    and not select.select([], [fd], [], min(0.02, max(0.0, deadline - time.monotonic())))[1]
+                ):
                     continue
                 try:
-                    written = os.write(fd, data[count : count + 8192])
+                    if os.name == "nt":
+                        from .windows_pipe import write_pipe
+
+                        written = write_pipe(fd, data[count : count + 8192])
+                    else:
+                        written = os.write(fd, data[count : count + 8192])
                 except BlockingIOError:
+                    if os.name == "nt":
+                        time.sleep(min(0.002, max(0.0, deadline - time.monotonic())))
                     continue
                 if written <= 0:
                     error = "short-write"

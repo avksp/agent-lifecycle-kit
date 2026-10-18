@@ -99,7 +99,7 @@ class LimitedNativeEvidenceTests(unittest.TestCase):
                 'providerModelRequestCount': None, 'completeFinancialRun': False,
                 'costStatus': 'UNAVAILABLE', 'fullUnknownHoldRetained': True}
         if row['polarity'] == 'POSITIVE':
-            slot_path = str(Path(path).parent.parent / 'capacity-slots' / 'slot-0.json')
+            slot_path = (Path(path).parent.parent / 'capacity-slots' / 'slot-0.json').as_posix()
             case['capacitySlotRef'] = self.put(slot_path, {'schemaVersion': 'alk-r69-selected-invocation-slot.v1',
                 'slotIndex': 0, 'caseId': row['caseId'], 'operationId': op,
                 'admissionSha256': self.admission_ref['sha256'], 'claimSha256': case['claimRef']['sha256']})

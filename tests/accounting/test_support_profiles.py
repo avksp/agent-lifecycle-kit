@@ -17,8 +17,8 @@ from agent_lifecycle.accounting.support_profiles import match_requested_claims, 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.resources import builtin_profile_path
 
-CONTRACT = json.loads(Path("tasks/release-2-16/alk-input-fit-contract.json").read_text())
-PROFILE = json.loads(builtin_profile_path("small-context-profile.v1.json").read_text())
+CONTRACT = json.loads(Path("tasks/release-2-16/alk-input-fit-contract.json").read_text(encoding='utf-8'))
+PROFILE = json.loads(builtin_profile_path("small-context-profile.v1.json").read_text(encoding='utf-8'))
 HEX = "a" * 64
 
 
@@ -521,8 +521,8 @@ class SupportProfileMatchingTests(unittest.TestCase):
 
 class FrozenAdapterProfileFixtureTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.fixture = json.loads(Path("tests/accounting/fixtures/release_216_adapter_profiles.json").read_text())
-        self.contract = json.loads(Path("tasks/release-2-16/h04-adapter-profile-cases.json").read_text())
+        self.fixture = json.loads(Path("tests/accounting/fixtures/release_216_adapter_profiles.json").read_text(encoding='utf-8'))
+        self.contract = json.loads(Path("tasks/release-2-16/h04-adapter-profile-cases.json").read_text(encoding='utf-8'))
 
     def test_all_twelve_local_profiles_pin_frozen_expectations_without_native_authority(self):
         self.assertEqual(self.fixture["assurance"], "SYNTHETIC_STRUCTURE_AND_REFUSAL_ONLY")

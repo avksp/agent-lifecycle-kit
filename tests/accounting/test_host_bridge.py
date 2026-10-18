@@ -120,12 +120,12 @@ class SourceQualificationConsumerTests(unittest.TestCase):
         self.root = Path(self.tmp.name).resolve()
         self.profiles = self.root / "work/profiles"
         frozen = ROOT / "tasks/release-2-16"
-        catalog = json.loads((frozen / "h04-adapter-profile-cases.json").read_text())
+        catalog = json.loads((frozen / "h04-adapter-profile-cases.json").read_text(encoding="utf-8"))
         self.entry = copy.deepcopy(catalog["expectedBindings"]["entries"][0])
         self.manifest = {"status": "FROZEN", "syntheticUnitFixture": True}
         self.write(self.root, "tasks/release-2-16/plan.manifest.json", self.manifest)
         self.write(self.root, "tasks/release-2-16/h04-artifact-contracts.json",
-                   json.loads((frozen / "h04-artifact-contracts.json").read_text()))
+                   json.loads((frozen / "h04-artifact-contracts.json").read_text(encoding="utf-8")))
         source_bindings = []
         for index, source in enumerate(self.entry["sources"]):
             raw = ("synthetic archived source " + str(index)).encode()
@@ -223,7 +223,7 @@ class SourceQualificationConsumerTests(unittest.TestCase):
         self.assertEqual(result["matchedClaimIds"], [])
         self.assertIs(result["dispatchEntitlement"], False)
         verify.assert_called_once_with(self.root, review_id="unit-only")
-        contract = json.loads((ROOT / "tasks/release-2-16/h04-artifact-contracts.json").read_text())
+        contract = json.loads((ROOT / "tasks/release-2-16/h04-artifact-contracts.json").read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator({"$defs": contract["$defs"], "$ref": "#/$defs/resolverResult"}).validate(result)
 
     def test_supplied_pass_without_real_publication_refuses(self):
@@ -459,7 +459,7 @@ class SourceQualificationConsumerTests(unittest.TestCase):
 
 class AccountingDispatchRefusalTests(unittest.TestCase):
     def setUp(self) -> None:
-        fixture = json.loads((ROOT / "tests/accounting/fixtures/release_216_adapter_profiles.json").read_text())
+        fixture = json.loads((ROOT / "tests/accounting/fixtures/release_216_adapter_profiles.json").read_text(encoding="utf-8"))
         payload = fixture["profiles"][0]
         ref = {"path": "proof.json", "sha256": HEX, "bytes": 1}
         self.profile = {"schemaVersion": "alk-accounting-profile.v1", "payload": payload,
@@ -486,7 +486,7 @@ class AccountingDispatchRefusalTests(unittest.TestCase):
     def test_matching_fixture_is_unqualified_and_result_obeys_frozen_schema(self):
         result = self.resolve()
         self.assert_refusal(result, "UNQUALIFIED_EVIDENCE")
-        contract = json.loads((ROOT / "tasks/release-2-16/h04-artifact-contracts.json").read_text())
+        contract = json.loads((ROOT / "tasks/release-2-16/h04-artifact-contracts.json").read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator({"$defs": contract["$defs"], "$ref": "#/$defs/resolverResult"}).validate(result)
         self.assertEqual(result["requestDigest"], canonical_digest(self.request))
         self.assertEqual(result["profileDigest"], self.profile["profileDigest"])
@@ -610,7 +610,7 @@ class AccountingDispatchRefusalTests(unittest.TestCase):
             root = Path(tmp)
             path = root / ".alk/host-launch/codex.json"
             path.parent.mkdir(parents=True)
-            launch_profile = json.loads((ROOT / "tests/adapter_sessions/fixtures/local_launch_profiles/valid.json").read_text())
+            launch_profile = json.loads((ROOT / "tests/adapter_sessions/fixtures/local_launch_profiles/valid.json").read_text(encoding="utf-8"))
             launch_profile["executable"] = sys.executable
             path.write_text(json.dumps(launch_profile))
             for value in (self.request, None, {"outcome": "ALLOW_CAPABILITY"}):
@@ -629,3 +629,58 @@ class AccountingDispatchRefusalTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BoundedReaderKernelTests(unittest.TestCase):
+    def test_reservation_precedes_content_io_and_failed_reads_keep_the_charge(self):
+        import os
+        from contextlib import contextmanager
+        from types import SimpleNamespace
+        from agent_lifecycle.accounting.host_bridge import BoundedReader
+        original = os.fdopen
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            (root / 'input.bin').write_bytes(b'12345678')
+            for cap, fail, expected_reads, expected_charge in ((7, False, 0, 0), (16, True, 1, 8)):
+                reads = []
+                @contextmanager
+                def observed(*args, **kwargs):
+                    with original(*args, **kwargs) as stream:
+                        def read(size):
+                            reads.append(size)
+                            if fail:
+                                raise OSError('injected actual stream read failure')
+                            return stream.read(size)
+                        yield SimpleNamespace(fileno=stream.fileno, read=read)
+                reader = BoundedReader(cap)
+                try:
+                    with patch.object(os, 'fdopen', side_effect=observed), self.assertRaises(LifecycleError):
+                        reader.read(root, 'input.bin', 8)
+                    self.assertEqual(len(reads), expected_reads)
+                    self.assertEqual(reader.charged_bytes, expected_charge)
+                    self.assertEqual(reader.cache, {})
+                finally:
+                    reader.close()
+
+    def test_cached_bytes_remain_pinned_and_do_not_charge_twice(self):
+        import os
+        from agent_lifecycle.accounting.host_bridge import BoundedReader
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            (root / 'input.bin').write_bytes(b'original')
+            reader = BoundedReader(16)
+            try:
+                self.assertEqual(reader.read(root, 'input.bin', 8), b'original')
+                self.assertEqual(reader.charged_bytes, 8)
+                if os.name == 'nt':
+                    with self.assertRaises(OSError):
+                        root.rename(root.with_name(root.name + '-replacement'))
+                self.assertEqual(reader.read(root, 'input.bin', 8), b'original')
+                self.assertEqual(reader.charged_bytes, 8)
+                with self.assertRaises(LifecycleError):
+                    reader.read(root, 'input.bin', 7)
+                self.assertEqual(reader.charged_bytes, 8)
+            finally:
+                reader.close()
+            with self.assertRaises(LifecycleError):
+                reader.read(root, 'input.bin', 8)

@@ -23,6 +23,7 @@ from agent_lifecycle.accounting.contracts import (
 from agent_lifecycle.accounting.journal import (
     Journal, JournalUnavailable, RevisionConflict, _Lease, _state_delta, _apply_delta, _apply, _apply_delta_encoded,
 )
+from contextlib import closing
 
 
 PROOF = EvidenceRef("fixture:trusted-controller", "a" * 64)
@@ -136,13 +137,13 @@ def fork_lease_owner(path, ready_path, child_path):
                                 'orphan': os.getppid() != owner, 'inherited_refused': refused,
                                 'heartbeat': time.monotonic()}
                         staged = target.with_suffix('.tmp')
-                        staged.write_text(json.dumps(data))
+                        staged.write_text(json.dumps(data), encoding="utf-8", newline="\n")
                         staged.replace(target)
                         time.sleep(.01)
                 finally:
                     os._exit(0)
             staged_ready = Path(ready_path).with_suffix('.tmp')
-            staged_ready.write_text(json.dumps({'owner': owner, 'child': child}))
+            staged_ready.write_text(json.dumps({'owner': owner, 'child': child}), encoding="utf-8", newline="\n")
             staged_ready.replace(ready_path)
             time.sleep(15)  # Test kills owner, forbidding normal dequeue.
 
@@ -302,8 +303,8 @@ class JournalTests(unittest.TestCase):
                 self.assertIsNone(process.poll(), 'Owner died before fixture readiness')
                 self.assertLess(time.monotonic(), deadline)
                 time.sleep(.01)
-            owner = json.loads(ready.read_text())
-            child = json.loads(child_status.read_text())
+            owner = json.loads(ready.read_text(encoding="utf-8"))
+            child = json.loads(child_status.read_text(encoding="utf-8"))
             self.assertEqual(owner['owner'], process.pid)
             self.assertEqual(owner['child'], child['pid'])
             self.assertTrue(child['inherited_refused'])
@@ -316,7 +317,7 @@ class JournalTests(unittest.TestCase):
             while not child['orphan']:
                 self.assertLess(time.monotonic(), deadline)
                 time.sleep(.01)
-                child = json.loads(child_status.read_text())
+                child = json.loads(child_status.read_text(encoding="utf-8"))
             os.kill(child['pid'], 0)
             self.assertEqual(self.j.reserve(operation()), 'RESERVED')
             progressed = time.monotonic()
@@ -324,7 +325,7 @@ class JournalTests(unittest.TestCase):
             while child['heartbeat'] <= progressed:
                 self.assertLess(time.monotonic(), deadline)
                 time.sleep(.01)
-                child = json.loads(child_status.read_text())
+                child = json.loads(child_status.read_text(encoding="utf-8"))
             self.assertTrue(child['orphan'] and child['inherited_refused'])
             self.assertFalse(stale_tickets[0].exists())
             self.assertEqual(self.j.snapshot('run').active_reservations, 100)
@@ -476,7 +477,7 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(self.j.configuration,
                          {"journal_mode": "delete", "synchronous": 2, "foreign_keys": 1})
         other = Path(self.temp.name) / "unrelated.db"
-        with sqlite3.connect(other) as db:
+        with closing(sqlite3.connect(other)) as db, db:
             db.execute("CREATE TABLE unrelated(value)")
         with self.assertRaises(JournalUnavailable):
             Journal(other, PROOF)
@@ -699,7 +700,7 @@ class JournalTests(unittest.TestCase):
         other = Path(self.temp.name) / "future.db"
         with Journal(other, PROOF):
             pass
-        with sqlite3.connect(other) as db:
+        with closing(sqlite3.connect(other)) as db, db:
             db.execute("UPDATE schema_metadata SET version=999")
         with self.assertRaises(JournalUnavailable):
             Journal(other, PROOF)

@@ -55,6 +55,7 @@ from agent_lifecycle.adapter_sessions.private_input import (
 from agent_lifecycle.context import render_context
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
+from agent_lifecycle.contracts.private_storage import private_fingerprint, private_mode
 from agent_lifecycle.contracts.process_execution_schemas import command_identity_hash
 
 ROUTE_ID = "codex-exact-prompt-v1"
@@ -128,7 +129,7 @@ def _selected_host_evidence(
     _verify_private_ancestors(snapshot, root=root)
     info = snapshot.lstat()
     _require(
-        stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700,
+        stat.S_ISDIR(info.st_mode) and private_mode(snapshot, info, (0o700,)),
         "codex-exact-config-unsafe",
         "private CODEX_HOME is not protected",
     )
@@ -185,7 +186,7 @@ def _raw_source_record(root: Path, path: Path, kind: str) -> dict[str, Any]:
     raw = _read_private(path, root=root)
     info = path.lstat()
     _require(
-        stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o600 and info.st_size == len(raw),
+        stat.S_ISREG(info.st_mode) and private_mode(path, info, (0o600,)) and info.st_size == len(raw),
         "codex-exact-raw-inventory-invalid",
         "raw source changed during inventory",
     )
@@ -448,7 +449,7 @@ def verify_prestart_raw_inventory(
         _verify_private_ancestors(snapshot, root=root)
         info = snapshot.lstat()
         _require(
-            stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700,
+            stat.S_ISDIR(info.st_mode) and private_mode(snapshot, info, (0o700,)),
             "codex-exact-config-unsafe",
             "private CODEX_HOME is not protected",
         )
@@ -486,6 +487,8 @@ def verify_prestart_raw_inventory(
                     "mode": stat.S_IMODE(file_info.st_mode),
                 }
             )
+            if os.name == "nt":
+                expected[-1]["securitySha256"] = private_fingerprint(path)
     else:
         expected.extend(_snapshot_raw_sources(root, snapshot))
     _require(

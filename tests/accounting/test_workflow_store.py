@@ -60,6 +60,7 @@ from .test_closing_resources import ClosingResourceCandidateTests
 from .test_journal import open_scope, operation, receipt
 from .test_normalization import observation
 from .test_opening_balances import import_data
+from contextlib import closing
 
 WRITER = EvidenceRef("test-writer", "a" * 64)
 
@@ -89,7 +90,7 @@ class WorkflowSchemaTests(unittest.TestCase):
         }
 
     def _v4(self, path: Path) -> None:
-        with sqlite3.connect(path, isolation_level=None) as db:
+        with closing(sqlite3.connect(path, isolation_level=None)) as db, db:
             db.execute("BEGIN IMMEDIATE")
             for statement in BASE_STATEMENTS:
                 db.execute(statement)
@@ -121,7 +122,7 @@ class WorkflowSchemaTests(unittest.TestCase):
             self.assertEqual(found, expected)
 
     def test_v6_workflow_guard_template_fences_v5_writer_and_metadata(self) -> None:
-        with sqlite3.connect(":memory:") as db:
+        with closing(sqlite3.connect(":memory:")) as db, db:
             db.execute("CREATE TABLE schema_metadata(singleton INTEGER PRIMARY KEY, version INTEGER NOT NULL)")
             db.execute("INSERT INTO schema_metadata VALUES(1,6)")
             db.create_function("alk_storage_writer_version", 0, lambda: 6)
@@ -197,7 +198,7 @@ class WorkflowSchemaTests(unittest.TestCase):
                     "INSERT INTO workflow_run_output_anchors VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", row
                 )
                 self.assertEqual(_load_run_output_anchor_data(journal._db, binding, canonical_digest(binding)), anchor)
-                with sqlite3.connect(":memory:") as detached:
+                with closing(sqlite3.connect(":memory:")) as detached, detached:
                     detached.row_factory = sqlite3.Row
                     detached.execute("CREATE TABLE workflow_bindings(run_id,binding_digest,payload)")
                     detached.execute(
@@ -803,9 +804,9 @@ class WorkflowSchemaTests(unittest.TestCase):
             with Journal(path, WRITER):
                 pass
             binding = ("run", "b" * 64, "{}")
-            with sqlite3.connect(path, isolation_level=None) as unregistered, self.assertRaises(sqlite3.OperationalError):
+            with closing(sqlite3.connect(path, isolation_level=None)) as unregistered, unregistered, self.assertRaises(sqlite3.OperationalError):
                 unregistered.execute("INSERT INTO workflow_bindings VALUES(?,?,?)", binding)
-            with sqlite3.connect(path, isolation_level=None) as old:
+            with closing(sqlite3.connect(path, isolation_level=None)) as old, old:
                 old.create_function("alk_storage_writer_version", 0, lambda: 4)
                 with self.assertRaises(sqlite3.IntegrityError):
                     old.execute("INSERT INTO workflow_bindings VALUES(?,?,?)", binding)
@@ -815,7 +816,7 @@ class WorkflowSchemaTests(unittest.TestCase):
             path = Path(directory) / "new.db"
             with Journal(path, WRITER):
                 pass
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db, db:
                 db.execute("DROP TRIGGER guard_workflow_nonce_uses_insert")
             with self.assertRaises(JournalUnavailable):
                 Journal(path, WRITER)
@@ -1476,7 +1477,7 @@ class WorkflowSchemaTests(unittest.TestCase):
                 self.assertEqual(journal.snapshot("run"), before)
             with self.assertRaises(JournalUnavailable):
                 Journal(path, WRITER)
-            with sqlite3.connect(path, isolation_level=None) as old:
+            with closing(sqlite3.connect(path, isolation_level=None)) as old, old:
                 old.create_function("alk_storage_writer_version", 0, lambda: 5)
                 with self.assertRaises(sqlite3.IntegrityError):
                     old.execute("INSERT INTO workflow_bindings VALUES(?,?,?)", ("stale", "a" * 64, "{}"))
@@ -1484,7 +1485,7 @@ class WorkflowSchemaTests(unittest.TestCase):
                 with self.subTest(corruption=corruption):
                     altered = Path(directory) / (corruption + ".db")
                     shutil.copy2(path, altered)
-                    with sqlite3.connect(altered, isolation_level=None) as tamper:
+                    with closing(sqlite3.connect(altered, isolation_level=None)) as tamper, tamper:
                         action = "delete" if corruption == "missing-receipt" else "update"
                         trigger_name = f"protect_workflow_storage_migrations_{action}"
                         trigger = tamper.execute(
@@ -1500,7 +1501,7 @@ class WorkflowSchemaTests(unittest.TestCase):
                         tamper.execute(trigger)
                     with self.assertRaises(JournalUnavailable):
                         Journal(altered, WRITER, storage_version=6)
-            with sqlite3.connect(path, isolation_level=None) as tamper:
+            with closing(sqlite3.connect(path, isolation_level=None)) as tamper, tamper:
                 tamper.execute("DROP TRIGGER guard_workflow_bindings_insert")
             with self.assertRaises(JournalUnavailable):
                 Journal(path, WRITER, storage_version=6)
