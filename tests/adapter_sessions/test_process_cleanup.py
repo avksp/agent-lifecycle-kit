@@ -278,12 +278,12 @@ class ProcessCleanupTests(unittest.TestCase):
 
     def _check_after_popen_exceptions(self) -> None:
         real_popen = subprocess.Popen
-        real_sample = ProcessTelemetry.sample
         real_thread_start = Thread.start
 
         def sample_after_init(telemetry, **kwargs):
             if kwargs.get('force_group'):
-                return real_sample(telemetry, **kwargs)
+                # Keep this injected-fault fixture independent of OS sampling latency.
+                return {}
             raise RuntimeError('sample fault')
 
         def fail_second_reader(thread):

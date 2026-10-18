@@ -90,6 +90,7 @@ def run_external_job(
     _require_usage_bound(reported_tokens, limits["maxReportedTokens"], "reportedTokens")
     children = _validated_children(request, child_requests or [])
     context = _prepare_external_job(request, children, job_root=job_root, now=now)
+    invocation_started_ns = time.monotonic_ns()
     process, local_cancel = _invoke_external_job_process(
         context,
         argv,
@@ -98,10 +99,12 @@ def run_external_job(
         cancel_event=cancel_event,
         process_runner=process_runner,
     )
+    observed_elapsed_ms = max(0, (time.monotonic_ns() - invocation_started_ns) // 1_000_000)
     return _finalize_external_job(
         context,
         process,
         local_cancel,
+        observed_elapsed_ms=observed_elapsed_ms,
         verdict=verdict,
         complete=complete,
         cost_micros=cost_micros,
@@ -209,6 +212,7 @@ def _finalize_external_job(
     process: dict[str, Any],
     local_cancel: threading.Event,
     *,
+    observed_elapsed_ms: int,
     verdict: str,
     complete: bool,
     cost_micros: int,
@@ -228,7 +232,7 @@ def _finalize_external_job(
     )
 
     blockers = [*process.get("blockers", []), *child_blockers, *artifact_blockers]
-    elapsed_ms = _elapsed_ms(process)
+    elapsed_ms = _elapsed_ms(process, observed_elapsed_ms=observed_elapsed_ms)
     wall_limit_ms = int(limits["maxWallSeconds"]) * 1000
     if elapsed_ms > wall_limit_ms:
         blockers.append({"code": "external-job-wall-limit-exceeded"})
@@ -292,7 +296,8 @@ def _finalize_external_job(
     )
     create_private_json(_status_path(context.attempt_root, 2), terminal)
     create_private_json(context.attempt_root / "transition-000002.json", terminal_transition)
-    create_private_json(context.attempt_root / "process-receipt.json", process["processReceipt"])
+    if process["processReceipt"] is not None:
+        create_private_json(context.attempt_root / "process-receipt.json", process["processReceipt"])
     create_private_json(context.attempt_root / "result.json", result)
     return _attempt_view(request, terminal, result, process["processReceipt"], terminal_transition)
 
@@ -620,9 +625,15 @@ def _terminal_state(
     return "SUCCEEDED"
 
 
-def _elapsed_ms(process: dict[str, Any]) -> int:
-    value = process.get("processReceipt", {}).get("timing", {}).get("elapsedMs", 0)
-    return max(0, int(value)) if isinstance(value, (int, float)) and not isinstance(value, bool) else 0
+def _elapsed_ms(process: dict[str, Any], *, observed_elapsed_ms: int) -> int:
+    receipt = process.get("processReceipt")
+    timing = receipt.get("timing") if isinstance(receipt, dict) else None
+    value = timing.get("elapsedMs") if isinstance(timing, dict) else None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return max(0, int(value))
+    # Started failures deliberately withhold process authority. Retain the real
+    # caller-observed execution/cleanup interval without inventing a receipt.
+    return observed_elapsed_ms
 
 
 def _output_digest(process: dict[str, Any]) -> str:
