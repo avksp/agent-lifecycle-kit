@@ -399,13 +399,13 @@ class PreparedAttemptIntegrationTests(unittest.TestCase):
             return result
 
         # One original monotonic deadline per fixture; reused launches never renew it.
-        self.absolute_deadline_monotonic_ns = time.monotonic_ns() + 5_000_000_000
         self.context = launch_preflight._LaunchContext(
             root=self.root, relative=Path('profiles/local.fixture.json'), runner=runner,
             timeout_seconds=2, profile={'executable': str(self.binary)}, profile_adapter='codex',
             env=dict(os.environ), env_receipt={}, profile_digest='fixture', shipped_digest=None)
         self.immutable_bindings = self.patches.enter_context(bound_current_invocation_fixture(
             self.root, manifest_path=self.manifest_path, lock_path=self.lock))
+        self.absolute_deadline_monotonic_ns = time.monotonic_ns() + 5_000_000_000
 
     def launch(self) -> dict:
         return launch_preflight._run_exact_managed_process(

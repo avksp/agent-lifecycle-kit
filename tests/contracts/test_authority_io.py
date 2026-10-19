@@ -11,6 +11,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -269,6 +270,63 @@ class AuthorityReadTests(unittest.TestCase):
 
 
 class AuthorityWriteTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows sharing requires native Windows")
+    def test_transient_directory_writer_contention_preserves_exclusion(self) -> None:
+        import ctypes
+
+        real_api = authority_io._windows_api()
+        for release_after_conflict in (True, False):
+            with self.subTest(release=release_after_conflict), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp).resolve()
+                target = root / "created.json"
+                held = authority_io._windows_directory(root, writable=True)
+                conflict = threading.Event()
+                outcomes = []
+
+                class ObservedApi:
+                    def __getattr__(self, name):
+                        return getattr(real_api, name)
+
+                    def CreateFileW(self, *args):
+                        handle = real_api.CreateFileW(*args)
+                        error = ctypes.get_last_error()
+                        if handle == ctypes.c_void_p(-1).value and error == 32:
+                            conflict.set()
+                        ctypes.set_last_error(error)
+                        return handle
+
+                def publish():
+                    try:
+                        authority_io.create_authority_bytes(target, b'{"value":1}', root=root)
+                        outcomes.append("CREATED")
+                    except LifecycleError as error:
+                        outcomes.append(error)
+
+                worker = threading.Thread(target=publish)
+                try:
+                    with patch.object(authority_io, "_windows_api", return_value=ObservedApi()):
+                        worker.start()
+                        self.assertTrue(conflict.wait(2), "actual kernel sharing conflict was not observed")
+                        if release_after_conflict:
+                            authority_io._windows_close(held)
+                            held = None
+                        worker.join(2)
+                        self.assertFalse(worker.is_alive(), "bounded sharing attempt did not settle")
+                    if release_after_conflict:
+                        self.assertEqual(outcomes, ["CREATED"])
+                        self.assertEqual(target.read_bytes(), b'{"value":1}')
+                    else:
+                        self.assertEqual(len(outcomes), 1)
+                        self.assertIsInstance(outcomes[0], LifecycleError)
+                        self.assertEqual(outcomes[0].code, "authority-input-unavailable")
+                        self.assertEqual(outcomes[0].details["winerror"], 32)
+                        self.assertFalse(target.exists())
+                finally:
+                    if held is not None:
+                        authority_io._windows_close(held)
+                    if worker.ident is not None:
+                        worker.join(2)
+
     @unittest.skipUnless(os.name == "nt", "Windows sharing requires native Windows")
     def test_windows_existing_directory_writer_blocks_authority(self) -> None:
         import ctypes

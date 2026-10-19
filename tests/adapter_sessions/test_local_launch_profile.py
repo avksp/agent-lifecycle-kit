@@ -100,9 +100,6 @@ class LocalLaunchProfileTests(unittest.TestCase):
     def test_late_exact_child_cannot_extend_original_attempt_deadline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            end = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
-            deadline = launch_preflight._original_attempt_deadline(
-                {'runDeadlineAt': end}, {'attemptDeadlineAt': end})
             results = []
             def observed_runner(*args, **kwargs):
                 self.assertEqual(kwargs['absolute_deadline_monotonic_ns'], deadline)
@@ -112,11 +109,15 @@ class LocalLaunchProfileTests(unittest.TestCase):
             context = _launch_context(root, observed_runner)
             prepared = _prepared_launch(root)
             prepared['argv'] = [sys.executable, '-c', 'import sys,time;sys.stdin.read();time.sleep(3)']
+            bound = _bound_launch_context(context, root)
+            end = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
+            deadline = launch_preflight._original_attempt_deadline(
+                {'runDeadlineAt': end}, {'attemptDeadlineAt': end})
             started = time.monotonic()
             with patch.object(launch_preflight, 'verify_fresh_task_gate'), patch.object(
                     launch_preflight, 'claim_attempt_start'), patch.object(
                     launch_preflight, 'publish_attempt_result', return_value={'status': 'FAIL'}):
-                receipt = _exact_launch(context, prepared, deadline)
+                receipt = _exact_launch(context, prepared, deadline, bound=bound)
             self.assertLess(time.monotonic() - started, 1.5)
             self.assertTrue(receipt['hostLaunchStarted'])
             self.assertTrue(receipt['timedOut'])
@@ -342,8 +343,8 @@ def _prepared_launch(root: Path) -> dict:
         'sealedSha256': 'a' * 64, 'finalPromptSha256': 'b' * 64, 'fitReceiptDigest': 'c' * 64}
 
 
-def _exact_launch(context, prepared, deadline) -> dict:
-    actual, args, invocation = _bound_launch_context(context, context.root)
+def _exact_launch(context, prepared, deadline, *, bound=None) -> dict:
+    actual, args, invocation = bound if bound is not None else _bound_launch_context(context, context.root)
     prepared['taskId'] = args['task_id']
     prepared['operationId'] = args['operation_id']
     inputs = {k:v for k,v in args.items() if k in {'state_path','manifest_path','lock_path','task_id','operation_id','source_revision'}}

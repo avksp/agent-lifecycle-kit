@@ -1198,7 +1198,15 @@ class RetentionProcessTests(unittest.TestCase):
         self.assertEqual(p.exitcode,23)
         self.assertEqual(self.j.rebuild('run'),before)
         tiny=replace(request,work_deadline_utc=(utc_instant(request.now_utc)+timedelta(microseconds=1)).isoformat())
-        self.assertEqual(self.j.reclaim_storage(tiny)['status'],'NEEDS_STORAGE_MAINTENANCE')
+        # A microsecond cannot be resolved by every supported Windows clock.
+        # Advance the observed clock after deadline creation to test expiry itself.
+        from unittest.mock import patch
+        from agent_lifecycle.accounting import closing_resources
+        ticks = iter([0.0])
+        def after_deadline():
+            return next(ticks, 1.0)
+        with patch.object(closing_resources.time, 'monotonic', side_effect=after_deadline):
+            self.assertEqual(self.j.reclaim_storage(tiny)['status'],'NEEDS_STORAGE_MAINTENANCE')
         result=self.j.reclaim_storage(request)
         self.assertEqual(result['status'],'RECLAIMED')
         self.assertEqual(self.count('cleanup_receipts'),counts)

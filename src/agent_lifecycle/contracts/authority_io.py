@@ -8,6 +8,7 @@ import stat
 import sys
 import tempfile
 import threading
+import time
 import uuid
 from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager, suppress
@@ -535,20 +536,39 @@ def _windows_open(path: Path, *, directory: bool, operation: str = "read", priva
             None,
         )
 
+    def open_with_sharing_retry(attributes: Any = None) -> tuple[Any, int]:
+        deadline = time.perf_counter() + 0.1
+        error = 0
+        for attempt in range(21):
+            if attempt and time.perf_counter() >= deadline:
+                break
+            handle = create(attributes)
+            if handle != ctypes.c_void_p(-1).value:
+                return handle, 0
+            error = ctypes.get_last_error()
+            remaining = deadline - time.perf_counter()
+            if error != 32 or attempt == 20 or remaining <= 0:
+                break
+            time.sleep(min(0.005, remaining))
+        return handle, error
+
     if private and operation == "create":
         from .windows_security import private_creation_attributes
 
         with private_creation_attributes(directory=False) as attributes:
-            handle = create(attributes)
+            handle, error = open_with_sharing_retry(attributes)
     else:
-        handle = create()
+        handle, error = open_with_sharing_retry()
     if handle == ctypes.c_void_p(-1).value:
-        error = ctypes.get_last_error()
         if error in {2, 3}:
             raise FileNotFoundError(errno.ENOENT, "authority input is unavailable")
         if error in {80, 183}:
             raise FileExistsError(errno.EEXIST, "authority output already exists")
-        raise LifecycleError("authority-input-unavailable", "authority input cannot be safely opened")
+        raise LifecycleError(
+            "authority-input-unavailable",
+            "authority input cannot be safely opened",
+            {"winerror": error, "operation": operation},
+        )
     attributes = (wintypes.DWORD * 2)()
     try:
         if not api.GetFileInformationByHandleEx(handle, 9, ctypes.byref(attributes), ctypes.sizeof(attributes)):

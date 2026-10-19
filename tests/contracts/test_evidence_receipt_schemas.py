@@ -121,17 +121,17 @@ class EvidenceReceiptSchemaTests(unittest.TestCase):
     def test_async_seeded_delayed_violation_cannot_back_pass(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             violation = threading.Event()
-            started = time.monotonic_ns()
+            started = time.perf_counter_ns()
             timer = threading.Timer(0.01, violation.set)
             self.addCleanup(timer.cancel)
             timer.start()
             self.assertTrue(violation.wait(1), "seeded violation must actually be observed")
             timer.join(1)
             self.assertFalse(timer.is_alive())
-            detected = (time.monotonic_ns() - started) // 1_000_000
+            detected = (time.perf_counter_ns() - started) // 1_000_000
             self.assertGreater(detected, 0, "violation must arrive after readiness")
             time.sleep(0.02)
-            elapsed = (time.monotonic_ns() - started) // 1_000_000
+            elapsed = (time.perf_counter_ns() - started) // 1_000_000
             value, descriptor = self._async_receipt(Path(directory), end_ms=elapsed,
                                                    violations=int(violation.is_set()))
             self.assertEqual(value["payload"]["violationCount"], 1)
