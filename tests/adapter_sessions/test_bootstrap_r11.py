@@ -538,10 +538,11 @@ class PreparedAttemptIntegrationTests(unittest.TestCase):
 
         def blocked_runner(*args, **kwargs):
             entered.set()
-            release.wait(3)
+            self.assertTrue(release.wait(5))
             return runner(*args, **kwargs)
 
-        self.context = replace(self.context, runner=blocked_runner)
+        # The deliberate pause shares the fixture's original five-second clock.
+        self.context = replace(self.context, runner=blocked_runner, timeout_seconds=5)
         worker = threading.Thread(target=lambda: first.append(self.launch()))
         worker.start()
         try:
@@ -553,10 +554,12 @@ class PreparedAttemptIntegrationTests(unittest.TestCase):
             self.assertFalse((self.evidence / 'proven-no-start.json').exists())
         finally:
             release.set()
-            worker.join(3)
+            worker.join(5)
         self.assertFalse(worker.is_alive())
+        self.assertEqual(len(first), 1)
         self.assertEqual(first[0]['status'], 'PASS', first)
         self.assertEqual(len(self.outcomes), 1)
+        self.assertEqual(self.outcomes[0]['absoluteDeadlineMonotonicNs'], self.absolute_deadline_monotonic_ns)
 
     def test_known_runner_no_start_remains_a_separate_proof(self) -> None:
         self.context = replace(self.context, runner=lambda *args, **kwargs: {
