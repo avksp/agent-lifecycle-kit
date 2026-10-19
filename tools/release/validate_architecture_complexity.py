@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from release_common import digest_value, file_identity, write_json
+from validate_declared_limit_semantics import LIMIT_SEMANTICS
 
 
 def main() -> int:
@@ -34,18 +35,33 @@ def main() -> int:
             files.append({"path": path.as_posix(), "lines": line_count, "identity": file_identity(path)})
             if line_count > args.hard_file_lines:
                 blockers.append(
-                    {"code": "architecture-hard-file-limit-exceeded", "path": path.as_posix(), "actualLines": line_count, "maxLines": args.hard_file_lines}
+                    {
+                        "code": "architecture-hard-file-limit-exceeded",
+                        "path": path.as_posix(),
+                        "actualLines": line_count,
+                        "maxLines": args.hard_file_lines,
+                    }
                 )
             if line_count > args.target_file_lines:
                 warnings.append(
-                    {"code": "architecture-file-target-exceeded", "path": path.as_posix(), "actualLines": line_count, "targetLines": args.target_file_lines}
+                    {
+                        "code": "architecture-file-target-exceeded",
+                        "path": path.as_posix(),
+                        "actualLines": line_count,
+                        "targetLines": args.target_file_lines,
+                    }
                 )
             tree = ast.parse(source, filename=path.as_posix())
             top_level = _top_level_symbol_count(tree)
             symbols.append({"path": path.as_posix(), "count": top_level})
             if top_level > args.hard_symbols:
                 blockers.append(
-                    {"code": "architecture-hard-symbol-limit-exceeded", "path": path.as_posix(), "actualSymbols": top_level, "maxSymbols": args.hard_symbols}
+                    {
+                        "code": "architecture-hard-symbol-limit-exceeded",
+                        "path": path.as_posix(),
+                        "actualSymbols": top_level,
+                        "maxSymbols": args.hard_symbols,
+                    }
                 )
             for node in ast.walk(tree):
                 if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -54,9 +70,26 @@ def main() -> int:
                 length = end - node.lineno + 1
                 record = {"path": path.as_posix(), "name": node.name, "line": node.lineno, "lines": length}
                 functions.append(record)
+                if length > args.target_function_lines:
+                    warnings.append(
+                        {
+                            "code": "architecture-function-target-exceeded",
+                            "path": path.as_posix(),
+                            "name": node.name,
+                            "line": node.lineno,
+                            "actualLines": length,
+                            "targetLines": args.target_function_lines,
+                        }
+                    )
                 if length > args.hard_function_lines:
                     blockers.append(
-                        {"code": "architecture-hard-function-limit-exceeded", "path": path.as_posix(), "name": node.name, "actualLines": length, "maxLines": args.hard_function_lines}
+                        {
+                            "code": "architecture-hard-function-limit-exceeded",
+                            "path": path.as_posix(),
+                            "name": node.name,
+                            "actualLines": length,
+                            "maxLines": args.hard_function_lines,
+                        }
                     )
 
     body = {
@@ -75,7 +108,13 @@ def main() -> int:
         "symbols": symbols,
         "blockers": blockers,
         "warnings": warnings,
-        "targetFileConformance": "EXCEEDED" if warnings else "PASS",
+        "limitSemantics": LIMIT_SEMANTICS,
+        "targetFileConformance": "EXCEEDED"
+        if any(row["code"] == "architecture-file-target-exceeded" for row in warnings)
+        else "PASS",
+        "targetFunctionConformance": "EXCEEDED"
+        if any(row["code"] == "architecture-function-target-exceeded" for row in warnings)
+        else "PASS",
         "hardLimitConformance": "FAIL" if blockers else "PASS",
         "productionPromotionClaimed": False,
     }

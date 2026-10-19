@@ -21,8 +21,10 @@ from agent_lifecycle.workflow.reviews import (
 from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.workflow.state import validate_typed_blocker
 from agent_lifecycle.workflow.task_transitions import accept_task, rework_task
+from agent_lifecycle.workflow.transactions import workflow_transaction
 
 
+@workflow_transaction
 def apply_task_review_outcome(
     state_path: Path,
     *,

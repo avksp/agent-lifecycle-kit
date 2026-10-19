@@ -229,6 +229,7 @@ def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[
             expected_revision=args.expected_revision,
             blocker_code=args.blocker_code,
             reason=args.reason,
+            review_task_id=getattr(args, "review_task", None),
         )
     if args.workflow_command == "resolve":
         return resolve_blocker(

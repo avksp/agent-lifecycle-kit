@@ -81,7 +81,7 @@ class ParallelTaskLifecycleTests(unittest.TestCase):
                 "actor": "worker",
                 "actorRunId": "worker-run",
                 "taskPacketHash": "0" * 64,
-                "itemOutcomes": [{"status": "COMPLETE"}],
+                "itemOutcomes": [{"plannedItemId": "REQ-1", "status": "COMPLETE"}],
                 "changedFiles": [],
                 "changeSet": {"baselineSha": "source", "provider": "git-worktree-v1"},
                 "commands": [],
@@ -176,7 +176,7 @@ def _review_outcome_fixture(root: Path, *, verdict: str, mutation: str) -> tuple
         "sourceRevision": "source",
         "actor": "worker",
         "actorRunId": "worker-run",
-        "itemOutcomes": [{"status": "COMPLETE"}],
+        "itemOutcomes": [{"plannedItemId": "REQ-1", "status": "COMPLETE"}],
         "changeSet": {"provider": "git-worktree-v1", "baselineSha": "source"},
         "commands": [],
     }

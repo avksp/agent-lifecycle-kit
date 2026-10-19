@@ -19,9 +19,9 @@ and secret handling stay in adapters or host-local profiles.
 ALK provides a verifiable finish for external-agent work with proportionate control. It adds only the checks and evidence needed for the task; most of the time remains for research, implementation and product verification.
 
 ## Quick start
-Start with [install ALK and make the first run](docs/guides/install-and-first-run.md). Release 2.16 adds cumulative accounting within verified host capabilities; see [retention maintenance](docs/operations/retention-maintenance.md).
+Start with [install ALK and make the first run](docs/guides/install-and-first-run.md). Release 2.17 strengthens [workflow validation and recovery](docs/reference/workflow-completeness.md). Release 2.16 introduced cumulative accounting within verified host capabilities; see [retention maintenance](docs/operations/retention-maintenance.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.16.0`, and common `agent-lifecycle version` errors. See [2.15 migration notes](docs/reference/cli.md#migrating-authority-artifacts-to-215) and [authority boundaries](docs/reference/authority-artifact-boundaries.md).
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.17.0`, and common `agent-lifecycle version` errors. See [2.15 migration notes](docs/reference/cli.md#migrating-authority-artifacts-to-215) and [authority boundaries](docs/reference/authority-artifact-boundaries.md).
 
 For a quick start, run:
 

@@ -4,6 +4,25 @@
 
 - No changes yet.
 
+## 2.17.0 - 2026-10-19
+
+- Require explicit executable-plan tier and integrity inputs, validate artifact
+  roles and output ownership, and reject unsupported CLI arguments before writes.
+- Serialize cooperating workflow writers with bounded OS locks, check complete
+  prospective state/event/checkpoint size before persistence, and fail closed on
+  stale revisions, duplicate operations and interrupted commits.
+- Preserve unfinished item identities across attempts and adopted plans; require
+  fresh passing evidence or an independently reviewed explicit scope change.
+- Validate supplied local predecessor-acceptance receipts offline and recover a
+  missing or truncated review response for the same pending result without
+  resetting attempts, usage, authority or absolute deadlines.
+- Report architecture size targets as warnings while preserving hard limits,
+  and expose supported lazy import edges or explicit graph incompleteness.
+- Document the workflow contract in English and Russian and align package,
+  plugin, marketplace and installation versions. Host telemetry remains
+  unavailable where unmeasured; this release adds no host attestation, model
+  scheduler, provider retries or all-file transaction rollback.
+
 ## 2.16.0 - 2026-10-16
 
 - Add persistent cumulative task/run accounting with admission, settlement,

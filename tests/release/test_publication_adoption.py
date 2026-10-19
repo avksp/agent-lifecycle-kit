@@ -18,6 +18,22 @@ TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf
 
 
 class PublicationAdoptionTests(unittest.TestCase):
+    def test_workflow_completeness_is_reachable_in_both_locales(self) -> None:
+        for prefix in ("docs", "docs/ru"):
+            reference = ROOT / prefix / "reference/workflow-completeness.md"
+            self.assertTrue(reference.is_file())
+            for page in ("README.md", "guides/install-and-first-run.md", "reference/cli.md"):
+                text = (ROOT / prefix / page).read_text(encoding="utf-8")
+                self.assertIn("workflow-completeness.md", text, page)
+            text = reference.read_text(encoding="utf-8")
+            for marker in (
+                "json-input-too-large", "json-input-depth-exceeded", "workflow-split-brain",
+                "task-result-unresolved-item-omitted", "excludedPlannedItemIds",
+                "prerequisiteAcceptance", "review-response-missing",
+                "review-response-truncated", "architecture-function-target-exceeded",
+            ):
+                self.assertIn(marker, text, (prefix, marker))
+
     def test_current_docs_pass_adoption_validation(self) -> None:
         result = validate_publication_adoption(root=ROOT, target_version=TARGET_VERSION)
 

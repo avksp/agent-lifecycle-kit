@@ -126,7 +126,11 @@ def _write_task_compile_bundle(root: Path) -> Path:
             "artifactRoot": "plans/p",
             "planArtifactRoot": "plans/p/.agent-plan/p",
         },
-        "specification": {"tier": "S1", "revision": 1, "artifact": "spec.json"},
+        "specification": {"tier": "S1", "revision": 1,
+            "artifact": "spec.json", "requirements": [
+                {"id": "REQ-1", "description": "Compile fixture"}]},
+        "validation": {"commands": ["python -m unittest"]},
+        "releaseImpact": "Non-release compiler fixture.",
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],
@@ -313,10 +317,19 @@ def _manifest() -> dict:
         "status": "FROZEN",
         "planRevision": 1,
         "package": {"id": "package", "planArtifactRoot": "plans/package"},
+        "specification": {
+            "tier": "S1",
+            "requirements": [{"id": "REQ-1", "description": "Fixture work"}],
+        },
+        "validation": {"commands": ["python -m unittest"]},
+        "releaseImpact": "Non-release single-owner workflow fixture.",
         "leadOwned": [],
         "readOnly": [],
         "forbiddenWrites": [],
-        "workstreams": [{"id": "WS-01", "writes": ["src"]}],
+        "acceptance": {"criteria": [{"id": "AC-1",
+            "requirementIds": ["REQ-1"], "evidenceIds": ["EV-1"]}]},
+        "workstreams": [{"id": "WS-01", "writes": ["src"],
+            "acceptanceIds": ["AC-1"], "evidenceIds": ["EV-1"]}],
     }
 
 

@@ -14,37 +14,63 @@ from agent_lifecycle.workflow.run import run_workflow_step
 
 class TaskAcceptanceImplementationAuditGateTests(unittest.TestCase):
     def test_native_task_consumer_refuses_stronger_claims_before_committing(self) -> None:
-        claims = [({}, True), ({"reviewerProvenance": {"guarantee": "DECLARED", "attestation": None}}, True),
-                  ({"reviewerProvenance": {"guarantee": "ATTESTED", "attestation": None}}, False),
-                  ({"reviewerProvenance": {}}, False),
-                  ({"provenanceValidation": {"status": "PASS", "guarantee": "ATTESTED"}}, False)]
+        claims = [
+            ({}, True),
+            ({"reviewerProvenance": {"guarantee": "DECLARED", "attestation": None}}, True),
+            ({"reviewerProvenance": {"guarantee": "ATTESTED", "attestation": None}}, False),
+            ({"reviewerProvenance": {}}, False),
+            ({"provenanceValidation": {"status": "PASS", "guarantee": "ATTESTED"}}, False),
+        ]
         for claim, allowed in claims:
             with self.subTest(claim=claim), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 bundle = _write_bundle(root, phase="RUNNING", task_status="READY", audit_required=False)
-                start_task(bundle["statePath"], task_id="WS-01", operation_id="start",
-                           expected_revision=1, source_revision="source", reason="unit consumer")
+                start_task(
+                    bundle["statePath"],
+                    task_id="WS-01",
+                    operation_id="start",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="unit consumer",
+                )
                 result_path, review_path = _write_result_review(root, bundle)
-                commit_task_result(bundle["statePath"], task_id="WS-01", operation_id="result",
-                                   expected_revision=2, source_revision="source", result_path=result_path,
-                                   reason="unit consumer result")
+                commit_task_result(
+                    bundle["statePath"],
+                    task_id="WS-01",
+                    operation_id="result",
+                    expected_revision=2,
+                    source_revision="source",
+                    result_path=result_path,
+                    reason="unit consumer result",
+                )
                 review = json.loads((root / review_path).read_text())
                 review.update(claim)
                 (root / review_path).write_bytes(canonical_bytes(review) + b"\n")
                 before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
                 if allowed:
-                    accept_task(bundle["statePath"], task_id="WS-01", operation_id="accept",
-                                expected_revision=3, review_path=review_path,
-                                reason="unit ordinary acceptance")
+                    accept_task(
+                        bundle["statePath"],
+                        task_id="WS-01",
+                        operation_id="accept",
+                        expected_revision=3,
+                        review_path=review_path,
+                        reason="unit ordinary acceptance",
+                    )
                     self.assertEqual(json.loads(bundle["statePath"].read_text())["tasks"][0]["status"], "ACCEPTED")
                 else:
                     with self.assertRaises(LifecycleError) as caught:
-                        accept_task(bundle["statePath"], task_id="WS-01", operation_id="accept",
-                                    expected_revision=3, review_path=review_path,
-                                    reason="unit unsupported claim refusal")
+                        accept_task(
+                            bundle["statePath"],
+                            task_id="WS-01",
+                            operation_id="accept",
+                            expected_revision=3,
+                            review_path=review_path,
+                            reason="unit unsupported claim refusal",
+                        )
                     self.assertEqual(caught.exception.code, "review-provenance-invalid")
-                    self.assertEqual(before, {p.relative_to(root).as_posix(): p.read_bytes()
-                                              for p in root.rglob("*") if p.is_file()})
+                    self.assertEqual(
+                        before, {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                    )
 
     def test_task_review_rejects_every_open_medium_plus_severity(self) -> None:
         state = {"runId": "run", "planDigest": "a" * 64}
@@ -246,9 +272,21 @@ def _write_bundle(
     audit_required: bool,
 ) -> dict[str, Path | str]:
     manifest = {
+        "schemaVersion": "agent-plan-manifest.v1",
         "status": "FROZEN",
         "planRevision": 1,
-        "package": {"id": "package", "planArtifactRoot": "plans/package"},
+        "package": {"id": "package", "planArtifactRoot": "plans/package", "artifactRoot": "work"},
+        "specification": {
+            "tier": "S1",
+            "requirements": [{"id": "REQ-FOUNDATION", "description": "Single-owner local audit fixture"}],
+        },
+        "acceptance": {
+            "criteria": [
+                {"id": "AC-FOUNDATION", "requirementIds": ["REQ-FOUNDATION"], "evidenceIds": ["EV-FOUNDATION"]}
+            ],
+        },
+        "validation": {"commands": ["python -m unittest"], "extraEvidence": ["EV-FOUNDATION"]},
+        "releaseImpact": "Non-release single-owner unit fixture.",
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],
@@ -256,11 +294,11 @@ def _write_bundle(
         "workstreams": [
             {
                 "id": "WS-01",
+                "owner": "worker",
                 "dependsOn": [],
                 "writes": ["src/example.py"],
             }
         ],
-        "acceptanceCriteria": [{"id": "AC-01", "evidenceIds": []}],
     }
     digest = canonical_digest(manifest)
     manifest_path = root / "plans/package/plan.manifest.json"
@@ -372,6 +410,189 @@ def _write_result_review(
     review_path = "work/WS-01/attempt-1/task-review.json"
     write_json_create(root / review_path, review)
     return result_path, review_path
+
+
+class CrossAttemptItemOutcomeTests(unittest.TestCase):
+    def archived_fixture(self, root, *, authorized=False):
+        from agent_lifecycle.workflow.artifacts import artifact_identity
+        from tests.workflow.helpers import _review
+
+        state, task, current = self.fixture(root)
+        previous = {
+            "id": task["id"],
+            "attempt": 1,
+            "packet": task["packet"],
+            "attemptHistory": [],
+            "result": task["attemptHistory"][0]["result"],
+            "status": "VERIFYING",
+        }
+        snapshot = {
+            "runId": "run",
+            "planRevision": 1,
+            "planDigest": state["planDigest"],
+            "sourceRevision": "source",
+            "tasks": [previous],
+        }
+        task["attemptHistory"] = []
+        state["priorSnapshots"] = [snapshot]
+        state["planRevision"] = 2
+        state["planDigest"] = current["planDigest"] = "9" * 64
+        current["itemOutcomes"][0]["plannedItemId"] = "NEW-SCOPE"
+        if authorized:
+            review = _review(attempt=1, result_hash=previous["result"]["sha256"])
+            review["verdict"] = "CONTRACT_CHANGE"
+            request = {
+                "reason": "independently reviewed replacement scope",
+                "excludedPlannedItemIds": ["REQ-FOUNDATION"],
+            }
+            review["contractChangeRequest"] = request
+            write_json_create(root / "scope-review.json", review)
+            previous.update(
+                status="CONTRACT_CHANGE",
+                review=artifact_identity(root, "scope-review.json", review),
+                contractChangeRequest={**request, "scope": "plan", "recoveryRoute": "adopt-plan", "taskId": task["id"]},
+            )
+        return state, task, current, previous
+
+    def test_plan_adoption_cannot_hide_unfinished_ids_in_archived_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state, task, current, _ = self.archived_fixture(root)
+            with self.assertRaises(LifecycleError) as caught:
+                self.validate(root, state, task, current)
+            self.assertEqual(caught.exception.code, "task-result-unresolved-item-omitted")
+            current["contractChangeRequest"] = {"reason": "worker cannot authorize omission"}
+            with self.assertRaises(LifecycleError) as caught:
+                self.validate(root, state, task, current, nonaccepting=True)
+            self.assertEqual(caught.exception.code, "task-result-unresolved-item-omitted")
+            current.pop("contractChangeRequest")
+            current["itemOutcomes"][0]["plannedItemId"] = "REQ-FOUNDATION"
+            self.validate(root, state, task, current)
+
+    def test_exact_independent_contract_change_accounts_for_excluded_archived_item(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state, task, current, _ = self.archived_fixture(root, authorized=True)
+            prior = (root / "prior.json").read_bytes()
+            self.validate(root, state, task, current)
+            self.assertEqual((root / "prior.json").read_bytes(), prior)
+
+    def test_exclusion_cannot_be_replayed_substituted_or_self_authorized(self) -> None:
+        from agent_lifecycle.contracts import read_json_object
+        from agent_lifecycle.workflow.artifacts import artifact_identity
+
+        for variant in ("unreviewed-status", "same-revision", "substituted-ids", "changed-review", "self-review"):
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                state, task, current, previous = self.archived_fixture(root, authorized=True)
+                if variant == "unreviewed-status":
+                    previous["status"] = "VERIFYING"
+                elif variant == "same-revision":
+                    state["planRevision"] = 1
+                elif variant == "substituted-ids":
+                    previous["contractChangeRequest"]["excludedPlannedItemIds"] = ["OTHER"]
+                elif variant == "changed-review":
+                    (root / "scope-review.json").write_bytes((root / "scope-review.json").read_bytes() + b" ")
+                else:
+                    review = read_json_object(root / "scope-review.json")
+                    review["reviewer"]["id"] = "worker"
+                    (root / "scope-review.json").write_bytes(canonical_bytes(review) + b"\n")
+                    previous["review"] = artifact_identity(root, "scope-review.json", review)
+                with self.assertRaises(LifecycleError):
+                    self.validate(root, state, task, current)
+
+    def fixture(self, root):
+        from agent_lifecycle.workflow.artifacts import artifact_identity
+        from tests.workflow.helpers import _result
+
+        prior = _result(attempt=1)
+        prior["itemOutcomes"][0]["status"] = "DEFERRED"
+        prior["blocker"] = {
+            "code": "unavailable",
+            "reason": "dependency unavailable",
+            "scope": "task",
+            "recoveryRoute": "task-review",
+            "taskId": "WS-01",
+            "attempt": 1,
+        }
+        write_json_create(root / "prior.json", prior)
+        current = _result(attempt=2)
+        current["commands"] = [
+            {"id": "verification", "command": ["python", "-m", "unittest"], "status": "PASS", "exitCode": 0}
+        ]
+        current["itemOutcomes"][0]["commandIds"] = ["verification"]
+        state = {
+            "schemaVersion": "agent-workflow-state.v4",
+            "runId": "run",
+            "planDigest": "0" * 64,
+            "sourceRevision": "source",
+        }
+        task = {
+            "id": "WS-01",
+            "attempt": 2,
+            "packet": {"sha256": "1" * 64},
+            "attemptHistory": [{"attempt": 1, "result": artifact_identity(root, "prior.json", prior)}],
+        }
+        return state, task, current
+
+    def validate(self, root, state, task, result, *, nonaccepting=False):
+        from agent_lifecycle.workflow.reviews import validate_task_result
+
+        return validate_task_result(
+            state,
+            task,
+            result,
+            {"sha256": canonical_digest(result)},
+            repository_root=root,
+            allow_non_accepting_outcome=nonaccepting,
+        )
+
+    def test_prior_deferred_item_must_resolve_with_selected_passing_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state, task, result = self.fixture(root)
+            before = (root / "prior.json").read_bytes()
+            self.validate(root, state, task, result)
+            self.assertEqual((root / "prior.json").read_bytes(), before)
+            result["itemOutcomes"][0]["commandIds"] = []
+            with self.assertRaises(LifecycleError) as caught:
+                self.validate(root, state, task, result)
+            self.assertEqual(caught.exception.code, "task-result-item-resolution-unproven")
+
+    def test_omitted_identity_unauthorized_deferral_and_duplicate_ids_refuse(self) -> None:
+        from copy import deepcopy
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state, task, original = self.fixture(root)
+            for variant in ("omit", "defer", "duplicate"):
+                result = deepcopy(original)
+                if variant == "omit":
+                    result["itemOutcomes"][0]["plannedItemId"] = "replacement"
+                elif variant == "defer":
+                    result["itemOutcomes"][0]["status"] = "DEFERRED"
+                else:
+                    result["itemOutcomes"].append(deepcopy(result["itemOutcomes"][0]))
+                with self.subTest(variant=variant), self.assertRaises(LifecycleError):
+                    self.validate(root, state, task, result)
+
+    def test_deferred_remains_nonaccepting_and_tampered_history_is_not_reused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state, task, result = self.fixture(root)
+            result["itemOutcomes"][0]["status"] = "DEFERRED"
+            result["blocker"] = {
+                "code": "still-unavailable",
+                "reason": "still pending",
+                "scope": "task",
+                "recoveryRoute": "task-review",
+                "taskId": "WS-01",
+                "attempt": 2,
+            }
+            self.validate(root, state, task, result, nonaccepting=True)
+            (root / "prior.json").write_bytes((root / "prior.json").read_bytes() + b" ")
+            with self.assertRaises(LifecycleError):
+                self.validate(root, state, task, result, nonaccepting=True)
 
 
 if __name__ == "__main__":

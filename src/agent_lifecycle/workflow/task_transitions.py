@@ -61,6 +61,7 @@ from agent_lifecycle.workflow.task_start import (
 from agent_lifecycle.workflow.task_start import (
     start_task as start_task,
 )
+from agent_lifecycle.workflow.transactions import workflow_transaction
 
 # Compatibility export for the existing finalization boundary.
 _clear_active_attempt_references = clear_active_attempt_references
@@ -69,6 +70,7 @@ MAX_REMEDIATION_FINDINGS = 128
 MAX_REMEDIATION_FINDING_ID_LENGTH = 256
 
 
+@workflow_transaction
 def commit_task_result(
     state_path: Path,
     *,
@@ -194,6 +196,7 @@ def commit_task_result(
     return status(state_path)
 
 
+@workflow_transaction
 def accept_task(
     state_path: Path,
     *,
@@ -261,11 +264,13 @@ def accept_task(
     if implementation_audit is not None:
         task["implementationAuditReport"] = implementation_audit
     from agent_lifecycle.workflow.limited_usage import (
+        PreparedSourceRegistry,
         refresh_committed_source_assurance,
         require_task_source_frontier_current,
     )
 
-    source_assurance = refresh_committed_source_assurance(root, state, task)
+    prepared_registries: list[PreparedSourceRegistry] = []
+    source_assurance = refresh_committed_source_assurance(root, state, task, prepared_registries=prepared_registries)
     if source_assurance is not None:
         task["sourceUsageAssurance"] = source_assurance
     require_task_source_frontier_current(root, state, task)
@@ -275,11 +280,13 @@ def accept_task(
         state,
         operation_id=operation_id,
         event_type="task-accepted",
+        persist_artifacts=tuple(registry.persist for registry in prepared_registries),
         payload={"taskId": task_id, "attempt": task["attempt"], "review": task["review"], "reason": reason},
     )
     return status(state_path)
 
 
+@workflow_transaction
 def rework_task(
     state_path: Path,
     *,

@@ -129,7 +129,7 @@ class WorkflowContinuationBaselineTests(unittest.TestCase):
         self.assertEqual(projections["bounded"]["state"]["phase"], "RUNNING")
         self.assertEqual(len(projections["bounded"]["events"]), 2)
 
-    def test_patching_only_state_clock_fails_observation_validation(self) -> None:
+    def test_mismatched_clock_observation_fails_validation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _, state_path = _write_route_bundle(root, phase="READY", task_status="READY")
@@ -144,6 +144,10 @@ class WorkflowContinuationBaselineTests(unittest.TestCase):
             state = _read_state(state_path)
             events = [json.loads(line) for line in (root / "events.jsonl").read_text(encoding="utf-8").splitlines()]
 
+            build_workflow_continuation_authority_projection(state, events)
+            # Ledger and event now share their operation observation clock.
+            # Preserve the negative oracle with an explicit mismatched tuple.
+            events[-1]["recordedAt"] = state["updatedAt"]
             with self.assertRaises(LifecycleError) as raised:
                 build_workflow_continuation_authority_projection(state, events)
 
@@ -533,6 +537,12 @@ def _bind_final_manifest(root: Path, state_path: Path) -> Path:
         "status": "FROZEN",
         "planRevision": 1,
         "package": {"id": "package", "planArtifactRoot": "plans/package"},
+        "specification": {
+            "tier": "S1",
+            "requirements": [{"id": "REQ-1", "description": "Fixture work"}],
+        },
+        "validation": {"commands": ["python -m unittest"]},
+        "releaseImpact": "Non-release single-owner workflow fixture.",
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],
@@ -548,7 +558,8 @@ def _bind_final_manifest(root: Path, state_path: Path) -> Path:
                 "evidenceIds": ["EV-01"],
             }
         ],
-        "acceptanceCriteria": [{"id": "AC-01", "evidenceIds": ["EV-01"]}],
+        "acceptance": {"criteria": [{"id": "AC-01",
+            "requirementIds": ["REQ-1"], "evidenceIds": ["EV-01"]}]},
     }
     digest = canonical_digest(manifest)
     manifest_path = root / "plans/package/plan.manifest.json"

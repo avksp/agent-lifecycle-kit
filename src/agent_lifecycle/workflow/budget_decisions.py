@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
+from agent_lifecycle.contracts import LifecycleError, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.persistence import persist_json_artifact, prepared_artifact_identity
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.budget_policy import (
     ALLOWED_BUDGET_ACTIONS,
@@ -26,8 +28,10 @@ from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_upd
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.workflow.state import validate_typed_blocker
+from agent_lifecycle.workflow.transactions import workflow_transaction
 
 
+@workflow_transaction
 def pause_for_budget_decision(
     state_path: Path,
     *,
@@ -81,8 +85,7 @@ def pause_for_budget_decision(
         validation=validation,
         expected_workflow_revision=state["stateRevision"] + 1,
     )
-    write_json_create(root / decision_rel, decision)
-    decision_identity = artifact_identity(root, decision_rel, decision)
+    decision_identity = prepared_artifact_identity(decision_rel, decision)
     task["status"] = "WAITING_FOR_BUDGET_DECISION"
     task["budgetDecision"] = {
         **decision_identity,
@@ -114,11 +117,13 @@ def pause_for_budget_decision(
         state,
         operation_id=operation_id,
         event_type="budget-decision-required",
+        persist_artifacts=(partial(persist_json_artifact, root, decision_identity, decision),),
         payload={"taskId": task_id, "attempt": task.get("attempt"), "decisionReceipt": decision_identity},
     )
     return status(state_path)
 
 
+@workflow_transaction
 def apply_budget_decision(
     state_path: Path,
     *,
@@ -179,8 +184,7 @@ def apply_budget_decision(
         cap_deltas=cap_deltas,
     )
     applied["pendingDecisionReceipt"] = pending_identity
-    write_json_create(root / receipt_rel, applied)
-    applied_identity = artifact_identity(root, receipt_rel, applied)
+    applied_identity = prepared_artifact_identity(receipt_rel, applied)
     _apply_action(
         state,
         task,
@@ -196,6 +200,7 @@ def apply_budget_decision(
         state,
         operation_id=operation_id,
         event_type="budget-decision-applied",
+        persist_artifacts=(partial(persist_json_artifact, root, applied_identity, applied),),
         payload={
             "taskId": task_id,
             "attempt": task.get("attempt"),

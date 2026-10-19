@@ -199,7 +199,11 @@ def _manifest() -> dict[str, object]:
             "artifactRoot": "plans/p",
             "planArtifactRoot": "plans/p/.agent-plan/p",
         },
-        "specification": {"tier": "S1", "revision": 1, "artifact": "spec.json"},
+        "specification": {"tier": "S1", "revision": 1,
+            "artifact": "spec.json", "requirements": [
+                {"id": "REQ-1", "description": "Compile fixture"}]},
+        "validation": {"commands": ["python -m unittest"]},
+        "releaseImpact": "Non-release compiler fixture.",
         "readOnly": ["README.md"],
         "forbiddenWrites": ["docs/private"],
         "leadOwned": [],
@@ -214,7 +218,10 @@ def _manifest() -> dict[str, object]:
                 "plannedItems": [{"id": "REQ-1", "description": "Do it"}],
                 "acceptanceIds": ["AC-1"],
                 "evidenceIds": ["EV-1"],
-                "artifactPaths": {},
+                "artifactPaths": {
+                    "result": "work/WS-01/attempt-{attempt}/task-result.json",
+                    "review": "work/WS-01/attempt-{attempt}/task-review.json",
+                },
                 "validationCommands": ["python -m unittest tests.compiler.test_small_model_packets -q"],
             }
         ],

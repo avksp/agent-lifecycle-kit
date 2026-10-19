@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from copy import deepcopy
+from functools import partial
 from pathlib import Path
 from typing import Any
 from typing import cast as _validated_cast
 
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.goal_validation import validate_goal_record
 from agent_lifecycle.contracts.implementation_audit_validation import (
     validate_final_audit_outcome_report,
     validate_final_implementation_audit,
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.persistence import persist_json_artifact, prepared_artifact_identity
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
 from agent_lifecycle.followup import validate_followup_register
 from agent_lifecycle.host_protocol.lifecycle_gate import (
@@ -57,8 +60,10 @@ from agent_lifecycle.workflow.review_mesh_gate import (
 from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.workflow.state import now_iso, validate_typed_blocker
 from agent_lifecycle.workflow.task_transitions import _clear_active_attempt_references
+from agent_lifecycle.workflow.transactions import workflow_transaction
 
 
+@workflow_transaction
 def apply_final_audit_outcome(
     state_path: Path,
     *,
@@ -276,6 +281,7 @@ def _sorted_unique(values: list[str]) -> list[str]:
     return result
 
 
+@workflow_transaction
 def finalize_run(
     state_path: Path,
     *,
@@ -371,22 +377,8 @@ def finalize_run(
         "review_mesh_quorum": review_mesh_quorum,
         "reason": reason,
     }
-    from agent_lifecycle.workflow.limited_usage import (
-        aggregate_source_usage_assurance,
-        require_task_source_frontier_current,
-    )
-
-    source_assurance = aggregate_source_usage_assurance(root, state)
-    if source_assurance is not None:
-        proof_inputs["source_usage_assurance"] = source_assurance
-    preview = _proof_body(state, **proof_inputs, lifecycle_control_stop=None)
-    lifecycle_control_stop = _evaluate_lifecycle_control_stop(state, final_audit=final_audit, final_proof=preview)
-    proof = _proof_body(state, **proof_inputs, lifecycle_control_stop=lifecycle_control_stop)
-    for accepted_task in state.get("tasks", []):
-        if accepted_task.get("status") == "ACCEPTED":
-            require_task_source_frontier_current(root, state, accepted_task)
-    write_json_create(root / proof_rel, proof)
-    identity = artifact_identity(root, proof_rel, proof)
+    proof, source_writers, lifecycle_control_stop = _prepare_final_proof(root, state, final_audit, proof_inputs)
+    identity = prepared_artifact_identity(proof_rel, proof)
     state["finalProof"] = {**identity, "semanticStatus": proof["semanticStatus"]}
     state["finalAudit"] = final_audit_identity
     optional_artifacts = (
@@ -409,6 +401,7 @@ def finalize_run(
         state,
         operation_id=operation_id,
         event_type="run-finalized",
+        persist_artifacts=(*source_writers, partial(persist_json_artifact, root, identity, proof)),
         payload={
             "finalAudit": final_audit_identity,
             "completionCheckReceipt": completion_check_receipt,
@@ -426,6 +419,31 @@ def finalize_run(
         },
     )
     return status(state_path)
+
+
+def _prepare_final_proof(
+    root: Path,
+    state: dict[str, Any],
+    final_audit: dict[str, Any],
+    proof_inputs: dict[str, Any],
+) -> tuple[dict[str, Any], tuple[Callable[[], None], ...], dict[str, Any] | None]:
+    from agent_lifecycle.workflow.limited_usage import (
+        PreparedSourceRegistry,
+        aggregate_source_usage_assurance,
+        require_task_source_frontier_current,
+    )
+
+    prepared: list[PreparedSourceRegistry] = []
+    source_assurance = aggregate_source_usage_assurance(root, state, prepared_registries=prepared)
+    if source_assurance is not None:
+        proof_inputs["source_usage_assurance"] = source_assurance
+    preview = _proof_body(state, **proof_inputs, lifecycle_control_stop=None)
+    stop = _evaluate_lifecycle_control_stop(state, final_audit=final_audit, final_proof=preview)
+    proof = _proof_body(state, **proof_inputs, lifecycle_control_stop=stop)
+    for task in state.get("tasks", []):
+        if task.get("status") == "ACCEPTED":
+            require_task_source_frontier_current(root, state, task)
+    return proof, tuple(registry.persist for registry in prepared), stop
 
 
 def _validate_final_audit(state: dict[str, Any], final_audit: dict[str, Any]) -> None:

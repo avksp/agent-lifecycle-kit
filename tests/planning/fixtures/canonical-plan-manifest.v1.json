@@ -2,6 +2,7 @@
   "schemaVersion": "agent-plan-manifest.v1",
   "status": "FROZEN",
   "planRevision": 1,
+  "releaseImpact": "Non-release test fixture with bounded plan validation.",
   "package": {
     "id": "canonical-plan",
     "artifactRoot": "work/canonical-plan",

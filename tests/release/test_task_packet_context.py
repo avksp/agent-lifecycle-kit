@@ -19,6 +19,11 @@ class TaskPacketContextVerifierTests(unittest.TestCase):
             out = Path(tmp)
             manifest = _write_context_manifest(out)
             value = json.loads(manifest.read_text(encoding="utf-8"))
+            value["specification"]["requirements"] = [
+                {"id": "R-1", "description": "Compile the context fixture."}
+            ]
+            value["validation"] = {"commands": ["python -m unittest"]}
+            value["releaseImpact"] = "Non-release context fixture."
             for key in ("artifactRoot", "planArtifactRoot"):
                 value["package"][key] = Path(value["package"][key]).relative_to(ROOT).as_posix()
             _write_json(manifest, value)

@@ -1247,7 +1247,8 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
             "    message=json.loads(line)\n"
             "    if message['method']=='initialize':\n"
             "        print(json.dumps({'id':1,'result':{}}),flush=True)\n"
-            + ("        time.sleep(60)\n" if stall else "")
+            + ("        Path('child.stalled').write_text('initialized')\n"
+               "        time.sleep(60)\n" if stall else "")
             + "    elif message['method']=='thread/read':\n"
             "        print(json.dumps({'id':2,'result':{'thread':{'id':message['params']['threadId']}}}),flush=True)\n"
         )
@@ -1334,8 +1335,21 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
             executable = self._app_server_io_fixture(root, stall=True)
             real_start = subprocess.Popen
             started = time.monotonic()
+            children = []
+
+            def start_ready(*args, **kwargs):
+                process = real_start(*args, **kwargs)
+                children.append(process)
+                # Begin the write-timeout scenario with the Python fixture ready.
+                ready_until = started + 1.0
+                while (not (root / "child.pid").is_file()
+                       and process.poll() is None
+                       and time.monotonic() < ready_until):
+                    time.sleep(0.005)
+                return process
+
             with patch.object(exact_prompt_module, "_APP_SERVER_TIMEOUT_SECONDS", 0.25), patch.object(
-                    exact_prompt_module.subprocess, "Popen", wraps=real_start) as start, self.assertRaises(
+                    exact_prompt_module.subprocess, "Popen", side_effect=start_ready) as start, self.assertRaises(
                         LifecycleError) as error:
                 read_codex_app_server_thread(root, executable=str(executable),
                                             expected_binary_sha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
@@ -1345,6 +1359,9 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
             self.assertLess(time.monotonic() - started, 3.0)
             self.assertEqual(start.call_count, 1)
             self.assertTrue((root / "child.pid").is_file())
+            self.assertTrue((root / "child.stalled").is_file())
+            self.assertEqual(int((root / "child.pid").read_text()), children[0].pid)
+            self.assertIsNotNone(children[0].returncode)
             self.assertFalse(process_is_running(int((root / "child.pid").read_text())))
 
     def test_app_server_delivers_short_writes_and_retries_would_block(self) -> None:

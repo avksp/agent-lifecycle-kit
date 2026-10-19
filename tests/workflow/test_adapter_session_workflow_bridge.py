@@ -12,6 +12,8 @@ from agent_lifecycle.adapter_sessions.workflow_bridge import (
     promote_session_to_workflow,
     resume_adapter_session,
 )
+from agent_lifecycle.freeze import build_plan_lock_v2
+from tests.planning.test_plan_completeness import _manifest as _complete_manifest
 from agent_lifecycle.contracts import canonical_digest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -126,11 +128,13 @@ class AdapterSessionWorkflowBridgeTests(unittest.TestCase):
 
 def _write_bundle(root: Path) -> tuple[Path, Path, Path]:
     manifest_payload = {
+        **_complete_manifest("S2"),
         "schemaVersion": "agent-plan-manifest.v1",
         "status": "FROZEN",
         "planRevision": 1,
         "package": {"id": "package", "planArtifactRoot": "plans/package"},
         "specification": {
+            **_complete_manifest("S2")["specification"],
             "tier": "S2",
             "tierResolutionRequest": {
                 "riskFlags": {"architecture": True},
@@ -138,17 +142,22 @@ def _write_bundle(root: Path) -> tuple[Path, Path, Path]:
             },
         },
         "readOnly": [],
-        "forbiddenWrites": [],
+        "forbiddenWrites": [".git", "secrets"],
         "leadOwned": [],
-        "workstreams": [{"id": "WS-01", "dependsOn": [], "writes": ["src/example.py"]}],
+        "workstreams": [{"id": "WS-01", "dependsOn": [],
+            "writes": ["src/example.py"],
+            "acceptanceIds": ["AC-1"], "evidenceIds": ["EV-1"]}],
         "acceptanceCriteria": [{"id": "AC-01", "evidenceIds": ["EV-01"]}],
     }
+    manifest_payload["planFiles"] = [
+        "plans/package/plan.manifest.json"
+    ]
     digest = canonical_digest(manifest_payload)
     manifest = root / "plans/package/plan.manifest.json"
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps(manifest_payload), encoding="utf-8")
     (manifest.parent / "plan.lock.json").write_text(
-        json.dumps({"schemaVersion": "agent-plan-lock.v1", "planRevision": 1, "manifestHash": digest}),
+        json.dumps(build_plan_lock_v2(manifest_payload, repository_root=root)),
         encoding="utf-8",
     )
     state = root / "state.json"

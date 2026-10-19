@@ -17,7 +17,7 @@ from .test_authorization import _receipt as _authorization_receipt
 from .test_continuation import _continuation_strategy_inputs
 from .test_task_acceptance_audit_gate import _write_bundle as _write_audit_bundle
 from .test_task_acceptance_audit_gate import _write_result_review
-from .test_task_transitions import _write_strategy_start_bundle
+from .test_continuation import _write_strategy_start_bundle
 from .test_workflow_run import _write_bundle
 
 

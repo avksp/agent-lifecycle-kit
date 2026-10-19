@@ -350,5 +350,66 @@ class PlanAdoptionRuntimeContractTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, "manifest-path-outside-package-root")
 
 
+class PrerequisiteAdoptionTests(unittest.TestCase):
+    def fixture(self, root, mutation):
+        from agent_lifecycle.workflow.transactions import workflow_transaction_context
+
+        state = _write_state(root, phase="RUNNING")
+        receipt = {
+            "packageId": "previous",
+            "sourceRevision": "a" * 40,
+            "reviewer": {"id": "independent", "independent": True},
+            "verdict": "ACCEPTED",
+            "findings": [],
+        }
+        if mutation == "package":
+            receipt["packageId"] = "wrong"
+        elif mutation == "source":
+            receipt["sourceRevision"] = "b" * 40
+        elif mutation == "verdict":
+            receipt["verdict"] = "REWORK"
+        raw = canonical_bytes(receipt) + b"\n"
+        if mutation != "missing":
+            (root / "accepted.json").write_bytes(raw)
+        entry = {
+            "packageId": "previous",
+            "sourceRevision": "a" * 40,
+            "evidencePath": "accepted.json",
+            "sha256": hashlib.sha256(raw).hexdigest(),
+        }
+        if mutation == "hash":
+            entry["sha256"] = "0" * 64
+        fields = {
+            "dependsOn": ["previous"],
+            "extensions": {"prerequisiteAcceptance": {"required": True, "dependencies": [entry]}},
+        }
+        if mutation == "standalone":
+            fields = {"dependsOn": [], "extensions": {"prerequisiteAcceptance": {"required": True, "dependencies": []}}}
+        manifest = _write_authority_bundle(root, global_fields=fields)
+        with workflow_transaction_context(state):
+            pass  # The stable run lock exists before the no-side-effect assertion.
+        return state, manifest
+
+    def test_supplied_acceptance_and_empty_standalone_adopt_offline(self) -> None:
+        for variant in ("valid", "standalone"):
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                state, manifest = self.fixture(root, variant)
+                _adopt_authority_bundle(state, manifest)
+                self.assertEqual(json.loads(state.read_text())["stateRevision"], 2)
+
+    def test_missing_mismatched_or_nonaccepting_evidence_refuses_without_writes(self) -> None:
+        for variant in ("missing", "hash", "package", "source", "verdict"):
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                state, manifest = self.fixture(root, variant)
+                before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                with self.assertRaises(LifecycleError):
+                    _adopt_authority_bundle(state, manifest)
+                self.assertEqual(
+                    before, {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

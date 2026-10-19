@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from agent_lifecycle.audit import build_implementation_audit_report
-from agent_lifecycle.contracts import canonical_digest, write_json_create
+from agent_lifecycle.contracts import canonical_bytes, canonical_digest, write_json_create
 from agent_lifecycle.contracts.schemas import get_schema
 from agent_lifecycle.workflow import commit_task_result, continue_workflow, start_execution, start_task
 
@@ -17,7 +17,58 @@ from .test_task_acceptance_audit_gate import (
 from .test_task_acceptance_audit_gate import (
     _write_result_review,
 )
-from .test_task_transitions import _strategy_start_inputs, _write_strategy_start_bundle
+from .test_task_transitions import _strategy_start_inputs
+from .test_task_transitions import (
+    _write_strategy_start_bundle as _write_direct_strategy_start_bundle,
+)
+from tests.planning.test_plan_completeness import _manifest as _complete_manifest
+from agent_lifecycle.freeze import build_plan_lock_v2
+from agent_lifecycle.policy.execution_strategy import resolve_execution_strategy
+
+
+def _write_strategy_start_bundle(root: Path, *, project_profile=None):
+    # Continuation verifies the complete S2 plan before projecting task start.
+    state_path, strategy_path, _ = _write_direct_strategy_start_bundle(
+        root, project_profile=project_profile,
+    )
+    manifest_path = root / "tasks/strategy/plan.manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    complete = _complete_manifest("S2")
+    for key in ("validation", "budgets", "contextLimits", "forbiddenWrites",
+                "finalAuditGates", "packageIntegrity"):
+        manifest[key] = complete[key]
+    manifest["planFiles"] = ["tasks/strategy/plan.manifest.json"]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    lock = build_plan_lock_v2(manifest, repository_root=root)
+    manifest_path.with_name("plan.lock.json").write_text(
+        json.dumps(lock), encoding="utf-8",
+    )
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["planDigest"] = canonical_digest(manifest)
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+    def load(path):
+        return json.loads((root / path).read_text(encoding="utf-8"))
+
+    strategy = resolve_execution_strategy(
+        manifest=manifest, lock=lock, state=state, task_id="WS-01",
+        adapter_id="codex", adapter_host="codex", operation_id="start-strategy",
+        expected_revision=1, source_revision="source", requested_risk="auto",
+        risk_policy=load("profiles/risk-execution-policy.v1.json"),
+        routing_profile=load("profiles/model-routing-profile.v1.json"),
+        baseline_profile=load("profiles/lifecycle-baselines.v1.json"),
+        host_profile=load("profiles/hosts/codex-live-profile.v1.json"),
+        project_profile_digest=(canonical_digest(project_profile)
+                                if project_profile is not None else None),
+        descriptor=load("adapters/codex/adapter.descriptor.json"),
+        capability_manifest=load("adapters/codex/capabilities.manifest.json"),
+        target_attempt=1,
+        descriptor_path="adapters/codex/adapter.descriptor.json",
+        capability_manifest_path="adapters/codex/capabilities.manifest.json",
+        project_profile_path=".alk/project-profile.json",
+    )
+    (root / strategy_path).write_bytes(canonical_bytes(strategy) + b"\n")
+    return state_path, strategy_path, strategy
 from .test_workflow_run import _write_bundle
 
 
@@ -454,6 +505,12 @@ def _bind_manifest(root: Path, state_path: Path) -> Path:
         "status": "FROZEN",
         "planRevision": 1,
         "package": {"id": "package", "planArtifactRoot": "plans/package"},
+        "specification": {
+            "tier": "S1",
+            "requirements": [{"id": "REQ-1", "description": "Fixture work"}],
+        },
+        "validation": {"commands": ["python -m unittest"]},
+        "releaseImpact": "Non-release single-owner workflow fixture.",
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],
@@ -469,7 +526,8 @@ def _bind_manifest(root: Path, state_path: Path) -> Path:
                 "evidenceIds": ["EV-01"],
             }
         ],
-        "acceptanceCriteria": [{"id": "AC-01", "evidenceIds": ["EV-01"]}],
+        "acceptance": {"criteria": [{"id": "AC-01",
+            "requirementIds": ["REQ-1"], "evidenceIds": ["EV-01"]}]},
     }
     digest = canonical_digest(manifest)
     manifest_path = root / "plans/package/plan.manifest.json"

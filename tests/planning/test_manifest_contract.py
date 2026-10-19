@@ -12,6 +12,33 @@ FIXTURE = ROOT / "tests/planning/fixtures/canonical-plan-manifest.v1.json"
 
 
 class ManifestContractTests(unittest.TestCase):
+    def test_artifact_roles_are_closed_and_paths_are_unique_and_safe(self) -> None:
+        cases = [
+            [],
+            {"result": "work/result.json"},
+            {"result": "work/result.json", "review": "work/review.json", "log": "work/log.json"},
+            {"result": "work/result.json", "review": "work/RESULT.json"},
+            {"result": "../result.json", "review": "work/review.json"},
+            {"result": "/tmp/result.json", "review": "work/review.json"},
+            {"result": "work/{other}/result.json", "review": "work/review.json"},
+            {"result": "tests/planning/fixtures/canonical-plan/plan.md", "review": "work/review.json"},
+        ]
+        for paths in cases:
+            with self.subTest(paths=paths):
+                manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+                manifest["workstreams"][0]["artifactPaths"] = paths
+                self.assertEqual(validate_plan_manifest_contract(manifest)["status"], "FAIL")
+
+    def test_artifact_attempt_templates_remain_valid_and_readonly_paths_protected(self) -> None:
+        manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        manifest["workstreams"][0]["artifactPaths"] = {
+            "result": "work/attempt-{attempt}/result.json",
+            "review": "work/attempt-{attempt}/review.json",
+        }
+        self.assertEqual(validate_plan_manifest_contract(manifest)["status"], "PASS")
+        manifest["readOnly"] = ["work/attempt-{attempt}/result.json"]
+        self.assertIn("plan-output-conflict", _codes(validate_plan_manifest_contract(manifest)))
+
     def test_plan_review_round_budget_is_bounded_and_boolean_safe(self) -> None:
         for value in (True, False, 0, -1, 11):
             with self.subTest(value=value):

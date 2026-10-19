@@ -374,8 +374,11 @@ class WorkflowEventBoundaryTests(unittest.TestCase):
     def test_journal_is_streamed_without_a_whole_log_cap(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "events.jsonl"
-            row = b'{"operationId":"prior","stateRevision":1,"padding":"' + b"x" * 1000 + b'"}\n'
-            path.write_bytes(row * 1100)
+            with path.open("wb") as handle:
+                for index in range(1100):
+                    row = {"operationId": f"prior-{index}",
+                           "stateRevision": index + 1, "padding": "x" * 1000}
+                    handle.write(canonical_bytes(row) + b"\n")
             self.assertGreater(path.stat().st_size, 1_048_576)
             self.assertEqual(sum(1 for _ in read_events(path)), 1100)
 

@@ -102,25 +102,27 @@ def _plan_manifest(
             "decisionDigest": "4" * 64,
         }
     if include_dependent:
-        workstreams.append({
-            "id": "WS-02",
-            "title": "Dependent task",
-            "owner": "worker",
-            "dependsOn": ["WS-01"],
-            "writes": ["docs"],
-            "reviewer": "reviewer",
-            "launchGate": "after WS-01",
-            "capabilityHints": [],
-            "requiredTools": [],
-            "contextRefs": [],
-            "evidenceIds": [],
-            "executionPolicy": {"network": "denied", "approvals": "none"},
-            "artifactPaths": {
-                "result": "work/WS-02/attempt-{attempt}/task-result.json",
-                "review": "work/WS-02/attempt-{attempt}/task-review.json",
-            },
-            "required": True,
-        })
+        workstreams.append(
+            {
+                "id": "WS-02",
+                "title": "Dependent task",
+                "owner": "worker",
+                "dependsOn": ["WS-01"],
+                "writes": ["docs"],
+                "reviewer": "reviewer",
+                "launchGate": "after WS-01",
+                "capabilityHints": [],
+                "requiredTools": [],
+                "contextRefs": [],
+                "evidenceIds": [],
+                "executionPolicy": {"network": "denied", "approvals": "none"},
+                "artifactPaths": {
+                    "result": "work/WS-02/attempt-{attempt}/task-result.json",
+                    "review": "work/WS-02/attempt-{attempt}/task-review.json",
+                },
+                "required": True,
+            }
+        )
     manifest = {
         "schemaVersion": "3.0",
         "status": "FROZEN",
@@ -131,6 +133,10 @@ def _plan_manifest(
             "planArtifactRoot": "plans/package/.agent-plan/package",
         },
         "planReview": _plan_review_block(include_report=include_plan_review_report),
+        "specification": {"tier": "S1", "requirements": [{"id": "REQ-WORK", "description": "Bounded fixture work"}]},
+        "acceptance": {"criteria": [{"id": "AC-WORK", "requirementIds": ["REQ-WORK"], "evidenceIds": ["EV-WORK"]}]},
+        "validation": {"commands": ["python -m unittest"], "extraEvidence": ["EV-WORK"]},
+        "releaseImpact": "Non-release single-owner workflow fixture.",
         "orchestration": {
             "maxParallelTasks": 1,
             "maxTaskAttempts": 1,
@@ -140,15 +146,13 @@ def _plan_manifest(
         "workstreams": workstreams,
     }
     if include_completion_check:
-        manifest["specification"] = {
-            "completionCheck": {
-                "schemaVersion": "agent-completion-check.v1",
-                "checkId": "done-check",
-                "kind": "verification",
-                "description": "Observable completion evidence for the requested outcome.",
-                "receiptPath": "final/completion-check-receipt.json",
-                "requiredEvidenceIds": ["EV-FINAL"],
-            }
+        manifest["specification"]["completionCheck"] = {
+            "schemaVersion": "agent-completion-check.v1",
+            "checkId": "done-check",
+            "kind": "verification",
+            "description": "Observable completion evidence for the requested outcome.",
+            "receiptPath": "final/completion-check-receipt.json",
+            "requiredEvidenceIds": ["EV-FINAL"],
         }
     return manifest
 

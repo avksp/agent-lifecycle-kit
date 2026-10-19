@@ -115,12 +115,19 @@ def _initialize_managed_git_state(root: Path, state_path: Path, *, max_attempts:
     state["budgets"]["maxTaskAttempts"] = max_attempts
     plan_root = "work/managed-fixture"
     manifest = {
-        "schemaVersion": "agent-plan-manifest.v1", "status": "FROZEN",
+        "schemaVersion": "agent-plan-manifest.v1",
+        "status": "FROZEN",
         "planRevision": state["planRevision"],
         "package": {"id": state["packageId"], "planArtifactRoot": plan_root, "artifactRoot": "work"},
+        "specification": {"tier": "S1", "requirements": [{"id": "REQ-MANAGED", "description": "Managed fixture work"}]},
+        "acceptance": {
+            "criteria": [{"id": "AC-MANAGED", "requirementIds": ["REQ-MANAGED"], "evidenceIds": ["EV-MANAGED"]}]
+        },
+        "validation": {"commands": ["python -m unittest"], "extraEvidence": ["EV-MANAGED"]},
+        "releaseImpact": "Non-release managed workflow fixture.",
         "workstreams": [
-            {"id": task["id"], "owner": task["owner"], "writes": task["writes"],
-             "dependsOn": task["dependsOn"]} for task in state["tasks"]
+            {"id": task["id"], "owner": task["owner"], "writes": task["writes"], "dependsOn": task["dependsOn"]}
+            for task in state["tasks"]
         ],
     }
     state["planDigest"] = canonical_digest(manifest)

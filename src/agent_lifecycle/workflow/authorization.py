@@ -14,8 +14,10 @@ from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.state import now_iso
+from agent_lifecycle.workflow.transactions import workflow_transaction
 
 
+@workflow_transaction
 def authorize_execution(
     state_path: Path,
     *,
@@ -27,7 +29,9 @@ def authorize_execution(
 ) -> dict[str, Any]:
     """Consume one unexpired authorization receipt and move a run to READY."""
 
-    state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
+    state = load_for_update(
+        state_path, operation_id=operation_id, expected_revision=expected_revision, authorization_required=False
+    )
     if state.get("phase") != "AWAITING_AUTHORIZATION":
         raise LifecycleError("invalid-phase", "execution authorization requires AWAITING_AUTHORIZATION phase")
     if state.get("startMode") == "plan-only":

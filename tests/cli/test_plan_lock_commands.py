@@ -15,6 +15,21 @@ except ImportError:
 
 
 class PlanLockCommandTests(unittest.TestCase):
+    def test_plan_check_refuses_historical_tierless_input(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path, _review_path = _write_reviewed_package(root)
+            manifest = _read_json(root / manifest_path)
+            del manifest["specification"]
+            _write_json(root / manifest_path, manifest)
+            before = (root / manifest_path).read_bytes()
+            with contextlib.chdir(root):
+                code, payload = _run_cli(["plan", "check", "--manifest", manifest_path])
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "plan-completeness-failed")
+            self.assertEqual((root / manifest_path).read_bytes(), before)
+            self.assertFalse((root / "work").exists())
+
     def test_lock_create_writes_only_canonical_verified_lock(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -291,6 +306,7 @@ def _write_reviewed_package(
     manifest_rel = "plans/release-test/plan.manifest.json"
     review_rel = "plans/release-test/plan-review.json"
     plan_rel = "plans/release-test/plan.md"
+    acceptance_rel = "plans/release-test/acceptance-criteria.md"
     manifest = {
         "schemaVersion": "agent-plan-manifest.v1",
         "status": "FROZEN",
@@ -300,7 +316,7 @@ def _write_reviewed_package(
             "artifactRoot": "work/release-test",
             "planArtifactRoot": "plans/release-test",
         },
-        "planFiles": sorted([manifest_rel, review_rel, plan_rel]),
+        "planFiles": sorted([manifest_rel, review_rel, plan_rel, acceptance_rel]),
         "packageIntegrity": {
             "required": True,
             "lockSchemaVersion": "agent-plan-lock.v2",
@@ -312,6 +328,10 @@ def _write_reviewed_package(
             "reviewedRevision": 3,
             "report": review_rel,
         },
+        "specification": {"tier": "S1", "requirements": [{"id": "REQ-1", "description": "Do the work"}]},
+        "acceptance": {"criteria": [{"id": "AC-1", "requirementIds": ["REQ-1"], "evidenceIds": ["EV-1"]}]},
+        "validation": {"commands": ["python -m unittest"], "extraEvidence": ["EV-1"]},
+        "releaseImpact": "Non-release local lock-command fixture.",
         "workstreams": [{"id": "WS-01", "owner": "worker", "dependsOn": [], "writes": ["src/example.py"]}],
     }
     review = {
@@ -333,6 +353,12 @@ def _write_reviewed_package(
     write_json_create(root / manifest_rel, manifest)
     write_json_create(root / review_rel, review)
     (root / plan_rel).write_text("# Plan\n", encoding="utf-8")
+    (root / acceptance_rel).write_text(
+        "| AC | Requirements | Evidence | Check |\n"
+        "| --- | --- | --- | --- |\n"
+        "| `AC-1` | `REQ-1` | `EV-1` | Required |\n",
+        encoding="utf-8",
+    )
     return manifest_rel, review_rel
 
 

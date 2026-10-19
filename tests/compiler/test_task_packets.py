@@ -86,11 +86,21 @@ class TaskPacketCompilerTests(unittest.TestCase):
                 # Pin the v2.14 profile input as well as the unchanged byte oracle.
                 legacy_profile = json.loads(builtin_profile_path("small-context-profile.v1.json").read_text())
                 legacy_profile["windows"]["16k"]["limits"]["maxActivePacketTokens"] = 5000
-                self.assertEqual(canonical_digest(legacy_profile), "e600f3f8bf92ace4651cf5a3aa55c5d6dd3c0a376676e14a95a6603c8e50bb91")
+                self.assertEqual(
+                    canonical_digest(legacy_profile), "e600f3f8bf92ace4651cf5a3aa55c5d6dd3c0a376676e14a95a6603c8e50bb91"
+                )
                 legacy_profile_path = root / "legacy-small-context-profile.v1.json"
                 legacy_profile_path.write_text(json.dumps(legacy_profile), encoding="utf-8")
+                # This historical tierless fixture is no longer executable.
+                # Keep its original byte oracles as a serialization contract,
+                # while separately proving refusal at the real public gate.
+                with self.assertRaises(LifecycleError) as legacy:
+                    compile_task_packets(fixture / "plan.manifest.json", repository_root=root, write=True)
+                self.assertEqual(legacy.exception.code, "plan-completeness-failed")
                 previous_cwd = Path.cwd()
                 os.chdir(root)
+                historical_serialization = patch("agent_lifecycle.compiler.task_packets.validate_plan_manifest")
+                historical_serialization.start()
                 try:
                     before = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
                     kwargs = {"out_dir": Path("exports/safe")} if case["explicit"] else {}
@@ -111,6 +121,7 @@ class TaskPacketCompilerTests(unittest.TestCase):
                         }
                         self.assertEqual(actual, dict(case["files"]))
                 finally:
+                    historical_serialization.stop()
                     os.chdir(previous_cwd)
 
     def test_swapped_ancestor_after_preflight_cannot_redirect_guarded_write(self) -> None:
@@ -271,7 +282,14 @@ def _manifest(*, nested_acceptance: bool = False) -> dict:
             "artifactRoot": "plans/p",
             "planArtifactRoot": "plans/p/.agent-plan/p",
         },
-        "specification": {"tier": "S1", "revision": 1, "artifact": "spec.json"},
+        "specification": {
+            "tier": "S1",
+            "revision": 1,
+            "artifact": "spec.json",
+            "requirements": [{"id": "REQ-1", "description": "Do it"}],
+        },
+        "validation": {"commands": ["python -m unittest"]},
+        "releaseImpact": "Non-release compiler fixture.",
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],
@@ -325,6 +343,21 @@ class ExplicitOperationRootTests(unittest.TestCase):
             ):
                 root = Path(tmp)
                 shutil.copytree(repository / fixture, root / fixture)
+                # Exercise current readiness, without changing the immutable
+                # historical fixture or its separate serialization oracles.
+                import json
+
+                from agent_lifecycle.freeze.package_integrity import build_plan_lock_v2
+
+                path = root / fixture / "plan.manifest.json"
+                normalized = json.loads(path.read_text(encoding="utf-8"))
+                normalized["specification"] = {"tier": "S0"}
+                normalized["validation"] = {"commands": ["python -m unittest"]}
+                path.write_text(json.dumps(normalized), encoding="utf-8")
+                (root / fixture / "plan.lock.json").write_text(
+                    json.dumps(build_plan_lock_v2(normalized, repository_root=root)),
+                    encoding="utf-8",
+                )
                 with patch("pathlib.Path.cwd", return_value=Path(other)):
                     if compact:
                         compile_small_model_packets(

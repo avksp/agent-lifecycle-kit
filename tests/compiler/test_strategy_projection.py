@@ -10,6 +10,8 @@ from pathlib import Path
 from agent_lifecycle.compiler import compile_small_model_packets, compile_task_packets
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.policy.execution_strategy import resolve_execution_strategy
+from agent_lifecycle.freeze import build_plan_lock_v2
+from tests.planning.test_plan_completeness import _manifest as _complete_manifest
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -88,6 +90,7 @@ class StrategyProjectionTests(unittest.TestCase):
 def _write_bundle(root: Path, *, tier: str) -> tuple[Path, dict, dict, dict]:
     root.mkdir(parents=True, exist_ok=True)
     manifest = {
+        **_complete_manifest(tier),
         "schemaVersion": "agent-plan-manifest.v1",
         "status": "FROZEN",
         "planRevision": 1,
@@ -97,13 +100,13 @@ def _write_bundle(root: Path, *, tier: str) -> tuple[Path, dict, dict, dict]:
             "planArtifactRoot": "plans/p/.agent-plan/p",
         },
         "specification": {
+            **_complete_manifest(tier)["specification"],
             "tier": tier,
             "revision": 1,
             "artifact": "spec.json",
-            "tierResolutionRequest": {"riskFlags": {}, "capabilityHints": []},
         },
         "readOnly": [],
-        "forbiddenWrites": [],
+        "forbiddenWrites": [".git", "secrets"],
         "leadOwned": [],
         "workstreams": [
             {
@@ -116,11 +119,14 @@ def _write_bundle(root: Path, *, tier: str) -> tuple[Path, dict, dict, dict]:
                 "plannedItems": [{"id": "REQ-1", "description": "Do it"}],
                 "acceptanceIds": ["AC-1"],
                 "evidenceIds": ["EV-1"],
-                "artifactPaths": {},
             }
         ],
         "acceptanceCriteria": [{"id": "AC-1", "evidenceIds": ["EV-1"]}],
     }
+    if tier == "S2":
+        manifest["planFiles"] = [
+            "plans/p/.agent-plan/p/plan.manifest.json"
+        ]
     digest = canonical_digest(manifest)
     lock = {
         "schemaVersion": "agent-plan-lock.v1",
@@ -139,10 +145,12 @@ def _write_bundle(root: Path, *, tier: str) -> tuple[Path, dict, dict, dict]:
     }
     lock_path = root / "plans/p/.agent-plan/p/plan.lock.json"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    lock_path.write_text(json.dumps(lock), encoding="utf-8")
-    manifest_path = root / "plans/p/plan.manifest.json"
+    manifest_path = root / "plans/p/.agent-plan/p/plan.manifest.json"
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    if tier == "S2":
+        lock = build_plan_lock_v2(manifest, repository_root=root)
+    lock_path.write_text(json.dumps(lock), encoding="utf-8")
     return manifest_path, manifest, lock, state
 
 

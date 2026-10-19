@@ -635,7 +635,7 @@ class CommandObservationRegressionTests(unittest.TestCase):
                   "taskId": task["id"], "attempt": task["attempt"],
                   "planDigest": state["planDigest"], "sourceRevision": state["sourceRevision"],
                   "actor": "worker", "actorRunId": "worker-session",
-                  "itemOutcomes": [{"id": "item", "status": "COMPLETE"}], "commands": [command]}
+                  "itemOutcomes": [{"plannedItemId": "item", "status": "COMPLETE"}], "commands": [command]}
         validate_task_result(state, task, result, {"sha256": "c" * 64})
 
     def test_unknown_and_malformed_observations_cannot_complete(self) -> None:

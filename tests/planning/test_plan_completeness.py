@@ -144,11 +144,18 @@ def _manifest(tier: str) -> dict:
         base["workstreams"][0].pop("evidenceIds")
         base.pop("releaseImpact")
     if tier == "S2":
+        base["packageIntegrity"] = {
+            "required": True, "lockSchemaVersion": "agent-plan-lock.v2",
+        }
+        base["planFiles"] = ["plans/p/plan.manifest.json"]
         base["budgets"] = {"maxInvocations": 33, "maxWallSeconds": 1800}
         base["contextLimits"] = {"targetTokens": 4096}
         base["forbiddenWrites"] = [".git", "secrets"]
         base["releaseTarget"] = {"targetVersion": "1.0.0"}
-        base["finalAuditGates"] = ["security gates pass", "release validation passes"]
+        base["finalAuditGates"] = [
+            "[AC-1|EV-1] Security gates pass.",
+            "[AC-1|EV-1] Release validation passes.",
+        ]
     return json.loads(json.dumps(base))
 
 

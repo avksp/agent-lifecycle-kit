@@ -112,7 +112,7 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
             "schemaVersion": "agent-plan-check.v1",
             "manifest": validate_plan_manifest(
                 manifest,
-                require_completeness=args.require_completeness,
+                require_completeness=True,
                 completeness_profile=completeness_profile,
             ),
             "lock": verify_plan_lock(manifest, lock) if lock else None,

@@ -74,10 +74,13 @@ def validate_task_result(
         raise LifecycleError("task-result-invalid", "task result itemOutcomes are required")
     if any(not isinstance(item, dict) for item in item_outcomes):
         raise LifecycleError("task-result-invalid", "task result itemOutcomes entries must be objects")
-    allowed_statuses = {"COMPLETE", "INCOMPLETE", "BLOCKED", "NOT_STARTED"} if non_accepting else {"COMPLETE"}
+    allowed_statuses = (
+        {"COMPLETE", "INCOMPLETE", "BLOCKED", "NOT_STARTED", "DEFERRED"} if non_accepting else {"COMPLETE"}
+    )
     if any(not isinstance(item.get("status"), str) or item["status"] not in allowed_statuses for item in item_outcomes):
         raise LifecycleError("task-result-not-complete", "task result has incomplete items")
     _validate_commands(result, allow_failed=non_accepting)
+    _validate_item_dispositions(state, task, result, repository_root)
     if not identity["sha256"]:
         raise LifecycleError("task-result-invalid", "task result identity missing")
     if repository_root is None:
@@ -94,6 +97,151 @@ def validate_task_result(
     )
     require_current_task_change_set(result, evidence)
     return evidence
+
+
+def _validate_item_dispositions(
+    state: dict[str, Any],
+    task: dict[str, Any],
+    result: dict[str, Any],
+    root: Path | None,
+) -> None:
+    items = result["itemOutcomes"]
+    identifiers = [item.get("plannedItemId") for item in items]
+    if any(not isinstance(value, str) or not value.strip() for value in identifiers) or len(set(identifiers)) != len(
+        items
+    ):
+        raise LifecycleError(
+            "task-result-item-identity-invalid", "item outcomes require unique stable plannedItemId values"
+        )
+    unfinished = _unfinished_item_ids(state, task, root)
+    omitted = sorted(unfinished.difference(identifiers))
+    if omitted:
+        raise LifecycleError(
+            "task-result-unresolved-item-omitted",
+            "unfinished prior items require explicit current disposition or reviewed contract change",
+            {"plannedItemIds": omitted},
+        )
+    commands = result.get("commands") or []
+    passing = {
+        command["id"]
+        for command in commands
+        if isinstance(command.get("id"), str)
+        and command.get("status") in {"PASS", "PASSED"}
+        and command.get("exitCode") == 0
+    }
+    for item in items:
+        if item["plannedItemId"] not in unfinished or item["status"] != "COMPLETE":
+            continue
+        references = item.get("commandIds")
+        if (
+            not isinstance(references, list)
+            or not references
+            or any(not isinstance(value, str) or value not in passing for value in references)
+        ):
+            raise LifecycleError(
+                "task-result-item-resolution-unproven",
+                "resolving an unfinished item requires passing evidence selected in the current source-bound result",
+                {"plannedItemId": item["plannedItemId"]},
+            )
+
+
+def _unfinished_item_ids(state: dict[str, Any], task: dict[str, Any], root: Path | None) -> set[str]:
+    unfinished: set[str] = set()
+    snapshots = state.get("priorSnapshots", [])
+    if not isinstance(snapshots, list):
+        raise LifecycleError("task-result-history-invalid", "prior plan snapshots must be an array")
+    for snapshot in snapshots:
+        if not isinstance(snapshot, dict) or not isinstance(snapshot.get("tasks"), list):
+            raise LifecycleError("task-result-history-invalid", "prior plan snapshot has no task history")
+        for previous in snapshot["tasks"]:
+            if not isinstance(previous, dict) or previous.get("id") != task.get("id"):
+                continue
+            _add_unfinished_items(state, task, previous.get("attemptHistory", []), root, unfinished)
+            if previous.get("result") is not None:
+                _add_unfinished_items(state, task, [{"result": previous["result"]}], root, unfinished)
+            excluded = _authorized_item_exclusions(state, snapshot, previous, root)
+            if not excluded.issubset(unfinished):
+                raise LifecycleError(
+                    "task-result-contract-change-invalid", "exclusions must name unfinished prior items"
+                )
+            unfinished.difference_update(excluded)
+    _add_unfinished_items(state, task, task.get("attemptHistory", []), root, unfinished)
+    return unfinished
+
+
+def _add_unfinished_items(
+    state: dict[str, Any],
+    task: dict[str, Any],
+    history: Any,
+    root: Path | None,
+    unfinished: set[str],
+) -> None:
+    if not isinstance(history, list):
+        raise LifecycleError("task-result-history-invalid", "prior outcome history must be an array")
+    if history and root is None:
+        raise LifecycleError("task-result-history-context-missing", "prior outcomes require their repository context")
+    for entry in history:
+        if not isinstance(entry, dict) or not isinstance(entry.get("result"), dict) or root is None:
+            raise LifecycleError("task-result-history-invalid", "prior outcome identity is unavailable")
+        prior = require_artifact_identity(root, entry["result"], label="prior task result")
+        if prior.get("runId") != state.get("runId") or prior.get("taskId") != task.get("id"):
+            raise LifecycleError("task-result-history-invalid", "prior outcomes belong to another run or task")
+        items = prior.get("itemOutcomes")
+        if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+            raise LifecycleError("task-result-history-invalid", "prior item outcomes are invalid")
+        for item in items:
+            if isinstance(item, dict) and item.get("status") in {"INCOMPLETE", "BLOCKED", "NOT_STARTED", "DEFERRED"}:
+                identifier = item.get("plannedItemId")
+                if not isinstance(identifier, str) or not identifier.strip():
+                    raise LifecycleError("task-result-history-invalid", "unfinished prior item lacks stable identity")
+                unfinished.add(identifier)
+
+
+def _authorized_item_exclusions(
+    state: dict[str, Any],
+    snapshot: dict[str, Any],
+    previous: dict[str, Any],
+    root: Path | None,
+) -> set[str]:
+    request = previous.get("contractChangeRequest")
+    if not isinstance(request, dict) or "excludedPlannedItemIds" not in request:
+        return set()
+    identifiers = request["excludedPlannedItemIds"]
+    current_revision, old_revision = state.get("planRevision"), snapshot.get("planRevision")
+    if (
+        not isinstance(identifiers, list)
+        or any(not isinstance(item, str) or not item.strip() for item in identifiers)
+        or len(set(identifiers)) != len(identifiers)
+        or not isinstance(request.get("reason"), str)
+        or not request["reason"].strip()
+        or previous.get("status") != "CONTRACT_CHANGE"
+        or root is None
+        or type(current_revision) is not int
+        or type(old_revision) is not int
+        or current_revision <= old_revision
+        or state.get("planDigest") == snapshot.get("planDigest")
+        or not isinstance(previous.get("review"), dict)
+        or not isinstance(previous.get("result"), dict)
+    ):
+        raise LifecycleError(
+            "task-result-contract-change-invalid", "exclusion requires an adopted independent contract change"
+        )
+    result = require_artifact_identity(root, previous["result"], label="contract change result")
+    review = require_artifact_identity(root, previous["review"], label="contract change review")
+    if validate_task_outcome_review(snapshot, previous, review, result=result) != "CONTRACT_CHANGE":
+        raise LifecycleError(
+            "task-result-contract-change-invalid", "exclusion review does not authorize a contract change"
+        )
+    reviewed_request = review["contractChangeRequest"]
+    if (
+        not reviewed_request
+        or any(request.get(key) != value for key, value in reviewed_request.items())
+        or (reviewed_request.get("excludedPlannedItemIds") != identifiers)
+    ):
+        raise LifecycleError(
+            "task-result-contract-change-invalid", "exclusion differs from the immutable independent review"
+        )
+    return set(identifiers)
 
 
 def _validate_non_accepting_outcome(

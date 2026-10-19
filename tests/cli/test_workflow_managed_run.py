@@ -81,11 +81,20 @@ def _write_bundle(root: Path) -> tuple[Path, Path]:
         "status": "FROZEN",
         "planRevision": 1,
         "package": {"id": "package", "planArtifactRoot": "plans/package"},
+        "specification": {
+            "tier": "S1",
+            "requirements": [{"id": "REQ-1", "description": "Fixture work"}],
+        },
+        "validation": {"commands": ["python -m unittest"]},
+        "releaseImpact": "Non-release single-owner workflow fixture.",
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],
-        "workstreams": [{"id": "WS-01", "dependsOn": [], "writes": ["src/example.py"]}],
-        "acceptanceCriteria": [{"id": "AC-01", "evidenceIds": ["EV-01"]}],
+        "workstreams": [{"id": "WS-01", "dependsOn": [],
+            "writes": ["src/example.py"],
+            "acceptanceIds": ["AC-01"], "evidenceIds": ["EV-01"]}],
+        "acceptance": {"criteria": [{"id": "AC-01",
+            "requirementIds": ["REQ-1"], "evidenceIds": ["EV-01"]}]},
     }
     digest = canonical_digest(manifest)
     manifest_path = root / "plans/package/plan.manifest.json"
