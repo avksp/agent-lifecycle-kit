@@ -48,11 +48,13 @@ def validate_final_audit_outcome_report(
         and item.get("status") == "open"
     )
     if sorted(set(finding_ids)) != open_ids and verdict == "REWORK":
-        blockers.append({
-            "code": "final-audit-outcome-findings-mismatch",
-            "expected": open_ids,
-            "actual": sorted(set(finding_ids)),
-        })
+        blockers.append(
+            {
+                "code": "final-audit-outcome-findings-mismatch",
+                "expected": open_ids,
+                "actual": sorted(set(finding_ids)),
+            }
+        )
     verifier = report.get("verifier")
     if verifier is None and isinstance(report.get("completionSignal"), dict):
         verifier = report["completionSignal"].get("verifier")

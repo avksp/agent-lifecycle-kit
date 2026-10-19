@@ -45,6 +45,14 @@ def validate_usage_receipt(
     return payload
 
 
+def validate_source_usage_receipt_shape(receipt: dict[str, Any]) -> dict[str, Any]:
+    """Validate only the closed v2 shape; never grant usage acceptance."""
+
+    from agent_lifecycle.contracts.scoped_usage_schemas import validate_source_usage_receipt_shape as validate
+
+    return validate(receipt)
+
+
 def _validate_shape(receipt: dict[str, Any]) -> None:
     if receipt.get("schemaVersion") != "agent-lifecycle-model-usage-receipt.v1":
         raise LifecycleError("invalid-model-usage-receipt", "unsupported model usage receipt schema")
@@ -56,7 +64,11 @@ def _validate_shape(receipt: dict[str, Any]) -> None:
     usage = receipt.get("usage")
     if not isinstance(usage, dict):
         raise LifecycleError("invalid-model-usage-receipt", "usage object is required")
-    missing = sorted(metric for metric in USAGE_METRICS if not isinstance(usage.get(metric), int) or isinstance(usage.get(metric), bool))
+    missing = sorted(
+        metric
+        for metric in USAGE_METRICS
+        if not isinstance(usage.get(metric), int) or isinstance(usage.get(metric), bool)
+    )
     if missing:
         raise LifecycleError("invalid-model-usage-receipt", "usage metrics must be integers", {"missing": missing})
     negative = sorted(metric for metric in USAGE_METRICS if usage[metric] < 0)
@@ -102,7 +114,11 @@ def _normalizer_qualification_check(receipt: dict[str, Any]) -> dict[str, Any]:
 def _route_binding_checks(receipt: dict[str, Any], decision: dict[str, Any]) -> list[dict[str, Any]]:
     expected_digest = decision.get("decisionDigest", canonical_digest(decision))
     receipt_digest = receipt.get("routeDecisionDigest")
-    route_bound = receipt_digest == expected_digest if _has_sidecar_binding(receipt) else receipt_digest in (None, expected_digest)
+    route_bound = (
+        receipt_digest == expected_digest
+        if _has_sidecar_binding(receipt)
+        else receipt_digest in (None, expected_digest)
+    )
     return [
         {
             "id": "operation-id-binding",
@@ -170,7 +186,11 @@ def _validate_sidecar_binding(receipt: dict[str, Any]) -> None:
 
 
 def _is_digest(value: Any) -> bool:
-    return isinstance(value, str) and len(value) == 64 and all(character in "0123456789abcdef" for character in value.lower())
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value.lower())
+    )
 
 
 def _budget_checks(
@@ -183,12 +203,14 @@ def _budget_checks(
     usage = receipt["usage"]
     if route_decision is not None and isinstance(route_decision.get("maxBillableTokens"), int):
         limit = route_decision["maxBillableTokens"]
-        checks.append({
-            "id": "route-max-billable-tokens",
-            "status": "PASS" if usage["billableTokens"] <= limit else "FAIL",
-            "value": usage["billableTokens"],
-            "limit": limit,
-        })
+        checks.append(
+            {
+                "id": "route-max-billable-tokens",
+                "status": "PASS" if usage["billableTokens"] <= limit else "FAIL",
+                "value": usage["billableTokens"],
+                "limit": limit,
+            }
+        )
     if budget_targets is None:
         return checks
     tier = receipt.get("sddTier") or (route_decision or {}).get("sddTier")
@@ -202,11 +224,13 @@ def _budget_checks(
     for metric in ("billableTokens", "cumulativeContextBytes", "toolCalls", "wallSeconds"):
         limit = hard.get(metric)
         if isinstance(limit, int):
-            checks.append({
-                "id": f"hard-ceiling-{metric}",
-                "status": "PASS" if usage[metric] <= limit else "FAIL",
-                "value": usage[metric],
-                "limit": limit,
-                "tier": tier,
-            })
+            checks.append(
+                {
+                    "id": f"hard-ceiling-{metric}",
+                    "status": "PASS" if usage[metric] <= limit else "FAIL",
+                    "value": usage[metric],
+                    "limit": limit,
+                    "tier": tier,
+                }
+            )
     return checks

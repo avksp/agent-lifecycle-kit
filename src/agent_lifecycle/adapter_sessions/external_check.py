@@ -310,8 +310,7 @@ def _validate_profile(profile: dict[str, Any]) -> None:
     if not isinstance(argv, list) or not 1 <= len(argv) <= MAX_PROFILE_ARG_COUNT or argv[0] != profile["executable"]:
         raise LifecycleError("external-check-profile-invalid", "external check profile argv is invalid")
     if any(
-        not isinstance(item, str) or not item or "\x00" in item or len(item.encode()) > MAX_ARG_BYTES
-        for item in argv
+        not isinstance(item, str) or not item or "\x00" in item or len(item.encode()) > MAX_ARG_BYTES for item in argv
     ):
         raise LifecycleError("external-check-profile-invalid", "external check profile argv is invalid")
     if (

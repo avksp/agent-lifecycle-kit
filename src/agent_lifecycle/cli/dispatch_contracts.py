@@ -250,9 +250,7 @@ def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
                 candidate, expected_source_revision=args.expected_source_revision
             )
         else:
-            payload = validate_security_finding(
-                candidate, expected_source_revision=args.expected_source_revision
-            )
+            payload = validate_security_finding(candidate, expected_source_revision=args.expected_source_revision)
         if args.out:
             write_json_create(Path(args.out), payload)
         return payload

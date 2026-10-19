@@ -83,6 +83,42 @@ def _cancel_attempt() -> Iterator[tuple[Path, dict[str, Any], Path]]:
 
 
 class ExternalJobCleanupTests(unittest.TestCase):
+    def test_cancelled_job_without_process_receipt_persists_observed_time(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "jobs"
+            request = _request("cancelled-without-receipt", max_wall_seconds=3)
+
+            def cancelled(*args: Any, **kwargs: Any) -> dict[str, Any]:
+                return {
+                    "status": "FAIL",
+                    "cancelled": True,
+                    "timedOut": False,
+                    "processReceipt": None,
+                    "cleanup": {"status": "PASS"},
+                    "outputBytes": 0,
+                    "stdout": "",
+                    "stderr": "",
+                    "blockers": [{"code": "adapter-process-cancelled"}],
+                }
+
+            with mock.patch.object(
+                external_job_runtime.time, "monotonic_ns", side_effect=[1_000_000_000, 1_250_000_000]
+            ):
+                view = run_external_job(
+                    request,
+                    [sys.executable, "-c", "pass"],
+                    env=dict(os.environ),
+                    job_root=root,
+                    process_runner=cancelled,
+                    post_terminal_quiet_seconds=0,
+                )
+            self.assertEqual(view["result"]["state"], "CANCELLED")
+            self.assertEqual(view["result"]["usage"]["wallMilliseconds"], 250)
+            self.assertIsNone(view["processReceipt"])
+            self.assertFalse(view["authorityClaimed"])
+            self.assertFalse((root / "cancelled-without-receipt/attempt-1/process-receipt.json").exists())
+            self.assertEqual(view, load_external_job_attempt(request, job_root=root))
+
     def test_publication_acknowledgement_survives_native_completion(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "jobs"

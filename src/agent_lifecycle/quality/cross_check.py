@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 
@@ -43,7 +44,9 @@ def build_cross_check_profile(
         "blockingRequiresPlanOptIn": True,
         "requiresExplicitActivation": True,
         "liveCallsAllowed": bool(live_calls_allowed),
-        "riskTriggers": _string_list(list(risk_triggers or DEFAULT_RISK_TRIGGERS), label="riskTriggers", code="invalid-cross-check-profile"),
+        "riskTriggers": _string_list(
+            list(risk_triggers or DEFAULT_RISK_TRIGGERS), label="riskTriggers", code="invalid-cross-check-profile"
+        ),
         "budgetCap": _resource_cap(cap, code="invalid-cross-check-profile"),
         "budgetUnits": "tokens-and-resources",
         "independencePolicy": _independence_policy(
@@ -94,7 +97,9 @@ def validate_cross_check_profile(profile: dict[str, Any]) -> dict[str, Any]:
         "schemaVersion": CROSS_CHECK_PROFILE_VALIDATION_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
         "profileId": profile.get("profileId") if isinstance(profile.get("profileId"), str) else None,
-        "enabledByDefault": profile.get("enabledByDefault") if isinstance(profile.get("enabledByDefault"), bool) else None,
+        "enabledByDefault": profile.get("enabledByDefault")
+        if isinstance(profile.get("enabledByDefault"), bool)
+        else None,
         "blockers": blockers,
         "profileDigest": profile.get("profileDigest"),
     }
@@ -117,7 +122,11 @@ def build_cross_check_receipt(
 
     profile_validation = validate_cross_check_profile(profile)
     usage = _budget_usage(budget_usage, code="invalid-cross-check-receipt")
-    cap = profile.get("budgetCap") if isinstance(profile, dict) and isinstance(profile.get("budgetCap"), dict) else {}
+    cap = (
+        _validated_cast(dict[str, Any], profile.get("budgetCap"))
+        if isinstance(profile, dict) and isinstance(profile.get("budgetCap"), dict)
+        else {}
+    )
     cap_blockers = _budget_blockers(usage, cap)
     if live_calls_started and profile.get("liveCallsAllowed") is not True:
         cap_blockers.append({"code": "cross-check-live-call-not-allowed"})
@@ -125,12 +134,19 @@ def build_cross_check_receipt(
         cap_blockers.append({"code": "cross-check-blocking-without-plan-opt-in"})
     if profile_validation["status"] != "PASS":
         cap_blockers.append({"code": "cross-check-profile-invalid"})
-    independence = _independence_evidence(subject, reviewer, profile.get("independencePolicy") if isinstance(profile, dict) else None)
+    independence = _independence_evidence(
+        subject, reviewer, profile.get("independencePolicy") if isinstance(profile, dict) else None
+    )
     if independence["required"] and independence["status"] != "INDEPENDENT":
         cap_blockers.append({"code": "cross-check-independence-not-proven"})
     body = {
         "schemaVersion": CROSS_CHECK_RECEIPT_SCHEMA,
-        "status": _enum(status or ("FAIL" if cap_blockers else "PASS"), RECEIPT_STATUSES, label="status", code="invalid-cross-check-receipt"),
+        "status": _enum(
+            status or ("FAIL" if cap_blockers else "PASS"),
+            RECEIPT_STATUSES,
+            label="status",
+            code="invalid-cross-check-receipt",
+        ),
         "profileId": profile.get("profileId"),
         "profileDigest": profile.get("profileDigest"),
         "subject": dict(subject),
@@ -142,7 +158,9 @@ def build_cross_check_receipt(
         "budgetCap": dict(cap),
         "budgetUsage": usage,
         "liveCallsStarted": bool(live_calls_started),
-        "evidenceIds": _string_list(evidence_ids or [], label="evidenceIds", code="invalid-cross-check-receipt", allow_empty=True),
+        "evidenceIds": _string_list(
+            evidence_ids or [], label="evidenceIds", code="invalid-cross-check-receipt", allow_empty=True
+        ),
         "blockers": cap_blockers,
         "productionPromotionClaimed": False,
     }
@@ -167,6 +185,8 @@ def validate_cross_check_receipt(receipt: dict[str, Any], *, profile: dict[str, 
             blockers.append({"code": "cross-check-profile-invalid"})
         if receipt.get("profileDigest") != profile.get("profileDigest"):
             blockers.append({"code": "cross-check-profile-digest-mismatch"})
+        if receipt.get("profileId") != profile.get("profileId"):
+            blockers.append({"code": "cross-check-profile-id-mismatch"})
         if receipt.get("liveCallsStarted") is True and profile.get("liveCallsAllowed") is not True:
             blockers.append({"code": "cross-check-live-call-not-allowed"})
     subject = receipt.get("subject")
@@ -183,13 +203,19 @@ def validate_cross_check_receipt(receipt: dict[str, Any], *, profile: dict[str, 
         reviewer = {}
     independence = receipt.get("independence")
     _validate_independence_evidence(independence, blockers)
-    if isinstance(independence, dict) and independence.get("required") is True and independence.get("status") != "INDEPENDENT":
+    if (
+        isinstance(independence, dict)
+        and independence.get("required") is True
+        and independence.get("status") != "INDEPENDENT"
+    ):
         blockers.append({"code": "cross-check-independence-not-proven"})
     if profile is not None and isinstance(subject, dict) and isinstance(reviewer, dict):
         expected_independence = _independence_evidence(subject, reviewer, profile.get("independencePolicy"))
         if independence != expected_independence:
             blockers.append({"code": "cross-check-independence-mismatch"})
-    if not isinstance(receipt.get("findings", []), list) or not all(isinstance(item, dict) for item in receipt.get("findings", [])):
+    if not isinstance(receipt.get("findings", []), list) or not all(
+        isinstance(item, dict) for item in receipt.get("findings", [])
+    ):
         blockers.append({"code": "cross-check-findings-invalid"})
     cap = receipt.get("budgetCap")
     usage = receipt.get("budgetUsage")
@@ -197,6 +223,11 @@ def validate_cross_check_receipt(receipt: dict[str, Any], *, profile: dict[str, 
     _validate_budget_usage(usage, blockers)
     if isinstance(cap, dict) and isinstance(usage, dict):
         blockers.extend(_budget_blockers(usage, cap))
+        if profile is not None and isinstance(profile.get("budgetCap"), dict):
+            authoritative_cap = profile["budgetCap"]
+            if cap != authoritative_cap:
+                blockers.append({"code": "cross-check-budget-cap-profile-mismatch"})
+            blockers.extend(_budget_blockers(usage, authoritative_cap))
     if not isinstance(receipt.get("liveCallsStarted"), bool):
         blockers.append({"code": "cross-check-live-calls-started-invalid"})
     _check_string_list(receipt.get("evidenceIds", []), "cross-check-evidence-ids-invalid", blockers, allow_empty=True)
@@ -221,13 +252,17 @@ def validate_cross_check_receipt(receipt: dict[str, Any], *, profile: dict[str, 
 
 def require_cross_check_profile_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("cross-check-profile-validation-failed", "cross-check profile validation failed", {"validation": validation})
+        raise LifecycleError(
+            "cross-check-profile-validation-failed", "cross-check profile validation failed", {"validation": validation}
+        )
     return validation
 
 
 def require_cross_check_receipt_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("receiptStatus") != "PASS":
-        raise LifecycleError("cross-check-receipt-validation-failed", "cross-check receipt did not pass", {"validation": validation})
+        raise LifecycleError(
+            "cross-check-receipt-validation-failed", "cross-check receipt did not pass", {"validation": validation}
+        )
     return validation
 
 
@@ -284,7 +319,9 @@ def _independence_policy(*, required: bool, dimensions: list[str] | None) -> dic
     selected = dimensions or ["host", "model"]
     for dimension in selected:
         if dimension not in INDEPENDENCE_DIMENSIONS:
-            raise LifecycleError("invalid-cross-check-profile", "independence dimension is unsupported", {"dimension": dimension})
+            raise LifecycleError(
+                "invalid-cross-check-profile", "independence dimension is unsupported", {"dimension": dimension}
+            )
     if len(selected) != len(set(selected)):
         raise LifecycleError("invalid-cross-check-profile", "independence dimensions contain duplicates")
     return {
@@ -346,9 +383,12 @@ def _validate_independence_policy(value: Any, blockers: list[dict[str, Any]]) ->
     if not isinstance(value.get("required"), bool):
         blockers.append({"code": "cross-check-independence-required-invalid"})
     dimensions = value.get("requiredDimensions")
-    if not isinstance(dimensions, list) or not dimensions:
-        blockers.append({"code": "cross-check-independence-dimensions-invalid"})
-    elif len(dimensions) != len(set(dimensions)) or any(item not in INDEPENDENCE_DIMENSIONS for item in dimensions):
+    if (
+        not isinstance(dimensions, list)
+        or not dimensions
+        or len(dimensions) != len(set(dimensions))
+        or any(item not in INDEPENDENCE_DIMENSIONS for item in dimensions)
+    ):
         blockers.append({"code": "cross-check-independence-dimensions-invalid"})
     identity_fields = value.get("identityFields")
     if identity_fields != INDEPENDENCE_IDENTITY_FIELDS:
@@ -367,7 +407,9 @@ def _validate_independence_evidence(value: Any, blockers: list[dict[str, Any]]) 
         blockers.append({"code": "cross-check-independence-status-invalid"})
     if not isinstance(value.get("requiredDimensions"), list) or not value["requiredDimensions"]:
         blockers.append({"code": "cross-check-independence-dimensions-invalid"})
-    if not isinstance(value.get("comparisons"), list) or not all(isinstance(item, dict) for item in value["comparisons"]):
+    if not isinstance(value.get("comparisons"), list) or not all(
+        isinstance(item, dict) for item in value["comparisons"]
+    ):
         blockers.append({"code": "cross-check-independence-comparisons-invalid"})
     if value.get("providerNamesCompared") is not False:
         blockers.append({"code": "cross-check-independence-provider-name-compare"})
@@ -406,7 +448,11 @@ def _required_string(value: Any, *, label: str, code: str) -> str:
 
 
 def _string_list(value: Any, *, label: str, code: str, allow_empty: bool = False) -> list[str]:
-    if not isinstance(value, list) or (not allow_empty and not value) or not all(isinstance(item, str) and item for item in value):
+    if (
+        not isinstance(value, list)
+        or (not allow_empty and not value)
+        or not all(isinstance(item, str) and item for item in value)
+    ):
         raise LifecycleError(code, f"{label} must be a list of strings")
     return list(value)
 
@@ -428,7 +474,11 @@ def _check_digest(value: Any, code: str, blockers: list[dict[str, Any]]) -> None
 
 
 def _check_string_list(value: Any, code: str, blockers: list[dict[str, Any]], *, allow_empty: bool = False) -> None:
-    if not isinstance(value, list) or (not allow_empty and not value) or not all(isinstance(item, str) and item for item in value):
+    if (
+        not isinstance(value, list)
+        or (not allow_empty and not value)
+        or not all(isinstance(item, str) and item for item in value)
+    ):
         blockers.append({"code": code})
 
 

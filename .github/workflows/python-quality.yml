@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python }}
+      - name: Restore versioned release test fixture
+        run: python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
       - name: Install locked quality environment
         run: |
           python -m pip install --disable-pip-version-check uv==0.12.5
@@ -40,6 +42,41 @@ jobs:
           --base-sha "${{ github.event.pull_request.base.sha || github.sha }}"
           --work-root work/python-quality/raw
           --evidence work/python-quality/run.json
+      - name: Show failed quality command diagnostics
+        if: failure()
+        run: |
+          python - <<'PY_DIAGNOSTICS'
+          import hashlib
+          import json
+          import sys
+          from pathlib import Path
+
+          root = Path.cwd().resolve()
+          evidence_root = (root / "work/python-quality").resolve()
+          receipt_path = evidence_root / "run.json"
+          if not receipt_path.is_file():
+              print("Quality receipt unavailable; preceding failure is retained.")
+          else:
+              receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+              for command in receipt.get("commands", []):
+                  if command.get("status") == "PASS":
+                      continue
+                  for key in ("stdoutPath", "stderrPath"):
+                      name = command.get(key)
+                      if not isinstance(name, str):
+                          continue
+                      path = (root / name).resolve()
+                      if not path.is_relative_to(evidence_root) or not path.is_file():
+                          print(f"Diagnostic unavailable: {command.get('id')} {key}")
+                          continue
+                      raw = path.read_bytes()
+                      digest = hashlib.sha256(raw).hexdigest()
+                      print(f"BEGIN quality diagnostic {command.get('id')} {key} bytes={len(raw)} sha256={digest}")
+                      sys.stdout.flush()
+                      sys.stdout.buffer.write(raw)
+                      sys.stdout.buffer.flush()
+                      print(f"\nEND quality diagnostic {command.get('id')} {key}")
+          PY_DIAGNOSTICS
       - name: Validate quality evidence
         run: >-
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src

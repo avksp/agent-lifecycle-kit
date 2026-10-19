@@ -18,6 +18,7 @@ from agent_lifecycle.contracts.authority_io import create_authority_bytes  # noq
 class TaskPacketCompilerTests(unittest.TestCase):
     def test_safe_standard_and_compact_bytes_match_release_2_14(self) -> None:
         import hashlib
+        import json
         import shutil
 
         from agent_lifecycle.compiler import compile_small_model_packets
@@ -82,6 +83,12 @@ class TaskPacketCompilerTests(unittest.TestCase):
             with self.subTest(compact=case["compact"], explicit=case["explicit"]), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 shutil.copytree(ROOT / fixture, root / fixture)
+                # Pin the v2.14 profile input as well as the unchanged byte oracle.
+                legacy_profile = json.loads(builtin_profile_path("small-context-profile.v1.json").read_text())
+                legacy_profile["windows"]["16k"]["limits"]["maxActivePacketTokens"] = 5000
+                self.assertEqual(canonical_digest(legacy_profile), "e600f3f8bf92ace4651cf5a3aa55c5d6dd3c0a376676e14a95a6603c8e50bb91")
+                legacy_profile_path = root / "legacy-small-context-profile.v1.json"
+                legacy_profile_path.write_text(json.dumps(legacy_profile), encoding="utf-8")
                 previous_cwd = Path.cwd()
                 os.chdir(root)
                 try:
@@ -91,7 +98,7 @@ class TaskPacketCompilerTests(unittest.TestCase):
                         if case["compact"]:
                             compile_small_model_packets(
                                 fixture / "plan.manifest.json",
-                                context_profile_path=builtin_profile_path("small-context-profile.v1.json"),
+                                context_profile_path=legacy_profile_path,
                                 write=True,
                                 **kwargs,
                             )

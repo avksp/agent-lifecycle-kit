@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "agent-a5-boundary-registry.v1",
+  "records": [
+    {
+      "adapterId": "codex",
+      "expectationId": "h04-216-codex",
+      "targetVersion": "0.155.1",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "0f527a49259789e66082ef34254491a8756d54ac7e600f36ec2107e0e39e9cba",
+      "boundaryRecordDigest": "78901296864c59a6033f4f8c1e7dd04438a5f8a689d552cb9d39c4d2ba10232b"
+    },
+    {
+      "adapterId": "claude",
+      "expectationId": "h04-216-claude",
+      "targetVersion": "2.1.226",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "5bc2dc4f5c5e59ec45d29ac5edf0b25949a4e9a6f37151c01109fe61d9df3408",
+      "boundaryRecordDigest": "fad4532fb3124dea505a7614383e67211bcc00fee598e3894faf05eaf92aaef8"
+    },
+    {
+      "adapterId": "opencode",
+      "expectationId": "h04-216-opencode",
+      "targetVersion": "1.18.15",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "c4e80bee44568ae9f5fbcf9bbb5766bde5342e46aa347cf0aff7a13ce6388e07",
+      "boundaryRecordDigest": "72f4246fbf86103d10d41be4d597ccf6dbba86fba4207b81e301ef1af2e877a4"
+    },
+    {
+      "adapterId": "grok-build",
+      "expectationId": "h04-216-grok-build",
+      "targetVersion": "0.2.118",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "8e5d8db9afdf5514ca6bc12c302583d08e873de55c405d0b7ed7ce1c8b9fe189",
+      "boundaryRecordDigest": "a1f4693f9ddd69a2c7e3f5dd496db7e8364cae82fa661d5cf1944f7f34206108"
+    },
+    {
+      "adapterId": "gemini-cli",
+      "expectationId": "h04-216-gemini-cli",
+      "targetVersion": "0.46.0",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "93e9e9fc791aa77306999ad7d1f46a5f04393dc2d177d9598a7815d491a9d8bc",
+      "boundaryRecordDigest": "899efd2ee7f902e10aad03a078c3a7fb185e82cbe1d448558e58f77b08daafb7"
+    },
+    {
+      "adapterId": "pi",
+      "expectationId": "h04-216-pi",
+      "targetVersion": "0.83.0",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "6813cab02f1ba12d072d8203769655c22552b10602eac2d0d9f3c1fb54d87620",
+      "boundaryRecordDigest": "61cab71147ca03a8e143c4eec0d3799cdc04fc08a472b8cc609319a024cd80c5"
+    },
+    {
+      "adapterId": "hermes",
+      "expectationId": "h04-216-hermes",
+      "targetVersion": "0.19.0",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "826297fd386240eb2308941fb4658a5943d5a0f77f8b06f115553ca5f32218f1",
+      "boundaryRecordDigest": "d56212bf64abcbcc288da5b191df08c2c15bd14da72aaa38cfa15e32224a57b2"
+    },
+    {
+      "adapterId": "qwen-code",
+      "expectationId": "h04-216-qwen-code",
+      "targetVersion": "0.21.8",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "48e210bf79853aedf669472f1a6bc7bd9eadfc6ef1b28aa25682391ff02f8efa",
+      "boundaryRecordDigest": "cc831c53d516d7bc24c4705cf3ee62d9aab8a0fb016ff3f9ed02612967d04d15"
+    },
+    {
+      "adapterId": "kimi-code",
+      "expectationId": "h04-216-kimi-code",
+      "targetVersion": "0.30.0",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "2605f2764a358a3aab4feb24982b3c96b4dfcc613754f2097575f334e5bd55ad",
+      "boundaryRecordDigest": "0ca0e879cc406d0e1873eaf283e23847378c0355b024d6ca6ad149db3a71c9b7"
+    },
+    {
+      "adapterId": "cursor",
+      "expectationId": "h04-216-cursor",
+      "targetVersion": "2026.07.23",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "c9ac34a9e19df51d156a6f11179257f76351ef895fad69f2b112b686acbf800c",
+      "boundaryRecordDigest": "5279a849fb8f482d67c45627574298262df8d559a197723aa7f272fc513f5736"
+    },
+    {
+      "adapterId": "goose",
+      "expectationId": "h04-216-goose",
+      "targetVersion": "1.45.0",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "f9175befa3c8bbda2c15440dc9bfd64a759d732d7fa79603c3bee801c08273a1",
+      "boundaryRecordDigest": "4e3bd05ac417aaab45db8452e0dfce7013a69fc236cd1e895c1c1486f3a2151a"
+    },
+    {
+      "adapterId": "openinterpreter",
+      "expectationId": "h04-216-openinterpreter",
+      "targetVersion": "0.0.34",
+      "mode": "A5_LIMITED",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "sourceDigest": "fe94f446d9ae2958822808afcb01ff9fb544ae5b4a1afc3cce9f444fcd523087",
+      "boundaryRecordDigest": "db0046510ff72bfec121f14f064c70852361afbbd92b031752f1bf95efea4633"
+    }
+  ],
+  "registryDigest": "95e92e9785911cec0bd15b7a300d7d3c3d1e4ba4f955d65f58c240b09bceee9f"
+}

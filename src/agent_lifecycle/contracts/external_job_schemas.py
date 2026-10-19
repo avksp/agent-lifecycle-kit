@@ -35,17 +35,20 @@ _DIGEST = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
 _TEXT = {"type": "string", "minLength": 1, "maxLength": MAX_TEXT_BYTES}
 _BLOCKERS = {"type": "array", "maxItems": 128, "items": {"type": "object"}}
 _LIMIT_RANGES = {
-    "maxWallSeconds": (1, MAX_WALL_SECONDS), "maxAttempts": (1, MAX_ATTEMPTS),
-    "maxOutputBytes": (1, MAX_OUTPUT_BYTES), "maxArtifactBytes": (1, MAX_ARTIFACT_BYTES),
-    "maxArtifacts": (0, MAX_ARTIFACTS), "maxCostMicros": (0, MAX_COST_MICROS),
-    "maxReportedTokens": (0, MAX_REPORTED_TOKENS), "cancelGraceSeconds": (0, MAX_CANCEL_GRACE_SECONDS),
+    "maxWallSeconds": (1, MAX_WALL_SECONDS),
+    "maxAttempts": (1, MAX_ATTEMPTS),
+    "maxOutputBytes": (1, MAX_OUTPUT_BYTES),
+    "maxArtifactBytes": (1, MAX_ARTIFACT_BYTES),
+    "maxArtifacts": (0, MAX_ARTIFACTS),
+    "maxCostMicros": (0, MAX_COST_MICROS),
+    "maxReportedTokens": (0, MAX_REPORTED_TOKENS),
+    "cancelGraceSeconds": (0, MAX_CANCEL_GRACE_SECONDS),
 }
 _LIMITS = {
     "type": "object",
     "required": list(_LIMIT_RANGES),
     "properties": {
-        key: {"type": "integer", "minimum": low, "maximum": high}
-        for key, (low, high) in _LIMIT_RANGES.items()
+        key: {"type": "integer", "minimum": low, "maximum": high} for key, (low, high) in _LIMIT_RANGES.items()
     },
 }
 _USAGE_FIELDS = ("wallMilliseconds", "outputBytes", "artifactBytes", "costMicros", "reportedTokens")
@@ -58,37 +61,106 @@ _CHILD_REF = {
     "type": "object",
     "required": ["jobId", "attempt", "requestDigest", "parentRequestDigest"],
     "properties": {
-        "jobId": _TEXT, "attempt": {"type": "integer", "minimum": 1, "maximum": MAX_ATTEMPTS},
-        "requestDigest": _DIGEST, "parentRequestDigest": _DIGEST,
+        "jobId": _TEXT,
+        "attempt": {"type": "integer", "minimum": 1, "maximum": MAX_ATTEMPTS},
+        "requestDigest": _DIGEST,
+        "parentRequestDigest": _DIGEST,
     },
 }
 _REQUEST_FIELDS = (
-    "schemaVersion", "jobId", "attempt", "parentJobId", "parentAttempt", "parentRequestDigest", "adapterId",
-    "operation", "executionKind", "descriptorDigest", "planDigest", "planLockDigest", "sourceRevision",
-    "sourceSnapshotDigest", "limits", "shell", "secretsWritten", "authorityClaimed", "productionPromotionClaimed",
+    "schemaVersion",
+    "jobId",
+    "attempt",
+    "parentJobId",
+    "parentAttempt",
+    "parentRequestDigest",
+    "adapterId",
+    "operation",
+    "executionKind",
+    "descriptorDigest",
+    "planDigest",
+    "planLockDigest",
+    "sourceRevision",
+    "sourceSnapshotDigest",
+    "limits",
+    "shell",
+    "secretsWritten",
+    "authorityClaimed",
+    "productionPromotionClaimed",
     "requestDigest",
 )
 _STATUS_FIELDS = (
-    "schemaVersion", "jobId", "attempt", "requestDigest", "state", "sequence", "observedAt", "startedAt", "endedAt",
-    "children", "usage", "cancelRequested", "processCleanupStatus", "postTerminalWriteDetected", "authorityClaimed",
-    "productionPromotionClaimed", "statusDigest",
+    "schemaVersion",
+    "jobId",
+    "attempt",
+    "requestDigest",
+    "state",
+    "sequence",
+    "observedAt",
+    "startedAt",
+    "endedAt",
+    "children",
+    "usage",
+    "cancelRequested",
+    "processCleanupStatus",
+    "postTerminalWriteDetected",
+    "authorityClaimed",
+    "productionPromotionClaimed",
+    "statusDigest",
 )
 _ARTIFACT_FIELDS = (
-    "schemaVersion", "artifactId", "jobId", "attempt", "requestDigest", "mediaType", "bytes", "sha256", "locator",
-    "sensitiveContentStored", "productionPromotionClaimed", "artifactDigest",
+    "schemaVersion",
+    "artifactId",
+    "jobId",
+    "attempt",
+    "requestDigest",
+    "mediaType",
+    "bytes",
+    "sha256",
+    "locator",
+    "sensitiveContentStored",
+    "productionPromotionClaimed",
+    "artifactDigest",
 )
 _RESULT_FIELDS = (
-    "schemaVersion", "resultId", "jobId", "attempt", "requestDigest", "statusDigest", "state", "verdict", "complete",
-    "blockingEligible", "outputDigest", "outputBytes", "artifacts", "usage", "blockers", "authorityClaimed",
-    "productionPromotionClaimed", "resultDigest",
+    "schemaVersion",
+    "resultId",
+    "jobId",
+    "attempt",
+    "requestDigest",
+    "statusDigest",
+    "state",
+    "verdict",
+    "complete",
+    "blockingEligible",
+    "outputDigest",
+    "outputBytes",
+    "artifacts",
+    "usage",
+    "blockers",
+    "authorityClaimed",
+    "productionPromotionClaimed",
+    "resultDigest",
 )
 _VALIDATION_FIELDS = (
-    "schemaVersion", "status", "subject", "subjectState", "blockingEligible", "blockers",
-    "productionPromotionClaimed", "validationDigest",
+    "schemaVersion",
+    "status",
+    "subject",
+    "subjectState",
+    "blockingEligible",
+    "blockers",
+    "productionPromotionClaimed",
+    "validationDigest",
 )
 _TRANSITION_FIELDS = (
-    "schemaVersion", "status", "previousState", "nextState", "idempotent", "blockers",
-    "productionPromotionClaimed", "validationDigest",
+    "schemaVersion",
+    "status",
+    "previousState",
+    "nextState",
+    "idempotent",
+    "blockers",
+    "productionPromotionClaimed",
+    "validationDigest",
 )
 
 EXTERNAL_JOB_SCHEMAS: dict[str, dict[str, Any]] = {
@@ -96,15 +168,23 @@ EXTERNAL_JOB_SCHEMAS: dict[str, dict[str, Any]] = {
         EXTERNAL_JOB_REQUEST_SCHEMA,
         required=list(_REQUEST_FIELDS),
         properties={
-            "jobId": _TEXT, "attempt": {"type": "integer", "minimum": 1, "maximum": 1000},
+            "jobId": _TEXT,
+            "attempt": {"type": "integer", "minimum": 1, "maximum": 1000},
             "parentJobId": {"type": ["string", "null"], "maxLength": MAX_TEXT_BYTES},
             "parentAttempt": {"type": ["integer", "null"], "minimum": 1, "maximum": MAX_ATTEMPTS},
             "parentRequestDigest": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
-            "adapterId": _TEXT, "operation": _TEXT,
-            "executionKind": {"enum": list(EXECUTION_KINDS)}, "descriptorDigest": _DIGEST,
-            "planDigest": _DIGEST, "planLockDigest": _DIGEST, "sourceRevision": _TEXT,
-            "sourceSnapshotDigest": _DIGEST, "limits": _LIMITS, "shell": {"const": False},
-            "secretsWritten": {"const": False}, "authorityClaimed": {"const": False},
+            "adapterId": _TEXT,
+            "operation": _TEXT,
+            "executionKind": {"enum": list(EXECUTION_KINDS)},
+            "descriptorDigest": _DIGEST,
+            "planDigest": _DIGEST,
+            "planLockDigest": _DIGEST,
+            "sourceRevision": _TEXT,
+            "sourceSnapshotDigest": _DIGEST,
+            "limits": _LIMITS,
+            "shell": {"const": False},
+            "secretsWritten": {"const": False},
+            "authorityClaimed": {"const": False},
             "productionPromotionClaimed": {"const": False},
             "requestDigest": _DIGEST,
         },
@@ -113,15 +193,20 @@ EXTERNAL_JOB_SCHEMAS: dict[str, dict[str, Any]] = {
         EXTERNAL_JOB_STATUS_SCHEMA,
         required=list(_STATUS_FIELDS),
         properties={
-            "jobId": _TEXT, "attempt": {"type": "integer", "minimum": 1, "maximum": 1000},
-            "requestDigest": _DIGEST, "state": {"enum": list(JOB_STATES)},
+            "jobId": _TEXT,
+            "attempt": {"type": "integer", "minimum": 1, "maximum": 1000},
+            "requestDigest": _DIGEST,
+            "state": {"enum": list(JOB_STATES)},
             "sequence": {"type": "integer", "minimum": 0, "maximum": 10**9},
-            "observedAt": _TEXT, "startedAt": {"type": ["string", "null"], "maxLength": MAX_TEXT_BYTES},
+            "observedAt": _TEXT,
+            "startedAt": {"type": ["string", "null"], "maxLength": MAX_TEXT_BYTES},
             "endedAt": {"type": ["string", "null"], "maxLength": MAX_TEXT_BYTES},
             "children": {"type": "array", "maxItems": MAX_CHILDREN, "items": _CHILD_REF},
-            "usage": _USAGE, "cancelRequested": {"type": "boolean"},
+            "usage": _USAGE,
+            "cancelRequested": {"type": "boolean"},
             "processCleanupStatus": {"enum": list(CLEANUP_STATUSES)},
-            "postTerminalWriteDetected": {"type": "boolean"}, "authorityClaimed": {"const": False},
+            "postTerminalWriteDetected": {"type": "boolean"},
+            "authorityClaimed": {"const": False},
             "productionPromotionClaimed": {"const": False},
             "statusDigest": _DIGEST,
         },
@@ -130,12 +215,16 @@ EXTERNAL_JOB_SCHEMAS: dict[str, dict[str, Any]] = {
         EXTERNAL_JOB_ARTIFACT_SCHEMA,
         required=list(_ARTIFACT_FIELDS),
         properties={
-            "artifactId": _TEXT, "jobId": _TEXT,
+            "artifactId": _TEXT,
+            "jobId": _TEXT,
             "attempt": {"type": "integer", "minimum": 1, "maximum": MAX_ATTEMPTS},
-            "requestDigest": _DIGEST, "mediaType": _TEXT,
+            "requestDigest": _DIGEST,
+            "mediaType": _TEXT,
             "bytes": {"type": "integer", "minimum": 0, "maximum": MAX_ARTIFACT_BYTES},
-            "sha256": _DIGEST, "locator": {"type": "string", "minLength": 1, "maxLength": 4096},
-            "sensitiveContentStored": {"const": False}, "productionPromotionClaimed": {"const": False},
+            "sha256": _DIGEST,
+            "locator": {"type": "string", "minLength": 1, "maxLength": 4096},
+            "sensitiveContentStored": {"const": False},
+            "productionPromotionClaimed": {"const": False},
             "artifactDigest": _DIGEST,
         },
     ),
@@ -143,15 +232,21 @@ EXTERNAL_JOB_SCHEMAS: dict[str, dict[str, Any]] = {
         EXTERNAL_JOB_RESULT_SCHEMA,
         required=list(_RESULT_FIELDS),
         properties={
-            "resultId": _TEXT, "jobId": _TEXT,
+            "resultId": _TEXT,
+            "jobId": _TEXT,
             "attempt": {"type": "integer", "minimum": 1, "maximum": 1000},
-            "requestDigest": _DIGEST, "statusDigest": _DIGEST,
-            "state": {"enum": sorted(TERMINAL_JOB_STATES)}, "verdict": {"enum": list(JOB_VERDICTS)},
-            "complete": {"type": "boolean"}, "blockingEligible": {"type": "boolean"},
+            "requestDigest": _DIGEST,
+            "statusDigest": _DIGEST,
+            "state": {"enum": sorted(TERMINAL_JOB_STATES)},
+            "verdict": {"enum": list(JOB_VERDICTS)},
+            "complete": {"type": "boolean"},
+            "blockingEligible": {"type": "boolean"},
             "outputDigest": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
             "outputBytes": {"type": "integer", "minimum": 0, "maximum": MAX_OUTPUT_BYTES},
             "artifacts": {"type": "array", "maxItems": MAX_ARTIFACTS, "items": {"type": "object"}},
-            "usage": _USAGE, "blockers": _BLOCKERS, "authorityClaimed": {"const": False},
+            "usage": _USAGE,
+            "blockers": _BLOCKERS,
+            "authorityClaimed": {"const": False},
             "productionPromotionClaimed": {"const": False},
             "resultDigest": _DIGEST,
         },
@@ -160,18 +255,26 @@ EXTERNAL_JOB_SCHEMAS: dict[str, dict[str, Any]] = {
         EXTERNAL_JOB_VALIDATION_SCHEMA,
         required=list(_VALIDATION_FIELDS),
         properties={
-            "status": {"enum": ["PASS", "FAIL"]}, "subject": {"enum": ["REQUEST", "STATUS", "ARTIFACT", "RESULT"]},
-            "subjectState": {"type": ["string", "null"]}, "blockingEligible": {"type": "boolean"},
-            "blockers": _BLOCKERS, "productionPromotionClaimed": {"const": False}, "validationDigest": _DIGEST,
+            "status": {"enum": ["PASS", "FAIL"]},
+            "subject": {"enum": ["REQUEST", "STATUS", "ARTIFACT", "RESULT"]},
+            "subjectState": {"type": ["string", "null"]},
+            "blockingEligible": {"type": "boolean"},
+            "blockers": _BLOCKERS,
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
         },
     ),
     EXTERNAL_JOB_TRANSITION_VALIDATION_SCHEMA: open_object_schema(
         EXTERNAL_JOB_TRANSITION_VALIDATION_SCHEMA,
         required=list(_TRANSITION_FIELDS),
         properties={
-            "status": {"enum": ["PASS", "FAIL"]}, "previousState": {"type": ["string", "null"]},
-            "nextState": {"type": ["string", "null"]}, "idempotent": {"type": "boolean"},
-            "blockers": _BLOCKERS, "productionPromotionClaimed": {"const": False}, "validationDigest": _DIGEST,
+            "status": {"enum": ["PASS", "FAIL"]},
+            "previousState": {"type": ["string", "null"]},
+            "nextState": {"type": ["string", "null"]},
+            "idempotent": {"type": "boolean"},
+            "blockers": _BLOCKERS,
+            "productionPromotionClaimed": {"const": False},
+            "validationDigest": _DIGEST,
         },
     ),
 }
@@ -274,9 +377,7 @@ def build_external_job_artifact(
     return {**body, "artifactDigest": canonical_digest(body)}
 
 
-def validate_external_job_artifact(
-    artifact: Any, *, request: dict[str, Any] | None = None
-) -> dict[str, Any]:
+def validate_external_job_artifact(artifact: Any, *, request: dict[str, Any] | None = None) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     value = artifact if isinstance(artifact, dict) else {}
     if not isinstance(artifact, dict):
@@ -290,9 +391,7 @@ def validate_external_job_artifact(
     _check_int(value.get("bytes"), 0, MAX_ARTIFACT_BYTES, "external-job-artifact-bytes-invalid", blockers)
     _check_digest(value.get("sha256"), "external-job-artifact-sha256-invalid", blockers)
     try:
-        locator = normalize_repo_path(
-            _text(value.get("locator"), "artifact locator"), label="artifact locator"
-        )
+        locator = normalize_repo_path(_text(value.get("locator"), "artifact locator"), label="artifact locator")
         if not locator.startswith("artifacts/"):
             raise LifecycleError("external-job-artifact-locator-invalid", "artifact locator must be below artifacts/")
     except LifecycleError:
@@ -376,10 +475,7 @@ def validate_external_job_status(status: Any, *, request: dict[str, Any] | None 
         request_validation = validate_external_job_request(request)
         if request_validation["status"] != "PASS":
             blockers.append({"code": "external-job-request-invalid"})
-        elif any(
-            value.get(key) != request.get(key)
-            for key in ("jobId", "attempt", "requestDigest")
-        ):
+        elif any(value.get(key) != request.get(key) for key in ("jobId", "attempt", "requestDigest")):
             blockers.append({"code": "external-job-status-lineage-mismatch"})
         else:
             for child in value.get("children", []):
@@ -498,9 +594,10 @@ def validate_external_job_result(
             blockers.append({"code": "external-job-result-lineage-mismatch"})
         else:
             limits = request["limits"]
-            if len(artifacts) > limits["maxArtifacts"] or sum(item.get("bytes", 0) for item in artifacts) > limits[
-                "maxArtifactBytes"
-            ]:
+            if (
+                len(artifacts) > limits["maxArtifacts"]
+                or sum(item.get("bytes", 0) for item in artifacts) > limits["maxArtifactBytes"]
+            ):
                 blockers.append({"code": "external-job-artifact-limit-exceeded"})
             if value.get("outputBytes", 0) > limits["maxOutputBytes"]:
                 blockers.append({"code": "external-job-output-limit-exceeded"})
@@ -508,9 +605,7 @@ def validate_external_job_result(
     if status is not None:
         if validate_external_job_status(status, request=request)["status"] != "PASS":
             blockers.append({"code": "external-job-status-invalid"})
-        elif any(
-            value.get(key) != status.get(key) for key in ("jobId", "attempt", "statusDigest", "state")
-        ):
+        elif any(value.get(key) != status.get(key) for key in ("jobId", "attempt", "statusDigest", "state")):
             blockers.append({"code": "external-job-result-status-mismatch"})
         elif value.get("usage") != status.get("usage"):
             blockers.append({"code": "external-job-result-usage-mismatch"})
@@ -791,10 +886,25 @@ def _label(value: str) -> str:
 
 
 __all__ = [
-    "CLEANUP_STATUSES", "EXECUTION_KINDS", "EXTERNAL_JOB_ARTIFACT_SCHEMA", "EXTERNAL_JOB_REQUEST_SCHEMA",
-    "EXTERNAL_JOB_RESULT_SCHEMA", "EXTERNAL_JOB_SCHEMAS", "EXTERNAL_JOB_STATUS_SCHEMA",
-    "EXTERNAL_JOB_TRANSITION_VALIDATION_SCHEMA", "EXTERNAL_JOB_VALIDATION_SCHEMA", "JOB_STATES", "JOB_VERDICTS",
-    "TERMINAL_JOB_STATES", "build_external_job_artifact", "build_external_job_request", "build_external_job_result",
-    "build_external_job_status", "require_external_job_pass", "validate_external_job_artifact",
-    "validate_external_job_request", "validate_external_job_result", "validate_external_job_status",
+    "CLEANUP_STATUSES",
+    "EXECUTION_KINDS",
+    "EXTERNAL_JOB_ARTIFACT_SCHEMA",
+    "EXTERNAL_JOB_REQUEST_SCHEMA",
+    "EXTERNAL_JOB_RESULT_SCHEMA",
+    "EXTERNAL_JOB_SCHEMAS",
+    "EXTERNAL_JOB_STATUS_SCHEMA",
+    "EXTERNAL_JOB_TRANSITION_VALIDATION_SCHEMA",
+    "EXTERNAL_JOB_VALIDATION_SCHEMA",
+    "JOB_STATES",
+    "JOB_VERDICTS",
+    "TERMINAL_JOB_STATES",
+    "build_external_job_artifact",
+    "build_external_job_request",
+    "build_external_job_result",
+    "build_external_job_status",
+    "require_external_job_pass",
+    "validate_external_job_artifact",
+    "validate_external_job_request",
+    "validate_external_job_result",
+    "validate_external_job_status",
 ]

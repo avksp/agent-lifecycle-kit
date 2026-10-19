@@ -87,7 +87,7 @@ def validate_input_privacy(
     file_identities = []
     modules = (
         "agent_lifecycle.contracts.canonical",
-        "agent_lifecycle.neutrality.ed25519",
+        "agent_lifecycle.contracts.ed25519",
         "agent_lifecycle.adapter_sessions.session_store",
         "agent_lifecycle.adapter_sessions.planning_session",
         "agent_lifecycle.context.checkpoint_store",
@@ -253,7 +253,7 @@ def _runtime_checks() -> dict[str, Any]:
         blockers.append({"code": "input-privacy-runtime-check-failed", "checkId": "json-nonfinite-output"})
 
     try:
-        from agent_lifecycle.neutrality import ed25519
+        from agent_lifecycle.contracts import ed25519
 
         rejected = []
         for encoded in (ed25519.P.to_bytes(32, "little"), bytes([1]) + bytes(30) + bytes([0x80])):

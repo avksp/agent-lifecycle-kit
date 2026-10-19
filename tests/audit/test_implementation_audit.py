@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import copy
 import subprocess
 import tempfile
 import unittest
@@ -13,13 +14,73 @@ from agent_lifecycle.audit import (
     validate_implementation_audit_report,
 )
 from agent_lifecycle.changesets import capture_task_change_set
-from agent_lifecycle.contracts import canonical_digest, write_json_create
+from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, write_json_create
 from agent_lifecycle.planning.task_compatibility import (
     build_task_plan_compatibility_receipt,
 )
+from agent_lifecycle.workflow.artifacts import artifact_identity
+from tests.review.test_provenance import _attestation, _context
 
 
 class ImplementationAuditTests(unittest.TestCase):
+    def test_native_final_consumer_refuses_unqualified_claims_without_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle, paths = _write_two_author_final_bundle(root)
+            final = build_final_implementation_audit(
+                manifest_path=bundle["manifestPath"], state_path=bundle["statePath"],
+                report_paths=paths, auditor_id="distinct-auditor")
+            self.assertEqual(final["status"], "PASS")
+            report = json.loads((root / paths[0]).read_text())
+            for original, validator, digest_key, phase in (
+                (report, validate_implementation_audit_report, "reportDigest", "task-review"),
+                (final, validate_final_implementation_audit, "auditDigest", "final-review"),
+            ):
+                for claim in ({}, {"reviewerProvenance": {"guarantee": "DECLARED", "attestation": None}}):
+                    value = {**original, **claim}
+                    value[digest_key] = canonical_digest({k: v for k, v in value.items() if k != digest_key})
+                    self.assertEqual(validator(value)["status"], "PASS")
+                context = _context()
+                context["expectedPhase"] = phase
+                context["trustRoot"]["authorizedIssuers"][0]["phases"] = [phase]
+                context["expectedTrustRootDigest"] = canonical_digest(context["trustRoot"])
+                claims = [
+                    ({"reviewerProvenance": {"guarantee": "ATTESTED", "attestation": None}}, "review-provenance-invalid"),
+                    ({"reviewerProvenance": {}}, "review-provenance-invalid"),
+                    ({"reviewerProvenance": None}, "review-provenance-invalid"),
+                    ({"provenanceValidation": {"status": "PASS", "guarantee": "ATTESTED"}}, "review-provenance-invalid"),
+                    ({"auditor": {**original["auditor"], "guarantee": "ATTESTED"}}, "review-provenance-invalid"),
+                    ({"reviewerProvenance": {"guarantee": "ATTESTED", "attestation": _attestation(context)}},
+                     "review-provenance-unsupported"),
+                ]
+                for claim, code in claims:
+                    value = {**original, **claim}
+                    value[digest_key] = canonical_digest({k: v for k, v in value.items() if k != digest_key})
+                    before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                    with self.subTest(phase=phase, claim=claim), self.assertRaises(LifecycleError) as caught:
+                        validator(value)
+                    self.assertEqual(caught.exception.code, code)
+                    self.assertEqual(before, {p.relative_to(root).as_posix(): p.read_bytes()
+                                              for p in root.rglob("*") if p.is_file()})
+
+    def test_final_all_authors_checks_each_bound_accepted_result(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle, paths = _write_two_author_final_bundle(root)
+            for auditor, collision_task in (("worker", "WS-01"), ("other-worker", "WS-02"),
+                                            ("distinct-auditor", None)):
+                before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                result = build_final_implementation_audit(
+                    manifest_path=bundle["manifestPath"], state_path=bundle["statePath"],
+                    report_paths=paths, auditor_id=auditor)
+                with self.subTest(auditor=auditor):
+                    self.assertEqual(result["status"], "FAIL" if collision_task else "PASS")
+                    collisions = [b["taskId"] for b in result["blockers"]
+                                  if b["code"] == "final-implementation-audit-author-collision"]
+                    self.assertEqual(collisions, [collision_task] if collision_task else [])
+                    self.assertEqual(before, {p.relative_to(root).as_posix(): p.read_bytes()
+                                              for p in root.rglob("*") if p.is_file()})
+
     def test_task_implementation_audit_accepts_complete_independent_review(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -369,6 +430,53 @@ class ImplementationAuditTests(unittest.TestCase):
 
         self.assertEqual(validation["status"], "FAIL")
         self.assertIn("final-implementation-audit-open-blockers", {item["code"] for item in validation["blockers"]})
+
+
+def _write_two_author_final_bundle(root: Path) -> tuple[dict, list[str]]:
+    """Real canonical result bindings; no native identity or host guarantee."""
+    bundle = _write_bundle(root, phase="FINAL_AUDIT", task_status="ACCEPTED")
+    manifest = json.loads(bundle["manifestPath"].read_text())
+    manifest["workstreams"].append({"id": "WS-02", "dependsOn": [], "writes": ["src/second.py"]})
+    bundle["planDigest"] = canonical_digest(manifest)
+    bundle["manifestPath"].write_bytes(canonical_bytes(manifest) + b"\n")
+    state = json.loads(bundle["statePath"].read_text())
+    state["planDigest"] = bundle["planDigest"]
+    second = copy.deepcopy(state["tasks"][0])
+    second.update(id="WS-02", writes=["src/second.py"])
+    state["tasks"].append(second)
+    bundle["statePath"].write_bytes(canonical_bytes(state) + b"\n")
+    result_path, review_path = _write_result_review(root, bundle)
+    result = json.loads((root / result_path).read_text())
+    review = json.loads((root / review_path).read_text())
+    state = json.loads(bundle["statePath"].read_text())
+    state["tasks"][0]["result"] = artifact_identity(root, result_path, result)
+    state["tasks"][0]["review"].update(artifact_identity(root, review_path, review))
+    second_result = copy.deepcopy(result)
+    second_result.update(taskId="WS-02", actor="other-worker", actorRunId="other-worker-run",
+                         changedFiles=["src/second.py"])
+    second_result["itemOutcomes"][0]["changedFiles"] = ["src/second.py"]
+    second_review = copy.deepcopy(review)
+    second_review.update(taskId="WS-02", reviewId="review-2", resultHash=canonical_digest(second_result))
+    second_review["reviewer"].update(id="other-reviewer", runId="other-review-run")
+    second_result_path = "work/WS-02/attempt-1/task-result.json"
+    second_review_path = "work/WS-02/attempt-1/task-review.json"
+    write_json_create(root / second_result_path, second_result)
+    write_json_create(root / second_review_path, second_review)
+    state["tasks"][1]["result"] = artifact_identity(root, second_result_path, second_result)
+    state["tasks"][1]["review"] = {**artifact_identity(root, second_review_path, second_review), "verdict": "ACCEPTED"}
+    bundle["statePath"].write_bytes(canonical_bytes(state) + b"\n")
+    paths = []
+    for task_id, result_path, review_path in (("WS-01", result_path, review_path),
+                                             ("WS-02", second_result_path, second_review_path)):
+        report = build_implementation_audit_report(
+            manifest_path=bundle["manifestPath"], state_path=bundle["statePath"], task_id=task_id,
+            result_path=result_path, review_path=review_path)
+        if report["status"] != "PASS":
+            raise AssertionError(report["blockers"])
+        path = f"work/{task_id}/attempt-1/implementation-audit.json"
+        write_json_create(root / path, report)
+        paths.append(path)
+    return bundle, paths
 
 
 def _write_bundle(root: Path, *, phase: str = "STEP_REVIEW", task_status: str = "VERIFYING") -> dict[str, Path | str]:

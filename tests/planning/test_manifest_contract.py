@@ -28,6 +28,48 @@ class ManifestContractTests(unittest.TestCase):
         result = validate_plan_manifest_contract(json.loads(FIXTURE.read_text(encoding="utf-8")))
         self.assertEqual(result["status"], "PASS")
 
+    def test_marked_a5_plan_requires_closed_task_policies(self) -> None:
+        manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        plan_policy = {
+            "schemaVersion": "agent-a5-plan-policy.v1",
+            "mode": "A5_LIMITED",
+            "defaultRequirement": "STRONG_A5",
+            "contractDigest": "a" * 64,
+        }
+        task_policy = {
+            "schemaVersion": "agent-a5-limited-policy.v1",
+            "mode": "A5_LIMITED",
+            "adapterId": "codex",
+            "expectationId": "a5:codex",
+            "targetVersion": "0.155.1",
+            "entrySurface": "ALK_TASK_START",
+            "frozenTaskRequirement": "STRONG_A5",
+            "boundaryRecordDigest": "b" * 64,
+            "strongAdmissionSupported": False,
+        }
+        task_policy["policyDigest"] = canonical_digest(task_policy)
+        manifest["immutableInput"] = plan_policy
+        for task in manifest["workstreams"]:
+            task["immutableInput"] = task_policy.copy()
+        self.assertEqual(validate_plan_manifest_contract(manifest)["status"], "PASS")
+
+        del manifest["workstreams"][0]["immutableInput"]
+        self.assertIn("plan-a5-task-policy-missing", _codes(validate_plan_manifest_contract(manifest)))
+        manifest["workstreams"][0]["immutableInput"] = task_policy.copy()
+        manifest["workstreams"][0]["immutableInput"]["untrusted"] = True
+        self.assertIn("plan-a5-task-policy-invalid", _codes(validate_plan_manifest_contract(manifest)))
+        manifest["workstreams"][0]["immutableInput"] = task_policy.copy()
+        manifest["workstreams"][0]["immutableInput"]["frozenTaskRequirement"] = "NONE"
+        manifest["workstreams"][0]["immutableInput"]["policyDigest"] = canonical_digest(
+            {key: value for key, value in manifest["workstreams"][0]["immutableInput"].items() if key != "policyDigest"}
+        )
+        self.assertIn("plan-a5-requirement-downgrade", _codes(validate_plan_manifest_contract(manifest)))
+
+    def test_unmarked_a5_policy_cannot_claim_applicability(self) -> None:
+        manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        manifest["workstreams"][0]["immutableInput"] = {}
+        self.assertIn("plan-a5-policy-without-marker", _codes(validate_plan_manifest_contract(manifest)))
+
     def test_unknown_top_level_field_is_rejected(self) -> None:
         manifest = json.loads(FIXTURE.read_text(encoding="utf-8"))
         manifest["integrationSeams"] = []

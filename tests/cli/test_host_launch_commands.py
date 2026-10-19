@@ -17,6 +17,55 @@ VALID_FIXTURE = ROOT / "tests/adapter_sessions/fixtures/local_launch_profiles/va
 
 
 class HostLaunchCommandTests(unittest.TestCase):
+    def test_qualification_check_missing_evidence_refuses_without_process(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            request = root / "request.json"
+            request.write_text('{"schemaVersion":"alk-accounting-capability-request.v1"}')
+            output = root / "result.json"
+            with _working_directory(root), patch("agent_lifecycle.adapter_sessions.launcher.run_process") as process:
+                code, payload, _stderr = _run_cli([
+                    "host-launch", "qualification-check", "--profiles-root", "work/profiles",
+                    "--adapter", "codex", "--request", str(request), "--out", str(output)])
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "ADAPTER_BUDGET_CAPABILITY_UNAVAILABLE")
+            self.assertEqual(json.loads(output.read_bytes())["outcome"], "DENY")
+            process.assert_not_called()
+
+    def test_accounting_request_refuses_before_profile_or_version_probe(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            request = root / "accounting.json"
+            request.write_text('{"outcome":"ALLOW_CAPABILITY","dispatchEntitlement":true}')
+            with _working_directory(root), patch("agent_lifecycle.adapter_sessions.launcher.run_process") as process:
+                code, payload, _stderr = _run_cli([
+                    "host-launch", "preflight", "--profile", "missing.json",
+                    "--accounting-request", str(request),
+                ])
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "ADAPTER_BUDGET_CAPABILITY_UNAVAILABLE")
+            process.assert_not_called()
+
+    def test_accounting_check_refuses_and_saves_create_only_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            profile, request, output = root / "profile.json", root / "request.json", root / "output.json"
+            profile.write_text('{"status":"PASS"}')
+            request.write_text('{"outcome":"ALLOW_CAPABILITY"}')
+            args = ["host-launch", "accounting-check", "--profile", str(profile), "--request", str(request),
+                    "--expectation-digest", "a" * 64, "--plan-digest", "a" * 64,
+                    "--candidate-digest", "a" * 64, "--out", str(output)]
+            with _working_directory(root), patch("agent_lifecycle.adapter_sessions.launcher.run_process") as process:
+                code, payload, _stderr = _run_cli(args)
+                saved = output.read_bytes()
+                code2, _payload2, _stderr2 = _run_cli(args)
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "ADAPTER_BUDGET_CAPABILITY_UNAVAILABLE")
+            self.assertEqual(json.loads(saved)["outcome"], "DENY")
+            self.assertEqual(code2, 2)
+            self.assertEqual(output.read_bytes(), saved)
+            process.assert_not_called()
+
     def test_inspect_makes_zero_process_calls(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

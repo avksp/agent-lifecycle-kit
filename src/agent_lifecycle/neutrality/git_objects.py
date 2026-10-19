@@ -94,8 +94,8 @@ def _pretty_object(data: bytes, object_type: str) -> bytes:
         if mode_end <= offset or name_end < 0 or name_end + 21 > len(data):
             raise NeutralityError("Git tree object framing is malformed")
         mode = data[offset:mode_end]
-        name = data[mode_end + 1:name_end]
-        object_id = data[name_end + 1:name_end + 21].hex().encode("ascii")
+        name = data[mode_end + 1 : name_end]
+        object_id = data[name_end + 1 : name_end + 21].hex().encode("ascii")
         if mode == b"40000":
             display_mode, display_type = b"040000", b"tree"
         elif mode == b"160000":

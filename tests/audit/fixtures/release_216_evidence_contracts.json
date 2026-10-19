@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "alk-evidence-contract-test-fixture.v1",
+  "authority": "SYNTHETIC_SHAPE_ONLY",
+  "descriptor": {
+    "schemaVersion": "agent-expected-evidence.v1",
+    "kind": "command-observation",
+    "scope": "TASK",
+    "components": [
+      {
+        "id": "alk",
+        "repositoryPath": ".",
+        "configurationPaths": [],
+        "oraclePaths": [
+          "tests/contracts/test_evidence_receipt_schemas.py"
+        ],
+        "buildArtifactPath": null
+      }
+    ],
+    "producerRequirement": "DECLARED",
+    "requirements": {
+      "commandDigests": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "caseIds": [
+        "case-1"
+      ]
+    }
+  },
+  "receipt": {
+    "schemaVersion": "agent-evidence-receipt.v1",
+    "evidenceId": "EV216-SYNTHETIC",
+    "subject": {
+      "packageId": "release-2-16",
+      "runId": "synthetic-run",
+      "planRevision": 42,
+      "planDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "sourceRevision": "base",
+      "scope": "TASK",
+      "taskBindings": [
+        {
+          "taskId": "WS216-01",
+          "attempt": 1,
+          "resultDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "snapshotHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        }
+      ],
+      "components": [
+        {
+          "id": "alk",
+          "commitOid": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "contentDigest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "buildDigest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "configurationDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+          "oracleDigest": "2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    },
+    "producer": {
+      "actorId": "test-producer",
+      "sessionId": "test-session",
+      "guarantee": "DECLARED",
+      "attestation": null
+    },
+    "payload": {
+      "schemaVersion": "agent-command-observation.v1",
+      "platform": {
+        "os": "macos",
+        "architecture": "arm64",
+        "pythonVersion": "3.12"
+      },
+      "commands": [
+        {
+          "commandDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "status": "PASS",
+          "exitCode": 0,
+          "stdout": {
+            "path": "work/release-2-16/evidence/synthetic.txt",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "bytes": 0
+          },
+          "stderr": {
+            "path": "work/release-2-16/evidence/synthetic.txt",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "bytes": 0
+          },
+          "cases": [
+            {
+              "id": "case-1",
+              "status": "PASS",
+              "evidence": {
+                "path": "work/release-2-16/evidence/synthetic.txt",
+                "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+                "bytes": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "payloadDigest": "34128a0a5c643c612b2fbd23efb555b73a184ddc35545aed79e4d8353bc0ef31",
+    "receiptDigest": "4f4baad95747d01f3be5517a7792f8fb2c50ec14accbffd4367917ec85237d81"
+  },
+  "referencedArtifactsExist": false,
+  "nativeAcceptance": false
+}

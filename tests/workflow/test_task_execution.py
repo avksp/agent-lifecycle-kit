@@ -793,7 +793,13 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             state_path = _write_state(root, phase="RUNNING")
+            from tests.workflow import test_plan_adoption as authority_fixture
+
+            manifest_path = authority_fixture._write_authority_bundle(root)
+            frozen_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["planDigest"] = canonical_digest(frozen_manifest)
+            state["planRevision"] = frozen_manifest["planRevision"]
             state["manifestPath"] = "plans/package/plan.manifest.json"
             state["packetSet"] = {"path": "plans/package/workflow/task-packets/index.json"}
             state["tasks"][0].pop("writes", None)
@@ -808,6 +814,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
             )
             result_path = "work/WS-01/attempt-1/task-result.json"
             result = _result(attempt=1)
+            result["planDigest"] = state["planDigest"]
             write_json_create(root / result_path, result)
             commit_task_result(
                 state_path,
@@ -820,6 +827,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
             )
             review_path = "work/WS-01/attempt-1/task-review.json"
             review = _review(attempt=1, result_hash=canonical_digest(result))
+            review["planDigest"] = state["planDigest"]
             write_json_create(root / review_path, review)
 
             with self.assertRaises(LifecycleError) as raised:
@@ -881,7 +889,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="first result",
             )
             review_1_path = "work/WS-01/attempt-1/task-review.json"
-            review_1 = _review(attempt=1, result_hash=canonical_digest(result_1))
+            review_1 = _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=1, result_hash=canonical_digest(result_1))
             review_1["verdict"] = "REWORK"
             review_1["findings"] = [
                 {"id": "F-REWORK-1", "severity": "HIGH", "status": "open", "message": "revise implementation"}
@@ -943,7 +951,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="fresh second result",
             )
             review_2_path = "work/WS-01/attempt-2/task-review.json"
-            review_2 = _review(attempt=2, result_hash=canonical_digest(result_2))
+            review_2 = _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=2, result_hash=canonical_digest(result_2))
             write_json_create(root / review_2_path, review_2)
             accepted = accept_task(
                 state_path,
@@ -1261,7 +1269,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="done",
             )
             review_path = "work/WS-01/attempt-1/task-review.json"
-            write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+            write_json_create(root / review_path, _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=1, result_hash=canonical_digest(result)))
 
             accepted = accept_task(
                 state_path,
@@ -1319,7 +1327,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="done",
             )
             review_path = "work/WS-01/attempt-1/task-review.json"
-            write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+            write_json_create(root / review_path, _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=1, result_hash=canonical_digest(result)))
 
             accepted = accept_task(
                 state_path,
@@ -1411,7 +1419,7 @@ class WorkflowTaskExecutionTests(unittest.TestCase):
                 reason="done",
             )
             review_path = "work/WS-01/attempt-1/task-review.json"
-            write_json_create(root / review_path, _review(attempt=1, result_hash=canonical_digest(result)))
+            write_json_create(root / review_path, _review(plan_digest=json.loads(state_path.read_text(encoding="utf-8"))["planDigest"], attempt=1, result_hash=canonical_digest(result)))
 
             with self.assertRaises(LifecycleError) as raised:
                 accept_task(
@@ -1489,3 +1497,20 @@ class ProtectedRenameTransactionTests(unittest.TestCase):
                 },
                 before,
             )
+
+
+class R1054OptionalTaskTests(unittest.TestCase):
+    def test_last_required_acceptance_waits_for_running_and_verifying_optional(self):
+        from agent_lifecycle.workflow.task_transitions import _mark_task_accepted
+        for active in ('RUNNING','VERIFYING'):
+            with self.subTest(optionalStatus=active):
+                required={'id':'A','required':True,'status':'VERIFYING','dependsOn':[]};optional={'id':'B','required':False,'status':active,'dependsOn':[]}
+                state={'schemaVersion':'agent-workflow-state.v4','phase':'RUNNING','tasks':[required,optional]}
+                review={'reviewId':'review','reviewer':{'id':'reviewer','runId':'separate','surface':'host'},'verdict':'PASS'}
+                _mark_task_accepted(state,required,review,{},'accepted');self.assertEqual(state['phase'],'RUNNING');self.assertEqual(optional['status'],active)
+                _mark_task_accepted(state,optional,review,{},'accepted');self.assertEqual(state['phase'],'FINAL_AUDIT')
+    def test_optional_ready_does_not_block_required_completion(self):
+        from agent_lifecycle.workflow.task_transitions import _mark_task_accepted
+        required={'id':'A','required':True,'status':'VERIFYING','dependsOn':[]};optional={'id':'B','required':False,'status':'READY','dependsOn':[]};state={'schemaVersion':'agent-workflow-state.v4','phase':'RUNNING','tasks':[required,optional]}
+        _mark_task_accepted(state,required,{'reviewId':'review','reviewer':{'id':'reviewer','runId':'separate','surface':'host'},'verdict':'PASS'},{},'accepted')
+        self.assertEqual(state['phase'],'FINAL_AUDIT')

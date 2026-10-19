@@ -124,8 +124,9 @@ REVIEW_MESH_SCHEMAS: dict[str, dict[str, Any]] = {
             "independenceRequirement": {"type": ["object", "null"]},
             "findings": {"type": "array", "items": {"type": "object"}},
             "budgetUsage": {"type": "object"},
+            "budgetUsageStatus": {"enum": ["UNAVAILABLE"]},
             "independence": {"type": "object"},
-            "crossCheckReceipt": {"type": "object"},
+            "crossCheckReceipt": {"type": ["object", "null"]},
             "independentEvidence": {"type": ["object", "null"]},
             "blockers": {"type": "array", "items": {"type": "object"}},
             "productionPromotionClaimed": {"const": False},
@@ -225,3 +226,20 @@ REVIEW_MESH_SCHEMAS: dict[str, dict[str, Any]] = {
         },
     ),
 }
+
+REVIEW_MESH_SCHEMAS["agent-review-mesh-result.v1"]["allOf"] = [
+    {
+        "if": {"properties": {"crossCheckReceipt": {"type": "null"}}, "required": ["crossCheckReceipt"]},
+        "then": {
+            "required": ["budgetUsageStatus", "roundParticipation"],
+            "properties": {
+                "budgetUsageStatus": {"const": "UNAVAILABLE"},
+                "roundParticipation": {
+                    "type": "object",
+                    "required": ["eligible"],
+                    "properties": {"eligible": {"const": False}},
+                },
+            },
+        },
+    },
+]

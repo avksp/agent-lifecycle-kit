@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import agent_lifecycle.workflow.state as workflow_state
+from agent_lifecycle.accounting.source_usage_context import load_source_usage_context
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
 from agent_lifecycle.contracts.paths import normalize_repo_path
@@ -24,6 +25,7 @@ from agent_lifecycle.workflow.artifacts import (
     validate_attempt_history,
 )
 from agent_lifecycle.workflow.gates import record_gate_receipts, validate_controller_gates
+from agent_lifecycle.workflow.immutable_input import evaluate_task_admission, is_unadopted_ordinary_context
 from agent_lifecycle.workflow.model_usage import validate_attempt_model_route
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
@@ -46,6 +48,7 @@ def start_task(
     risk_profile_path: str | None = None,
     strategy_path: str | None = None,
     strategy_inputs: dict[str, Any] | None = None,
+    immutable_input_request: dict[str, Any] | None = None,
     reason: str,
 ) -> dict[str, Any]:
     """Start one dependency-ready task with optional exact strategy authority."""
@@ -62,6 +65,34 @@ def start_task(
     validate_attempt_history(state_path, state, task)
     _validate_task_authority_paths(state_path, state)
     attempt = next_available_attempt(state_path, state, task)
+    root = package_root(state_path, state)
+    a5_decision = None
+    if not is_unadopted_ordinary_context(state, task, immutable_input_request):
+        manifest, lock, verification = _current_plan_envelope(root, state)
+        if verification.get("manifestHash") != state["planDigest"] or lock.get("manifestHash") != state["planDigest"]:
+            raise LifecycleError("a5-context-invalid", "Current plan identity is not verified")
+        registry = None
+        if "immutableInput" in manifest:
+            registry = read_json_object(
+                root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 route boundaries"
+            )
+        a5_decision = evaluate_task_admission(
+            manifest,
+            state,
+            task,
+            {
+                "runId": state["runId"],
+                "packageId": state["packageId"],
+                "taskId": task_id,
+                "targetAttempt": attempt,
+                "operationId": operation_id,
+                "stateRevision": expected_revision,
+                "planDigest": state["planDigest"],
+                "sourceRevision": source_revision,
+            },
+            immutable_input_request,
+            registry=registry,
+        )
 
     clear_task_risk_profile(task)
     _clear_task_execution_strategy(task)
@@ -75,6 +106,10 @@ def start_task(
             operation_id=operation_id,
             source_revision=source_revision,
         )
+        if risk_profile.get("schemaVersion") == "agent-risk-execution-profile.v2" and strategy_path is None:
+            raise LifecycleError(
+                "scoped-usage-strategy-required", "limited source risk requires exact strategy recomputation"
+            )
         apply_task_risk_profile(task, risk_profile, profile_identity)
     strategy_identity = None
     if strategy_path is not None:
@@ -99,6 +134,8 @@ def start_task(
         attempt=attempt,
     )
     _mark_task_running(state, task, attempt, reason)
+    if a5_decision is not None:
+        task["immutableInputAdmission"] = a5_decision
     record_gate_receipts(task, gate_receipts)
     commit_state(
         state_path,
@@ -108,6 +145,9 @@ def start_task(
         payload={
             "taskId": task_id,
             "attempt": attempt,
+            "planDigest": state["planDigest"],
+            "sourceRevision": source_revision,
+            "immutableInputAdmission": a5_decision,
             "executionStrategy": strategy_identity,
             "reason": reason,
         },
@@ -202,6 +242,15 @@ def _load_task_execution_strategy(
         descriptor_path=inputs["descriptorPath"],
         capability_manifest_path=inputs["capabilityManifestPath"],
         project_profile_path=inputs["projectProfilePath"],
+        repository_root=root,
+        source_usage_context=load_source_usage_context(
+            root,
+            manifest,
+            state,
+            task,
+            lineage["adapterId"],
+            lineage["adapterHost"],
+        ),
     )
     if strategy.get("strategyDigest") != expected_strategy.get("strategyDigest"):
         raise LifecycleError(
@@ -220,8 +269,11 @@ def _current_plan_envelope(
         raise LifecycleError("execution-strategy-plan-context-missing", "adopted manifest path is required")
     manifest_relative = normalize_repo_path(manifest_path, label="frozen plan manifest")
     manifest = read_json_object(root / manifest_relative, label="frozen plan manifest")
+    plan_root = manifest.get("package", {}).get("planArtifactRoot")
+    if not isinstance(plan_root, str) or not plan_root:
+        raise LifecycleError("a5-context-invalid", "Frozen package artifact root is missing")
     lock_relative = normalize_repo_path(
-        Path(manifest_relative).with_name("plan.lock.json").as_posix(),
+        f"{plan_root.rstrip('/')}/plan.lock.json",
         label="plan lock",
     )
     lock = read_json_object(root / lock_relative, label="plan lock")
@@ -418,6 +470,10 @@ def _apply_task_execution_strategy(
         "usageEvidence": dict(_object(strategy.get("usageEvidence"))),
         "modelRoute": dict(route),
     }
+    source_usage = source_decisions.get("sourceUsagePolicy")
+    if source_usage is not None:
+        task["executionStrategy"]["sourceUsagePolicyDigest"] = source_usage
+        task["executionStrategy"]["usageMode"] = strategy["usageEvidence"].get("usageMode")
     task["adapterId"] = strategy["lineage"]["adapterId"]
     task["modelRoute"] = dict(route)
 
@@ -506,6 +562,14 @@ def _apply_attempt_wall_cap(state: dict[str, Any], task: dict[str, Any]) -> None
 
 
 def clear_active_attempt_references(task: dict[str, Any]) -> None:
+    assurance = task.pop("sourceUsageAssurance", None)
+    history = task.get("attemptHistory", [])
+    if isinstance(assurance, dict) and history and history[-1].get("result") == task.get("result"):
+        from copy import deepcopy
+
+        history[-1]["sourceUsageAssurance"] = deepcopy(assurance)
+        if isinstance(task.get("modelUsageReceipt"), dict):
+            history[-1]["modelUsageReceipt"] = deepcopy(task["modelUsageReceipt"])
     task["usageIterations"] = []
     task["controllerGateReceipts"] = []
     for key in (

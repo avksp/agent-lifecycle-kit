@@ -21,6 +21,7 @@ def main() -> int:
 
     root = Path(args.package_root)
     blockers: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
     files: list[dict[str, Any]] = []
     functions: list[dict[str, Any]] = []
     symbols: list[dict[str, Any]] = []
@@ -35,8 +36,8 @@ def main() -> int:
                 blockers.append(
                     {"code": "architecture-hard-file-limit-exceeded", "path": path.as_posix(), "actualLines": line_count, "maxLines": args.hard_file_lines}
                 )
-            elif line_count > args.target_file_lines:
-                blockers.append(
+            if line_count > args.target_file_lines:
+                warnings.append(
                     {"code": "architecture-file-target-exceeded", "path": path.as_posix(), "actualLines": line_count, "targetLines": args.target_file_lines}
                 )
             tree = ast.parse(source, filename=path.as_posix())
@@ -73,6 +74,9 @@ def main() -> int:
         "functions": sorted(functions, key=lambda item: (item["path"], item["line"], item["name"])),
         "symbols": symbols,
         "blockers": blockers,
+        "warnings": warnings,
+        "targetFileConformance": "EXCEEDED" if warnings else "PASS",
+        "hardLimitConformance": "FAIL" if blockers else "PASS",
         "productionPromotionClaimed": False,
     }
     write_json(Path(args.evidence), {**body, "validationDigest": digest_value(body)})

@@ -18,17 +18,17 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 подтверждения, а основное время остаётся на исследование, реализацию и проверку
 продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 2.15.0 · Python 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 2.16.0 · Python 3.11-3.14
 
 Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
 
 ## Быстрый старт
 
-Начните с подробного руководства [установка ALK и первый запуск](guides/install-and-first-run.md).
+Начните с подробного руководства [установка ALK и первый запуск](guides/install-and-first-run.md). В 2.16 добавлен накопительный учёт в подтверждённых границах хоста; см. [обслуживание и хранение подробностей](reference/cli.md#очистка-подробностей).
 
 Описание переносимого пакета навыков находится в разделе [переносимый пакет Agent Plugins](reference/agent-plugins.md), проверка установленного пакета - в разделе [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md), а необязательный контроль жизненного цикла адаптера - в [отдельном справочнике](adapters/lifecycle-control.md). Сейчас комплектные адаптеры публикуют `GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск сохраняет статус `WRAPPER_ONLY`.
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.15.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.16.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
 
 Для быстрого старта выполните:
 

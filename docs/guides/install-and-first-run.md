@@ -3,6 +3,9 @@
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
+These instructions target ALK v2.16.0. Verify frozen plans before execution
+with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
+
 ## Upgrading to 2.15
 
 Before reusing existing plans, read the
@@ -85,7 +88,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.15.0
+python -m pip install agent-lifecycle-kit==2.16.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -96,7 +99,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.15.0
+python -m pip install agent-lifecycle-kit==2.16.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -281,3 +284,20 @@ with the related artifact and reason.
   roles of ALK, the host, the model and the repository.
 - [Plan verification and integrity](../reference/plan-verification.md) explains
   how a reviewer checks a handed-off plan package before implementation.
+
+## Release 2.16 accounting and retention
+
+ALK records cumulative task/run expenses and conservative holds for unavailable
+usage. Admission, settlement and recovery are distinct; retries keep prior costs.
+A budget or time overrun does not erase a valid result or authorize a fresh
+attempt. Required evidence and independent acceptance still apply.
+
+Host capabilities set the guarantee. The selected Codex CLI 0.162.1 route proves
+only ALK-controlled input fit with private `features.apps=false`; full-host
+usage stays `UNAVAILABLE`, and unsupported strong A5/protected closing refuses.
+Other adapter source profiles are capability descriptions, not native proof.
+
+Raw details become eligible 30 days after full financial closure. Configure an
+hourly same-user maintenance command with pinned authority and a fresh finite
+deadline, then verify the actual target. See the
+[retention operations guide](../operations/retention-maintenance.md).

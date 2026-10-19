@@ -6,7 +6,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from agent_lifecycle.adapter_sessions.local_launch_profile import validate_local_launch_profile
 from agent_lifecycle.adapter_sessions.planning_session import load_planning_session
+from agent_lifecycle.adapter_sessions.qualification import load_shipped_launch_profile
 from agent_lifecycle.adapter_sessions.unified_start import start_lifecycle
 from agent_lifecycle.contracts import canonical_digest
 
@@ -15,12 +17,14 @@ class UnifiedStartPlanningLaunchTests(unittest.TestCase):
     def test_qualified_planning_launch_uses_default_profile_and_stops_at_review(self) -> None:
         raw = "Investigate the private failure and prepare a plan"
         launch_receipt = _planning_receipt(result_summary=f"Candidate for: {raw}")
+        profile = load_shipped_launch_profile("codex", repository_root=Path(__file__).resolve().parents[2])
+        validation = validate_local_launch_profile(profile)
         with tempfile.TemporaryDirectory() as tmp, patch(
             "agent_lifecycle.adapter_sessions.unified_start.start_adapter_task",
             return_value=_intake_receipt(raw),
         ), patch(
             "agent_lifecycle.adapter_sessions.unified_start.load_local_launch_profile",
-            return_value=(Path(".alk/host-launch/codex.json"), {"adapterId": "codex"}, {"status": "PASS"}),
+            return_value=(Path(".alk/host-launch/codex.json"), profile, validation),
         ) as load_profile, patch(
             "agent_lifecycle.adapter_sessions.unified_start.launch_from_local_profile",
             return_value=launch_receipt,

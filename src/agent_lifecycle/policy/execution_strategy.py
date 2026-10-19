@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.accounting.source_usage_context import SourceUsageContext
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.freeze import verify_plan_lock
@@ -48,6 +50,8 @@ def resolve_execution_strategy(
     descriptor_path: str | None = None,
     capability_manifest_path: str | None = None,
     project_profile_path: str | None = None,
+    repository_root: Path | None = None,
+    source_usage_context: SourceUsageContext | None = None,
 ) -> dict[str, Any]:
     """Resolve one read-only strategy from existing authorities."""
 
@@ -94,6 +98,8 @@ def resolve_execution_strategy(
         routing_profile=routing_profile,
         baseline_profile=baseline_profile,
         host_profile=host_profile,
+        repository_root=repository_root,
+        source_usage_context=source_usage_context,
     )
     adaptive = _adaptive_decision(manifest, state, task_id, risk, baseline_profile)
     adaptive_validation = validate_adaptive_lifecycle_decision(adaptive)
@@ -200,6 +206,7 @@ def _strategy_body(
         "usageEvidence": dict(risk["usageEvidence"]),
         "sourceDecisionDigests": {
             "riskProfile": risk["profileDigest"],
+            **({"sourceUsagePolicy": risk["sourceUsagePolicyDigest"]} if "sourceUsagePolicyDigest" in risk else {}),
             "qualityFloor": quality["floorDigest"],
             "modelRoute": route["decisionDigest"],
             "adaptiveDecision": adaptive["decisionDigest"],

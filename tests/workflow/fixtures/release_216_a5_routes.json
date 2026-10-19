@@ -1,0 +1,409 @@
+{
+  "actualWholeHostUsage": null,
+  "adapterExpectations": [
+    {
+      "adapterId": "codex",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-codex",
+      "expectedTargetVersion": "0.155.1",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/0",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "SAVED_OBSERVED_BINARY"
+    },
+    {
+      "adapterId": "claude",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-claude",
+      "expectedTargetVersion": "2.1.226",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/1",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "opencode",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-opencode",
+      "expectedTargetVersion": "1.18.15",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/2",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "grok-build",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-grok-build",
+      "expectedTargetVersion": "0.2.118",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/3",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "gemini-cli",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-gemini-cli",
+      "expectedTargetVersion": "0.46.0",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/4",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "pi",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-pi",
+      "expectedTargetVersion": "0.83.0",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/5",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "hermes",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-hermes",
+      "expectedTargetVersion": "0.19.0",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/6",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "qwen-code",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-qwen-code",
+      "expectedTargetVersion": "0.21.8",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/7",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "kimi-code",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-kimi-code",
+      "expectedTargetVersion": "0.30.0",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/8",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "cursor",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-cursor",
+      "expectedTargetVersion": "2026.07.23",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/9",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "goose",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-goose",
+      "expectedTargetVersion": "1.45.0",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/10",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    },
+    {
+      "adapterId": "openinterpreter",
+      "entrySurfaces": [
+        "ALK_TASK_START",
+        "ALK_MANAGED_TASK_LAUNCH",
+        "ALK_PLANNING_TASK_LAUNCH",
+        "ALK_PLANNING_QUALIFICATION",
+        "EXTERNAL_ALREADY_RUNNING"
+      ],
+      "expectationId": "h04-216-openinterpreter",
+      "expectedTargetVersion": "0.0.34",
+      "externalLimit": "ALK guards do not control calls or file access made directly by an already-running host outside these APIs.",
+      "mode": "A5_LIMITED",
+      "runtimeQualification": "NOT_RUN",
+      "sourceRef": "tasks/release-2-16/h04-adapter-profile-cases.json#/expectedBindings/entries/11",
+      "sourceSha256": "3d2aa0d4d2acfbe621f5104a410f2466654ff6087dab643dba7227171a90d67d",
+      "strongAdmissionSupported": false,
+      "strongCapability": "UNPROVEN",
+      "versionBasis": "RECORDED_ALK_DESCRIPTOR_ONLY"
+    }
+  ],
+  "allStrongProtectionGranted": false,
+  "artifactRole": "ISOLATED_PLANNED_ORACLE_INPUT_NOT_EVIDENCE",
+  "capabilityCases": [
+    {
+      "actual": null,
+      "expected": "All12 exact adapter/version/mode A5 boundaries independently reviewed; no missing target, inherited H04 support or unsupported global-absence assertion.",
+      "id": "a5.capability.inventory",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "expected": "Positive strong route requires full preserved invariant and later V-CONSUME; unproven requests deny; endpoint identity, binary PASS and partial local read-only cannot qualify.",
+      "id": "a5.capability.strong-claim-gates",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "expected": "Exact existing route executes no worker/helper access for a rejected strong request; records qualified limitation/refusal with truthful UNPROVEN/UNSUPPORTED distinction.",
+      "id": "a5.capability.limited-refusal",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "expected": "Stripped/downgraded claim, changed request/policy/mode, unknown or mismatched actual attempt cannot convert refusal to ordinary dispatch or acceptance.",
+      "id": "a5.capability.no-silent-fallback",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "expected": "Result/ownership/audit/final consumers reject missing/mismatched route/subject and forged positive proof; actual required protected validity still blocks on limited routes.",
+      "id": "a5.capability.consumer-binding",
+      "status": "NOT_RUN"
+    },
+    {
+      "actual": null,
+      "expected": "No-strong-request compatible ordinary flow retains all current source/result/writePolicy/audit/current-state requirements, cumulative costs and valid evidence; no retry solely for unchanged missing capability.",
+      "id": "a5.capability.ordinary-path-preservation",
+      "status": "NOT_RUN"
+    }
+  ],
+  "implementationCases": [
+    {
+      "actual": null,
+      "id": "A501",
+      "oracle": "All12 distinct source/version/mode expectations; wrong/missing/duplicate or changed route cannot back a qualified refusal or positive claim.",
+      "owner": "WS216-02",
+      "r22CaseId": "a5.capability.inventory",
+      "status": "NOT_RUN",
+      "testModule": "tests.adapter_sessions.test_immutable_input_launch"
+    },
+    {
+      "actual": null,
+      "id": "A503",
+      "oracle": "Frozen STRONG or requested STRONG denies after next-attempt resolution and before risk/strategy/helper/start mutation, including strategy omitted. State and original attempt/history/cost unchanged.",
+      "owner": "WS216-02",
+      "r22CaseId": "a5.capability.limited-refusal",
+      "status": "NOT_RUN",
+      "testModule": "tests.workflow.test_immutable_input_admission"
+    },
+    {
+      "actual": null,
+      "id": "A504",
+      "oracle": "Managed/planning/qualification strong requests produce zero actual runner, run_process, capture_identity and planning_runner calls and no task-input transmission. Direct sink with absent/altered context refuses.",
+      "owner": "WS216-02",
+      "r22CaseId": "a5.capability.limited-refusal",
+      "status": "NOT_RUN",
+      "testModule": "tests.adapter_sessions.test_immutable_input_launch"
+    },
+    {
+      "actual": null,
+      "id": "A505",
+      "oracle": "Explicit request preserved through core/project paths and actual profile call. Strong or task-bearing request cannot hide as version-preflight/resume; no internal retry as NONE; frozen input in planning rejected.",
+      "owner": "WS216-02",
+      "r22CaseId": "a5.capability.no-silent-fallback",
+      "status": "NOT_RUN",
+      "testModule": "tests.adapter_sessions.test_immutable_input_start"
+    },
+    {
+      "actual": null,
+      "id": "A507",
+      "oracle": "Existing result/review/ownership/audit lineage must join original native actual attempt and current frozen applicability. Forged positive/stripped policy fails; different legitimate consumer operation/revision is allowed with independent current checks.",
+      "owner": "WS216-02",
+      "r22CaseId": "a5.capability.consumer-binding",
+      "status": "NOT_RUN",
+      "testModule": "tests.workflow.test_immutable_input_admission"
+    },
+    {
+      "actual": null,
+      "id": "A508",
+      "oracle": "Compatible accepted ordinary evidence/admission/cost retained across adoption; original decision never rehashed as new plan. A separate binding ties existing compatibility receipt to new policy. Incompatible evidence archived without erasing charges or automatic rerun.",
+      "owner": "WS216-02",
+      "r22CaseId": "a5.capability.ordinary-path-preservation",
+      "status": "NOT_RUN",
+      "testModule": "tests.workflow.test_plan_adoption"
+    },
+    {
+      "actual": null,
+      "id": "A509",
+      "oracle": "Explicit ordinary planning/qualification/version-only preflight needs no fictional authority file or workflow task. Actual bounded input/profile and existing checks retained; classification never authorizes implementation or paid/model work by itself.",
+      "owner": "WS216-02",
+      "r22CaseId": "a5.capability.ordinary-path-preservation",
+      "status": "NOT_RUN",
+      "testModule": "tests.adapter_sessions.test_immutable_input_launch"
+    },
+    {
+      "actual": null,
+      "id": "A512",
+      "oracle": "Known ordinary calls with no A5 field remain ordinary under their existing checks. Serialized context is not a bearer grant. A forged managed context cannot convert a frozen task into standalone ordinary work.",
+      "owner": "WS216-02",
+      "r22CaseId": "a5.capability.ordinary-path-preservation",
+      "status": "NOT_RUN",
+      "testModule": "tests.adapter_sessions.test_immutable_input_start"
+    }
+  ],
+  "nativeAndSourceUnitProofKeptSeparate": true,
+  "newRuntimeQualification": false,
+  "owner": "WS216-02",
+  "refusalShape": {
+    "managed": "Existing BLOCKED builder, argv empty, hostLaunchStarted=false; callback count must be measured.",
+    "planning": "Existing BLOCKED/NOT_STARTED, processCalls=0, result=null; tokens MISSING/null, not zero.",
+    "proof": "Spy actual sinks and stdin transport, including direct paths. Mocking only the facade does not prove refusal.",
+    "receipts": "Do not add undeclared positive/proof fields to existing receipts. Bind classification in native A5 state/context records and expected consumer inputs.",
+    "task": "Existing LifecycleError style with reviewed codes a5-strong-unproven / a5-context-invalid; no fake native task blocker shape."
+  },
+  "schemaVersion": "alk-release-216-a5-route-oracle-inputs.v1",
+  "sourceContractRefs": [
+    {
+      "bytes": 152725,
+      "path": "tasks/release-2-16/plan.manifest.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "6e5e0194715f2dfd1922ea4569af1b14bcb9ef22ceaa78af9632427fc1fc60dc"
+    },
+    {
+      "bytes": 19870,
+      "path": "tasks/release-2-16/accounting-and-recovery-cases.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "9dab0dc17a6889df8d9af22aea670fdc90025a955e6037403b53fc6b6bef9b62"
+    },
+    {
+      "bytes": 8834,
+      "path": "tasks/release-2-16/cf01-a5-capability-scope.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "afc8c917e47598f81e579ae9fdd851753f45202fa612351a987a1d936a61817d"
+    },
+    {
+      "bytes": 76468,
+      "path": "tasks/release-2-16/cf01-a5-implementation-contract.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "b4720a9eb297d9d84c59040fd80df3aca05a836489228a745e4bf478a8c536b7"
+    },
+    {
+      "bytes": 23584,
+      "path": "tasks/release-2-16/closing-write-inventory.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "d8091e1a2db1a17140d6741549653d21d093f2490c5aa971f58fdb5e6fe4dacd"
+    },
+    {
+      "bytes": 16893,
+      "path": "tasks/release-2-16/cf-d-window-request-contract.json",
+      "role": "EXISTING_FROZEN_REQUIREMENT_NOT_RUNTIME_PROOF",
+      "sha256": "1eacd18002f6daba4755a8f978e6145eef76ea7d3ac9b4c9f0279cad206e75c8"
+    }
+  ],
+  "status": "INPUTS_INSTALLED_NOT_RUN"
+}

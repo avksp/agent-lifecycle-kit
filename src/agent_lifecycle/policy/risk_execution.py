@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
+from agent_lifecycle.accounting.source_usage_context import SourceUsageContext, validate_source_usage_context
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.policy.quality_floor import resolve_quality_floor
 
@@ -76,8 +79,11 @@ def derive_risk_execution_profile(
     routing_profile: dict[str, Any],
     baseline_profile: dict[str, Any],
     host_profile: dict[str, Any] | None,
+    repository_root: Path | None = None,
+    source_usage_context: SourceUsageContext | None = None,
 ) -> dict[str, Any]:
     """Build a provider-neutral profile without changing workflow state."""
+    _ = (repository_root,)
 
     # Keep model-routing imports lazy: its resolver imports quality-floor policy,
     # so importing it while the policy package is initializing creates a cycle.
@@ -92,7 +98,9 @@ def derive_risk_execution_profile(
     _require_task(manifest, state, task_id)
     policy_validation = validate_risk_execution_policy(risk_policy)
     if policy_validation["status"] != "PASS":
-        raise LifecycleError("risk-policy-invalid", "risk execution policy is invalid", {"validation": policy_validation})
+        raise LifecycleError(
+            "risk-policy-invalid", "risk execution policy is invalid", {"validation": policy_validation}
+        )
     validate_model_routing_profile(routing_profile)
 
     plan_tier = _plan_tier(manifest)
@@ -121,7 +129,9 @@ def derive_risk_execution_profile(
         risk_flags=risk_flags,
     )
     if quality_floor["status"] != "PASS":
-        raise LifecycleError("risk-quality-floor-failed", "quality floor could not be resolved", {"decision": quality_floor})
+        raise LifecycleError(
+            "risk-quality-floor-failed", "quality floor could not be resolved", {"decision": quality_floor}
+        )
     tier_policy = risk_policy["tiers"][resolved_tier]
     route = resolve_model_route(
         {
@@ -145,7 +155,9 @@ def derive_risk_execution_profile(
         "maxInvocations": int(tier_policy["maxInvocations"]),
         "maxWallSeconds": int(tier_policy["maxWallSeconds"]),
     }
-    package = manifest.get("package") if isinstance(manifest.get("package"), dict) else {}
+    package = (
+        _validated_cast(dict[str, Any], manifest.get("package")) if isinstance(manifest.get("package"), dict) else {}
+    )
     body = {
         "schemaVersion": RISK_EXECUTION_PROFILE_SCHEMA,
         "status": "PASS",
@@ -176,6 +188,29 @@ def derive_risk_execution_profile(
         "hostLaunchStarted": False,
         "productionPromotionClaimed": False,
     }
+    selected_context = validate_source_usage_context(
+        source_usage_context,
+        manifest=manifest,
+        state=state,
+        task_id=task_id,
+        adapter_id=adapter_id,
+        adapter_host=adapter_host,
+    )
+    if selected_context is not None and selected_context.appliesToTask:
+        from agent_lifecycle.contracts.scoped_usage_schemas import (
+            SOURCE_RISK_PROFILE,
+            SOURCE_USAGE_MODE,
+            limited_usage_evidence,
+        )
+
+        if route["modelClass"] not in selected_context.allowedModelClasses:
+            raise LifecycleError("scoped-usage-model-scope-mismatch", "model route is outside limited source scope")
+        body.update(
+            schemaVersion=SOURCE_RISK_PROFILE,
+            usageMode=SOURCE_USAGE_MODE,
+            sourceUsagePolicyDigest=selected_context.policyDigest,
+            usageEvidence=limited_usage_evidence(),
+        )
     return {**body, "profileDigest": canonical_digest(body)}
 
 
@@ -193,14 +228,26 @@ def _plan_tier(manifest: dict[str, Any]) -> str:
 
 
 def _risk_flags(manifest: dict[str, Any]) -> dict[str, bool]:
-    specification = manifest.get("specification") if isinstance(manifest.get("specification"), dict) else {}
-    request = specification.get("tierResolutionRequest") if isinstance(specification.get("tierResolutionRequest"), dict) else {}
-    flags = request.get("riskFlags") if isinstance(request.get("riskFlags"), dict) else {}
+    specification = (
+        _validated_cast(dict[str, Any], manifest.get("specification"))
+        if isinstance(manifest.get("specification"), dict)
+        else {}
+    )
+    request = (
+        _validated_cast(dict[str, Any], specification.get("tierResolutionRequest"))
+        if isinstance(specification.get("tierResolutionRequest"), dict)
+        else {}
+    )
+    flags = (
+        _validated_cast(dict[str, Any], request.get("riskFlags")) if isinstance(request.get("riskFlags"), dict) else {}
+    )
     return {str(key): bool(value) for key, value in flags.items()}
 
 
 def _task_shape(manifest: dict[str, Any]) -> str:
-    package = manifest.get("package") if isinstance(manifest.get("package"), dict) else {}
+    package = (
+        _validated_cast(dict[str, Any], manifest.get("package")) if isinstance(manifest.get("package"), dict) else {}
+    )
     if isinstance(manifest.get("releaseTarget"), dict) or str(package.get("id", "")).startswith("release-"):
         return "release"
     hints = " ".join(
@@ -219,7 +266,9 @@ def _task_shape(manifest: dict[str, Any]) -> str:
 
 
 def _require_state_lineage(manifest: dict[str, Any], state: dict[str, Any], *, source_revision: str) -> None:
-    package = manifest.get("package") if isinstance(manifest.get("package"), dict) else {}
+    package = (
+        _validated_cast(dict[str, Any], manifest.get("package")) if isinstance(manifest.get("package"), dict) else {}
+    )
     expected = {
         "packageId": package.get("id"),
         "planRevision": manifest.get("planRevision"),
@@ -234,8 +283,10 @@ def _require_state_lineage(manifest: dict[str, Any], state: dict[str, Any], *, s
 
 
 def _require_task(manifest: dict[str, Any], state: dict[str, Any], task_id: str) -> None:
-    workstreams = manifest.get("workstreams") if isinstance(manifest.get("workstreams"), list) else []
-    state_tasks = state.get("tasks") if isinstance(state.get("tasks"), list) else []
+    workstreams = (
+        _validated_cast(list[Any], manifest.get("workstreams")) if isinstance(manifest.get("workstreams"), list) else []
+    )
+    state_tasks = _validated_cast(list[Any], state.get("tasks")) if isinstance(state.get("tasks"), list) else []
     if task_id not in {item.get("id") for item in workstreams if isinstance(item, dict)}:
         raise LifecycleError("risk-task-missing", "task is not declared by the frozen plan", {"taskId": task_id})
     if task_id not in {item.get("id") for item in state_tasks if isinstance(item, dict)}:

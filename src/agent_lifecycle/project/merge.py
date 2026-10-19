@@ -221,9 +221,7 @@ def _build_field_provenance(
                 candidates.append(("plan", value))
                 winner = "plan"
             if key == "risk" and requested is _MISSING:
-                default_risk = next(
-                    (entry for entry in provenance if entry["field"] == "defaultRisk"), None
-                )
+                default_risk = next((entry for entry in provenance if entry["field"] == "defaultRisk"), None)
                 if isinstance(default_risk, dict):
                     winner = default_risk["winningSource"]
                     candidates.append((winner, value))

@@ -6,9 +6,15 @@ import json
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.accounting.host_bridge import accounting_request_blocker
+from agent_lifecycle.adapter_sessions.immutable_input import (
+    planning_invocation_context,
+    require_no_strong_protection,
+    validate_current_invocation,
+)
 from agent_lifecycle.adapter_sessions.process import run_process
 from agent_lifecycle.adapter_sessions.redaction import redact_process_text
-from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.contracts import LifecycleError, canonical_digest
 
 MAX_TASK_INPUT_BYTES = 32_768
 MAX_ENVELOPE_BYTES = 49_152
@@ -78,7 +84,56 @@ def run_planning_launch(
     advisory: dict[str, Any] | None = None,
     timeout_seconds: float = MAX_PLANNING_WALL_SECONDS,
     process_cwd: Path | None = None,
+    immutable_input_request: dict[str, Any] | None = None,
+    immutable_input_context: dict[str, Any] | None = None,
+    explicit_launch: bool = False,
+    profile_digest: str | None = None,
+    qualification_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    try:
+        request = require_no_strong_protection(immutable_input_request, expected_protection="NONE")
+        if immutable_input_context is None and not explicit_launch:
+            raise LifecycleError("a5-context-invalid", "Planning sink lacks an explicit bound invocation")
+        current = planning_invocation_context(
+            adapter_id=adapter_id,
+            session_id=session_id,
+            request=request,
+            requested_mode=requested_mode,
+            task_text=task_text,
+            input_source=input_source,
+            argv=argv,
+            env=env,
+            advisory=advisory,
+            timeout_seconds=min(timeout_seconds, MAX_PLANNING_WALL_SECONDS),
+            process_cwd=process_cwd,
+            profile_digest=profile_digest,
+            qualification_binding=qualification_binding,
+        )
+        validate_current_invocation(
+            immutable_input_context if immutable_input_context is not None else current,
+            request,
+            current_context=current,
+        )
+    except LifecycleError as exc:
+        return _receipt(
+            adapter_id=adapter_id,
+            session_id=session_id,
+            requested_mode=requested_mode,
+            input_identity=_input_identity(task_text, input_source),
+            process=None,
+            result=None,
+            blockers=[{"code": exc.code, "message": exc.message}],
+        )
+    if isinstance(advisory, dict) and "accountingCapabilityRequest" in advisory:
+        return _receipt(
+            adapter_id=adapter_id,
+            session_id=session_id,
+            requested_mode=requested_mode,
+            input_identity=_input_identity(task_text, input_source),
+            process=None,
+            result=None,
+            blockers=[accounting_request_blocker()],
+        )
     try:
         envelope = build_planning_envelope(
             adapter_id=adapter_id,
@@ -167,9 +222,7 @@ def _receipt(
         "inputBytes": process.get("inputBytes", 0) if process else 0,
         "outputBytes": process.get("outputBytes", 0) if process else 0,
         "outputLimitExceeded": bool(process and process.get("outputLimitExceeded")),
-        "redactionApplied": bool(
-            process and (process.get("stdoutRedacted") or process.get("stderrRedacted"))
-        ),
+        "redactionApplied": bool(process and (process.get("stdoutRedacted") or process.get("stderrRedacted"))),
         "rawOutputStored": False,
     }
     usage = _usage_evidence(result)
@@ -208,12 +261,14 @@ def _input_identity(task_text: str, input_source: str) -> dict[str, Any]:
 
 
 def _usage_evidence(result: dict[str, Any] | None) -> dict[str, Any]:
-    usage = result.get("usage") if isinstance(result, dict) and isinstance(result.get("usage"), dict) else {}
-    confidence = usage.get("confidence") if usage.get("confidence") in {"ATTESTED", "ESTIMATED"} else "MISSING"
+    # Planning JSON is model-authored content, including its usage claims.
+    # Preserve those claims in result; only separately observed host telemetry
+    # may supply attested token counts to the qualification boundary.
+    _ = (result,)
     return {
-        "confidence": confidence,
-        "inputTokens": usage.get("inputTokens") if isinstance(usage.get("inputTokens"), int) else None,
-        "outputTokens": usage.get("outputTokens") if isinstance(usage.get("outputTokens"), int) else None,
+        "confidence": "MISSING",
+        "inputTokens": None,
+        "outputTokens": None,
         "moneyFieldsCanonical": False,
     }
 

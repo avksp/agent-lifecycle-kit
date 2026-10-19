@@ -13,15 +13,17 @@ from agent_lifecycle.contracts.audit_optimization_schemas import AUDIT_OPTIMIZAT
 from agent_lifecycle.contracts.audit_schemas import AUDIT_SCHEMAS
 from agent_lifecycle.contracts.benchmark_schemas import BENCHMARK_SCHEMAS
 from agent_lifecycle.contracts.bug_forensics_schemas import BUG_FORENSICS_SCHEMAS
+from agent_lifecycle.contracts.closing_resource_schemas import CLOSING_RESOURCE_SCHEMAS
+from agent_lifecycle.contracts.closing_window_schemas import CLOSING_WINDOW_SCHEMAS
 from agent_lifecycle.contracts.context_checkpoint_schemas import CONTEXT_CHECKPOINT_SCHEMAS
 from agent_lifecycle.contracts.context_model_schemas import CONTEXT_MODEL_SCHEMAS
 from agent_lifecycle.contracts.core_schemas import CORE_SCHEMAS
 from agent_lifecycle.contracts.cross_check_schemas import CROSS_CHECK_SCHEMAS
+from agent_lifecycle.contracts.deadline_schemas import DEADLINE_SCHEMAS
 from agent_lifecycle.contracts.domain_language_schemas import DOMAIN_LANGUAGE_SCHEMAS
 from agent_lifecycle.contracts.evidence_import_schemas import EVIDENCE_IMPORT_SCHEMAS
-from agent_lifecycle.contracts.execution_strategy_schemas import (
-    EXECUTION_STRATEGY_SCHEMAS,
-)
+from agent_lifecycle.contracts.evidence_receipt_schemas import EVIDENCE_RECEIPT_SCHEMAS
+from agent_lifecycle.contracts.execution_strategy_schemas import EXECUTION_STRATEGY_SCHEMAS
 from agent_lifecycle.contracts.external_check_schemas import EXTERNAL_CHECK_SCHEMAS
 from agent_lifecycle.contracts.external_job_schemas import EXTERNAL_JOB_SCHEMAS
 from agent_lifecycle.contracts.finding_check_schemas import FINDING_CHECK_SCHEMAS
@@ -63,17 +65,20 @@ from agent_lifecycle.contracts.proof_integrity_schemas import PROOF_INTEGRITY_SC
 from agent_lifecycle.contracts.public_locators import PUBLIC_LOCATOR_SCHEMAS
 from agent_lifecycle.contracts.release_accounting_schemas import RELEASE_ACCOUNTING_SCHEMAS
 from agent_lifecycle.contracts.release_contract_schemas import RELEASE_CONTRACT_SCHEMAS
-from agent_lifecycle.contracts.research_evidence_schemas import (
-    RESEARCH_EVIDENCE_SCHEMAS,
-)
+from agent_lifecycle.contracts.research_evidence_schemas import RESEARCH_EVIDENCE_SCHEMAS
 from agent_lifecycle.contracts.review_mesh_recommendation_schemas import (
     REVIEW_MESH_RECOMMENDATION_SCHEMAS,
 )
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_SCHEMAS
 from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHEMAS
+from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_IDENTITY_SCHEMAS
 from agent_lifecycle.contracts.runner_worktree_schemas import WORKTREE_SUPPORT_SCHEMAS
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.schema_builders import open_object_schema
+from agent_lifecycle.contracts.scoped_usage_schemas import (
+    SCOPED_USAGE_SCHEMAS,
+    populate_scoped_usage_schema_fields,
+)
 from agent_lifecycle.contracts.security_analysis_schemas import SECURITY_ANALYSIS_SCHEMAS
 from agent_lifecycle.contracts.statistical_evidence_schemas import STATISTICAL_EVIDENCE_SCHEMAS
 from agent_lifecycle.contracts.status_goal_schemas import STATUS_GOAL_SCHEMAS
@@ -83,6 +88,7 @@ from agent_lifecycle.contracts.thread_bridge_schemas import THREAD_BRIDGE_SCHEMA
 from agent_lifecycle.contracts.usage_export_schemas import USAGE_EXPORT_SCHEMAS
 from agent_lifecycle.contracts.validation_ladder_schemas import VALIDATION_LADDER_SCHEMAS
 from agent_lifecycle.contracts.workflow_artifact_schemas import WORKFLOW_ARTIFACT_SCHEMAS
+from agent_lifecycle.contracts.workflow_authority_schemas import WORKFLOW_AUTHORITY_SCHEMAS
 from agent_lifecycle.contracts.workflow_authorization_schemas import WORKFLOW_AUTHORIZATION_SCHEMAS
 from agent_lifecycle.contracts.workflow_continuation_batch_schemas import WORKFLOW_CONTINUATION_BATCH_SCHEMAS
 from agent_lifecycle.contracts.workflow_continuation_schemas import WORKFLOW_CONTINUATION_SCHEMAS
@@ -91,7 +97,6 @@ from agent_lifecycle.contracts.workflow_run_schemas import WORKFLOW_RUN_SCHEMAS
 from agent_lifecycle.contracts.workflow_state_schemas import WORKFLOW_STATE_SCHEMAS
 
 SCHEMA_INDEX_VERSION = "agent-lifecycle-schema-index.v1"
-
 LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-lifecycle-start-receipt.v1": open_object_schema(
         "agent-lifecycle-start-receipt.v1",
@@ -360,7 +365,6 @@ LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
         },
     ),
 }
-
 PLAN_INTEGRITY_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-plan-file-inventory.v1": open_object_schema(
         "agent-plan-file-inventory.v1",
@@ -407,7 +411,6 @@ PLAN_INTEGRITY_SCHEMAS: dict[str, dict[str, Any]] = {
         },
     ),
 }
-
 RISK_EXECUTION_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-risk-execution-policy.v1": open_object_schema(
         "agent-risk-execution-policy.v1",
@@ -709,7 +712,9 @@ _LIFECYCLE_CONTROL_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
 }
 
-_SCHEMA_GROUPS = (
+populate_scoped_usage_schema_fields(RISK_EXECUTION_SCHEMAS["agent-risk-execution-profile.v1"])
+
+_SCHEMA_GROUPS: tuple[dict[str, dict[str, Any]], ...] = (
     CORE_SCHEMAS,
     AUDIT_SCHEMAS,
     AUDIT_OPTIMIZATION_SCHEMAS,
@@ -738,6 +743,12 @@ _SCHEMA_GROUPS = (
     WORKFLOW_CONTINUATION_SCHEMAS,
     WORKFLOW_ECONOMICS_SCHEMAS,
     WORKFLOW_STATE_SCHEMAS,
+    DEADLINE_SCHEMAS,
+    WORKFLOW_AUTHORITY_SCHEMAS,
+    REVIEWER_IDENTITY_SCHEMAS,
+    EVIDENCE_RECEIPT_SCHEMAS,
+    CLOSING_RESOURCE_SCHEMAS,
+    CLOSING_WINDOW_SCHEMAS,
     PHASE_PACKET_SCHEMAS,
     VALIDATION_LADDER_SCHEMAS,
     BUG_FORENSICS_SCHEMAS,
@@ -759,6 +770,7 @@ _SCHEMA_GROUPS = (
     PROJECT_PROFILE_PRESET_SCHEMAS,
     ADAPTER_CONTRACT_SCHEMAS,
     CONTEXT_MODEL_SCHEMAS,
+    SCOPED_USAGE_SCHEMAS,
     CONTEXT_CHECKPOINT_SCHEMAS,
     RELEASE_CONTRACT_SCHEMAS,
     RELEASE_ACCOUNTING_SCHEMAS,

@@ -77,6 +77,7 @@ PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
             "taskTemplates": _OBJECT,
             "compatibility": _OBJECT,
             "extensions": {"$ref": "#/$defs/extensions"},
+            "immutableInput": _OBJECT,
         },
     ),
     MANIFEST_VALIDATION_SCHEMA: _closed_object_schema(

@@ -1,0 +1,3961 @@
+{
+  "schemaVersion": "release-216-local-adapter-profile-fixtures.v1",
+  "assurance": "SYNTHETIC_STRUCTURE_AND_REFUSAL_ONLY",
+  "runtimeQualification": false,
+  "dispatchEntitlement": false,
+  "contractRefs": [
+    {
+      "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+      "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+      "bytes": 180961
+    },
+    {
+      "path": "tasks/release-2-16/h04-artifact-contracts.json",
+      "sha256": "1118dd9c3b6e4bbfaf42265f8936bbdb8ff21177d03a56b5b72b61a87a1bf4ec",
+      "bytes": 42910
+    },
+    {
+      "path": "tasks/release-2-16/alk-input-fit-contract.json",
+      "sha256": "b651e81f41f2feb4dfbdcd2b22dab67308273b3c4f746f83651391226c479e55",
+      "bytes": 119027
+    }
+  ],
+  "profiles": [
+    {
+      "profileId": "local-fixture:codex",
+      "revision": 1,
+      "expectationId": "h04-216-codex",
+      "binding": {
+        "adapterId": "codex",
+        "hostVersion": "0.155.1",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "codex:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "codex:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "codex:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "codex:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "codex:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "codex:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "codex:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "codex:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:claude",
+      "revision": 1,
+      "expectationId": "h04-216-claude",
+      "binding": {
+        "adapterId": "claude",
+        "hostVersion": "2.1.226",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "claude:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "claude:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "claude:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "claude:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "claude:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "claude:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "claude:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "claude:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:opencode",
+      "revision": 1,
+      "expectationId": "h04-216-opencode",
+      "binding": {
+        "adapterId": "opencode",
+        "hostVersion": "1.18.15",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "opencode:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "opencode:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "opencode:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "opencode:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "opencode:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "opencode:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "opencode:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "opencode:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:grok-build",
+      "revision": 1,
+      "expectationId": "h04-216-grok-build",
+      "binding": {
+        "adapterId": "grok-build",
+        "hostVersion": "0.2.118",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "grok-build:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "grok-build:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "grok-build:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "grok-build:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "grok-build:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "grok-build:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "grok-build:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "grok-build:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:gemini-cli",
+      "revision": 1,
+      "expectationId": "h04-216-gemini-cli",
+      "binding": {
+        "adapterId": "gemini-cli",
+        "hostVersion": "0.46.0",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "gemini-cli:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "gemini-cli:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "gemini-cli:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "gemini-cli:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "gemini-cli:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "gemini-cli:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "gemini-cli:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "gemini-cli:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:pi",
+      "revision": 1,
+      "expectationId": "h04-216-pi",
+      "binding": {
+        "adapterId": "pi",
+        "hostVersion": "0.83.0",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "pi:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "pi:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "pi:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "pi:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "pi:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "pi:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "pi:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "pi:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:hermes",
+      "revision": 1,
+      "expectationId": "h04-216-hermes",
+      "binding": {
+        "adapterId": "hermes",
+        "hostVersion": "0.19.0",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "hermes:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "hermes:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "hermes:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "hermes:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "hermes:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "hermes:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "hermes:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "hermes:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:qwen-code",
+      "revision": 1,
+      "expectationId": "h04-216-qwen-code",
+      "binding": {
+        "adapterId": "qwen-code",
+        "hostVersion": "0.21.8",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "qwen-code:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "qwen-code:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "qwen-code:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "qwen-code:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "qwen-code:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "qwen-code:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "qwen-code:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "qwen-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:kimi-code",
+      "revision": 1,
+      "expectationId": "h04-216-kimi-code",
+      "binding": {
+        "adapterId": "kimi-code",
+        "hostVersion": "0.30.0",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "kimi-code:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "kimi-code:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "kimi-code:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "kimi-code:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "kimi-code:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "kimi-code:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "kimi-code:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "kimi-code:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:cursor",
+      "revision": 1,
+      "expectationId": "h04-216-cursor",
+      "binding": {
+        "adapterId": "cursor",
+        "hostVersion": "2026.07.23",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "cursor:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "cursor:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "cursor:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "cursor:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "cursor:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "cursor:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "cursor:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "cursor:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:goose",
+      "revision": 1,
+      "expectationId": "h04-216-goose",
+      "binding": {
+        "adapterId": "goose",
+        "hostVersion": "1.45.0",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "goose:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "goose:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "goose:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "goose:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "goose:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "goose:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "goose:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "goose:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    },
+    {
+      "profileId": "local-fixture:openinterpreter",
+      "revision": 1,
+      "expectationId": "h04-216-openinterpreter",
+      "binding": {
+        "adapterId": "openinterpreter",
+        "hostVersion": "0.0.34",
+        "executableSha256": null,
+        "launchMode": "LOCAL_STRUCTURE_FIXTURE",
+        "providerId": "NOT_CLAIMED",
+        "transportId": "NOT_CLAIMED",
+        "configurationSha256": null,
+        "evidenceMode": "SOURCE_BOUND_LIMITATION"
+      },
+      "modes": [
+        "LIFECYCLE_ONLY"
+      ],
+      "claims": [],
+      "routes": [
+        {
+          "role": "coordinator",
+          "routeId": "openinterpreter:coordinator",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "worker",
+          "routeId": "openinterpreter:worker",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "check",
+          "routeId": "openinterpreter:check",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "auditor",
+          "routeId": "openinterpreter:auditor",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "retry",
+          "routeId": "openinterpreter:retry",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "compaction",
+          "routeId": "openinterpreter:compaction",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        },
+        {
+          "role": "closeout",
+          "routeId": "openinterpreter:closeout",
+          "state": "UNQUALIFIED",
+          "claimIds": [],
+          "reason": "Local closed-contract oracle; actual adapter routes and financial coverage require separate WS216-02 qualification.",
+          "sourceIds": [
+            "frozen-local-contract"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "frozen-local-contract",
+          "kind": "ALK_TEST",
+          "origin": "tasks/release-2-16/h04-adapter-profile-cases.json",
+          "artifact": {
+            "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+            "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+            "bytes": 180961
+          },
+          "versionApplicability": "Frozen expected version only; no runtime observation"
+        }
+      ],
+      "sourceCaseDispositions": [
+        {
+          "sourceCaseId": "AC01",
+          "sourceCaseSha256": "cbb3b9214f6b65c37db48b82043b80a517bc5fa3893a8b592add7102481ce4a4",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC02",
+          "sourceCaseSha256": "785e0161d33c3db1b0c92c2cb9e8420d12e523d133302d9fd67d7ea04d6cfdf4",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC03",
+          "sourceCaseSha256": "bb9a7ee9df94148ab93000a9dc527fbbbc85c950a4792c681a57f6848e54533e",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC04",
+          "sourceCaseSha256": "4d5c3aac7c5b06bbbd3c026fe32d2e475c1048172882d902f42c769d622ca70b",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC05",
+          "sourceCaseSha256": "048457d395177095e8ab38afe28a0bcd99bb6646f87b47080f56af5387c60bef",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC06",
+          "sourceCaseSha256": "9de67973ec7e4f93efed76d1052deef7a652d72a82240a05174d66f88b36f1a0",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC07",
+          "sourceCaseSha256": "a9e440a5ab84b3224bd4691794a97b8c60833d32ecd1f54594d0db1dfce178fa",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC08",
+          "sourceCaseSha256": "63faeb99a6b2f4fc03328216c948059fc9d67289f0f9c536464568d4d9c71929",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC09",
+          "sourceCaseSha256": "91ddc0ea04e6a8b077cfec21975e3fe8e2da19d792705f70b3db50b6030e665e",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC10",
+          "sourceCaseSha256": "28432a1ad7e4124decd20b06682b580312a58d2b1e8bf287b7c698fac4f275b1",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC11",
+          "sourceCaseSha256": "3f19ee5daa3a2786fc62ba60d5c8f00dd157f2879dd219341cf3241a50067751",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC12",
+          "sourceCaseSha256": "0681e679f743edfe2ddc91c03c059fd9495783014cd84736d53d322988d00044",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        },
+        {
+          "sourceCaseId": "AC13",
+          "sourceCaseSha256": "f0d0918991cd8754786cc351ea54879ad3c0413418e8147fd206e3683a9b381a",
+          "claimIds": [],
+          "routeIds": [
+            "openinterpreter:worker"
+          ],
+          "disposition": "UNQUALIFIED",
+          "reason": "Original case identity preserved for local refusal/shape tests; no qualified native disposition.",
+          "evidenceRefs": [
+            {
+              "path": "tasks/release-2-16/h04-adapter-profile-cases.json",
+              "sha256": "dada72cc300e3b54787b215a698e8c26853126ad59b5fd95593cf09ef8eab961",
+              "bytes": 180961
+            }
+          ]
+        }
+      ],
+      "completeFinancialRun": false
+    }
+  ]
+}

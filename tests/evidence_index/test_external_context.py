@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.evidence_index import (
     build_external_context_import_receipt,
     external_context_hints_from_receipts,
@@ -52,6 +52,21 @@ class ExternalContextImportTests(unittest.TestCase):
             self.assertIn("[REDACTED]", receipt["hints"][0]["text"])
             self.assertIn("[LOCAL_PATH]", receipt["hints"][0]["text"])
 
+    def test_partial_bearer_markers_are_sanitized_once_and_stable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "memory.md"
+            for value in ("[REDACTED]suffix", "prefix[REDACTED]", "[REDACTED][REDACTED]"):
+                with self.subTest(value=value):
+                    source.write_text("Bearer " + value, encoding="utf-8")
+                    receipt = build_external_context_import_receipt(source)
+                    self.assertEqual(receipt["hints"][0]["text"], "Bearer [REDACTED]")
+                    self.assertEqual(receipt["redaction"]["status"], "REDACTED")
+                    self.assertEqual(validate_external_context_import_receipt(receipt)["status"], "PASS")
+            source.write_text("Bearer [REDACTED]", encoding="utf-8")
+            receipt = build_external_context_import_receipt(source)
+            self.assertEqual(receipt["hints"][0]["text"], "Bearer [REDACTED]")
+            self.assertEqual(validate_external_context_import_receipt(receipt)["status"], "PASS")
+
     def test_external_context_normalizes_public_url_citation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "memory.md"
@@ -65,6 +80,31 @@ class ExternalContextImportTests(unittest.TestCase):
             self.assertEqual(receipt["source"]["citation"], "https://example.com/reference#Public")
             self.assertEqual(receipt["hints"][0]["citation"], receipt["source"]["citation"])
             self.assertEqual(validate_external_context_import_receipt(receipt)["status"], "PASS")
+
+    def test_external_context_rejects_raw_and_partial_redaction_even_with_valid_digest(self) -> None:
+        cases = (
+            ("API_KEY=secret-value", "external-context-secret-leakage"),
+            ("API_KEY=[REDACTED]suffix", "external-context-secret-leakage"),
+            ("API_KEY=prefix[REDACTED]", "external-context-secret-leakage"),
+            ("Bearer [REDACTED]suffix", "external-context-secret-leakage"),
+            ("Bearer prefix[REDACTED]", "external-context-secret-leakage"),
+            ("Bearer [REDACTED][REDACTED]", "external-context-secret-leakage"),
+            ("/" + "Users/local/private-note", "external-context-private-path-leakage"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "memory.md"
+            source.write_text("Safe optional context.", encoding="utf-8")
+            for text, expected in cases:
+                with self.subTest(text=text):
+                    receipt = build_external_context_import_receipt(source)
+                    receipt["hints"][0]["text"] = text
+                    receipt["receiptDigest"] = canonical_digest(
+                        {key: value for key, value in receipt.items() if key != "receiptDigest"}
+                    )
+                    result = validate_external_context_import_receipt(receipt)
+                    self.assertEqual(result["status"], "FAIL")
+                    self.assertIn(expected, {row["code"] for row in result["blockers"]})
+                    self.assertNotIn("external-context-digest-mismatch", {row["code"] for row in result["blockers"]})
 
     def test_external_context_hints_require_valid_non_proof_receipts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

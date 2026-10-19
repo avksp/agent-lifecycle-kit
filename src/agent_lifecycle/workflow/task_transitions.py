@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.ownership_paths import (
@@ -52,6 +54,7 @@ from agent_lifecycle.workflow.risk_execution_gate import validate_attempt_risk_u
 from agent_lifecycle.workflow.selectors import find_task, ready_tasks, unlock_ready_tasks
 from agent_lifecycle.workflow.state import now_iso
 from agent_lifecycle.workflow.task_start import (
+    _current_plan_envelope,
     clear_active_attempt_references,
     require_source_and_authorization,
 )
@@ -87,6 +90,7 @@ def commit_task_result(
     if task.get("status") != "RUNNING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not RUNNING")
     validate_attempt_history(state_path, state, task)
+    _require_current_a5_admission(state_path, state, task, operation_id)
     gate_receipts = validate_controller_gates(
         state_path,
         state,
@@ -137,8 +141,9 @@ def commit_task_result(
             task,
             receipt,
             budget_targets=_read_budget_targets(root, budget_targets_path),
+            repository_root=root,
         )
-        risk_validation = validate_attempt_risk_usage(task, receipt)
+        risk_validation = validate_attempt_risk_usage(task, receipt, limited_validation=validation)
         task["modelUsageReceipt"] = {
             **model_usage_identity,
             "operationId": receipt["operationId"],
@@ -152,6 +157,9 @@ def commit_task_result(
             },
             "riskValidation": risk_validation,
         }
+        if "usageAssurance" in validation:
+            task["modelUsageReceipt"]["usageAssurance"] = dict(validation["usageAssurance"])
+            task["sourceUsageAssurance"] = dict(validation["usageAssurance"])
     elif model_usage_receipt_path is not None:
         raise LifecycleError(
             "unexpected-model-usage-receipt",
@@ -167,6 +175,9 @@ def commit_task_result(
     record_gate_receipts(task, gate_receipts)
     if state.get("schemaVersion") != WORKFLOW_STATE_V4:
         state["phase"] = "STEP_REVIEW"
+    from agent_lifecycle.workflow.limited_usage import require_task_source_frontier_current
+
+    require_task_source_frontier_current(root, state, task)
     commit_state(
         state_path,
         state,
@@ -204,6 +215,7 @@ def accept_task(
     if task.get("status") != "VERIFYING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not VERIFYING")
     validate_attempt_history(state_path, state, task)
+    _require_current_a5_admission(state_path, state, task, operation_id)
     gate_receipts = validate_controller_gates(
         state_path,
         state,
@@ -248,6 +260,15 @@ def accept_task(
     task["ownershipReceipt"] = ownership_receipt
     if implementation_audit is not None:
         task["implementationAuditReport"] = implementation_audit
+    from agent_lifecycle.workflow.limited_usage import (
+        refresh_committed_source_assurance,
+        require_task_source_frontier_current,
+    )
+
+    source_assurance = refresh_committed_source_assurance(root, state, task)
+    if source_assurance is not None:
+        task["sourceUsageAssurance"] = source_assurance
+    require_task_source_frontier_current(root, state, task)
     _mark_task_accepted(state, task, review, identity, reason)
     commit_state(
         state_path,
@@ -294,6 +315,7 @@ def rework_task(
         task["result"],
         repository_root=root,
         require_freshness=task_result_freshness_required(state),
+        allow_non_accepting_outcome=state.get("schemaVersion") == WORKFLOW_STATE_V4,
     )
     expected_review_path = artifact_path(task, "review", int(task["attempt"]))
     if normalize_repo_path(review_path) != expected_review_path:
@@ -336,7 +358,7 @@ def rework_task(
             "finding IDs must exactly match the open findings in the REWORK evidence",
             {"missing": missing, "omitted": omitted, "available": sorted(available)},
         )
-    task.setdefault("attemptHistory", []).append(
+    _validated_cast(list[dict[str, Any]], task.setdefault("attemptHistory", [])).append(
         {
             "schemaVersion": "agent-task-attempt-history-entry.v1",
             "runId": state.get("runId"),
@@ -351,6 +373,11 @@ def rework_task(
             "implementationAuditReport": audit_identity,
             "findingIds": requested,
             "archivedAt": now_iso(),
+            **{
+                key: deepcopy(task[key])
+                for key in ("attemptStartedAt", "attemptDeadlineAt", "usageIterations", "usageTotals")
+                if key in task
+            },
         }
     )
     task["remediationFindingIds"] = requested
@@ -399,6 +426,51 @@ def _mutable_state(state_path: Path, operation_id: str, expected_revision: int) 
     return load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
 
 
+def _require_current_a5_admission(
+    state_path: Path,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    operation_id: str,
+) -> None:
+    from agent_lifecycle.workflow.events import event_log_path, read_events
+    from agent_lifecycle.workflow.immutable_input import (
+        is_unadopted_ordinary_context,
+        original_admission_from_events,
+        require_task_consumer_admission,
+    )
+
+    if is_unadopted_ordinary_context(state, task):
+        return
+    root = package_root(state_path, state)
+    manifest, lock, verification = _current_plan_envelope(root, state)
+    if verification.get("manifestHash") != state["planDigest"] or lock.get("manifestHash") != state["planDigest"]:
+        raise LifecycleError("a5-context-invalid", "A5 consumer plan identity is not verified")
+    registry = (
+        read_json_object(root / "profiles/immutable-input-adapter-capabilities.v1.json", label="A5 route boundaries")
+        if "immutableInput" in manifest
+        else None
+    )
+    require_task_consumer_admission(
+        manifest,
+        state,
+        task,
+        {
+            "runId": state["runId"],
+            "packageId": state["packageId"],
+            "taskId": task["id"],
+            "targetAttempt": task["attempt"],
+            "operationId": operation_id,
+            "stateRevision": state["stateRevision"],
+            "planDigest": state["planDigest"],
+            "sourceRevision": state["sourceRevision"],
+        },
+        registry=registry,
+        trusted_original_admission=original_admission_from_events(
+            state, task, list(read_events(event_log_path(state_path, state)))
+        ),
+    )
+
+
 def _read_budget_targets(root: Path, budget_targets_path: str | None) -> dict[str, Any] | None:
     if budget_targets_path is None:
         return None
@@ -431,7 +503,9 @@ def _mark_task_accepted(
     unlock_ready_tasks(state)
     if state.get("schemaVersion") == WORKFLOW_STATE_V4:
         required = [item for item in state.get("tasks", []) if item.get("required", True)]
-        state["phase"] = "FINAL_AUDIT" if all(item.get("status") == "ACCEPTED" for item in required) else "RUNNING"
+        active = any(item.get("status") in {"RUNNING", "VERIFYING"} for item in state.get("tasks", []))
+        complete = bool(required) and all(item.get("status") == "ACCEPTED" for item in required)
+        state["phase"] = "FINAL_AUDIT" if complete and not active else "RUNNING"
     else:
         state["phase"] = "RUNNING" if ready_tasks(state) else "FINAL_AUDIT"
 
@@ -500,17 +574,17 @@ def _validate_task_write_scope(
         }
     forbidden_roots = [
         normalize_authority_path(path, label="forbidden write path")
-        for path in policy.get("forbiddenWrites", [])
+        for path in [*policy.get("forbiddenWrites", []), *task.get("forbiddenWrites", [])]
         if isinstance(path, str)
     ]
     read_only_roots = [
         normalize_authority_path(path, label="read-only path")
-        for path in policy.get("readOnly", [])
+        for path in [*policy.get("readOnly", []), *task.get("readOnly", [])]
         if isinstance(path, str)
     ]
     lead_owned_roots = [
         normalize_authority_path(item["path"], label="lead-owned path")
-        for item in policy.get("leadOwned", [])
+        for item in [*policy.get("leadOwned", []), *task.get("leadOwned", [])]
         if isinstance(item, dict) and isinstance(item.get("path"), str)
     ]
     entries: list[dict[str, Any]] = []
@@ -653,7 +727,11 @@ def _validate_control_post_action(
         )
     pre_action = task.get("lifecycleControlPreAction")
     if not isinstance(pre_action, dict):
-        pre_action = evidence.get("preAction") if isinstance(evidence.get("preAction"), dict) else None
+        pre_action = (
+            _validated_cast(dict[str, Any], evidence.get("preAction"))
+            if isinstance(evidence.get("preAction"), dict)
+            else None
+        )
     gate = evaluate_post_action_gate(
         pre_action=pre_action or {},
         repository_root=root,
@@ -665,7 +743,9 @@ def _validate_control_post_action(
             "taskId": task.get("id"),
         },
         actual_status="PASS",
-        event=evidence.get("postEvent") if isinstance(evidence.get("postEvent"), dict) else None,
+        event=_validated_cast(dict[str, Any], evidence.get("postEvent"))
+        if isinstance(evidence.get("postEvent"), dict)
+        else None,
         policy=policy,
     )
     require_lifecycle_gate_pass(gate, gate_type="post-action")
@@ -685,7 +765,11 @@ def _require_control_task_acceptance(state: dict[str, Any], task: dict[str, Any]
         return
     post_action = task.get("lifecycleControlPostAction")
     if not isinstance(post_action, dict):
-        post_action = evidence.get("postAction") if isinstance(evidence.get("postAction"), dict) else None
+        post_action = (
+            _validated_cast(dict[str, Any], evidence.get("postAction"))
+            if isinstance(evidence.get("postAction"), dict)
+            else None
+        )
     if (
         not isinstance(post_action, dict)
         or post_action.get("status") != "PASS"

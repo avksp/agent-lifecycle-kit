@@ -95,6 +95,20 @@ class SecurityAnalysisWorkflowTests(unittest.TestCase):
                 reviewer_id="security-reviewer",
                 evidence_ids=["EV93-REVIEW"],
             )
+            # The advisory packet producer does not bind execution lineage.
+            # Bind this fixture to its actual current task before exercising
+            # the strict wrapper consumer; negative missing-lineage tests stay.
+            current = json.loads(Path(bundle["statePath"]).read_text(encoding="utf-8"))
+            assignment["assignment"]["subject"].update(
+                runId=current["runId"], taskId="WS-01", attempt=current["tasks"][0]["attempt"],
+                planDigest=current["planDigest"],
+            )
+            assignment["assignment"]["assignmentDigest"] = canonical_digest(
+                {key: value for key, value in assignment["assignment"].items() if key != "assignmentDigest"}
+            )
+            assignment["packetDigest"] = canonical_digest(
+                {key: value for key, value in assignment.items() if key != "packetDigest"}
+            )
             write_json_create(root / "work/review/assignment.json", assignment)
             audit = build_security_analysis_audit(
                 run_id="run",

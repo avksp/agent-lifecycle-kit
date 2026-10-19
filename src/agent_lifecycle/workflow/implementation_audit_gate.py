@@ -4,10 +4,22 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.canonical import sha256_hex as sha256_hex
+from agent_lifecycle.contracts.evidence_receipt_schemas import (
+    classify_evidence_candidate as classify_evidence_candidate,
+)
+from agent_lifecycle.contracts.evidence_receipt_schemas import (
+    load_evidence_receipt_bytes as load_evidence_receipt_bytes,
+)
+from agent_lifecycle.contracts.evidence_receipt_schemas import (
+    validate_expected_evidence,
+)
 from agent_lifecycle.contracts.independent_evidence_schemas import validate_independence_requirement
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.paths import read_stable_repository_file as read_stable_repository_file
 from agent_lifecycle.contracts.security_analysis_schemas import SECURITY_ANALYSIS_AUDIT_SCHEMA
 from agent_lifecycle.quality.security_analysis import (
     security_analysis_high_severity,
@@ -16,6 +28,27 @@ from agent_lifecycle.quality.security_analysis import (
 )
 from agent_lifecycle.review_mesh.contracts import validate_review_mesh_assignment
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
+from agent_lifecycle.workflow.audit_evidence import (
+    _current_evidence_component as _current_evidence_component,
+)
+from agent_lifecycle.workflow.audit_evidence import (
+    _current_git_commit as _current_git_commit,
+)
+from agent_lifecycle.workflow.audit_evidence import (
+    _expected_task_evidence_subject as _expected_task_evidence_subject,
+)
+from agent_lifecycle.workflow.audit_evidence import (
+    _path_inventory_digest as _path_inventory_digest,
+)
+from agent_lifecycle.workflow.audit_evidence import (
+    _validate_command_inventory as _validate_command_inventory,
+)
+from agent_lifecycle.workflow.audit_evidence import (
+    _validate_evidence_references as _validate_evidence_references,
+)
+from agent_lifecycle.workflow.audit_evidence import (
+    validate_task_evidence_paths,
+)
 
 
 def task_implementation_audit_required(
@@ -108,6 +141,7 @@ def validate_task_implementation_audit_artifact(
         report_identity=identity,
     )
     require_implementation_audit_accepted(validation, report)
+    _revalidate_task_evidence_report(state_path, state, task, report)
     _validate_security_verification_artifact(state_path, state, task, report)
     return {
         **identity,
@@ -217,6 +251,146 @@ def missing_required_implementation_audits(state_path: Path, state: dict[str, An
         ):
             missing.append(str(task.get("id")))
     return missing
+
+
+def _revalidate_task_evidence_report(
+    state_path: Path,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    report: dict[str, Any],
+) -> None:
+    manifest = load_state_manifest(state_path, state)
+    if manifest is None:
+        raise LifecycleError("evidence-contract-invalid", "current plan manifest is unavailable")
+    acceptance = manifest.get("acceptance")
+    entries = acceptance.get("evidence", []) if isinstance(acceptance, dict) else []
+    if not isinstance(entries, list) or not any(
+        isinstance(item, dict) and isinstance(item.get("validation"), dict) for item in entries
+    ):
+        return
+    if manifest.get("status") != "FROZEN" or canonical_digest(manifest) != state.get("planDigest"):
+        raise LifecycleError("evidence-contract-invalid", "frozen plan does not match current state")
+    root = package_root(state_path, state)
+    result_summary = report.get("result")
+    evidence_summary = report.get("evidence")
+    if not isinstance(result_summary, dict) or not isinstance(evidence_summary, dict):
+        raise LifecycleError("evidence-contract-invalid", "audit evidence summary is missing")
+    result_path = normalize_repo_path(_validated_cast(str, result_summary.get("path")), label="task result")
+    result = read_json_object(root / result_path, label="task result")
+    identity = artifact_identity(root, result_path, result)
+    if any(result_summary.get(key) != identity[key] for key in ("path", "sha256", "bytes")):
+        raise LifecycleError("evidence-subject-mismatch", "audit result identity is stale")
+    from agent_lifecycle.workflow.reviews import validate_task_result
+
+    snapshot = validate_task_result(state, task, result, identity, repository_root=root, require_freshness=True)
+    paths = evidence_summary.get("suppliedEvidence")
+    if not isinstance(paths, list) or any(
+        not isinstance(item, dict) or not isinstance(item.get("path"), str) for item in paths
+    ):
+        raise LifecycleError("evidence-contract-invalid", "audit evidence paths are invalid")
+    current = validate_task_evidence_paths(
+        root, manifest, state, task, identity, snapshot, [item["path"] for item in paths]
+    )
+    if current["missingEvidenceIds"] or current != evidence_summary:
+        raise LifecycleError("evidence-contract-invalid", "audit evidence summary is stale or incomplete")
+
+
+def validate_final_task_evidence_reports(
+    state_path: Path,
+    state: dict[str, Any],
+    audit: dict[str, Any],
+    *,
+    manifest: dict[str, Any] | None = None,
+) -> None:
+    """Revalidate typed accepted-task receipts at the final accepting boundary."""
+    selected = manifest if manifest is not None else load_state_manifest(state_path, state)
+    if selected is None:
+        raise LifecycleError("evidence-contract-invalid", "final audit plan manifest is unavailable")
+    acceptance = selected.get("acceptance")
+    entries = acceptance.get("evidence") if isinstance(acceptance, dict) else None
+    if not isinstance(entries, list):
+        return
+    typed_ids = {
+        item["id"]
+        for item in entries
+        if isinstance(item, dict)
+        and isinstance(item.get("id"), str)
+        and isinstance(item.get("validation"), dict)
+        and validate_expected_evidence(item["validation"])["scope"] == "TASK"
+    }
+    if not typed_ids:
+        return
+    if selected.get("status") != "FROZEN" or canonical_digest(selected) != state.get("planDigest"):
+        raise LifecycleError("evidence-contract-invalid", "typed final audit plan is stale")
+    workstreams = selected.get("workstreams")
+    if not isinstance(workstreams, list):
+        raise LifecycleError("evidence-contract-invalid", "typed workstream inventory is unavailable")
+    frozen = {item["id"]: item for item in workstreams if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    if len(frozen) != len(workstreams):
+        raise LifecycleError("evidence-contract-invalid", "typed workstream IDs are ambiguous")
+    expected = {}
+    for task in state.get("tasks", []):
+        if not isinstance(task, dict) or task.get("status") != "ACCEPTED":
+            continue
+        task_id = task.get("id")
+        owner = frozen.get(task_id)
+        if owner is None:
+            raise LifecycleError("evidence-contract-invalid", "accepted task is outside frozen plan")
+        required = owner.get("evidenceIds")
+        if not isinstance(required, list) or any(not isinstance(item, str) for item in required):
+            raise LifecycleError("evidence-contract-invalid", "frozen task evidence inventory is invalid")
+        if typed_ids.intersection(required):
+            if task.get("evidenceIds") != required or task_id in expected:
+                raise LifecycleError("evidence-contract-invalid", "typed task evidence inventory changed")
+            expected[task_id] = task
+    for owner in frozen.values():
+        ids = owner.get("evidenceIds", [])
+        if not isinstance(ids, list) or any(not isinstance(item, str) for item in ids):
+            raise LifecycleError("evidence-contract-invalid", "frozen evidence IDs are invalid")
+        if owner.get("required", True) and typed_ids.intersection(ids) and owner["id"] not in expected:
+            raise LifecycleError("evidence-contract-invalid", "required typed task is not accepted")
+    reports = audit.get("reports")
+    if not isinstance(reports, list) or audit.get("missingTaskIds") != []:
+        raise LifecycleError("evidence-contract-invalid", "final audit report inventory is incomplete")
+    seen_ids, seen_paths = set(), set()
+    for item in reports:
+        if (
+            not isinstance(item, dict)
+            or not isinstance(item.get("path"), str)
+            or not isinstance(item.get("taskId"), str)
+        ):
+            raise LifecycleError("evidence-contract-invalid", "final audit report identity is invalid")
+        task_id, path = item.get("taskId"), item["path"]
+        if task_id in seen_ids or path in seen_paths:
+            raise LifecycleError("evidence-id-duplicate", "final audit report is duplicated")
+        seen_ids.add(task_id)
+        seen_paths.add(path)
+        task = expected.get(task_id)
+        if task is None:
+            accepted_other = any(
+                isinstance(t, dict) and t.get("id") == task_id and t.get("status") == "ACCEPTED"
+                for t in state.get("tasks", [])
+            )
+            if task_id not in frozen or not accepted_other or typed_ids.intersection(frozen[task_id]["evidenceIds"]):
+                raise LifecycleError("evidence-contract-invalid", "final report has no accepted frozen task")
+            continue
+        accepted = task.get("implementationAuditReport")
+        if not isinstance(accepted, dict) or any(
+            accepted.get(key) != item.get(key) for key in ("path", "sha256", "bytes", "taskId", "attempt", "verdict")
+        ):
+            raise LifecycleError("evidence-contract-invalid", "final report differs from accepted task audit")
+        current = validate_task_implementation_audit_artifact(state_path, state, task, path)
+        if any(
+            current.get(key) != item.get(key) for key in ("path", "sha256", "bytes", "taskId", "attempt", "verdict")
+        ):
+            raise LifecycleError("evidence-contract-invalid", "final report evidence is stale")
+        summary = item.get("validation")
+        if not isinstance(summary, dict) or any(
+            summary.get(key) != current["validation"][key] for key in ("status", "validationDigest")
+        ):
+            raise LifecycleError("evidence-contract-invalid", "final report validation has changed")
+    if set(expected) - seen_ids:
+        raise LifecycleError("evidence-contract-invalid", "typed accepted task report is missing")
 
 
 def load_state_manifest(state_path: Path, state: dict[str, Any]) -> dict[str, Any] | None:
@@ -438,6 +612,19 @@ def _security_assignment_payload(
             "security-analysis-verification-required",
             "security verification Review Mesh assignment has no exact source revision",
         )
+    expected_lineage = {
+        "runId": state.get("runId"),
+        "taskId": task.get("id"),
+        "attempt": task.get("attempt"),
+        "planDigest": state.get("planDigest"),
+    }
+    for field, expected in expected_lineage.items():
+        value = subject.get(field)
+        if type(value) is not type(expected) or value != expected:
+            raise LifecycleError(
+                "security-analysis-verification-required",
+                f"security verification Review Mesh assignment {field} mismatch",
+            )
     reviewer_value = nested.get("reviewer")
     reviewer: dict[str, Any] = reviewer_value if isinstance(reviewer_value, dict) else {}
     security = {

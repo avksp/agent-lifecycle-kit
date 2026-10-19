@@ -66,7 +66,7 @@
       "limits": {
         "maxRenderedEnvelopeTokens": 12288,
         "reservedOutputTokens": 3072,
-        "maxActivePacketTokens": 5000,
+        "maxActivePacketTokens": 8192,
         "maxStateSummaryTokens": 1800,
         "maxEvidenceSummaryTokens": 1500,
         "maxToolOutputTokens": 1024,

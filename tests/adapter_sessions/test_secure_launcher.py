@@ -18,6 +18,39 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class SecureAdapterLauncherTests(unittest.TestCase):
+    def test_ordinary_stdin_keeps_portable_writer_and_patch_point(self) -> None:
+        import os
+        from agent_lifecycle.adapter_sessions import process as process_module
+
+        with patch.object(process_module.select, "select", side_effect=OSError("pipe select unavailable")), \
+             patch.object(process_module, "_write_stdin", wraps=process_module._write_stdin) as writer:
+            result = run_process(
+                [sys.executable, "-c", "import sys; print(len(sys.stdin.buffer.read()))"],
+                env=dict(os.environ), timeout_seconds=3, stdin_text="portable input",
+            )
+        self.assertEqual(result["status"], "PASS", result)
+        self.assertEqual(result["stdout"].strip(), str(len("portable input")))
+        writer.assert_called_once()
+        self.assertIsNone(result.get("inputObservation"))
+
+    def test_ordinary_stalled_stdin_deadline_keeps_unknown_measurement(self) -> None:
+        import os
+        import time
+
+        started = time.monotonic()
+        result = run_process(
+            [sys.executable, "-c", "import time; time.sleep(20)"], env=dict(os.environ),
+            timeout_seconds=0.2, cleanup_grace_seconds=0.2,
+            stdin_text="x" * 2_000_000, max_input_bytes=3_000_000,
+        )
+        self.assertNotEqual(result["status"], "PASS")
+        self.assertTrue(result["timedOut"])
+        self.assertLess(time.monotonic() - started, 3)
+        self.assertEqual(result["cleanup"]["status"], "PASS")
+        self.assertEqual(result["observerDisposition"], "NOT_REQUESTED")
+        self.assertIsNone(result["inputObservation"]["acceptedBytes"])
+        self.assertEqual(result["inputObservation"]["measurementStatus"], "UNAVAILABLE")
+
     def test_supported_profile_is_blocked_before_process_creation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             marker = Path(tmp) / "launched.txt"
@@ -101,6 +134,7 @@ class SecureAdapterLauncherTests(unittest.TestCase):
             risk_profile = _risk_profile(manifest, state)
             result = {
                 "status": "PASS",
+                "processStarted": True,
                 "exitCode": 0,
                 "timedOut": False,
                 "stdoutTail": "ready",
@@ -304,7 +338,7 @@ def _manifest() -> dict:
         "schemaVersion": "agent-plan-manifest.v1",
         "status": "FROZEN",
         "planRevision": 1,
-        "package": {"id": "package"},
+        "package": {"id": "package", "planArtifactRoot": ".", "artifactRoot": "work"},
         "specification": {
             "tier": "S2",
             "tierResolutionRequest": {
@@ -323,7 +357,9 @@ def _state(manifest: dict) -> dict:
         "planRevision": 1,
         "planDigest": canonical_digest(manifest),
         "sourceRevision": "source",
-        "tasks": [{"id": "WS-01"}],
+        "stateRevision": 1,
+        "phase": "RUNNING",
+        "tasks": [{"id": "WS-01", "status": "RUNNING", "attempt": 1}],
     }
 
 

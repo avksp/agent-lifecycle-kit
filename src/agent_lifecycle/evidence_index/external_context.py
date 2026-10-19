@@ -6,12 +6,13 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex
 from agent_lifecycle.contracts.redaction import (
     LOCAL_PATH_REDACTION,
+    REDACTED_VALUE,
     contains_local_absolute_path,
-    redact_text,
     redact_text_with_stats,
 )
 from agent_lifecycle.contracts.token_estimation import estimate_tokens
@@ -22,6 +23,7 @@ EXTERNAL_CONTEXT_VALIDATION_SCHEMA = "agent-external-context-import-validation.v
 DEFAULT_MAX_INPUT_BYTES = 32768
 DEFAULT_TARGET_TOKENS = 2048
 DEFAULT_MAX_HINT_CHARS = 1400
+
 
 def build_external_context_import_receipt(
     source_path: Path,
@@ -70,7 +72,10 @@ def build_external_context_import_receipt(
             if sanitized:
                 hints.append(
                     {
-                        "hintId": f"external-context-{canonical_digest({'label': label, 'digest': source['sourceDigest']})[:16]}",
+                        "hintId": (
+                            "external-context-"
+                            + canonical_digest({"label": label, "digest": source["sourceDigest"]})[:16]
+                        ),
                         "contextRole": "optional-external-context",
                         "sourceOfTruth": False,
                         "proof": False,
@@ -83,8 +88,10 @@ def build_external_context_import_receipt(
     except UnicodeDecodeError:
         blockers.append({"code": "external-context-source-not-utf8", "sourceLabel": label})
     except OSError as exc:
-        blockers.append({"code": "external-context-source-read-failed", "sourceLabel": label, "reason": exc.__class__.__name__})
-    body = {
+        blockers.append(
+            {"code": "external-context-source-read-failed", "sourceLabel": label, "reason": exc.__class__.__name__}
+        )
+    body: dict[str, Any] = {
         "schemaVersion": EXTERNAL_CONTEXT_RECEIPT_SCHEMA,
         "status": "PASS",
         "sourceOfTruth": False,
@@ -140,7 +147,7 @@ def validate_external_context_import_receipt(receipt: dict[str, Any]) -> dict[st
     for field in ("modelCallsStarted", "networkCallsStarted", "providerApiCallsStarted", "productionPromotionClaimed"):
         if receipt.get(field) is not False:
             blockers.append({"code": "external-context-forbidden-claim", "field": field})
-    source = receipt.get("source") if isinstance(receipt.get("source"), dict) else {}
+    source = _validated_cast(dict[str, Any], receipt.get("source")) if isinstance(receipt.get("source"), dict) else {}
     if source.get("sourcePathStored") is not False:
         blockers.append({"code": "external-context-source-path-stored"})
     hints = receipt.get("hints")
@@ -159,7 +166,7 @@ def validate_external_context_import_receipt(receipt: dict[str, Any]) -> dict[st
     expected_digest = canonical_digest({key: value for key, value in receipt.items() if key != "receiptDigest"})
     if receipt.get("receiptDigest") != expected_digest:
         blockers.append({"code": "external-context-digest-mismatch"})
-    body = {
+    body: dict[str, Any] = {
         "schemaVersion": EXTERNAL_CONTEXT_VALIDATION_SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
         "hintCount": len(hints),
@@ -175,7 +182,9 @@ def external_context_hints_from_receipts(receipts: list[dict[str, Any]]) -> list
     hints: list[dict[str, Any]] = []
     for receipt in receipts:
         require_external_context_import_pass(validate_external_context_import_receipt(receipt))
-        source = receipt.get("source") if isinstance(receipt.get("source"), dict) else {}
+        source = (
+            _validated_cast(dict[str, Any], receipt.get("source")) if isinstance(receipt.get("source"), dict) else {}
+        )
         for hint in receipt.get("hints", []):
             if not isinstance(hint, dict):
                 continue
@@ -196,7 +205,9 @@ def external_context_hints_from_receipts(receipts: list[dict[str, Any]]) -> list
 
 def require_external_context_import_pass(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("status") != "PASS":
-        raise LifecycleError("external-context-import-failed", "external context import validation failed", {"validation": payload})
+        raise LifecycleError(
+            "external-context-import-failed", "external context import validation failed", {"validation": payload}
+        )
     return payload
 
 
@@ -211,8 +222,7 @@ def _decode_context_text(data: bytes) -> str:
 
 def _sanitize_text(text: str, *, max_chars: int) -> tuple[str, dict[str, Any]]:
     redaction = _empty_redaction()
-    sanitized, _changed, stats = redact_text_with_stats(text)
-    sanitized = sanitized.replace(LOCAL_PATH_REDACTION, "[LOCAL_PATH]").replace("<redacted>", "[REDACTED]")
+    sanitized, stats = _external_redaction(text)
     redaction["localPathsRedacted"] = stats["localPathsRedacted"]
     redaction["secretLikeMarkersRedacted"] = stats["secretLikeMarkersRedacted"]
     sanitized = re.sub(r"\s+", " ", sanitized).strip()
@@ -245,7 +255,16 @@ def _validate_hint(hint: Any, index: int, blockers: list[dict[str, Any]]) -> Non
     if not isinstance(hint, dict):
         blockers.append({"code": "external-context-hint-invalid", "index": index})
         return
-    for key in ("hintId", "contextRole", "sourceOfTruth", "proof", "citation", "sourceDigest", "redactionStatus", "text"):
+    for key in (
+        "hintId",
+        "contextRole",
+        "sourceOfTruth",
+        "proof",
+        "citation",
+        "sourceDigest",
+        "redactionStatus",
+        "text",
+    ):
         if key not in hint:
             blockers.append({"code": "external-context-hint-field-missing", "index": index, "field": key})
     if hint.get("contextRole") != "optional-external-context":
@@ -257,8 +276,26 @@ def _validate_hint(hint: Any, index: int, blockers: list[dict[str, Any]]) -> Non
 
 
 def _contains_secret_like(value: str) -> bool:
-    sanitized, changed = redact_text(value)
-    return changed and sanitized != value
+    sanitized, _stats = _external_redaction(value)
+    return sanitized != value
+
+
+def _external_redaction(value: str) -> tuple[str, dict[str, int]]:
+    # Inspect complete values in the shared canonical representation. A suffix
+    # attached to a display marker is still part of the sensitive value.
+    canonical = value.replace("[LOCAL_PATH]", LOCAL_PATH_REDACTION).replace("[REDACTED]", REDACTED_VALUE)
+    # A whole placeholder is safe. A credential prefix/suffix attached to it
+    # remains sensitive, including forms the shared bare-token regex cannot see.
+    canonical, partial_markers = re.subn(
+        r"(?i)(\bBearer\s+)(?:[^\s,;}\]\"']+<redacted>[^\s,;}\]\"']*"
+        r"|<redacted>[^\s,;}\]\"']+)",
+        lambda match: match.group(1) + REDACTED_VALUE,
+        canonical,
+    )
+    sanitized, _changed, stats = redact_text_with_stats(canonical)
+    stats["secretLikeMarkersRedacted"] += partial_markers
+    display = sanitized.replace(LOCAL_PATH_REDACTION, "[LOCAL_PATH]").replace(REDACTED_VALUE, "[REDACTED]")
+    return display, stats
 
 
 def _positive_int(value: int, field: str) -> None:
@@ -268,6 +305,5 @@ def _positive_int(value: int, field: str) -> None:
 
 def _safe_label(value: str) -> str:
     label = re.sub(r"\s+", " ", value.strip())
-    label, _changed, _stats = redact_text_with_stats(label)
-    label = label.replace(LOCAL_PATH_REDACTION, "[LOCAL_PATH]").replace("<redacted>", "[REDACTED]")
+    label, _stats = _external_redaction(label)
     return label[:120] or "external-context"

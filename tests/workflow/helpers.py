@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from datetime import UTC, datetime
@@ -112,10 +113,28 @@ def _initialize_managed_git_state(root: Path, state_path: Path, *, max_attempts:
     state["sourceRevision"] = revision
     state["budgets"]["remediationMode"] = "ask"
     state["budgets"]["maxTaskAttempts"] = max_attempts
+    plan_root = "work/managed-fixture"
+    manifest = {
+        "schemaVersion": "agent-plan-manifest.v1", "status": "FROZEN",
+        "planRevision": state["planRevision"],
+        "package": {"id": state["packageId"], "planArtifactRoot": plan_root, "artifactRoot": "work"},
+        "workstreams": [
+            {"id": task["id"], "owner": task["owner"], "writes": task["writes"],
+             "dependsOn": task["dependsOn"]} for task in state["tasks"]
+        ],
+    }
+    state["planDigest"] = canonical_digest(manifest)
+    state["manifestPath"] = plan_root + "/plan.manifest.json"
+    write_json_create(root / state["manifestPath"], manifest)
+    lock_path = root / plan_root / "plan.lock.json"
+    write_json_create(lock_path, {
+        "schemaVersion": "agent-plan-lock.v1", "planRevision": state["planRevision"],
+        "manifestHash": state["planDigest"],
+    })
     state["packetSet"] = {
-        "manifestDigest": "0" * 64,
+        "manifestDigest": state["planDigest"],
         "packetSetHash": "a" * 64,
-        "planLockSha256": "b" * 64,
+        "planLockSha256": hashlib.sha256(lock_path.read_bytes()).hexdigest(),
     }
     state["tasks"][0].setdefault("attemptHistory", [])
     state["tasks"][0].setdefault("remediationFindingIds", [])
@@ -131,6 +150,7 @@ def _fresh_result(root: Path, state_path: Path, *, attempt: int) -> dict:
     evidence = capture_task_change_set(root, baseline=state["sourceRevision"], write_paths=task.get("writes", []))
     result = _result(attempt=attempt)
     result["sourceRevision"] = state["sourceRevision"]
+    result["planDigest"] = state["planDigest"]
     result["changedFiles"] = evidence["changedFiles"]
     result["changeSet"] = {
         "schemaVersion": "agent-task-change-set-claim.v1",
@@ -369,14 +389,14 @@ def _result(*, attempt: int) -> dict:
     }
 
 
-def _review(*, attempt: int, result_hash: str) -> dict:
+def _review(*, attempt: int, result_hash: str, plan_digest: str = "0" * 64) -> dict:
     return {
         "schemaVersion": "agent-task-review.v2",
         "reviewId": "review-1",
         "runId": "run",
         "taskId": "WS-01",
         "attempt": attempt,
-        "planDigest": "0" * 64,
+        "planDigest": plan_digest,
         "resultHash": result_hash,
         "taskPacketHash": "1" * 64,
         "traceDigest": "2" * 64,

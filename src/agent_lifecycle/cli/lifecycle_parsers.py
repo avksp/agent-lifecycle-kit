@@ -11,6 +11,7 @@ from agent_lifecycle.cli.workflow_task_parsers import add_strategy_adoption_args
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
 from agent_lifecycle.resources import builtin_profile_path
 from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
+from agent_lifecycle.workflow.closing_window import ORDINARY_OPERATOR_CLAIM, PROTECTED_OPERATOR_CLAIM
 
 _add_project_parser = add_project_parser
 
@@ -18,6 +19,14 @@ _BASELINE_PROFILE = builtin_profile_path("lifecycle-baselines.v1.json")
 _MODEL_ROUTING_PROFILE = builtin_profile_path("model-routing-profile.v1.json")
 _RISK_POLICY = builtin_profile_path("risk-execution-policy.v1.json")
 _SMALL_CONTEXT_PROFILE = builtin_profile_path("small-context-profile.v1.json")
+
+
+def _add_operator_claim_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--requested-claim",
+        choices=[ORDINARY_OPERATOR_CLAIM, PROTECTED_OPERATOR_CLAIM],
+        help="request an ordinary or protected operator route; unavailable protected routes refuse",
+    )
 
 
 def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -72,6 +81,17 @@ def _add_host_launch_parser(subparsers: argparse._SubParsersAction[argparse.Argu
         child = host_launch_sub.add_parser(command)
         child.add_argument("--profile", required=True)
         child.add_argument("--out")
+        if command == "preflight":
+            child.add_argument("--accounting-request", help="refuse unqualified accounting requests before probing")
+    accounting = host_launch_sub.add_parser("accounting-check", help="check accounting input; pending evidence refuses")
+    for flag in ("profile", "request", "expectation-digest", "plan-digest", "candidate-digest"):
+        accounting.add_argument("--" + flag, required=True)
+    accounting.add_argument("--out")
+    qualification = host_launch_sub.add_parser("qualification-check", help="check staged source-only qualification")
+    qualification.add_argument("--profiles-root", required=True)
+    qualification.add_argument("--adapter", required=True)
+    qualification.add_argument("--request", required=True)
+    qualification.add_argument("--out")
 
 
 def _add_diagnose_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -521,6 +541,7 @@ def _add_workflow_continue_parser(
         help="project or explicitly apply existing authoritative workflow transitions",
     )
     workflow_continue.add_argument("--state", required=True)
+    _add_operator_claim_argument(workflow_continue)
     workflow_continue.add_argument("--manifest", required=True)
     workflow_continue.add_argument("--lock")
     workflow_continue.add_argument("--operation-id")
@@ -564,6 +585,13 @@ def _add_workflow_continue_parser(
 def _add_workflow_state_parsers(
     workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser],
 ) -> None:
+    maintenance = workflow_sub.add_parser("maintenance", help="collect eligible closed-run raw details")
+    maintenance.add_argument("--authority", required=True)
+    maintenance.add_argument("--authority-sha", required=True)
+    maintenance.add_argument("--candidate-limit", required=True, type=int)
+    maintenance.add_argument("--deadline", required=True)
+    maintenance.add_argument("--journal", dest="maintenance_journal_override", help=argparse.SUPPRESS)
+    maintenance.add_argument("--private-root", dest="maintenance_root_override", help=argparse.SUPPRESS)
     workflow_init = workflow_sub.add_parser("init")
     workflow_init.add_argument("--state", required=True)
     workflow_init.add_argument("--run-id", required=True)
@@ -601,6 +629,7 @@ def _add_workflow_state_parsers(
     _add_workflow_continue_parser(workflow_sub)
     workflow_adopt = workflow_sub.add_parser("adopt-plan")
     workflow_adopt.add_argument("--state", required=True)
+    _add_operator_claim_argument(workflow_adopt)
     workflow_adopt.add_argument("--manifest", required=True)
     workflow_adopt.add_argument("--operation-id", required=True)
     workflow_adopt.add_argument("--expected-revision", required=True, type=int)
@@ -708,6 +737,7 @@ def _add_workflow_review_parsers(
     add_progress_hook_args(workflow_final_outcome)
     workflow_finalize = workflow_sub.add_parser("finalize")
     workflow_finalize.add_argument("--state", required=True)
+    _add_operator_claim_argument(workflow_finalize)
     workflow_finalize.add_argument("--operation-id", required=True)
     workflow_finalize.add_argument("--expected-revision", required=True, type=int)
     workflow_finalize.add_argument("--source-revision", required=True)

@@ -252,9 +252,7 @@ def validate_capability_level_claims(
                     }
                 )
         if qualified in {"OBSERVED", "ENFORCED"} and item.get("qualificationStatus") != "QUALIFIED":
-            operation_blockers.append(
-                {"code": "capability-level-qualification-required", "operation": name}
-            )
+            operation_blockers.append({"code": "capability-level-qualification-required", "operation": name})
         if operation_blockers:
             blockers.extend(operation_blockers)
             levels[name] = "UNAVAILABLE"

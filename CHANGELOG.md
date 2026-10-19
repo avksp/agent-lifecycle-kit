@@ -4,6 +4,22 @@
 
 - No changes yet.
 
+## 2.16.0 - 2026-10-16
+
+- Add persistent cumulative task/run accounting with admission, settlement,
+  recovery, deduplication, protected closeout allocation and conservative
+  unknown-usage holds across workers, validators, auditors, retries and lead.
+- Keep valid results and previously spent resources after overruns; bind
+  finalization/recovery and independent evidence to the current workflow.
+- Resolve H04, immutable input and protected-closing modes by verified host
+  capability. Unsupported guarantees refuse; source-only adapter profiles
+  do not claim complete native or financial host coverage.
+- Retain raw details until full financial closure plus 30 days, with bounded
+  authority-pinned hourly maintenance and explicit pending/overdue outcomes;
+  preserve totals, closure summaries and deduplication identities.
+- Complete evidence/provenance/import checks and publish matching package,
+  plugin, marketplace and EN/RU installation surfaces for 2.16.0.
+
 ## 2.15.0 - 2026-09-13
 
 - Reject duplicate JSON keys without echoing unsafe input; retain canonical

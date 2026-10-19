@@ -7,19 +7,16 @@ from typing import Any
 
 from agent_lifecycle.context.profiles import WINDOWS
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.model_classes import (
+    ALLOWED_MODEL_CLASSES,
+)
+from agent_lifecycle.contracts.model_classes import (
+    CRITICAL_REVIEW_CLASSES as CRITICAL_REVIEW_CLASSES,
+)
+from agent_lifecycle.contracts.model_classes import (
+    LOCAL_MODEL_CLASSES as LOCAL_MODEL_CLASSES,
+)
 
-ALLOWED_MODEL_CLASSES = {
-    "no-model",
-    "budget",
-    "local-compact",
-    "standard-code",
-    "local-standard-code",
-    "strong-reasoning",
-    "local-strong-review",
-    "specialist-review",
-}
-LOCAL_MODEL_CLASSES = {"local-compact", "local-standard-code", "local-strong-review"}
-CRITICAL_REVIEW_CLASSES = {"strong-reasoning", "local-strong-review", "specialist-review"}
 ROUTING_POLICIES = {"cost-optimized", "balanced", "quality-first", "local-only", "manual"}
 SDD_TIERS = {"S0", "S1", "S2"}
 JSON_RELIABILITY = {"strict", "best-effort", "unsupported"}
@@ -178,7 +175,9 @@ def _validate_binding(model_class: str, binding: dict[str, Any]) -> dict[str, An
     disallowed_risks = _optional_string_list(binding, "disallowedForRisks")
     review_strategy = binding.get("reviewStrategy")
     if review_strategy is not None and not isinstance(review_strategy, str):
-        raise LifecycleError("invalid-host-model-profile", "reviewStrategy must be a string", {"modelClass": model_class})
+        raise LifecycleError(
+            "invalid-host-model-profile", "reviewStrategy must be a string", {"modelClass": model_class}
+        )
     return {
         "contextWindow": context_window,
         "capabilities": capabilities,
@@ -236,8 +235,15 @@ def _validate_token_budgets(value: Any) -> None:
         if tier not in SDD_TIERS or not isinstance(budgets, dict):
             raise LifecycleError("invalid-model-routing-profile", "tokenBudgets keys must be SDD tiers")
         for budget_class, amount in budgets.items():
-            if not isinstance(budget_class, str) or not isinstance(amount, int) or isinstance(amount, bool) or amount < 0:
-                raise LifecycleError("invalid-model-routing-profile", "token budget values must be non-negative integers")
+            if (
+                not isinstance(budget_class, str)
+                or not isinstance(amount, int)
+                or isinstance(amount, bool)
+                or amount < 0
+            ):
+                raise LifecycleError(
+                    "invalid-model-routing-profile", "token budget values must be non-negative integers"
+                )
 
 
 def _validate_policy_presets(value: Any) -> None:
@@ -265,10 +271,14 @@ def _validate_progressive_escalation(value: Any) -> None:
         "stronger-review",
         "optional-cross-check",
     ]:
-        raise LifecycleError("invalid-model-routing-profile", "progressiveEscalation.ladder must use the canonical order")
+        raise LifecycleError(
+            "invalid-model-routing-profile", "progressiveEscalation.ladder must use the canonical order"
+        )
     classes = value.get("failureClasses", [])
     if not isinstance(classes, list) or sorted(classes) != sorted(FAILURE_CLASSES):
-        raise LifecycleError("invalid-model-routing-profile", "progressiveEscalation.failureClasses must list neutral failure classes")
+        raise LifecycleError(
+            "invalid-model-routing-profile", "progressiveEscalation.failureClasses must list neutral failure classes"
+        )
     triggers = value.get("evidenceTriggers", [])
     if not isinstance(triggers, list) or any(not isinstance(item, str) or not item for item in triggers):
         raise LifecycleError("invalid-model-routing-profile", "progressiveEscalation.evidenceTriggers must be strings")
