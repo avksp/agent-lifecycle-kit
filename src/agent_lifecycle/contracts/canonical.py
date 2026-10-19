@@ -96,10 +96,8 @@ def read_json_object(path: Path, *, label: str | None = None) -> dict[str, Any]:
 
 def prepare_json_object(value: Any, *, label: str = "JSON output") -> bytes:
     """Prepare the exact stored bytes and prove they fit the existing reader."""
-    try:
-        data = canonical_bytes(value) + b"\n"
-    except RecursionError:
-        raise LifecycleError("json-input-depth-exceeded", f"{label} exceeds the JSON nesting limit") from None
+    _validate_json_nesting(value)
+    data = canonical_bytes(value) + b"\n"
     load_json_object(data, label=label)
     return data
 
