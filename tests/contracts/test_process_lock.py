@@ -40,7 +40,8 @@ class ProcessLockTests(unittest.TestCase):
                 child.wait(timeout=10)
             with exclusive_process_lock(path, timeout_seconds=1):
                 self.assertTrue(path.is_file())
-                self.assertEqual(path.read_bytes(), b"")
+            # Windows byte-range locks also exclude this second file handle.
+            self.assertEqual(path.read_bytes(), b"")
 
     def test_exception_releases_lock_without_replacing_its_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -55,9 +56,12 @@ class ProcessLockTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "absent" / "operation.lock"
             for timeout in (-1, True, float("inf"), float("nan")):
-                with self.subTest(timeout=timeout), self.assertRaises(LifecycleError) as caught:
-                    with exclusive_process_lock(path, timeout_seconds=timeout):
-                        self.fail("invalid timeout acquired a lock")
+                with (
+                    self.subTest(timeout=timeout),
+                    self.assertRaises(LifecycleError) as caught,
+                    exclusive_process_lock(path, timeout_seconds=timeout),
+                ):
+                    self.fail("invalid timeout acquired a lock")
                 self.assertEqual(caught.exception.code, "process-lock-timeout-invalid")
                 self.assertFalse(path.parent.exists())
 
