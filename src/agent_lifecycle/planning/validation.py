@@ -7,7 +7,8 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import is_under_repo_path, normalize_repo_path
 from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
-from agent_lifecycle.planning.manifest_contract import require_plan_manifest_contract
+from agent_lifecycle.planning.manifest_contract import require_plan_artifact_paths, require_plan_manifest_contract
+from agent_lifecycle.planning.prerequisites import prerequisite_dependencies
 
 
 def validate_plan_manifest(
@@ -18,6 +19,9 @@ def validate_plan_manifest(
 ) -> dict[str, Any]:
     if manifest.get("schemaVersion") == "agent-plan-manifest.v1":
         require_plan_manifest_contract(manifest)
+    else:
+        require_plan_artifact_paths(manifest)
+        prerequisite_dependencies(manifest)
     _require_package(manifest)
     workstreams = _workstreams(manifest)
     overlaps = _write_overlaps(workstreams)
@@ -31,7 +35,9 @@ def validate_plan_manifest(
         "workstreamCount": len(workstreams),
         "planDigest": canonical_digest(manifest),
     }
-    if require_completeness:
+    # DRAFT import producers need structural validation. Every executable
+    # FROZEN plan, including the legacy envelope, needs selected-tier readiness.
+    if require_completeness or manifest.get("status") == "FROZEN":
         completeness = validate_plan_completeness(manifest, profile=completeness_profile)
         require_plan_completeness_pass(completeness)
         payload["completeness"] = completeness

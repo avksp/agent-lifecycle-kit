@@ -44,6 +44,18 @@ def main() -> int:
             blockers.append({"code": "architecture-policy-invalid", "path": args.policy, "message": str(exc)})
 
     dependency_report = build_module_dependency_report(package_root, repository_root=repository_root)
+    if dependency_report["graphComplete"] is not True:
+        body = {
+            "schemaVersion": "agent-module-dependency-validation.v2",
+            "status": "FAIL",
+            "graphComplete": False,
+            "moduleCount": dependency_report["moduleCount"],
+            "dependencyReport": dependency_report,
+            "blockers": blockers + dependency_report["blockers"],
+            "productionPromotionClaimed": False,
+        }
+        write_json(Path(args.evidence), {**body, "validationDigest": digest_value(body)})
+        return 1
     graph = graph_from_report(dependency_report)
     identities = dependency_report["sourceFiles"]
     module_paths = {item["module"]: Path(item["path"]) for item in identities}

@@ -73,8 +73,20 @@ def dispatch_benchmark(args: argparse.Namespace) -> dict[str, Any] | str | None:
     return _lazy_call("agent_lifecycle.cli.benchmarks", "dispatch_benchmark", args)
 
 
+def require_known_arguments(args: argparse.Namespace, remainder: list[str]) -> None:
+    """Reject unowned arguments before a command can cause side effects."""
+    target = COMMAND_DISPATCH.get(args.command)
+    if remainder and (target is None or not target[2]):
+        raise LifecycleError(
+            "cli-unrecognized-arguments",
+            "Command contains unrecognized arguments",
+            {"argumentCount": len(remainder)},
+        )
+
+
 def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] | str | None:
     """Route a parsed command without owning domain behavior or CLI output."""
+    require_known_arguments(args, remainder)
     target = COMMAND_DISPATCH.get(args.command)
     if target is None:
         raise LifecycleError(
@@ -84,5 +96,4 @@ def dispatch(args: argparse.Namespace, remainder: list[str]) -> dict[str, Any] |
     function = globals()[function_name]
     if accepts_remainder:
         return function(args, remainder)
-    del remainder
     return function(args)

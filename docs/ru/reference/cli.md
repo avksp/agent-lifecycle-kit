@@ -81,7 +81,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.16.0
+python -m pip install agent-lifecycle-kit==2.17.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -335,6 +335,10 @@ agent-lifecycle project preset render \
 `--language-after <path>`. Словарь является контекстом только для чтения: он
 не выдаёт полномочия записи и не заменяет спецификацию или зафиксированный
 план. См. [предметный язык проекта](project-domain-language.md).
+
+## Проверка рабочего цикла в 2.17
+
+Полный контракт: [проверка рабочего цикла и восстановление](workflow-completeness.md). Неподдерживаемые аргументы CLI отклоняются до изменений; `workflow init --dry-run` не поддерживается. Техническое прерывание review использует `workflow block --review-task <task-id>` с `review-response-missing` или `review-response-truncated`, затем разрешённый `workflow resolve` для неизменного предмета проверки. Это не повторяет запрос провайдеру, не обнуляет расход и не продлевает сроки. Блокировки ОС сериализуют сотрудничающие процессы одного пользователя; недоступный расход хоста остаётся неизвестным.
 
 ## Выполнение
 

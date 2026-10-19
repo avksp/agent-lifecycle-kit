@@ -15,6 +15,7 @@ from agent_lifecycle.contracts.immutable_input_schemas import validate_a5_plan_p
 from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
 from agent_lifecycle.freeze import verify_plan_lock_envelope, verify_plan_package_integrity
 from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
+from agent_lifecycle.planning.prerequisites import validate_prerequisite_acceptance
 from agent_lifecycle.planning.task_compatibility import (
     build_task_plan_compatibility_receipt,
     task_contracts_compatible,
@@ -36,12 +37,15 @@ from agent_lifecycle.workflow.state import (
     TERMINAL_PHASES,
     deadline_after,
     now_iso,
+    require_current_authorization,
 )
+from agent_lifecycle.workflow.transactions import workflow_transaction
 
 # Preserve the existing internal extension point while keeping one algorithm.
 _task_contract_compatible = task_contracts_compatible
 
 
+@workflow_transaction
 def adopt_plan(
     state_path: Path,
     *,
@@ -54,11 +58,14 @@ def adopt_plan(
     start_mode: str,
     authorized_by: str | None = None,
 ) -> dict[str, Any]:
-    state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
+    state = load_for_update(
+        state_path, operation_id=operation_id, expected_revision=expected_revision, authorization_required=False
+    )
     _require_adoptable(state, reset_tasks=reset_tasks)
     root = package_root(state_path, state)
     manifest = read_json_object(manifest_path, label="frozen plan manifest")
     digest = _verify_frozen_manifest(root, manifest)
+    validate_prerequisite_acceptance(manifest, repository_root=root)
     revision = _plan_revision(manifest)
     _require_revision_upgrade(state, digest, revision, reset_tasks=reset_tasks)
     packet_set, packets = _packet_set(root, manifest, digest)
@@ -164,6 +171,7 @@ def adopt_plan(
     return status(state_path)
 
 
+@workflow_transaction
 def start_execution(
     state_path: Path,
     *,
@@ -172,16 +180,16 @@ def start_execution(
     source_revision: str,
     reason: str,
 ) -> dict[str, Any]:
-    state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
+    state = load_for_update(
+        state_path, operation_id=operation_id, expected_revision=expected_revision, authorization_required=False
+    )
     if state.get("startMode") == "plan-only" or state.get("phase") == "PLAN_ONLY":
         raise LifecycleError("plan-only-not-executable", "plan-only workflow cannot start execution")
     if state["phase"] != "READY":
         raise LifecycleError("invalid-phase", "execution can only start from READY")
     if state.get("sourceRevision") != source_revision:
         raise LifecycleError("source-revision-mismatch", "source revision mismatch")
-    authorization = state.get("authorization")
-    if not isinstance(authorization, dict) or authorization.get("granted") is not True:
-        raise LifecycleError("authorization-required", "execution authorization is required")
+    require_current_authorization(state)
     previous = state["phase"]
     required = [task for task in state.get("tasks", []) if task.get("required", True)]
     state["phase"] = (

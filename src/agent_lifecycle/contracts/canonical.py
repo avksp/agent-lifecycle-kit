@@ -94,6 +94,14 @@ def read_json_object(path: Path, *, label: str | None = None) -> dict[str, Any]:
     return load_json_object(data, label=label or "JSON document")
 
 
+def prepare_json_object(value: Any, *, label: str = "JSON output") -> bytes:
+    """Prepare the exact stored bytes and prove they fit the existing reader."""
+    _validate_json_nesting(value)
+    data = canonical_bytes(value) + b"\n"
+    load_json_object(data, label=label)
+    return data
+
+
 def write_json_create(path: Path, value: Any) -> bytes:
     data = canonical_bytes(value) + b"\n"
     try:

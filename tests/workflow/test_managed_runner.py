@@ -178,6 +178,12 @@ def _write_bundle(
         "status": plan_status,
         "planRevision": 1,
         "package": {"id": "package", "planArtifactRoot": "plans/package"},
+        "specification": {
+            "tier": "S1",
+            "requirements": [{"id": "REQ-1", "description": "Fixture work"}],
+        },
+        "validation": {"commands": ["python -m unittest"]},
+        "releaseImpact": "Non-release single-owner workflow fixture.",
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],
@@ -193,7 +199,8 @@ def _write_bundle(
                 "evidenceIds": ["EV-01"],
             }
         ],
-        "acceptanceCriteria": [{"id": "AC-01", "evidenceIds": ["EV-01"]}],
+        "acceptance": {"criteria": [{"id": "AC-01",
+            "requirementIds": ["REQ-1"], "evidenceIds": ["EV-01"]}]},
     }
     digest = canonical_digest(manifest)
     manifest_path = root / "plans/package/plan.manifest.json"

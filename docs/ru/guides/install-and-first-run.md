@@ -3,8 +3,12 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
-Инструкция рассчитана на ALK v2.16.0. Перед исполнением проверьте замороженный
+Инструкция рассчитана на ALK v2.17.0. Перед исполнением проверьте замороженный
 план командой `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
+
+## Обновление до 2.17
+
+Прочитайте [проверку рабочего цикла и восстановление](../reference/workflow-completeness.md). Новый исполняемый план требует явного tier и соответствующих integrity-входов. Сохраняйте принятые результаты, исторические доказательства и накопленные расходы; исправляйте входы через review и новую замороженную ревизию. Квалификация хоста проверяется отдельно.
 
 ## Обновление до 2.15
 
@@ -89,7 +93,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.16.0
+python -m pip install agent-lifecycle-kit==2.17.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -100,7 +104,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.16.0
+python -m pip install agent-lifecycle-kit==2.17.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```

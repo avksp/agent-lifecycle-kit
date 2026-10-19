@@ -1,0 +1,103 @@
+{
+  "status": "FROZEN",
+  "planRevision": 2,
+  "package": {
+    "id": "release-2-17-canonical-v2-plan-package",
+    "planArtifactRoot": "tests/freeze/fixtures/release-2-17-canonical-v2-plan-package",
+    "artifactRoot": "work/release-2-17-canonical-v2-plan-package"
+  },
+  "specification": {
+    "tier": "S2",
+    "requirements": [
+      {
+        "id": "REQ-1",
+        "description": "Do the work"
+      }
+    ],
+    "tierResolutionRequest": {
+      "schemaVersion": "agent-sdd-tier-resolution-request.v1",
+      "taskCount": 1,
+      "executableOwners": [
+        "worker"
+      ],
+      "capabilityHints": [
+        "planning"
+      ],
+      "riskFlags": {
+        "architecture": true,
+        "security": false,
+        "performance": false,
+        "browser": false,
+        "externalEnvironment": false
+      },
+      "requirementsBytes": 1024,
+      "externalSpecification": false
+    }
+  },
+  "acceptance": {
+    "criteria": [
+      {
+        "id": "AC-1",
+        "requirementIds": [
+          "REQ-1"
+        ],
+        "evidenceIds": [
+          "EV-1"
+        ]
+      }
+    ]
+  },
+  "workstreams": [
+    {
+      "id": "WS-01",
+      "dependsOn": [],
+      "writes": [
+        "src/example.py"
+      ],
+      "acceptanceIds": [
+        "AC-1"
+      ],
+      "evidenceIds": [
+        "EV-1"
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "python -m unittest"
+    ],
+    "extraEvidence": []
+  },
+  "releaseImpact": "none",
+  "packageIntegrity": {
+    "required": true,
+    "lockSchemaVersion": "agent-plan-lock.v2",
+    "inventorySource": "planFiles",
+    "undeclaredTopLevelFiles": "reject",
+    "allowedUnlistedFiles": [
+      "plan.lock.json"
+    ]
+  },
+  "planFiles": [
+    "tests/freeze/fixtures/release-2-17-canonical-v2-plan-package/plan.manifest.json",
+    "tests/freeze/fixtures/release-2-17-canonical-v2-plan-package/plan.md"
+  ],
+  "budgets": {
+    "maxInvocations": 33,
+    "maxWallSeconds": 1800
+  },
+  "contextLimits": {
+    "targetTokens": 4096
+  },
+  "forbiddenWrites": [
+    ".git",
+    "secrets"
+  ],
+  "releaseTarget": {
+    "targetVersion": "1.0.0"
+  },
+  "finalAuditGates": [
+    "[AC-1|EV-1] The bounded fixture checks pass."
+  ],
+  "schemaVersion": "agent-plan-manifest.v1"
+}

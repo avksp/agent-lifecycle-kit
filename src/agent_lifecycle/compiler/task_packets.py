@@ -20,6 +20,7 @@ from agent_lifecycle.contracts.ownership_paths import (
     require_output_footprint,
 )
 from agent_lifecycle.freeze import verify_plan_package_integrity
+from agent_lifecycle.planning.validation import validate_plan_manifest
 from agent_lifecycle.policy.execution_strategy import validate_execution_strategy
 
 
@@ -59,6 +60,7 @@ def compile_task_packets(
 def _verify_manifest(root: Path, manifest: dict[str, Any]) -> str:
     if manifest.get("status") != "FROZEN":
         raise LifecycleError("plan-not-frozen", "only FROZEN plans can be compiled")
+    validate_plan_manifest(manifest, require_completeness=True)
     package = manifest.get("package", {})
     plan_root = package.get("planArtifactRoot")
     if not isinstance(plan_root, str) or not plan_root:

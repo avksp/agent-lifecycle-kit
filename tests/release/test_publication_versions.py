@@ -22,7 +22,7 @@ class PublicationVersionTests(unittest.TestCase):
     def test_current_accounting_fixture_keeps_unavailable_telemetry(self) -> None:
         from agent_lifecycle.metrics.release_accounting import validate_release_accounting
 
-        path = ROOT / "tests/metrics/fixtures/release-2-16-accounting.json"
+        path = ROOT / "tests/metrics/fixtures/release-2-17-accounting.json"
         accounting = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(accounting["releaseId"], TARGET_VERSION)
         self.assertEqual(validate_release_accounting(accounting)["status"], "PASS")
@@ -252,7 +252,7 @@ class PublicationVersionTests(unittest.TestCase):
             root = Path(tmp)
             _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
             _write_json(
-                root / "tests/metrics/fixtures/release-2-16-accounting.json",
+                root / "tests/metrics/fixtures/release-2-17-accounting.json",
                 {"releaseId": "2.8.0"},
             )
 
@@ -337,7 +337,7 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
     (root / "src/agent_lifecycle/_version.py").write_text(f'__version__ = "{version}"\n', encoding="utf-8")
     (root / "CHANGELOG.md").write_text(f"## {version} - 2026-01-01\n", encoding="utf-8")
     _write_json(
-        root / "tests/metrics/fixtures/release-2-13-strategy-baseline.json",
+        root / "tests/metrics/fixtures/release-2-17-accounting.json",
         {"releaseId": version},
     )
     for path in (

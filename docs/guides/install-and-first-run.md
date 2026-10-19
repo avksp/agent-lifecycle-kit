@@ -3,8 +3,12 @@
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
-These instructions target ALK v2.16.0. Verify frozen plans before execution
+These instructions target ALK v2.17.0. Verify frozen plans before execution
 with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
+
+## Upgrading to 2.17
+
+Read [workflow completeness and recovery](../reference/workflow-completeness.md). New executable plans require an explicit tier and matching integrity inputs. Preserve accepted results, historical evidence and accumulated costs; correct invalid inputs through review and a new frozen revision. Host qualification remains a separate requirement.
 
 ## Upgrading to 2.15
 
@@ -88,7 +92,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.16.0
+python -m pip install agent-lifecycle-kit==2.17.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -99,7 +103,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.16.0
+python -m pip install agent-lifecycle-kit==2.17.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```

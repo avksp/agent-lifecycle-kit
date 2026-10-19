@@ -44,7 +44,14 @@ def install_windows_fixture_process(case: unittest.TestCase) -> None:
                 with path.open("rb") as stream:
                     first = stream.readline(4096).rstrip(b"\r\n")
                 if first == b"#!" + os.fsencode(sys.executable):
-                    physical = [sys.executable, "-B", str(path), *argv[1:]]
+                    interpreter = getattr(sys, "_base_executable", sys.executable)
+                    physical = [interpreter, "-B", str(path), *argv[1:]]
+                    if os.path.normcase(interpreter) != os.path.normcase(sys.executable):
+                        # Match CPython multiprocessing: direct PID, selected venv.
+                        supplied = kwargs.get("env")
+                        environment = dict(os.environ if supplied is None else supplied)
+                        environment["__PYVENV_LAUNCHER__"] = sys.executable
+                        kwargs["env"] = environment
         return _REAL_POPEN(physical, *args, **kwargs)
 
     injected = patch.object(subprocess, "Popen", side_effect=start)

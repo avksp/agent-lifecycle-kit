@@ -248,7 +248,7 @@ class A5PlanAdoptionTests(unittest.TestCase):
 def _assert_authority_rejection(test, root, state_path, manifest_path, code, *, preserve=False):
     journal = root / "events.jsonl"
     if not journal.exists():
-        journal.write_bytes(b'{"schemaVersion":"agent-workflow-event.v1","stateRevision":1}\n')
+        journal.write_bytes(b'{"schemaVersion":"agent-workflow-event.v1","stateRevision":1,"operationId":"prior-fixture"}\n')
     before = _tree_bytes(root)
     with (
         patch("agent_lifecycle.workflow.plan_adoption._packet_set") as packet_set,

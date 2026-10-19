@@ -678,6 +678,7 @@ def _add_workflow_control_parsers(
     workflow_block.add_argument("--operation-id", required=True)
     workflow_block.add_argument("--expected-revision", required=True, type=int)
     workflow_block.add_argument("--blocker-code", required=True)
+    workflow_block.add_argument("--review-task")
     workflow_block.add_argument("--reason", required=True)
     workflow_resolve = workflow_sub.add_parser("resolve")
     workflow_resolve.add_argument("--state", required=True)

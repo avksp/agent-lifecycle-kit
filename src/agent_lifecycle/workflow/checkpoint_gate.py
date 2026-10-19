@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.context.checkpoint_store import checkpoint_path, write_context_checkpoint
+from agent_lifecycle.context.checkpoints import (
+    build_context_checkpoint,
+    require_context_checkpoint_pass,
+    validate_context_checkpoint,
+)
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.canonical import prepare_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
-from agent_lifecycle.context.checkpoint_store import write_context_checkpoint
-from agent_lifecycle.context.checkpoints import build_context_checkpoint
 from agent_lifecycle.host_protocol.context_events import build_context_checkpoint_event
 
 MAX_CHECKPOINTS_PER_RUN = 64
@@ -23,6 +29,14 @@ DEFAULT_CHECKPOINT_POLICY: dict[str, Any] = {
 }
 
 
+@dataclass(frozen=True)
+class PreparedCheckpoint:
+    receipt: dict[str, Any]
+    checkpoint: dict[str, Any] | None = None
+    root: Path | None = None
+    retention_limit: int = MAX_CHECKPOINTS_PER_RUN
+
+
 def normalize_context_checkpoint_policy(policy: dict[str, Any] | None) -> dict[str, Any]:
     """Normalize the reviewed plan's checkpoint policy into runtime state."""
 
@@ -31,8 +45,14 @@ def normalize_context_checkpoint_policy(policy: dict[str, Any] | None) -> dict[s
     if not isinstance(policy, dict):
         raise LifecycleError("context-checkpoint-policy-invalid", "contextCheckpointPolicy must be an object")
     events = policy.get("milestoneEvents", policy.get("events", []))
-    if not isinstance(events, list) or len(events) > 16 or any(not isinstance(item, str) or not item for item in events):
-        raise LifecycleError("context-checkpoint-policy-events-invalid", "milestoneEvents must be a bounded string array")
+    if (
+        not isinstance(events, list)
+        or len(events) > 16
+        or any(not isinstance(item, str) or not item for item in events)
+    ):
+        raise LifecycleError(
+            "context-checkpoint-policy-events-invalid", "milestoneEvents must be a bounded string array"
+        )
     root = policy.get("checkpointRoot", DEFAULT_CHECKPOINT_POLICY["checkpointRoot"])
     try:
         root = normalize_repo_path(root, label="contextCheckpointPolicy.checkpointRoot")
@@ -42,19 +62,27 @@ def normalize_context_checkpoint_policy(policy: dict[str, Any] | None) -> dict[s
         raise LifecycleError("context-checkpoint-policy-root-invalid", "checkpointRoot must remain under .alk")
     limit = policy.get("maxCheckpointsPerRun", MAX_CHECKPOINTS_PER_RUN)
     if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1 or limit > MAX_CHECKPOINTS_PER_RUN:
-        raise LifecycleError("context-checkpoint-policy-retention-invalid", "maxCheckpointsPerRun must be between 1 and 64")
+        raise LifecycleError(
+            "context-checkpoint-policy-retention-invalid", "maxCheckpointsPerRun must be between 1 and 64"
+        )
     target = policy.get("targetContinuationTokens", 2048)
     if not isinstance(target, int) or isinstance(target, bool) or target < 1 or target > 8192:
-        raise LifecycleError("context-checkpoint-policy-budget-invalid", "targetContinuationTokens is outside the supported range")
+        raise LifecycleError(
+            "context-checkpoint-policy-budget-invalid", "targetContinuationTokens is outside the supported range"
+        )
     enabled = policy.get("enabled", bool(events))
     required = policy.get("required", False)
     if not isinstance(enabled, bool) or not isinstance(required, bool):
         raise LifecycleError("context-checkpoint-policy-flags-invalid", "enabled and required must be booleans")
     if required and not enabled:
-        raise LifecycleError("context-checkpoint-policy-required-disabled", "required checkpoint capture needs an enabled policy")
+        raise LifecycleError(
+            "context-checkpoint-policy-required-disabled", "required checkpoint capture needs an enabled policy"
+        )
     retention = policy.get("retentionPolicy", DEFAULT_CHECKPOINT_POLICY["retentionPolicy"])
     if retention != DEFAULT_CHECKPOINT_POLICY["retentionPolicy"]:
-        raise LifecycleError("context-checkpoint-policy-retention-policy-invalid", "unsupported checkpoint retention policy")
+        raise LifecycleError(
+            "context-checkpoint-policy-retention-policy-invalid", "unsupported checkpoint retention policy"
+        )
     return {
         "enabled": enabled,
         "required": required,
@@ -66,19 +94,15 @@ def normalize_context_checkpoint_policy(policy: dict[str, Any] | None) -> dict[s
     }
 
 
-def invoke_checkpoint_gate(
+def prepare_checkpoint_gate(
     *,
     state_path: Path,
     state: dict[str, Any],
     operation_id: str,
     event_type: str,
     payload: dict[str, Any],
-) -> dict[str, Any]:
-    """Capture one declared milestone before the state commit.
-
-    Required capture raises before the caller mutates or persists workflow
-    state. Optional capture returns a non-blocking receipt.
-    """
+) -> PreparedCheckpoint:
+    """Prepare the complete checkpoint and receipt without persistent writes."""
 
     policy = normalize_context_checkpoint_policy(state.get("contextCheckpointPolicy"))
     base = {
@@ -98,7 +122,7 @@ def invoke_checkpoint_gate(
         "productionPromotionClaimed": False,
     }
     if not policy["enabled"] or event_type not in policy["milestoneEvents"]:
-        return base
+        return PreparedCheckpoint(base)
     base["attempted"] = True
     next_revision = int(state.get("stateRevision", 0)) + 1
     checkpoint_id = f"ctx-{base['idempotencyKey'][:24]}"
@@ -122,11 +146,9 @@ def invoke_checkpoint_gate(
             target_tokens=policy["targetContinuationTokens"],
         )
         root = _checkpoint_root(state_path, policy["checkpointRoot"])
-        stored = write_context_checkpoint(
-            checkpoint,
-            root=root,
-            max_checkpoints_per_run=policy["maxCheckpointsPerRun"],
-        )
+        require_context_checkpoint_pass(validate_context_checkpoint(checkpoint))
+        prepare_json_object(checkpoint, label="prospective context checkpoint")
+        path = checkpoint_path(checkpoint_id, root=root)
         event = build_context_checkpoint_event(
             event_type="context.checkpoint.created",
             session_id=checkpoint["sessionId"],
@@ -138,13 +160,14 @@ def invoke_checkpoint_gate(
             payload={"eventType": event_type, "idempotencyKey": base["idempotencyKey"]},
             recorded_at=checkpoint["createdAt"],
         )
-        return {
+        receipt = {
             **base,
             "status": "PASS",
-            "checkpointPath": stored["path"],
+            "checkpointPath": path.as_posix(),
             "checkpointDigest": checkpoint["checkpointDigest"],
             "checkpointEvent": event,
         }
+        return PreparedCheckpoint(receipt, checkpoint, root, policy["maxCheckpointsPerRun"])
     except (LifecycleError, OSError) as exc:
         blocker = {"code": getattr(exc, "code", "context-checkpoint-write-failed"), "message": str(exc)}
         result = {**base, "status": "BLOCKED" if policy["required"] else "OPTIONAL_FAILURE", "blockers": [blocker]}
@@ -154,7 +177,59 @@ def invoke_checkpoint_gate(
                 "required context checkpoint failed before workflow commit",
                 {"gate": result},
             ) from exc
-        return result
+        return PreparedCheckpoint(result)
+
+
+def optional_checkpoint_failure(prepared: PreparedCheckpoint) -> dict[str, Any]:
+    """Use a fixed failure shape that can be fully preflighted before storage."""
+    return {
+        **prepared.receipt,
+        "status": "OPTIONAL_FAILURE",
+        "checkpointPath": None,
+        "checkpointDigest": None,
+        "checkpointEvent": None,
+        "blockers": [
+            {"code": "context-checkpoint-write-failed", "message": "optional checkpoint could not be persisted"}
+        ],
+    }
+
+
+def persist_checkpoint_gate(prepared: PreparedCheckpoint) -> dict[str, Any]:
+    if prepared.checkpoint is None:
+        return prepared.receipt
+    try:
+        stored = write_context_checkpoint(
+            prepared.checkpoint,
+            root=prepared.root,
+            max_checkpoints_per_run=prepared.retention_limit,
+        )
+        if stored["path"] != prepared.receipt["checkpointPath"]:
+            raise LifecycleError("context-checkpoint-path-mismatch", "checkpoint path changed after preparation")
+    except (LifecycleError, OSError) as error:
+        if prepared.receipt["required"]:
+            raise LifecycleError(
+                "required-context-checkpoint-failed",
+                "required context checkpoint failed before workflow commit",
+                {"gate": {**prepared.receipt, "status": "BLOCKED"}},
+            ) from error
+        return optional_checkpoint_failure(prepared)
+    return prepared.receipt
+
+
+def invoke_checkpoint_gate(
+    *,
+    state_path: Path,
+    state: dict[str, Any],
+    operation_id: str,
+    event_type: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Preserve the public capture API while the kernel preflights both stages."""
+    return persist_checkpoint_gate(
+        prepare_checkpoint_gate(
+            state_path=state_path, state=state, operation_id=operation_id, event_type=event_type, payload=payload
+        )
+    )
 
 
 def _checkpoint_root(state_path: Path, relative_root: str) -> Path:

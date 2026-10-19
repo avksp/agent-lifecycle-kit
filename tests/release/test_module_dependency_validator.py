@@ -11,6 +11,35 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ModuleDependencyValidatorTests(unittest.TestCase):
+    def test_unresolved_dynamic_import_writes_failure_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "sample"
+            root.mkdir()
+            (root / "__init__.py").write_text("", encoding="utf-8")
+            (root / "a.py").write_text("import importlib\nimportlib.import_module(input())\n", encoding="utf-8")
+            evidence = Path(tmp) / "failure.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tools/release/validate_module_dependencies.py"),
+                    "--package-root",
+                    str(root),
+                    "--repository-root",
+                    tmp,
+                    "--evidence",
+                    str(evidence),
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 1, result.stderr)
+            payload = json.loads(evidence.read_text(encoding="utf-8"))
+            self.assertEqual(payload["status"], "FAIL")
+            self.assertFalse(payload["graphComplete"])
+            self.assertFalse(payload["productionPromotionClaimed"])
+            self.assertEqual(payload["blockers"][0]["code"], "dependency-dynamic-import-unresolved")
+
     def test_current_audit_workflow_cycle_is_absent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             evidence = Path(tmp) / "dependencies.json"

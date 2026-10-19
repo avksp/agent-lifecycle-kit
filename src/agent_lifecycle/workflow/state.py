@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, read_json_object
-from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest
+from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest, prepare_json_object
 from agent_lifecycle.contracts.persistence import replace_private_json as write_json_replace_private
 from agent_lifecycle.contracts.workflow_state_schemas import (
     WORKFLOW_STATE_V3,
@@ -28,6 +28,24 @@ BLOCKER_RECOVERY_ROUTES = {
 
 def now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def require_current_authorization(state: dict[str, Any]) -> None:
+    """Honor revocation and a consumed receipt's expiry on every mutation."""
+    authorization = state.get("authorization")
+    if not isinstance(authorization, dict) or authorization.get("granted") is not True:
+        raise LifecycleError("authorization-required", "workflow mutation requires execution authorization")
+    expires = authorization.get("expiresAt")
+    if expires is None:
+        return  # Existing immediate/legacy grants retain their original contract.
+    try:
+        deadline = datetime.fromisoformat(expires.replace("Z", "+00:00"))
+        if deadline.tzinfo is None or deadline.utcoffset() is None:
+            raise ValueError
+    except (AttributeError, TypeError, ValueError):
+        raise LifecycleError("authorization-invalid", "workflow authorization expiry is invalid") from None
+    if datetime.now(UTC) >= deadline:
+        raise LifecycleError("authorization-expired", "workflow execution authorization has expired")
 
 
 def load_state(path: Path) -> dict[str, Any]:
@@ -157,6 +175,7 @@ def deadline_after(started_at: str, seconds: int) -> str:
 
 
 def write_state_replace(path: Path, state: dict[str, Any]) -> None:
+    prepare_json_object(state, label="prospective workflow state")
     write_json_replace_private(path, state)
 
 

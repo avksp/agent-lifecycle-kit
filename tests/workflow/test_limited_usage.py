@@ -2092,7 +2092,11 @@ class ProspectiveAdmissionProcedureTests(unittest.TestCase):
         admission['sourceUsageBinding'].update(originalWindowId=window_id,
             semanticOperationId=f.task['attemptModelRoute']['operationId'], planDigest=f.state['planDigest'],
             sourceInputSubjectDigest=canonical_digest(subject))
-        procedure_path = Path(__file__).resolve().parents[2] / 'tasks/release-2-16/source-prospective-admission-procedure.py'
+        procedure_path = Path(__file__).resolve().parent / 'fixtures/source-prospective-admission-procedure.py'
+        self.assertEqual(
+            'cb21443da9c51b54c6732105b4a797702a9ba3a9dcab74f4484e8240110844c6',
+            hashlib.sha256(procedure_path.read_bytes()).hexdigest(),
+        )
         spec = importlib.util.spec_from_file_location('synthetic_prospective_procedure', procedure_path)
         procedure = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(procedure)

@@ -10,6 +10,7 @@ import hashlib
 import json
 import re
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from datetime import timezone as timezone
 from pathlib import Path, PurePosixPath
@@ -513,18 +514,50 @@ def emit_registry_artifact(repository_root: Path, state: dict[str, Any], task: d
     return _emit_registry_for_context(selection, task)
 
 
-def _emit_registry_for_context(selection: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:
-    """Emit historical context without granting task limited-mode eligibility."""
+@dataclass(frozen=True)
+class PreparedSourceRegistry:
+    """A declared observation, not a persisted receipt or host attestation."""
 
+    selection: dict[str, Any]
+    snapshot: dict[str, Any]
+    reference: dict[str, Any]
+
+    def persist(self) -> None:
+        require_snapshot_current(self.selection, self.snapshot)
+        raw = self.snapshot["projectionBytes"]
+        _require(
+            self.reference == _ref(self.reference["path"], raw), "scoped-usage-ref-invalid", "prepared registry changed"
+        )
+        try:
+            create_authority_bytes(self.selection["root"] / self.reference["path"], raw, root=self.selection["root"])
+        except FileExistsError:
+            _read_ref(self.selection["root"], self.reference, limit=self.selection["registryByteLimit"])
+        require_snapshot_current(self.selection, self.snapshot)
+
+
+def _prepare_registry_for_context(selection: dict[str, Any], task: dict[str, Any]) -> PreparedSourceRegistry:
     snapshot = current_source_snapshot(selection)
     raw = snapshot["projectionBytes"]
-    ref = _registry_ref(task, raw)
-    try:
-        create_authority_bytes(selection["root"] / ref["path"], raw, root=selection["root"])
-    except FileExistsError:
-        _read_ref(selection["root"], ref, limit=selection["registryByteLimit"])
+    _require(
+        len(raw) <= selection["registryByteLimit"], "scoped-usage-ref-invalid", "prepared registry exceeds its reader"
+    )
     require_snapshot_current(selection, snapshot)
-    return ref
+    return PreparedSourceRegistry(selection, snapshot, _registry_ref(task, raw))
+
+
+def _emit_registry_for_context(
+    selection: dict[str, Any],
+    task: dict[str, Any],
+    *,
+    prepared_registries: list[PreparedSourceRegistry] | None = None,
+) -> dict[str, Any]:
+    """Prepare historical context without granting task limited eligibility."""
+    prepared = _prepare_registry_for_context(selection, task)
+    if prepared_registries is None:
+        prepared.persist()
+    else:
+        prepared_registries.append(prepared)
+    return prepared.reference
 
 
 def validate_limited_source_usage(
@@ -532,6 +565,8 @@ def validate_limited_source_usage(
     state: dict[str, Any],
     task: dict[str, Any],
     receipt: dict[str, Any],
+    *,
+    _prepared_registry_bytes: bytes | None = None,
 ) -> dict[str, Any]:
     validate_source_usage_receipt_shape(receipt)
     selection = load_frozen_source_policy(
@@ -597,7 +632,11 @@ def validate_limited_source_usage(
         "registry reference differs from the actual current derived projection",
     )
     _require(
-        _read_ref(selection["root"], expected_registry, limit=selection["registryByteLimit"])
+        (
+            _read_ref(selection["root"], expected_registry, limit=selection["registryByteLimit"])
+            if _prepared_registry_bytes is None
+            else _prepared_registry_bytes
+        )
         == snapshot["projectionBytes"],
         "scoped-usage-frontier-stale",
         "registry artifact bytes differ",
@@ -669,6 +708,8 @@ def refresh_committed_source_assurance(
     repository_root: Path,
     state: dict[str, Any],
     task: dict[str, Any],
+    *,
+    prepared_registries: list[PreparedSourceRegistry] | None = None,
 ) -> dict[str, Any] | None:
     """Observe a newer descendant without changing the committed source result.
 
@@ -725,12 +766,19 @@ def refresh_committed_source_assurance(
     )
     # This is a fresh ALK-declared observation of the same original work window,
     # not a rewritten receipt, expenditure, executor or source-input binding.
+    prepared = _prepare_registry_for_context(selection, task)
     current_view = {
         **receipt,
         "ledgerRef": _ref(_HEAD_PATH, snapshot["current"]["headRaw"]),
-        "currentRegistryRef": emit_registry_artifact(root, state, task),
+        "currentRegistryRef": prepared.reference,
     }
-    validation = validate_limited_source_usage(root, state, task, current_view)
+    validation = validate_limited_source_usage(
+        root, state, task, current_view, _prepared_registry_bytes=prepared.snapshot["projectionBytes"]
+    )
+    if prepared_registries is None:
+        prepared.persist()
+    else:
+        prepared_registries.append(prepared)
     require_snapshot_current(selection, snapshot)
     assurance = validation["usageAssurance"]
     assurance["originalReceiptDigest"] = canonical_digest(receipt)
@@ -776,13 +824,17 @@ def require_task_source_frontier_current(
 def aggregate_source_usage_assurance(
     repository_root: Path,
     state: dict[str, Any],
+    *,
+    prepared_registries: list[PreparedSourceRegistry] | None = None,
 ) -> dict[str, Any] | None:
     observations = []
     historical = _load_frozen_source_context(repository_root, state)
     for task in state.get("tasks", []):
         if task.get("status") != "ACCEPTED":
             continue
-        assurance = refresh_committed_source_assurance(repository_root, state, task)
+        assurance = refresh_committed_source_assurance(
+            repository_root, state, task, prepared_registries=prepared_registries
+        )
         if assurance is None:
             selection = historical
             if selection is not None:
@@ -799,7 +851,9 @@ def aggregate_source_usage_assurance(
                         "actualTokens": None,
                         "financialClosure": "OPEN_UNAVAILABLE",
                         "ledgerRef": _ref(_HEAD_PATH, snapshot["current"]["headRaw"]),
-                        "currentRegistryRef": _emit_registry_for_context(selection, task),
+                        "currentRegistryRef": _emit_registry_for_context(
+                            selection, task, prepared_registries=prepared_registries
+                        ),
                         "sourceAuthoringRegistryDigest": selection["policy"]["sourceAuthoringRegistryRef"]["sha256"],
                         "assuranceBasis": "HISTORICAL_UNAVAILABLE_SOURCE_CONTEXT_NOT_CURRENT_EXECUTOR",
                     }

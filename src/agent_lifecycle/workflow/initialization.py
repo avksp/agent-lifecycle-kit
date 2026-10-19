@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.canonical import prepare_json_object
 from agent_lifecycle.contracts.persistence import create_private_json
 from agent_lifecycle.contracts.workflow_state_schemas import (
     WORKFLOW_STATE_MIGRATION_RECEIPT,
@@ -17,6 +18,7 @@ from agent_lifecycle.contracts.workflow_state_schemas import (
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
 from agent_lifecycle.workflow.state import now_iso
+from agent_lifecycle.workflow.transactions import workflow_transaction, workflow_transaction_context
 
 
 def initialize_workflow_state(
@@ -51,10 +53,13 @@ def initialize_workflow_state(
         "priorSnapshots": [],
     }
     validate_workflow_state(state, allow_legacy=False)
-    create_private_json(state_path, state)
-    return status(state_path)
+    prepare_json_object(state, label="initial workflow state")
+    with workflow_transaction_context(state_path):
+        create_private_json(state_path, state)
+        return status(state_path)
 
 
+@workflow_transaction
 def migrate_workflow_state(
     state_path: Path,
     *,
@@ -64,7 +69,9 @@ def migrate_workflow_state(
 ) -> dict[str, Any]:
     """Migrate a v3 state once, preserving lineage and immutable artifact identities."""
 
-    state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
+    state = load_for_update(
+        state_path, operation_id=operation_id, expected_revision=expected_revision, authorization_required=False
+    )
     if state.get("schemaVersion") != WORKFLOW_STATE_V3:
         raise LifecycleError("workflow-state-migration-not-required", "state migration requires v3 input")
     if state.get("sourceRevision") != source_revision:

@@ -8,13 +8,17 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.authority_text import require_manifest_text
 from agent_lifecycle.contracts.immutable_input_schemas import validate_a5_plan_policy, validate_a5_policy
 from agent_lifecycle.contracts.ownership_paths import (
+    authority_paths_overlap,
+    normalize_authority_path,
     require_declared_output_footprint,
     require_manifest_authority_paths,
+    require_output_footprint,
 )
 from agent_lifecycle.contracts.plan_manifest_schemas import (
     MANIFEST_SCHEMA,
     MANIFEST_VALIDATION_SCHEMA,
 )
+from agent_lifecycle.planning.prerequisites import prerequisite_dependencies
 
 _TOP_LEVEL = {
     "schemaVersion",
@@ -192,6 +196,10 @@ def validate_plan_manifest_contract(manifest: dict[str, Any]) -> dict[str, Any]:
     require_manifest_text(manifest)
     require_manifest_authority_paths(manifest)
     try:
+        prerequisite_dependencies(manifest)
+    except LifecycleError as exc:
+        blockers.append(_blocker(exc.code, exc.message))
+    try:
         require_declared_output_footprint(manifest)
     except LifecycleError as exc:
         blockers.append(_blocker(exc.code, exc.message))
@@ -211,6 +219,7 @@ def validate_plan_manifest_contract(manifest: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(package.get("id"), str) or not package["id"].strip():
             blockers.append(_blocker("plan-manifest-package-id-missing", "package.id is required"))
     _validate_nested(manifest, blockers)
+    blockers.extend(_artifact_path_blockers(manifest))
     _validate_immutable_input_policy(manifest, blockers)
     _validate_extensions(manifest.get("extensions"), blockers)
     return _result(manifest, blockers)
@@ -227,6 +236,62 @@ def require_plan_manifest_contract(manifest: dict[str, Any]) -> dict[str, Any]:
             "plan-manifest-contract-failed", "canonical plan manifest contract failed", {"validation": result}
         )
     return result
+
+
+def require_plan_artifact_paths(manifest: dict[str, Any]) -> None:
+    """Apply the same closed artifact roles to legacy executable envelopes."""
+    blockers = _artifact_path_blockers(manifest)
+    if blockers:
+        raise LifecycleError("plan-artifact-paths-invalid", "plan artifact paths are invalid", {"blockers": blockers})
+
+
+def _artifact_path_blockers(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    outputs: list[str] = []
+    seen: set[str] = set()
+    protected = [
+        p
+        for key in ("readOnly", "forbiddenWrites")
+        for values in [manifest.get(key, [])]
+        if isinstance(values, list)
+        for p in values
+        if isinstance(p, str)
+    ]
+    workstreams = manifest.get("workstreams", [])
+    if not isinstance(workstreams, list):
+        return blockers
+    for task in workstreams:
+        if not isinstance(task, dict) or "artifactPaths" not in task:
+            continue
+        roles = task["artifactPaths"]
+        if not isinstance(roles, dict) or set(roles) != {"result", "review"}:
+            blockers.append(
+                _blocker("plan-artifact-roles-invalid", "artifactPaths must contain result and review only")
+            )
+            continue
+        for raw in roles.values():
+            try:
+                if (
+                    not isinstance(raw, str)
+                    or "{" in raw.replace("{attempt}", "")
+                    or "}" in raw.replace("{attempt}", "")
+                ):
+                    raise LifecycleError("plan-artifact-path-invalid", "artifact path or attempt template is invalid")
+                path = normalize_authority_path(raw, label="artifact path")
+                key = path.casefold()
+                if key in seen:
+                    raise LifecycleError("plan-artifact-path-duplicate", "artifact paths must be distinct")
+                if any(authority_paths_overlap(key, normalize_authority_path(p).casefold()) for p in protected):
+                    raise LifecycleError("plan-output-conflict", "artifact path overlaps protected authority")
+                seen.add(key)
+                outputs.append(path)
+            except LifecycleError as exc:
+                blockers.append(_blocker(exc.code, exc.message))
+    try:
+        require_output_footprint(manifest, outputs)
+    except LifecycleError as exc:
+        blockers.append(_blocker(exc.code, exc.message))
+    return blockers
 
 
 def _validate_nested(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -> None:

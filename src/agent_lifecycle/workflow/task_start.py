@@ -36,8 +36,10 @@ from agent_lifecycle.workflow.risk_execution_gate import (
 )
 from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.workflow.state import deadline_after
+from agent_lifecycle.workflow.transactions import workflow_transaction
 
 
+@workflow_transaction
 def start_task(
     state_path: Path,
     *,

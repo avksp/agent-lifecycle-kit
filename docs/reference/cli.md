@@ -76,7 +76,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.16.0
+python -m pip install agent-lifecycle-kit==2.17.0
 ```
 
 ## Task evidence identity
@@ -321,6 +321,10 @@ audited without edits with
 plan comparison. The vocabulary is read-only context; it cannot grant write
 authority or replace the specification and frozen plan. See [Project domain
 language](project-domain-language.md).
+
+## Release 2.17 workflow validation
+
+See [workflow completeness and recovery](workflow-completeness.md) for the full contract. Unsupported CLI arguments fail before mutation; `workflow init --dry-run` is not supported. Technical review interruption uses `workflow block --review-task <task-id>` with `review-response-missing` or `review-response-truncated`, then authorized `workflow resolve` for the unchanged subject. This does not issue provider retries, reset usage or extend deadlines. Same-user OS locks serialize cooperating writers; unavailable host usage remains unavailable.
 
 ## Execution
 

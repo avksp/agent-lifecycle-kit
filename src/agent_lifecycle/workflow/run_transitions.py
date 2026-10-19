@@ -2,17 +2,24 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts import LifecycleError, read_json_object
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
-from agent_lifecycle.workflow.artifacts import artifact_identity, package_root
+from agent_lifecycle.workflow.artifacts import artifact_identity, package_root, require_artifact_identity
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
+from agent_lifecycle.workflow.reviews import task_result_freshness_required, validate_task_result
+from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.workflow.state import EXTERNAL_ACTION_PHASES, TERMINAL_PHASES, validate_typed_blocker
+from agent_lifecycle.workflow.transactions import workflow_transaction
+
+REVIEW_INTERRUPTION_CODES = {"review-response-missing", "review-response-truncated"}
 
 
+@workflow_transaction
 def block_run(
     state_path: Path,
     *,
@@ -20,17 +27,29 @@ def block_run(
     expected_revision: int,
     blocker_code: str,
     reason: str,
+    review_task_id: str | None = None,
 ) -> dict[str, Any]:
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
     if state["phase"] in TERMINAL_PHASES:
         raise LifecycleError("terminal-run", "terminal workflow state cannot be blocked")
     if state["phase"] == "BLOCKED":
         raise LifecycleError("nested-blocker-forbidden", "a blocked workflow cannot be blocked again")
+    subject = None
+    if blocker_code in REVIEW_INTERRUPTION_CODES:
+        if state.get("schemaVersion") != "agent-workflow-state.v4" or not review_task_id:
+            raise LifecycleError(
+                "review-interruption-task-required", "technical review interruption requires v4 and a task"
+            )
+        subject = _technical_review_subject(state_path, state, review_task_id)
+    elif review_task_id is not None:
+        raise LifecycleError("review-interruption-code-required", "review task requires a technical interruption code")
     previous = state["phase"]
     state["phase"] = "BLOCKED"
-    blocker = {"code": blocker_code, "reason": reason, "resumePhase": previous}
+    blocker: dict[str, Any] = {"code": blocker_code, "reason": reason, "resumePhase": previous}
     if state.get("schemaVersion") == "agent-workflow-state.v4":
         blocker.update({"scope": "run", "recoveryRoute": "resolve-run"})
+        if subject is not None:
+            blocker["reviewSubject"] = subject
         validate_typed_blocker(blocker)
     state["blocker"] = blocker
     commit_state(
@@ -43,6 +62,7 @@ def block_run(
     return status(state_path)
 
 
+@workflow_transaction
 def resolve_blocker(
     state_path: Path,
     *,
@@ -63,6 +83,8 @@ def resolve_blocker(
                 "typed-blocker-route-required",
                 "task, plan and external blockers require their named recovery route",
             )
+    if blocker.get("code") in REVIEW_INTERRUPTION_CODES:
+        _require_review_recovery(state_path, state, blocker)
     resume_phase = blocker.get("resumePhase")
     if not isinstance(resume_phase, str) or resume_phase in TERMINAL_PHASES:
         raise LifecycleError("invalid-workflow-state", "blocker resumePhase is invalid")
@@ -79,6 +101,127 @@ def resolve_blocker(
     return status(state_path)
 
 
+def _technical_review_subject(state_path: Path, state: dict[str, Any], task_id: str) -> dict[str, Any]:
+    task = find_task(state, task_id)
+    if task.get("status") != "VERIFYING" or not isinstance(task.get("result"), dict) or task.get("pendingDecision"):
+        raise LifecycleError(
+            "review-interruption-subject-invalid", "technical recovery requires a pending implementation review"
+        )
+    root = package_root(state_path, state)
+    result = require_artifact_identity(root, task["result"], label="pending review subject")
+    if any(result.get(key) != state.get(key) for key in ("runId", "planDigest", "sourceRevision")):
+        raise LifecycleError("review-interruption-subject-invalid", "pending result does not match the current run")
+    if "planRevision" in result and result["planRevision"] != state.get("planRevision"):
+        raise LifecycleError("review-interruption-subject-invalid", "pending result has another plan revision")
+    if result.get("taskId") != task_id or result.get("attempt") != task.get("attempt"):
+        raise LifecycleError("review-interruption-subject-invalid", "pending result does not match the current attempt")
+    packet = task.get("packet")
+    if isinstance(packet, dict) and result.get("taskPacketHash") != packet.get("sha256"):
+        raise LifecycleError("review-interruption-subject-invalid", "pending result does not match its task packet")
+    if task_result_freshness_required(state):
+        validate_task_result(
+            state,
+            task,
+            result,
+            task["result"],
+            repository_root=root,
+            require_freshness=True,
+            allow_non_accepting_outcome=True,
+        )
+    iterations = task.get("usageIterations", [])
+    return {
+        "runId": state["runId"],
+        "taskId": task_id,
+        "attempt": task["attempt"],
+        "planDigest": state["planDigest"],
+        "planRevision": state["planRevision"],
+        "packet": dict(packet) if isinstance(packet, dict) else None,
+        "sourceRevision": state["sourceRevision"],
+        "result": dict(task["result"]),
+        "findingIds": sorted(task.get("remediationFindingIds", [])),
+        "budgetDigest": canonical_digest(state.get("budgets", {})),
+        "runDeadlineAt": state.get("runDeadlineAt"),
+        "attemptDeadlineAt": task.get("attemptDeadlineAt"),
+        "usageTotals": dict(task.get("usageTotals") or {}),
+        "usageIterationCount": len(iterations),
+        "usageIterationDigest": canonical_digest(iterations),
+    }
+
+
+def _require_review_recovery(state_path: Path, state: dict[str, Any], blocker: dict[str, Any]) -> None:
+    previous = blocker.get("reviewSubject")
+    if not isinstance(previous, dict) or not isinstance(previous.get("taskId"), str):
+        raise LifecycleError("review-recovery-subject-missing", "technical blocker lacks a bound review subject")
+    current = _technical_review_subject(state_path, state, previous["taskId"])
+    if (
+        set(previous) != set(current)
+        or not isinstance(previous.get("usageTotals"), dict)
+        or type(previous.get("usageIterationCount")) is not int
+        or previous["usageIterationCount"] < 0
+    ):
+        raise LifecycleError("review-recovery-subject-invalid", "technical blocker subject shape is invalid")
+    changing_usage = {"usageTotals", "usageIterationCount", "usageIterationDigest"}
+    if {k: v for k, v in current.items() if k not in changing_usage} != {
+        k: v for k, v in previous.items() if k not in changing_usage
+    }:
+        raise LifecycleError(
+            "review-recovery-subject-mismatch", "technical recovery cannot change its review subject or caps"
+        )
+    task = find_task(state, previous["taskId"])
+    iterations = task.get("usageIterations", [])
+    count = previous["usageIterationCount"]
+    if len(iterations) < count or canonical_digest(iterations[:count]) != previous["usageIterationDigest"]:
+        raise LifecycleError("review-recovery-usage-reset", "technical recovery cannot discard usage history")
+    for metric, value in previous["usageTotals"].items():
+        actual = current["usageTotals"].get(metric)
+        if type(value) in (int, float) and (type(actual) not in (int, float) or actual < value):
+            raise LifecycleError("review-recovery-usage-reset", "technical recovery cannot reset accrued usage")
+    for name in ("runDeadlineAt", "attemptDeadlineAt"):
+        _require_review_deadline(current[name])
+    _require_review_capacity(state, task)
+
+
+def _require_review_capacity(state: dict[str, Any], task: dict[str, Any]) -> None:
+    budgets = state.get("budgets", {})
+    for metric, task_limit, run_limit in (
+        ("reportedTokens", "maxReportedTokensPerTask", "maxReportedTokensPerRun"),
+        ("toolCalls", "maxToolCallsPerTask", "maxToolCallsPerRun"),
+        ("iterations", "maxUsageIterationsPerAttempt", None),
+    ):
+        _require_known_capacity((task.get("usageTotals") or {}).get(metric), budgets.get(task_limit))
+        cap = budgets.get(run_limit) if run_limit else None
+        if type(cap) in (int, float):
+            values = [(item.get("usageTotals") or {}).get(metric) for item in state["tasks"] if item.get("attempt")]
+            total = (
+                sum(value for value in values if isinstance(value, (int, float)))
+                if all(type(value) in (int, float) for value in values)
+                else None
+            )
+            _require_known_capacity(total, cap)
+
+
+def _require_known_capacity(used: Any, cap: Any) -> None:
+    if type(cap) in (int, float):
+        if type(used) not in (int, float):
+            raise LifecycleError("review-recovery-budget-unavailable", "declared remaining capacity is unavailable")
+        if used >= cap:
+            raise LifecycleError("review-recovery-budget-exhausted", "declared review capacity is exhausted")
+
+
+def _require_review_deadline(value: Any) -> None:
+    try:
+        deadline = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if deadline.tzinfo is None or deadline.utcoffset() is None:
+            raise ValueError
+    except (AttributeError, TypeError, ValueError):
+        raise LifecycleError(
+            "review-recovery-deadline-unavailable", "technical recovery requires an absolute deadline"
+        ) from None
+    if datetime.now(UTC) >= deadline:
+        raise LifecycleError("review-recovery-deadline-expired", "technical recovery cannot extend an expired deadline")
+
+
+@workflow_transaction
 def pause_for_external_action(
     state_path: Path,
     *,
@@ -115,6 +258,7 @@ def pause_for_external_action(
     return status(state_path)
 
 
+@workflow_transaction
 def resume_external_action(
     state_path: Path,
     *,

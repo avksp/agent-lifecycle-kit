@@ -200,6 +200,7 @@ def _write_bundle(root: Path) -> tuple[Path, Path]:
             "tier": "S0",
             "tierResolutionRequest": {"riskFlags": {}, "capabilityHints": []},
         },
+        "validation": {"commands": ["python -m unittest"]},
         "readOnly": [],
         "forbiddenWrites": [],
         "leadOwned": [],

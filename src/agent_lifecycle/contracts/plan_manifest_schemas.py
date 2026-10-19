@@ -50,7 +50,10 @@ PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
             "readOnly": _STRING_LIST,
             "forbiddenWrites": _STRING_LIST,
             "leadOwned": {"type": "array", "items": {"type": "object"}},
-            "workstreams": {"type": "array", "items": {"type": "object"}},
+            "workstreams": {
+                "type": "array",
+                "items": {"type": "object", "properties": {"artifactPaths": {"$ref": "#/$defs/artifactPaths"}}},
+            },
             "acceptance": _OBJECT,
             "acceptanceCriteria": {"type": "array", "items": {"type": "object"}},
             "validation": _OBJECT,
@@ -95,6 +98,12 @@ PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
 }
 
 PLAN_MANIFEST_SCHEMAS[MANIFEST_SCHEMA]["$defs"] = {
+    "artifactPaths": _closed_object_schema(
+        "agent-plan-artifact-paths.v1",
+        required=["result", "review"],
+        include_schema_version=False,
+        properties={"result": {"type": "string", "minLength": 1}, "review": {"type": "string", "minLength": 1}},
+    ),
     "package": _closed_object_schema(
         "agent-plan-package.v1",
         required=["id"],
@@ -151,6 +160,28 @@ PLAN_MANIFEST_SCHEMAS[MANIFEST_SCHEMA]["$defs"] = {
         "type": "object",
         "additionalProperties": True,
         "properties": {
+            "prerequisiteAcceptance": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["required", "dependencies"],
+                "properties": {
+                    "required": {"type": "boolean"},
+                    "dependencies": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": ["packageId", "sourceRevision", "evidencePath", "sha256"],
+                            "properties": {
+                                "packageId": {"type": "string", "minLength": 1},
+                                "sourceRevision": {"type": "string", "minLength": 1},
+                                "evidencePath": {"type": "string", "minLength": 1},
+                                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                            },
+                        },
+                    },
+                },
+            },
             "securityAnalysis": {
                 "type": "object",
                 "required": ["profileId", "activation", "implementationAudit"],
@@ -161,7 +192,7 @@ PLAN_MANIFEST_SCHEMAS[MANIFEST_SCHEMA]["$defs"] = {
                     "implementationAudit": {"type": "object"},
                     "verificationEvidence": {"type": "object"},
                 },
-            }
+            },
         },
     },
 }

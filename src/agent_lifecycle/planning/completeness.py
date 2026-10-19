@@ -138,12 +138,11 @@ def validate_plan_completeness(
     required_checks = _required_checks(active_profile, tier)
     for check in required_checks:
         _CHECKS[check](manifest, tier, blockers)
-    if tier == "S2" and _canonical_authority_enabled(manifest):
-        # Plans carrying packageIntegrity use the closed graph and path rules.
-        # Older frozen plans remain readable under their historical profile.
+    if tier == "S2":
+        _check_s2_integrity(manifest, blockers)
         _check_traceability(manifest, tier, blockers)
         _check_path_authority(manifest, tier, blockers)
-        required_checks = [*required_checks, "traceability", "path-authority"]
+        required_checks = [*required_checks, "package-integrity", "traceability", "path-authority"]
     if operation_root is not None:
         required_checks = [*required_checks, "filesystem-path-authority"]
         try:
@@ -176,12 +175,13 @@ def require_plan_completeness_pass(validation: dict[str, Any]) -> dict[str, Any]
     return validation
 
 
-def _tier(manifest: dict[str, Any]) -> str:
+def _tier(manifest: dict[str, Any]) -> str | None:
     specification = manifest.get("specification")
-    if isinstance(specification, dict) and isinstance(specification.get("tier"), str):
-        return specification["tier"]
+    if isinstance(specification, dict) and "tier" in specification:
+        value = specification["tier"]
+        return value if isinstance(value, str) else None
     raw = manifest.get("tier")
-    return raw if isinstance(raw, str) else "S1"
+    return raw if isinstance(raw, str) else None
 
 
 def _package_id(manifest: dict[str, Any]) -> str | None:
@@ -193,7 +193,22 @@ def _required_checks(profile: dict[str, Any], tier: str) -> list[str]:
     profiles = profile.get("profiles") if isinstance(profile.get("profiles"), dict) else {}
     tier_profile = profiles.get(tier) if isinstance(profiles, dict) else None
     required = tier_profile.get("requiredChecks") if isinstance(tier_profile, dict) else []
-    return _strings(required)
+    baseline = DEFAULT_PROFILE["profiles"][tier]["requiredChecks"]
+    return list(dict.fromkeys([*baseline, *_strings(required)]))
+
+
+def _check_s2_integrity(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
+    integrity = manifest.get("packageIntegrity")
+    if not isinstance(integrity, dict) or integrity.get("required") is not True:
+        blockers.append(_blocker("missing-package-integrity", "S2 requires packageIntegrity.required=true"))
+        return
+    if integrity.get("lockSchemaVersion") != "agent-plan-lock.v2":
+        blockers.append(_blocker("s2-lock-schema-invalid", "S2 requires a v2 inventory lock"))
+    paths = manifest.get("planFiles")
+    if not isinstance(paths, list) or not paths or any(not isinstance(p, str) or not p for p in paths):
+        blockers.append(_blocker("plan-files-missing", "S2 requires a nonempty planFiles inventory"))
+    elif paths != sorted(set(paths)):
+        blockers.append(_blocker("plan-files-unsorted", "planFiles must be unique and sorted lexicographically"))
 
 
 def _check_single_workstream(manifest: dict[str, Any], tier: str, blockers: list[dict[str, Any]]) -> None:
@@ -311,10 +326,6 @@ def _check_write_ownership(manifest: dict[str, Any], tier: str, blockers: list[d
                     "missing-write-ownership", "workstream writes are required", {"workstreamId": workstream.get("id")}
                 )
             )
-
-
-def _canonical_authority_enabled(manifest: dict[str, Any]) -> bool:
-    return isinstance(manifest.get("packageIntegrity"), dict)
 
 
 def _validation_ladder_enabled(manifest: dict[str, Any]) -> bool:

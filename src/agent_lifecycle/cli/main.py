@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from agent_lifecycle.cli.dispatch import dispatch
+from agent_lifecycle.cli.dispatch import dispatch, require_known_arguments
 from agent_lifecycle.cli.errors import to_lifecycle_error
 from agent_lifecycle.cli.parsers import build_parser
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes
@@ -19,6 +19,7 @@ def main(argv: list[str] | None = None) -> int:
             from agent_lifecycle.neutrality.cli import main as neutrality_main
 
             return neutrality_main(remainder)
+        require_known_arguments(args, remainder)
         payload = dispatch(args, remainder)
     except LifecycleError as exc:
         _write(exc.to_json())
