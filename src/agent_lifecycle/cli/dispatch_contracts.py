@@ -85,7 +85,7 @@ def dispatch_contracts(args: argparse.Namespace) -> dict[str, Any]:
         return {"schemaVersion": "agent-lifecycle-version.v1", "version": __version__}
     if args.command == "schema":
         if args.schema_command == "list":
-            return list_schemas()
+            return list_schemas(scope=args.scope)
         if args.schema_command == "show":
             return get_schema(args.schema_id)
         raise LifecycleError("command-not-implemented", "schema command is not implemented")
@@ -369,9 +369,16 @@ def _dispatch_review_mesh(args: argparse.Namespace) -> dict[str, Any]:
             blocking=args.blocking,
             evidence_ids=args.evidence_id,
             out_dir=Path(args.out_dir) if args.out_dir else None,
+            review_input=read_json_object(Path(args.review_input)) if args.review_input else None,
+            repository_root=Path(args.repository_root),
+            authority_manifest=read_json_object(Path(args.manifest)) if args.manifest else None,
+            summary_output=Path(args.out) if args.out else None,
         )
         if args.out:
-            write_json_create(Path(args.out), payload)
+            output = Path(args.out)
+            if args.review_input and not output.is_absolute():
+                output = Path(args.repository_root) / output
+            write_json_create(output, payload)
         return payload
     if args.review_mesh_command == "assign":
         source = _review_mesh_source(args, code="review-mesh-assignment-source-missing", label="assignment")

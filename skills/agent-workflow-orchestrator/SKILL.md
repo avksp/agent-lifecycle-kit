@@ -5,155 +5,38 @@ description: Run or resume the full lifecycle from request clarification through
 
 # Agent workflow orchestrator
 
-Drive the complete lifecycle with this skill. The controller is host-neutral:
-skills define semantics; adapters own native
-questions, approvals, tools, launch, waiting, cancellation and telemetry.
-
 ## Lifecycle
 
-1. Load existing durable state when present. Do not reconstruct authority from
-   chat.
-2. Clarify only decisions that materially change behavior, scope, safety,
-   architecture, ownership, evidence, or external authority.
-3. Route planning to `agent-first-planning`.
-4. Route every candidate specification or plan to independent review through
-   `audit-agent-plan`; refine until the freeze verdict passes or blocks.
-5. Freeze only reviewed matching inputs.
-6. Compile packets with `agent-plan-to-workers`.
-7. Respect execution mode: plan-only, approval-required, or auto-after-freeze.
-8. Launch only dependency-ready packets within frozen parallelism.
-9. Run controller-owned validation before launch and after attempts when the
-   plan requires it.
-10. Audit every task attempt with `audit-plan-implementation` before
-    acceptance.
-11. Route implementation/test/evidence defects to bounded remediation. Route
-    plan gaps, write-set gaps, architecture changes, or contract changes to
-    reopen and refreeze.
-12. After all required tasks are accepted, run final implementation audit and
-    publish completion only from a reproducible proof.
+Follow clarification → planning → independent plan review → reviewed freeze → separate execution authorization → bounded tasks → independent task audits → final audit → finalize. Use atomic commands and actual native state; a goal or prose approval is not a state transition. Preserve research-only and Markdown plan review boundaries.
 
-For remediation require a frozen retry budget, independent `REWORK` evidence
-and open finding IDs; in v4 use `workflow task-review-apply` (with
-`task-rework` as compatibility wrapper). Never edit state manually.
-Before each `task-result`, put a current `workflow task-snapshot` claim in the
-result. Later code changes require a new claim and result.
+Read [the complete lifecycle contract](references/lifecycle-contract.md) before
+acting in this stage. It preserves every original instruction; this entrypoint
+is a routing summary, not a replacement contract. Follow its linked shared
+contracts for the selected task.
 
-`workflow continue` applies one projected revision and action digest. For
-sequences add `--until-blocked --apply`, bundle, lock, caps and `--out`. It
-replaces no validator or transition; stop at external authority.
+Read docs/guides/lifecycle-cookbook.md. Retain valid evidence after overruns; preserve all expenses and UNKNOWN usage across retries and compact. Start only the selected frozen task.
 
-For adapter-backed work, prefer `agent-lifecycle start --adapter <id>`. It
-requires one task source or `--resume <session-id>`. Raw input in `auto`,
-`research`, `plan` or `review` creates draft intake only; it cannot claim
-lifecycle coverage or start implementation. Review recommendations are advice
-until confirmed by the operator or reviewed plan. Only `--mode implement` may
-consume a fully bound frozen request. `--resume` accepts stored ALK session
-identity, never a guessed host conversation id. Lower-level atomic commands are
-`adapter task start`, `adapter run` and `adapter session resume`;
-`adapter session start` only records `WAITING_FOR_TASK`. Native launch remains
-descriptor-driven and host-owned.
+Do not bypass independent review, reviewed freeze, ownership, authorization or
+budgets. Missing evidence stays missing; unknown telemetry stays null. Do not
+reset expenses or run clocks after retries or context compaction.
 
-The optional thread bridge is off by default; imported content is advisory and
-only matching qualification evidence can project support.
+Safe artifact commands: `task artifact-create` creates new bounded structured
+JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
+Review Mesh packets grant no review, attestation or execution authority. See
+`docs/reference/safe-artifact-authoring.md`.
 
-## Adapter lifecycle control
+Full contract SHA256: `b3ec79e0280c06fa1057845ce7cae24f87682a0662d6f670e79d98ee2406bc35`
+Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.
 
-Inspect the operation declaration and capability manifest before an adapter
-action. The levels have different guarantees:
 
-- `GUIDANCE_ONLY` gives instructions and does not block a host action.
-- `OBSERVED` records a result for later acceptance, but cannot prove prevention.
-- `ENFORCED` requires an exact host-owned pre-action boundary and matching live
-  qualification for that operation and host version.
-- `NO_RECOMMENDATION` means evidence is insufficient for promotion.
+## Existing host and continuation routes
 
-Evidence cannot be promoted from a prompt, skill or fixture alone. The selected
-level must match adapter-owned evidence and the frozen plan.
+Keep the frozen plan and lock authoritative. Adapter levels GUIDANCE_ONLY,
+OBSERVED and ENFORCED describe the qualified host-owned pre-action boundary;
+NO_RECOMMENDATION stays unqualified. A prompt, skill or fixture cannot create
+host enforcement. Read the complete reference for the required receipts.
 
-For every controlled action, check the frozen plan and lock, state revision,
-ownership-safe paths and the pre-action decision before the host call. Bind the
-post-action result and changed paths to the same operation, then run task-
-acceptance and stop gates. A missing, stale or mismatched receipt blocks the
-level selected by the plan.
-
-Project defaults use `agent-lifecycle project profile init/check`. A local
-`.alk/project-profile.json` may supply `--adapter`; use `--project-profile` for
-an explicit file or `--no-project-profile` to disable defaults. The frozen plan
-and lock remain authoritative for risk, quality, scope, gates and receipts.
-
-With `--launch` on raw planning input, use only an exact-version qualified
-planning profile from `.alk/host-launch/<adapter>.json`, bounded stdin, and a
-`REVIEW_REQUIRED` or `BLOCKED` result. Missing or stale profiles return
-preparation commands. Persist digest lineage only; `--resume` must not attach
-to a native host conversation. Implementation uses a reviewed frozen manifest,
-matching lock and complete workflow bindings.
-
-For risk-aware execution, project the digest-bound route with `start --risk`
-and pass that exact profile to `workflow task-start --risk-profile` with the
-same operation and lineage. Require host-attested tokens, invocation count and
-wall time within all caps before acceptance.
-
-For common requests, use `docs/guides/lifecycle-cookbook.md` for research-only,
-planning, Markdown plan review, code review, implementation audit and
-cross-review.
-
-If a frozen plan opts into Review Mesh, use `review-mesh prepare`, then let
-adapters run reviewers and import, synthesize and quorum receipts. Review Mesh
-is not authority to inject prompts into hosts or bypass review/freeze.
-
-## State rules
-
-- Immutable authority: plan manifest, plan lock, frozen packets.
-- Mutable runtime: workflow state, journal, task results, task reviews,
-  evidence receipts, final audit.
-- Every mutation needs an operation id, expected revision, source revision, and
-  reason.
-- New runs use `agent-workflow-state.v4` from `workflow init`; v3 is accepted
-  only through explicit fail-closed `workflow state-migrate`.
-- v4 uses exact-lineage authorize/pause-resume receipts and typed routes;
-  `PLAN_ONLY` never authorizes.
-- Review, remediation, `CONTRACT_CHANGE` and `BLOCKED` are task-local. The run
-  stays `RUNNING` until every required task is `ACCEPTED`, then enters
-  `FINAL_AUDIT`.
-- Apply `final-audit-outcome`: `ACCEPTED` finalizes, `REWORK` archives,
-  `CONTRACT_CHANGE` refreezes, and `BLOCKED` waits externally.
-- Bounded waits only. On timeout, request cancellation through the host adapter
-  and record a conservative block.
-- Budget exhaustion, missing receipts, stale evidence, or unverifiable
-  telemetry cannot produce a pass.
-
-## Context policy
-
-- Keep the latest user instructions and active packet verbatim.
-- Summarize older context into structured state.
-- Drop tool dumps and intermediate data after extracting decisions, evidence
-  ids, hashes, exit codes, and blockers.
-- Prefer deterministic validators before semantic review.
-- For 4k-strict/8k/16k/32k/64k hosts, render/check context with
-  `small-context-profile.v1`; overflow must split, request larger context, or
-  block, never silently truncate.
-
-## Output
-
-Return the next typed action, current run phase, locked tasks, active blockers,
-accepted evidence, remaining budget, and concrete next command or host action.
-When progress hooks are enabled, keep stdout JSON unchanged and treat stderr or
-the hook receipt as display evidence only.
-
-## Context continuity
-
-For long sessions or compaction, use the context checkpoint contract. Prefer
-an opted-in ALK milestone or an explicit `agent-lifecycle context checkpoint`.
-`NATIVE_HOOK` requires accepted adapter event evidence; otherwise label support
-`MILESTONE`, `AGENT_REQUESTED` or `UNAVAILABLE`. After compaction, restore one
-bounded packet and re-check lineage. It is advisory: the frozen plan, workflow
-state, ownership and accepted evidence govern execution and acceptance.
-
-## Lifecycle authority
-
-Workflow state and the existing transitions invoked through `workflow continue`
-or direct commands are authoritative. Legacy runner
-artifacts are read-only journal evidence; convert them only through the
-explicit bounded `workflow migrate-runner-artifact` route. Their statuses never
-authorize attempts, acceptance, blockers or finalization. Require workflow
-state, authorization and final audit.
+`workflow continue` projects first; apply only the projected revision and action.
+It replaces no validator or transition. Use context checkpoint and the thread
+bridge only through their existing bounded, lineage-checked contracts; restored
+context grants no execution authority.

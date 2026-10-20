@@ -76,7 +76,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.18.0
+python -m pip install agent-lifecycle-kit==2.19.0
 ```
 
 ## Task evidence identity
@@ -714,3 +714,22 @@ Raw details become eligible 30 days after full financial closure. Configure an
 hourly same-user maintenance command with pinned authority and a fresh finite
 deadline, then verify the actual target. See the
 [retention operations guide](../operations/retention-maintenance.md).
+
+
+## Safe artifact and review helpers (2.19)
+
+| Command or option | Effect |
+| --- | --- |
+| `task artifact-create --kind json --input <json> --out <new-file>` | Create-only canonical serialization; no acceptance authority. |
+| `task artifact-create --kind task-result --state <state> --task <id> --input <json> --out <new-file>` | Existing typed result validator and current lineage; commit/review stay separate. |
+| `task artifact-create --kind evidence --input <json> --out <new-file>` | Existing closed receipt and digest checks; no attestation by shape. |
+| `task artifact-inspect --input <json> --max-display-bytes 8192` | Read-only redacted display with original path/digest and truncation metadata. |
+| `plan freeze-prepare --manifest <draft> --out <new-directory> --repository-root .` | New bounded candidate, no accepting review/lock/authorization. |
+| `plan verify --manifest <manifest> --out <receipt> --compact` | Compact summary with retained full typed receipt; default output unchanged. |
+| `schema list --scope core` | Small view naming actual contextual validators; full registry remains default. |
+| `review-mesh prepare ... --review-input <inventory> --repository-root . --out-dir <new-directory>` | Validate local inventory and generate reading index/response contract; no model launch or delivery proof. |
+
+See [safe artifact authoring](safe-artifact-authoring.md) for limits, refusal
+conditions and the review/freeze boundary, and [Review Mesh](review-mesh.md#bounded-review-handoff)
+for inventory and raw/normalized response contracts. New authoring commands emit
+compact non-authoritative summaries; existing commands keep their default output.

@@ -121,7 +121,8 @@ def _add_diagnostics_parser(subparsers: argparse._SubParsersAction[argparse.Argu
 def _add_schema_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     schema = subparsers.add_parser("schema", help="inspect bundled JSON schemas")
     schema_sub = schema.add_subparsers(dest="schema_command", required=True)
-    schema_sub.add_parser("list")
+    schema_list = schema_sub.add_parser("list")
+    schema_list.add_argument("--scope", choices=["all", "core"], default="all")
     show = schema_sub.add_parser("show")
     show.add_argument("schema_id")
 
@@ -243,6 +244,8 @@ def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.Argu
     prepare.add_argument("--evidence-id", action="append", default=[])
     prepare.add_argument("--out-dir")
     prepare.add_argument("--out")
+    prepare.add_argument("--review-input", help="explicit source-bound portable reading inventory")
+    prepare.add_argument("--repository-root", default=".")
     assign = review_mesh_sub.add_parser("assign")
     assign_source = assign.add_mutually_exclusive_group(required=True)
     assign_source.add_argument("--manifest")

@@ -1077,6 +1077,12 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "`agent-progress-hook-receipt.v1`.\n"
         "`agent-risk-execution-policy.v1`.\n"
         "`agent-risk-execution-profile.v1`.\n"
+        "`agent-review-mesh-profile.v1`.\n"
+        "`agent-review-mesh-assignment.v1`.\n"
+        "`agent-review-mesh-result.v1`.\n"
+        "`agent-review-mesh-synthesis.v1`.\n"
+        "`agent-review-mesh-quorum-receipt.v1`.\n"
+        "`agent-review-mesh-quorum-validation.v1`.\n"
         "`agent-execution-strategy.v1`.\n"
         "`agent-execution-strategy-validation.v1`.\n"
         "`agent-lifecycle-quality-floor-decision.v1`.\n"
@@ -1881,6 +1887,19 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
                 else "The command creates ALK intake for the task.\n"
             ),
         )
+
+
+    # Keep the synthetic legacy fixture complete when mandatory documentation grows.
+    # Test-specific negative pages and host evidence remain under each test's control.
+    for relative in (
+        "docs/reference/safe-artifact-authoring.md",
+        "docs/ru/reference/safe-artifact-authoring.md",
+        "docs/architecture/sdlc-boundary.md",
+        "docs/ru/architecture/sdlc-boundary.md",
+        "docs/reference/review-mesh.md",
+        "docs/ru/reference/review-mesh.md",
+    ):
+        _write_text(root / relative, (ROOT / relative).read_text(encoding="utf-8"))
 
 
 def _write_text(path: Path, text: str) -> None:

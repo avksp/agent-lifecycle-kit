@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.cli.plan_lock_commands import create_reviewed_plan_lock
+from agent_lifecycle.cli.plan_lock_commands import create_reviewed_plan_lock, prepare_freeze_candidate
 from agent_lifecycle.compiler import build_phase_packet, compile_small_model_packets, compile_task_packets
 from agent_lifecycle.contracts import (
     LifecycleError,
@@ -45,6 +45,12 @@ from agent_lifecycle.policy.proposals import accept_finding_check_proposal, buil
 from agent_lifecycle.specification import (
     build_completion_gate_receipt,
     validate_specification,
+)
+from agent_lifecycle.workflow.artifact_builders import (
+    artifact_summary,
+    build_authored_artifact,
+    create_artifact,
+    inspect_artifact,
 )
 from agent_lifecycle.workflow.artifacts import build_finding_check_evidence_artifact
 
@@ -96,6 +102,12 @@ def _dispatch_specification(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
+    if args.plan_command == "freeze-prepare":
+        return prepare_freeze_candidate(
+            manifest_path=args.manifest,
+            output_path=args.out,
+            repository_root=Path(args.repository_root),
+        )
     if args.plan_command == "lock-create":
         return create_reviewed_plan_lock(
             manifest_path=args.manifest,
@@ -125,27 +137,7 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         return payload
     if args.plan_command == "verify":
-        manifest_path = Path(args.manifest)
-        manifest, lock, acceptance_markdown, workflow_state, package_root = load_verification_inputs(
-            manifest_path=manifest_path,
-            lock_path=Path(args.lock) if args.lock else None,
-            acceptance_path=Path(args.acceptance) if args.acceptance else None,
-            state_path=Path(args.state) if args.state else None,
-            package_root=Path(args.package_root) if args.package_root else None,
-        )
-        payload = build_plan_verification(
-            manifest,
-            manifest_path=manifest_path,
-            lock=lock,
-            acceptance_markdown=acceptance_markdown,
-            workflow_state=workflow_state,
-            repository_root=Path(args.repository_root),
-            package_root=package_root,
-        )
-        output_path = args.out or args.evidence
-        if output_path:
-            write_json_create(Path(output_path), payload)
-        return require_plan_verification_pass(payload)
+        return _verify_plan(args)
     if args.plan_command == "acceptance-check":
         manifest_path = Path(args.manifest)
         acceptance_path = Path(args.acceptance)
@@ -234,6 +226,33 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
     if args.plan_command == "finding-check":
         return _dispatch_finding_check(args)
     raise LifecycleError("command-not-implemented", "plan command is not implemented")
+
+
+def _verify_plan(args: argparse.Namespace) -> dict[str, Any]:
+    if args.compact and not args.out:
+        raise LifecycleError("plan-compact-output-required", "Compact display requires --out for the full receipt")
+    manifest_path = Path(args.manifest)
+    manifest, lock, markdown, state, package_root = load_verification_inputs(
+        manifest_path=manifest_path,
+        lock_path=Path(args.lock) if args.lock else None,
+        acceptance_path=Path(args.acceptance) if args.acceptance else None,
+        state_path=Path(args.state) if args.state else None,
+        package_root=Path(args.package_root) if args.package_root else None,
+    )
+    payload = build_plan_verification(
+        manifest,
+        manifest_path=manifest_path,
+        lock=lock,
+        acceptance_markdown=markdown,
+        workflow_state=state,
+        repository_root=Path(args.repository_root),
+        package_root=package_root,
+    )
+    output_path = args.out or args.evidence
+    if output_path:
+        write_json_create(Path(output_path), payload)
+    require_plan_verification_pass(payload)
+    return artifact_summary(Path(output_path), payload) if args.compact else payload
 
 
 def _build_planning_handoff_phase_packet(
@@ -385,6 +404,18 @@ def _dispatch_finding_check(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_task(args: argparse.Namespace) -> dict[str, Any]:
+    if args.task_command == "artifact-create":
+        value = build_authored_artifact(
+            read_json_object(Path(args.input)),
+            kind=args.kind,
+            redact_advisory=args.redact_advisory,
+            state=read_json_object(Path(args.state)) if args.state else None,
+            task_id=args.task,
+            repository_root=Path(args.repository_root),
+        )
+        return create_artifact(Path(args.out), value)
+    if args.task_command == "artifact-inspect":
+        return inspect_artifact(Path(args.input), max_display_bytes=args.max_display_bytes)
     if args.task_command == "compile":
         execution_strategy = (
             read_json_object(Path(args.strategy), label="execution strategy") if args.strategy else None

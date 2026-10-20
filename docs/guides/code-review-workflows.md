@@ -469,3 +469,16 @@ for that phase. Otherwise a normal independent task review is enough.
 - Treat `review-mesh recommend` as advice until a frozen plan opts in.
 - Do not merge on a self-review. High-risk changes need independent review or
   a recorded quorum receipt.
+
+
+## Bounded source handoff
+
+For an ALK manifest, `review-mesh prepare --review-input` validates the declared
+source/AC/EV inventory and prepares a portable reading index. Select PLAN_PACKAGE
+or TASK_CHANGESET scope; retain previous findings and finite area/integration/
+final slots. Reviewers need the actual indexed bytes, including local inputs
+that a Git clone lacks. Prepared examples are SKIPPED format examples, not review
+results. Collect the actual raw response through the existing importer;
+[the handoff contract](../reference/review-mesh.md#bounded-review-handoff) lists
+refusals, byte limits and exact coverage. Markdown-only drafts keep their existing
+draft-only path; preparation does not invent a frozen manifest for them.

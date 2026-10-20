@@ -174,11 +174,9 @@ def _add_diagnostics_parser(subparsers: argparse._SubParsersAction[argparse.Argu
 
 
 def _add_schema_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    schema = subparsers.add_parser("schema", help="inspect bundled JSON schemas")
-    schema_sub = schema.add_subparsers(dest="schema_command", required=True)
-    schema_sub.add_parser("list")
-    show = schema_sub.add_parser("show")
-    show.add_argument("schema_id")
+    from agent_lifecycle.cli.lifecycle_parsers import _add_schema_parser as add_parser
+
+    add_parser(subparsers)
 
 
 def _add_contract_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -287,85 +285,9 @@ def _add_quality_parser(subparsers: argparse._SubParsersAction[argparse.Argument
 
 
 def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
-    from agent_lifecycle.review_mesh.operator_templates import REVIEW_MESH_OPERATOR_TEMPLATE_IDS
+    from agent_lifecycle.cli.lifecycle_parsers import _add_review_mesh_parser as add_parser
 
-    review_mesh = subparsers.add_parser("review-mesh", help="optional Review Mesh commands")
-    review_mesh_sub = review_mesh.add_subparsers(dest="review_mesh_command", required=True)
-    template_list = review_mesh_sub.add_parser("template-list")
-    template_list.add_argument("--out")
-    profile = review_mesh_sub.add_parser("profile")
-    profile.add_argument("--profile-id", default="optional-review-mesh")
-    profile.add_argument("--mode", choices=list(REVIEW_MESH_MODE_IDS), action="append", default=[])
-    profile.add_argument("--default-mode", choices=list(REVIEW_MESH_MODE_IDS), default="leader-draft-multi-review")
-    profile.add_argument("--reviewer-model-class", action="append", default=[])
-    profile.add_argument("--require-independence", action="store_true")
-    profile.add_argument("--independence-dimension", choices=["host", "model"], action="append", default=[])
-    profile.add_argument("--allow-live-calls", action="store_true")
-    profile.add_argument("--max-invocations", type=int)
-    profile.add_argument("--max-input-tokens", type=int)
-    profile.add_argument("--max-output-tokens", type=int)
-    profile.add_argument("--max-wall-seconds", type=int)
-    profile.add_argument("--out")
-    recommend = review_mesh_sub.add_parser("recommend")
-    source = recommend.add_mutually_exclusive_group(required=True)
-    source.add_argument("--text")
-    source.add_argument("--file")
-    source.add_argument("--intake")
-    source.add_argument("--manifest")
-    recommend.add_argument("--sdd-tier", choices=["S0", "S1", "S2"])
-    recommend.add_argument("--risk-flag", action="append", default=[])
-    recommend.add_argument("--out")
-    prepare = review_mesh_sub.add_parser("prepare")
-    prepare_source = prepare.add_mutually_exclusive_group(required=True)
-    prepare_source.add_argument("--manifest")
-    prepare_source.add_argument("--intake")
-    prepare_source.add_argument("--handoff")
-    prepare.add_argument("--template", choices=list(REVIEW_MESH_OPERATOR_TEMPLATE_IDS), default="leader-draft-review")
-    prepare.add_argument("--profile-id")
-    prepare.add_argument("--phase")
-    prepare.add_argument("--reviewer", action="append", default=[])
-    prepare.add_argument("--blocking", action="store_true")
-    prepare.add_argument("--evidence-id", action="append", default=[])
-    prepare.add_argument("--out-dir")
-    prepare.add_argument("--out")
-    assign = review_mesh_sub.add_parser("assign")
-    assign_source = assign.add_mutually_exclusive_group(required=True)
-    assign_source.add_argument("--manifest")
-    assign_source.add_argument("--intake")
-    assign_source.add_argument("--handoff")
-    assign.add_argument("--profile")
-    assign.add_argument("--mode", choices=list(REVIEW_MESH_MODE_IDS), required=True)
-    assign.add_argument("--phase", required=True)
-    assign.add_argument("--assignment-id", required=True)
-    assign.add_argument("--reviewer-id", required=True)
-    assign.add_argument("--reviewer-role", default="reviewer")
-    assign.add_argument("--reviewer-model-class", default="strong-reasoning")
-    assign.add_argument("--reviewer-host-identity-hash")
-    assign.add_argument("--reviewer-model-identity-hash")
-    assign.add_argument("--blocking", action="store_true")
-    assign.add_argument("--evidence-id", action="append", default=[])
-    assign.add_argument("--out")
-    import_result = review_mesh_sub.add_parser("import-result")
-    import_result.add_argument("--profile", required=True)
-    import_result.add_argument("--assignment", required=True)
-    import_result.add_argument("--reviewer-output", required=True)
-    import_result.add_argument("--allow-local-evidence-ref", action="store_true")
-    import_result.add_argument("--out")
-    synthesize = review_mesh_sub.add_parser("synthesize")
-    synthesize.add_argument("--profile", required=True)
-    synthesize.add_argument("--result", action="append", required=True)
-    synthesize.add_argument("--mode", choices=list(REVIEW_MESH_MODE_IDS))
-    synthesize.add_argument("--accepted-finding-id", action="append", default=[])
-    synthesize.add_argument("--rejected-finding-id", action="append", default=[])
-    synthesize.add_argument("--out")
-    quorum = review_mesh_sub.add_parser("quorum")
-    quorum.add_argument("--profile", required=True)
-    quorum.add_argument("--synthesis", required=True)
-    quorum.add_argument("--min-reviewers", type=int, required=True)
-    quorum.add_argument("--required-role", action="append", default=[])
-    quorum.add_argument("--reviewer-role", action="append", default=[])
-    quorum.add_argument("--out")
+    add_parser(subparsers)
 
 
 def _add_audit_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

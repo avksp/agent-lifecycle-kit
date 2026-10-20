@@ -291,3 +291,17 @@ agent-lifecycle benchmark evaluate \
 Используйте `--tracked-release` для доказательств публикации, а
 `--include-local-artifacts`, если локальный сгенерированный артефакт намеренно
 включён в проверку.
+
+
+## JSON, подготовка review и просмотр отказов
+
+`task artifact-create` создаёт структурированный JSON без перезаписи; `task
+artifact-inspect` даёт ограниченный просмотр. Перед семантическим review
+выполняйте `plan verify`: типизированные блокеры указывают на структурную ошибку.
+`--compact` требует полного receipt через `--out`. `plan freeze-prepare` создаёт
+новый кандидат без review и разрешения на исполнение. `schema list --scope core`
+показывает контекстные валидаторы. См. [безопасное создание артефактов](../reference/safe-artifact-authoring.md).
+
+Для переносимых материалов используйте `review-mesh prepare --review-input` и
+сохраните все индексированные входы под объявленным корнем. Подготовленный пакет
+не подтверждает доставку и принятие; см. [контракт review](../reference/review-mesh.md#bounded-review-handoff).

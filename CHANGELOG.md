@@ -4,6 +4,24 @@
 
 - No changes yet.
 
+## 2.19.0 - 2026-10-20
+
+- Add create-only canonical JSON, typed task-result/evidence authoring and a
+  bounded read-only inspector without replacing review or execution authority.
+- Prepare freeze candidates through existing preflight and footprint guards;
+  retain separate independent review, reviewed lock and authorization.
+- Make plan verification the documented read-only preflight, with opt-in compact
+  output retaining a full receipt; add contextual core schema discovery.
+- Extend existing Review Mesh preparation with a source-bound input inventory,
+  portable hashed byte-range index and one generated raw-response contract used
+  by the collector. Local completeness does not launch reviewers or prove remote
+  delivery, accepted coverage or attested independence.
+- Route seven thin skills to complete preserved references and check actual built
+  plugin/ZIP byte parity, including refusal of drift and bypass advice.
+- Update English/Russian operator guides and distinguish maintained core maturity
+  from adapter capabilities and externally attested guarantees. Keep package,
+  plugin and installation versions consistent; preserve unavailable telemetry.
+
 ## 2.18.0 - 2026-10-20
 
 - Bound process stdin delivery, output draining and cleanup by shared deadlines;

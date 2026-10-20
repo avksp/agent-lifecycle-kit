@@ -5,69 +5,25 @@ description: Create or revise production-ready SDD plans for agent execution, in
 
 # Agent first planning
 
-Use this skill when a request must become an agent-ready implementation plan
-before work starts. The output is a frozen-ready package, not implementation.
-
 ## Contract
 
-1. Clarify only questions that can change scope, architecture, safety,
-   acceptance, external authority, or write ownership. Record safe assumptions
-   for everything else.
-2. Choose the SDD tier.
-   - `S0`: one bounded mechanical change with one executable owner.
-   - `S1`: one standard owner and no major architecture, security,
-     performance, browser, data, or external-environment risk.
-   - `S2`: multiple executable owners or meaningful architecture, security,
-     performance, browser, data, release, migration, or external risk.
-   Use the core `tier resolve` command when available, and never lower a tier
-   without independent review.
-3. For `S2`, write a product specification first and require independent
-   specification review before plan freeze.
-4. Produce a developer overview that explains the intent, user-visible result,
-   architecture boundaries, risks, non-goals, and execution model.
-5. Produce a plan manifest or equivalent machine-readable contract with:
-   requirements, acceptance criteria, evidence ids, workstreams, dependency DAG,
-   exact write ownership, read-only inputs, lead-owned integration seams,
-   validation commands, budgets, context limits, and final audit gates.
-6. Keep immutable planning authority separate from mutable run artifacts.
-7. Route the candidate plan to `audit-agent-plan`. Revise until it is
-   `READY_TO_FREEZE`, explicitly blocked, or the review budget is exhausted.
+Prepare scope, SDD tier, specification when required, developer overview, exact ownership, acceptance, evidence and finite budgets. Planning is draft-only until independent audit-agent-plan returns READY_TO_FREEZE and a reviewed lock is created. Never implement during planning.
 
-When the CLI is available, run the structural gate before independent review:
+Read [the complete lifecycle contract](references/lifecycle-contract.md) before
+acting in this stage. It preserves every original instruction; this entrypoint
+is a routing summary, not a replacement contract. Follow its linked shared
+contracts for the selected task.
 
-```bash
-agent-lifecycle plan completeness-check --manifest <plan.manifest.json>
-agent-lifecycle plan check --manifest <plan.manifest.json> --require-completeness
-```
+Use plan verify as the read-only structural preflight; freeze-prepare only prepares a new candidate, never review or execution permission.
 
-The goal is compact-but-complete authority for the selected tier, not long
-prose. S0/S1 plans can stay short, but the fields required by their tier must
-be present.
+Do not bypass independent review, reviewed freeze, ownership, authorization or
+budgets. Missing evidence stays missing; unknown telemetry stays null. Do not
+reset expenses or run clocks after retries or context compaction.
 
-## Planning rules
+Safe artifact commands: `task artifact-create` creates new bounded structured
+JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
+Review Mesh packets grant no review, attestation or execution authority. See
+`docs/reference/safe-artifact-authoring.md`.
 
-- Do not implement code while planning.
-- Do not assign shared integration to a worker by hiding it in another task.
-- Do not depend on chat history as authority when a plan package exists.
-- Do not claim production readiness without tests, evidence, rollback or
-  release gates appropriate to the risk.
-- Keep plans small enough for workers: active packet, exact files, acceptance
-  criteria, and evidence routes only.
-- For small-context hosts, require compact packet rendering with
-  `small-context-profile.v1`; do not depend on full plan context.
-- Do not use shortness as a reason to omit required tier structure. Missing
-  evidence routes, write ownership, budgets, context limits, or final gates are
-  blockers when the selected tier requires them.
-
-## Output
-
-Return these artifacts or their host-native equivalents:
-
-- clarification log and assumptions;
-- SDD product specification when required;
-- developer overview;
-- plan manifest;
-- plan lock or freeze candidate identity;
-- exact worker write-set manifest;
-- validation and evidence plan;
-- plan review request.
+Full contract SHA256: `e8dc5e8e01c2db420f72da8fcc8fc0f5a9e5e1c1e65aadb3df049b8dfcf0735e`
+Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.

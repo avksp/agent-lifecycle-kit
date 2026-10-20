@@ -81,7 +81,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.18.0
+python -m pip install agent-lifecycle-kit==2.19.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -773,3 +773,23 @@ Linux может использовать почасовой пользоват�
 `DONE` требует отсутствия всех объявленных исходных и промежуточных raw-файлов;
 итоги расходов, записи закрытия и защита от повторного списания сохраняются.
 Это логическое удаление, а не физическое стирание носителя.
+
+
+## Безопасные артефакты и review (2.19)
+
+| Команда или параметр | Результат |
+| --- | --- |
+| `task artifact-create --kind json --input <json> --out <new-file>` | Каноническая сериализация без перезаписи и полномочий принятия. |
+| `task artifact-create --kind task-result --state <state> --task <id> --input <json> --out <new-file>` | Существующая проверка результата и текущей привязки; commit/review выполняются отдельно. |
+| `task artifact-create --kind evidence --input <json> --out <new-file>` | Проверка закрытого receipt и digest; форма не является аттестацией. |
+| `task artifact-inspect --input <json> --max-display-bytes 8192` | Очищенный просмотр только для чтения с исходным путём/digest и признаком усечения. |
+| `plan freeze-prepare --manifest <draft> --out <new-directory> --repository-root .` | Новый ограниченный кандидат без положительного review, lock и разрешения. |
+| `plan verify --manifest <manifest> --out <receipt> --compact` | Краткий вывод с сохранением полного типизированного receipt; прежний вывод по умолчанию сохранён. |
+| `schema list --scope core` | Краткий набор с реальными контекстными валидаторами; по умолчанию полный реестр. |
+| `review-mesh prepare ... --review-input <inventory> --repository-root . --out-dir <new-directory>` | Локальная проверка входов, индекс чтения и контракт ответа; без запуска модели и подтверждения доставки. |
+
+Ограничения и отказы описаны в [безопасном создании артефактов](safe-artifact-authoring.md),
+формат входов и различие сырого/нормализованного ответа — в
+[Review Mesh](review-mesh.md#bounded-review-handoff). Новые команды создания
+возвращают краткие неавторитетные summaries; прежние команды сохраняют вывод
+по умолчанию.

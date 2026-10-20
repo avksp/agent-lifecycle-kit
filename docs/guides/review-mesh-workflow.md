@@ -523,3 +523,16 @@ agent-lifecycle workflow finalize \
 7. Synthesize findings.
 8. Build quorum.
 9. Attach quorum only to phases that the frozen plan requires.
+
+
+## Prepare a portable reading index (2.19)
+
+The opt-in `review-mesh prepare --review-input <inventory> --repository-root .`
+validates source-bound local inputs before creating a fresh output directory.
+Keep `reading-index.json`, the referenced bytes and the generated raw response
+contract available to each reviewer. Inspect clone availability: local-only or
+changed inputs require separate delivery. No source is embedded in the prompt;
+preparation does not launch a reviewer or observe delivery. Generated examples
+are SKIPPED and cannot substitute for actual review. Import the actual
+`reviewer-output.v1`; do not relabel `agent-review-mesh-result.v1` as raw output.
+See [inventory, ranges and coverage](../reference/review-mesh.md#bounded-review-handoff).

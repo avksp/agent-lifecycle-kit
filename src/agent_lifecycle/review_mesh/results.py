@@ -12,6 +12,10 @@ from agent_lifecycle.contracts.redaction import (
     is_sensitive_key,
     redact_text_with_stats,
 )
+from agent_lifecycle.contracts.review_mesh_schemas import (
+    RAW_REVIEW_STATUSES,
+    require_response_contract,
+)
 from agent_lifecycle.contracts.thread_bridge_schemas import (
     validate_thread_context_import,
 )
@@ -38,6 +42,9 @@ def import_review_mesh_result(
     _require_safe_bound_metadata(profile, allow_local_evidence_refs=allow_local_evidence_refs)
     _require_safe_bound_metadata(assignment, allow_local_evidence_refs=allow_local_evidence_refs)
     bindings = _validate_import_bindings(reviewer_output, assignment, profile)
+    contract = assignment.get("subject", {}).get("responseContract")
+    if contract is not None:
+        validate_prepared_reviewer_output(reviewer_output, contract, assignment)
     sanitized, redaction = _sanitize_payload(reviewer_output, allow_local_evidence_refs=allow_local_evidence_refs)
     # These exact values have already matched the checked bound authority.
     # Content normalization must not rewrite identity labels or placeholders.
@@ -81,6 +88,11 @@ def import_review_mesh_result(
             "outputDigest": canonical_digest(reviewer_output),
             "sanitizedOutputDigest": canonical_digest(sanitized),
             "bindings": bindings,
+            **(
+                {"responseContractDigest": contract["contractDigest"], "coverage": sanitized.get("coverage")}
+                if contract is not None
+                else {}
+            ),
         },
     }
     normalized = {**body, "resultDigest": canonical_digest(body)}
@@ -166,9 +178,7 @@ def _validate_import_input(value: Any) -> None:
     findings = value.get("findings", [])
     if not isinstance(findings, list) or any(not isinstance(item, dict) for item in findings):
         _invalid_import("findings must be a list of objects")
-    if "status" in value and (
-        not isinstance(value["status"], str) or value["status"] not in {"PASS", "FAIL", "SKIPPED"}
-    ):
+    if "status" in value and (not isinstance(value["status"], str) or value["status"] not in RAW_REVIEW_STATUSES):
         _invalid_import("status must be PASS, FAIL or SKIPPED")
     if "liveCallsStarted" in value and type(value["liveCallsStarted"]) is not bool:
         _invalid_import("liveCallsStarted must be boolean")
@@ -181,6 +191,37 @@ def _validate_import_input(value: Any) -> None:
     commands = value.get("commandOutcomes", [])
     if _command_outcome_blockers(commands):
         _invalid_import("commandOutcomes require unique commandId, PASS/FAIL status and a compatible integer exitCode")
+
+
+def validate_prepared_reviewer_output(
+    value: dict[str, Any],
+    contract: dict[str, Any],
+    assignment: dict[str, Any],
+) -> dict[str, Any]:
+    """Extend the existing raw collector only for an explicitly bound contract."""
+    checked = require_response_contract(contract)
+    _validate_import_input(value)
+    if any(field not in value for field in checked["schema"]["required"]):
+        _invalid_import("prepared response is missing required contract fields")
+    expected = {
+        "schemaVersion": checked["rawSchemaVersion"],
+        "contractDigest": checked["contractDigest"],
+        "subjectDigest": assignment["subject"]["subjectDigest"],
+        "assignmentDigest": assignment["assignmentDigest"],
+    }
+    if any(not _binding_values_equal(value.get(field), item) for field, item in expected.items()):
+        _invalid_import("prepared response contract or subject identity differs")
+    coverage = checked["extensions"].get("coverage")
+    if coverage is not None:
+        supplied = value.get("coverage")
+        if (
+            type(supplied) is not list
+            or any(type(path) is not str for path in supplied)
+            or len(set(supplied)) != len(supplied)
+            or set(supplied) != set(coverage["paths"])
+        ):
+            _invalid_import("coverage must contain every declared path exactly once")
+    return value
 
 
 def _validate_import_bindings(

@@ -1881,6 +1881,82 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
 )
 
+
+DOC_RULES += (
+    (
+        "docs/reference/safe-artifact-authoring.md",
+        (
+            "task artifact-create",
+            "task artifact-inspect",
+            "plan freeze-prepare",
+            "--compact",
+            "--scope core",
+            "262144",
+            "unknown",
+            "review",
+        ),
+    ),
+    (
+        "docs/ru/reference/safe-artifact-authoring.md",
+        (
+            "task artifact-create",
+            "task artifact-inspect",
+            "plan freeze-prepare",
+            "--compact",
+            "--scope core",
+            "262144",
+            "null",
+            "review",
+        ),
+    ),
+    (
+        "docs/architecture/sdlc-boundary.md",
+        (
+            "Designed",
+            "Enforced locally",
+            "Declared",
+            "Externally attested",
+            "Production/Stable",
+            "EXPERIMENTAL",
+            "VERIFIED",
+        ),
+    ),
+    (
+        "docs/ru/architecture/sdlc-boundary.md",
+        (
+            "Designed",
+            "Enforced locally",
+            "Declared",
+            "Externally attested",
+            "Production/Stable",
+            "EXPERIMENTAL",
+            "VERIFIED",
+        ),
+    ),
+    (
+        "docs/reference/review-mesh.md",
+        (
+            "--review-input",
+            "reading-index.json",
+            "reviewer-output.v1",
+            "contractDigest",
+            "remoteDeliveryObserved: false",
+            "LOCAL_ONLY",
+        ),
+    ),
+    (
+        "docs/ru/reference/review-mesh.md",
+        (
+            "--review-input",
+            "reading-index.json",
+            "reviewer-output.v1",
+            "contractDigest",
+            "remoteDeliveryObserved: false",
+            "LOCAL_ONLY",
+        ),
+    ),
+)
+
 OPTIONAL_DOC_RULE_PATHS = {
     "docs/reference/host-local-token-accounting.md",
     "docs/reference/review-mesh.md",

@@ -214,3 +214,79 @@ boundary. Reviewer text never becomes argv.
 
 See [evidence independence](evidence-independence.md) for statistical claims
 and [review efficiency](review-efficiency.md) for advisory cost metrics.
+
+
+## Bounded review handoff
+
+```bash
+agent-lifecycle review-mesh prepare --manifest plans/review/plan.manifest.json --template leader-draft-review --review-input review-input.json --repository-root . --out-dir work/review-01 --out work/review-01-receipt.json
+```
+
+The optional `--review-input` activates the 2.19 local handoff contract; existing
+prepare/import calls without it retain their legacy behavior. It requires an
+explicit manifest, repository root and entirely new output directory. All inputs
+and output footprints are checked before mutation. A packet is not a reviewer
+launch, delivered message, review vote or execution authorization.
+
+The inventory is `agent-review-input-inventory.v1`, with these required fields:
+
+| Field | Contract |
+| --- | --- |
+| `sourceRevision`, `phase` | Exact manifest base revision and selected review phase. |
+| `scope` | Exactly `kind`, `taskIds`, `changedPaths`, `acceptanceIds`, `evidenceIds`; required task AC/EV IDs must match the manifest. |
+| `inputs` | 1–64 unique IDs and repository-relative regular paths, each with actual `bytes` and SHA256; no aliases or private host inputs. |
+| `previousFindings` | Up to 128 typed findings with unique IDs; negative history is retained. |
+| `reviewChain` | Ordered `area`, `integration`, `final`; each has integer `roleSlots` 1–64 and `remediationSlots` 0–16. |
+| `authorityRefs`, `budgetRefs` | Nonempty unique references to declared input IDs, not newly invented authority. |
+
+`PLAN_PACKAGE` requires every declared plan file except the reserved pending
+review if it does not yet exist. `TASK_CHANGESET` requires the current Git
+change-set paths in the selected frozen write ownership relative to the manifest
+base revision. Every required source path and evidence ID must occur in the
+inventory. Missing/deleted inputs, stale revision/phase/digest/size, duplicate
+IDs/paths, traversal, links, credential metadata, unsupported constraints and
+colliding outputs refuse. Use existing intake/plan identity; do not substitute
+an unchecked summary for source authority.
+
+Optional per-input `ranges` contain ordered nonoverlapping `{start,end}` byte
+offsets. The default covers the full file. There are at most 64 ranges per input
+and 8 MiB total input; the index is capped at 64 KiB and each reviewer packet at
+96 KiB. Split oversized work before preparation. The reading index carries range
+hashes and chunk counts. `iter_reading_ranges(root, index)` verifies input and
+range identities and yields at most 8192 bytes per chunk, including single-line
+JSON. Retain all declared required ranges for the actual reviewer; an incomplete
+review must not be accepted as full review.
+
+Outputs are a profile, assignment packets and `reading-index.json`; source bytes
+are referenced, not copied into the prompt. Reviewer identity is excluded from
+the shared subject and included in each assignment digest. Reassignment changes
+the assignment, not the subject. Repository-relative paths support relocation
+only when every input byte is also available under the new root. The index marks
+`SOURCE_REVISION_MATCH`, `LOCAL_ONLY`, `LOCAL_CHANGES_REQUIRED` or
+`UNAVAILABLE_REQUIRES_LOCAL_INPUT` against the pinned Git revision. A Git clone
+alone is insufficient for local/uncommitted inputs. `localCompleteness: true`
+means local preparation succeeded; `remoteDeliveryObserved: false` remains false.
+
+## Prepared raw response contract
+
+Prepared packets carry one versioned `responseFormat.contract` and a generated
+example validated through the same importer. The example is SKIPPED and
+`exampleIsCompletion: false`; it is format guidance only. Return actual findings
+and null for unknown usage. Raw `reviewer-output.v1` and normalized
+`agent-review-mesh-result.v1` are different contracts.
+
+Every opted-in response requires `schemaVersion`, `status`, `findings`,
+`contractDigest`, `subjectDigest` and `assignmentDigest`. The default coverage
+extension requires a JSON array of every declared changed path exactly once.
+String, missing, non-string, duplicate, extra or incomplete coverage refuses.
+Wrong raw version, stale identity/digest or a changed requested contract refuses
+before a result file is created. Negative findings remain negative; coverage is
+still a caller declaration, not proof of independent reading.
+
+The only optional extension is
+`responseExtensions: {coverage: {type: "array", paths: [...]}}`, with normalized
+unique paths; unknown extension names/types/keywords refuse. An optional explicit
+`responseContract` must exactly equal the generated contract. This extends the
+existing raw collector rather than introducing a generic schema engine. A valid
+normalized import is not an accepting task audit or an attested independence
+receipt. See [safe artifact authoring](safe-artifact-authoring.md).
