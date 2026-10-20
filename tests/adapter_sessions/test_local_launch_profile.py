@@ -178,11 +178,12 @@ class LocalLaunchProfileTests(unittest.TestCase):
     def test_managed_task_forwards_original_deadline_before_prompt_preparation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            now = datetime.now(timezone.utc)
             context = _launch_context(root, run_process)
             context.profile['executable'] = sys.executable
             context, args, _ = _bound_launch_context(context, root)
             state = json.loads(args['state_path'].read_text())
+            # Start the deadline fixture after unrelated Git/bootstrap setup.
+            now = datetime.now(timezone.utc)
             task = state['tasks'][0]
             task['attemptDeadlineAt'] = (now + timedelta(seconds=30)).isoformat()
             state['runDeadlineAt'] = (now + timedelta(seconds=60)).isoformat()
