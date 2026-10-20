@@ -30,7 +30,7 @@ class OpenCodeExampleTests(unittest.TestCase):
     def test_every_real_guide_example_reaches_an_inert_strict_cli_parser(self) -> None:
         titles = set()
         for guide in GUIDES:
-            text = (ROOT / guide).read_text()
+            text = (ROOT / guide).read_text(encoding="utf-8")
             lines = text.splitlines()
             examples = []
             for start, line in enumerate(lines):
