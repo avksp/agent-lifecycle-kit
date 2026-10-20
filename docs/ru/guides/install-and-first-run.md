@@ -3,7 +3,7 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
-Инструкция рассчитана на ALK v2.18.0. Перед исполнением проверьте замороженный
+Инструкция рассчитана на ALK v2.19.0. Перед исполнением проверьте замороженный
 план командой `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Обновление до 2.18
@@ -97,7 +97,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.18.0
+python -m pip install agent-lifecycle-kit==2.19.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -108,7 +108,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.18.0
+python -m pip install agent-lifecycle-kit==2.19.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -314,3 +314,12 @@ ALK сохраняет накопленные расходы задачи/зап
 закреплёнными полномочиями и новым конечным сроком каждого обслуживания.
 Проверьте реальное расписание и результат на целевой системе; см.
 [инструкцию обслуживания](../reference/cli.md#очистка-подробностей).
+
+
+## Создание артефакта и подготовка review
+
+После установки используйте `task artifact-create` для структурированного JSON,
+`task artifact-inspect` для ограниченного просмотра только для чтения. `plan verify`
+проверяет структуру; `plan freeze-prepare` создаёт новый кандидат без review и
+разрешения на исполнение. См. [безопасное создание артефактов](../reference/safe-artifact-authoring.md)
+и [входы ревьюера](../reference/review-mesh.md#bounded-review-handoff).

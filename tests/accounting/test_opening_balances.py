@@ -1112,12 +1112,32 @@ def retention_process(path, barrier, output, action, value, stage=None):
     try:
         with Journal(path,PROOF,fault_hook=fault) as j:
             if barrier:barrier.wait(timeout=10)
-            if action=='close':result=j.close_run(value,value.closed_at_utc).status
-            elif action=='collect':result=j.collect_closed_run(value[0],value[1]).status
-            elif action=='newscope':result=j.import_opening(*value).status
-            elif action=='settle':result=j.ingest_usage(value[0],value[1]).status
-            elif action=='vacuum':result=j.reclaim_storage(value)['status']
-            else:raise ValueError(action)
+            from time import monotonic
+            # Functional idempotence is separate from the one-second admission
+            # performance window. Only an explicitly unstarted admission timeout
+            # may be retried here, with the same operation and a finite fixture
+            # budget. Production limits/retries and reconciliation refusals stay
+            # unchanged; successful-oracle and financial assertions stay exact.
+            fixture_deadline = monotonic() + 5.0
+            for attempt in range(5):
+                try:
+                    if action=='close':result=j.close_run(value,value.closed_at_utc).status
+                    elif action=='collect':result=j.collect_closed_run(value[0],value[1]).status
+                    elif action=='newscope':result=j.import_opening(*value).status
+                    elif action=='settle':result=j.ingest_usage(value[0],value[1]).status
+                    elif action=='vacuum':result=j.reclaim_storage(value)['status']
+                    else:raise ValueError(action)
+                    break
+                except JournalUnavailable as exc:
+                    retryable = (
+                        barrier is not None and action in {'close', 'collect'}
+                        and exc.write_outcome == 'NOT_STARTED'
+                        and str(exc) == 'Write admission deadline expired'
+                        and j.last_write_admission.get('status') == 'REFUSED'
+                    )
+                    if not retryable or attempt == 4 or monotonic() >= fixture_deadline:
+                        raise
+                    print(f'retention fixture admission retry: {action} NOT_STARTED', flush=True)
             if output:output.put(result)
     except (JournalUnavailable,RevisionConflict):
         if output:output.put('UNAVAILABLE')

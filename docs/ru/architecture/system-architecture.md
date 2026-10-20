@@ -1181,3 +1181,14 @@ Git, и по умолчанию не читает локальные матер�
 Дополнительные англоязычные архитектурные документы: `docs/architecture/release-architecture.md`,
 `docs/architecture/runner-transition-contract.md` и
 `docs/architecture/runner-extension-map.md`.
+
+
+## Безопасные артефакты и границы review (2.19)
+
+Создание без перезаписи использует общие canonical I/O, runtime-валидаторы и
+проверку границ вывода. Существующий verifier плана служит структурным preflight
+только для чтения. Review Mesh получает опциональный индекс метаданных и единый
+сырой контракт для существующего импортёра без запуска моделей и второго движка
+схем. Краткие навыки ведут к полным сохранённым контрактам и сверяются с байтами
+собранного плагина. Различия designed, enforced, declared и externally attested
+описаны в [границах SDLC](sdlc-boundary.md).

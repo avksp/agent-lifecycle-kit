@@ -231,6 +231,15 @@ def _subject_from_source(source: dict[str, Any], *, blocking: bool) -> dict[str,
     for key in ("sourceRevision", "sourceLineageDigest", "primaryProducerClass", "primaryImplementationDigest"):
         if isinstance(source.get(key), str) and source[key]:
             subject[key] = source[key]
+    if isinstance(source.get("reviewHandoff"), dict):
+        handoff = source["reviewHandoff"]
+        subject.update(
+            kind="REVIEW_HANDOFF",
+            sourceSubjectDigest=digest,
+            subjectDigest=handoff["subjectDigest"],
+            readingIndexPath="reading-index.json",
+            responseContract=handoff["responseContract"],
+        )
     return subject
 
 

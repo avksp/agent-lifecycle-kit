@@ -9,6 +9,7 @@ from agent_lifecycle.contracts.adapter_contract_schemas import ADAPTER_CONTRACT_
 from agent_lifecycle.contracts.adapter_event_schemas import ADAPTER_EVENT_SCHEMAS
 from agent_lifecycle.contracts.adapter_session_schemas import ADAPTER_SESSION_SCHEMAS
 from agent_lifecycle.contracts.adapter_task_schemas import ADAPTER_TASK_SCHEMAS
+from agent_lifecycle.contracts.artifact_authoring_schemas import ARTIFACT_AUTHORING_SCHEMAS
 from agent_lifecycle.contracts.audit_optimization_schemas import AUDIT_OPTIMIZATION_SCHEMAS
 from agent_lifecycle.contracts.audit_schemas import AUDIT_SCHEMAS
 from agent_lifecycle.contracts.benchmark_schemas import BENCHMARK_SCHEMAS
@@ -69,7 +70,7 @@ from agent_lifecycle.contracts.research_evidence_schemas import RESEARCH_EVIDENC
 from agent_lifecycle.contracts.review_mesh_recommendation_schemas import (
     REVIEW_MESH_RECOMMENDATION_SCHEMAS,
 )
-from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_SCHEMAS
+from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_SCHEMAS, raw_reviewer_schema
 from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHEMAS
 from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_IDENTITY_SCHEMAS
 from agent_lifecycle.contracts.runner_worktree_schemas import WORKTREE_SUPPORT_SCHEMAS
@@ -787,18 +788,83 @@ _SCHEMA_GROUPS: tuple[dict[str, dict[str, Any]], ...] = (
     STRUCTURED_RESULT_SCHEMAS,
 )
 
+_AUTHORING_CORE_SCHEMAS = {
+    "reviewer-output.v1": raw_reviewer_schema(),
+    "agent-plan-review.v1": open_object_schema(
+        "agent-plan-review.v1",
+        required=[
+            "schemaVersion",
+            "packageId",
+            "planRevision",
+            "reviewId",
+            "reviewedPlanHash",
+            "fullReview",
+            "reviewer",
+            "verdict",
+        ],
+        properties={
+            "packageId": {"description": "Must match the valid bound manifest"},
+            "planRevision": {"description": "Must match the valid bound manifest"},
+            "reviewId": {"type": "string", "minLength": 1},
+            "reviewedPlanHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "fullReview": {"const": True},
+            "reviewer": {
+                "type": "object",
+                "required": ["id", "runId", "surface", "independent"],
+                "properties": {
+                    "independent": {"const": True},
+                    **{name: {"type": "string", "minLength": 1} for name in ("id", "runId", "surface")},
+                },
+            },
+            "verdict": {"const": "READY_TO_FREEZE"},
+            "findings": {"type": "array"},
+        },
+    ),
+    **ARTIFACT_AUTHORING_SCHEMAS,
+}
+_CORE_VALIDATORS = {
+    "agent-artifact-authoring-request.v1": {
+        "validator": "agent_lifecycle.contracts.artifact_authoring_schemas.validate_authoring_request",
+        "context": "structured authoring request; serialization grants no authority",
+    },
+    "agent-evidence-receipt.v1": {
+        "validator": "agent_lifecycle.contracts.evidence_receipt_schemas.validate_evidence_receipt_shape",
+        "context": "closed receipt shape and digests; acceptance remains separate",
+    },
+    "agent-plan-review.v1": {
+        "validator": "agent_lifecycle.freeze.package_integrity.build_reviewed_plan_lock_v2",
+        "context": "accepting reviewed lock requires exact manifest, report and package inventory",
+    },
+    "reviewer-output.v1": {
+        "validator": "agent_lifecycle.review_mesh.results.validate_prepared_reviewer_output",
+        "context": "strict prepared-handoff contract; older non-opt-in imports retain compatibility",
+    },
+}
+
 _SCHEMAS: dict[str, dict[str, Any]] = {}
 for _group in _SCHEMA_GROUPS:
     _overlap = set(_SCHEMAS).intersection(_group)
     if _overlap:
         raise RuntimeError(f"duplicate schema ids: {sorted(_overlap)}")
     _SCHEMAS.update(_group)
+if set(_SCHEMAS).intersection(_AUTHORING_CORE_SCHEMAS):
+    raise RuntimeError("authoring schema ids conflict")
+_SCHEMAS.update(_AUTHORING_CORE_SCHEMAS)
 
 
-def list_schemas() -> dict[str, Any]:
+def list_schemas(*, scope: str = "all") -> dict[str, Any]:
+    if scope not in {"all", "core"}:
+        from agent_lifecycle.contracts.errors import LifecycleError
+
+        raise LifecycleError("schema-scope-invalid", "Unknown schema discovery scope")
+    selected = _SCHEMAS if scope == "all" else {name: _SCHEMAS[name] for name in _CORE_VALIDATORS}
     return {
         "schemaVersion": SCHEMA_INDEX_VERSION,
-        "schemas": [{"id": schema_id, "draft": schema["$schema"]} for schema_id, schema in sorted(_SCHEMAS.items())],
+        "schemas": [
+            {"id": name, "draft": schema["$schema"], **(_CORE_VALIDATORS[name] if scope == "core" else {})}
+            for name, schema in sorted(selected.items())
+        ],
+        **({"scope": "core", "authoritativeByDiscovery": False} if scope == "core" else {}),
     }
 
 

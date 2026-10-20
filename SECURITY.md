@@ -1,7 +1,10 @@
 # Security policy
 
-Agent Lifecycle Kit is pre-release software. Treat all native host adapters as
-experimental unless the release support matrix marks a host as `VERIFIED`.
+Agent Lifecycle Kit maintains a deterministic core API/CLI with the package
+classifier Production/Stable. This is a bounded core maintenance claim, not a
+certification of every deployment, host or model integration. Treat native host
+adapters as experimental unless the release support matrix marks a route as
+`VERIFIED`; its documented limitations still apply.
 
 ## Reporting
 
@@ -10,10 +13,17 @@ working exploit details until a fix or mitigation is available.
 
 ## Release claims
 
-The offline release candidate proves only local deterministic packaging,
-neutrality scanning and contract validation. It does not claim production
-promotion. Production promotion requires external signed receipts for platform
-matrix execution, release neutrality and live cost calibration.
+Offline tests, deterministic packaging, neutrality scanning and supported-platform
+CI provide source-bound evidence only for the checks they actually execute. They
+do not claim production promotion. Any stronger production-promotion contract
+requires its external signed platform, neutrality and live-cost evidence; local
+tests, schema validity and prepared packets cannot replace it. Missing telemetry
+is UNAVAILABLE/null, never zero.
+
+Distinguish designed requirements, locally enforced validation, caller-declared
+data and externally attested claims. See
+[the SDLC boundary](docs/architecture/sdlc-boundary.md) and the per-route support
+matrix. An editable same-account plugin is not an external trusted operator.
 
 ## Release 1.75 security boundary
 

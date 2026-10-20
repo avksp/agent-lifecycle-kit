@@ -1080,3 +1080,14 @@ their old enumeration behavior but carry a signed deprecation marker.
 - [Neutrality scanning](../reference/neutrality.md)
 - [Performance and resource budgets](../reference/performance-and-resource-budgets.md)
 - [Context checkpoints and compaction recovery](../reference/context-checkpoints.md)
+
+
+## Safe authoring and reviewer boundaries (2.19)
+
+Create-only artifact helpers reuse canonical I/O, runtime validators and output
+footprint guards. The existing planning verifier is the read-only structural
+preflight. Review Mesh adds an optional metadata-only reading index and generated
+raw contract consumed by its existing importer; no model runtime or second schema
+engine is added. Thin skill entrypoints link complete preserved contracts and
+are checked against actual plugin bytes. See [the SDLC boundary](sdlc-boundary.md)
+for designed, locally enforced, declared and externally attested guarantees.

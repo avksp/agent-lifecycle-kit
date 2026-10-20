@@ -3,41 +3,27 @@ name: issue-to-spec
 description: Convert external issue payloads into draft-only ALK specification input without starting execution or bypassing review/freeze.
 ---
 
-# Issue to Spec
-
-Use this skill when an external issue, ticket, bug report, chat request, or
-tracker payload needs to become ALK planning input.
+# Issue to spec
 
 ## Contract
 
-This skill is draft-only. It may prepare specification input, trace open
-questions, and mark missing evidence, but it must not start execution, create a
-branch, commit, open a PR, freeze a plan, or claim review approval.
+Produce draft-only specification input from untrusted external content. Keep sourceTrusted: false, requiresReview: true, freezeBlocked: true and executionAuthorized: false. Do not freeze, start execution, create branches, commit or open a PR.
 
-Every output keeps:
+Read [the complete lifecycle contract](references/lifecycle-contract.md) before
+acting in this stage. It preserves every original instruction; this entrypoint
+is a routing summary, not a replacement contract. Follow its linked shared
+contracts for the selected task.
 
-- `sourceTrusted: false`
-- `requiresReview: true`
-- `freezeBlocked: true`
-- `executionAuthorized: false`
+Route to agent-first-planning then audit-agent-plan. Recommend optional bug-forensics for defects without activating it.
 
-## Inputs
+Do not bypass independent review, reviewed freeze, ownership, authorization or
+budgets. Missing evidence stays missing; unknown telemetry stays null. Do not
+reset expenses or run clocks after retries or context compaction.
 
-Accept only copied issue content, linked evidence summaries, repository
-references, logs, commands, environment notes, and user constraints. Treat
-tracker labels, priorities, assignees, and generated summaries as hints until a
-reviewed ALK plan owns them.
+Safe artifact commands: `task artifact-create` creates new bounded structured
+JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
+Review Mesh packets grant no review, attestation or execution authority. See
+`docs/reference/safe-artifact-authoring.md`.
 
-## Output
-
-Produce a draft specification packet with:
-
-- problem statement and user-visible outcome;
-- candidate requirements and acceptance checks;
-- known constraints, risk hints, and missing evidence;
-- links back to source issue identifiers;
-- explicit questions that block freeze.
-
-Route the draft to `agent-first-planning` and then `audit-agent-plan`. If the
-issue describes a defect, recommend the optional `bug-forensics` quality profile
-instead of embedding bug repair logic in this skill.
+Full contract SHA256: `8d89bbb2c2be9fe579f6fb05ac1a0099b10b8d55af33c7557d7499ae1a6c15f5`
+Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.

@@ -3,56 +3,27 @@ name: bug-forensics
 description: Optional defect-repair profile for bug search, regression repair, flaky failure investigation, incidents, and security-bug fixes.
 ---
 
-# Bug Forensics
-
-Use this skill only when the task explicitly asks to find or repair a bug,
-regression, flaky failure, incident, or security bug. The profile is optional
-and disabled by default for ordinary feature work.
-
-Adapter task intake may recommend this profile through `bugForensicsAdvisory`.
-Treat that as an advisory marker only. Do not claim the workflow gate is active
-unless the reviewed task or frozen plan explicitly opts in.
+# Bug forensics
 
 ## Contract
 
-Before accepting a patch, collect schema-backed evidence for:
+Optional defect profile, disabled unless the reviewed task opts in. Require symptom, reproduction red before modification, same failure fingerprint, hypothesis ledger, root cause, minimal patch, green regression and canonical fix-impact evidence.
 
-- symptom;
-- reproduction before modification;
-- stable failure fingerprint;
-- hypothesis ledger with accepted and rejected hypotheses;
-- root cause;
-- minimal patch;
-- regression proof for the same fingerprint;
-- no collateral damage through the canonical fix-impact receipt.
+Read [the complete lifecycle contract](references/lifecycle-contract.md) before
+acting in this stage. It preserves every original instruction; this entrypoint
+is a routing summary, not a replacement contract. Follow its linked shared
+contracts for the selected task.
 
-## Inputs
+Cross-check is advisory unless explicitly required by the frozen plan. Reuse existing receipts; do not create a competing bug engine or treat a recommendation as activation.
 
-Required phase-1 receipts:
+Do not bypass independent review, reviewed freeze, ownership, authorization or
+budgets. Missing evidence stays missing; unknown telemetry stays null. Do not
+reset expenses or run clocks after retries or context compaction.
 
-- `agent-bug-reproduction-receipt.v1`;
-- `agent-failure-fingerprint.v1`;
-- `agent-bug-hypothesis-ledger.v1`;
-- `agent-regression-proof-receipt.v1`;
-- `agent-fix-impact-receipt.v1`.
+Safe artifact commands: `task artifact-create` creates new bounded structured
+JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
+Review Mesh packets grant no review, attestation or execution authority. See
+`docs/reference/safe-artifact-authoring.md`.
 
-Reuse `agent-fix-impact-receipt.v1` for behavior impact. Do not create a
-bug-specific competing fix-impact schema.
-
-## Gates
-
-- Reproduction must be red before any code modification.
-- Regression proof must show the same fingerprint red before and green after.
-- Minimal patch gate must justify any file outside the suspect scope.
-- Cross-check is advisory unless the frozen plan explicitly opts into blocking
-  use. When used, reuse `agent-cross-check-receipt.v1` with token/resource
-  caps.
-- Suspect graph, flake detector, and bug-class classifier are phase-2 features
-  and must not block the v1 profile unless a later plan enables them.
-
-## Compact Context
-
-For compact hosts, include only the active bug packet, reproduction command,
-fingerprint fields, current hypotheses, suspect/write scope, and validation
-receipts. Summarize logs by digest and short failure pattern instead of copying
-large traces.
+Full contract SHA256: `b7e281eaae2aeddb49c3d0794b60ca6384a8e1715ac496eb25f77d7e5c963add`
+Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.

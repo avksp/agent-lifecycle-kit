@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +14,62 @@ except ImportError:
 
 
 class ReviewMeshCliTests(unittest.TestCase):
+    def test_prepared_handoff_and_generated_response_use_actual_cli_import(self):
+        from agent_lifecycle.contracts import canonical_bytes
+        from tests.review_mesh.test_operator_templates import _handoff_fixture
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _manifest, inventory = _handoff_fixture(root)
+            request = root / "review-input.json"
+            request.write_bytes(canonical_bytes(inventory) + b"\n")
+            code, receipt = _run_cli(
+                [
+                    "review-mesh",
+                    "prepare",
+                    "--manifest",
+                    str(root / "plan/plan.manifest.json"),
+                    "--template",
+                    "leader-draft-review",
+                    "--review-input",
+                    str(request),
+                    "--repository-root",
+                    str(root),
+                    "--out-dir",
+                    "prepared",
+                    "--out",
+                    "receipt.json",
+                ]
+            )
+            self.assertEqual(code, 0, receipt)
+            self.assertTrue((root / "receipt.json").exists())
+            packet = receipt["assignmentPackets"][0]
+            response = root / "response.json"
+            response.write_bytes(canonical_bytes(packet["reviewerTask"]["responseFormat"]["example"]) + b"\n")
+            argv = [
+                "review-mesh",
+                "import-result",
+                "--profile",
+                str(root / "prepared/profile.json"),
+                "--assignment",
+                str(root / "prepared/assignments/leader-draft-review-1.json"),
+                "--reviewer-output",
+                str(response),
+                "--out",
+                str(root / "result.json"),
+            ]
+            code, result = _run_cli(argv)
+            self.assertEqual(code, 0, result)
+            self.assertEqual(result["schemaVersion"], "agent-review-mesh-result.v1")
+            self.assertEqual(result["status"], "SKIPPED")
+            raw = packet["reviewerTask"]["responseFormat"]["example"]
+            raw["coverage"] = "all"
+            response.write_bytes(canonical_bytes(raw) + b"\n")
+            argv[-1] = str(root / "must-not-exist.json")
+            code, error = _run_cli(argv)
+            self.assertEqual(code, 2, error)
+            self.assertFalse((root / "must-not-exist.json").exists())
+
     def test_template_list_and_prepare_commands_build_local_packets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

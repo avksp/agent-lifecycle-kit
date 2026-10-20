@@ -15,6 +15,20 @@ except ImportError:
 
 
 class CliContractMetricsCommandTests(unittest.TestCase):
+    def test_core_schema_discovery_is_opt_in_and_lists_actual_contextual_validators(self):
+        full_code, full = _run_cli(["schema", "list"])
+        code, core = _run_cli(["schema", "list", "--scope", "core"])
+        self.assertEqual((full_code, code), (0, 0))
+        self.assertNotIn("scope", full)
+        self.assertFalse(core["authoritativeByDiscovery"])
+        self.assertEqual(len(core["schemas"]), 4)
+        self.assertTrue({item["id"] for item in core["schemas"]}.issubset(item["id"] for item in full["schemas"]))
+        for item in core["schemas"]:
+            self.assertTrue(item["validator"])
+            self.assertTrue(item["context"])
+            code, schema = _run_cli(["schema", "show", item["id"]])
+            self.assertEqual(code, 0, schema)
+
     def test_contract_policy_and_check_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "policy.json"

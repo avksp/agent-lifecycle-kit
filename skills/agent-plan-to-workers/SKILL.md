@@ -5,42 +5,25 @@ description: Compile a frozen reviewed plan into deterministic worker packets wi
 
 # Agent plan to workers
 
-Use this skill after a plan is reviewed and frozen. The task is compilation:
-project a frozen plan into worker packets without redesigning it.
-
 ## Contract
 
-1. Verify the plan manifest, lock, source revision, plan digest, and review
-   verdict.
-2. Reject unfrozen, mismatched, or stale plan inputs.
-3. Build dependency waves from the frozen DAG.
-4. Emit one packet per executable workstream with:
-   task id, owner, reviewer, dependencies, goal, planned items, allowed writes,
-   forbidden writes, read-only context, validation command ids, evidence ids,
-   budget limits, result path, review path, and remediation route.
-5. Emit a controller validation descriptor for controller-owned gates.
-6. Keep lead-owned integration and shared seams explicit; do not smuggle them
-   into worker write sets.
-7. Use deterministic ordering and content-addressed packet identity.
+Compile only the exact independently reviewed frozen manifest and lock. Keep task ownership, DAG, acceptance, evidence, forbidden paths and budgets unchanged; reject stale inputs. Compilation grants no execution permission.
 
-## Rules
+Read [the complete lifecycle contract](references/lifecycle-contract.md) before
+acting in this stage. It preserves every original instruction; this entrypoint
+is a routing summary, not a replacement contract. Follow its linked shared
+contracts for the selected task.
 
-- Do not change requirements, acceptance criteria, write ownership, or gates.
-- Do not add implementation advice that conflicts with the frozen plan.
-- Do not include secrets, private keys, credentials, or host-private state.
-- Keep packet context minimal: active task, referenced contracts, and exact
-  evidence route.
-- For compact mode, emit packets that fit the target profile or report a split
-  requirement before execution.
-- Fail closed if a worker cannot be assigned a complete ownership and evidence
-  contract.
+Use task compile with a separate runtime output root. Packet rendering must preserve the complete task contract and bounded context.
 
-## Output
+Do not bypass independent review, reviewed freeze, ownership, authorization or
+budgets. Missing evidence stays missing; unknown telemetry stays null. Do not
+reset expenses or run clocks after retries or context compaction.
 
-Return:
+Safe artifact commands: `task artifact-create` creates new bounded structured
+JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
+Review Mesh packets grant no review, attestation or execution authority. See
+`docs/reference/safe-artifact-authoring.md`.
 
-- packet index with frozen plan identity;
-- dependency waves;
-- task packet paths and digests;
-- controller validation descriptor;
-- unresolved compile findings, if any.
+Full contract SHA256: `f7d34afc28c907d002dd7fdef926309458403eeb6a017d46bd1360c5cf07f0d5`
+Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.

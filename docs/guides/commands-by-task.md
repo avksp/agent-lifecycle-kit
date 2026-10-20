@@ -281,3 +281,17 @@ agent-lifecycle benchmark evaluate \
 Use `--tracked-release` for publication evidence and
 `--include-local-artifacts` when a local generated artifact is deliberately
 part of the check.
+
+
+## Author JSON, prepare review and inspect failures
+
+Use `task artifact-create` for structured create-only JSON and `task
+artifact-inspect` for a bounded display. Run `plan verify` before semantic plan
+review; its typed blockers identify the structural repair. Optional `--compact`
+requires a full receipt via `--out`. `plan freeze-prepare` produces a new candidate
+without reviewing or authorizing it. Use `schema list --scope core` to locate the
+contextual validators. See [safe artifact authoring](../reference/safe-artifact-authoring.md).
+
+For portable reviewer inputs use `review-mesh prepare --review-input` and retain
+every indexed input alongside its root. A prepared packet is not delivery or
+acceptance; see [the review contract](../reference/review-mesh.md#bounded-review-handoff).

@@ -3,7 +3,7 @@
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
-These instructions target ALK v2.18.0. Verify frozen plans before execution
+These instructions target ALK v2.19.0. Verify frozen plans before execution
 with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Upgrading to 2.18
@@ -96,7 +96,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.18.0
+python -m pip install agent-lifecycle-kit==2.19.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -107,7 +107,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.18.0
+python -m pip install agent-lifecycle-kit==2.19.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -309,3 +309,12 @@ Raw details become eligible 30 days after full financial closure. Configure an
 hourly same-user maintenance command with pinned authority and a fresh finite
 deadline, then verify the actual target. See the
 [retention operations guide](../operations/retention-maintenance.md).
+
+
+## Create a new artifact or prepare review
+
+After installation, use `task artifact-create` for structured JSON and `task
+artifact-inspect` for bounded read-only display. `plan verify` is the structural
+preflight; `plan freeze-prepare` creates a new candidate without review or
+execution permission. See [safe artifact authoring](../reference/safe-artifact-authoring.md)
+and [bounded review handoff](../reference/review-mesh.md#bounded-review-handoff).
