@@ -107,26 +107,22 @@ class ProcessCleanupTests(unittest.TestCase):
     def test_r11_observer_slot_exhaustion_refuses_before_popen(self) -> None:
         slots = process_module._ObserverSlots(8)
         release = threading.Event()
-        entered = threading.Event()
-
-        def block_start(_event: dict) -> None:
-            entered.set()
-            release.wait()
+        leases = []
 
         try:
-            for _ in range(8):
-                first = run_process(
-                    [sys.executable, "-c", "import time; time.sleep(30)"],
-                    env=dict(os.environ), timeout_seconds=0.1,
-                    cleanup_grace_seconds=0.2, stdin_text="private",
-                    on_started=block_start, on_input=lambda _event: None,
-                    _observer_slots=slots,
-                )
-                self.assertTrue(first["startedFailure"])
-                self.assertTrue(first["timedOut"])
-            self.assertTrue(entered.is_set())
-            self.assertTrue(first["startedFailure"])
-            self.assertTrue(first["timedOut"])
+            # Model finished owners whose callbacks are still alive. Filling the
+            # pool directly keeps spawn latency out of this admission witness.
+            for _ in range(slots.limit):
+                lease = slots.acquire(blocking=False)
+                self.assertIsNotNone(lease)
+                thread = Thread(target=release.wait, name="alk-process-observer", daemon=True)
+                lease.register(thread)
+                thread.start()
+                leases.append(lease)
+                lease.process_finished()
+            self.assertEqual(len(slots._leases), slots.limit)
+            self.assertTrue(all(thread.is_alive() for lease in leases for thread in lease.threads))
+            self.assertIsNone(slots.acquire(blocking=False))
             with patch.object(process_module.subprocess, "Popen",
                               side_effect=AssertionError("must refuse before Popen")):
                 second = run_process(
@@ -141,7 +137,7 @@ class ProcessCleanupTests(unittest.TestCase):
                              "adapter-process-observer-slots-exhausted")
         finally:
             release.set()
-            for lease in list(slots._leases):
+            for lease in leases:
                 for thread in lease.threads:
                     thread.join(1)
         deadline = time.monotonic() + 1

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
+from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError, read_json_object, sha256_hex
+from agent_lifecycle.contracts.process_redaction import redact_process_text
 
 
 @dataclass(frozen=True)
@@ -20,6 +23,8 @@ class CommandRun:
 
 
 CommandRunner = Callable[[list[str], float], CommandRun]
+MAX_INSPECTION_STDOUT_BYTES = 1024 * 1024
+MAX_INSPECTION_STDERR_BYTES = 65536
 
 
 def _check_json_plugin_config(
@@ -94,7 +99,9 @@ def _check_hermes_registry(path: Path, *, project_root: Path, expected_maturity:
             "commandsMatched": payload.get("commands") == "./slash-commands.json",
         }
     )
-    if not all(details[key] for key in ("packageMatched", "skillsDirectoryMatched", "descriptorMatched", "commandsMatched")):
+    if not all(
+        details[key] for key in ("packageMatched", "skillsDirectoryMatched", "descriptorMatched", "commandsMatched")
+    ):
         details["reason"] = "registry-metadata-mismatch"
         return {"name": "hermes-registry", "status": "FAIL", "details": details}
     if expected_maturity not in {"EXPERIMENTAL", "VERIFIED"} or payload.get("maturity") != expected_maturity:
@@ -169,9 +176,17 @@ def _check_scaffold_projection_files(path: Path, *, project_root: Path, host: st
     if missing:
         return {"name": f"{host}-projection-files", "status": "FAIL", "details": details}
     projection = read_json_object(path / "projection.manifest.json", label=f"{host} projection manifest")
-    details["runnerStatus"] = (projection.get("runner") or {}).get("status") if isinstance(projection.get("runner"), dict) else None
-    details["receiptNormalizerStatus"] = (projection.get("receiptNormalizer") or {}).get("status") if isinstance(projection.get("receiptNormalizer"), dict) else None
-    details["eventBridgeStatus"] = (projection.get("eventBridge") or {}).get("status") if isinstance(projection.get("eventBridge"), dict) else None
+    details["runnerStatus"] = (
+        (projection.get("runner") or {}).get("status") if isinstance(projection.get("runner"), dict) else None
+    )
+    details["receiptNormalizerStatus"] = (
+        (projection.get("receiptNormalizer") or {}).get("status")
+        if isinstance(projection.get("receiptNormalizer"), dict)
+        else None
+    )
+    details["eventBridgeStatus"] = (
+        (projection.get("eventBridge") or {}).get("status") if isinstance(projection.get("eventBridge"), dict) else None
+    )
     details["productionPromotionClaimed"] = projection.get("productionPromotionClaimed")
     allowed_runner_statuses = {"fail-closed-skeleton", "bounded-live-runner"}
     if details["runnerStatus"] not in allowed_runner_statuses or details["productionPromotionClaimed"] is not False:
@@ -240,6 +255,36 @@ def _run_command_check_with_text(
             "",
         )
 
+    except LifecycleError as exc:
+        return (
+            {
+                "name": name,
+                "status": "FAIL",
+                "details": {
+                    "argv": display_argv,
+                    "reason": exc.code,
+                },
+            },
+            None,
+            "",
+        )
+
+    if (
+        len(result.stdout.encode("utf-8")) > MAX_INSPECTION_STDOUT_BYTES
+        or len(result.stderr.encode("utf-8")) > MAX_INSPECTION_STDERR_BYTES
+    ):
+        return (
+            {
+                "name": name,
+                "status": "FAIL",
+                "details": {
+                    "argv": display_argv,
+                    "reason": "inspection-output-limit",
+                },
+            },
+            None,
+            "",
+        )
     text = "\n".join(part for part in (result.stdout, result.stderr) if part)
     missing_markers = _missing_markers(text, required_markers or [])
     status = "PASS" if result.returncode == 0 and not missing_markers else "FAIL"
@@ -251,6 +296,10 @@ def _run_command_check_with_text(
         "stdoutSha256": sha256_hex(result.stdout.encode("utf-8")),
         "stderrSha256": sha256_hex(result.stderr.encode("utf-8")),
     }
+    safe_stdout, stdout_redacted = redact_process_text(result.stdout)
+    safe_stderr, stderr_redacted = redact_process_text(result.stderr)
+    details.update(stdoutRedacted=stdout_redacted, stderrRedacted=stderr_redacted)
+    text = "\n".join(part for part in (safe_stdout, safe_stderr) if part)
     if missing_markers:
         details["missingMarkers"] = missing_markers
     first_line = _first_non_empty_line(text)
@@ -260,15 +309,18 @@ def _run_command_check_with_text(
 
 
 def _default_command_runner(command: list[str], timeout_seconds: float) -> CommandRun:
-    completed = subprocess.run(
+    completed = run_bounded_command(
         command,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        timeout=timeout_seconds,
+        cwd=Path.cwd(),
+        timeout_seconds=timeout_seconds,
+        max_stdout_bytes=MAX_INSPECTION_STDOUT_BYTES,
+        max_stderr_bytes=MAX_INSPECTION_STDERR_BYTES,
     )
-    return CommandRun(returncode=completed.returncode, stdout=completed.stdout, stderr=completed.stderr)
+    return CommandRun(
+        returncode=completed.returncode,
+        stdout=completed.stdout.decode("utf-8", errors="replace"),
+        stderr=completed.stderr.decode("utf-8", errors="replace"),
+    )
 
 
 def _missing_markers(text: str, markers: list[str]) -> list[str]:

@@ -6,17 +6,146 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
-from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
 from tools.live_hosts import opencode_harness  # noqa: E402
+
+from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
+
+
+def _with_discovery(runner):
+    """Explicit V1 CLI fixture, separate from model/usage fixtures."""
+    def run(command):
+        if command[1:] == ["--version"]:
+            return opencode_harness.CommandResult(0, "1.19.3", "", 0.001)
+        if command[-1:] == ["--help"]:
+            from agent_lifecycle.host_protocol.opencode_compatibility import help_commands
+            for arguments, markers in help_commands(1).values():
+                if command[1:] == arguments:
+                    return opencode_harness.CommandResult(0, " ".join([*markers, "--title", "--file", "--variant"]), "", 0.001)
+        return runner(command)
+    return run
 
 
 class OpenCodeHarnessTests(unittest.TestCase):
+    def test_malformed_model_and_variant_refuse_both_entrypoints_before_writes(self) -> None:
+        malformed = (("provider/model\0", None), ("provider/model", "high\0"),
+                     ("--help", None), ("model", None), ("provider/model", "--help"),
+                     ("", None), ("provider/model", ""), ("provider/model name", None),
+                     ("provider/model", "high extra"), ("provider//model", None))
+        for major in (1, 2):
+            for model, variant in malformed:
+                for calibration in (False, True):
+                    with tempfile.TemporaryDirectory() as tmp:
+                        root = Path(tmp)
+                        def run(argv, major=major):
+                            if argv[1:] == ["--version"]:
+                                return opencode_harness.CommandResult(0, "1.19.3" if major == 1 else "2.0.32", "", 0.001)
+                            for arguments, markers in opencode_harness.help_commands(major).values():
+                                if argv[1:] == arguments:
+                                    return opencode_harness.CommandResult(0, " ".join([*markers, "--title", "--file", "--variant"]), "", 0.001)
+                            self.fail("malformed route reached model invocation")
+                        kwargs = dict(opencode_bin="opencode", worktree=root, allow_live=True,
+                                      receipt_path=root / "receipts/result.json", diagnostic_dir=root / "diagnostics",
+                                      budget_policy=opencode_harness.BudgetPolicy(mode="local", max_invocations=100, max_wall_seconds=10),
+                                      opencode_model=model, opencode_variant=variant, runner=run,
+                                      clean_worktree_checker=lambda _path: {"clean": True})
+                        with self.subTest(major=major, model=model, variant=variant, calibration=calibration):
+                            if calibration:
+                                report = opencode_harness.run_live_calibration(
+                                    profile_path=ROOT / "conformance/core/live-calibration-profile.v1.json",
+                                    budget_targets_path=ROOT / "conformance/core/budget-targets.v1.json",
+                                    runs_per_scenario_cohort=None, **kwargs)
+                            else:
+                                report = opencode_harness.run_live_host_receipt(baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json", **kwargs)
+                            self.assertEqual(report["status"], "FAIL")
+                            self.assertFalse(report["liveCallsStarted"])
+                            self.assertIn("opencode-model-selection-invalid", {item["code"] for item in report["blockers"]})
+                            self.assertFalse((root / "diagnostics").exists())
+                            self.assertFalse((root / "receipts").exists())
+
+    def test_injected_discovery_output_limits_refuse_before_model_calls(self) -> None:
+        for during_version in (True, False):
+            checks, blockers = [], []
+            def run(argv, during_version=during_version):
+                version = argv[1:] == ["--version"]
+                text = "2.0.32" if version and not during_version else "x" * 262145
+                return opencode_harness.CommandResult(0, text, "", 0.01)
+            version, major = opencode_harness._discover_cli("opencode", run, checks, blockers)
+            self.assertIsNone(version)
+            self.assertIsNone(major)
+            self.assertEqual(blockers[0]["code"], "opencode-discovery-output-limit")
+
+    def test_default_runner_enforces_real_cwd_and_deadline(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="alk-opencode cwd ") as tmp:
+            root = Path(tmp).resolve()
+            result = opencode_harness.run_command_capture([sys.executable, "-c", "import os; print(os.getcwd())"], cwd=root, timeout_seconds=2)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(Path(result.stdout.strip()), root)
+            stalled = opencode_harness.run_command_capture([sys.executable, "-c", "import time; time.sleep(10)"], cwd=root, timeout_seconds=0.05)
+            self.assertNotEqual(stalled.returncode, 0)
+            self.assertIn("bounded-process-timeout", stalled.stderr)
+            self.assertLess(stalled.wall_seconds, 2)
+
+    def test_invalid_cli_and_variant_fail_before_authoritative_writes(self) -> None:
+        for version, wrong_export, conflict in (("3.0.0", False, False), ("2.0.32", True, False), ("2.0.32", False, True)):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                calls = []
+                def run(argv, calls=calls, version=version, wrong_export=wrong_export):
+                    calls.append(argv)
+                    if argv[1:] == ["--version"]:
+                        return opencode_harness.CommandResult(0, version, "", 0.01)
+                    for name, (arguments, markers) in opencode_harness.help_commands(2).items():
+                        if argv[1:] == arguments:
+                            text = "opencode [command] export stats" if name == "export" and wrong_export else " ".join(markers)
+                            return opencode_harness.CommandResult(0, text, "", 0.01)
+                    self.fail("model invocation escaped prelaunch refusal")
+                with self.subTest(version=version, export=wrong_export, conflict=conflict):
+                    report = opencode_harness.run_live_host_receipt(
+                        opencode_bin="opencode", baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json", worktree=root,
+                        allow_live=True, receipt_path=root / "receipts/result.json", diagnostic_dir=root / "diagnostics",
+                        budget_policy=opencode_harness.BudgetPolicy(mode="local", max_invocations=100, max_wall_seconds=10),
+                        opencode_model="provider/model#low" if conflict else None, opencode_variant="high" if conflict else None,
+                        runner=run, clean_worktree_checker=lambda _path: {"clean": True},
+                    )
+                    self.assertEqual(report["status"], "FAIL")
+                    self.assertFalse(report["liveCallsStarted"])
+                    self.assertFalse((root / "diagnostics").exists())
+                    self.assertFalse((root / "receipts").exists())
+
+    def test_live_default_runner_receives_worktree_and_v2_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            calls = []
+            def capture(argv, *, cwd=None, timeout_seconds=30):
+                calls.append((argv, cwd, timeout_seconds))
+                if argv[1:] == ["--version"]:
+                    return opencode_harness.CommandResult(0, "2.0.32", "", 0.001)
+                for arguments, markers in opencode_harness.help_commands(2).values():
+                    if argv[1:] == arguments:
+                        return opencode_harness.CommandResult(0, " ".join(markers), "", 0.001)
+                self.assertEqual(argv[1], "run")
+                self.assertIn("Operation: ", argv[2])
+                self.assertIn("--standalone", argv)
+                self.assertIn("provider/model#high", argv)
+                self.assertNotIn("--dir", argv)
+                self.assertNotIn("--variant", argv)
+                return opencode_harness.CommandResult(0, "", "", 0.01)
+            with patch.object(opencode_harness, "run_command_capture", side_effect=capture):
+                report = opencode_harness.run_live_host_receipt(
+                    opencode_bin="opencode", baseline_path=ROOT / "conformance/core/adapter-baseline.v1.json", worktree=root,
+                    allow_live=True, receipt_path=root / "result.json", diagnostic_dir=root / "diagnostics",
+                    budget_policy=opencode_harness.BudgetPolicy(mode="local", max_invocations=100, max_wall_seconds=10),
+                    opencode_model="provider/model", opencode_variant="high", clean_worktree_checker=lambda _path: {"clean": True},
+                )
+            self.assertTrue(report["liveCallsStarted"])
+            self.assertTrue(all(cwd == root and 0 < deadline <= 10 for _, cwd, deadline in calls))
+
     def test_fixture_operations_cover_adapter_baseline_with_valid_envelopes(self) -> None:
         baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
 
@@ -90,7 +219,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
 
         def fake_runner(command: list[str]) -> opencode_harness.CommandResult:
             calls.append(command)
-            operation = command[-1].split("Operation: ", 1)[1].split(".", 1)[0]
+            operation = command[2].split("Operation: ", 1)[1].split(".", 1)[0]
             stdout = "\n".join(
                 [
                     json.dumps({"type": "session", "session_id": f"session-{operation}"}),
@@ -103,9 +232,12 @@ class OpenCodeHarnessTests(unittest.TestCase):
             tmp_path = Path(tmp)
             receipt_dir = tmp_path / "receipts"
             receipt = receipt_dir / "opencode.json"
+            profile = _load_json(ROOT / "profiles/hosts/opencode-live-profile.v1.json")
+            profile["bindings"]["standard-code"]["providerModel"] = "fixture/standard-code"
+            profile_path = tmp_path / "host-profile.json"
+            profile_path.write_text(json.dumps(profile), encoding="utf-8")
             model_selection = opencode_harness.load_host_model_selection(
-                ROOT / "profiles/hosts/opencode-live-profile.v1.json",
-                model_class="standard-code",
+                profile_path, model_class="standard-code",
             )
             selection_receipt = receipt_dir / "opencode-model-selection.json"
             report = opencode_harness.run_live_host_receipt(
@@ -118,7 +250,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
                 budget_policy=opencode_harness.BudgetPolicy(mode="metered", budget_cap_usd=1.0),
                 model_selection=model_selection,
                 model_selection_receipt_path=selection_receipt,
-                runner=fake_runner,
+                runner=_with_discovery(fake_runner),
                 clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
             )
 
@@ -131,9 +263,9 @@ class OpenCodeHarnessTests(unittest.TestCase):
             self.assertTrue(payload["usageAttested"])
             self.assertEqual({item["name"] for item in payload["operations"]}, set(baseline["requiredOperations"]))
             self.assertEqual(len(calls), len(baseline["requiredOperations"]))
-            self.assertEqual(calls[0][calls[0].index("--model") + 1], "<opencode-host-local-standard-code-model>")
+            self.assertEqual(calls[0][calls[0].index("--model") + 1], "fixture/standard-code")
             self.assertEqual(selection_payload["schemaVersion"], "agent-host-model-selection-receipt.v1")
-            self.assertNotIn("<opencode-host-local-standard-code-model>", json.dumps(payload["modelSelection"]))
+            self.assertNotIn("fixture/standard-code", json.dumps(payload["modelSelection"]))
 
             validation_evidence = tmp_path / "host-conformance-validation.json"
             validation = subprocess.run(
@@ -153,8 +285,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
                 ],
                 cwd=ROOT,
                 text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 check=False,
             )
             self.assertEqual(validation.returncode, 0, validation.stderr)
@@ -184,7 +315,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
                     max_billable_tokens=1000,
                 ),
                 model_selection=model_selection,
-                runner=lambda command: opencode_harness.CommandResult(returncode=0, stdout="", stderr="", wall_seconds=0.1),
+                runner=_with_discovery(lambda _command: opencode_harness.CommandResult(returncode=0, stdout="", stderr="", wall_seconds=0.1)),
                 clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
             )
 
@@ -194,7 +325,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
     def test_live_host_receipt_subscription_mode_does_not_require_cost_usd(self) -> None:
         baseline = _load_json(ROOT / "conformance/core/adapter-baseline.v1.json")
 
-        def subscription_runner(command: list[str]) -> opencode_harness.CommandResult:
+        def subscription_runner(_command: list[str]) -> opencode_harness.CommandResult:
             stdout = "\n".join(
                 [
                     json.dumps({"type": "session", "session_id": "session-subscription"}),
@@ -218,7 +349,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
                     max_invocations=len(baseline["requiredOperations"]),
                     max_billable_tokens=1000,
                 ),
-                runner=subscription_runner,
+                runner=_with_discovery(subscription_runner),
                 clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
             )
 
@@ -260,7 +391,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
                 receipt_path=receipt,
                 diagnostic_dir=tmp_path / "diagnostics",
                 budget_policy=opencode_harness.BudgetPolicy(mode="metered", budget_cap_usd=1.0),
-                runner=fake_runner,
+                runner=_with_discovery(fake_runner),
                 clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
             )
 
@@ -292,8 +423,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
                 ],
                 cwd=ROOT,
                 text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 check=False,
             )
             self.assertEqual(validation.returncode, 0, validation.stderr)
@@ -304,7 +434,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
         profile = _load_json(ROOT / "conformance/core/live-calibration-profile.v1.json")
         expected_runs = len(profile["requiredScenarios"]) * len(profile["requiredCohorts"])
 
-        def runner_without_context_bytes(command: list[str]) -> opencode_harness.CommandResult:
+        def runner_without_context_bytes(_command: list[str]) -> opencode_harness.CommandResult:
             stdout = "\n".join(
                 [
                     json.dumps({"type": "session", "session_id": "session-proxy"}),
@@ -330,7 +460,7 @@ class OpenCodeHarnessTests(unittest.TestCase):
                     max_invocations=expected_runs,
                     max_billable_tokens=expected_runs * 20,
                 ),
-                runner=runner_without_context_bytes,
+                runner=_with_discovery(runner_without_context_bytes),
                 clean_worktree_checker=lambda _: {"clean": True, "dirtyEntryCount": 0},
             )
 

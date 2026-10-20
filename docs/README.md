@@ -6,6 +6,10 @@ bounded execution, evidence, review and final proof aligned. The external agent
 solves the product task; ALK preserves the authority needed to verify or block
 that result. It is host-neutral and does not depend on a source project.
 
+## Release 2.18 security and compatibility
+
+Read [OpenCode 1.x/2.x qualification and signing](adapters/opencode.md), [redaction policy](reference/public-locators-and-redaction.md) and [review examples](guides/code-review-workflows.md). Process stdin/output/Git reads share bounded deadlines and byte limits; identity capture disables external diff and textconv. Historical receipts remain unchanged. No host or model guarantee is inferred from CLI help.
+
 ## Release 2.17 workflow validation
 
 Read [workflow completeness and recovery](reference/workflow-completeness.md) for explicit plan inputs, bounded writes, unfinished items and review interruption. Existing accounting and host-capability boundaries remain in force.
@@ -29,7 +33,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==2.17.0` from
+  `python -m pip install agent-lifecycle-kit==2.18.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

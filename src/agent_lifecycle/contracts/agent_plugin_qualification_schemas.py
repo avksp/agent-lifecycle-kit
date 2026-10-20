@@ -8,7 +8,6 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 
-
 PROFILE_SCHEMA = "agent-plugin-qualification-profile.v1"
 RECEIPT_SCHEMA = "agent-plugin-qualification-receipt.v1"
 VALIDATION_SCHEMA = "agent-plugin-qualification-validation.v1"
@@ -170,7 +169,11 @@ def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(installation, dict):
         blockers.append(_issue("profile-installation-invalid"))
     else:
-        if installation.get("owner") != "client" or installation.get("automatic") is not False or installation.get("writesAllowed") is not False:
+        if (
+            installation.get("owner") != "client"
+            or installation.get("automatic") is not False
+            or installation.get("writesAllowed") is not False
+        ):
             blockers.append(_issue("profile-installation-boundary"))
 
     environment = profile.get("environment")
@@ -195,7 +198,12 @@ def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
         elif mode == "reported" and accepted != "any-version":
             blockers.append(_issue("profile-host-version-policy-reported-invalid", accepted=accepted))
         elif mode in {"exact", "range"}:
-            blockers.append(_issue("profile-host-version-policy-unsupported", mode=mode))
+            from agent_lifecycle.contracts.launch_qualification import version_policy_bounds
+
+            try:
+                version_policy_bounds(host_version_policy)
+            except ValueError:
+                blockers.append(_issue("profile-host-version-policy-invalid", mode=mode))
 
     qualification = profile.get("qualification")
     if not isinstance(qualification, dict):
@@ -205,13 +213,21 @@ def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
             blockers.append(_issue("profile-qualification-status", actual=qualification.get("status")))
         if qualification.get("mode") != "explicit-read-only":
             blockers.append(_issue("profile-qualification-mode"))
-        if qualification.get("maxProcesses") != 2 or qualification.get("timeoutSeconds") != 10 or qualification.get("maxOutputBytes") != 262144:
+        if (
+            qualification.get("maxProcesses") != 2
+            or qualification.get("timeoutSeconds") != 10
+            or qualification.get("maxOutputBytes") != 262144
+        ):
             blockers.append(_issue("profile-qualification-limits"))
         if qualification.get("modelCalls") != 0 or qualification.get("hostLaunch") is not True:
             blockers.append(_issue("profile-qualification-safety"))
 
     boundary = profile.get("descriptorBoundary")
-    if not isinstance(boundary, dict) or boundary.get("maturityReadOnly") is not True or boundary.get("managedLaunchReadOnly") is not True:
+    if (
+        not isinstance(boundary, dict)
+        or boundary.get("maturityReadOnly") is not True
+        or boundary.get("managedLaunchReadOnly") is not True
+    ):
         blockers.append(_issue("profile-descriptor-boundary"))
     if "managedLaunch" in profile or "maturity" in profile:
         blockers.append(_issue("profile-descriptor-override"))
@@ -239,9 +255,13 @@ def build_qualification_receipt(
         raise LifecycleError("plugin-qualification-status-invalid", "unsupported plugin qualification status")
     profile_validation = validate_qualification_profile(profile)
     if profile_validation["status"] != "PASS":
-        raise LifecycleError("plugin-qualification-profile-invalid", "qualification profile failed validation", profile_validation)
+        raise LifecycleError(
+            "plugin-qualification-profile-invalid", "qualification profile failed validation", profile_validation
+        )
     if process_calls < 0 or process_calls > 2:
-        raise LifecycleError("plugin-qualification-process-count-invalid", "process call count is outside the profile limit")
+        raise LifecycleError(
+            "plugin-qualification-process-count-invalid", "process call count is outside the profile limit"
+        )
     body = {
         "schemaVersion": RECEIPT_SCHEMA,
         "status": status,
@@ -299,12 +319,14 @@ def validate_qualification_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
         blockers.append(_issue("receipt-process-count"))
     if receipt.get("status") == "OFFLINE_VALIDATED" and process_calls != 0:
         blockers.append(_issue("receipt-offline-process-call"))
-    if receipt.get("status") == "QUALIFIED" and process_calls < 1:
+    if receipt.get("status") == "QUALIFIED" and (not isinstance(process_calls, int) or process_calls < 1):
         blockers.append(_issue("receipt-qualified-without-probe"))
     expected = canonical_digest({key: value for key, value in receipt.items() if key != "receiptDigest"})
     if receipt.get("receiptDigest") != expected:
         blockers.append(_issue("receipt-digest-mismatch", expected=expected, actual=receipt.get("receiptDigest")))
-    return _validation(blockers, checked_digest=receipt.get("receiptDigest") if isinstance(receipt.get("receiptDigest"), str) else None)
+    return _validation(
+        blockers, checked_digest=receipt.get("receiptDigest") if isinstance(receipt.get("receiptDigest"), str) else None
+    )
 
 
 def _required_text(payload: dict[str, Any], field: str, expected: str, blockers: list[dict[str, Any]]) -> None:
@@ -331,5 +353,7 @@ def _validation(blockers: list[dict[str, Any]], *, checked_digest: str | None = 
 def require_qualification_receipt_pass(receipt: dict[str, Any]) -> dict[str, Any]:
     validation = validate_qualification_receipt(receipt)
     if validation["status"] != "PASS":
-        raise LifecycleError("plugin-qualification-receipt-invalid", "qualification receipt failed validation", validation)
+        raise LifecycleError(
+            "plugin-qualification-receipt-invalid", "qualification receipt failed validation", validation
+        )
     return receipt

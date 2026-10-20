@@ -85,3 +85,37 @@ agent-lifecycle start --adapter opencode --file task.md
 
 The command creates ALK intake. For host execution, use the launch route through
 a verified profile. See [Using ALK with an adapter](usage-modes.md).
+
+## OpenCode 1.x and 2.x (2.18)
+
+The descriptor's `maturity` and `liveTestedHostRange` preserve the historical
+1.18.9 evidence and its source revision. They do not qualify the installed CLI.
+Inspection reports `effectiveVersionQualification` separately: recognized stable
+1.x/2.x with matching command discovery is `COMPATIBLE_UNVERIFIED`; unknown majors,
+ambiguous versions, suffixes and wrong-family help are `UNSUPPORTED`. `VERIFIED`
+requires accepted live evidence bound to the same version range, ALK source and
+operation. CLI/help fixtures cannot supply that evidence. The exact-version
+managed launch and its existing unsupported planning route remain separate.
+
+For 1.x use `run MESSAGE --format=json --dir DIR --model provider/model
+--variant VALUE`. For 2.x use `run MESSAGE --format=json --standalone
+--model provider/model#variant` and set the subprocess working directory explicitly;
+never pass removed `--dir` or `--variant` flags. Use repeated `--file=PATH`, a
+unique `--title` and an explicit timeout. Approval flags require the existing
+explicit model/tool authorization; discovery supplies no approval.
+
+Discover export with `export --help` on 1.x and `session export --help` on 2.x.
+The 2.x statistics surface includes `stats --json`. A zero exit status printing
+root help is a refusal, not successful command discovery. No host installation
+or global configuration is upgraded. Sources: [official CLI reference](https://opencode.ai/docs/cli/),
+[1.19.3 run source](https://github.com/anomalyco/opencode/blob/e3c4eb242585dcd77be1a867391b7c25fd47ce52/packages/opencode/src/cli/cmd/run.ts)
+and [2.0.32 run source](https://github.com/anomalyco/opencode/blob/843a6c514e606b436a7fe713422ace0a93ad3d61/packages/cli/src/commands/handlers/run.ts).
+
+## Signing authority
+
+Pin the expected signer fingerprint and an external trust root independently of
+the supplied signing seed. Public trust documents can be world-readable; signing
+keys must use owner-only POSIX permissions (0600 or 0400), checked on the actual
+held file descriptor. Windows permission bits do not establish an ACL boundary.
+Canonical/weak-point checks preserve the signed wire format. Fixed private-scalar
+rounds reduce secret-dependent control flow; pure Python is not constant-time.

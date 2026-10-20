@@ -169,9 +169,20 @@ only an example:
 
 ```bash
 opencode models <provider>
-opencode run --model <provider>/<model-id> --format json \
-  --file work/review-mesh/plan-review/assignments/parallel-research-synthesis-3.json \
-  "Review the assignment and return only reviewer-output.v1 JSON" \
+# OpenCode 1.x: bounded invocation; unique title per call.
+python3 -c 'import subprocess,sys; subprocess.run(sys.argv[1:],check=True,timeout=120)' \
+  opencode run "Review the assignment and return only reviewer-output.v1 JSON" \
+  --model "<provider>/<model-id>" --format=json \
+  --title "alk-review-$(python3 -c 'import uuid; print(uuid.uuid4())')" \
+  --file="work/review-mesh/plan-review/assignments/parallel-research-synthesis-3.json" \
+  > reviewer-glm-output.json
+
+# OpenCode 2.x: bounded invocation; unique title per call.
+python3 -c 'import subprocess,sys; subprocess.run(sys.argv[1:],check=True,timeout=120)' \
+  opencode run "Review the assignment and return only reviewer-output.v1 JSON" \
+  --model "<provider>/<model-id>" --format=json --standalone \
+  --title "alk-review-$(python3 -c 'import uuid; print(uuid.uuid4())')" \
+  --file="work/review-mesh/plan-review/assignments/parallel-research-synthesis-3.json" \
   > reviewer-glm-output.json
 ```
 
@@ -320,9 +331,20 @@ claude --model <claude-model-alias> --print --output-format json \
   > reviewer-b-output.json
 
 opencode models <provider>
-opencode run --model <provider>/<model-id> --format json \
-  --file rm-assignment-glm.json \
-  "Review the assignment and return only reviewer-output.v1 JSON" \
+# OpenCode 1.x: bounded invocation; unique title per call.
+python3 -c 'import subprocess,sys; subprocess.run(sys.argv[1:],check=True,timeout=120)' \
+  opencode run "Review the assignment and return only reviewer-output.v1 JSON" \
+  --model "<provider>/<model-id>" --format=json \
+  --title "alk-review-$(python3 -c 'import uuid; print(uuid.uuid4())')" \
+  --file="rm-assignment-glm.json" \
+  > reviewer-glm-output.json
+
+# OpenCode 2.x: bounded invocation; unique title per call.
+python3 -c 'import subprocess,sys; subprocess.run(sys.argv[1:],check=True,timeout=120)' \
+  opencode run "Review the assignment and return only reviewer-output.v1 JSON" \
+  --model "<provider>/<model-id>" --format=json --standalone \
+  --title "alk-review-$(python3 -c 'import uuid; print(uuid.uuid4())')" \
+  --file="rm-assignment-glm.json" \
   > reviewer-glm-output.json
 ```
 

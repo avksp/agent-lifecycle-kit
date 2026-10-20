@@ -76,8 +76,11 @@ def concurrent_worker(path, barrier, output, action, name):
             output.put(result)
     except RevisionConflict:
         output.put("REVISION_CONFLICT")
-    except JournalUnavailable:
-        output.put("UNAVAILABLE")
+    except JournalUnavailable as exc:
+        output.put(
+            f"UNAVAILABLE: {exc!r}; cause={exc.__cause__!r}; "
+            f"write_outcome={exc.write_outcome!r}"
+        )
 
 
 def crash_worker(path, stage):

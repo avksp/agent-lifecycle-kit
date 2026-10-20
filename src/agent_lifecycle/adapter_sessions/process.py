@@ -704,6 +704,8 @@ def run_process(
         attempt_id=attempt_id,
         adapter_id=adapter_id,
         retry=retry,
+        timeout_seconds=timeout_seconds,
+        cleanup_grace_seconds=cleanup_grace_seconds,
     )
     if invalid is not None:
         return invalid

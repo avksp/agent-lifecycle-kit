@@ -7,6 +7,18 @@ from agent_lifecycle.contracts.process_redaction import redact_process_text
 
 
 class ProcessRedactionContractTests(unittest.TestCase):
+    def test_shared_process_contract_and_adapter_facade_remove_new_credential_families(self) -> None:
+        tokens = ["glpat-" + "A" * 24, "npm_" + "B" * 36,
+                  "sk_live_" + "C" * 24, "hf_" + "D" * 34, "AIza" + "E" * 35]
+        value = " ".join(tokens) + " https://example.invalid/?sig=opaque-value&keep=home"
+        redacted, changed = redact_process_text(value)
+        self.assertTrue(changed)
+        self.assertEqual(facade_redact(value), (redacted, changed))
+        for token in tokens:
+            self.assertNotIn(token, redacted)
+        self.assertNotIn("opaque-value", redacted)
+        self.assertIn("https://example.invalid/?sig=<redacted>&keep=home", redacted)
+
     def test_adapter_facade_matches_shared_contract(self) -> None:
         posix_path = "/" + "Users/example/project"
         value = f"token=sk-test-secret {posix_path} C:\\Users\\example\\project"

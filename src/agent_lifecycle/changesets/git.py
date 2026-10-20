@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
+from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.paths import normalize_git_revision, normalize_repo_path
 
@@ -63,20 +63,24 @@ def changed_files(cwd: Path, *, base: str | None = None) -> list[str]:
 def resolve_revision(cwd: Path, revision: str, *, label: str = "revision") -> str:
     value = normalize_git_revision(revision, label=label)
     try:
-        completed = subprocess.run(
+        completed = run_bounded_command(
             ["git", "rev-parse", "--verify", "--end-of-options", f"{value}^{{commit}}"],
             cwd=cwd,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=GIT_TIMEOUT_SECONDS,
+            timeout_seconds=GIT_TIMEOUT_SECONDS,
+            max_stdout_bytes=128,
         )
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+    except (OSError, LifecycleError) as exc:
         raise LifecycleError("invalid-git-revision", f"{label}: revision cannot be resolved") from exc
     resolved = completed.stdout.strip().splitlines()
-    if len(resolved) != 1 or not resolved[0]:
+    if completed.returncode or len(resolved) != 1 or len(resolved[0]) not in (40, 64):
         raise LifecycleError("invalid-git-revision", f"{label}: revision cannot be resolved")
-    return resolved[0]
+    try:
+        value = resolved[0].decode("ascii")
+    except UnicodeDecodeError as exc:
+        raise LifecycleError("invalid-git-revision", f"{label}: revision cannot be resolved") from exc
+    if any(char not in "0123456789abcdef" for char in value):
+        raise LifecycleError("invalid-git-revision", f"{label}: revision cannot be resolved")
+    return value
 
 
 def _resolve_revision(cwd: Path, revision: str, *, label: str = "revision") -> str:
@@ -87,21 +91,19 @@ def _resolve_revision(cwd: Path, revision: str, *, label: str = "revision") -> s
 
 def _git_paths(cwd: Path, argv: list[str]) -> list[str]:
     try:
-        completed = subprocess.run(
+        completed = run_bounded_command(
             argv,
             cwd=cwd,
-            check=True,
-            capture_output=True,
-            timeout=GIT_TIMEOUT_SECONDS,
+            timeout_seconds=GIT_TIMEOUT_SECONDS,
+            max_stdout_bytes=MAX_GIT_OUTPUT_BYTES,
         )
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        raise LifecycleError("git-command-failed", f"git command failed: {' '.join(argv)}") from exc
-    if len(completed.stdout) > MAX_GIT_OUTPUT_BYTES:
-        raise LifecycleError(
-            "git-output-limit",
-            "Git changed-file output exceeds the bounded snapshot limit",
-            {"maxBytes": MAX_GIT_OUTPUT_BYTES},
-        )
+    except LifecycleError as exc:
+        code = "git-output-limit" if exc.code == "bounded-process-output-limit" else "git-command-failed"
+        raise LifecycleError(code, "Git changed-file command failed closed") from exc
+    except OSError as exc:
+        raise LifecycleError("git-command-failed", "Git changed-file command could not start") from exc
+    if completed.returncode:
+        raise LifecycleError("git-command-failed", "Git changed-file command failed")
     paths = []
     for raw in completed.stdout.split(b"\0"):
         if not raw:

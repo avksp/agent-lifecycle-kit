@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import subprocess
 import threading
 from typing import Any
@@ -13,6 +14,7 @@ from agent_lifecycle.contracts.process_execution_schemas import build_process_ex
 DEFAULT_OUTPUT_BYTES = 262_144
 DEFAULT_CLEANUP_GRACE_SECONDS = 1.0
 
+
 def _invalid_limit_failure(
     *,
     input_bytes: bytes,
@@ -23,7 +25,32 @@ def _invalid_limit_failure(
     attempt_id: str | None,
     adapter_id: str | None,
     retry: dict[str, Any] | None,
+    timeout_seconds: float,
+    cleanup_grace_seconds: float,
 ) -> dict[str, Any] | None:
+    for name, value in (("timeout", timeout_seconds), ("cleanup-grace", cleanup_grace_seconds)):
+        if (
+            type(value) not in (int, float)
+            or not math.isfinite(value)
+            or value < 0
+            or (name == "timeout" and value == 0)
+        ):
+            return _bounded_failure(
+                f"adapter-process-{name}-invalid",
+                input_bytes=len(input_bytes),
+                output_bytes=0,
+                process_started=False,
+                details={
+                    "reason": (
+                        "positive-finite-limit-required" if name == "timeout" else "nonnegative-finite-limit-required"
+                    )
+                },
+                command_hash=command_hash,
+                operation_id=operation_id,
+                attempt_id=attempt_id,
+                adapter_id=adapter_id,
+                retry=retry,
+            )
     if max_input_bytes is not None and len(input_bytes) > max_input_bytes:
         return _bounded_failure(
             "adapter-process-input-limit",
@@ -52,6 +79,7 @@ def _invalid_limit_failure(
         )
     return None
 
+
 def _build_process_result(
     process: subprocess.Popen[Any],
     *,
@@ -75,8 +103,9 @@ def _build_process_result(
 ) -> dict[str, Any]:
     stdout = capture.captures["stdout"].decode("utf-8", errors="replace")
     stderr = capture.captures["stderr"].decode("utf-8", errors="replace")
-    stdout_tail, stdout_redacted = redact_process_text(stdout[-2000:])
-    stderr_tail, stderr_redacted = redact_process_text(stderr[-2000:])
+    safe_stdout, stdout_redacted = redact_process_text(stdout)
+    safe_stderr, stderr_redacted = redact_process_text(stderr)
+    stdout_tail, stderr_tail = safe_stdout[-2000:], safe_stderr[-2000:]
     blockers = _process_blockers(
         capture.output_limit_exceeded,
         timed_out=timed_out,
@@ -132,6 +161,7 @@ def _build_process_result(
         "blockers": blockers,
     }
 
+
 def _process_blockers(
     output_limit_exceeded: threading.Event,
     *,
@@ -154,6 +184,7 @@ def _process_blockers(
     if cleanup.get("status") != "PASS":
         blockers.append({"code": "adapter-process-cleanup-unverified", "cleanup": cleanup})
     return blockers
+
 
 def _bounded_failure(
     code: str,

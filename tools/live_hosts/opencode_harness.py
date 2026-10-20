@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import time
+import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable
-
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
@@ -17,8 +17,6 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex  # noqa: E402
-from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
 from tools.live_hosts.common import (  # noqa: E402
     BudgetPolicy,
     BudgetTracker,
@@ -31,6 +29,16 @@ from tools.live_hosts.common import (  # noqa: E402
     write_model_selection_receipt,
 )
 
+from agent_lifecycle.changesets.git_io import run_bounded_command  # noqa: E402
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex  # noqa: E402
+from agent_lifecycle.host_protocol import HostOperationReceipt, HostOperationRequest  # noqa: E402
+from agent_lifecycle.host_protocol.opencode_compatibility import (  # noqa: E402
+    effective_qualification,
+    help_commands,
+    model_arguments,
+    opencode_family,
+    run_arguments,
+)
 
 HOST = "opencode"
 LIVE_HOST_RECEIPT_SCHEMA = "agent-lifecycle-live-host-conformance-receipt.v1"
@@ -91,7 +99,7 @@ class OpenCodeUsage:
             usage["sessionId"] = self.session_id
         return usage
 
-    def with_context_byte_proxy(self, value: int) -> "OpenCodeUsage":
+    def with_context_byte_proxy(self, value: int) -> OpenCodeUsage:
         return replace(
             self,
             cumulative_context_bytes=value,
@@ -216,15 +224,13 @@ def run_preflight(
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     checks: list[dict[str, Any]] = []
-    version = _run_command([opencode_bin, "--version"], checks, "opencode-version")
-    run_help = _run_command([opencode_bin, "run", "--help"], checks, "opencode-run-help")
-    export_help = _run_command([opencode_bin, "export", "--help"], checks, "opencode-export-help")
-    stats_help = _run_command([opencode_bin, "stats", "--help"], checks, "opencode-stats-help")
+    runner = _bound_runner(worktree, budget_policy)
+    version, major = _discover_cli(opencode_bin, runner, checks, blockers)
     baseline = _load_json(baseline_path)
     operations = required_operations(baseline)
     if not operations:
         blockers.append({"code": "invalid-adapter-baseline", "message": "adapter baseline has no required operations"})
-    if not Path("opencode.json").is_file():
+    if not ((worktree or Path.cwd()) / "opencode.json").is_file():
         blockers.append({"code": "missing-opencode-config", "message": "opencode.json is required for local plugin projection"})
     if allow_live:
         try:
@@ -237,11 +243,12 @@ def run_preflight(
         if not clean.get("clean"):
             blockers.append({"code": "BLOCKED_DIRTY_WORKTREE", "message": "live runs require a clean dedicated worktree"})
     checks.append({"name": "budget-gate", "status": "PASS" if allow_live and not blockers else "BLOCKED", "details": {"budgetPolicy": budget_policy.to_json(), "allowLive": allow_live}})
-    help_ok = all(result["returncode"] == 0 for result in (version, run_help, export_help, stats_help))
+    help_ok = major is not None
     return {
         **_base_report("PASS" if not blockers and help_ok else "FAIL", blockers),
         "checks": checks,
-        "opencodeVersion": _first_line(version["stdout"]),
+        "opencodeVersion": version,
+        "versionQualification": effective_qualification(version or "", surfaces_ok=help_ok),
         "baselineDigest": canonical_digest(baseline),
         "requiredOperationCount": len(operations),
         "budgetPolicy": budget_policy.to_json(),
@@ -292,10 +299,10 @@ def run_live_host_receipt(
     opencode_variant: str | None = None,
     model_selection: HostModelSelection | None = None,
     model_selection_receipt_path: Path | None = None,
-    runner: Callable[[list[str]], CommandResult] = None,
-    clean_worktree_checker: Callable[[Path], dict[str, Any]] = None,
+    runner: Callable[[list[str]], CommandResult] | None = None,
+    clean_worktree_checker: Callable[[Path], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    runner = runner or run_command_capture
+    runner = runner or _bound_runner(worktree, budget_policy)
     clean_worktree_checker = clean_worktree_checker or check_clean_worktree
     blockers: list[dict[str, Any]] = []
     checks: list[dict[str, Any]] = []
@@ -307,6 +314,14 @@ def run_live_host_receipt(
     if blockers:
         return _blocked_live_report(blockers, checks, budget_policy, model_selection=model_selection)
 
+    _, major = _discover_cli(opencode_bin, runner, checks, blockers)
+    if major is not None:
+        try:
+            _model_args(opencode_model, opencode_variant, model_selection, major=major)
+        except LifecycleError as error:
+            blockers.append({"code": error.code, "message": error.message})
+    if blockers or major is None:
+        return _blocked_live_report(blockers, checks, budget_policy, model_selection=model_selection)
     assert worktree is not None
     assert receipt_path is not None
     diagnostic_dir.mkdir(parents=True, exist_ok=True)
@@ -319,8 +334,8 @@ def run_live_host_receipt(
         except HarnessError as error:
             blockers.append({"code": error.code, "message": error.message})
             break
-        invocation_id = f"opencode-{operation_name}-live-{index:02d}"
-        result = runner(_operation_command(opencode_bin, worktree, operation_name, opencode_model=opencode_model, opencode_variant=opencode_variant, model_selection=model_selection))
+        invocation_id = f"opencode-{operation_name}-live-{index:02d}-{uuid.uuid4().hex}"
+        result = runner(_operation_command(opencode_bin, worktree, operation_name, opencode_model=opencode_model, opencode_variant=opencode_variant, model_selection=model_selection, major=major, title=invocation_id))
         live_calls_started = True
         transcript = _write_invocation_diagnostic(diagnostic_dir, operation_name, invocation_id, result)
         checks.append({"name": f"opencode-live-{operation_name}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": _display_path(transcript)}})
@@ -380,10 +395,10 @@ def run_live_calibration(
     opencode_variant: str | None = None,
     model_selection: HostModelSelection | None = None,
     model_selection_receipt_path: Path | None = None,
-    runner: Callable[[list[str]], CommandResult] = None,
-    clean_worktree_checker: Callable[[Path], dict[str, Any]] = None,
+    runner: Callable[[list[str]], CommandResult] | None = None,
+    clean_worktree_checker: Callable[[Path], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    runner = runner or run_command_capture
+    runner = runner or _bound_runner(worktree, budget_policy)
     clean_worktree_checker = clean_worktree_checker or check_clean_worktree
     blockers: list[dict[str, Any]] = []
     checks: list[dict[str, Any]] = []
@@ -401,6 +416,14 @@ def run_live_calibration(
     if blockers:
         return _blocked_live_report(blockers, checks, budget_policy, model_selection=model_selection)
 
+    _, major = _discover_cli(opencode_bin, runner, checks, blockers)
+    if major is not None:
+        try:
+            _model_args(opencode_model, opencode_variant, model_selection, major=major)
+        except LifecycleError as error:
+            blockers.append({"code": error.code, "message": error.message})
+    if blockers or major is None:
+        return _blocked_live_report(blockers, checks, budget_policy, model_selection=model_selection)
     assert worktree is not None
     assert receipt_path is not None
     diagnostic_dir.mkdir(parents=True, exist_ok=True)
@@ -415,9 +438,9 @@ def run_live_calibration(
                 except HarnessError as error:
                     blockers.append({"code": error.code, "message": error.message})
                     break
-                invocation_id = f"opencode-{scenario}-{cohort}-{run_index:02d}"
+                invocation_id = f"opencode-{scenario}-{cohort}-{run_index:02d}-{uuid.uuid4().hex}"
                 prompt = _prompt_for_calibration(scenario, cohort, run_index)
-                result = runner(_calibration_command(opencode_bin, worktree, prompt, opencode_model=opencode_model, opencode_variant=opencode_variant, model_selection=model_selection))
+                result = runner(_calibration_command(opencode_bin, worktree, prompt, opencode_model=opencode_model, opencode_variant=opencode_variant, model_selection=model_selection, major=major, title=invocation_id))
                 live_calls_started = True
                 transcript = _write_invocation_diagnostic(diagnostic_dir, f"{scenario}-{cohort}-{run_index:02d}", invocation_id, result)
                 checks.append({"name": f"opencode-calibration-{scenario}-{cohort}-{run_index:02d}", "status": "PASS" if result.returncode == 0 else "FAIL", "details": {"returncode": result.returncode, "diagnostic": _display_path(transcript)}})
@@ -532,16 +555,63 @@ def parse_opencode_jsonl(text: str, *, wall_seconds: float = 0.0) -> OpenCodeUsa
 def check_clean_worktree(worktree: Path) -> dict[str, Any]:
     if not worktree.exists():
         return {"clean": False, "reason": "missing-worktree"}
-    result = subprocess.run(["git", "-C", str(worktree), "status", "--short"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    result = run_command_capture(["git", "status", "--short"], cwd=worktree)
     if result.returncode != 0:
         return {"clean": False, "reason": "not-a-git-worktree", "stderrSha256": sha256_hex(result.stderr.encode("utf-8"))}
     return {"clean": result.stdout == "", "dirtyEntryCount": len([line for line in result.stdout.splitlines() if line.strip()])}
 
 
-def run_command_capture(command: list[str]) -> CommandResult:
+def run_command_capture(
+    command: list[str], *, cwd: Path | None = None, timeout_seconds: float = 30.0,
+) -> CommandResult:
     started = time.monotonic()
-    result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    return CommandResult(returncode=result.returncode, stdout=result.stdout, stderr=result.stderr, wall_seconds=round(time.monotonic() - started, 3))
+    try:
+        result = run_bounded_command(command, cwd=cwd or Path.cwd(), timeout_seconds=timeout_seconds,
+                                     max_stdout_bytes=8388608, max_stderr_bytes=65536)
+        return CommandResult(result.returncode, result.stdout.decode("utf-8", errors="replace"),
+                             result.stderr.decode("utf-8", errors="replace"), round(time.monotonic() - started, 3))
+    except LifecycleError as error:
+        return CommandResult(-1, "", error.code, round(time.monotonic() - started, 3))
+
+
+def _bound_runner(worktree: Path | None, policy: BudgetPolicy | None) -> Callable[[list[str]], CommandResult]:
+    limit = min(30.0, policy.max_wall_seconds) if policy and policy.max_wall_seconds is not None else 30.0
+    deadline = time.monotonic() + limit
+
+    def run(command: list[str]) -> CommandResult:
+        return run_command_capture(command, cwd=worktree, timeout_seconds=deadline - time.monotonic())
+
+    return run
+
+
+def _discover_cli(
+    binary: str, runner: Callable[[list[str]], CommandResult], checks: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
+) -> tuple[str | None, int | None]:
+    version_result = runner([binary, "--version"])
+    try:
+        if len(version_result.stdout.encode()) > 262144 or len(version_result.stderr.encode()) > 65536:
+            raise LifecycleError("opencode-discovery-output-limit", "OpenCode discovery output exceeded its limit")
+        if version_result.returncode != 0:
+            raise LifecycleError("opencode-version-probe-failed", "OpenCode version probe failed")
+        version, major = opencode_family(version_result.stdout + "\n" + version_result.stderr)
+        checks.append({"name": "opencode-version", "status": "PASS", "observedVersion": version, "family": major})
+        for name, (arguments, markers) in help_commands(major).items():
+            result = runner([binary, *arguments])
+            if len(result.stdout.encode()) > 262144 or len(result.stderr.encode()) > 65536:
+                raise LifecycleError("opencode-discovery-output-limit", "OpenCode discovery output exceeded its limit")
+            text = result.stdout + "\n" + result.stderr
+            required = [*markers, *(["--title", "--file", "--variant"] if name == "run" and major == 1 else [])]
+            missing = [marker for marker in required if marker.lower() not in text.lower()]
+            ok = result.returncode == 0 and not missing
+            checks.append({"name": f"opencode-{name}-help", "status": "PASS" if ok else "FAIL", "missingMarkers": missing,
+                           "stdoutSha256": sha256_hex(result.stdout.encode()), "stderrSha256": sha256_hex(result.stderr.encode())})
+            if not ok:
+                raise LifecycleError("opencode-command-surface-unsupported", "OpenCode command-specific discovery failed")
+        return version, major
+    except LifecycleError as error:
+        blockers.append({"code": error.code, "message": error.message})
+        return None, None
 
 
 def required_operations(baseline: dict[str, Any]) -> list[str]:
@@ -629,47 +699,42 @@ def _calibration_usage_or_block(
 
 
 def _operation_command(
-    opencode_bin: str,
-    worktree: Path,
-    operation_name: str,
-    *,
-    opencode_model: str | None = None,
-    opencode_variant: str | None = None,
-    model_selection: HostModelSelection | None = None,
+    opencode_bin: str, worktree: Path, operation_name: str, *,
+    opencode_model: str | None = None, opencode_variant: str | None = None,
+    model_selection: HostModelSelection | None = None, major: int = 1, title: str | None = None,
 ) -> list[str]:
-    command = [opencode_bin, "run", "--format", "json", "--dir", str(worktree)]
-    command.extend(_model_args(opencode_model, opencode_variant, model_selection))
-    if operation_name == "tool-execution":
-        command.append("--auto")
-    command.append(_prompt_for_operation(operation_name))
-    return command
+    return _calibration_command(opencode_bin, worktree, _prompt_for_operation(operation_name),
+                                opencode_model=opencode_model, opencode_variant=opencode_variant,
+                                model_selection=model_selection, major=major, title=title,
+                                auto_approve=operation_name == "tool-execution")
 
 
 def _calibration_command(
-    opencode_bin: str,
-    worktree: Path,
-    prompt: str,
-    *,
-    opencode_model: str | None = None,
-    opencode_variant: str | None = None,
-    model_selection: HostModelSelection | None = None,
+    opencode_bin: str, worktree: Path, prompt: str, *,
+    opencode_model: str | None = None, opencode_variant: str | None = None,
+    model_selection: HostModelSelection | None = None, major: int = 1,
+    title: str | None = None, auto_approve: bool = False,
 ) -> list[str]:
-    return [opencode_bin, "run", "--format", "json", "--dir", str(worktree), *_model_args(opencode_model, opencode_variant, model_selection), prompt]
+    model, variant = _selected_model(opencode_model, opencode_variant, model_selection)
+    return run_arguments(binary=opencode_bin, major=major, message=prompt, directory=str(worktree),
+                         title=title or f"alk-{uuid.uuid4().hex}", model=model, variant=variant,
+                         auto_approve=auto_approve)
+
+
+def _selected_model(model: str | None, variant: str | None, selection: HostModelSelection | None) -> tuple[str | None, str | None]:
+    if selection is not None:
+        if (model and model != selection.provider_model) or (variant and variant != selection.variant):
+            raise LifecycleError("opencode-model-variant-conflict", "Explicit model route conflicts with selected profile")
+        return selection.provider_model, selection.variant
+    return model, variant
 
 
 def _model_args(
-    opencode_model: str | None,
-    opencode_variant: str | None,
-    model_selection: HostModelSelection | None,
+    opencode_model: str | None, opencode_variant: str | None, model_selection: HostModelSelection | None,
+    *, major: int = 1,
 ) -> list[str]:
-    model = opencode_model or (model_selection.provider_model if model_selection is not None else None)
-    variant = opencode_variant or (model_selection.variant if model_selection is not None else None)
-    args: list[str] = []
-    if model:
-        args.extend(["--model", model])
-    if variant:
-        args.extend(["--variant", variant])
-    return args
+    model, variant = _selected_model(opencode_model, opencode_variant, model_selection)
+    return model_arguments(major, model, variant)
 
 
 def _validate_model_selection_inputs(
@@ -731,13 +796,6 @@ def _live_report(
     }
 
 
-def _run_command(command: list[str], checks: list[dict[str, Any]], name: str) -> dict[str, Any]:
-    started = time.monotonic()
-    result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    elapsed = time.monotonic() - started
-    checks.append({"name": name, "status": "PASS" if result.returncode == 0 else "FAIL", "returncode": result.returncode, "stdoutSha256": sha256_hex(result.stdout.encode("utf-8")), "stderrSha256": sha256_hex(result.stderr.encode("utf-8")), "wallSeconds": round(elapsed, 3)})
-    return {"returncode": result.returncode, "stdout": result.stdout, "stderr": result.stderr}
-
 
 def _write_invocation_diagnostic(diagnostic_dir: Path, operation_name: str, invocation_id: str, result: CommandResult) -> Path:
     path = diagnostic_dir / f"{operation_name}.json"
@@ -798,7 +856,7 @@ def _display_path(path: Path) -> str:
 
 
 def _source_revision() -> str:
-    result = subprocess.run(["git", "rev-parse", "HEAD"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    result = run_command_capture(["git", "rev-parse", "HEAD"], cwd=ROOT)
     if result.returncode == 0:
         return result.stdout.strip()
     return "unknown"

@@ -81,7 +81,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.17.0
+python -m pip install agent-lifecycle-kit==2.18.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -335,6 +335,10 @@ agent-lifecycle project preset render \
 `--language-after <path>`. Словарь является контекстом только для чтения: он
 не выдаёт полномочия записи и не заменяет спецификацию или зафиксированный
 план. См. [предметный язык проекта](project-domain-language.md).
+
+## Безопасность и совместимость в 2.18
+
+Диагностика процессов скрывает секреты до выбора хвоста; stdin, чтение stdout/stderr и Git-протоколы ограничены общим сроком и лимитами байтов. Git-идентичность не вызывает external diff/textconv, поэтому старые квитанции не переименовываются под новый digest. [OpenCode 1.x/2.x](../adapters/opencode.md) использует отдельные команды и эффективную квалификацию установленной версии, сохраняя историческую maturity. Политики plugin-квалификации `exact` и `range` (`2.0.30..2.0.32`) исполняются отдельно от live-готовности хоста. Публичные trust root можно читать; seed подписи требует POSIX-прав 0600/0400. RFC-байты сохранены; constant-time для Python не заявляется.
 
 ## Проверка рабочего цикла в 2.17
 

@@ -8,7 +8,9 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.host_protocol.inspection_common import (
-    CommandRun,
+    CommandRun as CommandRun,
+)
+from agent_lifecycle.host_protocol.inspection_common import (
     CommandRunner,
     _default_command_runner,
     _display_binary,
@@ -35,7 +37,7 @@ def inspect_adapter_descriptor(
     if timeout_seconds <= 0:
         raise LifecycleError("invalid-adapter-inspect-timeout", "adapter inspect timeout must be positive")
 
-    root = (project_root or Path(".")).resolve()
+    root = (project_root or Path()).resolve()
     validation = validate_adapter_descriptor(descriptor)
     blockers = list(validation["blockers"])
     checks: list[dict[str, Any]] = [
@@ -49,7 +51,9 @@ def inspect_adapter_descriptor(
         }
     ]
     operations = descriptor.get("operations", [])
-    operation_names = [item.get("name") for item in operations if isinstance(item, dict) and isinstance(item.get("name"), str)]
+    operation_names = [
+        item.get("name") for item in operations if isinstance(item, dict) and isinstance(item.get("name"), str)
+    ]
     capabilities: dict[str, Any] = {
         "descriptor": {
             "operationNames": operation_names,
@@ -71,7 +75,9 @@ def inspect_adapter_descriptor(
             "status": "SKIPPED" if skip_host_commands else "UNKNOWN",
             "binary": _display_binary(host_bin or descriptor.get("host")),
         },
-        "hostCapabilities": descriptor.get("hostCapabilities") if isinstance(descriptor.get("hostCapabilities"), list) else [],
+        "hostCapabilities": descriptor.get("hostCapabilities")
+        if isinstance(descriptor.get("hostCapabilities"), list)
+        else [],
     }
 
     host_checks, host_capabilities, host_blockers = _inspect_known_host(
@@ -94,6 +100,14 @@ def inspect_adapter_descriptor(
         "adapterId": descriptor.get("adapterId"),
         "host": descriptor.get("host"),
         "maturity": descriptor.get("maturity"),
+        **(
+            {
+                "descriptorMaturity": descriptor.get("maturity"),
+                "effectiveVersionQualification": capabilities.get("versionQualification"),
+            }
+            if descriptor.get("adapterId") == "opencode"
+            else {}
+        ),
         "descriptorDigest": canonical_digest(descriptor),
         "descriptorPath": _relative_display_path(descriptor_path, root) if descriptor_path else None,
         "liveCallsStarted": False,

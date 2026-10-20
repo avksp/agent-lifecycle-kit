@@ -76,7 +76,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.17.0
+python -m pip install agent-lifecycle-kit==2.18.0
 ```
 
 ## Task evidence identity
@@ -321,6 +321,10 @@ audited without edits with
 plan comparison. The vocabulary is read-only context; it cannot grant write
 authority or replace the specification and frozen plan. See [Project domain
 language](project-domain-language.md).
+
+## Release 2.18 security and compatibility
+
+Process diagnostics redact complete bounded captures before choosing a tail. Stdin, stdout/stderr and Git protocols share deadlines and byte limits. Git identity disables external diff/textconv; historical receipts are not rewritten to a new digest. [OpenCode 1.x/2.x](../adapters/opencode.md) uses separate command grammar and effective installed-version qualification while preserving historical maturity. Plugin `exact` and inclusive same-major `range` policies (`2.0.30..2.0.32`) are enforced separately from full-host live qualification. Public trust roots may be readable; signing seeds require POSIX mode 0600/0400. RFC signature bytes are preserved; pure Python is not claimed constant-time.
 
 ## Release 2.17 workflow validation
 

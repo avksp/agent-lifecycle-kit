@@ -3,8 +3,12 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
-Инструкция рассчитана на ALK v2.17.0. Перед исполнением проверьте замороженный
+Инструкция рассчитана на ALK v2.18.0. Перед исполнением проверьте замороженный
 план командой `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
+
+## Обновление до 2.18
+
+Прочитайте [совместимость OpenCode 1.x/2.x и правила ключей подписи](../adapters/opencode.md). ALK ограничивает ввод-вывод процессов и Git общим сроком и лимитами байтов, скрывает секреты до обрезания диагностики и отключает textconv во входах идентичности. Старые квитанции не переписываются. Справка CLI не подтверждает работу моделей; Python-подписи не объявляются constant-time. Ключи подписи на POSIX требуют 0600/0400. Глобальная установка OpenCode автоматически не обновляется.
 
 ## Обновление до 2.17
 
@@ -93,7 +97,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.17.0
+python -m pip install agent-lifecycle-kit==2.18.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -104,7 +108,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.17.0
+python -m pip install agent-lifecycle-kit==2.18.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```

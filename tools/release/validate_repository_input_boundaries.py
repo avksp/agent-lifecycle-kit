@@ -45,9 +45,7 @@ REQUIRED_MARKERS = {
     ),
     "changeSummary": (
         "_resolve_revision",
-        "rev-parse",
         "--end-of-options",
-        "normalize_git_revision",
     ),
     "evidenceIndex": (
         "resolve_repository_file",
@@ -128,6 +126,36 @@ def _delegation_errors(source: str, contract: dict[str, set[str]], *, facade: bo
                     (".read_bytes", ".read_text", ".write_bytes", ".write_text", ".open")
                 ):
                     errors.append(f"{function}:unguarded-io:{call}")
+    return errors
+
+
+def _change_summary_delegation_errors(source: str) -> list[str]:
+    """Require the summary facade to return the shared guarded resolution."""
+    target = "agent_lifecycle.changesets.git.resolve_revision"
+    contract = {"_resolve_revision": {target}}
+    errors = _delegation_errors(source, contract, facade=True)
+    tree = ast.parse(source)
+    aliases = {
+        alias.asname or alias.name: f"{node.module}.{alias.name}"
+        for node in tree.body
+        if isinstance(node, ast.ImportFrom)
+        for alias in node.names
+    }
+    function = next(
+        (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_resolve_revision"),
+        None,
+    )
+    body = function.body if function is not None else []
+    if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+        body = body[1:]
+    call = body[0].value if len(body) == 1 and isinstance(body[0], ast.Return) else None
+    if (
+        not isinstance(call, ast.Call)
+        or _name(call.func, aliases) != target
+        or [ast.unparse(argument) for argument in call.args] != ["root", "revision"]
+        or [(keyword.arg, ast.unparse(keyword.value)) for keyword in call.keywords] != [("label", "label")]
+    ):
+        errors.append("_resolve_revision:guarded-result-not-returned")
     return errors
 
 
@@ -435,6 +463,8 @@ def validate_sources(package_root: Path, *, authority_backend_path: Path | None 
         identities.append(identity)
         try:
             executable = ast.unparse(ast.parse(text))
+            if label == "changeSummary":
+                errors.extend(_change_summary_delegation_errors(text))
         except (SyntaxError, RecursionError):
             executable = ""
         missing = [marker for marker in REQUIRED_MARKERS[label] if marker not in executable]

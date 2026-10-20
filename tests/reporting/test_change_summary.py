@@ -1,15 +1,37 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.reporting import build_change_summary_receipt
+from agent_lifecycle.reporting.change_summary import _run_git
 
 
 class ChangeSummaryTests(unittest.TestCase):
+    def test_failed_command_redacts_full_stdout_and_stderr_before_error_tail(self) -> None:
+        for stream in ("stdout", "stderr"):
+            with self.subTest(stream=stream), tempfile.TemporaryDirectory() as tmp:
+                source = f"import sys; sys.{stream}.write('api_key='+'q'*5000); raise SystemExit(7)"
+
+                def inert_command(_argv, fixture_source=source, **kwargs):
+                    return run_bounded_command([sys.executable, "-c", fixture_source], **kwargs)
+
+                with (
+                    patch("agent_lifecycle.reporting.change_summary.run_bounded_command", side_effect=inert_command),
+                    self.assertRaises(LifecycleError) as raised,
+                ):
+                    _run_git(Path(tmp), ["diff"])
+                self.assertEqual(raised.exception.code, "change-summary-git-failed")
+                self.assertNotIn("q" * 30, str(raised.exception))
+                self.assertIn("<redacted>", str(raised.exception))
+                self.assertTrue(raised.exception.details[stream + "Redacted"])
+
     def test_change_summary_matches_git_style_counters(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
