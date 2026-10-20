@@ -27,8 +27,10 @@ def _dispatch_goal_progress(args: argparse.Namespace) -> dict[str, Any]:
     if not isinstance(context, dict) or not isinstance(observations, list):
         raise LifecycleError("goal-progress-input-invalid", "Progress context and observations are required")
     progress = build_goal_progress(
-        context, observations,
-        qualified_receipts=value.get("qualifiedReceipts", {}), now=args.now,
+        context,
+        observations,
+        qualified_receipts=value.get("qualifiedReceipts", {}),
+        now=args.now,
     )
     write_json_create(Path(args.out), progress)
     return progress

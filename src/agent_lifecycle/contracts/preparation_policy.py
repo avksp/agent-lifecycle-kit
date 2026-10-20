@@ -18,11 +18,21 @@ from agent_lifecycle.contracts.errors import LifecycleError
 
 POLICY_SCHEMA = "agent-preparation-policy-context.v1"
 QUANTITIES = frozenset({"RESERVATION_TOKENS", "SELECTED_ALK_INPUT"})
-REVIEW_PREFLIGHT_FIELDS = frozenset({
-    "schemaVersion", "status", "reason", "sourceSnapshotDigest", "packetDigest",
-    "requestDigest", "invocationDigest", "modelCalls", "authorityClaimed",
-    "productionPromotionClaimed", "preflightDigest",
-})
+REVIEW_PREFLIGHT_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "status",
+        "reason",
+        "sourceSnapshotDigest",
+        "packetDigest",
+        "requestDigest",
+        "invocationDigest",
+        "modelCalls",
+        "authorityClaimed",
+        "productionPromotionClaimed",
+        "preflightDigest",
+    }
+)
 _DIGEST = re.compile(r"[0-9a-f]{64}")
 _MAX = (1 << 63) - 1
 T = TypeVar("T")
@@ -34,12 +44,18 @@ class PreparationAdmission(Protocol):
     def check(self, *, repository_root: Path | None = None) -> dict[str, Any]: ...
 
     def invoke(
-        self, effect: Callable[[], T], *, input_digest: str,
+        self,
+        effect: Callable[[], T],
+        *,
+        input_digest: str,
         repository_root: Path | None = None,
     ) -> T: ...
 
     def check_retry(
-        self, *, prior_request_digest: str, prior_result_digest: str,
+        self,
+        *,
+        prior_request_digest: str,
+        prior_result_digest: str,
         retry_ordinal: int,
     ) -> None: ...
 
@@ -57,26 +73,32 @@ def _digest(value: Any) -> str:
 
 
 def review_invocation_digest(
-    *, request: dict[str, Any], argv: list[str], root_digest: str,
+    *,
+    request: dict[str, Any],
+    argv: list[str],
+    root_digest: str,
     rendered_input: bytes,
 ) -> str:
     """Pure identity shared by reviewer preflight and its real bounded sink."""
     if (
         not isinstance(rendered_input, bytes)
         or not 1 <= len(rendered_input) <= 1024 * 1024
-        or not isinstance(argv, list) or not 1 <= len(argv) <= 64
+        or not isinstance(argv, list)
+        or not 1 <= len(argv) <= 64
         or any(not isinstance(v, str) or not v or len(v) > 4096 for v in argv)
     ):
         raise ValueError("Bounded exact review invocation required")
-    return canonical_digest({
-        "requestDigest": _digest(request["requestDigest"]),
-        "sourceSnapshotDigest": _digest(request["sourceSnapshotDigest"]),
-        "argvDigest": canonical_digest(argv),
-        "rootDigest": _digest(root_digest),
-        "renderedInputDigest": hashlib.sha256(rendered_input).hexdigest(),
-        "renderedInputBytes": len(rendered_input),
-        "inputTransport": "STDIN",
-    })
+    return canonical_digest(
+        {
+            "requestDigest": _digest(request["requestDigest"]),
+            "sourceSnapshotDigest": _digest(request["sourceSnapshotDigest"]),
+            "argvDigest": canonical_digest(argv),
+            "rootDigest": _digest(root_digest),
+            "renderedInputDigest": hashlib.sha256(rendered_input).hexdigest(),
+            "renderedInputBytes": len(rendered_input),
+            "inputTransport": "STDIN",
+        }
+    )
 
 
 def _decision(reason: str, identity: str | None) -> dict[str, Any]:
@@ -92,7 +114,10 @@ def _decision(reason: str, identity: str | None) -> dict[str, Any]:
 
 
 def evaluate_preparation_policy(
-    context: dict[str, Any], usage: dict[str, Any], *, now: int,
+    context: dict[str, Any],
+    usage: dict[str, Any],
+    *,
+    now: int,
 ) -> dict[str, Any]:
     """Fail closed without I/O, side effects, permission or inferred zeros."""
     identity = None
@@ -118,9 +143,11 @@ def evaluate_preparation_policy(
         required = chain["required"]
         slots = chain["slots"]
         if (
-            not isinstance(required, list) or not 1 <= len(required) <= 64
+            not isinstance(required, list)
+            or not 1 <= len(required) <= 64
             or len(set(required)) != len(required)
-            or not isinstance(slots, list) or len(slots) > 64
+            or not isinstance(slots, list)
+            or len(slots) > 64
             or any(not isinstance(x, str) or len(x) > 64 for x in required)
             or not {"integration", "final"}.issubset(required)
         ):
@@ -128,8 +155,9 @@ def evaluate_preparation_policy(
         ready = set()
         for slot in slots:
             if (
-                slot["qualified"] is True and slot["authorizationDigest"]
-                == grant["digest"] and now < _uint(slot["expiresAt"])
+                slot["qualified"] is True
+                and slot["authorizationDigest"] == grant["digest"]
+                and now < _uint(slot["expiresAt"])
                 and _uint(slot["remaining"], positive=True)
             ):
                 ready.add(slot["stage"])
@@ -160,9 +188,9 @@ def evaluate_preparation_policy(
             raise ValueError("Nonproductive rounds exceed completed history")
         initial = progress.get("verifiedInitial") is True and rounds == 0
         state = progress["status"]
-        if (state not in {"ADVANCING", "STALLED", "EXPECTED_WAIT"}
-                and not (state == "UNAVAILABLE" and initial
-                         and usage.get("goalRequests", usage["requests"]) == 0)):
+        if state not in {"ADVANCING", "STALLED", "EXPECTED_WAIT"} and not (
+            state == "UNAVAILABLE" and initial and usage.get("goalRequests", usage["requests"]) == 0
+        ):
             return _decision("PREPARATION_HISTORY_UNAVAILABLE", identity)
         if state == "EXPECTED_WAIT":
             if now >= _uint(progress["waitUntil"]):

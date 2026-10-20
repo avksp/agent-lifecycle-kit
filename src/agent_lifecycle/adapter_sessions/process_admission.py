@@ -36,21 +36,31 @@ _META_SCHEMA = "agent-preparation-operation.v1"
 
 
 def local_preparation_input_digest(
-    *, profile_digest: str, operation: str, repository_root: Path,
-    source_revision: str | None, task_id: str | None,
-    task_text: str | None, immutable_context: dict[str, Any] | None,
+    *,
+    profile_digest: str,
+    operation: str,
+    repository_root: Path,
+    source_revision: str | None,
+    task_id: str | None,
+    task_text: str | None,
+    immutable_context: dict[str, Any] | None,
 ) -> str:
     """Bind the actual controlled local invocation without exporting its text."""
-    return canonical_digest({
-        "profileDigest": profile_digest, "operation": operation,
-        "rootDigest": canonical_digest(str(repository_root.resolve())),
-        "sourceRevision": source_revision, "taskId": task_id,
-        "taskTextDigest": hashlib.sha256(
-            task_text.encode("utf-8"),
-        ).hexdigest() if task_text is not None else None,
-        "immutableContextDigest": canonical_digest(immutable_context)
-        if immutable_context is not None else None,
-    })
+    return canonical_digest(
+        {
+            "profileDigest": profile_digest,
+            "operation": operation,
+            "rootDigest": canonical_digest(str(repository_root.resolve())),
+            "sourceRevision": source_revision,
+            "taskId": task_id,
+            "taskTextDigest": hashlib.sha256(
+                task_text.encode("utf-8"),
+            ).hexdigest()
+            if task_text is not None
+            else None,
+            "immutableContextDigest": canonical_digest(immutable_context) if immutable_context is not None else None,
+        }
+    )
 
 
 @dataclass(frozen=True)
@@ -69,25 +79,37 @@ class ExecutionTargetSelection:
 
     def recheck(self) -> dict[str, Any]:
         current = inspect_execution_target(
-            self.root, source_identity=self.source_identity,
-            plan_identity=self.plan_identity, source_paths=self.source_paths,
-            outputs=self.outputs, state_path=self.state_path,
-            event_log=self.event_log, stage=self.stage,
+            self.root,
+            source_identity=self.source_identity,
+            plan_identity=self.plan_identity,
+            source_paths=self.source_paths,
+            outputs=self.outputs,
+            state_path=self.state_path,
+            event_log=self.event_log,
+            stage=self.stage,
         )
         require_execution_target_digest(self.expected_digest, current)
         return current
 
 
 def preparation_operation_reason(
-    *, goal_digest: str, phase_digest: str, source_digest: str,
-    charged_milliseconds: int, semantic_round: int, quantity: str,
+    *,
+    goal_digest: str,
+    phase_digest: str,
+    source_digest: str,
+    charged_milliseconds: int,
+    semantic_round: int,
+    quantity: str,
 ) -> str:
     """Construct metadata before the existing operation is authorized/bound."""
     body = {
-        "schemaVersion": _META_SCHEMA, "goalDigest": goal_digest,
-        "phaseDigest": phase_digest, "sourceDigest": source_digest,
+        "schemaVersion": _META_SCHEMA,
+        "goalDigest": goal_digest,
+        "phaseDigest": phase_digest,
+        "sourceDigest": source_digest,
         "chargedMilliseconds": charged_milliseconds,
-        "semanticRound": semantic_round, "quantity": quantity,
+        "semanticRound": semantic_round,
+        "quantity": quantity,
     }
     _metadata(json.dumps(body, sort_keys=True, separators=(",", ":")))
     return json.dumps(body, sort_keys=True, separators=(",", ":"))
@@ -101,11 +123,10 @@ def _metadata(reason: str) -> dict[str, Any]:
         raise ValueError("Qualified preparation operation required")
     for key in ("goalDigest", "phaseDigest", "sourceDigest"):
         text = value[key]
-        if (not isinstance(text, str) or len(text) != 64
-                or any(char not in "0123456789abcdef" for char in text)):
+        if not isinstance(text, str) or len(text) != 64 or any(char not in "0123456789abcdef" for char in text):
             raise ValueError("Preparation operation binding required")
     for key in ("chargedMilliseconds", "semanticRound"):
-        if type(value[key]) is not int or not 0 < value[key] < 2 ** 63:
+        if type(value[key]) is not int or not 0 < value[key] < 2**63:
             raise ValueError("Finite preparation upper bound required")
     if value["quantity"] not in {"RESERVATION_TOKENS", "SELECTED_ALK_INPUT"}:
         raise ValueError("Supported preparation quantity required")
@@ -126,13 +147,14 @@ class JournalPreparationAdmission:
         op = self.operation
         try:
             projection = self.journal.snapshot(op.budget_scope_id)
-            if (projection.qualification != "QUALIFIED"
-                    or projection.gate_status != "READY"):
+            if projection.qualification != "QUALIFIED" or projection.gate_status != "READY":
                 raise ValueError("Journal is not ready and qualified")
             revision = projection.journal_revision
             return self.journal.bounded_prefix(
-                op.budget_scope_id, expected_revision=revision,
-                boundary=(revision, 0), max_rows=self.max_prefix_rows,
+                op.budget_scope_id,
+                expected_revision=revision,
+                boundary=(revision, 0),
+                max_rows=self.max_prefix_rows,
                 max_bytes=self.max_prefix_bytes,
             )
         except (JournalUnavailable, RevisionConflict, KeyError, ValueError) as exc:
@@ -159,12 +181,13 @@ class JournalPreparationAdmission:
                 or context["quantity"] != current["quantity"]
                 or context["inputDigest"] != op.input_digest
                 or context["unitDefinitionId"] != op.unit_definition_id
-                or context["routeQualificationDigest"]
-                != op.route_qualification.digest
+                or context["routeQualificationDigest"] != op.route_qualification.digest
                 or context["issuerDigest"] != op.issuer.digest
                 or context["validityDigest"] != op.validity.digest
-                or context["request"] != {
-                    "tokens": op.upper_bound_tokens, "requests": 1,
+                or context["request"]
+                != {
+                    "tokens": op.upper_bound_tokens,
+                    "requests": 1,
                     "chargedMilliseconds": current["chargedMilliseconds"],
                     "semanticRound": current["semanticRound"],
                 }
@@ -177,8 +200,7 @@ class JournalPreparationAdmission:
                 target = self.target.recheck()
                 if (
                     target["targetId"] != context["targetId"]
-                    or canonical_digest(self.target.source_identity)
-                    != context["sourceDigest"]
+                    or canonical_digest(self.target.source_identity) != context["sourceDigest"]
                 ):
                     raise ValueError("Actual execution target binding mismatch")
             elif self.target is not None:
@@ -193,13 +215,19 @@ class JournalPreparationAdmission:
         return decision, prefix, revision
 
     def _usage(
-        self, prefix: dict[str, Any], current: dict[str, Any],
+        self,
+        prefix: dict[str, Any],
+        current: dict[str, Any],
         context: dict[str, Any],
     ) -> dict[str, Any]:
         usage = {
-            "qualified": True, "prefixDigest": prefix["prefixDigest"],
-            "quantity": current["quantity"], "tokens": 0, "requests": 0,
-            "chargedMilliseconds": 0, "semanticRound": 0,
+            "qualified": True,
+            "prefixDigest": prefix["prefixDigest"],
+            "quantity": current["quantity"],
+            "tokens": 0,
+            "requests": 0,
+            "chargedMilliseconds": 0,
+            "semanticRound": 0,
             "goalRequests": 0,
         }
         opening = json.loads(prefix["events"][0]["payload"])
@@ -211,17 +239,20 @@ class JournalPreparationAdmission:
             raise ValueError("Opening request/work history unavailable")
         if opening["opening"]["pending_operations"]:
             raise ValueError("Opening pending request/work history unavailable")
-        if (opening["policy"]["authorization"]["digest"]
-                != context["authorization"]["digest"]):
+        if opening["policy"]["authorization"]["digest"] != context["authorization"]["digest"]:
             raise ValueError("Scope authorization mismatch")
         for event in prefix["events"]:
             if event["kind"] != "RESERVE":
                 continue
             binding = json.loads(event["payload"])["operation"]
             prior = _metadata(binding["attribution_reason"])
-            same_goal = all(prior[k] == current[k] for k in (
-                "goalDigest", "phaseDigest",
-            ))
+            same_goal = all(
+                prior[k] == current[k]
+                for k in (
+                    "goalDigest",
+                    "phaseDigest",
+                )
+            )
             if prior["quantity"] != current["quantity"]:
                 raise ValueError("Scope quantity cannot reset")
             if not same_goal:
@@ -229,13 +260,12 @@ class JournalPreparationAdmission:
                 allowed = change.get("allowedPredecessorGoalPhases", [])
                 if (
                     change.get("qualified") is not True
-                    or change.get("authorizationDigest")
-                    != context["authorization"]["digest"]
+                    or change.get("authorizationDigest") != context["authorization"]["digest"]
                     or change.get("newGoalDigest") != current["goalDigest"]
                     or change.get("newPhaseDigest") != current["phaseDigest"]
-                    or not isinstance(allowed, list) or not 1 <= len(allowed) <= 64
-                    or {"goalDigest": prior["goalDigest"],
-                        "phaseDigest": prior["phaseDigest"]} not in allowed
+                    or not isinstance(allowed, list)
+                    or not 1 <= len(allowed) <= 64
+                    or {"goalDigest": prior["goalDigest"], "phaseDigest": prior["phaseDigest"]} not in allowed
                 ):
                     raise ValueError("Scope goal/phase cannot silently reset")
             if binding["operation_id"] == self.operation.operation_id:
@@ -249,20 +279,23 @@ class JournalPreparationAdmission:
             usage["goalRequests"] += int(same_goal)
             usage["chargedMilliseconds"] += prior["chargedMilliseconds"]
             usage["semanticRound"] = max(
-                usage["semanticRound"], prior["semanticRound"],
+                usage["semanticRound"],
+                prior["semanticRound"],
             )
         return usage
 
     def _require_root(self, root: Path | None) -> None:
-        if self.target is not None and (
-            root is None or root.resolve() != self.target.root.resolve()
-        ):
+        if self.target is not None and (root is None or root.resolve() != self.target.root.resolve()):
             raise LifecycleError(
-                "PREPARATION_TARGET_MISMATCH", "Actual target root differs",
+                "PREPARATION_TARGET_MISMATCH",
+                "Actual target root differs",
             )
 
     def check_retry(
-        self, *, prior_request_digest: str, prior_result_digest: str,
+        self,
+        *,
+        prior_request_digest: str,
+        prior_result_digest: str,
         retry_ordinal: int,
     ) -> None:
         """Only an explicitly qualified finite settled-transient allowance."""
@@ -272,8 +305,7 @@ class JournalPreparationAdmission:
             retry = context["retry"]
             if (
                 retry["qualified"] is not True
-                or retry["authorizationDigest"]
-                != context["authorization"]["digest"]
+                or retry["authorizationDigest"] != context["authorization"]["digest"]
                 or retry["priorRequestDigest"] != prior_request_digest
                 or retry["priorResultDigest"] != prior_result_digest
                 or retry["disposition"] != "TRANSIENT_SETTLED"
@@ -284,7 +316,8 @@ class JournalPreparationAdmission:
                 raise ValueError("No qualified transient retry grant")
         except (KeyError, ValueError, TypeError) as exc:
             raise LifecycleError(
-                "REVIEW_ROUTE_SUSPENDED", "Finite corrected retry unavailable",
+                "REVIEW_ROUTE_SUSPENDED",
+                "Finite corrected retry unavailable",
             ) from exc
 
     def check(self, *, repository_root: Path | None = None) -> dict[str, Any]:
@@ -295,7 +328,10 @@ class JournalPreparationAdmission:
         return decision
 
     def invoke(
-        self, effect: Callable[[], T], *, input_digest: str,
+        self,
+        effect: Callable[[], T],
+        *,
+        input_digest: str,
         repository_root: Path | None = None,
     ) -> T:
         """Fresh expected-revision reservation and unique claim gate dispatch."""
@@ -303,35 +339,48 @@ class JournalPreparationAdmission:
         self._require_root(repository_root)
         if input_digest != op.input_digest:
             raise LifecycleError(
-                "PREPARATION_INPUT_MISMATCH", "Controlled input changed",
+                "PREPARATION_INPUT_MISMATCH",
+                "Controlled input changed",
             )
         decision, _, revision = self._current()
         if self.journal.reserve(op, expected_revision=revision) != "RESERVED":
             raise LifecycleError(
-                "PREPARATION_ADMISSION_REPLAY", "No fresh dispatch reservation",
+                "PREPARATION_ADMISSION_REPLAY",
+                "No fresh dispatch reservation",
             )
         claim = self.journal.claim(
-            op.budget_scope_id, op.operation_id, op.binding_digest,
+            op.budget_scope_id,
+            op.operation_id,
+            op.binding_digest,
             "preparation:" + op.dispatch_key,
         )
         if claim != "CLAIM_GRANTED":
             raise LifecycleError(
-                "PREPARATION_ADMISSION_REPLAY", "No fresh dispatch claim",
+                "PREPARATION_ADMISSION_REPLAY",
+                "No fresh dispatch claim",
             )
         # Recheck changing readiness/target after admission and just before the
         # effect; any refusal/crash leaves the original conservative hold.
         self.check()
         proof = EvidenceRef("preparation:dispatch", decision["decisionDigest"])
-        if self.journal.note_dispatch(
-            op.budget_scope_id, op.operation_id, proof,
-        ) != "RECORDED":
+        if (
+            self.journal.note_dispatch(
+                op.budget_scope_id,
+                op.operation_id,
+                proof,
+            )
+            != "RECORDED"
+        ):
             raise LifecycleError(
-                "PREPARATION_DISPATCH_UNAVAILABLE", "Dispatch record unavailable",
+                "PREPARATION_DISPATCH_UNAVAILABLE",
+                "Dispatch record unavailable",
             )
         try:
             return effect()
         except BaseException:
             self.journal.note_unavailable(
-                op.budget_scope_id, op.operation_id, proof,
+                op.budget_scope_id,
+                op.operation_id,
+                proof,
             )
             raise

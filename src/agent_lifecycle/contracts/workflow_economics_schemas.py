@@ -56,15 +56,30 @@ def _aggregate_metric_schema(name: str) -> dict[str, Any]:
 WORKFLOW_ECONOMICS_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-goal-progress-observation.v1": open_object_schema(
         "agent-goal-progress-observation.v1",
-        required=["schemaVersion", "state", "reasonCode", "nonproductiveRounds", "initialContext",
-                  "observationCount", "historyDigest", "goalDigest", "phaseDigest", "subjectDigest",
-                  "sourceRevision", "stateRevision", "qualification", "authorityClaimed",
-                  "productionPromotionClaimed", "progressDigest"],
+        required=[
+            "schemaVersion",
+            "state",
+            "reasonCode",
+            "nonproductiveRounds",
+            "initialContext",
+            "observationCount",
+            "historyDigest",
+            "goalDigest",
+            "phaseDigest",
+            "subjectDigest",
+            "sourceRevision",
+            "stateRevision",
+            "qualification",
+            "authorityClaimed",
+            "productionPromotionClaimed",
+            "progressDigest",
+        ],
         properties={
             "state": {"enum": ["ADVANCING", "STALLED", "EXPECTED_WAIT", "UNAVAILABLE"]},
             "observationCount": {"type": "integer", "minimum": 0, "maximum": 64},
             "nonproductiveRounds": {"type": "integer", "minimum": 0, "maximum": 64},
-            "authorityClaimed": {"const": False}, "productionPromotionClaimed": {"const": False},
+            "authorityClaimed": {"const": False},
+            "productionPromotionClaimed": {"const": False},
             "progressDigest": _DIGEST,
         },
     ),
@@ -294,16 +309,26 @@ def _valid_token_usage(value: Any) -> bool:
 MAX_SESSION_COUNTER = 10**9
 SESSION_USAGE_SCHEMA = "agent-provider-session-usage.v1"
 SESSION_COUNTERS = (
-    "inputTokens", "cachedInputTokens", "nonCachedInputTokens", "outputTokens",
-    "totalTokens", "invocations", "wallSeconds",
+    "inputTokens",
+    "cachedInputTokens",
+    "nonCachedInputTokens",
+    "outputTokens",
+    "totalTokens",
+    "invocations",
+    "wallSeconds",
 )
 SESSION_BINDINGS = (
-    "sessionDigest", "sourceRevision", "subjectDigest", "assignmentDigest",
+    "sessionDigest",
+    "sourceRevision",
+    "subjectDigest",
+    "assignmentDigest",
 )
 
 
 def validate_cumulative_session_usage(
-    receipt: Any, *, binding: dict[str, Any],
+    receipt: Any,
+    *,
+    binding: dict[str, Any],
     qualification: dict[str, Any] | None = None,
     previous: dict[str, Any] | None = None,
     limits: dict[str, int] | None = None,
@@ -329,81 +354,111 @@ def validate_cumulative_session_usage(
     ):
         blockers.append({"code": "session-usage-provenance-unavailable"})
     if previous is not None:
-        if not _session_shape(previous) or any(
-            previous[key] != receipt[key] for key in SESSION_BINDINGS
-        ):
+        if not _session_shape(previous) or any(previous[key] != receipt[key] for key in SESSION_BINDINGS):
             blockers.append({"code": "session-usage-previous-binding-invalid"})
-        elif (
-            receipt["sequence"] <= previous["sequence"]
-            or any(receipt["usage"][key] < previous["usage"][key] for key in SESSION_COUNTERS)
+        elif receipt["sequence"] <= previous["sequence"] or any(
+            receipt["usage"][key] < previous["usage"][key] for key in SESSION_COUNTERS
         ):
             blockers.append({"code": "session-usage-reset-or-decrease"})
     if limits is not None:
         if (
-            not isinstance(limits, dict) or not limits or set(limits) - set(SESSION_COUNTERS)
+            not isinstance(limits, dict)
+            or not limits
+            or set(limits) - set(SESSION_COUNTERS)
             or any(type(value) is not int or not 0 <= value <= MAX_SESSION_COUNTER for value in limits.values())
         ):
             blockers.append({"code": "session-usage-limit-invalid"})
         elif any(receipt["usage"][key] > limit for key, limit in limits.items()):
             blockers.append({"code": "session-usage-budget-exceeded"})
     return {
-        "status": "FAIL" if blockers else "PASS", "blockers": blockers,
+        "status": "FAIL" if blockers else "PASS",
+        "blockers": blockers,
         "receiptDigest": receipt["receiptDigest"],
-        "usage": dict(receipt["usage"]), "basis": "CUMULATIVE_PROVIDER_SESSION",
-        "authorityClaimed": False, "productionPromotionClaimed": False,
+        "usage": dict(receipt["usage"]),
+        "basis": "CUMULATIVE_PROVIDER_SESSION",
+        "authorityClaimed": False,
+        "productionPromotionClaimed": False,
     }
 
 
 def _session_shape(value: Any) -> bool:
     fields = {
-        "schemaVersion", *SESSION_BINDINGS, "sequence", "sourceArtifactDigest",
-        "usage", "receiptDigest",
+        "schemaVersion",
+        *SESSION_BINDINGS,
+        "sequence",
+        "sourceArtifactDigest",
+        "usage",
+        "receiptDigest",
     }
     if not isinstance(value, dict) or set(value) != fields:
         return False
     usage = value["usage"]
     if (
         value["schemaVersion"] != SESSION_USAGE_SCHEMA
-        or not all(_session_digest(value[key]) for key in (
-            "sessionDigest", "subjectDigest", "assignmentDigest", "sourceArtifactDigest", "receiptDigest",
-        ))
+        or not all(
+            _session_digest(value[key])
+            for key in (
+                "sessionDigest",
+                "subjectDigest",
+                "assignmentDigest",
+                "sourceArtifactDigest",
+                "receiptDigest",
+            )
+        )
         or not isinstance(value["sourceRevision"], str)
         or len(value["sourceRevision"]) not in {40, 64}
         or any(char not in "0123456789abcdef" for char in value["sourceRevision"])
-        or type(value["sequence"]) is not int or not 0 <= value["sequence"] <= MAX_SESSION_COUNTER
-        or not isinstance(usage, dict) or set(usage) != set(SESSION_COUNTERS)
+        or type(value["sequence"]) is not int
+        or not 0 <= value["sequence"] <= MAX_SESSION_COUNTER
+        or not isinstance(usage, dict)
+        or set(usage) != set(SESSION_COUNTERS)
         or any(type(item) is not int or not 0 <= item <= MAX_SESSION_COUNTER for item in usage.values())
     ):
         return False
     return (
         usage["cachedInputTokens"] + usage["nonCachedInputTokens"] == usage["inputTokens"]
         and usage["inputTokens"] + usage["outputTokens"] == usage["totalTokens"]
-        and value["receiptDigest"] == canonical_digest({
-            key: item for key, item in value.items() if key != "receiptDigest"
-        })
+        and value["receiptDigest"]
+        == canonical_digest({key: item for key, item in value.items() if key != "receiptDigest"})
     )
 
 
 def check_job_observation(
-    value: dict[str, Any], request: dict[str, Any] | None,
-    blockers: list[dict[str, Any]], *, max_attempts: int,
+    value: dict[str, Any],
+    request: dict[str, Any] | None,
+    blockers: list[dict[str, Any]],
+    *,
+    max_attempts: int,
 ) -> None:
     if "observation" not in value:
         return
     observation = value["observation"]
     fields = {
-        "subjectDigest", "assignmentDigest", "requestDigest", "attempt",
-        "deliveryAttempt", "semanticRound", "remoteState", "localState",
-        "semanticStatus", "responseDigest", "sessionUsage",
+        "subjectDigest",
+        "assignmentDigest",
+        "requestDigest",
+        "attempt",
+        "deliveryAttempt",
+        "semanticRound",
+        "remoteState",
+        "localState",
+        "semanticStatus",
+        "responseDigest",
+        "sessionUsage",
     }
     if not isinstance(observation, dict) or set(observation) != fields:
         blockers.append({"code": "external-job-observation-invalid"})
         return
     valid = (
         all(_session_digest(observation[key]) for key in ("subjectDigest", "assignmentDigest", "requestDigest"))
-        and all(type(observation[key]) is int and 1 <= observation[key] <= max_attempts for key in (
-            "attempt", "deliveryAttempt", "semanticRound",
-        ))
+        and all(
+            type(observation[key]) is int and 1 <= observation[key] <= max_attempts
+            for key in (
+                "attempt",
+                "deliveryAttempt",
+                "semanticRound",
+            )
+        )
         and observation["remoteState"] in ("UNKNOWN", "RUNNING", "TERMINAL")
         and observation["localState"] in ("PENDING", "LOST", "RECOVERED", "COMPLETE", "FAILED")
         and observation["semanticStatus"] in ("UNAVAILABLE", "PASS", "FAIL", "INCOMPLETE")
@@ -427,9 +482,16 @@ def check_job_observation(
         if verdict in ("PASS", "FAIL"):
             valid = valid and observation["semanticStatus"] == verdict
             if value.get("complete") is True:
-                valid = valid and observation["remoteState"] == "TERMINAL" and observation["localState"] in (
-                    "COMPLETE", "RECOVERED",
-                ) and observation["responseDigest"] is not None
+                valid = (
+                    valid
+                    and observation["remoteState"] == "TERMINAL"
+                    and observation["localState"]
+                    in (
+                        "COMPLETE",
+                        "RECOVERED",
+                    )
+                    and observation["responseDigest"] is not None
+                )
         if value.get("blockingEligible") is True:
             valid = valid and value.get("complete") is True and observation["semanticStatus"] == verdict
     if not valid:
@@ -437,19 +499,21 @@ def check_job_observation(
 
 
 def _session_digest(value: Any) -> bool:
-    return isinstance(value, str) and len(value) == 64 and all(
-        char in "0123456789abcdef" for char in value
-    )
+    return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value)
 
 
 WORKFLOW_ECONOMICS_SCHEMAS[SESSION_USAGE_SCHEMA] = open_object_schema(
     SESSION_USAGE_SCHEMA,
     required=["schemaVersion", *SESSION_BINDINGS, "sequence", "sourceArtifactDigest", "usage", "receiptDigest"],
     properties={
-        "usage": {"type": "object", "required": list(SESSION_COUNTERS),
-                  "properties": {key: {"type": "integer", "minimum": 0,
-                                        "maximum": MAX_SESSION_COUNTER} for key in SESSION_COUNTERS},
-                  "additionalProperties": False},
+        "usage": {
+            "type": "object",
+            "required": list(SESSION_COUNTERS),
+            "properties": {
+                key: {"type": "integer", "minimum": 0, "maximum": MAX_SESSION_COUNTER} for key in SESSION_COUNTERS
+            },
+            "additionalProperties": False,
+        },
         "receiptDigest": _DIGEST,
     },
 )

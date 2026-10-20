@@ -11,28 +11,40 @@ STATES = ("ADVANCING", "STALLED", "EXPECTED_WAIT", "UNAVAILABLE")
 _BINDINGS = ("goalDigest", "phaseDigest", "subjectDigest", "sourceRevision")
 _OBLIGATIONS = ("criteriaDigests", "evidenceDigests", "outcomeDigests")
 _OBSERVATION_FIELDS = {
-    *_BINDINGS, "stateRevision", "operationDigest", "qualificationDigest",
-    "acceptedCriteria", "qualifiedEvidence", "verifiedOutcomes", "kind",
-    "semanticRoundCompleted", "observedAt", "waitingUntil", "waitAuthorizationDigest",
+    *_BINDINGS,
+    "stateRevision",
+    "operationDigest",
+    "qualificationDigest",
+    "acceptedCriteria",
+    "qualifiedEvidence",
+    "verifiedOutcomes",
+    "kind",
+    "semanticRoundCompleted",
+    "observedAt",
+    "waitingUntil",
+    "waitAuthorizationDigest",
 }
 
 
 def _digest(value: Any) -> bool:
-    return isinstance(value, str) and len(value) == 64 and all(
-        char in "0123456789abcdef" for char in value
-    )
+    return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value)
 
 
 def _identities(value: Any) -> bool:
     return (
-        isinstance(value, list) and len(value) <= 256
-        and all(_digest(item) for item in value) and len(set(value)) == len(value)
+        isinstance(value, list)
+        and len(value) <= 256
+        and all(_digest(item) for item in value)
+        and len(set(value)) == len(value)
     )
 
 
 def build_goal_progress(
-    context: dict[str, Any], observations: list[dict[str, Any]], *,
-    qualified_receipts: dict[str, dict[str, Any]], now: int,
+    context: dict[str, Any],
+    observations: list[dict[str, Any]],
+    *,
+    qualified_receipts: dict[str, dict[str, Any]],
+    now: int,
 ) -> dict[str, Any]:
     """No I/O or attestation: the caller owns provenance of checked receipts.
 
@@ -46,14 +58,13 @@ def build_goal_progress(
     state, reason, stalled = "UNAVAILABLE", "qualified-history-required", 0
     history = qualified_receipts.get(context["historyDigest"], {})
     complete = (
-        isinstance(history, dict) and history.get("status") == "PASS"
+        isinstance(history, dict)
+        and history.get("status") == "PASS"
         and history.get("provenanceValidated") is True
         and history.get("completePrefix") is True
         and history.get("historyDigest") == context["historyDigest"]
         and history.get("stateRevision") == context["stateRevision"]
-        and history.get("obligationsDigest") == canonical_digest({
-            key: context[key] for key in _OBLIGATIONS
-        })
+        and history.get("obligationsDigest") == canonical_digest({key: context[key] for key in _OBLIGATIONS})
         and all(history.get(key) == context[key] for key in _BINDINGS)
     )
     if not complete:
@@ -63,11 +74,16 @@ def build_goal_progress(
             state, reason = "ADVANCING", "verified-initial-context"
     else:
         state, reason, stalled = _derive(
-            context, observations, qualified_receipts, now,
+            context,
+            observations,
+            qualified_receipts,
+            now,
         )
     body = {
         "schemaVersion": "agent-goal-progress-observation.v1",
-        "state": state, "reasonCode": reason, "nonproductiveRounds": stalled,
+        "state": state,
+        "reasonCode": reason,
+        "nonproductiveRounds": stalled,
         "initialContext": not observations and state != "UNAVAILABLE",
         "observationCount": len(observations),
         "historyDigest": canonical_digest(observations),
@@ -75,7 +91,8 @@ def build_goal_progress(
         "stateRevision": context["stateRevision"],
         "obligationsDigest": canonical_digest({key: context[key] for key in _OBLIGATIONS}),
         "qualification": "CALLER_VERIFIED_INPUTS_ONLY",
-        "authorityClaimed": False, "productionPromotionClaimed": False,
+        "authorityClaimed": False,
+        "productionPromotionClaimed": False,
     }
     return {**body, "progressDigest": canonical_digest(body)}
 
@@ -89,11 +106,14 @@ def _context(context: Any, observations: Any, now: Any) -> None:
         or not isinstance(context["sourceRevision"], str)
         or len(context["sourceRevision"]) not in {40, 64}
         or any(char not in "0123456789abcdef" for char in context["sourceRevision"])
-        or type(context["stateRevision"]) is not int or context["stateRevision"] < 0
+        or type(context["stateRevision"]) is not int
+        or context["stateRevision"] < 0
         or type(context["verifiedInitial"]) is not bool
         or not all(_identities(context[key]) for key in _OBLIGATIONS)
-        or not isinstance(observations, list) or len(observations) > MAX_OBSERVATIONS
-        or type(now) is not int or now < 0
+        or not isinstance(observations, list)
+        or len(observations) > MAX_OBSERVATIONS
+        or type(now) is not int
+        or now < 0
     ):
         raise LifecycleError("goal-progress-context-invalid", "Progress context is unbounded or invalid")
     if canonical_digest(observations) != context["historyDigest"]:
@@ -101,7 +121,8 @@ def _context(context: Any, observations: Any, now: Any) -> None:
 
 
 def _qualified(
-    observation: dict[str, Any], context: dict[str, Any],
+    observation: dict[str, Any],
+    context: dict[str, Any],
     receipts: dict[str, dict[str, Any]],
 ) -> bool:
     if set(observation) != _OBSERVATION_FIELDS:
@@ -110,16 +131,24 @@ def _qualified(
         return False
     if any(observation[key] != context[key] for key in _BINDINGS):
         return False
-    if not all(_identities(observation[key]) for key in (
-        "acceptedCriteria", "qualifiedEvidence", "verifiedOutcomes",
-    )):
+    if not all(
+        _identities(observation[key])
+        for key in (
+            "acceptedCriteria",
+            "qualifiedEvidence",
+            "verifiedOutcomes",
+        )
+    ):
         return False
     # These are stable approved obligation identities, never artifact hashes.
-    if any(not set(observation[observed]) <= set(context[allowed]) for observed, allowed in (
-        ("acceptedCriteria", "criteriaDigests"),
-        ("qualifiedEvidence", "evidenceDigests"),
-        ("verifiedOutcomes", "outcomeDigests"),
-    )):
+    if any(
+        not set(observation[observed]) <= set(context[allowed])
+        for observed, allowed in (
+            ("acceptedCriteria", "criteriaDigests"),
+            ("qualifiedEvidence", "evidenceDigests"),
+            ("verifiedOutcomes", "outcomeDigests"),
+        )
+    ):
         return False
     receipt = receipts.get(observation["qualificationDigest"])
     if not isinstance(receipt, dict):
@@ -134,8 +163,10 @@ def _qualified(
 
 
 def _derive(
-    context: dict[str, Any], observations: list[dict[str, Any]],
-    receipts: dict[str, dict[str, Any]], now: int,
+    context: dict[str, Any],
+    observations: list[dict[str, Any]],
+    receipts: dict[str, dict[str, Any]],
+    now: int,
 ) -> tuple[str, str, int]:
     previous_revision = -1
     previous_time = 0
@@ -150,8 +181,10 @@ def _derive(
             return "UNAVAILABLE", "observation-not-qualified", 0
         revision, operation = observation["stateRevision"], observation["operationDigest"]
         if (
-            type(revision) is not int or revision <= previous_revision
-            or not _digest(operation) or operation in seen
+            type(revision) is not int
+            or revision <= previous_revision
+            or not _digest(operation)
+            or operation in seen
             or type(observation["semanticRoundCompleted"]) is not bool
             or observation["kind"] not in {"WORK", "AUDIT", "DIAGNOSIS", "WAIT"}
             or type(observation["observedAt"]) is not int
@@ -161,9 +194,14 @@ def _derive(
         previous_revision = revision
         previous_time = observation["observedAt"]
         seen.add(operation)
-        current = [set(observation[key]) for key in (
-            "acceptedCriteria", "qualifiedEvidence", "verifiedOutcomes",
-        )]
+        current = [
+            set(observation[key])
+            for key in (
+                "acceptedCriteria",
+                "qualifiedEvidence",
+                "verifiedOutcomes",
+            )
+        ]
         if not all(old <= new for old, new in zip((accepted, evidence, outcomes), current, strict=True)):
             return "UNAVAILABLE", "history-regressed-or-incomparable", 0
         improved = any(new - old for old, new in zip((accepted, evidence, outcomes), current, strict=True))

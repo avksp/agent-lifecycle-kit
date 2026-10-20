@@ -179,11 +179,16 @@ def _dispatch_local_profile_operation(
             immutable_input_context=immutable_input_context,
             preparation=preparation,
             preparation_input_digest=local_preparation_input_digest(
-                profile_digest=context.profile_digest, operation=operation,
-                repository_root=context.root, source_revision=source_revision,
-                task_id=task_id, task_text=task_text,
+                profile_digest=context.profile_digest,
+                operation=operation,
+                repository_root=context.root,
+                source_revision=source_revision,
+                task_id=task_id,
+                task_text=task_text,
                 immutable_context=immutable_input_context,
-            ) if preparation is not None else None,
+            )
+            if preparation is not None
+            else None,
         )
     if operation == "managedTask":
         return _managed_task(
@@ -209,30 +214,39 @@ def _dispatch_local_profile_operation(
 
 
 def _prepared_context(
-    context: _LaunchContext, admission: PreparationAdmission | None,
-    operation: str, source_revision: str | None, task_id: str | None,
-    task_text: str | None, immutable_context: dict[str, Any] | None,
+    context: _LaunchContext,
+    admission: PreparationAdmission | None,
+    operation: str,
+    source_revision: str | None,
+    task_id: str | None,
+    task_text: str | None,
+    immutable_context: dict[str, Any] | None,
 ) -> _LaunchContext:
     if admission is None:
         return context
     if operation not in {"planningTask", "managedTask"}:
         raise LifecycleError(
-            "PREPARATION_INPUT_MISMATCH", "No expensive task selected",
+            "PREPARATION_INPUT_MISMATCH",
+            "No expensive task selected",
         )
     admission.check(repository_root=context.root)
     if operation == "planningTask":
         return context
     input_digest = local_preparation_input_digest(
-        profile_digest=context.profile_digest, operation=operation,
-        repository_root=context.root, source_revision=source_revision,
-        task_id=task_id, task_text=task_text,
+        profile_digest=context.profile_digest,
+        operation=operation,
+        repository_root=context.root,
+        source_revision=source_revision,
+        task_id=task_id,
+        task_text=task_text,
         immutable_context=immutable_context,
     )
     runner = context.runner
 
     def admitted_runner(*args: Any, **kwargs: Any) -> dict[str, Any]:
         return admission.invoke(
-            lambda: runner(*args, **kwargs), input_digest=input_digest,
+            lambda: runner(*args, **kwargs),
+            input_digest=input_digest,
             repository_root=context.root,
         )
 
@@ -353,8 +367,13 @@ def launch_from_local_profile(
             )
         return _blocked_context_launch(context, session_id, blockers, risk_profile)
     context = _prepared_context(
-        context, preparation, operation, source_revision,
-        task_id, task_text, immutable_input_context,
+        context,
+        preparation,
+        operation,
+        source_revision,
+        task_id,
+        task_text,
+        immutable_input_context,
     )
     return _dispatch_local_profile_operation(
         context,
@@ -530,6 +549,7 @@ def _planning_task(
             executable_identity=identity,
         )
         before = capture_git_worktree_identity(context.root)
+
         def launch() -> dict[str, Any]:
             return run_planning_launch(
                 adapter_id=context.profile_adapter,
@@ -547,10 +567,15 @@ def _planning_task(
                 profile_digest=context.profile_digest,
             )
 
-        receipt = (preparation.invoke(
-            launch, input_digest=preparation_input_digest or "",
-            repository_root=context.root,
-        ) if preparation is not None else launch())
+        receipt = (
+            preparation.invoke(
+                launch,
+                input_digest=preparation_input_digest or "",
+                repository_root=context.root,
+            )
+            if preparation is not None
+            else launch()
+        )
         after = capture_git_worktree_identity(context.root)
     except LifecycleError as exc:
         return _blocked_planning_launch(

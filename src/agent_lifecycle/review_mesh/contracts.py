@@ -360,7 +360,10 @@ def build_review_mesh_result(
     require_review_mesh_assignment_pass(validate_review_mesh_assignment(assignment, profile=profile))
     budget_usage = dict(budget_usage)
     session_check = cumulative_reviewer_budget(
-        profile, assignment, budget_usage, session_usage_context,
+        profile,
+        assignment,
+        budget_usage,
+        session_usage_context,
     )
     usage_blockers: list[dict[str, Any]] = []
     _validate_budget_usage(budget_usage, usage_blockers, prefix="review-mesh-result", allow_unknown=True)
@@ -429,8 +432,10 @@ def build_review_mesh_result(
 
 
 def cumulative_reviewer_budget(
-    profile: dict[str, Any], assignment: dict[str, Any],
-    usage: dict[str, Any], context: dict[str, Any] | None,
+    profile: dict[str, Any],
+    assignment: dict[str, Any],
+    usage: dict[str, Any],
+    context: dict[str, Any] | None,
 ) -> dict[str, Any] | None:
     """A selected session route cannot fall back to prompt or per-call usage."""
     subject = assignment.get("subject", {})
@@ -445,17 +450,21 @@ def cumulative_reviewer_budget(
         "assignmentDigest": assignment.get("assignmentDigest"),
     }
     cap = profile["budgetCap"]
-    names = {"maxInputTokens": "inputTokens", "maxOutputTokens": "outputTokens",
-             "maxInvocations": "invocations", "maxWallSeconds": "wallSeconds"}
+    names = {
+        "maxInputTokens": "inputTokens",
+        "maxOutputTokens": "outputTokens",
+        "maxInvocations": "invocations",
+        "maxWallSeconds": "wallSeconds",
+    }
     check = validate_cumulative_session_usage(
-        context.get("receipt"), binding=binding,
-        qualification=context.get("qualification"), previous=context.get("previous"),
+        context.get("receipt"),
+        binding=binding,
+        qualification=context.get("qualification"),
+        previous=context.get("previous"),
         limits={names[key]: value for key, value in cap.items() if key in names},
     )
     receipt = context.get("receipt", {})
-    if check["status"] != "PASS" or any(
-        usage.get(key) != receipt.get("usage", {}).get(key) for key in USAGE_KEYS
-    ):
+    if check["status"] != "PASS" or any(usage.get(key) != receipt.get("usage", {}).get(key) for key in USAGE_KEYS):
         raise LifecycleError("review-session-usage-invalid", "Cumulative reviewer usage is unavailable or invalid")
     return check
 
@@ -482,7 +491,9 @@ def _imported_independence_claimed(result: dict[str, Any]) -> bool:
 
 
 def validate_review_mesh_result(
-    result: dict[str, Any], *, profile: dict[str, Any] | None = None,
+    result: dict[str, Any],
+    *,
+    profile: dict[str, Any] | None = None,
     session_usage_context: dict[str, Any] | None = None,
     assignment: dict[str, Any] | None = None,
 ) -> dict[str, Any]:

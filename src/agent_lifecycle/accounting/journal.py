@@ -383,9 +383,7 @@ class Journal(
         ):
             raise ValueError("Invalid bounded prefix limits or boundary")
         with self._transaction(scope):
-            row = self._db.execute(
-                "SELECT revision FROM scope_state WHERE scope=?", (scope,)
-            ).fetchone()
+            row = self._db.execute("SELECT revision FROM scope_state WHERE scope=?", (scope,)).fetchone()
             if row is None:
                 raise JournalUnavailable("Complete scope prefix unavailable")
             if row[0] != expected_revision:
@@ -405,22 +403,18 @@ class Journal(
                 or sum(item["bytes"] for item in metadata) > max_bytes
                 or not metadata
                 or len(metadata) != expected_revision
-                or any(
-                    item["revision"] != index or item["ordinal"] != 0
-                    for index, item in enumerate(metadata, 1)
-                )
+                or any(item["revision"] != index or item["ordinal"] != 0 for index, item in enumerate(metadata, 1))
                 or boundary != (metadata[-1]["revision"], metadata[-1]["ordinal"])
             ):
                 raise JournalUnavailable("Prefix incomplete or exceeds limits")
-            events = [dict(item) for item in self._db.execute(
-                "SELECT * FROM events WHERE scope=? ORDER BY revision,ordinal",
-                (scope,),
-            )]
-            if any(
-                hashlib.sha256(item["payload"].encode("utf-8")).hexdigest()
-                != item["digest"]
-                for item in events
-            ):
+            events = [
+                dict(item)
+                for item in self._db.execute(
+                    "SELECT * FROM events WHERE scope=? ORDER BY revision,ordinal",
+                    (scope,),
+                )
+            ]
+            if any(hashlib.sha256(item["payload"].encode("utf-8")).hexdigest() != item["digest"] for item in events):
                 raise JournalUnavailable("Prefix payload integrity unavailable")
             body = {
                 "schemaVersion": "agent-journal-bounded-prefix.v1",

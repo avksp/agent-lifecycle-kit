@@ -74,9 +74,8 @@ def token_attribution_basis(tokens: dict[str, Any] | None) -> dict[str, str]:
     """Expose arithmetic derivation separately from supplied observations."""
     values = build_token_attribution(tokens)
     return {
-        key: "UNAVAILABLE" if value is None else (
-            "MEASURED" if tokens is not None and key in tokens else "DERIVED"
-        ) for key, value in values.items()
+        key: "UNAVAILABLE" if value is None else ("MEASURED" if tokens is not None and key in tokens else "DERIVED")
+        for key, value in values.items()
     }
 
 

@@ -31,7 +31,9 @@ def _measured_main(argv: list[str]) -> int:
         parser.error("measurement flags must appear exactly once")
     try:
         return run_measured_command(
-            Path(args.measure_request[0]), Path(args.measure_out[0]), remaining,
+            Path(args.measure_request[0]),
+            Path(args.measure_out[0]),
+            remaining,
             lambda: _main(remaining),
         )
     except LifecycleError as exc:

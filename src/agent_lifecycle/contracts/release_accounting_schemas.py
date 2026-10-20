@@ -11,22 +11,73 @@ from agent_lifecycle.contracts.schema_builders import open_object_schema
 _DIGEST = {"type": "string", "minLength": 64, "maxLength": 64}
 _BLOCKERS = {"type": "array", "items": {"type": "object"}}
 COMMAND_RESOURCE_SCHEMA = "agent-command-resource-receipt.v1"
-COMMANDS = frozenset({
-    "version", "start", "host-launch", "diagnose", "diagnostics", "schema",
-    "contract", "neutrality", "evidence", "research", "import", "quality",
-    "review-mesh", "benchmark", "strategy", "report", "policy", "workflow",
-    "audit", "context", "thread", "goal", "followup", "worktree", "model",
-    "metrics", "tier", "specification", "plan", "task", "adapter", "project",
-    "conformance",
-})
+COMMANDS = frozenset(
+    {
+        "version",
+        "start",
+        "host-launch",
+        "diagnose",
+        "diagnostics",
+        "schema",
+        "contract",
+        "neutrality",
+        "evidence",
+        "research",
+        "import",
+        "quality",
+        "review-mesh",
+        "benchmark",
+        "strategy",
+        "report",
+        "policy",
+        "workflow",
+        "audit",
+        "context",
+        "thread",
+        "goal",
+        "followup",
+        "worktree",
+        "model",
+        "metrics",
+        "tier",
+        "specification",
+        "plan",
+        "task",
+        "adapter",
+        "project",
+        "conformance",
+    }
+)
 PHASES = frozenset({"controller", "model", "review", "remediation", "waiting"})
 _SPAN_FIELDS = {
-    "schemaVersion", "status", "operationDigest", "sourceRevision", "sourceRevisionBasis",
-    "sourceSnapshotDigest", "sourceBinding", "command", "phase", "argvDigest",
-    "spanDigest", "parentSpanDigest", "clockDomainDigest", "startWallNs",
-    "endWallNs", "startCpuNs", "endCpuNs", "inclusiveWallNs", "exclusiveWallNs",
-    "inclusiveCpuNs", "exclusiveCpuNs", "exitCode", "outcome", "childCpu",
-    "modelTokens", "children", "authorityClaimed", "productionPromotionClaimed",
+    "schemaVersion",
+    "status",
+    "operationDigest",
+    "sourceRevision",
+    "sourceRevisionBasis",
+    "sourceSnapshotDigest",
+    "sourceBinding",
+    "command",
+    "phase",
+    "argvDigest",
+    "spanDigest",
+    "parentSpanDigest",
+    "clockDomainDigest",
+    "startWallNs",
+    "endWallNs",
+    "startCpuNs",
+    "endCpuNs",
+    "inclusiveWallNs",
+    "exclusiveWallNs",
+    "inclusiveCpuNs",
+    "exclusiveCpuNs",
+    "exitCode",
+    "outcome",
+    "childCpu",
+    "modelTokens",
+    "children",
+    "authorityClaimed",
+    "productionPromotionClaimed",
     "receiptDigest",
 }
 
@@ -169,8 +220,12 @@ def validate_command_resource_receipt(value: Any) -> dict[str, Any]:
             blockers.append({"code": "command-span-shape-invalid"})
             break
         digest_fields = (
-            "operationDigest", "sourceSnapshotDigest", "argvDigest", "spanDigest",
-            "clockDomainDigest", "receiptDigest",
+            "operationDigest",
+            "sourceSnapshotDigest",
+            "argvDigest",
+            "spanDigest",
+            "clockDomainDigest",
+            "receiptDigest",
         )
         if any(not _is_digest(span[key]) for key in digest_fields):
             blockers.append({"code": "command-span-identity-invalid"})
@@ -184,9 +239,14 @@ def validate_command_resource_receipt(value: Any) -> dict[str, Any]:
             break
         if parent is not None and (
             span["parentSpanDigest"] != parent["spanDigest"]
-            or any(span[key] != parent[key] for key in (
-                "sourceRevision", "sourceSnapshotDigest", "clockDomainDigest",
-            ))
+            or any(
+                span[key] != parent[key]
+                for key in (
+                    "sourceRevision",
+                    "sourceSnapshotDigest",
+                    "clockDomainDigest",
+                )
+            )
             or span["startWallNs"] < parent["startWallNs"]
             or span["endWallNs"] > parent["endWallNs"]
             or span["startCpuNs"] < parent["startCpuNs"]
@@ -213,25 +273,28 @@ def validate_command_resource_receipt(value: Any) -> dict[str, Any]:
 
 
 def _is_digest(value: Any) -> bool:
-    return isinstance(value, str) and len(value) == 64 and all(
-        char in "0123456789abcdef" for char in value
-    )
+    return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value)
 
 
 def _span_values_valid(span: dict[str, Any]) -> bool:
     revision = span["sourceRevision"]
     numbers = [key for key in span if key.endswith("Ns")]
     return (
-        span["schemaVersion"] == COMMAND_RESOURCE_SCHEMA and span["status"] == "PASS"
-        and isinstance(span["command"], str) and span["command"] in COMMANDS
-        and isinstance(span["phase"], str) and span["phase"] in PHASES
-        and isinstance(revision, str) and len(revision) in {40, 64}
+        span["schemaVersion"] == COMMAND_RESOURCE_SCHEMA
+        and span["status"] == "PASS"
+        and isinstance(span["command"], str)
+        and span["command"] in COMMANDS
+        and isinstance(span["phase"], str)
+        and span["phase"] in PHASES
+        and isinstance(revision, str)
+        and len(revision) in {40, 64}
         and all(char in "0123456789abcdef" for char in revision)
         and span["sourceBinding"] == "VERIFIED_SELECTED_BYTES"
         and span["sourceRevisionBasis"] == "DECLARED_BASE"
         and (span["parentSpanDigest"] is None or _is_digest(span["parentSpanDigest"]))
         and all(type(span[key]) is int and 0 <= span[key] < (1 << 63) for key in numbers)
-        and type(span["exitCode"]) is int and -255 <= span["exitCode"] <= 255
+        and type(span["exitCode"]) is int
+        and -255 <= span["exitCode"] <= 255
         and span["outcome"] == ("SUCCEEDED" if span["exitCode"] == 0 else "FAILED")
         and span["childCpu"] == {"status": "UNAVAILABLE", "value": None}
         and span["modelTokens"] == {"status": "UNAVAILABLE", "value": None}

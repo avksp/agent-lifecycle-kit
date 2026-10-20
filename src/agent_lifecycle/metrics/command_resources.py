@@ -32,22 +32,25 @@ REQUEST_SCHEMA = "agent-command-resource-request.v1"
 MAX_SPANS = 64
 MAX_SOURCE_BYTES = 8 * 1024 * 1024
 _ACTIVE: ContextVar[CommandMeasurement | None] = ContextVar(
-    "alk_command_measurement", default=None,
+    "alk_command_measurement",
+    default=None,
 )
 
 
 def _digest(value: Any) -> bool:
-    return (
-        isinstance(value, str) and len(value) == 64
-        and all(char in "0123456789abcdef" for char in value)
-    )
+    return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value)
 
 
 def validate_measurement_request(request: Any) -> None:
     """Validate bounded input before touching the selected command."""
     fields = {
-        "schemaVersion", "operationDigest", "sourceRevision", "sourceRoot",
-        "sourceFiles", "sourceSnapshotDigest", "phase",
+        "schemaVersion",
+        "operationDigest",
+        "sourceRevision",
+        "sourceRoot",
+        "sourceFiles",
+        "sourceSnapshotDigest",
+        "phase",
     }
     if not isinstance(request, dict) or set(request) != fields:
         raise LifecycleError("command-measurement-request-invalid", "Invalid measurement request")
@@ -56,11 +59,14 @@ def validate_measurement_request(request: Any) -> None:
         request["schemaVersion"] != REQUEST_SCHEMA
         or not _digest(request["operationDigest"])
         or not _digest(request["sourceSnapshotDigest"])
-        or not isinstance(request["phase"], str) or request["phase"] not in PHASES
-        or not isinstance(revision, str) or len(revision) not in {40, 64}
+        or not isinstance(request["phase"], str)
+        or request["phase"] not in PHASES
+        or not isinstance(revision, str)
+        or len(revision) not in {40, 64}
         or any(char not in "0123456789abcdef" for char in revision)
         or not isinstance(request["sourceRoot"], str)
-        or not request["sourceRoot"] or len(request["sourceRoot"]) > 4096
+        or not request["sourceRoot"]
+        or len(request["sourceRoot"]) > 4096
     ):
         raise LifecycleError("command-measurement-request-invalid", "Invalid measurement binding")
     files = request["sourceFiles"]
@@ -80,8 +86,10 @@ def _verify_source(request: dict[str, Any]) -> None:
 
     for name, digest in request["sourceFiles"].items():
         data = read_stable_repository_file(
-            Path(request["sourceRoot"]), name,
-            max_bytes=MAX_SOURCE_BYTES - total, label="measurement source",
+            Path(request["sourceRoot"]),
+            name,
+            max_bytes=MAX_SOURCE_BYTES - total,
+            label="measurement source",
         )
         total += len(data)
         if total > MAX_SOURCE_BYTES or sha256_hex(data) != digest:
@@ -120,10 +128,7 @@ class CommandMeasurement:
                 ancestor.count += 1
                 ancestor = ancestor.parent
         self.span_digest = canonical_digest(uuid4().hex)
-        self.clock_domain: str = (
-            self.parent.clock_domain if self.parent is not None
-            else canonical_digest(uuid4().hex)
-        )
+        self.clock_domain: str = self.parent.clock_domain if self.parent is not None else canonical_digest(uuid4().hex)
         self.children: list[dict[str, Any]] = []
         self.token: Any = None
         self.start_wall = 0
@@ -146,26 +151,33 @@ class CommandMeasurement:
         child_wall = sum(child["inclusiveWallNs"] for child in self.children)
         child_cpu = sum(child["inclusiveCpuNs"] for child in self.children)
         body = {
-            "schemaVersion": COMMAND_RESOURCE_SCHEMA, "status": "PASS",
+            "schemaVersion": COMMAND_RESOURCE_SCHEMA,
+            "status": "PASS",
             "operationDigest": self.request["operationDigest"],
             "sourceRevision": self.request["sourceRevision"],
             "sourceRevisionBasis": "DECLARED_BASE",
             "sourceSnapshotDigest": self.request["sourceSnapshotDigest"],
             "sourceBinding": "VERIFIED_SELECTED_BYTES",
-            "command": self.command, "phase": self.request["phase"],
-            "argvDigest": self.argv_digest, "spanDigest": self.span_digest,
+            "command": self.command,
+            "phase": self.request["phase"],
+            "argvDigest": self.argv_digest,
+            "spanDigest": self.span_digest,
             "parentSpanDigest": self.parent.span_digest if self.parent else None,
             "clockDomainDigest": self.clock_domain,
-            "startWallNs": self.start_wall, "endWallNs": end_wall,
-            "startCpuNs": self.start_cpu, "endCpuNs": end_cpu,
+            "startWallNs": self.start_wall,
+            "endWallNs": end_wall,
+            "startCpuNs": self.start_cpu,
+            "endCpuNs": end_cpu,
             "inclusiveWallNs": end_wall - self.start_wall,
             "exclusiveWallNs": end_wall - self.start_wall - child_wall,
             "inclusiveCpuNs": end_cpu - self.start_cpu,
             "exclusiveCpuNs": end_cpu - self.start_cpu - child_cpu,
-            "exitCode": exit_code, "outcome": "SUCCEEDED" if exit_code == 0 else "FAILED",
+            "exitCode": exit_code,
+            "outcome": "SUCCEEDED" if exit_code == 0 else "FAILED",
             "childCpu": {"status": "UNAVAILABLE", "value": None},
             "modelTokens": {"status": "UNAVAILABLE", "value": None},
-            "children": self.children, "authorityClaimed": False,
+            "children": self.children,
+            "authorityClaimed": False,
             "productionPromotionClaimed": False,
         }
         receipt = {**body, "receiptDigest": canonical_digest(body)}
@@ -178,7 +190,9 @@ class CommandMeasurement:
 
 
 def collect_command(
-    request: dict[str, Any], argv: list[str], invoke: Callable[[], int],
+    request: dict[str, Any],
+    argv: list[str],
+    invoke: Callable[[], int],
 ) -> tuple[int, dict[str, Any]]:
     """Measure one real invocation; exceptions remain exceptions, without retry."""
     measurement = CommandMeasurement(request, argv)
@@ -193,7 +207,10 @@ def collect_command(
 
 
 def run_measured_command(
-    request_path: Path, output_path: Path, argv: list[str], invoke: Callable[[], int],
+    request_path: Path,
+    output_path: Path,
+    argv: list[str],
+    invoke: Callable[[], int],
 ) -> int:
     """Check destination first; publication failure explicitly preserves effects."""
     request = read_json_object(request_path, label="command measurement request")
@@ -217,8 +234,7 @@ def run_measured_command(
                 raise LifecycleError(
                     "command-measurement-publication-failed",
                     "Command already executed; receipt publication failed. Do not repeat automatically.",
-                    {"commandExecuted": True, "commandExitCode": code,
-                     "receiptDigest": receipt["receiptDigest"]},
+                    {"commandExecuted": True, "commandExitCode": code, "receiptDigest": receipt["receiptDigest"]},
                 ) from None
     return code
 
@@ -234,26 +250,36 @@ def command_accounting_entries(receipts: list[dict[str, Any]]) -> list[dict[str,
         if receipt["spanDigest"] in seen:
             raise LifecycleError("command-measurement-duplicate", "Repeated command span")
         seen.add(receipt["spanDigest"])
-        view = {"model": "implementation", "review": "audit",
-                "remediation": "postAuditRemediation"}.get(receipt["phase"], "alkProcess")
+        view = {"model": "implementation", "review": "audit", "remediation": "postAuditRemediation"}.get(
+            receipt["phase"], "alkProcess"
+        )
+
         def measured(value: int) -> dict[str, Any]:
             return {"status": "MEASURED", "value": value, "additive": True}
-        entries.append({
-            "entryId": receipt["spanDigest"], "view": view,
-            "costCategory": "productValidation" if view == "audit" else (
-                "implementation" if view in {"implementation", "postAuditRemediation"}
-                else "pipelineCompliance"
-            ),
-            "scope": {"kind": "command-exclusive", "id": receipt["spanDigest"], "additive": True},
-            "metrics": {"tokens": {"status": "UNAVAILABLE", "value": None, "additive": True},
-                        "steps": measured(1),
-                        "elapsedWallMs": measured(receipt["exclusiveWallNs"] // 1_000_000),
-                        "computeMs": measured(receipt["exclusiveCpuNs"] // 1_000_000)},
-            "workflowMetrics": build_workflow_metric_set(inferred_measured={
-                "toolCalls": 1, "toolWallMs": receipt["exclusiveWallNs"] // 1_000_000,
-                "parallelComputeMs": receipt["exclusiveCpuNs"] // 1_000_000,
-            }),
-        })
+
+        entries.append(
+            {
+                "entryId": receipt["spanDigest"],
+                "view": view,
+                "costCategory": "productValidation"
+                if view == "audit"
+                else ("implementation" if view in {"implementation", "postAuditRemediation"} else "pipelineCompliance"),
+                "scope": {"kind": "command-exclusive", "id": receipt["spanDigest"], "additive": True},
+                "metrics": {
+                    "tokens": {"status": "UNAVAILABLE", "value": None, "additive": True},
+                    "steps": measured(1),
+                    "elapsedWallMs": measured(receipt["exclusiveWallNs"] // 1_000_000),
+                    "computeMs": measured(receipt["exclusiveCpuNs"] // 1_000_000),
+                },
+                "workflowMetrics": build_workflow_metric_set(
+                    inferred_measured={
+                        "toolCalls": 1,
+                        "toolWallMs": receipt["exclusiveWallNs"] // 1_000_000,
+                        "parallelComputeMs": receipt["exclusiveCpuNs"] // 1_000_000,
+                    }
+                ),
+            }
+        )
         for child in receipt["children"]:
             visit(child)
 

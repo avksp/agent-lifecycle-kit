@@ -101,7 +101,9 @@ def import_review_mesh_result(
     }
     normalized = {**body, "resultDigest": canonical_digest(body)}
     validation = validate_review_mesh_result(
-        normalized, profile=profile, session_usage_context=session_usage_context,
+        normalized,
+        profile=profile,
+        session_usage_context=session_usage_context,
         assignment=assignment,
     )
     if normalized.get("budgetUsageStatus") == "UNAVAILABLE" or unproven_independence:
@@ -123,7 +125,8 @@ def import_review_mesh_result(
 
 
 def _same_response_once(
-    result: dict[str, Any], existing: list[dict[str, Any]],
+    result: dict[str, Any],
+    existing: list[dict[str, Any]],
 ) -> dict[str, Any]:
     if not isinstance(existing, list) or len(existing) > 64:
         _invalid_import("recovery input must be a bounded result list")
@@ -141,9 +144,17 @@ def _same_response_once(
             _invalid_import("recovery result integrity differs")
         if (
             imported.get("outputDigest") != result["import"]["outputDigest"]
-            or any(candidate.get(key) != result.get(key) for key in (
-                "subject", "reviewer", "profileDigest", "assignmentId", "sessionUsage", "budgetUsage",
-            ))
+            or any(
+                candidate.get(key) != result.get(key)
+                for key in (
+                    "subject",
+                    "reviewer",
+                    "profileDigest",
+                    "assignmentId",
+                    "sessionUsage",
+                    "budgetUsage",
+                )
+            )
             or found is not None
             or candidate != result
         ):

@@ -234,7 +234,8 @@ def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
         from agent_lifecycle.adapter_sessions.qualification import provider_preflight
 
         payload = provider_preflight(
-            Path(args.profile), project_root=Path(args.project_root),
+            Path(args.profile),
+            project_root=Path(args.project_root),
         )
         if args.out:
             write_json_create(Path(args.out), payload)

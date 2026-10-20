@@ -23,9 +23,15 @@ from agent_lifecycle.contracts.preparation_policy import (
 
 
 def reviewer_preflight(
-    *, request: dict[str, Any], repository_root: Path, source_pins: dict[str, str],
-    packet: dict[str, Any], rendered_input: bytes, argv: list[str],
-    qualification: dict[str, Any], preparation: PreparationAdmission,
+    *,
+    request: dict[str, Any],
+    repository_root: Path,
+    source_pins: dict[str, str],
+    packet: dict[str, Any],
+    rendered_input: bytes,
+    argv: list[str],
+    qualification: dict[str, Any],
+    preparation: PreparationAdmission,
 ) -> dict[str, Any]:
     """Check current source/input and existing qualified technical restrictions.
 
@@ -45,7 +51,9 @@ def reviewer_preflight(
         total = 0
         for name, expected in sorted(source_pins.items()):
             data = read_stable_repository_file(
-                repository_root, name, max_bytes=1024 * 1024,
+                repository_root,
+                name,
+                max_bytes=1024 * 1024,
                 label="review source",
             )
             total += len(data)
@@ -68,25 +76,32 @@ def reviewer_preflight(
             or qualification["repositoryRootDigest"] != root_digest
             or qualification["inputTransport"] != "STDIN"
             or qualification["packetDigest"] != packet_digest
-            or qualification["renderedInputDigest"]
-            != hashlib.sha256(rendered_input).hexdigest()
+            or qualification["renderedInputDigest"] != hashlib.sha256(rendered_input).hexdigest()
             or qualification["renderedInputBytes"] != len(rendered_input)
             or qualification["inputComplete"] is not True
             or qualification["providerReady"] is not True
             or qualification["readOnlyEnforced"] is not True
-            or qualification["restrictionBasis"]
-            not in {"HOST_RESTRICTIONS", "ISOLATED_WORKSPACE"}
-            or not isinstance(argv, list) or not 1 <= len(argv) <= 64
+            or qualification["restrictionBasis"] not in {"HOST_RESTRICTIONS", "ISOLATED_WORKSPACE"}
+            or not isinstance(argv, list)
+            or not 1 <= len(argv) <= 64
             or any(not isinstance(v, str) or not v or len(v) > 4096 for v in argv)
-            or any(v.split("=", 1)[0] in {
-                "--yolo", "--full-auto", "--dangerously-skip-permissions",
-                "--dangerously-bypass-approvals-and-sandbox",
-            } for v in argv)
+            or any(
+                v.split("=", 1)[0]
+                in {
+                    "--yolo",
+                    "--full-auto",
+                    "--dangerously-skip-permissions",
+                    "--dangerously-bypass-approvals-and-sandbox",
+                }
+                for v in argv
+            )
             or canonical_digest(argv) != qualification["allowedArgvDigest"]
         ):
             raise ValueError("Qualified reviewer input/restrictions required")
         invocation_digest = review_invocation_digest(
-            request=request, argv=argv, root_digest=root_digest,
+            request=request,
+            argv=argv,
+            root_digest=root_digest,
             rendered_input=rendered_input,
         )
         # Admission owns all effect/financial state; no adapter import here.
@@ -97,10 +112,13 @@ def reviewer_preflight(
     body = {
         "schemaVersion": "agent-reviewer-preflight.v1",
         "status": "PASS" if reason == "READY" else "UNAVAILABLE",
-        "reason": reason, "sourceSnapshotDigest": source_digest,
-        "packetDigest": packet_digest, "modelCalls": 0,
+        "reason": reason,
+        "sourceSnapshotDigest": source_digest,
+        "packetDigest": packet_digest,
+        "modelCalls": 0,
         "requestDigest": request_digest,
         "invocationDigest": invocation_digest,
-        "authorityClaimed": False, "productionPromotionClaimed": False,
+        "authorityClaimed": False,
+        "productionPromotionClaimed": False,
     }
     return {**body, "preflightDigest": canonical_digest(body)}

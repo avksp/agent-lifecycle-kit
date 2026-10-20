@@ -503,7 +503,8 @@ def validate_external_job_status(status: Any, *, request: dict[str, Any] | None 
     if "observation" in value:
         observation = value["observation"]
         eligible = (
-            eligible and isinstance(observation, dict)
+            eligible
+            and isinstance(observation, dict)
             and observation.get("remoteState") == "TERMINAL"
             and observation.get("localState") in ("COMPLETE", "RECOVERED")
             and observation.get("semanticStatus") in ("PASS", "FAIL")
@@ -711,11 +712,15 @@ def _blocking_eligible(status: dict[str, Any], verdict: str | None, complete: bo
         and complete
         and status.get("processCleanupStatus") in {"PASS", "NOT_REQUIRED"}
         and status.get("postTerminalWriteDetected") is False
-        and ("observation" not in status or (
-            isinstance(observation, dict) and observation.get("remoteState") == "TERMINAL"
-            and observation.get("localState") in ("COMPLETE", "RECOVERED")
-            and observation.get("semanticStatus") == verdict
-        ))
+        and (
+            "observation" not in status
+            or (
+                isinstance(observation, dict)
+                and observation.get("remoteState") == "TERMINAL"
+                and observation.get("localState") in ("COMPLETE", "RECOVERED")
+                and observation.get("semanticStatus") == verdict
+            )
+        )
     )
 
 
@@ -944,8 +949,18 @@ __all__ = [
 for _schema_id in (EXTERNAL_JOB_STATUS_SCHEMA, EXTERNAL_JOB_RESULT_SCHEMA):
     EXTERNAL_JOB_SCHEMAS[_schema_id]["properties"]["observation"] = {
         "type": "object",
-        "required": ["subjectDigest", "assignmentDigest", "requestDigest", "attempt",
-                     "deliveryAttempt", "semanticRound", "remoteState", "localState",
-                     "semanticStatus", "responseDigest", "sessionUsage"],
+        "required": [
+            "subjectDigest",
+            "assignmentDigest",
+            "requestDigest",
+            "attempt",
+            "deliveryAttempt",
+            "semanticRound",
+            "remoteState",
+            "localState",
+            "semanticStatus",
+            "responseDigest",
+            "sessionUsage",
+        ],
         "additionalProperties": True,
     }

@@ -210,15 +210,18 @@ def _validate_phase_entry(index: int, phase: Any, blockers: list[dict[str, Any]]
             if expected != observation:
                 raise LifecycleError("token-attribution-invalid", "Token observation differs")
             basis = phase.get("tokenObservationBasis")
-            if not isinstance(basis, dict) or set(basis) != set(observation) or any(
-                basis[key] not in ("MEASURED", "DERIVED", "UNAVAILABLE")
-                or (value is None) != (basis[key] == "UNAVAILABLE")
-                for key, value in observation.items()
+            if (
+                not isinstance(basis, dict)
+                or set(basis) != set(observation)
+                or any(
+                    basis[key] not in ("MEASURED", "DERIVED", "UNAVAILABLE")
+                    or (value is None) != (basis[key] == "UNAVAILABLE")
+                    for key, value in observation.items()
+                )
             ):
                 raise LifecycleError("token-attribution-invalid", "Observation basis is invalid")
             if isinstance(tokens, dict) and any(
-                observation[key] is not None and observation[key] != tokens.get(key)
-                for key in TOKEN_KEYS
+                observation[key] is not None and observation[key] != tokens.get(key) for key in TOKEN_KEYS
             ):
                 raise LifecycleError("token-attribution-invalid", "Legacy and observed counters conflict")
         except LifecycleError:

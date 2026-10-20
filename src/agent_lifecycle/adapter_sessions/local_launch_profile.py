@@ -23,9 +23,7 @@ MAX_ARGV_ITEMS = 64
 MAX_ARG_BYTES = 4096
 EXECUTABLE_HASH_CHUNK_BYTES = 256 * 1024
 SAFE_VERSION_PROBES = (("--version",), ("-V",), ("version",))
-PLANNING_SUPPORT_STATUSES = frozenset(
-    {"PLANNING_ONLY_QUALIFIED", "PLANNING_ONLY_UNSUPPORTED"}
-)
+PLANNING_SUPPORT_STATUSES = frozenset({"PLANNING_ONLY_QUALIFIED", "PLANNING_ONLY_UNSUPPORTED"})
 _DANGEROUS_PLANNING_FLAGS = frozenset(
     {
         "--allow-dangerously-skip-permissions",
@@ -133,7 +131,11 @@ def build_executable_identity(
         path_value = None if process_env is None else source_env.get("PATH", "")
         resolved_name = shutil.which(executable, path=path_value)
         candidate = Path(resolved_name) if resolved_name else None
-    origin = "SHIPPED_PROFILE_BOUND" if profile_digest and profile_digest == shipped_profile_digest else "OPERATOR_OWNED_UNVERIFIED"
+    origin = (
+        "SHIPPED_PROFILE_BOUND"
+        if profile_digest and profile_digest == shipped_profile_digest
+        else "OPERATOR_OWNED_UNVERIFIED"
+    )
     base = {
         "schemaVersion": "agent-host-executable-identity.v1",
         "status": "UNAVAILABLE",
@@ -176,8 +178,7 @@ def build_executable_identity(
                     break
                 digest.update(chunk)
                 byte_count += len(chunk)
-                if (max_executable_bytes is not None
-                        and byte_count > max_executable_bytes):
+                if max_executable_bytes is not None and byte_count > max_executable_bytes:
                     raise OSError("executable exceeds preflight bound")
         after = resolved.stat()
     except OSError as exc:
