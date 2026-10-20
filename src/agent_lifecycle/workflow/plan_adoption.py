@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from typing import cast as _validated_cast
 
+from agent_lifecycle.compiler.task_packets import packet_publication_lock
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES, load_json_object
@@ -66,109 +67,115 @@ def adopt_plan(
     manifest = read_json_object(manifest_path, label="frozen plan manifest")
     digest = _verify_frozen_manifest(root, manifest)
     validate_prerequisite_acceptance(manifest, repository_root=root)
-    revision = _plan_revision(manifest)
-    _require_revision_upgrade(state, digest, revision, reset_tasks=reset_tasks)
-    packet_set, packets = _packet_set(root, manifest, digest)
-    tasks = _build_tasks(manifest, packets)
-    previous_tasks = {task["id"]: task for task in state["tasks"]}
-    unresolved = {item["taskId"]: copy.deepcopy(item) for item in state.get("unresolvedPlanIncompatibilities", [])}
-    for previous in state["tasks"]:
-        if "planIncompatibility" in previous:
-            unresolved[previous["id"]] = copy.deepcopy(previous["planIncompatibility"])
-    for task in tasks:
-        previous = previous_tasks.get(task["id"], {})
-        if task["id"] in unresolved:
-            task["planIncompatibility"] = copy.deepcopy(unresolved[task["id"]])
-            if "usageTotals" in previous:
-                task["usageTotals"] = copy.deepcopy(previous["usageTotals"])
-            elif "cumulativeUsageTotals" in unresolved[task["id"]]:
-                task["usageTotals"] = copy.deepcopy(unresolved[task["id"]]["cumulativeUsageTotals"])
-            else:
-                task.pop("usageTotals", None)
-            task["priorFinancialObligations"] = copy.deepcopy(
-                previous.get("priorFinancialObligations", unresolved[task["id"]].get("financialObligations", previous))
+    artifact_root = manifest.get("package", {}).get("artifactRoot")
+    if not isinstance(artifact_root, str) or not artifact_root:
+        raise LifecycleError("invalid-plan-manifest", "package.artifactRoot is required")
+    with packet_publication_lock(root / artifact_root / "workflow/task-packets"):
+        revision = _plan_revision(manifest)
+        _require_revision_upgrade(state, digest, revision, reset_tasks=reset_tasks)
+        packet_set, packets = _packet_set(root, manifest, digest)
+        tasks = _build_tasks(manifest, packets)
+        previous_tasks = {task["id"]: task for task in state["tasks"]}
+        unresolved = {item["taskId"]: copy.deepcopy(item) for item in state.get("unresolvedPlanIncompatibilities", [])}
+        for previous in state["tasks"]:
+            if "planIncompatibility" in previous:
+                unresolved[previous["id"]] = copy.deepcopy(previous["planIncompatibility"])
+        for task in tasks:
+            previous = previous_tasks.get(task["id"], {})
+            if task["id"] in unresolved:
+                task["planIncompatibility"] = copy.deepcopy(unresolved[task["id"]])
+                if "usageTotals" in previous:
+                    task["usageTotals"] = copy.deepcopy(previous["usageTotals"])
+                elif "cumulativeUsageTotals" in unresolved[task["id"]]:
+                    task["usageTotals"] = copy.deepcopy(unresolved[task["id"]]["cumulativeUsageTotals"])
+                else:
+                    task.pop("usageTotals", None)
+                task["priorFinancialObligations"] = copy.deepcopy(
+                    previous.get(
+                        "priorFinancialObligations", unresolved[task["id"]].get("financialObligations", previous)
+                    )
+                )
+        original_admissions: dict[str, dict[str, Any]] = {}
+        original_legacy_plans: dict[str, str] = {}
+        if preserve_accepted_compatible:
+            if not reset_tasks:
+                raise LifecycleError(
+                    "reset-required",
+                    "preserving accepted tasks requires resetTasks",
+                )
+            if any(task.get("status") == "ACCEPTED" for task in state["tasks"]):
+                original_admissions, original_legacy_plans = _reconcile_previous_a5_authority(
+                    state_path, state, legacy_start_required={task["id"] for task in tasks if "immutableInput" in task}
+                )
+            tasks = _preserve_accepted_tasks(
+                state,
+                tasks,
+                current_plan={
+                    "runId": state.get("runId"),
+                    "packageId": state.get("packageId"),
+                    "planRevision": revision,
+                    "planDigest": digest,
+                    "sourceRevision": source_revision,
+                },
+                current_plan_policy=manifest.get("immutableInput"),
+                original_admissions=original_admissions,
+                original_legacy_plans=original_legacy_plans,
             )
-    original_admissions: dict[str, dict[str, Any]] = {}
-    original_legacy_plans: dict[str, str] = {}
-    if preserve_accepted_compatible:
-        if not reset_tasks:
-            raise LifecycleError(
-                "reset-required",
-                "preserving accepted tasks requires resetTasks",
-            )
-        if any(task.get("status") == "ACCEPTED" for task in state["tasks"]):
-            original_admissions, original_legacy_plans = _reconcile_previous_a5_authority(
-                state_path, state, legacy_start_required={task["id"] for task in tasks if "immutableInput" in task}
-            )
-        tasks = _preserve_accepted_tasks(
+        for task in tasks:
+            if "planIncompatibility" in task:
+                unresolved[task["id"]] = copy.deepcopy(task["planIncompatibility"])
+        incompatibilities = list(unresolved.values())
+        previous_phase = state["phase"]
+        _archive_prior_snapshot(state)
+        _replace_plan_state(
             state,
-            tasks,
-            current_plan={
-                "runId": state.get("runId"),
-                "packageId": state.get("packageId"),
+            state_path=state_path,
+            manifest_path=manifest_path,
+            manifest=manifest,
+            digest=digest,
+            revision=revision,
+            root=root,
+            source_revision=source_revision,
+            start_mode=start_mode,
+            authorized_by=authorized_by,
+            packet_set=packet_set,
+            tasks=tasks,
+        )
+        if incompatibilities:
+            state["unresolvedPlanIncompatibilities"] = incompatibilities
+            state["phase"] = "BLOCKED"
+            state["blocker"] = {
+                "code": "plan-drift",
+                "reason": "Accepted A5 evidence is incompatible; bounded disposition is required",
+                "resumePhase": "READY",
+            }
+        plan_root = manifest["package"]["planArtifactRoot"]
+        frozen_lock = read_json_object(root / plan_root / "plan.lock.json", label="plan lock")
+        verify_plan_lock_envelope(manifest, frozen_lock)
+        commit_state(
+            state_path,
+            state,
+            operation_id=operation_id,
+            event_type="plan-adopted",
+            payload={
+                "previousPhase": previous_phase,
                 "planRevision": revision,
                 "planDigest": digest,
-                "sourceRevision": source_revision,
+                "frozenPlanAuthority": {"manifest": manifest, "lock": frozen_lock},
+                "incompatibilities": incompatibilities,
+                "resetTasks": reset_tasks,
+                "preserveAcceptedCompatible": preserve_accepted_compatible,
+                "taskCompatibilityReceipts": [
+                    {
+                        "taskId": task.get("id"),
+                        "receiptDigest": task["planCompatibilityReceipt"]["receiptDigest"],
+                    }
+                    for task in tasks
+                    if isinstance(task.get("planCompatibilityReceipt"), dict)
+                ],
             },
-            current_plan_policy=manifest.get("immutableInput"),
-            original_admissions=original_admissions,
-            original_legacy_plans=original_legacy_plans,
         )
-    for task in tasks:
-        if "planIncompatibility" in task:
-            unresolved[task["id"]] = copy.deepcopy(task["planIncompatibility"])
-    incompatibilities = list(unresolved.values())
-    previous_phase = state["phase"]
-    _archive_prior_snapshot(state)
-    _replace_plan_state(
-        state,
-        state_path=state_path,
-        manifest_path=manifest_path,
-        manifest=manifest,
-        digest=digest,
-        revision=revision,
-        root=root,
-        source_revision=source_revision,
-        start_mode=start_mode,
-        authorized_by=authorized_by,
-        packet_set=packet_set,
-        tasks=tasks,
-    )
-    if incompatibilities:
-        state["unresolvedPlanIncompatibilities"] = incompatibilities
-        state["phase"] = "BLOCKED"
-        state["blocker"] = {
-            "code": "plan-drift",
-            "reason": "Accepted A5 evidence is incompatible; bounded disposition is required",
-            "resumePhase": "READY",
-        }
-    plan_root = manifest["package"]["planArtifactRoot"]
-    frozen_lock = read_json_object(root / plan_root / "plan.lock.json", label="plan lock")
-    verify_plan_lock_envelope(manifest, frozen_lock)
-    commit_state(
-        state_path,
-        state,
-        operation_id=operation_id,
-        event_type="plan-adopted",
-        payload={
-            "previousPhase": previous_phase,
-            "planRevision": revision,
-            "planDigest": digest,
-            "frozenPlanAuthority": {"manifest": manifest, "lock": frozen_lock},
-            "incompatibilities": incompatibilities,
-            "resetTasks": reset_tasks,
-            "preserveAcceptedCompatible": preserve_accepted_compatible,
-            "taskCompatibilityReceipts": [
-                {
-                    "taskId": task.get("id"),
-                    "receiptDigest": task["planCompatibilityReceipt"]["receiptDigest"],
-                }
-                for task in tasks
-                if isinstance(task.get("planCompatibilityReceipt"), dict)
-            ],
-        },
-    )
-    return status(state_path)
+        return status(state_path)
 
 
 @workflow_transaction

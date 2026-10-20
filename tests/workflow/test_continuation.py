@@ -8,7 +8,10 @@ from pathlib import Path
 from agent_lifecycle.audit import build_implementation_audit_report
 from agent_lifecycle.contracts import canonical_bytes, canonical_digest, write_json_create
 from agent_lifecycle.contracts.schemas import get_schema
+from agent_lifecycle.freeze import build_plan_lock_v2
+from agent_lifecycle.policy.execution_strategy import resolve_execution_strategy
 from agent_lifecycle.workflow import commit_task_result, continue_workflow, start_execution, start_task
+from tests.planning.test_plan_completeness import _manifest as _complete_manifest
 
 from .test_final_audit_outcomes import _write_v4_state
 from .test_task_acceptance_audit_gate import (
@@ -21,27 +24,26 @@ from .test_task_transitions import _strategy_start_inputs
 from .test_task_transitions import (
     _write_strategy_start_bundle as _write_direct_strategy_start_bundle,
 )
-from tests.planning.test_plan_completeness import _manifest as _complete_manifest
-from agent_lifecycle.freeze import build_plan_lock_v2
-from agent_lifecycle.policy.execution_strategy import resolve_execution_strategy
+from .test_workflow_run import _write_bundle
 
 
 def _write_strategy_start_bundle(root: Path, *, project_profile=None):
     # Continuation verifies the complete S2 plan before projecting task start.
     state_path, strategy_path, _ = _write_direct_strategy_start_bundle(
-        root, project_profile=project_profile,
+        root,
+        project_profile=project_profile,
     )
     manifest_path = root / "tasks/strategy/plan.manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     complete = _complete_manifest("S2")
-    for key in ("validation", "budgets", "contextLimits", "forbiddenWrites",
-                "finalAuditGates", "packageIntegrity"):
+    for key in ("validation", "budgets", "contextLimits", "forbiddenWrites", "finalAuditGates", "packageIntegrity"):
         manifest[key] = complete[key]
     manifest["planFiles"] = ["tasks/strategy/plan.manifest.json"]
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     lock = build_plan_lock_v2(manifest, repository_root=root)
     manifest_path.with_name("plan.lock.json").write_text(
-        json.dumps(lock), encoding="utf-8",
+        json.dumps(lock),
+        encoding="utf-8",
     )
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["planDigest"] = canonical_digest(manifest)
@@ -51,15 +53,21 @@ def _write_strategy_start_bundle(root: Path, *, project_profile=None):
         return json.loads((root / path).read_text(encoding="utf-8"))
 
     strategy = resolve_execution_strategy(
-        manifest=manifest, lock=lock, state=state, task_id="WS-01",
-        adapter_id="codex", adapter_host="codex", operation_id="start-strategy",
-        expected_revision=1, source_revision="source", requested_risk="auto",
+        manifest=manifest,
+        lock=lock,
+        state=state,
+        task_id="WS-01",
+        adapter_id="codex",
+        adapter_host="codex",
+        operation_id="start-strategy",
+        expected_revision=1,
+        source_revision="source",
+        requested_risk="auto",
         risk_policy=load("profiles/risk-execution-policy.v1.json"),
         routing_profile=load("profiles/model-routing-profile.v1.json"),
         baseline_profile=load("profiles/lifecycle-baselines.v1.json"),
         host_profile=load("profiles/hosts/codex-live-profile.v1.json"),
-        project_profile_digest=(canonical_digest(project_profile)
-                                if project_profile is not None else None),
+        project_profile_digest=(canonical_digest(project_profile) if project_profile is not None else None),
         descriptor=load("adapters/codex/adapter.descriptor.json"),
         capability_manifest=load("adapters/codex/capabilities.manifest.json"),
         target_attempt=1,
@@ -69,10 +77,56 @@ def _write_strategy_start_bundle(root: Path, *, project_profile=None):
     )
     (root / strategy_path).write_bytes(canonical_bytes(strategy) + b"\n")
     return state_path, strategy_path, strategy
-from .test_workflow_run import _write_bundle
 
 
 class WorkflowContinuationTests(unittest.TestCase):
+    def test_implicitly_unique_task_argv_keeps_the_original_projection_digest(self) -> None:
+        import contextlib
+        import io
+
+        from agent_lifecycle.cli.main import main
+
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest, state = _write_bundle(Path(tmp), phase="RUNNING", task_status="READY")
+            projected = _continue(manifest, state, operation_id="implicit-task")
+            self.assertEqual(projected["status"], "READY")
+            argv = projected["nextAction"]["argv"]
+            self.assertNotIn("--task", argv)
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                code = main(argv[1:])
+            self.assertEqual(code, 0, output.getvalue())
+            self.assertEqual(json.loads(output.getvalue())["status"], "APPLIED")
+            self.assertEqual(json.loads(state.read_bytes())["tasks"][0]["status"], "RUNNING")
+
+    def test_local_next_action_argv_executes_existing_guarded_cli_route(self) -> None:
+        import contextlib
+        import io
+
+        from agent_lifecycle.cli.main import main
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest_path, state_path = _write_bundle(root, phase="READY", task_status="READY")
+            receipt = _continue(manifest_path, state_path, operation_id="typed-local-start")
+            command = receipt["nextAction"]
+            self.assertFalse(command["shell"])
+            self.assertEqual(command["argv"][:3], ["agent-lifecycle", "workflow", "continue"])
+            self.assertEqual(command["continuationActionDigest"], receipt["action"]["actionDigest"])
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                code = main(command["argv"][1:])
+            self.assertEqual(code, 0, output.getvalue())
+            self.assertEqual(json.loads(output.getvalue())["status"], "APPLIED")
+            self.assertEqual(json.loads(state_path.read_bytes())["stateRevision"], 2)
+
+    def test_local_next_action_does_not_fill_missing_authorization(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest, state = _write_bundle(Path(tmp), phase="AWAITING_AUTHORIZATION", task_status="READY")
+            before = state.read_bytes()
+            receipt = _continue(manifest, state, operation_id="do-not-invent-authorization")
+            self.assertEqual(receipt["status"], "INPUT_REQUIRED")
+            self.assertIsNone(receipt["nextAction"]["argv"])
+            self.assertEqual(state.read_bytes(), before)
+
     def test_projection_is_read_only_and_ready_for_single_transition(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -155,6 +209,8 @@ class WorkflowContinuationTests(unittest.TestCase):
             self.assertEqual(receipt["status"], "INPUT_REQUIRED")
             self.assertEqual(receipt["action"]["route"], "task-start")
             self.assertIsNone(receipt["action"]["taskId"])
+            self.assertIsNone(receipt["nextAction"]["argv"])
+            self.assertEqual(receipt["nextAction"]["status"], "INPUT_REQUIRED")
             self.assertIn("taskId", {item["name"] for item in receipt["requiredInputs"]})
 
     def test_task_start_projection_and_apply_consume_exact_strategy(self) -> None:
@@ -526,8 +582,7 @@ def _bind_manifest(root: Path, state_path: Path) -> Path:
                 "evidenceIds": ["EV-01"],
             }
         ],
-        "acceptance": {"criteria": [{"id": "AC-01",
-            "requirementIds": ["REQ-1"], "evidenceIds": ["EV-01"]}]},
+        "acceptance": {"criteria": [{"id": "AC-01", "requirementIds": ["REQ-1"], "evidenceIds": ["EV-01"]}]},
     }
     digest = canonical_digest(manifest)
     manifest_path = root / "plans/package/plan.manifest.json"

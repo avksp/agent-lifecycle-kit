@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -14,14 +15,105 @@ from agent_lifecycle.workflow.continuation_batch import STOP_ACTION_REASONS
 from agent_lifecycle.workflow.transition_contract import ACTION_TYPES
 
 from .test_authorization import _receipt as _authorization_receipt
-from .test_continuation import _continuation_strategy_inputs
+from .test_continuation import _continuation_strategy_inputs, _write_strategy_start_bundle
 from .test_task_acceptance_audit_gate import _write_bundle as _write_audit_bundle
 from .test_task_acceptance_audit_gate import _write_result_review
-from .test_continuation import _write_strategy_start_bundle
 from .test_workflow_run import _write_bundle
 
 
 class WorkflowContinuationBatchTests(unittest.TestCase):
+    def test_local_only_chain_matches_explicit_state_and_events_and_stops_for_worker(self) -> None:
+        from agent_lifecycle.workflow import start_execution, start_task
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, state = _write_bundle(root, phase="READY", task_status="READY")
+            original = state.read_bytes()
+            bundle = _write_batch_bundle(root)
+            with (
+                patch("agent_lifecycle.workflow.operation_kernel.now_iso", return_value="2026-08-01T00:00:00Z"),
+                patch("agent_lifecycle.workflow.state.now_iso", return_value="2026-08-01T00:00:00Z"),
+                patch("agent_lifecycle.workflow.task_transitions.now_iso", return_value="2026-08-01T00:00:00Z"),
+                patch("agent_lifecycle.workflow.plan_adoption.now_iso", return_value="2026-08-01T00:00:00Z"),
+            ):
+                explicit_start = time.perf_counter()
+                start_execution(
+                    state,
+                    operation_id="batch-start",
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="bounded continuation test",
+                )
+                start_task(
+                    state,
+                    task_id="WS-01",
+                    operation_id="batch-task-start",
+                    expected_revision=2,
+                    source_revision="source",
+                    reason="bounded continuation test",
+                )
+                expected_state = state.read_bytes()
+                expected_events = (root / "events.jsonl").read_bytes()
+                explicit_wall = time.perf_counter() - explicit_start
+                state.write_bytes(original)
+                (root / "events.jsonl").unlink()
+                batch_start = time.perf_counter()
+                summary = continue_workflow_batch(
+                    state_path=state,
+                    manifest_path=manifest,
+                    lock_path=manifest.parent / "plan.lock.json",
+                    input_bundle_path=bundle,
+                    output_path="work/local-chain.json",
+                    max_transitions=8,
+                    max_io_bytes=1_048_576,
+                    expected_revision=1,
+                    source_revision="source",
+                    reason="bounded continuation test",
+                    local_only=True,
+                )
+                batch_wall = time.perf_counter() - batch_start
+            self.assertEqual(summary["appliedCount"], 2)
+            self.assertEqual(summary["stopReason"], "WAITING")
+            self.assertEqual(state.read_bytes(), expected_state)
+            self.assertEqual((root / "events.jsonl").read_bytes(), expected_events)
+            print(
+                "LOCAL_CHAIN_COMPARISON="
+                + json.dumps(
+                    {
+                        "explicitFacadeCalls": 2,
+                        "batchFacadeCalls": 1,
+                        "stateByteParity": True,
+                        "eventByteParity": True,
+                        "hostLaunchStarted": False,
+                        "explicitWallSeconds": explicit_wall,
+                        "batchWallSeconds": batch_wall,
+                    }
+                )
+            )
+
+    def test_local_only_does_not_consume_supplied_authorization(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, state = _write_bundle(root, phase="READY", task_status="READY")
+            bundle = _write_three_transition_bundle(root, state)
+            before = state.read_bytes()
+            summary = continue_workflow_batch(
+                state_path=state,
+                manifest_path=manifest,
+                lock_path=manifest.parent / "plan.lock.json",
+                input_bundle_path=bundle,
+                output_path="work/no-auto-authorization.json",
+                max_transitions=8,
+                max_io_bytes=1_048_576,
+                expected_revision=1,
+                source_revision="source",
+                reason="local boundary",
+                local_only=True,
+            )
+            self.assertEqual(summary["appliedCount"], 0)
+            self.assertEqual(summary["stopReason"], "HUMAN_DECISION_REQUIRED")
+            self.assertEqual(state.read_bytes(), before)
+
     def test_three_transition_bundle_applies_consecutive_existing_routes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

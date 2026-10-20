@@ -10,10 +10,23 @@ from unittest.mock import patch
 from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.reporting import build_change_summary_receipt
-from agent_lifecycle.reporting.change_summary import _run_git
+from agent_lifecycle.reporting.change_summary import _run_git, build_digest_display_view
 
 
 class ChangeSummaryTests(unittest.TestCase):
+    def test_digest_view_preserves_original_full_payload_and_expands_collisions(self) -> None:
+        first, second = "a" * 63 + "0", "a" * 63 + "1"
+        original = {"summaryDigest": first, "nested": {"otherDigest": second}}
+        rendered = build_digest_display_view(original, minimum_length=4)
+        self.assertEqual(rendered["data"], original)
+        self.assertEqual(
+            {row["fullDigest"]: row["displayPrefix"] for row in rendered["displayIdentities"]},
+            {first: first, second: second},
+        )
+        self.assertFalse(rendered["prefixesUsableAsAuthority"])
+        rendered["data"]["nested"]["otherDigest"] = "different view data"
+        self.assertEqual(original["nested"]["otherDigest"], second)
+
     def test_failed_command_redacts_full_stdout_and_stderr_before_error_tail(self) -> None:
         for stream in ("stdout", "stderr"):
             with self.subTest(stream=stream), tempfile.TemporaryDirectory() as tmp:

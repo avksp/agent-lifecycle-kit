@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
+import threading
+import unicodedata
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -13,15 +20,40 @@ from agent_lifecycle.contracts import (
 )
 from agent_lifecycle.contracts.authority_io import create_authority_bytes, read_authority_bytes
 from agent_lifecycle.contracts.authority_text import require_manifest_text
+from agent_lifecycle.contracts.execution_target import discard_created_output
 from agent_lifecycle.contracts.ownership_paths import (
     compiler_output_paths,
     repository_authority_name,
     require_manifest_authority_paths,
     require_output_footprint,
 )
+from agent_lifecycle.contracts.process_lock import exclusive_process_lock
 from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.planning.validation import validate_plan_manifest
 from agent_lifecycle.policy.execution_strategy import validate_execution_strategy
+
+_PUBLICATION_ACTIVE: ContextVar[frozenset[tuple[int, int, str]]] = ContextVar(
+    "alk_packet_publications", default=frozenset()
+)
+
+
+@contextmanager
+def packet_publication_lock(output_dir: Path) -> Iterator[None]:
+    """Serialize the existing publication/adoption boundary, including nested composition."""
+    identity = unicodedata.normalize("NFC", output_dir.resolve().as_posix()).casefold()
+    key = (os.getpid(), threading.get_ident(), identity)
+    active = _PUBLICATION_ACTIVE.get()
+    if key in active:
+        yield
+        return
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+    path = Path.home().resolve() / ".agent-lifecycle-kit" / "workflow-locks" / f"packets-{digest}.lock"
+    with exclusive_process_lock(path):
+        token = _PUBLICATION_ACTIVE.set(active | {key})
+        try:
+            yield
+        finally:
+            _PUBLICATION_ACTIVE.reset(token)
 
 
 def compile_task_packets(
@@ -31,6 +63,7 @@ def compile_task_packets(
     write: bool = False,
     execution_strategy: dict[str, Any] | None = None,
     repository_root: Path | None = None,
+    publication_guard: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     root = repository_root if repository_root is not None else Path.cwd()
     manifest_path = root / repository_authority_name(root / manifest_path, root)
@@ -53,7 +86,7 @@ def compile_task_packets(
     packet_records = [_packet_record(output_dir, packet) for packet in packets]
     index = _index(manifest, plan_digest, output_dir, packet_records)
     if write:
-        _write_packets(output_dir, packets, index, repository_root=root)
+        _write_packets(output_dir, packets, index, repository_root=root, publication_guard=publication_guard)
     return {"index": index, "packets": packets}
 
 
@@ -294,15 +327,64 @@ def _write_packets(
     index: dict[str, Any],
     *,
     repository_root: Path,
+    publication_guard: Callable[[], None] | None = None,
 ) -> None:
-    for packet in packets:
-        _write_idempotent(
-            output_dir / f"{packet['task']['id']}.task-packet.json", packet, repository_root=repository_root
-        )
-    _write_idempotent(output_dir / "index.json", index, repository_root=repository_root)
+    prepared = [(output_dir / f"{packet['task']['id']}.task-packet.json", packet) for packet in packets]
+    prepared.append((output_dir / "index.json", index))
+    prepared = [
+        (Path(repository_authority_name(repository_root / path, repository_root)), payload)
+        for path, payload in prepared
+    ]
+    with packet_publication_lock(repository_root / output_dir):
+        expected = {path: canonical_bytes(payload) + b"\n" for path, payload in prepared}
+        for path, data in expected.items():
+            try:
+                actual = read_authority_bytes(repository_root / path, root=repository_root, max_bytes=len(data))
+            except FileNotFoundError:
+                continue
+            if actual != data:
+                raise LifecycleError("output-conflict", "output exists with different content")
+        created: list[tuple[Path, bytes, tuple[int, ...]]] = []
+        pending: Path | None = None
+        try:
+            for path, payload in prepared:
+                if publication_guard is not None:
+                    publication_guard()
+                pending = path
+                if _write_idempotent(path, payload, repository_root=repository_root):
+                    info = (repository_root / path).lstat()
+                    identity = (
+                        info.st_dev,
+                        info.st_ino,
+                        info.st_mode,
+                        info.st_size,
+                        info.st_mtime_ns,
+                        info.st_ctime_ns,
+                    )
+                    created.append((path, expected[path], identity))
+                pending = None
+        except BaseException as exc:
+            conflicts: list[str] = []
+            if (
+                pending is not None
+                and isinstance(exc, LifecycleError)
+                and exc.code == "authority-output-unavailable"
+                and not discard_created_output(repository_root, str(pending), [expected[pending]], allow_partial=True)
+            ):
+                conflicts.append(str(pending))
+            for path, data, created_identity in reversed(created):
+                if not discard_created_output(repository_root, str(path), [data], expected_identity=created_identity):
+                    conflicts.append(str(path))
+            if conflicts:
+                raise LifecycleError(
+                    "packet-publication-rollback-conflict",
+                    "Changed writer data was retained during rollback",
+                    {"paths": conflicts},
+                ) from exc
+            raise
 
 
-def _write_idempotent(path: Path, payload: dict[str, Any], *, repository_root: Path | None = None) -> None:
+def _write_idempotent(path: Path, payload: dict[str, Any], *, repository_root: Path | None = None) -> bool:
     data = canonical_bytes(payload) + b"\n"
     root = repository_root if repository_root is not None else Path.cwd()
     path = root / repository_authority_name(root / path, root)
@@ -311,3 +393,5 @@ def _write_idempotent(path: Path, payload: dict[str, Any], *, repository_root: P
     except FileExistsError:
         if read_authority_bytes(path, root=root, max_bytes=len(data)) != data:
             raise LifecycleError("output-conflict", "output exists with different content") from None
+        return False
+    return True

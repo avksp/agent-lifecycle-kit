@@ -76,7 +76,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.19.0
+python -m pip install agent-lifecycle-kit==2.20.0
 ```
 
 ## Task evidence identity
@@ -733,3 +733,51 @@ See [safe artifact authoring](safe-artifact-authoring.md) for limits, refusal
 conditions and the review/freeze boundary, and [Review Mesh](review-mesh.md#bounded-review-handoff)
 for inventory and raw/normalized response contracts. New authoring commands emit
 compact non-authoritative summaries; existing commands keep their default output.
+
+
+## Release 2.20: composed initialization and digest display
+
+`workflow init --manifest` projects the actual local destinations without
+writing. Run it from the selected repository root. The manifest selects the
+packet directory; a different `--packet-output-dir` is refused before writes.
+For nested state files the package root is derived unless supplied explicitly.
+
+```bash
+agent-lifecycle workflow init --manifest tasks/example/plan.manifest.json \
+  --state work/example/run.state.json --run-id example-run --package-id example
+```
+
+Apply requires the full `bindingDigest` from a current projection and a unique
+adoption operation ID:
+
+```bash
+agent-lifecycle workflow init --manifest tasks/example/plan.manifest.json \
+  --state work/example/run.state.json --run-id example-run --package-id example \
+  --apply --projected-target-digest <full-binding-digest> --operation-id initial-adoption
+```
+
+Apply requires an actually reviewed frozen v2 plan. It compiles the packet set,
+creates state and adopts the plan in `AWAITING_AUTHORIZATION`. Execution still
+requires the separate existing authorization command. Draft projection grants
+no execution authority. Existing state, journals, incompatible ignored packets,
+source drift and unsafe output aliases are refused. Complete exact packet sets
+can be reused; an old run cannot be reused as a new run. Failure removes only
+this invocation's unfinished outputs and retains competing writer data. A
+completed packet set can remain after a later initialization failure. These
+are local cooperating-writer guarantees, not continuous host attestation.
+
+Enabled `contextCheckpointPolicy` is unsupported by the composed route and
+refused before writes; use the existing explicit compile/init/adopt commands.
+Without `--manifest`, `workflow init` retains its existing unbound-state behavior.
+
+`workflow status --state <state> --full --digest-prefix-length 12` returns a
+separate display view: `data` contains the complete original status, while
+`displayIdentities` pairs each full SHA-256 with its display prefix. Collisions
+expand within the rendered set. Prefix lengths range from 4 to 64. Prefixes
+never replace persisted identities or become accepted authority inputs.
+
+For deterministic local continuation, add `--local-only` to the existing
+`workflow continue --until-blocked --apply` command, preserving all required
+bundle, byte, transition and output limits. See [workflow continuation](workflow-continuation.md).
+Public commands and live aliases remain supported; only unused private parser
+builders were removed.

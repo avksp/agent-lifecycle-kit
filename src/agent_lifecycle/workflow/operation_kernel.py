@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -26,6 +28,38 @@ from agent_lifecycle.workflow.state import (
     write_state_replace,
 )
 from agent_lifecycle.workflow.transactions import workflow_transaction
+
+_WRITE_OBSERVER: ContextVar[tuple[Path, Callable[[dict[Path, bytes]], None]] | None] = ContextVar(
+    "alk_prepared_workflow_writes", default=None
+)
+
+
+@contextmanager
+def observe_workflow_writes(state_path: Path, observer: Callable[[dict[Path, bytes]], None]) -> Iterator[None]:
+    """Observe immutable prepared bytes for one bounded, serialized composition."""
+    if _WRITE_OBSERVER.get() is not None:
+        raise LifecycleError("workflow-observer-conflict", "A workflow write observer is already active")
+    token = _WRITE_OBSERVER.set((state_path.resolve(), observer))
+    try:
+        yield
+    finally:
+        _WRITE_OBSERVER.reset(token)
+
+
+def record_prepared_workflow_writes(
+    state_path: Path,
+    state_bytes: bytes,
+    *,
+    event_path: Path | None = None,
+    event_bytes: bytes | None = None,
+) -> None:
+    selected = _WRITE_OBSERVER.get()
+    if selected is None or selected[0] != state_path.resolve():
+        return
+    values = {state_path.resolve(): state_bytes}
+    if event_path is not None and event_bytes is not None:
+        values[event_path.resolve()] = event_bytes
+    selected[1](values)
 
 
 def load_for_update(
@@ -120,6 +154,13 @@ def commit_state(
         final_payload, final_event = failure
     else:
         raise LifecycleError("context-checkpoint-receipt-mismatch", "checkpoint receipt changed after preparation")
+    if _WRITE_OBSERVER.get() is not None:
+        record_prepared_workflow_writes(
+            state_path,
+            prepare_json_object(prospective, label="prospective workflow state"),
+            event_path=event_log_path(state_path, prospective),
+            event_bytes=prepare_json_object(final_event, label="prospective workflow event"),
+        )
     append_event(
         state_path=state_path,
         state=prospective,
@@ -128,6 +169,10 @@ def commit_state(
         payload=final_payload,
         prepared_event=final_event,
     )
+    if _WRITE_OBSERVER.get() is not None:
+        record_prepared_workflow_writes(
+            state_path, prepare_json_object(prospective, label="prospective workflow state")
+        )
     write_state_replace(state_path, prospective)
     state.clear()
     state.update(prospective)
