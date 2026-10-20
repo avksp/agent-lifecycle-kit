@@ -9,7 +9,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from agent_lifecycle.contracts.authority_io import hold_authority_directory, open_authority_read
+from agent_lifecycle.contracts.authority_io import hold_authority_directory
 from agent_lifecycle.contracts.canonical import canonical_digest
 from agent_lifecycle.contracts.errors import LifecycleError
 from agent_lifecycle.contracts.ownership_paths import repository_authority_name
@@ -187,8 +187,14 @@ def discard_created_output(
             identity = _file_identity(before)
             if expected_identity is not None and identity != expected_identity:
                 return False
-            with open_authority_read(path, root=root) as stream:
+            identity_fields = 5 if os.name == "nt" else 6
+            # Reuse the held parent; reopening it conflicts with Windows write sharing.
+            with os.fdopen(directory.open_child(path.name), "rb", buffering=0) as stream:
+                if _file_identity(os.fstat(stream.fileno()))[:identity_fields] != identity[:identity_fields]:
+                    return False
                 data = stream.read(max(map(len, expected_versions)) + 1)
+                if _file_identity(os.fstat(stream.fileno()))[:identity_fields] != identity[:identity_fields]:
+                    return False
             if not any(data == value or (allow_partial and value.startswith(data)) for value in expected_versions):
                 return False
             if _file_identity(directory.stat_child(path.name)) != identity:

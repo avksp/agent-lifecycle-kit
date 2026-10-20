@@ -369,12 +369,16 @@ def _write_packets(
                 pending is not None
                 and isinstance(exc, LifecycleError)
                 and exc.code == "authority-output-unavailable"
-                and not discard_created_output(repository_root, str(pending), [expected[pending]], allow_partial=True)
+                and not discard_created_output(
+                    repository_root, pending.as_posix(), [expected[pending]], allow_partial=True
+                )
             ):
-                conflicts.append(str(pending))
+                conflicts.append(pending.as_posix())
             for path, data, created_identity in reversed(created):
-                if not discard_created_output(repository_root, str(path), [data], expected_identity=created_identity):
-                    conflicts.append(str(path))
+                if not discard_created_output(
+                    repository_root, path.as_posix(), [data], expected_identity=created_identity
+                ):
+                    conflicts.append(path.as_posix())
             if conflicts:
                 raise LifecycleError(
                     "packet-publication-rollback-conflict",
