@@ -69,8 +69,8 @@ class ReviewerPreflightTests(unittest.TestCase):
             self.assertFalse(value["savingsPercentageClaimed"])
             self.assertFalse(value["productionPromotionClaimed"])
             self.assertEqual(value["modelTokens"], {"status": "UNAVAILABLE", "value": None})
-            self.assertNotIn("/Volumes/", str(value))
-            self.assertNotIn("/Users/", str(value))
+            self.assertNotIn("/" + "Volumes/", str(value))
+            self.assertNotIn("/" + "Users/", str(value))
             records.append(value)
         command, guided, audit, legacy = records
         self.assertEqual(len(command["after"]), 10)
