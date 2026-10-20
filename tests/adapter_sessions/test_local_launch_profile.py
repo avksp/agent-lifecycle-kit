@@ -10,7 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from agent_lifecycle.adapter_sessions import launch_preflight
+from agent_lifecycle.adapter_sessions import launch_preflight, managed_process
 from agent_lifecycle.adapter_sessions.immutable_input import current_managed_invocation
 from agent_lifecycle.adapter_sessions.local_launch_profile import (
     build_executable_identity,
@@ -189,18 +189,26 @@ class LocalLaunchProfileTests(unittest.TestCase):
             state['runDeadlineAt'] = (now + timedelta(seconds=60)).isoformat()
             args['state_path'].write_text(json.dumps(state))
             sentinel = {'status': 'fixture'}
-            boundary = time.monotonic_ns()
+            # Pair the wall/monotonic samples; real clocks need not tick together.
+            boundary = 100_000_000_000
             def prepare(**kwargs):
+                deadline_builder.assert_called_once_with(state, task)
                 self.assertEqual(kwargs['state'], state)
                 self.assertEqual(kwargs['task'], task)
                 self.assertIs(kwargs['task'], kwargs['state']['tasks'][0])
                 time.sleep(0.01)
                 return {'intentPath': root / 'intent.json'}
-            with patch.object(launch_preflight, '_managed_launch_blockers', return_value=[]), patch.object(
+            with patch.object(managed_process, 'time', wraps=time) as mono, patch.object(
+                    launch_preflight, 'datetime') as wall, patch.object(
+                    launch_preflight, '_original_attempt_deadline', wraps=launch_preflight._original_attempt_deadline) as deadline_builder, patch.object(
+                    launch_preflight, '_managed_launch_blockers', return_value=[]), patch.object(
                     launch_preflight, '_identity', return_value={'status': 'PASS', 'executableContentSha256': 'a' * 64}), patch.object(
                     launch_preflight, 'prepare_exact_prompt', side_effect=prepare), patch.object(
                     launch_preflight, 'require_bootstrap_audit', return_value={'auditSha256': 'b' * 64}), patch.object(
                     launch_preflight, '_run_exact_managed_process', return_value=sentinel) as runner:
+                mono.monotonic_ns.return_value = boundary
+                wall.now.return_value = now
+                wall.fromisoformat.side_effect = datetime.fromisoformat
                 result = launch_preflight._managed_task(context, session_id='session', explicit_launch=True,
                     state_path=args['state_path'], manifest_path=args['manifest_path'], lock_path=args['lock_path'],
                     task_id=args['task_id'], operation_id=args['operation_id'], source_revision=args['source_revision'], risk_profile=args['risk_profile'],
@@ -209,6 +217,7 @@ class LocalLaunchProfileTests(unittest.TestCase):
             self.assertIs(result, sentinel)
             forwarded = runner.call_args.kwargs['absolute_deadline_monotonic_ns']
             self.assertIs(type(forwarded), int)
+            self.assertEqual(forwarded, boundary + 30_000_000_000)
             self.assertLessEqual(forwarded, boundary + 30_000_000_000)
             self.assertGreater(forwarded, boundary + 29_000_000_000)
 
