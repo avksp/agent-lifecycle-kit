@@ -18,7 +18,7 @@ from agent_lifecycle.workflow.implementation_audit_gate import (
     task_implementation_audit_required,
 )
 from agent_lifecycle.workflow.model_usage import model_usage_receipt_required
-from agent_lifecycle.workflow.next_action import build_managed_next_action
+from agent_lifecycle.workflow.next_action import build_local_next_action, build_managed_next_action
 from agent_lifecycle.workflow.plan_adoption import start_execution
 from agent_lifecycle.workflow.review_mesh_gate import review_mesh_required
 from agent_lifecycle.workflow.run import run_workflow_step
@@ -131,7 +131,19 @@ def continue_workflow(
     except LifecycleError as exc:
         return _blocked_from_preflight(preflight, operation_id, apply=apply, exc=exc)
     if not apply:
-        return _projection_receipt(preflight, operation_id, route, action, required)
+        receipt = _projection_receipt(preflight, operation_id, route, action, required)
+        receipt["nextAction"] = build_local_next_action(
+            preflight["nextAction"],
+            action,
+            state_path=state_path,
+            manifest_path=manifest_path,
+            lock_path=lock_path,
+            reason=reason,
+            required_inputs=required,
+            status=receipt["status"],
+        )
+        body = {key: value for key, value in receipt.items() if key != "receiptDigest"}
+        return {**body, "receiptDigest": canonical_digest(body)}
     return _apply_projected_route(
         state_path=state_path,
         manifest_path=manifest_path,

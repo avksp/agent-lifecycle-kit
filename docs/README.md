@@ -33,7 +33,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==2.19.0` from
+  `python -m pip install agent-lifecycle-kit==2.20.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -190,3 +190,15 @@ updating existing plans and runtime output layouts.
 - [Create and inspect artifacts; prepare a freeze candidate](reference/safe-artifact-authoring.md).
 - [Bounded reviewer input and raw response contracts](reference/review-mesh.md#bounded-review-handoff).
 - [ALK, host, model and SDLC guarantees](architecture/sdlc-boundary.md).
+
+## Composed workflow in 2.20
+
+Use [workflow init --manifest](reference/cli.md#release-220-composed-initialization-and-digest-display)
+for read-only actual-target projection; apply requires its full target digest and
+a reviewed frozen plan. Execution authorization remains separate.
+[Local-only continuation](reference/workflow-continuation.md) stops before workers,
+reviews and authorization; ambiguous next actions require explicit input.
+Status can show collision-safe prefixes alongside full identities. The measured
+CLI trace uses 2 facade calls instead of 3 with identical state/events, but takes
+longer in the small fixture. Snapshot fixtures use 6 Git children for 2/20/60 files
+versus 10/64/184 in 2.19. Event validation still scans the complete log.

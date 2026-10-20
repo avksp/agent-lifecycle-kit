@@ -2,18 +2,261 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
+import time
 import unittest
+from contextlib import ExitStack, chdir
 from pathlib import Path
 from unittest import mock
 
 from tests.workflow.test_continuation_batch import _write_batch_bundle
+from tests.workflow.test_transaction_projection import _bundle as _initialization_bundle
+from tests.workflow.test_transaction_projection import _inventory
 from tests.workflow.test_workflow_run import _write_bundle
 
 from .helpers import _run_cli
 
 
 class WorkflowContinueCliTests(unittest.TestCase):
+    def test_composed_cli_guard_and_selector_refusals_leave_every_output_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            manifest = _initialization_bundle(root)
+            args = [
+                "workflow",
+                "init",
+                "--state",
+                "run.state.json",
+                "--manifest",
+                str(manifest),
+                "--run-id",
+                "unit-run",
+                "--package-id",
+                "canonical-fixture",
+            ]
+            before = _inventory(root)
+            cases = [
+                (["--apply"], "initialization-projection-required"),
+                (
+                    ["--apply", "--projected-target-digest", "0" * 64, "--operation-id", "stale"],
+                    "execution-target-changed",
+                ),
+                (["--projected-target-digest", "0" * 64], "initialization-option-conflict"),
+                (["--packet-output-dir", "alternate"], "execution-target-selector-mismatch"),
+            ]
+            with chdir(root):
+                for extra, expected in cases:
+                    with self.subTest(extra=extra):
+                        code, payload = _run_cli([*args, *extra])
+                        self.assertEqual(code, 2)
+                        self.assertEqual(payload["code"], expected)
+                        self.assertEqual(before, _inventory(root))
+
+    def test_local_only_option_cannot_silently_enable_an_unbounded_or_one_step_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, state = _write_bundle(root, phase="READY", task_status="READY")
+            before = state.read_bytes()
+            code, payload = _continue_args(manifest, state, operation_id="wrong-mode", extra=["--local-only"])
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "continuation-batch-option-conflict")
+            self.assertEqual(state.read_bytes(), before)
+            self.assertFalse((root / "events.jsonl").exists())
+
+    def test_explicit_three_commands_and_composed_two_commands_have_identical_authority_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, ExitStack() as clocks:
+            root = Path(tmp).resolve()
+            manifest = _initialization_bundle(root)
+            source = json.loads(manifest.read_bytes())["baseRevision"]["sha"]
+            for module in ("initialization", "operation_kernel", "plan_adoption", "state", "events"):
+                clocks.enter_context(
+                    mock.patch("agent_lifecycle.workflow." + module + ".now_iso", return_value="2026-01-01T00:00:00Z")
+                )
+            args = [
+                "workflow",
+                "init",
+                "--state",
+                "run.state.json",
+                "--run-id",
+                "unit-run",
+                "--package-id",
+                "canonical-fixture",
+            ]
+            with chdir(root):
+                started = time.perf_counter()
+                explicit = [
+                    ["task", "compile", "--manifest", str(manifest), "--write"],
+                    args,
+                    [
+                        "workflow",
+                        "adopt-plan",
+                        "--state",
+                        "run.state.json",
+                        "--manifest",
+                        str(manifest),
+                        "--operation-id",
+                        "cli-parity-adopt",
+                        "--expected-revision",
+                        "1",
+                        "--source-revision",
+                        source,
+                        "--start-mode",
+                        "approval-required",
+                    ],
+                ]
+                for argv in explicit:
+                    code, result = _run_cli(argv)
+                    self.assertEqual(code, 0, result)
+                explicit_wall = time.perf_counter() - started
+                state_bytes = (root / "run.state.json").read_bytes()
+                event_bytes = (root / "events.jsonl").read_bytes()
+                (root / "run.state.json").unlink()
+                (root / "events.jsonl").unlink()
+                shutil.rmtree(root / "work")
+                started = time.perf_counter()
+                code, projected = _run_cli([*args, "--manifest", str(manifest)])
+                self.assertEqual(code, 0, projected)
+                code, result = _run_cli(
+                    [
+                        *args,
+                        "--manifest",
+                        str(manifest),
+                        "--apply",
+                        "--projected-target-digest",
+                        projected["bindingDigest"],
+                        "--operation-id",
+                        "cli-parity-adopt",
+                    ]
+                )
+                composed_wall = time.perf_counter() - started
+                self.assertEqual(code, 0, result)
+                self.assertEqual((root / "run.state.json").read_bytes(), state_bytes)
+                self.assertEqual((root / "events.jsonl").read_bytes(), event_bytes)
+            print(
+                "CLI_INITIALIZATION_PARITY="
+                + json.dumps(
+                    {
+                        "explicitFacadeCalls": 3,
+                        "projectionAndApplyFacadeCalls": 2,
+                        "stateByteParity": True,
+                        "eventByteParity": True,
+                        "explicitWallSeconds": explicit_wall,
+                        "composedWallSeconds": composed_wall,
+                    }
+                )
+            )
+
+    def test_composed_initialization_cli_projects_then_applies_without_authorizing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            manifest = _initialization_bundle(root)
+            args = [
+                "workflow",
+                "init",
+                "--state",
+                "runtime/run.state.json",
+                "--manifest",
+                str(manifest),
+                "--run-id",
+                "unit-run",
+                "--package-id",
+                "canonical-fixture",
+            ]
+            before = _inventory(root)
+            with chdir(root):
+                code, projected = _run_cli(args)
+                self.assertEqual(code, 0)
+                self.assertEqual(before, _inventory(root))
+                self.assertEqual(projected["stage"], "FROZEN")
+                code, applied = _run_cli(
+                    [
+                        *args,
+                        "--apply",
+                        "--projected-target-digest",
+                        projected["bindingDigest"],
+                        "--operation-id",
+                        "cli-initial-adoption",
+                    ]
+                )
+            self.assertEqual(code, 0, applied)
+            state = json.loads((root / "runtime/run.state.json").read_bytes())
+            self.assertEqual(state["phase"], "AWAITING_AUTHORIZATION")
+            self.assertEqual(state["packageRoot"], "..")
+            self.assertFalse(state["authorization"]["granted"])
+            self.assertFalse(applied["executionAuthorized"])
+
+    def test_composed_initialization_cli_refuses_conflicting_target_before_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            manifest = _initialization_bundle(root)
+            (root / "events.jsonl").write_bytes(b"old run")
+            before = _inventory(root)
+            with chdir(root):
+                code, payload = _run_cli(
+                    [
+                        "workflow",
+                        "init",
+                        "--state",
+                        "run.state.json",
+                        "--manifest",
+                        str(manifest),
+                        "--run-id",
+                        "unit-run",
+                        "--package-id",
+                        "canonical-fixture",
+                    ]
+                )
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "execution-target-output-conflict")
+            self.assertEqual(before, _inventory(root))
+
+    def test_new_apply_options_cannot_silently_change_legacy_init(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            code, payload = _run_cli(
+                [
+                    "workflow",
+                    "init",
+                    "--state",
+                    str(root / "state.json"),
+                    "--run-id",
+                    "run",
+                    "--package-id",
+                    "p",
+                    "--apply",
+                ]
+            )
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "initialization-manifest-required")
+            self.assertFalse((root / "state.json").exists())
+
+    def test_local_only_batch_cli_stops_before_worker_result(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, state = _write_bundle(root, phase="READY", task_status="READY")
+            bundle = _write_batch_bundle(root)
+            code, summary = _continue_args(
+                manifest, state, operation_id=None, extra=[*_batch_args(manifest, bundle), "--local-only"]
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(summary["appliedCount"], 2)
+            self.assertEqual(summary["stopReason"], "WAITING")
+            self.assertFalse(summary["hostLaunchStarted"])
+
+    def test_status_digest_display_keeps_full_underlying_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _, state = _write_bundle(Path(tmp), phase="READY", task_status="READY")
+            before = state.read_bytes()
+            args = ["workflow", "status", "--state", str(state), "--full"]
+            code, original = _run_cli(args)
+            self.assertEqual(code, 0)
+            code, rendered = _run_cli([*args, "--digest-prefix-length", "12"])
+            self.assertEqual(code, 0)
+            self.assertEqual(rendered["data"], original)
+            self.assertFalse(rendered["prefixesUsableAsAuthority"])
+            self.assertEqual(state.read_bytes(), before)
+
     def test_projection_is_default_and_does_not_write(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

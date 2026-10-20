@@ -40,6 +40,7 @@ MODEL_CALLS_STARTED = False
 HOST_LAUNCH_STARTED = False
 MAX_PROSPECTIVE_BLOCKER_BYTES = 16_384
 MAX_PROSPECTIVE_RECORD_OVERHEAD = 4_096
+LOCAL_CHAIN_ACTION_TYPES = frozenset({"start-execution", "launch-tasks"})
 
 STOP_ACTION_REASONS = {
     "none": "TERMINAL",
@@ -66,6 +67,7 @@ def continue_workflow_batch(
     source_revision: str,
     reason: str,
     resume_receipt_path: str | None = None,
+    local_only: bool = False,
 ) -> dict[str, Any]:
     """Apply an explicit transition bundle until a bounded stop is reached."""
 
@@ -135,6 +137,7 @@ def continue_workflow_batch(
             max_io_bytes=max_io_bytes,
             prepared=prepared,
             prefix=prefix,
+            local_only=local_only,
         )
         _reserve_output(context, state)
         try:
@@ -174,8 +177,10 @@ class _BatchContext:
         max_io_bytes: int,
         prepared: dict[str, Any],
         prefix: list[dict[str, Any]],
+        local_only: bool = False,
     ) -> None:
         self.root = root
+        self.local_only = local_only
         self.state_path = state_path
         self.manifest_path = manifest_path
         self.lock_path = lock_path
@@ -468,6 +473,9 @@ def _run_batch(context: _BatchContext) -> dict[str, Any]:
             reason=context.reason,
         )
         action_type = _projected_action_type(projection)
+        if context.local_only and action_type not in LOCAL_CHAIN_ACTION_TYPES:
+            stop_reason = _local_boundary_reason(action_type)
+            break
         if projection.get("status") == "BLOCKED":
             stop_reason = STOP_ACTION_REASONS.get(action_type, "BLOCKED") if action_type else "BLOCKED"
             break
@@ -527,6 +535,14 @@ def _run_batch(context: _BatchContext) -> dict[str, Any]:
             stop_reason = "BLOCKED"
             break
     return _finalize(context, stop_reason=stop_reason, projection=projection)
+
+
+def _local_boundary_reason(action_type: str | None) -> str:
+    if action_type == "request-execution-authorization":
+        return "HUMAN_DECISION_REQUIRED"
+    if action_type in {"accept-task", "final-audit-outcome", "finalize-run"}:
+        return "AUDIT_REQUIRED"
+    return STOP_ACTION_REASONS.get(action_type or "", "WAITING")
 
 
 def _projected_action_type(projection: dict[str, Any]) -> str | None:

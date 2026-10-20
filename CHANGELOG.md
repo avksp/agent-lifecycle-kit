@@ -4,6 +4,28 @@
 
 - No changes yet.
 
+## 2.20.0 - 2026-10-20
+
+- Add target-bound, read-only initialization projection and opt-in composition
+  of existing compile/init/adopt operations. Recheck actual source and output
+  identities at publication boundaries; preserve separate execution authorization.
+  Cooperating-writer rollback is bounded to owned prepared bytes; continuous host
+  attestation and composed checkpoint-enabled initialization are not claimed.
+- Extend bounded continuation across deterministic local transitions only; stop
+  before workers, semantic reviews and authorization. Expose typed argv for
+  uniquely determined local actions, with missing choices left INPUT_REQUIRED.
+- Batch complete task snapshots into six Git children on the declared 2/20/60-file
+  positive fixtures (previously 10/64/184), retaining full-result/typed-failure
+  parity and existing ownership checks, including rename and protected paths.
+- Reuse streaming event validation and document full-scan time/memory evidence;
+  operation-ID memory remains O(n), without a constant-time cumulative claim.
+- Remove 15 unused private parser builders while preserving all 235 public routes;
+  provide collision-safe display prefixes beside unchanged full digest identities.
+- Update EN/RU references and release consumers. Composed CLI initialization uses
+  two facade calls instead of three with identical state/events; measured small
+  fixture wall time is higher, so fewer calls are not advertised as lower latency.
+  Unavailable host/model accounting remains null and earlier expenses are kept.
+
 ## 2.19.0 - 2026-10-20
 
 - Add create-only canonical JSON, typed task-result/evidence authoring and a

@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
+import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.changesets.git import GIT_TIMEOUT_SECONDS, changed_files, resolve_revision
-from agent_lifecycle.changesets.git_io import run_bounded_command
+from agent_lifecycle.changesets.git_io import BoundedProcess, run_bounded_command
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.ownership_paths import (
     is_under_authority_path,
@@ -51,9 +53,10 @@ def capture_task_change_set(
     transitions: list[dict[str, Any]] = []
     current_entries: list[dict[str, Any]] = []
     total_bytes = 0
+    baselines = _baseline_entries(root, baseline_sha, scoped)
     for path in scoped:
         normalized = normalize_repo_path(path, label="changed file")
-        before = _baseline_entry(root, baseline_sha, normalized)
+        before = baselines[normalized]
         current = _current_entry(root, normalized)
         total_bytes += int(before.get("bytes", 0)) + int(current.get("bytes", 0))
         if total_bytes > MAX_TOTAL_BYTES:
@@ -121,32 +124,129 @@ def require_current_task_change_set(
 
 
 def _baseline_entry(root: Path, baseline_sha: str, path: str) -> dict[str, Any]:
-    output = _git_bytes(
-        root,
-        ["git", "ls-tree", "-z", baseline_sha, "--", path],
-        max_bytes=8192,
-        label="baseline tree entry",
-    )
-    if not output:
-        return {"kind": "missing", "mode": None, "sha256": None, "bytes": 0}
-    rows = [row for row in output.split(b"\0") if row]
-    if len(rows) != 1 or b"\t" not in rows[0]:
-        raise LifecycleError("task-snapshot-git-shape", "Git returned an ambiguous baseline tree entry")
-    metadata, raw_path = rows[0].split(b"\t", 1)
+    """Retain the established single-entry extension point over one batch."""
+    return _baseline_entries(root, baseline_sha, [path])[path]
+
+
+def _path_batches(paths: list[str]) -> Iterator[list[str]]:
+    """Keep argv bounded on Windows as well as POSIX; no per-file worker."""
+    batch: list[str] = []
+    size = 0
+    for path in paths:
+        cost = len(path.encode("utf-8")) + 3
+        if batch and (len(batch) >= 128 or size + cost > 16_384):
+            yield batch
+            batch, size = [], 0
+        batch.append(path)
+        size += cost
+    if batch:
+        yield batch
+
+
+def _baseline_entries(root: Path, baseline_sha: str, paths: list[str]) -> dict[str, dict[str, Any]]:
+    entries: dict[str, dict[str, Any]] = {
+        path: {"kind": "missing", "mode": None, "sha256": None, "bytes": 0} for path in paths
+    }
+    objects: dict[str, tuple[str, str, int]] = {}
+    for batch in _path_batches(paths):
+        output = _git_bytes(
+            root,
+            ["git", "ls-tree", "-l", "-z", baseline_sha, "--", *batch],
+            max_bytes=8192 * len(batch),
+            label="baseline tree entry",
+        )
+        for row in output.split(b"\0"):
+            if row:
+                path, metadata = _parse_baseline_row(root, row, set(batch))
+                if path in objects:
+                    raise LifecycleError("task-snapshot-git-shape", "Git returned an ambiguous baseline tree entry")
+                objects[path] = metadata
+    if objects:
+        entries.update(_read_baseline_blobs(root, objects))
+    return entries
+
+
+def _parse_baseline_row(root: Path, row: bytes, requested: set[str]) -> tuple[str, tuple[str, str, int]]:
     try:
-        mode, object_type, object_id = metadata.decode("ascii").split(" ", 2)
-        decoded_path = raw_path.decode("utf-8", errors="strict")
+        metadata, raw_path = row.split(b"\t", 1)
+        mode, object_type, object_id, raw_size = metadata.decode("ascii").split()
+        path = raw_path.decode("utf-8", errors="strict")
     except (UnicodeDecodeError, ValueError) as exc:
         raise LifecycleError("task-snapshot-git-shape", "Git returned an invalid baseline tree entry") from exc
-    if decoded_path != path or object_type != "blob" or mode not in {"100644", "100755", "120000"}:
+    if path not in requested:
+        raise LifecycleError("task-snapshot-git-shape", "Git returned an ambiguous baseline tree entry")
+    if object_type != "blob" or mode not in {"100644", "100755", "120000"}:
         raise LifecycleError("task-snapshot-unsupported-entry", "baseline contains an unsupported task entry")
-    data = _git_object_data(root, object_id)
-    return {
-        "kind": "symlink" if mode == "120000" else "file",
-        "mode": mode,
-        "sha256": hashlib.sha256(data).hexdigest(),
-        "bytes": len(data),
-    }
+    if len(object_id) not in (40, 64) or any(value not in "0123456789abcdef" for value in object_id):
+        raise LifecycleError("task-snapshot-git-shape", "Git returned an invalid baseline tree entry")
+    if raw_size == "BAD":
+        # Preserve the established typed missing-object failure. This early
+        # diagnostic stays within the complete-call process bound.
+        _git_object_data(root, object_id)
+    try:
+        size = int(raw_size)
+    except ValueError as exc:
+        raise LifecycleError("task-snapshot-git-shape", "Git returned an invalid baseline blob size") from exc
+    if size < 0 or size > MAX_GIT_OBJECT_BYTES:
+        raise LifecycleError(
+            "task-snapshot-byte-limit",
+            "baseline blob exceeds the snapshot file limit",
+            {"bytes": size, "maxBytes": MAX_GIT_OBJECT_BYTES},
+        )
+    return path, (mode, object_id, size)
+
+
+def _read_baseline_blobs(root: Path, objects: dict[str, tuple[str, str, int]]) -> dict[str, dict[str, Any]]:
+    entries: dict[str, dict[str, Any]] = {}
+    try:
+        with BoundedProcess(
+            ["git", "cat-file", "--batch"],
+            cwd=root,
+            deadline=time.monotonic() + GIT_TIMEOUT_SECONDS,
+            max_stdout_bytes=MAX_TOTAL_BYTES + 257 * len(objects),
+            writable=True,
+        ) as transport:
+            for path, (mode, object_id, size) in objects.items():
+                transport.write_request(object_id.encode("ascii") + b"\n")
+                header = transport.stdout.readline(256)
+                expected = f"{object_id} blob {size}\n".encode("ascii")
+                if header != expected:
+                    if not header and transport.wait() != 0:
+                        raise LifecycleError("task-snapshot-git-failed", "baseline blob: Git command failed")
+                    raise LifecycleError("task-snapshot-git-shape", "Git baseline blob size changed during snapshot")
+                digest = hashlib.sha256()
+                remaining = size
+                while remaining:
+                    data = transport.stdout.read(min(65_536, remaining))
+                    if not data:
+                        raise LifecycleError(
+                            "task-snapshot-git-shape", "Git baseline blob size changed during snapshot"
+                        )
+                    digest.update(data)
+                    remaining -= len(data)
+                if transport.stdout.read(1) != b"\n":
+                    raise LifecycleError("task-snapshot-git-shape", "Git baseline blob size changed during snapshot")
+                entries[path] = {
+                    "kind": "symlink" if mode == "120000" else "file",
+                    "mode": mode,
+                    "sha256": digest.hexdigest(),
+                    "bytes": size,
+                }
+            transport.write_request(None)
+            if transport.stdout.read_all():
+                raise LifecycleError("task-snapshot-git-shape", "Git returned trailing baseline blob data")
+            if transport.wait() != 0:
+                raise LifecycleError("task-snapshot-git-failed", "baseline blob: Git command failed")
+    except LifecycleError as exc:
+        if exc.code.startswith("bounded-process-"):
+            code = (
+                "task-snapshot-byte-limit" if exc.code == "bounded-process-output-limit" else "task-snapshot-git-failed"
+            )
+            raise LifecycleError(code, "baseline blob: Git transport failed closed") from exc
+        raise
+    except OSError as exc:
+        raise LifecycleError("task-snapshot-git-failed", "baseline blob: Git command failed") from exc
+    return entries
 
 
 def _current_entry(root: Path, path: str) -> dict[str, Any]:

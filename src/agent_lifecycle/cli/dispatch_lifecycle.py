@@ -20,6 +20,7 @@ from agent_lifecycle.contracts.phase_packet_schemas import (
 )
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.quality import build_validation_selection
+from agent_lifecycle.reporting.change_summary import build_digest_display_view
 from agent_lifecycle.workflow import (
     accept_task,
     adopt_plan,
@@ -48,6 +49,7 @@ from agent_lifecycle.workflow import (
 )
 from agent_lifecycle.workflow.artifacts import build_current_task_change_set
 from agent_lifecycle.workflow.closing_window import operator_claim_refusal
+from agent_lifecycle.workflow.initialization import initialize_compiled_workflow, project_workflow_initialization
 
 
 def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
@@ -61,12 +63,19 @@ def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
 
 def _dispatch_workflow_initialization(args: argparse.Namespace) -> dict[str, Any]:
     if args.workflow_command == "init":
+        if getattr(args, "manifest", None) is not None:
+            return _initialize_from_manifest(args)
+        if any(
+            getattr(args, name, None)
+            for name in ("apply", "projected_target_digest", "operation_id", "source_revision", "packet_output_dir")
+        ):
+            raise LifecycleError("initialization-manifest-required", "Composition options require --manifest")
         return initialize_workflow_state(
             Path(args.state),
             run_id=args.run_id,
             package_id=args.package_id,
-            package_root=args.package_root,
-            event_log=args.event_log,
+            package_root=args.package_root if args.package_root is not None else ".",
+            event_log=args.event_log if args.event_log is not None else "events.jsonl",
         )
     if args.workflow_command == "state-migrate":
         return migrate_workflow_state(
@@ -113,7 +122,9 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         return _dispatch_workflow_initialization(args)
     state_path = Path(args.state)
     if args.workflow_command == "status":
-        return status(state_path, full=args.full)
+        payload = status(state_path, full=args.full)
+        prefix = getattr(args, "digest_prefix_length", None)
+        return build_digest_display_view(payload, minimum_length=prefix) if prefix is not None else payload
     if args.workflow_command == "next":
         return next_action(status(state_path, full=True)["state"])
     if args.workflow_command == "validation-select":
@@ -502,7 +513,7 @@ def _task_phase_payload(
     evidence: list[dict[str, Any]],
     active_blockers: list[str],
 ) -> dict[str, Any]:
-    common = {
+    common: dict[str, Any] = {
         "taskId": task_id,
         "attempt": attempt,
         "writes": writes,
@@ -631,6 +642,8 @@ def _require_args(args: argparse.Namespace, names: list[str], *, mode: str) -> N
 def _dispatch_workflow_continue(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
     batch_options = (args.input_bundle, args.max_transitions, args.max_io_bytes, args.resume_receipt)
     if not args.until_blocked:
+        if args.local_only:
+            raise LifecycleError("continuation-batch-option-conflict", "--local-only requires --until-blocked")
         if any(value is not None for value in batch_options):
             raise LifecycleError(
                 "continuation-batch-option-conflict",
@@ -701,6 +714,32 @@ def _dispatch_workflow_continue(args: argparse.Namespace, state_path: Path) -> d
         source_revision=args.source_revision,
         reason=args.reason,
         resume_receipt_path=args.resume_receipt,
+        local_only=args.local_only,
+    )
+
+
+def _initialize_from_manifest(args: argparse.Namespace) -> dict[str, Any]:
+    common = {
+        "manifest_path": Path(args.manifest),
+        "run_id": args.run_id,
+        "package_id": args.package_id,
+        "repository_root": Path.cwd(),
+        "package_root": args.package_root,
+        "event_log": args.event_log,
+        "output_dir": Path(args.packet_output_dir) if args.packet_output_dir is not None else None,
+        "source_revision": args.source_revision,
+    }
+    if not args.apply:
+        if args.projected_target_digest is not None:
+            raise LifecycleError("initialization-option-conflict", "--projected-target-digest requires --apply")
+        return project_workflow_initialization(Path(args.state), **common)
+    if not args.projected_target_digest or not args.operation_id:
+        raise LifecycleError("initialization-projection-required", "Apply requires target digest and operation ID")
+    return initialize_compiled_workflow(
+        Path(args.state),
+        **common,
+        projected_target_digest=args.projected_target_digest,
+        operation_id=args.operation_id,
     )
 
 

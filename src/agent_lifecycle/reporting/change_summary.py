@@ -2,17 +2,51 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.changesets.git import resolve_revision
 from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.display_identity import MAX_DISPLAY_IDENTITIES, digest_display_prefixes
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.process_redaction import redact_process_text
 from agent_lifecycle.contracts.redaction import redact_value
 
 CHANGE_SUMMARY_SCHEMA = "agent-change-summary-receipt.v1"
+
+
+def build_digest_display_view(payload: dict[str, Any], *, minimum_length: int = 12) -> dict[str, Any]:
+    """Render a separate read-only view while retaining the complete payload."""
+    digests: list[str] = []
+    pending: list[tuple[Any, int]] = [(payload, 0)]
+    visited = 0
+    while pending:
+        value, depth = pending.pop()
+        visited += 1
+        if depth > 64 or visited > 100_000 or len(digests) > MAX_DISPLAY_IDENTITIES:
+            raise LifecycleError("display-identity-limit", "Display payload exceeds its traversal limit")
+        if isinstance(value, dict):
+            if len(pending) + len(value) + visited > 100_000:
+                raise LifecycleError("display-identity-limit", "Display payload exceeds its traversal limit")
+            pending.extend((item, depth + 1) for item in value.values())
+        elif isinstance(value, list):
+            if len(pending) + len(value) + visited > 100_000:
+                raise LifecycleError("display-identity-limit", "Display payload exceeds its traversal limit")
+            pending.extend((item, depth + 1) for item in value)
+        elif isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value):
+            digests.append(value)
+    prefixes = digest_display_prefixes(digests, minimum_length=minimum_length)
+    return {
+        "schemaVersion": "agent-digest-display-view.v1",
+        "data": deepcopy(payload),
+        "displayIdentities": [{"fullDigest": full, "displayPrefix": short} for full, short in prefixes.items()],
+        "readOnly": True,
+        "stateWritten": False,
+        "authorityClaimed": False,
+        "prefixesUsableAsAuthority": False,
+    }
 
 
 def build_change_summary_receipt(

@@ -130,3 +130,33 @@ Use the existing command-specific routes for unsupported actions.
 Existing `workflow run`, `workflow task-*`, `workflow final-audit-outcome` and
 `workflow finalize` commands remain supported. They call the same transition
 services and are useful for automation that already knows the exact route.
+
+
+## Local-only chains and structured next actions (2.20)
+
+The optional `--local-only` flag requires `--until-blocked --apply`. It uses the
+same bounded bundle engine, operation IDs, current projection checks and
+authoritative transitions. Only `start-execution` and `launch-tasks` may be
+applied. The latter records task start without launching a host or model.
+The chain stops before worker results, reviewers, final audit, authorization,
+human decisions and external actions, even when the bundle already includes
+an authorization receipt. Byte and transition caps and retry-prefix checks
+remain in force. Without this flag, the existing explicit bundle behavior remains.
+
+A ready one-step projection returns typed `nextAction.argv` tokens for the
+existing guarded `workflow continue --apply` route, with full state revision
+and action-digest guards. They are argument tokens with `shell: false`, never
+a shell command string or a provider/model selection. Missing inputs and
+ambiguous task selection return `INPUT_REQUIRED` and `argv: null`. Apply still
+recomputes the action; a changed source/state or different supplied input
+cannot use a stale projection.
+
+On the measured two-transition fixture, one local-chain facade call produces
+the same state and event bytes as two explicit calls with identical IDs and
+clocks. The small fixture's facade wall time is higher; fewer invocations do
+not imply an overall speedup. Event replay continues to validate every line
+and stores operation IDs in O(n) memory. It does not trust a tail cache or
+claim constant cumulative runtime.
+
+See [CLI reference](cli.md#release-220-composed-initialization-and-digest-display)
+for read-only composed initialization and full-identity-preserving display.
