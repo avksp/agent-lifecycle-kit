@@ -64,15 +64,60 @@ class ExternalJobCliTests(unittest.TestCase):
             cancel_code, cancel_payload = _run_cli(
                 ["adapter", "external-job", "cancel", "--request", str(request_path), "--job-root", str(job_root)]
             )
+            recover_code, recovered = _run_cli(
+                ["adapter", "external-job", "recover", "--request", str(request_path),
+                 "--job-root", str(job_root)]
+            )
 
         self.assertEqual(code, 0, run_payload)
         self.assertEqual(status_code, 0, status_payload)
         self.assertEqual(cancel_code, 0, cancel_payload)
+        self.assertEqual(recover_code, 0, recovered)
+        self.assertEqual(recovered["result"], run_payload["result"])
         self.assertEqual(run_payload["result"]["state"], "SUCCEEDED")
         self.assertEqual(status_payload["viewDigest"], run_payload["viewDigest"])
         self.assertEqual(cancel_payload["status"], "NOT_REQUIRED")
         self.assertNotIn(str(job_root), str(run_payload))
         self.assertNotIn("bounded", str(run_payload))
+
+    def test_recovery_error_never_exports_private_open_schema_extras(self):
+        import os
+
+        from agent_lifecycle.adapter_sessions.external_jobs import (
+            external_job_attempt_path,
+            run_external_job,
+        )
+        from agent_lifecycle.contracts import canonical_digest
+        from tests.adapter_sessions.test_external_jobs import _request
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            request = _request("cli-recovery-extra")
+            view = run_external_job(
+                request, [sys.executable, "-c", "print('private response')"],
+                env=dict(os.environ), job_root=root / "jobs",
+            )
+            result = dict(view["result"], diagnostic={
+                "api_key": "never-export-this-key", "prompt": "private prompt",
+                "path": str(root), "large": "x" * 200000,
+            })
+            result["resultDigest"] = canonical_digest({
+                k: v for k, v in result.items() if k != "resultDigest"
+            })
+            attempt = external_job_attempt_path(request, job_root=root / "jobs")
+            (attempt / "result.json").write_text(json.dumps(result), encoding="utf-8")
+            request_path = root / "request.json"
+            request_path.write_text(json.dumps(request), encoding="utf-8")
+            code, payload = _run_cli([
+                "adapter", "external-job", "recover", "--request", str(request_path),
+                "--job-root", str(root / "jobs"),
+            ])
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "REVIEW_RECOVERY_INVALID")
+            exported = json.dumps(payload)
+            self.assertLess(len(exported), 1000)
+            for secret in (str(root), "never-export-this-key", "private prompt"):
+                self.assertNotIn(secret, exported)
 
     def test_run_requires_explicit_argv(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

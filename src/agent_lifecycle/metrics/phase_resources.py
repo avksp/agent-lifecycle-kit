@@ -8,8 +8,10 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.metrics.usage_export import usage_export_totals, validate_usage_export
 from agent_lifecycle.metrics.workflow_economics import (
+    build_token_attribution,
     build_workflow_metric_set,
     build_workflow_resource_summary,
+    token_attribution_basis,
     validate_workflow_resource_summary,
 )
 
@@ -156,13 +158,16 @@ def _phase_entry(index: int, phase: dict[str, Any]) -> dict[str, Any]:
         raise LifecycleError("invalid-phase-resource-measurement", "phase resources must not use monetary fields")
     raw_tokens = phase.get("tokens")
     tokens = _tokens(raw_tokens if raw_tokens is not None else {})
+    token_observation = build_token_attribution(raw_tokens)
     resources = _resources(phase.get("resources", {}))
     duration_ms = _non_negative_int(phase.get("durationMs"), label="durationMs")
     inferred = {"elapsedWallMs": duration_ms}
     if isinstance(raw_tokens, dict) and "input" in raw_tokens:
-        inferred["modelInputTokens"] = tokens["input"]
+        inferred["modelInputTokens"] = token_observation["input"]
     if isinstance(raw_tokens, dict) and "output" in raw_tokens:
-        inferred["modelOutputTokens"] = tokens["output"]
+        inferred["modelOutputTokens"] = token_observation["output"]
+    if isinstance(raw_tokens, dict) and "cachedInput" in raw_tokens:
+        inferred["modelCachedInputTokens"] = token_observation["cachedInput"]
     if "toolCalls" in resources:
         inferred["toolCalls"] = resources["toolCalls"]
     return {
@@ -172,6 +177,8 @@ def _phase_entry(index: int, phase: dict[str, Any]) -> dict[str, Any]:
         "taskId": _optional_string(phase.get("taskId")),
         "operationId": _optional_string(phase.get("operationId")),
         "tokens": tokens,
+        "tokenObservation": token_observation,
+        "tokenObservationBasis": token_attribution_basis(raw_tokens),
         "steps": _non_negative_int(phase.get("steps"), label="steps"),
         "resources": resources,
         "durationMs": duration_ms,
@@ -194,6 +201,28 @@ def _validate_phase_entry(index: int, phase: Any, blockers: list[dict[str, Any]]
         if not isinstance(phase.get(key), str) or not phase[key]:
             blockers.append({"code": "phase-resource-field-missing", "index": index, "field": key})
     tokens = phase.get("tokens")
+    observation = phase.get("tokenObservation")
+    if observation is not None:
+        try:
+            if not isinstance(observation, dict):
+                raise LifecycleError("token-attribution-invalid", "Invalid token observation")
+            expected = build_token_attribution({key: value for key, value in observation.items() if value is not None})
+            if expected != observation:
+                raise LifecycleError("token-attribution-invalid", "Token observation differs")
+            basis = phase.get("tokenObservationBasis")
+            if not isinstance(basis, dict) or set(basis) != set(observation) or any(
+                basis[key] not in ("MEASURED", "DERIVED", "UNAVAILABLE")
+                or (value is None) != (basis[key] == "UNAVAILABLE")
+                for key, value in observation.items()
+            ):
+                raise LifecycleError("token-attribution-invalid", "Observation basis is invalid")
+            if isinstance(tokens, dict) and any(
+                observation[key] is not None and observation[key] != tokens.get(key)
+                for key in TOKEN_KEYS
+            ):
+                raise LifecycleError("token-attribution-invalid", "Legacy and observed counters conflict")
+        except LifecycleError:
+            blockers.append({"code": "phase-resource-token-observation-invalid", "index": index})
     if not isinstance(tokens, dict):
         blockers.append({"code": "phase-resource-tokens-invalid", "index": index})
     else:
@@ -227,8 +256,9 @@ def _validate_phase_entry(index: int, phase: Any, blockers: list[dict[str, Any]]
 def _tokens(value: Any) -> dict[str, int]:
     if not isinstance(value, dict):
         raise LifecycleError("invalid-phase-resource-measurement", "tokens must be an object")
-    result = {key: _non_negative_int(value.get(key, 0), label=f"tokens.{key}") for key in TOKEN_KEYS}
-    if result["total"] == 0:
+    observed = build_token_attribution(value)
+    result = {key: _non_negative_int(observed[key] or 0, label=f"tokens.{key}") for key in TOKEN_KEYS}
+    if observed["total"] is None:
         result["total"] = result["input"] + result["output"]
     return result
 

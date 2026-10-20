@@ -8,6 +8,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object, write_json_create
 from agent_lifecycle.metrics import require_lifecycle_recommendation_pass
+from agent_lifecycle.metrics.goal_progress import build_goal_progress
 from agent_lifecycle.metrics.recommendations import recommend_from_workflow_comparison
 from agent_lifecycle.metrics.regression_signals import (
     compare_workflow_economics,
@@ -18,6 +19,19 @@ from agent_lifecycle.reporting.execution_resources import (
     build_execution_resource_report,
     validate_execution_resource_report,
 )
+
+
+def _dispatch_goal_progress(args: argparse.Namespace) -> dict[str, Any]:
+    value = read_json_object(Path(args.input), label="progress input")
+    context, observations = value.get("context"), value.get("observations")
+    if not isinstance(context, dict) or not isinstance(observations, list):
+        raise LifecycleError("goal-progress-input-invalid", "Progress context and observations are required")
+    progress = build_goal_progress(
+        context, observations,
+        qualified_receipts=value.get("qualifiedReceipts", {}), now=args.now,
+    )
+    write_json_create(Path(args.out), progress)
+    return progress
 
 
 def _dispatch_execution_report(args: argparse.Namespace) -> dict[str, Any]:

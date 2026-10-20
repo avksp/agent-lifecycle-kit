@@ -81,7 +81,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.20.0
+python -m pip install agent-lifecycle-kit==2.21.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -843,3 +843,16 @@ agent-lifecycle workflow init --manifest tasks/example/plan.manifest.json \
 пакета входов, байтов, переходов и выходного файла. См. [продолжение процесса](workflow-continuation.md).
 Публичные команды и используемые псевдонимы сохранены; удалены только
 неиспользуемые закрытые построители парсеров.
+
+## Release 2.21: учёт команд и восстановление
+
+Подробности: [учёт по исходным данным](source-native-workflow-accounting.md), поддерживаемые величины, происхождение и границы проверенного маршрута. Учёт 2.14–2.20 остаётся читаемым; отсутствующие измерения сохраняют UNAVAILABLE.
+
+```bash
+agent-lifecycle --measure-request command-request.json --measure-out command-receipt.json version
+agent-lifecycle adapter provider-preflight --profile .alk/host-launch/reviewer.json
+agent-lifecycle adapter external-job recover --request request.json --job-root .alk/external-jobs
+agent-lifecycle metrics goal-progress --input progress-input.json --now <unix-seconds> --out progress.json
+```
+
+Параметры измерения идут перед обычной командой и требуют ограниченного запроса с привязкой исходников. Вход прогресса содержит context, observations и привязки квалифицированных квитанций. Чтение закрытого тела ответа доступно локальному API, а не CLI. Проверка провайдера не запускает модель и не предполагает готовность авторизации, конфигурации или модели. Восстановление не создаёт генерацию и не даёт приёмку. Отсутствие доверенных ограничений, цепочки, истории или готовности фактического места работы запрещает выбранный эффект; прямые вызовы хоста вне ALK этим не контролируются.

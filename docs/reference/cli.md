@@ -76,7 +76,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.20.0
+python -m pip install agent-lifecycle-kit==2.21.0
 ```
 
 ## Task evidence identity
@@ -781,3 +781,16 @@ For deterministic local continuation, add `--local-only` to the existing
 bundle, byte, transition and output limits. See [workflow continuation](workflow-continuation.md).
 Public commands and live aliases remain supported; only unused private parser
 builders were removed.
+
+## Release 2.21: command accounting and recovery
+
+The detailed [source-native accounting reference](source-native-workflow-accounting.md) explains supported quantities, provenance, qualified route limits and migration. Existing 2.14–2.20 accounting remains readable; missing measurements stay UNAVAILABLE.
+
+```bash
+agent-lifecycle --measure-request command-request.json --measure-out command-receipt.json version
+agent-lifecycle adapter provider-preflight --profile .alk/host-launch/reviewer.json
+agent-lifecycle adapter external-job recover --request request.json --job-root .alk/external-jobs
+agent-lifecycle metrics goal-progress --input progress-input.json --now <unix-seconds> --out progress.json
+```
+
+Measurement options precede the ordinary command and require bounded source-bound request input. The progress input contains context, observations and qualified receipt bindings. The host-local response reader is an API, not a raw-output CLI. Provider inspection starts no model and does not infer auth/config/model readiness. Recovery starts no new generation and grants no acceptance. Missing trusted restrictions, chain/history or actual-target readiness refuses selected effects; unrelated direct host calls are outside this guarantee.

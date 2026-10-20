@@ -9,6 +9,8 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
 from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES
 from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file
+from agent_lifecycle.contracts.release_accounting_schemas import COMMAND_RESOURCE_SCHEMA
+from agent_lifecycle.metrics.command_resources import command_accounting_entries
 from agent_lifecycle.metrics.costs import COST_CATEGORIES
 from agent_lifecycle.metrics.phase_resources import (
     PHASE_RESOURCE_MEASUREMENT_SCHEMA,
@@ -29,7 +31,7 @@ MAX_RELEASE_ACCOUNTING_ENTRIES = 1024
 
 ACCOUNTING_VIEWS = ("alkProcess", "implementation", "audit", "postAuditRemediation")
 METRIC_KEYS = ("tokens", "steps", "elapsedWallMs", "computeMs")
-METRIC_STATUSES = ("MEASURED", "ESTIMATED", "TIME_WINDOW_ONLY", "UNAVAILABLE")
+METRIC_STATUSES = ("MEASURED", "DERIVED", "ESTIMATED", "TIME_WINDOW_ONLY", "UNAVAILABLE")
 PROVENANCE_FIELDS = (
     "controllerVersion",
     "coreVersion",
@@ -156,12 +158,18 @@ def build_release_accounting(
     source_workflow_summaries: list[dict[str, Any]] = []
     entries: list[dict[str, Any]] = []
     observed_provenance: dict[str, set[str]] = {field: set() for field in PROVENANCE_FIELDS}
+    command_receipts: list[dict[str, Any]] = []
     for artifact_index, raw_path in enumerate(artifact_paths):
         payload, descriptor = _load_artifact(raw_path, root)
         _require_unique_source_artifact(source_artifacts, descriptor)
         source_artifacts.append(descriptor)
         schema = payload.get("schemaVersion")
-        if schema == PHASE_RESOURCE_MEASUREMENT_SCHEMA:
+        if schema == COMMAND_RESOURCE_SCHEMA:
+            command_receipts.append(payload)
+            # The checked byte inventory is observed; the base commit label
+            # stays declared and must not become an attested Git observation.
+            _collect_provenance({"measurementDigest": payload.get("receiptDigest")}, observed_provenance)
+        elif schema == PHASE_RESOURCE_MEASUREMENT_SCHEMA:
             require_phase_resource_measurement_pass(validate_phase_resource_measurement(payload))
             entries.extend(_entries_from_phase_measurement(payload, artifact_index, descriptor["payloadDigest"]))
             if isinstance(payload.get("workflowEconomics"), dict):
@@ -199,6 +207,12 @@ def build_release_accounting(
                 {"entryCount": len(entries), "maxEntries": MAX_RELEASE_ACCOUNTING_ENTRIES},
             )
 
+    if command_receipts:
+        native_entries = command_accounting_entries(command_receipts)
+        for entry in native_entries:
+            entries.append({**_normalize_entry(entry), "sourceArtifactDigest": entry["sourceArtifactDigest"]})
+        if len(entries) > MAX_RELEASE_ACCOUNTING_ENTRIES:
+            raise LifecycleError("release-accounting-entry-limit", "Too many accounting entries")
     _require_unique_entry_ids(entries)
     inherited_elapsed_wall = None
     if len(source_artifacts) == 1 and len(source_workflow_summaries) == 1:
@@ -361,16 +375,24 @@ def _entries_from_phase_measurement(
                 "costCategory": category,
                 "scope": {"kind": "release-phase", "id": _token(phase["phaseId"], label="phaseId"), "additive": True},
                 "metrics": {
-                    "tokens": _metric("MEASURED", phase["tokens"]["total"], additive=True),
+                    "tokens": _phase_token_metric(phase),
                     "steps": _metric("MEASURED", phase["steps"], additive=True),
                     "elapsedWallMs": _metric("MEASURED", phase["durationMs"], additive=True),
-                    "computeMs": _metric("UNAVAILABLE", None, additive=False),
+                    "computeMs": _metric("UNAVAILABLE", None, additive=True),
                 },
                 "workflowMetrics": phase.get("workflowMetrics", build_workflow_metric_set()),
                 "sourceArtifactDigest": source_digest,
             }
         )
     return result
+
+
+def _phase_token_metric(phase: dict[str, Any]) -> dict[str, Any]:
+    observation = phase.get("tokenObservation")
+    if isinstance(observation, dict) and observation.get("total") is not None:
+        return _metric(phase["tokenObservationBasis"]["total"], observation["total"], additive=True)
+    # Legacy integer defaults are readable, but are not source-qualified usage.
+    return _metric("UNAVAILABLE", None, additive=True)
 
 
 def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:

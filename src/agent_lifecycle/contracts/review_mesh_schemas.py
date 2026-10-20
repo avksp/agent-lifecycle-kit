@@ -28,6 +28,7 @@ def raw_reviewer_schema() -> dict[str, Any]:
             "status": {"enum": list(RAW_REVIEW_STATUSES)},
             "findings": {"type": "array", "items": {"type": "object"}},
             "budgetUsage": {"type": "object"},
+            "sessionUsage": {"type": "object", "description": "Untrusted observation; qualified route context is separate"},
             "commandOutcomes": {"type": "array", "items": {"type": "object"}},
         },
     )

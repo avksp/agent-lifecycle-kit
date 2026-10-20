@@ -1,30 +1,44 @@
 """Finite P01 storage witnesses. Fixtures are not provider attestations."""
 
-import json
 import copy
 import hashlib
+import json
 import multiprocessing
 import os
-import time
-import subprocess
 import signal
-import sys
-from unittest import mock
-from dataclasses import asdict, replace
-from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
+from contextlib import closing
+from dataclasses import replace
+from pathlib import Path
+from unittest import mock
 
 from agent_lifecycle.accounting.contracts import (
-    MAX_INTEGER, AuthoritativeReceipt, BudgetPolicy, BudgetScope, EvidenceRef,
-    OpeningBalance, Operation, canonical, digest, uint,
+    MAX_INTEGER,
+    AuthoritativeReceipt,
+    BudgetPolicy,
+    BudgetScope,
+    EvidenceRef,
+    OpeningBalance,
+    Operation,
+    canonical,
+    digest,
+    uint,
 )
 from agent_lifecycle.accounting.journal import (
-    Journal, JournalUnavailable, RevisionConflict, _Lease, _state_delta, _apply_delta, _apply, _apply_delta_encoded,
+    Journal,
+    JournalUnavailable,
+    RevisionConflict,
+    _apply,
+    _apply_delta,
+    _apply_delta_encoded,
+    _Lease,
+    _state_delta,
 )
-from contextlib import closing
-
 
 PROOF = EvidenceRef("fixture:trusted-controller", "a" * 64)
 
@@ -845,6 +859,73 @@ class JournalTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             replace(operation(), task_id=None)
 
+
+
+class BoundedPrefixTests(unittest.TestCase):
+    def test_complete_exact_caps_and_read_only_revision(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with Journal(Path(directory) / "usage.db", PROOF) as journal:
+                open_scope(journal)
+                first = journal.bounded_prefix(
+                    "run", expected_revision=1, boundary=(1, 0),
+                    max_rows=1, max_bytes=1 << 20,
+                )
+                exact = journal.bounded_prefix(
+                    "run", expected_revision=1, boundary=(1, 0),
+                    max_rows=1, max_bytes=first["utf8Bytes"],
+                )
+                self.assertEqual(first, exact)
+                self.assertEqual(exact["rowCount"], 1)
+                self.assertEqual(journal.snapshot("run").journal_revision, 1)
+                self.assertEqual(exact["prefixDigest"], digest({
+                    k: v for k, v in exact.items() if k != "prefixDigest"
+                }))
+
+    def test_payload_is_not_loaded_after_utf8_or_row_overflow(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with Journal(Path(directory) / "usage.db", PROOF) as journal:
+                open_scope(journal)
+                journal.reserve(replace(operation(), attribution_reason="é" * 5000))
+                for rows, byte_limit in ((1, 1 << 20), (2, 6000)):
+                    trace = []
+                    journal._db.set_trace_callback(trace.append)
+                    try:
+                        with self.assertRaises(JournalUnavailable):
+                            journal.bounded_prefix(
+                                "run", expected_revision=2, boundary=(2, 0),
+                                max_rows=rows, max_bytes=byte_limit,
+                            )
+                    finally:
+                        journal._db.set_trace_callback(None)
+                    self.assertFalse(any("SELECT * FROM events" in sql for sql in trace))
+
+    def test_missing_scope_invalid_caps_and_drifting_boundaries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with Journal(Path(directory) / "usage.db", PROOF) as journal:
+                open_scope(journal)
+                for rows, byte_limit in ((0, 1), (True, 1), (4097, 1), (1, 0),
+                                         (1, 16777217)):
+                    with self.assertRaises(ValueError):
+                        journal.bounded_prefix(
+                            "run", expected_revision=1, boundary=(1, 0),
+                            max_rows=rows, max_bytes=byte_limit,
+                        )
+                with self.assertRaises(JournalUnavailable):
+                    journal.bounded_prefix(
+                        "absent", expected_revision=0, boundary=(0, 0),
+                        max_rows=1, max_bytes=1000,
+                    )
+                with self.assertRaises(JournalUnavailable):
+                    journal.bounded_prefix(
+                        "run", expected_revision=1, boundary=(1, 1),
+                        max_rows=1, max_bytes=10000,
+                    )
+                journal.reserve(operation())
+                with self.assertRaises(RevisionConflict):
+                    journal.bounded_prefix(
+                        "run", expected_revision=1, boundary=(1, 0),
+                        max_rows=2, max_bytes=10000,
+                    )
 
 
 class StateDeltaTests(unittest.TestCase):

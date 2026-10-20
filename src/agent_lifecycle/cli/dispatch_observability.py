@@ -9,6 +9,7 @@ from typing import Any
 
 from agent_lifecycle.cli.dispatch_metrics import (
     _dispatch_execution_report,
+    _dispatch_goal_progress,
     _dispatch_workflow_compare,
     _dispatch_workflow_recommend,
 )
@@ -478,6 +479,8 @@ def _dispatch_model(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_metrics(args: argparse.Namespace) -> dict[str, Any] | str:
+    if args.metrics_command == "goal-progress":
+        return _dispatch_goal_progress(args)
     if args.metrics_command == "cost-check":
         report = read_json_object(Path(args.receipt), label="lifecycle cost report")
         return require_lifecycle_cost_pass(validate_lifecycle_cost_report(report))

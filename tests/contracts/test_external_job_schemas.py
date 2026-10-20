@@ -20,6 +20,146 @@ from agent_lifecycle.contracts.external_job_schemas import (
     validate_external_job_status,
 )
 from agent_lifecycle.contracts.schemas import get_schema
+from agent_lifecycle.contracts.external_job_schemas import validate_cumulative_session_usage
+
+
+def session_fixture() -> tuple[dict, dict, dict]:
+    binding = {"sessionDigest": "a" * 64, "sourceRevision": "b" * 40,
+               "subjectDigest": "c" * 64, "assignmentDigest": "d" * 64}
+    body = {"schemaVersion": "agent-provider-session-usage.v1", **binding,
+            "sequence": 1, "sourceArtifactDigest": "e" * 64,
+            "usage": {"inputTokens": 150, "cachedInputTokens": 50,
+                      "nonCachedInputTokens": 100, "outputTokens": 25,
+                      "totalTokens": 175, "invocations": 2, "wallSeconds": 10}}
+    receipt = {**body, "receiptDigest": canonical_digest(body)}
+    proof = {**binding, "status": "PASS", "provenanceValidated": True,
+             "sourceArtifactDigest": receipt["sourceArtifactDigest"], "receiptDigest": receipt["receiptDigest"]}
+    return receipt, binding, proof
+
+
+class CumulativeSessionUsageTests(unittest.TestCase):
+    def test_result_observation_requires_settled_matching_semantics_but_retains_negative_verdict(self) -> None:
+        from copy import deepcopy
+
+        request = ExternalJobContractTests._request()
+        observation = {"subjectDigest": "c" * 64, "assignmentDigest": "d" * 64,
+                       "requestDigest": request["requestDigest"], "attempt": request["attempt"],
+                       "deliveryAttempt": 1, "semanticRound": 1, "remoteState": "TERMINAL",
+                       "localState": "COMPLETE", "semanticStatus": "PASS",
+                       "responseDigest": "7" * 64, "sessionUsage": None}
+        status = ExternalJobContractTests._status(request)
+        status["observation"] = observation
+        status["statusDigest"] = canonical_digest({k: v for k, v in status.items() if k != "statusDigest"})
+        result = build_external_job_result(result_id="observed", request=request, status=status,
+                                           verdict="PASS", complete=True, artifacts=[], output_digest="7" * 64,
+                                           output_bytes=42)
+        for semantic, remote, local in (("FAIL", "TERMINAL", "COMPLETE"),
+                                       ("UNAVAILABLE", "TERMINAL", "COMPLETE"),
+                                       ("INCOMPLETE", "TERMINAL", "COMPLETE"),
+                                       ("PASS", "RUNNING", "PENDING"), ("PASS", "UNKNOWN", "PENDING")):
+            candidate_status = deepcopy(status)
+            candidate_status["observation"].update(semanticStatus=semantic, remoteState=remote, localState=local)
+            candidate_status["statusDigest"] = canonical_digest({
+                k: v for k, v in candidate_status.items() if k != "statusDigest"
+            })
+            candidate = deepcopy(result)
+            candidate["observation"] = deepcopy(candidate_status["observation"])
+            candidate["statusDigest"] = candidate_status["statusDigest"]
+            candidate["resultDigest"] = canonical_digest({k: v for k, v in candidate.items() if k != "resultDigest"})
+            self.assertEqual(validate_external_job_result(candidate, request=request, status=candidate_status)["status"], "FAIL")
+            with self.assertRaises(LifecycleError):
+                build_external_job_result(result_id="contradictory", request=request, status=candidate_status,
+                                          verdict="PASS", complete=True, artifacts=[],
+                                          output_digest="7" * 64, output_bytes=42)
+        negative = deepcopy(status)
+        negative["observation"]["semanticStatus"] = "FAIL"
+        negative["statusDigest"] = canonical_digest({k: v for k, v in negative.items() if k != "statusDigest"})
+        result = build_external_job_result(result_id="negative", request=request, status=negative,
+                                           verdict="FAIL", complete=True, artifacts=[], output_digest="7" * 64,
+                                           output_bytes=42)
+        self.assertTrue(result["blockingEligible"])
+        self.assertEqual(result["verdict"], "FAIL")
+
+    def test_unsettled_status_and_unavailable_incomplete_result_never_qualify(self) -> None:
+        request = ExternalJobContractTests._request()
+        status = ExternalJobContractTests._status(request)
+        status["observation"] = {"subjectDigest": "c" * 64, "assignmentDigest": "d" * 64,
+                                 "requestDigest": request["requestDigest"], "attempt": request["attempt"],
+                                 "deliveryAttempt": 1, "semanticRound": 1, "remoteState": "UNKNOWN",
+                                 "localState": "LOST", "semanticStatus": "UNAVAILABLE",
+                                 "responseDigest": None, "sessionUsage": None}
+        status["statusDigest"] = canonical_digest({k: v for k, v in status.items() if k != "statusDigest"})
+        validation = validate_external_job_status(status, request=request)
+        self.assertEqual(validation["status"], "PASS")
+        self.assertFalse(validation["blockingEligible"])
+        status["state"] = "FAILED"
+        status["statusDigest"] = canonical_digest({k: v for k, v in status.items() if k != "statusDigest"})
+        result = build_external_job_result(result_id="unavailable", request=request, status=status,
+                                           verdict="NO_FINAL_VERDICT", complete=False, artifacts=[],
+                                           output_digest=None, output_bytes=0)
+        self.assertFalse(result["blockingEligible"])
+
+    def test_qualified_cumulative_values_enforce_whole_session_cap(self) -> None:
+        receipt, binding, proof = session_fixture()
+        self.assertEqual(validate_cumulative_session_usage(receipt, binding=binding, qualification=proof,
+                                                         limits={"totalTokens": 175})["status"], "PASS")
+        self.assertEqual(validate_cumulative_session_usage(receipt, binding=binding, qualification=proof,
+                                                         limits={"totalTokens": 174})["status"], "FAIL")
+        self.assertEqual(get_schema("agent-provider-session-usage.v1")["$id"], "agent-provider-session-usage.v1")
+
+    def test_digest_or_legacy_zero_cannot_attest_missing_usage(self) -> None:
+        receipt, binding, _ = session_fixture()
+        for candidate in (receipt, {"usage": {"reportedTokens": 0}}):
+            self.assertEqual(validate_cumulative_session_usage(candidate, binding=binding)["status"], "FAIL")
+
+    def test_reset_decrease_wrong_session_and_unavailable_fields_refuse(self) -> None:
+        from copy import deepcopy
+
+        for change in ("reset", "decrease", "wrong-session", "cache", "missing", "bool"):
+            receipt, binding, proof = session_fixture()
+            previous = deepcopy(receipt)
+            receipt["sequence"] = 2
+            if change == "reset":
+                receipt["sequence"] = 0
+            elif change == "decrease":
+                receipt["usage"]["invocations"] = 1
+            elif change == "wrong-session":
+                receipt["sessionDigest"] = "f" * 64
+            elif change == "cache":
+                receipt["usage"]["cachedInputTokens"] = 151
+            elif change == "missing":
+                receipt["usage"]["outputTokens"] = None
+            else:
+                receipt["usage"]["invocations"] = True
+            receipt["receiptDigest"] = canonical_digest({k: v for k, v in receipt.items() if k != "receiptDigest"})
+            proof["receiptDigest"] = receipt["receiptDigest"]
+            check = validate_cumulative_session_usage(receipt, binding=binding, qualification=proof, previous=previous)
+            self.assertEqual(check["status"], "FAIL", change)
+
+    def test_delivery_recovery_is_separate_from_semantic_round_and_result_binding(self) -> None:
+        request = ExternalJobContractTests._request()
+        request["sourceRevision"] = "b" * 40
+        request["requestDigest"] = canonical_digest({k: v for k, v in request.items() if k != "requestDigest"})
+        session, _, _ = session_fixture()
+        observation = {"subjectDigest": "c" * 64, "assignmentDigest": "d" * 64,
+                       "requestDigest": request["requestDigest"], "attempt": request["attempt"],
+                       "deliveryAttempt": 2, "semanticRound": 1, "remoteState": "TERMINAL",
+                       "localState": "RECOVERED", "semanticStatus": "PASS",
+                       "responseDigest": "7" * 64, "sessionUsage": session}
+        original = ExternalJobContractTests._status(request)
+        status = build_external_job_status(
+            request=request, state="SUCCEEDED", sequence=3, observed_at=original["observedAt"],
+            started_at=original["startedAt"], ended_at=original["endedAt"],
+            usage=original["usage"], process_cleanup_status="PASS", observation=observation,
+        )
+        result = build_external_job_result(result_id="recovered", request=request, status=status,
+                                           verdict="PASS", complete=True, artifacts=[],
+                                           output_digest="7" * 64, output_bytes=42)
+        self.assertEqual(result["observation"]["semanticRound"], 1)
+        self.assertEqual(result["observation"]["deliveryAttempt"], 2)
+        result["observation"]["assignmentDigest"] = "f" * 64
+        result["resultDigest"] = canonical_digest({k: v for k, v in result.items() if k != "resultDigest"})
+        self.assertEqual(validate_external_job_result(result, request=request, status=status)["status"], "FAIL")
 
 
 class ExternalJobContractTests(unittest.TestCase):

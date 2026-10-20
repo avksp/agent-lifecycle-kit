@@ -52,6 +52,7 @@ def _dispatch_diagnostics(args: argparse.Namespace) -> dict[str, Any]:
 def _dispatch_external_job(args: argparse.Namespace) -> dict[str, Any]:
     from agent_lifecycle.adapter_sessions.external_jobs import (
         load_external_job_attempt,
+        recover_external_job_attempt,
         request_external_job_cancel,
         run_external_job,
     )
@@ -74,9 +75,12 @@ def _dispatch_external_job(args: argparse.Namespace) -> dict[str, Any]:
             cost_micros=args.cost_micros,
             reported_tokens=args.reported_tokens,
             child_requests=child_requests,
+            recover_existing=getattr(args, "recover_existing", False),
         )
     elif args.external_job_command == "status":
         payload = load_external_job_attempt(request, job_root=job_root)
+    elif args.external_job_command == "recover":
+        payload = recover_external_job_attempt(request, job_root=job_root)
     elif args.external_job_command == "cancel":
         payload = request_external_job_cancel(request, job_root=job_root)
     else:

@@ -4,6 +4,26 @@
 
 - No changes yet.
 
+## 2.21.0 - 2026-10-21
+
+- Add opt-in source-bound ALK command wall/self-CPU receipts with nested exclusive
+  accounting; keep absent model/cache/role telemetry distinct from measured zero.
+- Enforce declared reviewer limits against cumulative provider-session counters;
+  keep delivery attempts, semantic rounds and recovered results separate.
+- Add bounded zero-model provider/reviewer readiness and source/input/restriction
+  checks. Selected review calls bind actual request, argv, root and STDIN bytes;
+  missing qualified host restrictions remain unavailable rather than attested.
+- Recover the same complete external-job response from immutable private attempt
+  bytes before generation; verify subject, payload and artifact identity and
+  reject unsafe portable extras. Keep original usage and independent voice.
+- Derive bounded goal progress and apply a shared preparation policy at selected
+  ALK effect boundaries using the existing cumulative Journal. Preserve reserves,
+  unknown holds, concurrency/crash recovery and actual-target checks. Unsupported
+  whole-host quantities and unrelated host calls remain outside this guarantee.
+- Publish honest command/local-workflow comparison fixtures and EN/RU guidance.
+  Missing unchanged-full-review and legacy S0/S1 measurements keep later 2.22/2.23
+  optimization activation blocked; no synthetic savings percentage is claimed.
+
 ## 2.20.0 - 2026-10-20
 
 - Add target-bound, read-only initialization projection and opt-in composition

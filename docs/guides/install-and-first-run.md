@@ -3,7 +3,7 @@
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
-These instructions target ALK v2.20.0. Verify frozen plans before execution
+These instructions target ALK v2.21.0. Verify frozen plans before execution
 with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Upgrading to 2.18
@@ -96,7 +96,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.20.0
+python -m pip install agent-lifecycle-kit==2.21.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -107,7 +107,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.20.0
+python -m pip install agent-lifecycle-kit==2.21.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -318,3 +318,7 @@ artifact-inspect` for bounded read-only display. `plan verify` is the structural
 preflight; `plan freeze-prepare` creates a new candidate without review or
 execution permission. See [safe artifact authoring](../reference/safe-artifact-authoring.md)
 and [bounded review handoff](../reference/review-mesh.md#bounded-review-handoff).
+
+## Source-native accounting in 2.21
+
+See [command accounting and response recovery](../reference/source-native-workflow-accounting.md). Measurements are opt-in; unavailable host/model data stays null. Trusted route qualification is required for selected preparation controls. PyPI publication may await its separate protected approval.

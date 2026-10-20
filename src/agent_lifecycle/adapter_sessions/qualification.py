@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,64 @@ from agent_lifecycle.contracts.validation import load_bounded_literal_profile
 
 _VERSION = re.compile(r"(?<![0-9])([0-9]+\.[0-9]+\.[0-9]+)(?![0-9])")
 _SAFE_RECEIPT_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]*\.json$")
+
+
+def provider_preflight(
+    profile_path: Path, *, project_root: Path,
+    qualified_observations: dict[str, Any] | None = None,
+    now: int | None = None,
+) -> dict[str, Any]:
+    """Zero-model readiness with trusted adapter observations, not raw config.
+
+    The CLI supplies no authority-bearing observation file. Missing native auth,
+    configuration or model qualification remains explicitly unavailable.
+    """
+    from .local_launch_profile import (
+        build_executable_identity,
+        load_local_launch_profile,
+    )
+
+    checks = dict.fromkeys(("executable", "auth", "config", "model"), "UNAVAILABLE")
+    profile_digest = executable_digest = None
+    try:
+        _, profile, validation = load_local_launch_profile(
+            profile_path, project_root=project_root,
+        )
+        profile_digest = validation["profileDigest"]
+        identity = build_executable_identity(
+            profile, profile_digest=profile_digest, strict=False,
+            max_executable_bytes=64 * 1024 * 1024,
+        )
+        checks["executable"] = identity["status"]
+        executable_digest = identity["executableContentSha256"]
+        observation = qualified_observations or {}
+        at = int(time.time()) if now is None else now
+        if (
+            type(at) is int and at >= 0
+            and observation.get("qualified") is True
+            and observation.get("profileDigest") == profile_digest
+            and executable_digest is not None
+            and observation.get("executableDigest") == executable_digest
+            and type(observation.get("observedAt")) is int
+            and type(observation.get("expiresAt")) is int
+            and observation["observedAt"] <= at < observation["expiresAt"]
+            and 0 < observation["expiresAt"] - observation["observedAt"] <= 3600
+        ):
+            for name in ("auth", "config", "model"):
+                if observation.get(name) == "PASS":
+                    checks[name] = "PASS"
+    except (KeyError, OSError, ValueError, TypeError, LifecycleError):
+        pass
+    body = {
+        "schemaVersion": "agent-provider-preflight.v1",
+        "status": "PASS" if all(v == "PASS" for v in checks.values())
+        else "UNAVAILABLE",
+        "checks": checks, "profileDigest": profile_digest,
+        "executableDigest": executable_digest, "modelCalls": 0,
+        "quotaAssured": False, "authorityClaimed": False,
+        "productionPromotionClaimed": False,
+    }
+    return {**body, "preflightDigest": canonical_digest(body)}
 
 
 def qualified_profile_output_path(value: str) -> Path:
