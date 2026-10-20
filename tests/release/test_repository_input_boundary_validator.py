@@ -9,6 +9,7 @@ from unittest.mock import patch
 from tools.release.validate_repository_input_boundaries import (
     _authority_checks,
     _authority_runtime_checks,
+    _change_summary_delegation_errors,
     _delegation_errors,
     _inspect_source,
     validate_sources,
@@ -47,6 +48,29 @@ class RepositoryInputBoundaryValidatorTests(unittest.TestCase):
         )
         self.assertLessEqual(
             {"authority-canonical", "authority-paths", "authority-backend", "authority-source-freshness"}, checked
+        )
+
+    def test_change_summary_returns_shared_guarded_revision_and_cannot_fake_a_call(self):
+        prefix = "from agent_lifecycle.changesets.git import resolve_revision as guarded\n"
+        header = "def _resolve_revision(root, revision, *, label):\n"
+        self.assertEqual(
+            _change_summary_delegation_errors(prefix + header + " return guarded(root, revision, label=label)\n"),
+            [],
+        )
+        for body in (
+            " return revision\n",
+            " guarded(root, revision, label=label)\n return revision\n",
+            " if False:\n  return guarded(root, revision, label=label)\n return revision\n",
+            " def unused():\n  return guarded(root, revision, label=label)\n return revision\n",
+            " return guarded(root, 'HEAD', label=label)\n",
+            " return guarded(root, revision, label='different')\n",
+        ):
+            with self.subTest(body=body):
+                errors = _change_summary_delegation_errors(prefix + header + body)
+                self.assertIn("_resolve_revision:guarded-result-not-returned", errors)
+        wrong_import = prefix.replace("agent_lifecycle.changesets.git", "untrusted")
+        self.assertTrue(
+            _change_summary_delegation_errors(wrong_import + header + " return guarded(root, revision, label=label)\n")
         )
 
     def test_facade_delegation_accepts_import_alias_but_not_dead_or_unused_calls(self):

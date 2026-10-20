@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import os
 import sys
 import tempfile
@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.neutrality.authority import (  # noqa: E402
+    load_authority_bundle,
     sign_deny_authority,
     signing_key_for_seed,
     trust_root_for_seed,
@@ -27,15 +28,36 @@ from agent_lifecycle.neutrality.paths import validate_output_paths  # noqa: E402
 from agent_lifecycle.neutrality.policy import load_policy  # noqa: E402
 from agent_lifecycle.neutrality.receipt import (  # noqa: E402
     REQUIRED_COMPLETENESS_COUNTERS,
+    _report_subject_digest,
     build_claims,
     require_zero_completeness_counters,
     verify_existing_receipt,
-    _report_subject_digest,
 )
 from agent_lifecycle.neutrality.scanner import scan_repository  # noqa: E402
 
 
 class NeutralityTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "POSIX modes do not establish Windows ACLs")
+    def test_signing_key_mode_checked_without_restricting_public_trust_documents(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "workspace"
+            root.mkdir()
+            seed, now = bytes(range(32)), datetime.now(UTC)
+            paths = _write_authority(root, seed, now, authority_root=base / "external")
+            arguments = dict(deny_authority_path=paths["deny"], trust_root_path=paths["trust"],
+                             signing_key_path=paths["signing"], expected_signer_fingerprint=fingerprint(publickey_from_seed(seed)),
+                             workspace_root=root, artifact_root=root / "out", now=now)
+            for mode in (0o600, 0o400):
+                paths["signing"].chmod(mode)
+                self.assertEqual(load_authority_bundle(**arguments).signing_seed, seed)
+            for mode in (0o644, 0o640, 0o604, 0o700):
+                paths["signing"].chmod(mode)
+                with self.subTest(mode=oct(mode)), self.assertRaises(NeutralityError) as caught:
+                    load_authority_bundle(**arguments)
+                self.assertEqual(caught.exception.code, "neutrality-signing-key-mode")
+                self.assertNotIn(seed.hex(), str(caught.exception))
+
     def test_ed25519_round_trip(self) -> None:
         seed = bytes(range(32))
         public_key = publickey_from_seed(seed)
@@ -721,6 +743,8 @@ def _write_authority(
     }
     for key, value in [("trust", trust), ("signing", signing_key), ("deny", deny)]:
         paths[key].write_text(json.dumps(value), encoding="utf-8")
+        if key == "signing":
+            paths[key].chmod(0o600)
     (root / "policy.json").write_text(
         json.dumps(
             {

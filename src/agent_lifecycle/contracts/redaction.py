@@ -46,6 +46,19 @@ _SENSITIVE_SUFFIXES = (
     "_session_token",
     "_token",
 )
+# Query signatures grant access to a signed URL. A public cryptographic
+# signature in a structured receipt does not have the same secret meaning.
+_SENSITIVE_QUERY_KEYS = {
+    "awsaccesskeyid",
+    "googleaccessid",
+    "sig",
+    "signature",
+    "x_amz_credential",
+    "x_amz_security_token",
+    "x_amz_signature",
+    "x_goog_credential",
+    "x_goog_signature",
+}
 _PRIVATE_KEY = re.compile(r"-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----", re.DOTALL)
 _BEARER = re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]+", re.IGNORECASE)
 _BARE_TOKEN = re.compile(
@@ -53,6 +66,11 @@ _BARE_TOKEN = re.compile(
     r"sk-(?:proj-)?[A-Za-z0-9_-]{20,}|"
     r"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|"
     r"gh[pousr]_[A-Za-z0-9_]{20,}|"
+    r"glpat-[A-Za-z0-9_-]{20,}|"
+    r"npm_[A-Za-z0-9]{20,}|"
+    r"(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}|"
+    r"hf_[A-Za-z0-9]{20,}|"
+    r"AIza[A-Za-z0-9_-]{35,}|"
     r"xox[baprs]-[A-Za-z0-9-]{16,}|"
     r"AKIA[0-9A-Z]{16}"
     r")(?![A-Za-z0-9_-])"
@@ -394,7 +412,7 @@ def _redact_url_query(value: str, *, depth: int = 0) -> tuple[str, int]:
     parts = value.split("&")
     for index, part in enumerate(parts):
         key, separator, _raw_value = part.partition("=")
-        if separator and is_sensitive_key(unquote_plus(key).strip("\"'")):
+        if separator and _is_sensitive_query_key(key):
             parts[index] = f"{key}={REDACTED_VALUE}"
             count += 1
         else:
@@ -405,6 +423,21 @@ def _redact_url_query(value: str, *, depth: int = 0) -> tuple[str, int]:
                 parts[index] = redacted
                 count += nested_count
     return prefix + "&".join(parts), count
+
+
+def _is_sensitive_query_key(key: str) -> bool:
+    """Recognize signed query keys through bounded percent-encoding layers."""
+
+    for _ in range(_MAX_QUERY_DECODE_PASSES + 1):
+        normalized = key.strip("\"'").replace("-", "_").lower()
+        if is_sensitive_key(normalized) or normalized in _SENSITIVE_QUERY_KEYS:
+            return True
+        decoded = unquote_plus(key)
+        if decoded == key:
+            return False
+        key = decoded
+    # Deeper encoding has an ambiguous key; do not retain its potential secret.
+    return True
 
 
 def _quoted_redaction(value: str) -> str:

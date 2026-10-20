@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.changesets.git import resolve_revision
+from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.paths import normalize_git_revision, normalize_repo_path
+from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.process_redaction import redact_process_text
+from agent_lifecycle.contracts.redaction import redact_value
 
 CHANGE_SUMMARY_SCHEMA = "agent-change-summary-receipt.v1"
 
@@ -99,34 +102,34 @@ def _diff_args(
 
 
 def _run_git(root: Path, args: list[str]) -> str:
-    completed = subprocess.run(
-        ["git", "-C", str(root), *args],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    try:
+        completed = run_bounded_command(
+            ["git", *args],
+            cwd=root,
+            timeout_seconds=30,
+            max_stdout_bytes=16 * 1024 * 1024,
+        )
+    except (OSError, LifecycleError) as exc:
+        raise LifecycleError("change-summary-git-failed", "Git summary transport failed closed") from exc
+    stdout = completed.stdout.decode("utf-8", errors="replace")
     if completed.returncode != 0:
-        detail = completed.stderr.strip() or completed.stdout.strip() or "git diff failed"
-        raise LifecycleError("change-summary-git-failed", detail, {"args": ["git", *args]})
-    return completed.stdout
+        safe_stderr, stderr_redacted = redact_process_text(completed.stderr.decode("utf-8", errors="replace"))
+        safe_stdout, stdout_redacted = redact_process_text(stdout)
+        detail = (safe_stderr.strip() or safe_stdout.strip() or "git diff failed")[-2000:]
+        raise LifecycleError(
+            "change-summary-git-failed",
+            detail,
+            {
+                "args": redact_value(["git", *args])[0],
+                "stdoutRedacted": stdout_redacted,
+                "stderrRedacted": stderr_redacted,
+            },
+        )
+    return stdout
 
 
 def _resolve_revision(root: Path, revision: str, *, label: str) -> str:
-    value = normalize_git_revision(revision, label=label)
-    completed = subprocess.run(
-        ["git", "-C", str(root), "rev-parse", "--verify", "--end-of-options", f"{value}^{{commit}}"],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    if completed.returncode != 0:
-        raise LifecycleError("invalid-git-revision", f"{label}: revision cannot be resolved")
-    resolved = completed.stdout.strip().splitlines()
-    if len(resolved) != 1 or not resolved[0]:
-        raise LifecycleError("invalid-git-revision", f"{label}: revision cannot be resolved")
-    return resolved[0]
+    return resolve_revision(root, revision, label=label)
 
 
 def _parse_numstat(output: str) -> dict[str, int]:

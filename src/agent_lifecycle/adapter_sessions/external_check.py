@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 import shutil
-import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -15,6 +14,7 @@ from agent_lifecycle.adapter_sessions.env import resolve_launch_env
 from agent_lifecycle.adapter_sessions.process import run_process
 from agent_lifecycle.adapter_sessions.worktree_identity import capture_git_worktree_identity
 from agent_lifecycle.audit.external_checks import audit_external_check_result
+from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.external_check_schemas import (
     MAX_ARG_BYTES,
@@ -258,16 +258,13 @@ def _source_snapshot(root: Path, revision: str | None) -> dict[str, Any]:
 
 def _source_paths(root: Path) -> list[str]:
     try:
-        completed = subprocess.run(
+        completed = run_bounded_command(
             ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
             cwd=root,
-            shell=False,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            timeout=30,
-            check=False,
+            timeout_seconds=30,
+            max_stdout_bytes=MAX_SOURCE_FILE_LIST_BYTES,
         )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except (OSError, LifecycleError) as exc:
         raise LifecycleError("external-check-source-unavailable", "source file set could not be captured") from exc
     if completed.returncode != 0 or len(completed.stdout) > MAX_SOURCE_FILE_LIST_BYTES:
         raise LifecycleError("external-check-source-unavailable", "source file set could not be captured")

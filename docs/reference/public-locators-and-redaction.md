@@ -35,6 +35,21 @@ The URL path itself is not mistaken for a local path. A redacted receipt keeps
 its `redaction` or `redactionStatus` outcome, and no raw secret or local path is
 stored.
 
+Standalone token recognition includes GitLab `glpat-`, npm `npm_`, Stripe
+secret/restricted `sk_live_`, `sk_test_`, `rk_live_`, `rk_test_`, Hugging Face
+`hf_` and Google `AIza` forms. The shared recognizer also applies inside URL
+components, including bounded percent-encoding layers, and to adapter process
+output. Stripe publishable `pk_live_` and `pk_test_` values remain public.
+
+Signed URL query and fragment parameters remove `sig`, `signature`, AWS
+`X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, Google
+`X-Goog-Signature`, `X-Goog-Credential`, `AWSAccessKeyId` and `GoogleAccessId`
+values. Names are case insensitive and encoded names are inspected with a
+bounded decoder. Ordinary URL paths and unrelated parameters remain visible.
+This query rule does not remove public `signature` fields from structured
+verification receipts. All consumers retain the same shared policy and
+redaction flags; there is no separate adapter-specific token recognizer.
+
 ## Surface coverage
 
 The same primitive is consumed by research evidence, external-context

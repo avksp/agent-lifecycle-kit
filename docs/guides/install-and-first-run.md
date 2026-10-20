@@ -3,8 +3,12 @@
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
-These instructions target ALK v2.17.0. Verify frozen plans before execution
+These instructions target ALK v2.18.0. Verify frozen plans before execution
 with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
+
+## Upgrading to 2.18
+
+Read [OpenCode 1.x/2.x compatibility and signing-key rules](../adapters/opencode.md). ALK bounds process/Git I/O with shared deadlines and byte limits, redacts captures before truncation and disables textconv in identity inputs. Historical receipts are preserved. CLI help does not qualify model behavior; pure Python signatures are not claimed constant-time. POSIX signing keys require 0600/0400. OpenCode installations are not automatically upgraded.
 
 ## Upgrading to 2.17
 
@@ -92,7 +96,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.17.0
+python -m pip install agent-lifecycle-kit==2.18.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -103,7 +107,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.17.0
+python -m pip install agent-lifecycle-kit==2.18.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```

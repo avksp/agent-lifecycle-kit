@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import os
+import stat
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts.authority_io import open_authority_read
 
 from .canonical import canonical_bytes, load_json, sha256_hex
 from .ed25519 import fingerprint, publickey_from_seed, sign, verify
@@ -89,13 +94,15 @@ def load_authority_bundle(
     signing_seed: bytes | None = None
     signer_public_key_hex = signer["publicKeyHex"]
     if signing_key_path is not None:
+        if signing_key_path.is_symlink():
+            raise NeutralityError("signing key must not be a symlink")
         key_path = ensure_external_regular_file(
             signing_key_path,
             workspace_root=workspace_root,
             artifact_root=artifact_root,
             release_root=release_root,
         )
-        signing_key = load_json_from_stable_path(key_path)
+        signing_key = _load_private_signing_key(key_path)
         _validate_fresh_document(signing_key, "agent-neutrality-signing-key.v1", now, 86_400)
         signing_seed = bytes.fromhex(_required_string(signing_key, "seedHex"))
         derived_public_key = publickey_from_seed(signing_seed).hex()
@@ -122,6 +129,27 @@ def load_authority_bundle(
 
 def load_json_from_stable_path(path: Path) -> dict[str, Any]:
     return load_json(stable_read_bytes(path))
+
+
+def _load_private_signing_key(path: Path) -> dict[str, Any]:
+    """Check mode on the held descriptor before consuming private seed bytes."""
+    try:
+        with open_authority_read(path) as handle:
+            metadata = os.fstat(handle.fileno())
+            if os.name != "nt" and (stat.S_IMODE(metadata.st_mode) & 0o177):
+                raise NeutralityError(
+                    "signing key requires owner-only read/write permissions", code="neutrality-signing-key-mode"
+                )
+            if metadata.st_size > 1048576:
+                raise NeutralityError("signing key exceeds input limit")
+            data = handle.read(1048577)
+            if len(data) > 1048576:
+                raise NeutralityError("signing key exceeds input limit")
+    except NeutralityError:
+        raise
+    except LifecycleError as exc:
+        raise NeutralityError("signing key cannot be safely read") from exc
+    return load_json(data)
 
 
 def sign_deny_authority(seed: bytes, payload: dict[str, Any]) -> dict[str, Any]:
@@ -246,9 +274,7 @@ def _redacted_trust_projection(document: dict[str, Any]) -> dict[str, Any]:
         "issuedAt": document.get("issuedAt"),
         "expiresAt": document.get("expiresAt"),
         "authorizedSignerFingerprints": [
-            signer.get("fingerprint")
-            for signer in document.get("authorizedSigners", [])
-            if isinstance(signer, dict)
+            signer.get("fingerprint") for signer in document.get("authorizedSigners", []) if isinstance(signer, dict)
         ],
     }
 

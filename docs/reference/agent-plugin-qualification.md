@@ -102,5 +102,9 @@ an open-ended support or lifecycle claim.
 The qualification profile and receipt are versioned local contracts validated
 by the qualification commands. They are intentionally kept separate from the
 global lifecycle schema catalogue.
-The shipped profiles use an observation-only policy. A closed version range
-requires a separately implemented and validated policy.
+The shipped profiles retain their observation-only policy. Explicit policies
+are enforced during the read-only probe: `exact` accepts one stable version
+(e.g. `2.0.32`); `range` accepts an inclusive `2.0.30..2.0.32` range
+within one major. Reversed and cross-major ranges, ambiguous discovery and
+prerelease/build suffixes fail closed. `QUALIFIED` describes package/client
+qualification, never full-host `VERIFIED` status or lifecycle coverage.

@@ -5,6 +5,7 @@ import json
 import random
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.contracts import ed25519 as shared_ed25519
 from agent_lifecycle.neutrality import ed25519
@@ -23,6 +24,23 @@ def _reference_module():
 
 
 class Ed25519VectorTests(unittest.TestCase):
+    def test_private_scalar_work_does_not_branch_on_scalar_bits(self) -> None:
+        for scalar in (0, 1, 2**252 - 1, 2**254 + 8):
+            with self.subTest(scalar=scalar), patch.object(shared_ed25519, "_extended_add", wraps=shared_ed25519._extended_add) as add:
+                with patch.object(shared_ed25519, "_extended_double", wraps=shared_ed25519._extended_double) as double:
+                    shared_ed25519._scalar_mult(shared_ed25519.B, scalar)
+                self.assertEqual(add.call_count, 256)
+                self.assertEqual(double.call_count, 256)
+        # Generic multiplication must NOT reduce Q: this is the subgroup guard.
+        order_two = (0, shared_ed25519.P - 1)
+        self.assertNotEqual(shared_ed25519._encode_point(shared_ed25519._scalar_mult(order_two, shared_ed25519.Q)), (1).to_bytes(32, "little"))
+
+    def test_weak_r_points_are_refused_even_with_a_valid_issuer(self) -> None:
+        public_key = ed25519.publickey_from_seed(bytes(range(32)))
+        for encoded in (bytes(32), (1).to_bytes(32, "little"), (ed25519.P - 1).to_bytes(32, "little")):
+            with self.subTest(point=encoded.hex()):
+                self.assertFalse(ed25519.verify(public_key, b"", encoded + bytes(32)))
+
     def test_legacy_exports_use_the_same_algorithm_objects(self) -> None:
         for name in ("publickey_from_seed", "sign", "verify", "fingerprint", "_decode_point", "_scalar_mult"):
             self.assertIs(getattr(ed25519, name), getattr(shared_ed25519, name))

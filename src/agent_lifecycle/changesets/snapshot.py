@@ -5,11 +5,11 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
-import subprocess
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.changesets.git import GIT_TIMEOUT_SECONDS, changed_files, resolve_revision
+from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.ownership_paths import (
     is_under_authority_path,
@@ -191,28 +191,22 @@ def _current_entry(root: Path, path: str) -> dict[str, Any]:
 
 def _git_bytes(root: Path, argv: list[str], *, max_bytes: int, label: str) -> bytes:
     try:
-        completed = subprocess.run(
+        completed = run_bounded_command(
             argv,
             cwd=root,
-            shell=False,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            timeout=GIT_TIMEOUT_SECONDS,
-            check=False,
+            timeout_seconds=GIT_TIMEOUT_SECONDS,
+            max_stdout_bytes=max_bytes,
         )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except LifecycleError as exc:
+        code = "task-snapshot-byte-limit" if exc.code == "bounded-process-output-limit" else "task-snapshot-git-failed"
+        raise LifecycleError(code, f"{label}: Git transport failed closed", {"maxBytes": max_bytes}) from exc
+    except OSError as exc:
         raise LifecycleError("task-snapshot-git-failed", f"{label}: Git command failed") from exc
     if completed.returncode != 0:
         raise LifecycleError(
             "task-snapshot-git-failed",
             f"{label}: Git command failed",
             {"exitCode": completed.returncode},
-        )
-    if len(completed.stdout) > max_bytes:
-        raise LifecycleError(
-            "task-snapshot-byte-limit",
-            f"{label}: Git output exceeds the snapshot limit",
-            {"bytes": len(completed.stdout), "maxBytes": max_bytes},
         )
     return completed.stdout
 

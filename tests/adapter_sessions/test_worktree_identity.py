@@ -2,19 +2,57 @@ from __future__ import annotations
 
 import hashlib
 import os
+import shlex
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import agent_lifecycle.adapter_sessions.worktree_identity as identity
 from agent_lifecycle.adapter_sessions.worktree_identity import (
     capture_git_worktree_identity,
 )
-import agent_lifecycle.adapter_sessions.worktree_identity as identity
+from agent_lifecycle.changesets.snapshot import capture_task_change_set
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 
 
 class WorktreeIdentityTests(unittest.TestCase):
+    def test_textconv_is_never_invoked_and_raw_content_remains_distinguishable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            outer = Path(tmp)
+            root = outer / "repository"
+            root.mkdir()
+            marker = outer / "driver-called"
+            driver = outer / "textconv probe.py"
+            driver.write_text(f"from pathlib import Path\nPath({str(marker)!r}).write_text('called')\nprint('same view')\n")
+            self._git(root, "init")
+            self._git(root, "config", "user.email", "alk@example.invalid")
+            self._git(root, "config", "user.name", "ALK fixture")
+            command = shlex.quote(sys.executable.replace("\\", "/")) + " " + shlex.quote(driver.as_posix())
+            self._git(root, "config", "diff.alkfixture.textconv", command)
+            (root / ".gitattributes").write_text("*.txt diff=alkfixture\n")
+            tracked = root / "tracked.txt"
+            tracked.write_text("baseline\n")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "fixture")
+            tracked.write_text("first raw revision\n")
+            self._git(root, "diff", "--textconv", "--", "tracked.txt")
+            self.assertTrue(marker.exists())
+            marker.unlink()
+            for staged in (False, True):
+                with self.subTest(staged=staged):
+                    identities, snapshots = [], []
+                    for contents in ("first raw revision\n", "second raw revision\n"):
+                        tracked.write_text(contents)
+                        if staged:
+                            self._git(root, "add", "tracked.txt")
+                        identities.append(capture_git_worktree_identity(root))
+                        snapshots.append(capture_task_change_set(root, baseline="HEAD", write_paths=["tracked.txt"]))
+                    self.assertFalse(marker.exists())
+                    self.assertNotEqual(identities[0], identities[1])
+                    self.assertNotEqual(snapshots[0]["diffHash"], snapshots[1]["diffHash"])
+
     def test_large_untracked_file_is_hashed_incrementally(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

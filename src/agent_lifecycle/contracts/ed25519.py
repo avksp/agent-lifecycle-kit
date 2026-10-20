@@ -72,13 +72,18 @@ def _extended_double(point: ExtendedPoint) -> ExtendedPoint:
 
 
 def _scalar_mult(point: tuple[int, int], scalar: int) -> ExtendedPoint:
+    if scalar < 0:
+        raise ValueError("scalar must be nonnegative")
     result = _IDENTITY
     addend = _extended_from_affine(point)
-    while scalar > 0:
-        if scalar & 1:
-            result = _extended_add(result, addend)
+    # Private scalars always use 256 rounds and the same point operations.
+    # Python integers and this masked selection are NOT constant-time primitives.
+    for index in range(max(256, scalar.bit_length())):
+        candidate = _extended_add(result, addend)
+        mask = -((scalar >> index) & 1)
+        x, y, z, t = (old ^ ((old ^ new) & mask) for old, new in zip(result, candidate, strict=True))
+        result = x, y, z, t
         addend = _extended_double(addend)
-        scalar >>= 1
     return result
 
 
@@ -154,6 +159,8 @@ def verify(public_key: bytes, message: bytes, signature: bytes) -> bool:
         return False
     s = int.from_bytes(signature[32:], "little")
     if s >= Q:
+        return False
+    if _encode_point(_scalar_mult(point_r, 8)) == _encode_int(1):
         return False
     # Issuer keys must be nonidentity points in the prime-order subgroup.
     if point_a == (0, 1) or _encode_point(_scalar_mult(point_a, Q)) != _encode_int(1):

@@ -19,6 +19,7 @@ from agent_lifecycle.contracts.agent_plugin_qualification_schemas import (
     validate_qualification_profile,
     validate_qualification_receipt,
 )
+from agent_lifecycle.contracts.launch_qualification import version_policy_accepts
 from agent_lifecycle.contracts.process_redaction import redact_process_text
 
 
@@ -29,7 +30,9 @@ def package_identity(package_root: Path) -> dict[str, Any]:
     if not root.is_dir():
         raise LifecycleError("plugin-package-missing", "package root does not exist", {"path": package_root.as_posix()})
     files: list[dict[str, Any]] = []
-    for path in sorted((item for item in root.rglob("*") if item.is_file()), key=lambda item: item.relative_to(root).as_posix()):
+    for path in sorted(
+        (item for item in root.rglob("*") if item.is_file()), key=lambda item: item.relative_to(root).as_posix()
+    ):
         data = path.read_bytes()
         files.append(
             {
@@ -80,7 +83,9 @@ def build_offline_qualification_receipt(
         blockers.append({"code": "plugin-manifest-check-failed"})
     skill_names = package_result.get("skillNames", [])
     if skill_names != list(CANONICAL_SKILLS):
-        blockers.append({"code": "plugin-skill-set-mismatch", "expected": list(CANONICAL_SKILLS), "actual": skill_names})
+        blockers.append(
+            {"code": "plugin-skill-set-mismatch", "expected": list(CANONICAL_SKILLS), "actual": skill_names}
+        )
     checks = [
         {"name": "profile", "status": profile_validation["status"]},
         {"name": "package", "status": package_result.get("status", "FAIL")},
@@ -126,7 +131,9 @@ def run_agent_plugin_qualification_probe(
 
     profile_validation = validate_qualification_profile(profile)
     if profile_validation["status"] != "PASS":
-        raise LifecycleError("plugin-qualification-profile-invalid", "qualification profile failed validation", profile_validation)
+        raise LifecycleError(
+            "plugin-qualification-profile-invalid", "qualification profile failed validation", profile_validation
+        )
     if profile["qualification"]["status"] != "SUPPORTED":
         return build_qualification_receipt(
             profile=profile,
@@ -138,7 +145,9 @@ def run_agent_plugin_qualification_probe(
             blockers=[{"code": "client-qualification-unavailable"}],
         )
 
-    package_checks, package_version, package_skill_count, package_digest, package_blockers = _inspect_package(package_root, profile)
+    package_checks, package_version, package_skill_count, package_digest, package_blockers = _inspect_package(
+        package_root, profile
+    )
     project_checks, project_blockers = _inspect_project(project_root, profile, expected_version=package_version)
     checks = [*package_checks, *project_checks]
     process_calls = 0
@@ -156,10 +165,11 @@ def run_agent_plugin_qualification_probe(
         first_line = _first_line(text) if result.get("status") == "PASS" else None
         if name == "client-version" and first_line:
             client_version = first_line[:120]
+        policy_ok = name != "client-version" or version_policy_accepts(profile["hostVersionPolicy"], text)
         host_checks.append(
             {
                 "name": name,
-                "status": "PASS" if result.get("status") == "PASS" else "FAIL",
+                "status": "PASS" if result.get("status") == "PASS" and policy_ok else "FAIL",
                 "details": {
                     "binary": host_name,
                     "exitCode": result.get("exitCode"),
@@ -169,6 +179,7 @@ def run_agent_plugin_qualification_probe(
                     "stdoutSha256": sha256_hex(result.get("stdout", "").encode("utf-8")),
                     "stderrSha256": sha256_hex(result.get("stderr", "").encode("utf-8")),
                     "firstLine": first_line[:120] if first_line else None,
+                    "versionPolicyAccepted": policy_ok if name == "client-version" else None,
                 },
             }
         )
@@ -202,7 +213,9 @@ def run_agent_plugin_qualification_probe(
     )
 
 
-def _inspect_package(package_root: Path, profile: dict[str, Any]) -> tuple[list[dict[str, Any]], str | None, int, str | None, list[dict[str, Any]]]:
+def _inspect_package(
+    package_root: Path, profile: dict[str, Any]
+) -> tuple[list[dict[str, Any]], str | None, int, str | None, list[dict[str, Any]]]:
     checks: list[dict[str, Any]] = []
     blockers: list[dict[str, Any]] = []
     package_version: str | None = None
@@ -214,7 +227,13 @@ def _inspect_package(package_root: Path, profile: dict[str, Any]) -> tuple[list[
         manifest = read_json_object(package_root / profile["package"]["manifestPath"], label="portable plugin manifest")
         package_version = manifest.get("version") if isinstance(manifest.get("version"), str) else None
         manifest_ok = manifest.get("name") == profile["package"]["name"]
-        checks.append({"name": "portable-package-manifest", "status": "PASS" if manifest_ok else "FAIL", "details": {"name": manifest.get("name"), "version": package_version}})
+        checks.append(
+            {
+                "name": "portable-package-manifest",
+                "status": "PASS" if manifest_ok else "FAIL",
+                "details": {"name": manifest.get("name"), "version": package_version},
+            }
+        )
         if not manifest_ok:
             blockers.append({"code": "portable-package-name-mismatch"})
         skills_root = package_root / profile["package"]["skillsPath"]
@@ -222,7 +241,13 @@ def _inspect_package(package_root: Path, profile: dict[str, Any]) -> tuple[list[
         package_skill_count = len(actual)
         expected = list(profile["package"]["requiredSkills"])
         skills_ok = actual == expected
-        checks.append({"name": "portable-package-skills", "status": "PASS" if skills_ok else "FAIL", "details": {"skillCount": package_skill_count, "requiredSkillCount": len(expected)}})
+        checks.append(
+            {
+                "name": "portable-package-skills",
+                "status": "PASS" if skills_ok else "FAIL",
+                "details": {"skillCount": package_skill_count, "requiredSkillCount": len(expected)},
+            }
+        )
         if not skills_ok:
             blockers.append({"code": "portable-package-skill-set-mismatch", "expected": expected, "actual": actual})
     except (OSError, LifecycleError) as exc:
@@ -267,20 +292,34 @@ def _inspect_project(
                 }
             )
     except (OSError, LifecycleError) as exc:
-        checks.append({"name": "client-plugin-projection", "status": "FAIL", "details": {"path": discovery["pluginManifestPath"], "errorType": type(exc).__name__}})
+        checks.append(
+            {
+                "name": "client-plugin-projection",
+                "status": "FAIL",
+                "details": {"path": discovery["pluginManifestPath"], "errorType": type(exc).__name__},
+            }
+        )
         blockers.append({"code": "client-plugin-projection-missing"})
     skills_root = root / discovery["skillsPath"]
-    missing = [skill for skill in profile["package"]["requiredSkills"] if not (skills_root / skill / "SKILL.md").is_file()]
-    checks.append({"name": "client-skill-discovery", "status": "PASS" if not missing else "FAIL", "details": {"path": discovery["skillsPath"], "missing": missing}})
+    missing = [
+        skill for skill in profile["package"]["requiredSkills"] if not (skills_root / skill / "SKILL.md").is_file()
+    ]
+    checks.append(
+        {
+            "name": "client-skill-discovery",
+            "status": "PASS" if not missing else "FAIL",
+            "details": {"path": discovery["skillsPath"], "missing": missing},
+        }
+    )
     if missing:
         blockers.append({"code": "client-skills-missing", "missing": missing})
     return checks, blockers
 
 
-def _default_probe_runner(profile: dict[str, Any], project_root: Path) -> Any:
+def _default_probe_runner(_profile: dict[str, Any], _project_root: Path) -> Any:
     """Return a fail-closed runner when no composition adapter was supplied."""
 
-    def runner(argv: list[str], _timeout: float) -> dict[str, Any]:
+    def runner(_argv: list[str], _timeout: float) -> dict[str, Any]:
         return {
             "status": "FAIL",
             "exitCode": None,
@@ -297,9 +336,24 @@ def _run_probe_command(runner: Any, argv: list[str], profile: dict[str, Any]) ->
     try:
         result = runner(argv, float(profile["qualification"]["timeoutSeconds"]))
     except FileNotFoundError:
-        return {"status": "FAIL", "exitCode": None, "timedOut": False, "stdout": "", "stderr": "", "blockers": [{"code": "binary-not-found"}]}
-    except Exception as exc:  # pragma: no cover - defensive host boundary
-        return {"status": "FAIL", "exitCode": None, "timedOut": False, "stdout": "", "stderr": "", "blockers": [{"code": "probe-runner-failed", "errorType": type(exc).__name__}]}
+        return {
+            "status": "FAIL",
+            "exitCode": None,
+            "timedOut": False,
+            "stdout": "",
+            "stderr": "",
+            "blockers": [{"code": "binary-not-found"}],
+        }
+    except Exception as exc:  # noqa: BLE001 - injected host boundary may raise any exception
+        # pragma: no cover - defensive host boundary
+        return {
+            "status": "FAIL",
+            "exitCode": None,
+            "timedOut": False,
+            "stdout": "",
+            "stderr": "",
+            "blockers": [{"code": "probe-runner-failed", "errorType": type(exc).__name__}],
+        }
     if hasattr(result, "returncode"):
         stdout, _ = redact_process_text(str(getattr(result, "stdout", "") or ""))
         stderr, _ = redact_process_text(str(getattr(result, "stderr", "") or ""))
@@ -309,7 +363,9 @@ def _run_probe_command(runner: Any, argv: list[str], profile: dict[str, Any]) ->
             "timedOut": False,
             "stdout": stdout,
             "stderr": stderr,
-            "blockers": [] if result.returncode == 0 else [{"code": "client-process-nonzero", "exitCode": result.returncode}],
+            "blockers": []
+            if result.returncode == 0
+            else [{"code": "client-process-nonzero", "exitCode": result.returncode}],
         }
     if isinstance(result, dict):
         # run_process returns redacted stdoutTail/stderrTail for its bounded

@@ -4,17 +4,18 @@ from __future__ import annotations
 
 import hashlib
 import os
-import subprocess
 import time
 from pathlib import Path
 from typing import Any
 
+from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 
 MAX_UNTRACKED_FILES = 100_000
 MAX_UNTRACKED_BYTES = 4 * 1024 * 1024 * 1024
 MAX_HASH_CHUNK_BYTES = 256 * 1024
 MAX_CAPTURE_SECONDS = 120.0
+MAX_GIT_CAPTURE_BYTES = 128 * 1024 * 1024
 
 
 def capture_git_worktree_identity(project_root: Path) -> dict[str, Any]:
@@ -29,8 +30,8 @@ def capture_git_worktree_identity(project_root: Path) -> dict[str, Any]:
     root = project_root.resolve()
     deadline = time.monotonic() + MAX_CAPTURE_SECONDS
     head = _git_bytes(root, ["rev-parse", "HEAD"], deadline).decode("ascii", errors="strict").strip()
-    staged = _git_bytes(root, ["diff", "--cached", "--binary", "--no-ext-diff"], deadline)
-    unstaged = _git_bytes(root, ["diff", "--binary", "--no-ext-diff"], deadline)
+    staged = _git_bytes(root, ["diff", "--cached", "--binary", "--no-ext-diff", "--no-textconv"], deadline)
+    unstaged = _git_bytes(root, ["diff", "--binary", "--no-ext-diff", "--no-textconv"], deadline)
     submodules = _git_bytes(root, ["submodule", "status", "--recursive"], deadline)
     untracked_raw = _git_bytes(root, ["ls-files", "--others", "--exclude-standard", "-z"], deadline)
     names = sorted(item for item in untracked_raw.split(b"\0") if item)
@@ -131,16 +132,13 @@ def _git_bytes(root: Path, args: list[str], deadline: float) -> bytes:
     if remaining <= 0:
         raise LifecycleError("planning-worktree-identity-timeout", "Git identity capture exceeded its deadline")
     try:
-        result = subprocess.run(
+        result = run_bounded_command(
             ["git", *args],
             cwd=root,
-            shell=False,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            timeout=remaining,
-            check=False,
+            timeout_seconds=remaining,
+            max_stdout_bytes=MAX_GIT_CAPTURE_BYTES,
         )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except (OSError, LifecycleError) as exc:
         raise LifecycleError(
             "planning-worktree-identity-failed",
             "Git identity capture failed closed",

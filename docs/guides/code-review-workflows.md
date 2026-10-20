@@ -357,9 +357,20 @@ claude --model <claude-model-alias> --print --output-format json \
   "Review work/code-review/rm-claude.json and return only reviewer-output.v1 JSON" \
   > work/code-review/claude-output.json
 
-opencode run --model <provider>/<model-id> --format json \
-  --file work/code-review/rm-opencode.json \
-  "Review the assignment and return only reviewer-output.v1 JSON" \
+# OpenCode 1.x: bounded invocation; unique title per call.
+python3 -c 'import subprocess,sys; subprocess.run(sys.argv[1:],check=True,timeout=120)' \
+  opencode run "Review the assignment and return only reviewer-output.v1 JSON" \
+  --model "<provider>/<model-id>" --format=json \
+  --title "alk-review-$(python3 -c 'import uuid; print(uuid.uuid4())')" \
+  --file="work/code-review/rm-opencode.json" \
+  > work/code-review/opencode-output.json
+
+# OpenCode 2.x: bounded invocation; unique title per call.
+python3 -c 'import subprocess,sys; subprocess.run(sys.argv[1:],check=True,timeout=120)' \
+  opencode run "Review the assignment and return only reviewer-output.v1 JSON" \
+  --model "<provider>/<model-id>" --format=json --standalone \
+  --title "alk-review-$(python3 -c 'import uuid; print(uuid.uuid4())')" \
+  --file="work/code-review/rm-opencode.json" \
   > work/code-review/opencode-output.json
 ```
 

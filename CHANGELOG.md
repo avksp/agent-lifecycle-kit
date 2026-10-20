@@ -4,6 +4,24 @@
 
 - No changes yet.
 
+## 2.18.0 - 2026-10-20
+
+- Bound process stdin delivery, output draining and cleanup by shared deadlines;
+  reject non-finite timing and enforce Git/inspection byte limits during reads.
+- Redact complete bounded diagnostics before display truncation; expand common
+  token and signed-URL detection while preserving benign public locators.
+- Disable textconv and external diff for authority-bearing Git identity; preserve
+  native tree quoting and SHA-1/SHA-256 object semantics without rewriting history.
+- Share OpenCode 1.x/2.x command policy across real inspection and harnesses:
+  message-first argv, bounded cwd, explicit attachments, unique titles, V2
+  model#variant/session export and honest installed-version qualification.
+  Historical 1.18.9 evidence does not qualify newer versions or V2 model behavior.
+- Enforce declared exact/range plugin version policies, private signing-key modes
+  and strict weak-point rejection. Preserve RFC signatures and zero runtime
+  dependencies; fixed private-scalar work does not establish constant-time Python.
+- Publish matching package/plugin/install surfaces and bilingual compatibility
+  notes; preserve unavailable accounting telemetry and all previous release data.
+
 ## 2.17.0 - 2026-10-19
 
 - Require explicit executable-plan tier and integrity inputs, validate artifact

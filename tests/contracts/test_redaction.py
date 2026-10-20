@@ -14,6 +14,73 @@ from agent_lifecycle.contracts.redaction import (
 
 
 class ReceiptRedactionTests(unittest.TestCase):
+    def test_additional_provider_tokens_are_redacted_without_assignment_labels(self) -> None:
+        tokens = [
+            "glpat-" + "A" * 24,
+            "npm_" + "B" * 36,
+            "sk_live_" + "C" * 24,
+            "sk_test_" + "D" * 24,
+            "rk_live_" + "E" * 24,
+            "rk_test_" + "F" * 24,
+            "hf_" + "G" * 34,
+            "AIza" + "H" * 35,
+        ]
+        for token in tokens:
+            for value in [token, "diagnostic: " + token + " end"]:
+                with self.subTest(prefix=token[:8], embedded=value != token):
+                    redacted, changed, stats = redact_text_with_stats(value)
+                    self.assertTrue(changed)
+                    self.assertEqual(redacted, value.replace(token, REDACTED_VALUE))
+                    self.assertEqual(stats["secretLikeMarkersRedacted"], 1)
+
+    def test_additional_provider_tokens_are_redacted_inside_encoded_public_urls(self) -> None:
+        tokens = ["glpat-" + "A" * 24, "npm_" + "B" * 36,
+                  "sk_live_" + "C" * 24, "hf_" + "D" * 34, "AIza" + "E" * 35]
+        for token in tokens:
+            for encoding in [0, 1, 2, 3]:
+                encoded = token
+                for _ in range(encoding):
+                    encoded = "".join(f"%{byte:02X}" for byte in encoded.encode())
+                for suffix in ["/item/" + encoded, "/?note=" + encoded, "/#note=" + encoded]:
+                    with self.subTest(prefix=token[:8], encoding=encoding, suffix=suffix[:10]):
+                        redacted, changed, stats = redact_text_with_stats("https://example.invalid" + suffix)
+                        self.assertTrue(changed)
+                        self.assertNotIn(token, redacted)
+                        self.assertNotIn(encoded, redacted)
+                        self.assertGreater(stats["secretLikeMarkersRedacted"], 0)
+
+    def test_signed_query_values_are_private_but_public_parameters_survive(self) -> None:
+        keys = ["sig", "Signature", "X-Amz-Signature", "X-Amz-Credential",
+                "X-Amz-Security-Token", "X-Goog-Signature", "X-Goog-Credential",
+                "AWSAccessKeyId", "GoogleAccessId"]
+        for key in keys:
+            for component in ["?", "#", "#/report?"]:
+                for encoding in [0, 1, 2, 3]:
+                    encoded_key = key
+                    for _ in range(encoding):
+                        encoded_key = "".join(f"%{byte:02X}" for byte in encoded_key.encode())
+                    with self.subTest(key=key, component=component, encoding=encoding):
+                        value = "https://example.invalid/report" + component + encoded_key + "=opaque-value&keep=home"
+                        redacted, changed, stats = redact_text_with_stats(value)
+                        self.assertTrue(changed)
+                        self.assertNotIn("opaque-value", redacted)
+                        self.assertIn("keep=home", redacted)
+                        self.assertIn("example.invalid/report", redacted)
+                        self.assertGreater(stats["secretLikeMarkersRedacted"], 0)
+
+    def test_public_signatures_publishable_keys_and_benign_query_keys_are_preserved(self) -> None:
+        for value in ["pk_live_" + "A" * 24, "pk_test_" + "B" * 24,
+                      "https://example.invalid/report?signature_version=4&signed=yes&algorithm=sha256",
+                      "https://example.invalid/glpat-guide?topic=npm&model=hf-transformers",
+                      "glpat-short npm-short hf-short AIza-short"]:
+            with self.subTest(value=value):
+                redacted, changed, stats = redact_text_with_stats(value)
+                self.assertEqual(redacted, value)
+                self.assertFalse(changed)
+                self.assertEqual(stats["secretLikeMarkersRedacted"], 0)
+        value = {"signature": "public-verification-bytes", "sig": "public-verification-bytes"}
+        self.assertEqual(redact_value(value), (value, False))
+
     def test_encoded_bearer_plus_keeps_the_complete_credential_private(self) -> None:
         for marker in ["Bearer prefix+opaque-auth-secret", "Bearer prefix++opaque-auth-secret", "public+topic", "public topic+tail"]:
             for encoding, safe in [(1, ""), (2, ""), (3, ""), (1, "+"), (2, "+"), (3, "+")]:
