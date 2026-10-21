@@ -18,6 +18,42 @@ BASELINE = ROOT / "tests/metrics/fixtures/release-2-6-accounting-baseline.json"
 
 
 class AuditEfficiencyCommandTests(unittest.TestCase):
+    def test_cli_compares_deterministic_plan_pairs_without_native_savings(self):
+        measurement = json.loads(BASELINE.read_text(encoding="utf-8"))
+        observation = {
+            "findings": [],
+            "readiness": "READY_TO_FREEZE",
+            "blockingGates": [],
+            "packetBytes": 100,
+            "selectedNodes": 5,
+            "selectedEdges": 3,
+        }
+        measurement["planReviewPairs"] = [
+            {
+                "caseId": "synthetic",
+                "full": observation,
+                "delta": {**observation, "packetBytes": 80, "selectedNodes": 2},
+            }
+        ]
+        measurement["inputDigest"] = canonical_digest({k: v for k, v in measurement.items() if k != "inputDigest"})
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "measurement.json"
+            source.write_text(json.dumps(measurement), encoding="utf-8")
+            code, report = _run_cli(
+                [
+                    "metrics",
+                    "audit-efficiency",
+                    "--input",
+                    str(source),
+                    "--out",
+                    str(Path(tmp) / "report.json"),
+                ]
+            )
+        self.assertEqual(code, 0)
+        self.assertEqual(report["status"], "NO_COMPARISON")
+        self.assertEqual(report["planReviewComparison"]["status"], "PASS")
+        self.assertIsNone(report["planReviewComparison"]["candidateModelTokens"]["value"])
+
     def test_cli_writes_single_sample_report_without_reduction_claim(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "report.json"

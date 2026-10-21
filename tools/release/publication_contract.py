@@ -152,6 +152,19 @@ SOURCE_NATIVE_ACCOUNTING_DOCUMENTATION: dict[str, Any] = {
     "recoveryStartsGeneration": False,
 }
 
+CONSERVATIVE_PLAN_REVIEW_DOCUMENTATION: dict[str, Any] = {
+    "id": "conservative-delta-plan-review",
+    "status": "OPTIONAL",
+    "englishPath": "docs/reference/conservative-delta-review.md",
+    "russianPath": "docs/ru/reference/conservative-delta-review.md",
+    "modelCallsStarted": False,
+    "fullReviewDefault": True,
+    "partialReviewIsFull": False,
+    "currentIndependentApplicabilityRequired": True,
+    "automaticFullRerun": False,
+    "modelSavingsMeasured": False,
+}
+
 SUCCESSOR_ADOPTION: dict[str, Any] = {
     "packageId": "release-2-7",
     "requiredPredecessor": "release-2-6",
@@ -186,7 +199,7 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "release-accounting-fixture",
-        "path": "tests/metrics/fixtures/release-2-21-accounting.json",
+        "path": "tests/metrics/fixtures/release-2-22-accounting.json",
         "kind": "json-field",
         "jsonPath": ["releaseId"],
         "fieldForm": "accounting.release",
@@ -359,6 +372,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             RELEASE_ACCOUNTING_DOCUMENTATION,
             WORKFLOW_ECONOMICS_DOCUMENTATION,
             SOURCE_NATIVE_ACCOUNTING_DOCUMENTATION,
+            CONSERVATIVE_PLAN_REVIEW_DOCUMENTATION,
             REVIEW_EFFICIENCY_DOCUMENTATION,
             DELTA_AUDIT_DOCUMENTATION,
             PHASE_PACKET_VALIDATION_DOCUMENTATION,

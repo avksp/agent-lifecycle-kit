@@ -4,6 +4,23 @@
 
 - No changes yet.
 
+## 2.22.0 - 2026-10-21
+
+- Add conservative plan-review scope selection across requirements, acceptance,
+  evidence, tasks, ownership, security and final gates. Keep full review as the
+  default; unknown impact, changed source and incomplete lineage refuse reuse.
+- Bind complete independent baselines, change reviews, finding closures and
+  current per-seat applicability in an explicit composite contract and v3 lock.
+  Preserve original verdicts, dissent, delivery identities and legacy full locks;
+  partial reviews never become full reviews or execution authorization.
+- Add a read-only review-packet CLI with stable contained file/source checks,
+  bounded graph/report chains and no automatic model calls or full reruns.
+- Verify provider-neutral paired full/delta fixtures against actual consumers.
+  Preserve the real historical activation baseline and report unavailable
+  candidate model usage honestly; deterministic bytes do not prove token savings.
+- Publish matching package/plugin/install versions and English/Russian guidance.
+  Existing admission, accounting, security, quality and final-audit gates remain.
+
 ## 2.21.0 - 2026-10-21
 
 - Add opt-in source-bound ALK command wall/self-CPU receipts with nested exclusive

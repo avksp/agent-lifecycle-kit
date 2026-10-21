@@ -18,6 +18,23 @@ TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf
 
 
 class PublicationAdoptionTests(unittest.TestCase):
+    def test_plan_review_is_reachable_and_explains_safe_fallback_in_both_locales(self):
+        for prefix in ("docs", "docs/ru"):
+            for page in ("README.md", "guides/install-and-first-run.md", "reference/cli.md"):
+                text = (ROOT / prefix / page).read_text(encoding="utf-8")
+                self.assertIn("conservative-delta-review.md", text, page)
+            reference = ROOT / prefix / "reference/conservative-delta-review.md"
+            text = reference.read_text(encoding="utf-8")
+            for marker in (
+                "plan review-packet",
+                "FULL_REQUIRED",
+                "DELTA_ELIGIBLE",
+                "fullReview",
+                "agent-plan-lock.v3",
+                "UNAVAILABLE",
+            ):
+                self.assertIn(marker, text, (prefix, marker))
+
     def test_workflow_completeness_is_reachable_in_both_locales(self) -> None:
         for prefix in ("docs", "docs/ru"):
             reference = ROOT / prefix / "reference/workflow-completeness.md"
@@ -27,22 +44,25 @@ class PublicationAdoptionTests(unittest.TestCase):
                 self.assertIn("workflow-completeness.md", text, page)
             text = reference.read_text(encoding="utf-8")
             for marker in (
-                "json-input-too-large", "json-input-depth-exceeded", "workflow-split-brain",
-                "task-result-unresolved-item-omitted", "excludedPlannedItemIds",
-                "prerequisiteAcceptance", "review-response-missing",
-                "review-response-truncated", "architecture-function-target-exceeded",
+                "json-input-too-large",
+                "json-input-depth-exceeded",
+                "workflow-split-brain",
+                "task-result-unresolved-item-omitted",
+                "excludedPlannedItemIds",
+                "prerequisiteAcceptance",
+                "review-response-missing",
+                "review-response-truncated",
+                "architecture-function-target-exceeded",
             ):
                 self.assertIn(marker, text, (prefix, marker))
 
     def test_source_native_accounting_is_reachable_without_host_claims(self):
         for prefix in ("docs", "docs/ru"):
-            for page in ("README.md", "guides/install-and-first-run.md",
-                         "reference/cli.md"):
+            for page in ("README.md", "guides/install-and-first-run.md", "reference/cli.md"):
                 text = (ROOT / prefix / page).read_text(encoding="utf-8")
                 self.assertIn("source-native-workflow-accounting.md", text)
             text = (ROOT / prefix / "reference/source-native-workflow-accounting.md").read_text(encoding="utf-8")
-            for marker in ("UNAVAILABLE", "response.stdout", "response.stderr",
-                           "load_external_job_response", "STDIN"):
+            for marker in ("UNAVAILABLE", "response.stdout", "response.stderr", "load_external_job_response", "STDIN"):
                 self.assertIn(marker, text)
 
     def test_current_docs_pass_adoption_validation(self) -> None:
@@ -99,8 +119,8 @@ class PublicationAdoptionTests(unittest.TestCase):
             ):
                 self.assertIn(marker, text)
         self.assertIn("ALK core contains no provider client", english)
-        self.assertIn(  # noqa: RUF001 - exact Russian documentation marker
-            "В ядре ALK нет клиента провайдера",
+        self.assertIn(
+            "В ядре ALK нет клиента провайдера",  # noqa: RUF001 - exact documentation marker
             russian,
         )
 

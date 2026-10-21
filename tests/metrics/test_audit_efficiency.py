@@ -5,7 +5,7 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
-from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.metrics.audit_efficiency import (
     build_audit_efficiency_input,
     build_audit_efficiency_report,
@@ -21,6 +21,42 @@ DELTA_BASELINE = ROOT / "tests/metrics/fixtures/release-2-12-delta-audit-baselin
 
 
 class AuditEfficiencyTests(unittest.TestCase):
+    def test_plan_review_pairs_report_quality_without_model_savings(self):
+        from agent_lifecycle.metrics.audit_efficiency import compare_plan_review_observations
+
+        observation = {
+            "findings": [],
+            "readiness": "READY_TO_FREEZE",
+            "blockingGates": [],
+            "packetBytes": 200,
+            "selectedNodes": 5,
+            "selectedEdges": 4,
+        }
+        pairs = [{"caseId": "pair", "full": observation, "delta": {**observation, "selectedNodes": 2}}]
+        result = compare_plan_review_observations(pairs)
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["candidateModelTokens"]["status"], "UNAVAILABLE")
+        self.assertIsNone(result["modelTokenReductionPercent"]["value"])
+        self.assertFalse(result["independentModelApproval"])
+        pairs[0]["delta"] = {**observation, "findings": ["missed-medium"]}
+        self.assertEqual(compare_plan_review_observations(pairs)["status"], "FAIL")
+
+    def test_plan_review_pairs_reject_replayed_case_or_invalid_observation(self):
+        from agent_lifecycle.metrics.audit_efficiency import compare_plan_review_observations
+
+        observation = {
+            "findings": [],
+            "readiness": "READY_TO_FREEZE",
+            "blockingGates": [],
+            "packetBytes": 200,
+            "selectedNodes": 5,
+            "selectedEdges": 4,
+        }
+        pair = {"caseId": "same", "full": observation, "delta": observation}
+        for pairs in ([], [pair, pair], [{**pair, "delta": {**observation, "packetBytes": True}}]):
+            with self.subTest(pairs=pairs), self.assertRaises(LifecycleError):
+                compare_plan_review_observations(pairs)
+
     def test_release_2_12_delta_baseline_preserves_raw_measurement_and_fallback(self) -> None:
         baseline = json.loads(DELTA_BASELINE.read_text(encoding="utf-8"))
 

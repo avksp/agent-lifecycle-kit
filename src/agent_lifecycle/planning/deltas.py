@@ -10,9 +10,18 @@ from agent_lifecycle.contracts.plan_delta_schemas import (
     PLAN_DELTA_SCHEMA,
     PLAN_DELTA_VALIDATION_SCHEMA,
 )
+from agent_lifecycle.review.validation import derive_delta_selection
 
 _AUTHORITY_CATEGORIES = ("requirements", "writes", "acceptance", "evidence", "budgets", "risks", "gates", "terms")
 _CATEGORIES = (*_AUTHORITY_CATEGORIES, "workstreams", "documentation")
+
+
+def select_plan_review_impact(
+    before_subject: dict[str, Any],
+    after_subject: dict[str, Any],
+) -> dict[str, Any]:
+    """Expose the shared conservative selector without creating authority."""
+    return derive_delta_selection(before_subject, after_subject)
 
 
 def build_plan_delta(

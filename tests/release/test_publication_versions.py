@@ -19,10 +19,27 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_plan_review_publication_preserves_approval_and_cost_boundaries(self):
+        manifest = build_publication_manifest(
+            target_version=TARGET_VERSION,
+            target_ref=TARGET_REF,
+        )
+        feature = {x["id"]: x for x in manifest["documentedFeatures"]}["conservative-delta-plan-review"]
+        self.assertEqual(feature["status"], "OPTIONAL")
+        self.assertTrue(feature["fullReviewDefault"])
+        self.assertTrue(feature["currentIndependentApplicabilityRequired"])
+        for flag in (
+            "modelCallsStarted",
+            "partialReviewIsFull",
+            "automaticFullRerun",
+            "modelSavingsMeasured",
+        ):
+            self.assertFalse(feature[flag], flag)
+
     def test_current_accounting_fixture_keeps_unavailable_telemetry(self) -> None:
         from agent_lifecycle.metrics.release_accounting import validate_release_accounting
 
-        path = ROOT / "tests/metrics/fixtures/release-2-21-accounting.json"
+        path = ROOT / "tests/metrics/fixtures/release-2-22-accounting.json"
         accounting = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(accounting["releaseId"], TARGET_VERSION)
         self.assertEqual(validate_release_accounting(accounting)["status"], "PASS")
@@ -40,11 +57,10 @@ class PublicationVersionTests(unittest.TestCase):
 
     def test_source_native_accounting_manifest_retains_scope_limits(self):
         manifest = build_publication_manifest(
-            target_version=TARGET_VERSION, target_ref=TARGET_REF,
+            target_version=TARGET_VERSION,
+            target_ref=TARGET_REF,
         )
-        feature = {v["id"]: v for v in manifest["documentedFeatures"]}[
-            "source-native-workflow-accounting"
-        ]
+        feature = {v["id"]: v for v in manifest["documentedFeatures"]}["source-native-workflow-accounting"]
         self.assertFalse(feature["missingTelemetryIsZero"])
         self.assertFalse(feature["wholeHostEnforcementClaimed"])
         self.assertFalse(feature["automaticOptimizationActivation"])
@@ -264,7 +280,7 @@ class PublicationVersionTests(unittest.TestCase):
             root = Path(tmp)
             _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
             _write_json(
-                root / "tests/metrics/fixtures/release-2-21-accounting.json",
+                root / "tests/metrics/fixtures/release-2-22-accounting.json",
                 {"releaseId": "2.8.0"},
             )
 
@@ -349,7 +365,7 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
     (root / "src/agent_lifecycle/_version.py").write_text(f'__version__ = "{version}"\n', encoding="utf-8")
     (root / "CHANGELOG.md").write_text(f"## {version} - 2026-01-01\n", encoding="utf-8")
     _write_json(
-        root / "tests/metrics/fixtures/release-2-21-accounting.json",
+        root / "tests/metrics/fixtures/release-2-22-accounting.json",
         {"releaseId": version},
     )
     for path in (
