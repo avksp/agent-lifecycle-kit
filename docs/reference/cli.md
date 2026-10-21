@@ -76,7 +76,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.22.0
+python -m pip install agent-lifecycle-kit==2.23.0
 ```
 
 ## Task evidence identity
@@ -802,3 +802,7 @@ The [plan-review reference](conservative-delta-review.md) explains FULL, DELTA_E
 ```bash
 agent-lifecycle plan review-packet --repository-root . --manifest tasks/my-plan-r2/plan.manifest.json --baseline tasks/my-plan-r1/review.json
 ```
+
+## Compact S0/S1 packages in 2.23
+
+[Compact DRAFT authoring](tier-proportional-plan-packages.md) preserves checks, independent review and separate authorization. Explicit acceptance-criteria.md and planFiles completion are required before freeze; UNKNOWN metrics are never zero.

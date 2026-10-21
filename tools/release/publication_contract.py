@@ -165,6 +165,22 @@ CONSERVATIVE_PLAN_REVIEW_DOCUMENTATION: dict[str, Any] = {
     "modelSavingsMeasured": False,
 }
 
+TIER_PROPORTIONAL_PACKAGES_DOCUMENTATION: dict[str, Any] = {
+    "id": "tier-proportional-plan-packages",
+    "status": "OPTIONAL",
+    "englishPath": "docs/reference/tier-proportional-plan-packages.md",
+    "russianPath": "docs/ru/reference/tier-proportional-plan-packages.md",
+    "authoringDraftOnly": True,
+    "explicitChecklistCompletionRequired": True,
+    "independentReviewRequired": True,
+    "reviewedLockRequired": True,
+    "fullS2Preserved": True,
+    "modelCallsStarted": False,
+    "automaticAuthorization": False,
+    "typedProducerGuaranteesSupported": False,
+    "modelSavingsMeasured": False,
+}
+
 SUCCESSOR_ADOPTION: dict[str, Any] = {
     "packageId": "release-2-7",
     "requiredPredecessor": "release-2-6",
@@ -199,7 +215,7 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "release-accounting-fixture",
-        "path": "tests/metrics/fixtures/release-2-22-accounting.json",
+        "path": "tests/metrics/fixtures/release-2-23-accounting.json",
         "kind": "json-field",
         "jsonPath": ["releaseId"],
         "fieldForm": "accounting.release",
@@ -373,6 +389,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
             WORKFLOW_ECONOMICS_DOCUMENTATION,
             SOURCE_NATIVE_ACCOUNTING_DOCUMENTATION,
             CONSERVATIVE_PLAN_REVIEW_DOCUMENTATION,
+            TIER_PROPORTIONAL_PACKAGES_DOCUMENTATION,
             REVIEW_EFFICIENCY_DOCUMENTATION,
             DELTA_AUDIT_DOCUMENTATION,
             PHASE_PACKET_VALIDATION_DOCUMENTATION,

@@ -1,0 +1,94 @@
+{
+  "acceptance": {
+    "criteria": [
+      {
+        "evidenceIds": [
+          "EV-01"
+        ],
+        "id": "AC-01",
+        "requirementIds": [
+          "REQ-01"
+        ]
+      },
+      {
+        "evidenceIds": [
+          "EV-02"
+        ],
+        "id": "AC-02",
+        "requirementIds": [
+          "REQ-02"
+        ]
+      }
+    ]
+  },
+  "budgets": {
+    "maxInvocations": 3
+  },
+  "contextLimits": {
+    "targetTokens": 1024
+  },
+  "finalAuditGates": [
+    "[AC-01|EV-01] first",
+    "[AC-02|EV-02] second"
+  ],
+  "forbiddenWrites": [
+    ".git"
+  ],
+  "package": {
+    "id": "canonical-fixture",
+    "planArtifactRoot": "tasks/canonical-fixture"
+  },
+  "packageIntegrity": {
+    "inventorySource": "planFiles",
+    "lockSchemaVersion": "agent-plan-lock.v2",
+    "required": true,
+    "undeclaredTopLevelFiles": "reject"
+  },
+  "planFiles": [
+    "tasks/canonical-fixture/plan.manifest.json"
+  ],
+  "planRevision": 1,
+  "releaseTarget": {
+    "targetVersion": "1.0.0"
+  },
+  "schemaVersion": "agent-plan-manifest.v1",
+  "specification": {
+    "requirements": [
+      {
+        "description": "first",
+        "id": "REQ-01"
+      },
+      {
+        "description": "second",
+        "id": "REQ-02"
+      }
+    ],
+    "tier": "S2",
+    "tierResolutionRequest": {
+      "requirementsBytes": 1024
+    }
+  },
+  "status": "FROZEN",
+  "validation": {
+    "commands": [
+      "python -m unittest"
+    ]
+  },
+  "workstreams": [
+    {
+      "acceptanceIds": [
+        "AC-01",
+        "AC-02"
+      ],
+      "dependsOn": [],
+      "evidenceIds": [
+        "EV-01",
+        "EV-02"
+      ],
+      "id": "WS-01",
+      "writes": [
+        "src/one.py"
+      ]
+    }
+  ]
+}

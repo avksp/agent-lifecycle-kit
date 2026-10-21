@@ -50,3 +50,7 @@ Small/local models should receive compact plans, but compact does not mean
 underspecified. A small packet can omit narrative background when it still keeps
 the active task, write scope, acceptance ids, evidence route, validation command
 and output contract.
+
+## Compact S0/S1 packages in 2.23
+
+[Compact DRAFT authoring](tier-proportional-plan-packages.md) preserves checks, independent review and separate authorization. Explicit acceptance-criteria.md and planFiles completion are required before freeze; UNKNOWN metrics are never zero.

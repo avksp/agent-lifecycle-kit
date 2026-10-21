@@ -18,6 +18,30 @@ TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf
 
 
 class PublicationAdoptionTests(unittest.TestCase):
+    def test_compact_authoring_is_reachable_and_discloses_required_draft_completion(self):
+        for prefix in ("docs", "docs/ru"):
+            for page in (
+                "README.md",
+                "guides/install-and-first-run.md",
+                "reference/cli.md",
+                "reference/plan-completeness.md",
+            ):
+                text = (ROOT / prefix / page).read_text(encoding="utf-8")
+                self.assertIn("tier-proportional-plan-packages.md", text, (prefix, page))
+            text = (ROOT / prefix / "reference/tier-proportional-plan-packages.md").read_text(encoding="utf-8")
+            for marker in (
+                "plan package-profiles",
+                "plan compact-explain",
+                "plan compact-compile",
+                "acceptance-criteria.md",
+                "planFiles",
+                "freeze-prepare",
+                "lock-create",
+                "independent: true",
+                "UNAVAILABLE",
+            ):
+                self.assertIn(marker, text, (prefix, marker))
+
     def test_plan_review_is_reachable_and_explains_safe_fallback_in_both_locales(self):
         for prefix in ("docs", "docs/ru"):
             for page in ("README.md", "guides/install-and-first-run.md", "reference/cli.md"):
@@ -120,7 +144,7 @@ class PublicationAdoptionTests(unittest.TestCase):
                 self.assertIn(marker, text)
         self.assertIn("ALK core contains no provider client", english)
         self.assertIn(
-            "В ядре ALK нет клиента провайдера",  # noqa: RUF001 - exact documentation marker
+            "В ядре ALK нет клиента провайдера",
             russian,
         )
 

@@ -24,6 +24,17 @@ from tests.review.test_provenance import PREFIX, SEED, _attestation, _context
 
 
 class IndependentReviewValidationTests(unittest.TestCase):
+    def test_compact_required_future_review_marker_cannot_act_as_a_review(self):
+        import json
+
+        from agent_lifecycle.planning.compact_packages import compile_compact_plan
+        from tests.metrics.test_plan_package_comparison import MANIFEST, SOURCE, paired_inputs
+
+        _, source = paired_inputs()
+        manifest = compile_compact_plan(json.loads(source), source_path=SOURCE, manifest_path=MANIFEST)
+        with self.assertRaises(LifecycleError):
+            validate_independent_review(manifest["planReview"])
+
     def test_declared_reviews_preserve_behavior_and_authority_claims_refuse(self):
         for claim in ({}, {"reviewerProvenance": {"guarantee": "DECLARED", "attestation": None}}):
             with self.subTest(claim=claim):

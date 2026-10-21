@@ -11,6 +11,7 @@ from agent_lifecycle.audit.delta_review import (
     build_delta_review_packet,
 )
 from agent_lifecycle.changesets.snapshot import _baseline_entries
+from agent_lifecycle.cli.compact_plan_commands import compact_package_profiles, compact_plan_command
 from agent_lifecycle.cli.plan_lock_commands import create_reviewed_plan_lock, prepare_freeze_candidate
 from agent_lifecycle.compiler import build_phase_packet, compile_small_model_packets, compile_task_packets
 from agent_lifecycle.contracts import (
@@ -126,6 +127,15 @@ def _dispatch_specification(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
+    if args.plan_command == "package-profiles":
+        return compact_package_profiles()
+    if args.plan_command in {"compact-compile", "compact-explain"}:
+        return compact_plan_command(
+            input_path=args.input,
+            output_path=getattr(args, "out", None),
+            repository_root=Path(args.repository_root),
+            explain=args.plan_command == "compact-explain",
+        )
     if args.plan_command == "freeze-prepare":
         return prepare_freeze_candidate(
             manifest_path=args.manifest,

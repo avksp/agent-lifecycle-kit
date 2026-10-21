@@ -3,7 +3,7 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
-Инструкция рассчитана на ALK v2.22.0. Перед исполнением проверьте замороженный
+Инструкция рассчитана на ALK v2.23.0. Перед исполнением проверьте замороженный
 план командой `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Обновление до 2.18
@@ -97,7 +97,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.22.0
+python -m pip install agent-lifecycle-kit==2.23.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -108,7 +108,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.22.0
+python -m pip install agent-lifecycle-kit==2.23.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -331,3 +331,7 @@ ALK сохраняет накопленные расходы задачи/зап
 ## Ревью изменений плана в 2.22
 
 См. [консервативное ревью плана](../reference/conservative-delta-review.md). FULL_REQUIRED запрещает сокращение и не запускает модель. Можно восстановить доказательства либо допустить действительно необходимое полное ревью пакета плана. Бюджеты и обязательные проверки сохраняются; экономия токенов модели остаётся UNAVAILABLE.
+
+## Компактные пакеты S0/S1 в 2.23
+
+[Подготовка компактного DRAFT](../reference/tier-proportional-plan-packages.md) сохраняет проверки, независимое ревью и отдельное разрешение. Перед freeze требуется явно добавить acceptance-criteria.md и его запись в planFiles; UNKNOWN-метрики не становятся нулём.

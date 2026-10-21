@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "agent-compact-plan.v1",
+  "tier": "S1",
+  "mechanical": false,
+  "package": {
+    "id": "compact-example",
+    "title": "Controlled compact authoring example",
+    "planArtifactRoot": "tasks/compact-example",
+    "artifactRoot": "work/compact-example"
+  },
+  "author": "fixture-author",
+  "baseRevision": {
+    "ref": "fixture-source",
+    "sha": "1111111111111111111111111111111111111111"
+  },
+  "owner": "fixture-worker",
+  "riskFlags": {
+    "architecture": false,
+    "security": false,
+    "performance": false,
+    "browser": false,
+    "externalEnvironment": false,
+    "data": false,
+    "release": false,
+    "externalSpecification": false
+  },
+  "changes": [
+    {
+      "id": "Import",
+      "title": "Repair one missing import",
+      "requirement": "Use the standard library module referenced by the worker.",
+      "acceptance": "The bounded worker invocation no longer raises a missing-name error.",
+      "evidenceDescription": "Controlled regression result, not a production run.",
+      "evidencePath": "work/compact-example/import-result.json",
+      "writes": [
+        "src/example_worker.py"
+      ],
+      "validationCommands": [
+        "python -m unittest tests.test_example_worker -q"
+      ]
+    },
+    {
+      "id": "Guide",
+      "title": "Explain the bounded worker result",
+      "requirement": "Document the accepted result for the single-owner worker.",
+      "acceptance": "The guide states the bounded result and how to reproduce it.",
+      "evidenceDescription": "Controlled documentation check, not a real task audit.",
+      "evidencePath": "work/compact-example/guide-result.json",
+      "writes": [
+        "docs/example-worker.md"
+      ],
+      "validationCommands": [
+        "python tools/check_example_guide.py"
+      ]
+    }
+  ],
+  "orchestration": {
+    "startMode": "manual-after-freeze",
+    "remediationMode": "bounded-auto",
+    "maxPlanReviewRounds": 4,
+    "maxTaskAttempts": 3,
+    "maxParallelTasks": 1,
+    "maxValidationRunsPerTask": 4,
+    "maxToolCallsPerIteration": 8,
+    "maxUsageIterationsPerAttempt": 4,
+    "maxToolCallsPerTask": 24,
+    "maxToolCallsPerRun": 48,
+    "maxReportedTokensPerTask": 4000,
+    "maxReportedTokensPerRun": 8000,
+    "maxEvidenceArtifactBytes": 65536,
+    "maxEvidenceBytesPerTask": 131072,
+    "maxEvidenceBytesPerRun": 262144,
+    "maxTaskWallSeconds": 600,
+    "maxRunWallSeconds": 1200,
+    "maxContextBytes": 16384,
+    "maxRenderedPacketBytes": 32768
+  },
+  "releaseImpact": "No publication, migration or release behaviour change.",
+  "readOnly": [
+    "src/existing_input.py"
+  ],
+  "forbiddenWrites": [
+    ".git",
+    ".alk",
+    ".claude"
+  ],
+  "securityGates": [
+    "No input, protected path or authority may be overwritten."
+  ],
+  "contextLimits": {
+    "targetReviewerPacketTokens": 4000,
+    "maxReviewerPacketTokens": 8000,
+    "smallContextProfilesRequired": true
+  }
+}
