@@ -38,6 +38,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
     def test_all_actions_are_sha_pinned_and_checkout_credentials_are_disabled(self) -> None:
         workflow_paths = sorted((ROOT / ".github/workflows").glob("*.yml"))
         self.assertEqual({path.name for path in workflow_paths}, {
+            "ci-timing-control.yml",
             "ci.yml",
             "codeql.yml",
             "matrix.yml",
