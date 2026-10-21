@@ -51,6 +51,26 @@ class CommandResourceCliTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(result["state"], "STALLED")
             self.assertFalse(result["authorityClaimed"])
+    def test_measured_command_can_write_ordinary_output_in_receipt_directory(self) -> None:
+        from tests.metrics.test_goal_progress import progress_inputs
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_json_create(root / "request.json", request(root))
+            context, observations, receipts = progress_inputs(3)
+            write_json_create(root / "input.json", {"context": context,
+                "observations": observations, "qualifiedReceipts": receipts})
+            code, result = _run_cli([
+                "--measure-request", str(root / "request.json"),
+                "--measure-out", str(root / "receipt.json"),
+                "metrics", "goal-progress", "--input", str(root / "input.json"),
+                "--now", "100", "--out", str(root / "ordinary-output.json"),
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(result["state"], "STALLED")
+            self.assertEqual(json.loads((root / "ordinary-output.json").read_bytes()), result)
+            self.assertEqual(json.loads((root / "receipt.json").read_bytes())["exitCode"], 0)
+
     def test_opt_in_version_stdout_is_unchanged_and_output_create_only(self) -> None:
         ordinary = _run_cli(["version"])
         with tempfile.TemporaryDirectory() as tmp:

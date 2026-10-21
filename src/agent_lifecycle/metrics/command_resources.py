@@ -219,23 +219,26 @@ def run_measured_command(
     with hold_authority_directory(output_path.parent, writable=True):
         if output_path.exists() or output_path.is_symlink():
             raise LifecycleError("command-measurement-output-exists", "Output must be new")
-        measurement.start()
-        code = 2
+    # This is preflight, not a directory lease across the ordinary command.
+    # Publication reacquires its own create-only guarded writer; retaining the
+    # preflight handle would deny that writer (and ordinary output) on Windows.
+    measurement.start()
+    code = 2
+    try:
+        code = invoke()
+    except SystemExit as exc:
+        code = exc.code if type(exc.code) is int else 2
+        raise
+    finally:
+        receipt = measurement.finish(code)
         try:
-            code = invoke()
-        except SystemExit as exc:
-            code = exc.code if type(exc.code) is int else 2
-            raise
-        finally:
-            receipt = measurement.finish(code)
-            try:
-                write_json_create(output_path, receipt)
-            except (LifecycleError, OSError):
-                raise LifecycleError(
-                    "command-measurement-publication-failed",
-                    "Command already executed; receipt publication failed. Do not repeat automatically.",
-                    {"commandExecuted": True, "commandExitCode": code, "receiptDigest": receipt["receiptDigest"]},
-                ) from None
+            write_json_create(output_path, receipt)
+        except (LifecycleError, OSError):
+            raise LifecycleError(
+                "command-measurement-publication-failed",
+                "Command already executed; receipt publication failed. Do not repeat automatically.",
+                {"commandExecuted": True, "commandExitCode": code, "receiptDigest": receipt["receiptDigest"]},
+            ) from None
     return code
 
 

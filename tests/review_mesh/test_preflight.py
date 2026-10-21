@@ -244,7 +244,7 @@ class ReviewerPreflightTests(unittest.TestCase):
                 self.assertTrue(first["result"]["complete"])
                 before = journal.snapshot("run")
                 body = load_external_job_response(request, job_root=root / "jobs")
-                self.assertEqual(body, {"stdout": rendered.decode() + "\n", "stderr": ""})
+                self.assertEqual(body, {"stdout": rendered.decode() + os.linesep, "stderr": ""})
                 self.assertEqual(journal.snapshot("run"), before)
                 self.assertEqual(before.active_reservations, 100)
                 self.assertNotIn(rendered.decode(), str(first))

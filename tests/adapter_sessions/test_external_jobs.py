@@ -154,7 +154,7 @@ class ExternalJobRuntimeTests(unittest.TestCase):
             attempt = external_job_attempt_path(request, job_root=root)
             original = (attempt / "result.json").read_bytes()
             self.assertEqual(load_external_job_response(request, job_root=root),
-                             {"stdout": "complete private body\n", "stderr": ""})
+                             {"stdout": "complete private body" + os.linesep, "stderr": ""})
             self.assertEqual(recover_external_job_attempt(request, job_root=root)["result"],
                              first["result"])
             if os.name != "nt":
