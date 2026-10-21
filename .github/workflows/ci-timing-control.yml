@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  serial-windows311:
-    name: windows-serial-control / py3.11
+  paired-windows311:
+    name: windows-paired-control / py3.11
     runs-on: windows-latest
     steps:
       - name: Set git line ending policy
@@ -51,19 +51,26 @@ jobs:
           environment={k:os.environ.get(k) for k in
           ('GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','RUNNER_OS','RUNNER_ARCH','ImageOS','ImageVersion')});
           p.write_text(json.dumps(v,indent=2),encoding='utf-8')"
-      - name: Run stdlib tests
-        id: stdlib-tests
+      - name: Run parallel stdlib tests
+        id: parallel-tests
+        run: >-
+          uv run --frozen --group quality --python 3.11
+          python tools/ci/run_parallel_unittest.py --start tests --top .
+          --out work/ci/paired-parallel.json
+      - name: Run serial stdlib tests
         run: >-
           uv run --frozen --group quality --python 3.11
           python tools/ci/run_unittest.py --start tests --top .
-          --out work/ci/test-timings.json
-      - name: Retain serial control evidence
-        if: always() && steps.stdlib-tests.outcome != 'skipped'
+          --out work/ci/paired-serial.json
+      - name: Retain paired control evidence
+        if: always() && steps.parallel-tests.outcome != 'skipped'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: test-timings-windows-serial-control-py3.11
+          name: test-timings-windows-paired-control-py3.11
           path: |
-            work/ci/test-timings.json
+            work/ci/paired-parallel.json
+            work/ci/paired-parallel/
+            work/ci/paired-serial.json
             work/ci/control-environment.json
           if-no-files-found: error
           retention-days: 14

@@ -64,9 +64,14 @@ runner behavior is unchanged. Wall fields exclude final JSON serialization;
 provider test-step duration includes all command startup, cloning, discovery,
 log and report writes.
 
-The path-filtered `ci-timing-control` PR workflow runs one full sequential
-Windows/Python3.11 control at the same PR checkout SHA as the normal parallel
-job. Manual dispatch is available for a separately authorized comparison.
+The path-filtered `ci-timing-control` PR workflow runs both full modes in one
+Windows/Python3.11 job at the same checkout SHA. Its fixed order is parallel
+first, then sequential: any cache warming therefore benefits the sequential
+control, rather than favoring the proposed optimization. Both steps share one
+runner/image/interpreter; compare their provider step times. Cross-job image
+versions can differ even at the same SHA and runner label, so that comparison
+cannot certify the gate. Keep the recorded incomparable sample. Manual dispatch
+is available only for a separately authorized comparison.
 Promotion requires all normal OS/Python3.11–3.14 checks plus the successful
 control, identical full inventory/outcomes/skips, matching available environment
 identity and at least **15% lower provider test-step wall time**. Retain the
