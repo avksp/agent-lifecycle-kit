@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
@@ -31,6 +32,32 @@ def _invoke(root: Path, *, explain: bool = False, source: str = _SOURCE, output:
     if not explain:
         args.extend(["--out", output])
     return _run_cli([*args, "--repository-root", str(root)])
+
+
+@contextmanager
+def _windows_descriptor_ctime_disagreement():
+    """Inject Windows fd/path ctime semantics while retaining real files."""
+    actual_fstat = os.fstat
+    actual_identity = command._identity
+    descriptor_stats = []
+
+    def fstat(fd):
+        info = actual_fstat(fd)
+        descriptor_stats.append(info)
+        return info
+
+    def identity(info):
+        value = actual_identity(info)
+        if any(info is row for row in descriptor_stats):
+            return (*value[:-1], value[-1] + 1_000_000)
+        return value
+
+    with (
+        patch.object(command.os, "fstat", side_effect=fstat),
+        patch.object(command, "_identity", side_effect=identity),
+        patch.object(command, "_FD_PATH_IDENTITY_FIELDS", 5),
+    ):
+        yield
 
 
 class CompactPlanCommandTests(unittest.TestCase):
@@ -190,6 +217,13 @@ class CompactPlanCommandTests(unittest.TestCase):
             self.assertEqual((root / _SOURCE).read_bytes(), raw)
 
     def test_late_replacement_with_matching_prefix_or_all_prepared_bytes_survives_rollback(self) -> None:
+        self._assert_late_replacement_with_matching_prefix_or_all_prepared_bytes_survives_rollback()
+
+    def test_windows_descriptor_ctime_foreign_output_retained(self) -> None:
+        with _windows_descriptor_ctime_disagreement():
+            self._assert_late_replacement_with_matching_prefix_or_all_prepared_bytes_survives_rollback()
+
+    def _assert_late_replacement_with_matching_prefix_or_all_prepared_bytes_survives_rollback(self) -> None:
         for prefix in (0, 17, None):
             with self.subTest(prefix=prefix), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
@@ -220,6 +254,13 @@ class CompactPlanCommandTests(unittest.TestCase):
                 self.assertEqual((root / _OUTPUT).read_bytes(), foreign)
 
     def test_partial_write_is_removed_without_new_output_directories(self) -> None:
+        self._assert_partial_write_is_removed_without_new_output_directories()
+
+    def test_windows_descriptor_ctime_partial_rollback(self) -> None:
+        with _windows_descriptor_ctime_disagreement():
+            self._assert_partial_write_is_removed_without_new_output_directories()
+
+    def _assert_partial_write_is_removed_without_new_output_directories(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             raw = _prepare(root)

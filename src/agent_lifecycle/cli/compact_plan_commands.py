@@ -25,6 +25,8 @@ from agent_lifecycle.planning.compact_packages import (
     explain_compact_plan,
 )
 
+_FD_PATH_IDENTITY_FIELDS = 5 if os.name == "nt" else 6
+
 _DRAFT_PREREQUISITE = (
     "Before freeze-prepare: author acceptance-criteria.md from the explicit AC/EV facts "
     "and add it to planFiles. The prepared candidate still needs current independent review before lock-create"
@@ -140,6 +142,18 @@ def _identity(info: os.stat_result) -> tuple[int, ...]:
     return info.st_dev, info.st_ino, info.st_mode, info.st_size, info.st_mtime_ns, info.st_ctime_ns
 
 
+def _created_identity(fd: int, path_info: os.stat_result) -> tuple[int, ...]:
+    """Join fd/path metadata, retaining a full path fingerprint for rollback.
+
+    Windows fstat ctime can be change time while path stat reports birth time.
+    All comparable fields must agree before using the path API's fingerprint.
+    """
+    descriptor = _identity(os.fstat(fd))
+    observed = _identity(path_info)
+    fields = _FD_PATH_IDENTITY_FIELDS
+    return observed if descriptor[:fields] == observed[:fields] else descriptor
+
+
 def _require_same_source(root: Path, name: str, raw: bytes, version: tuple[int, ...]) -> None:
     _inspect_path(root, name)
     if _version(root / name) != version or _read(root, name) != raw or _version(root / name) != version:
@@ -159,14 +173,14 @@ def _publish(root: Path, source: str, raw: bytes, version: tuple[int, ...], dest
             with hold_authority_directory(path.parent, writable=True) as directory:
                 fd = directory.write_child(path.name, append=False, mode=0o644)
                 created = True
-                created_identity = _identity(os.fstat(fd))
+                created_identity = _created_identity(fd, directory.stat_child(path.name))
                 with os.fdopen(fd, "wb") as stream:
                     try:
                         stream.write(prepared)
                         stream.flush()
                         os.fsync(stream.fileno())
                     finally:
-                        created_identity = _identity(os.fstat(stream.fileno()))
+                        created_identity = _created_identity(stream.fileno(), directory.stat_child(path.name))
                 directory.sync()
             _require_same_source(root, source, raw, version)
         except FileExistsError:
