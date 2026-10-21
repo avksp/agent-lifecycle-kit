@@ -67,7 +67,10 @@ class LocalLaunchProfileTests(unittest.TestCase):
             raw.write_bytes(b'private input')
             prepared = _prepared_launch(root)
             context = _launch_context(root, Mock(side_effect=RuntimeError('post-start observation failed')))
-            with patch.object(launch_preflight, 'verify_fresh_task_gate'), patch.object(
+            with patch.object(
+                    launch_preflight.time, 'monotonic_ns',
+                    return_value=10_000_000_000), patch.object(
+                    launch_preflight, 'verify_fresh_task_gate'), patch.object(
                     launch_preflight, 'claim_attempt_start'), patch.object(
                     launch_preflight, 'record_uncertain_attempt') as uncertain, patch.object(
                     launch_preflight, 'cleanup_prestart_raw') as cleanup:
@@ -141,7 +144,10 @@ class LocalLaunchProfileTests(unittest.TestCase):
             root = Path(tmp)
             prepared = _prepared_launch(root)
             prepared['argv'] = [str(root / 'absent-executable')]
-            with patch.object(launch_preflight, 'verify_fresh_task_gate'), patch.object(
+            with patch.object(
+                    launch_preflight.time, 'monotonic_ns',
+                    return_value=10_000_000_000), patch.object(
+                    launch_preflight, 'verify_fresh_task_gate'), patch.object(
                     launch_preflight, 'claim_attempt_start'), patch.object(
                     launch_preflight, 'cleanup_prestart_raw') as cleanup, patch.object(
                     launch_preflight, 'record_proven_no_start') as no_start, patch.object(
