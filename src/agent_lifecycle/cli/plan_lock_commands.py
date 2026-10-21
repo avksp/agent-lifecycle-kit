@@ -64,7 +64,7 @@ def create_reviewed_plan_lock(
     )
     # Reject malformed or drifting package bytes before creating the
     # no-replace authority artifact. The second check still detects drift.
-    verify_plan_package_integrity(manifest, lock, repository_root=root)
+    verify_plan_package_integrity(manifest, lock, repository_root=root, require_current_review_source=True)
     lock_rel = f"{plan_root}/plan.lock.json"
     lock_path = root.joinpath(*PurePosixPath(lock_rel).parts)
     try:

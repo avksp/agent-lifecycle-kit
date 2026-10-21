@@ -367,6 +367,27 @@ LIFECYCLE_START_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
 }
 PLAN_INTEGRITY_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-plan-lock.v3": open_object_schema(
+        "agent-plan-lock.v3",
+        required=[
+            "packageId",
+            "planRevision",
+            "manifestHash",
+            "planFilesHash",
+            "entries",
+            "reviewEvidence",
+            "reviewEvidenceDigest",
+            "reviewScopeKind",
+        ],
+        properties={
+            "manifestHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "planFilesHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "entries": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+            "reviewEvidence": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+            "reviewEvidenceDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "reviewScopeKind": {"const": "COMPOSITE"},
+        },
+    ),
     "agent-plan-file-inventory.v1": open_object_schema(
         "agent-plan-file-inventory.v1",
         required=["schemaVersion", "entries"],
@@ -402,7 +423,7 @@ PLAN_INTEGRITY_SCHEMAS: dict[str, dict[str, Any]] = {
             "schemaVersion": {"const": "agent-plan-package-integrity-verification.v1"},
             "status": {"enum": ["PASS", "FAIL"]},
             "required": {"type": "boolean"},
-            "lockSchemaVersion": {"enum": ["agent-plan-lock.v1", "agent-plan-lock.v2"]},
+            "lockSchemaVersion": {"enum": ["agent-plan-lock.v1", "agent-plan-lock.v2", "agent-plan-lock.v3"]},
             "filesystemVerified": {"type": "boolean"},
             "manifestHash": {"type": "string", "minLength": 64, "maxLength": 64},
             "planFilesHash": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},

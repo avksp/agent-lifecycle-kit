@@ -76,7 +76,7 @@ Python 3.11-3.14 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.21.0
+python -m pip install agent-lifecycle-kit==2.22.0
 ```
 
 ## Task evidence identity
@@ -794,3 +794,11 @@ agent-lifecycle metrics goal-progress --input progress-input.json --now <unix-se
 ```
 
 Measurement options precede the ordinary command and require bounded source-bound request input. The progress input contains context, observations and qualified receipt bindings. The host-local response reader is an API, not a raw-output CLI. Provider inspection starts no model and does not infer auth/config/model readiness. Recovery starts no new generation and grants no acceptance. Missing trusted restrictions, chain/history or actual-target readiness refuses selected effects; unrelated direct host calls are outside this guarantee.
+
+## Release 2.22: conservative plan review
+
+The [plan-review reference](conservative-delta-review.md) explains FULL, DELTA_ELIGIBLE and FULL_REQUIRED, complete independent baselines, current per-seat applicability, composite coverage and agent-plan-lock.v3. Selection is advisory, starts no model and never authorizes execution. Missing evidence can be restored without repeating valid reviews. The ordinary full-review route remains supported; measured candidate model savings stay UNAVAILABLE.
+
+```bash
+agent-lifecycle plan review-packet --repository-root . --manifest tasks/my-plan-r2/plan.manifest.json --baseline tasks/my-plan-r1/review.json
+```

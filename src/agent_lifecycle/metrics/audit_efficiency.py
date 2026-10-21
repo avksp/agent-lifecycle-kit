@@ -121,6 +121,11 @@ def validate_audit_efficiency_input(value: Any) -> dict[str, Any]:
         )
     if value.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "audit-efficiency-production-claim"})
+    if "planReviewPairs" in value:
+        try:
+            compare_plan_review_observations(value["planReviewPairs"])
+        except LifecycleError:
+            blockers.append({"code": "plan-review-comparison-invalid"})
     expected = canonical_digest({key: item for key, item in value.items() if key != "inputDigest"})
     if value.get("inputDigest") != expected:
         blockers.append({"code": "audit-efficiency-input-digest-mismatch"})
@@ -131,6 +136,7 @@ def build_audit_efficiency_report(
     measurement: dict[str, Any],
     *,
     comparison_measurements: list[dict[str, Any]] | None = None,
+    plan_review_pairs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Report audit use without turning one release into a reduction claim."""
 
@@ -150,7 +156,7 @@ def build_audit_efficiency_report(
         status = "NO_COMPARISON"
     else:
         status = "PASS"
-    body = {
+    body: dict[str, Any] = {
         "schemaVersion": AUDIT_EFFICIENCY_REPORT_SCHEMA,
         "status": status,
         "releaseId": measurement.get("releaseId") if isinstance(measurement, dict) else None,
@@ -164,6 +170,12 @@ def build_audit_efficiency_report(
         "inputDigest": measurement.get("inputDigest") if isinstance(measurement, dict) else None,
         "productionPromotionClaimed": False,
     }
+    if plan_review_pairs is None and validation["status"] == "PASS":
+        plan_review_pairs = measurement.get("planReviewPairs")
+    if plan_review_pairs is not None:
+        body["planReviewComparison"] = compare_plan_review_observations(plan_review_pairs)
+        if body["planReviewComparison"]["status"] != "PASS":
+            body["status"] = "FAIL"
     return {**body, "reportDigest": canonical_digest(body)}
 
 
@@ -184,6 +196,16 @@ def validate_audit_efficiency_report(report: Any) -> dict[str, Any]:
         blockers.append({"code": "audit-efficiency-authority-boundary"})
     if report.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "audit-efficiency-production-claim"})
+    plan_comparison = report.get("planReviewComparison")
+    if plan_comparison is not None:
+        try:
+            expected_plan = compare_plan_review_observations(plan_comparison.get("pairs"))
+            if plan_comparison != expected_plan:
+                blockers.append({"code": "plan-review-comparison-mismatch"})
+            if expected_plan["status"] == "FAIL" and report.get("status") != "FAIL":
+                blockers.append({"code": "plan-review-comparison-failure-hidden"})
+        except (LifecycleError, AttributeError):
+            blockers.append({"code": "plan-review-comparison-invalid"})
     comparison: dict[str, Any] = (
         cast(dict[str, Any], report.get("comparison")) if isinstance(report.get("comparison"), dict) else {}
     )
@@ -205,6 +227,64 @@ def validate_audit_efficiency_report(report: Any) -> dict[str, Any]:
     if report.get("reportDigest") != expected:
         blockers.append({"code": "audit-efficiency-report-digest-mismatch"})
     return _report_validation(report, blockers)
+
+
+def compare_plan_review_observations(
+    pairs: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Compare declared deterministic observations, never infer model savings.
+
+    The caller executes both routes and supplies observations. These synthetic
+    decisions are test evidence, not independent reviews or measured usage.
+    """
+    if not isinstance(pairs, list) or not 1 <= len(pairs) <= 256:
+        raise LifecycleError("plan-review-pairs-invalid", "Bounded pairs needed")
+    seen: set[str] = set()
+    mismatches = []
+    for pair in pairs:
+        if not isinstance(pair, dict):
+            raise LifecycleError("plan-review-pairs-invalid", "Object needed")
+        name = pair.get("caseId")
+        if not isinstance(name, str) or not name or name in seen:
+            raise LifecycleError("plan-review-pairs-invalid", "Unique case needed")
+        seen.add(name)
+        left, right = pair.get("full"), pair.get("delta")
+        for observation in (left, right):
+            _validate_plan_review_observation(observation)
+        assert isinstance(left, dict) and isinstance(right, dict)
+        fields = [key for key in ("findings", "readiness", "blockingGates") if left[key] != right[key]]
+        if fields:
+            mismatches.append({"caseId": name, "fields": fields})
+    body = {
+        "status": "FAIL" if mismatches else "PASS",
+        "boundary": "DECLARED_DETERMINISTIC_FIXTURES",
+        "caseCount": len(pairs),
+        "pairs": pairs,
+        "mismatches": mismatches,
+        "candidateModelTokens": _unavailable("no-comparable-model-generation"),
+        "modelTokenReductionPercent": _unavailable("no-comparable-model-generation"),
+        "independentModelApproval": False,
+    }
+    return {**body, "comparisonDigest": canonical_digest(body)}
+
+
+def _validate_plan_review_observation(value: Any) -> None:
+    if not isinstance(value, dict):
+        raise LifecycleError("plan-review-observation-invalid", "Object needed")
+    for key in ("findings", "blockingGates"):
+        items = value.get(key)
+        if (
+            not isinstance(items, list)
+            or any(not isinstance(x, str) or not x for x in items)
+            or items != sorted(set(items))
+        ):
+            raise LifecycleError("plan-review-observation-invalid", "Sorted set needed")
+    readiness = value.get("readiness")
+    if not isinstance(readiness, str) or readiness not in {"READY_TO_FREEZE", "CHANGES_REQUIRED"}:
+        raise LifecycleError("plan-review-observation-invalid", "Verdict needed")
+    for key in ("packetBytes", "selectedNodes", "selectedEdges"):
+        if type(value.get(key)) is not int or value[key] < 0:
+            raise LifecycleError("plan-review-observation-invalid", "Count needed")
 
 
 def _efficiency_metrics(measurement: dict[str, Any]) -> dict[str, Any]:

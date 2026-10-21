@@ -11,9 +11,19 @@ from agent_lifecycle.contracts.finding_check_schemas import (
     validate_finding_check_binding,
     validate_finding_check_evidence,
 )
+from agent_lifecycle.review.validation import build_review_impact_graph as _review_graph
 
 TRACEABILITY_SCHEMA = "agent-plan-traceability-validation.v1"
 _GATE_LINK_RE = re.compile(r"\[([^|\]]+)\|([^\]]+)\]")
+
+
+def build_plan_impact_graph(
+    manifest: dict[str, Any],
+    *,
+    file_digests: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Expose the shared review-domain impact projection to planning callers."""
+    return _review_graph(manifest, file_digests=file_digests)
 
 
 def validate_plan_traceability(manifest: dict[str, Any]) -> dict[str, Any]:

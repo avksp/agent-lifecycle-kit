@@ -19,12 +19,31 @@ from agent_lifecycle.specification import validate_specification  # noqa: E402
 
 
 class SddServiceTests(unittest.TestCase):
+    def test_review_impact_wrappers_bind_the_same_fixture_and_downstream_gates(self):
+        import json
+
+        from agent_lifecycle.planning.deltas import select_plan_review_impact
+        from agent_lifecycle.planning.traceability import build_plan_impact_graph
+
+        fixture = ROOT / "tests/audit/fixtures/delta-review-eligible.json"
+        case = json.loads(fixture.read_bytes())
+        before, after = case["baseline"]["subject"], case["subject"]
+        graph = build_plan_impact_graph(after["manifest"], file_digests=after["fileDigests"])
+        selected = select_plan_review_impact(before, after)
+        self.assertEqual(selected["graphDigest"], graph["graphDigest"])
+        self.assertEqual(selected["mode"], "DELTA_ELIGIBLE")
+        self.assertIn("workstream:W1", selected["closure"])
+        self.assertIn("workstream:W2", selected["closure"])
+        self.assertIn("final:final", selected["closure"])
+
     def test_validate_specification_returns_requirement_digest(self) -> None:
-        result = validate_specification({
-            "tier": "S2",
-            "status": "FROZEN",
-            "requirements": [{"id": "REQ-1", "required": True}],
-        })
+        result = validate_specification(
+            {
+                "tier": "S2",
+                "status": "FROZEN",
+                "requirements": [{"id": "REQ-1", "required": True}],
+            }
+        )
         self.assertEqual(result["tier"], "S2")
         self.assertEqual(result["requirementCount"], 1)
 
@@ -71,11 +90,13 @@ class SddServiceTests(unittest.TestCase):
     def test_review_validation_rejects_open_medium_plus_findings(self) -> None:
         for severity in ("BLOCKER", "CRITICAL", "HIGH", "MEDIUM"):
             with self.subTest(severity=severity), self.assertRaises(LifecycleError):
-                validate_independent_review({
-                    "verdict": "READY_TO_FREEZE",
-                    "reviewer": {"independent": True},
-                    "findings": [{"id": "F-1", "status": "open", "severity": severity}],
-                })
+                validate_independent_review(
+                    {
+                        "verdict": "READY_TO_FREEZE",
+                        "reviewer": {"independent": True},
+                        "findings": [{"id": "F-1", "status": "open", "severity": severity}],
+                    }
+                )
 
     def test_verify_plan_lock_binds_manifest_digest(self) -> None:
         manifest = _manifest(overlap=False)
