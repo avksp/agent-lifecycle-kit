@@ -104,9 +104,11 @@ def compare_plan_packages(
         "productionPromotionClaimed": False,
         "modelCallsStarted": False,
         "limitations": [
-            "Byte deltas describe these two supplied authoring documents only; generated and review inputs are separate.",
+            "Byte deltas describe these two supplied authoring documents only; "
+            "generated and review inputs are separate.",
             "Caller-supplied local timings exclude unmeasured model, host and full workflow work.",
-            "Independent review, stale-lock, execution authorization, task/final audits and release gates remain separate.",
+            "Independent review, stale-lock, execution authorization, task/final audits "
+            "and release gates remain separate.",
         ],
     }
     return {**body, "comparisonDigest": canonical_digest(body)}
