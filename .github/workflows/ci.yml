@@ -47,14 +47,17 @@ jobs:
         id: stdlib-tests
         run: >-
           uv run --frozen --group quality --python ${{ matrix.python }}
-          python tools/ci/run_unittest.py --start tests --top .
+          python tools/ci/${{ runner.os == 'Windows' && 'run_parallel_unittest.py' || 'run_unittest.py' }}
+          --start tests --top .
           --out work/ci/test-timings.json
       - name: Retain test timing evidence
         if: always() && steps.stdlib-tests.outcome != 'skipped'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-timings-${{ matrix.os }}-py${{ matrix.python }}
-          path: work/ci/test-timings.json
+          path: |
+            work/ci/test-timings.json
+            work/ci/test-timings/
           if-no-files-found: error
           retention-days: 14
       - name: Run security tests directly
