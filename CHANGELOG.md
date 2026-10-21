@@ -4,6 +4,22 @@
 
 - No changes yet.
 
+## 2.23.0 - 2026-10-21
+
+- Add explicit S0/S1 compact authoring and deterministic canonical DRAFT
+  compilation, with read-only tier profiles and explanations. Missing facts,
+  unsafe paths or elevated risks refuse the compact route; full S2 stays intact.
+- Preserve literal requirements, acceptance, evidence, ownership, checks and
+  caller budgets. Require an explicit acceptance checklist/inventory completion,
+  independent review, reviewed lock and separate execution authorization.
+- Create output exclusively with stable source checks and identity-bound rollback;
+  preserve existing or competing outputs, including matching-byte replacements.
+- Compare controlled compact/verbose inputs without dropping canonical facts or
+  authority checks. Count common preparation and retain unavailable real model,
+  token, USD and full-cycle metrics; local byte counts do not prove savings.
+- Publish matching English/Russian guidance and package/plugin versions. Retain
+  declared reviewer provenance and all existing security, quality and final gates.
+
 ## 2.22.0 - 2026-10-21
 
 - Add conservative plan-review scope selection across requirements, acceptance,

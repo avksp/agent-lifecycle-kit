@@ -81,7 +81,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.22.0
+python -m pip install agent-lifecycle-kit==2.23.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -864,3 +864,7 @@ agent-lifecycle metrics goal-progress --input progress-input.json --now <unix-se
 ```bash
 agent-lifecycle plan review-packet --repository-root . --manifest tasks/my-plan-r2/plan.manifest.json --baseline tasks/my-plan-r1/review.json
 ```
+
+## Компактные пакеты S0/S1 в 2.23
+
+[Подготовка компактного DRAFT](tier-proportional-plan-packages.md) сохраняет проверки, независимое ревью и отдельное разрешение. Перед freeze требуется явно добавить acceptance-criteria.md и его запись в planFiles; UNKNOWN-метрики не становятся нулём.

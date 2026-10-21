@@ -114,6 +114,39 @@ def _build(purpose: str, payload: dict[str, object], *, limit: int = 65536) -> d
 
 
 class PhasePacketTests(unittest.TestCase):
+    def test_compact_canonical_criteria_and_writes_survive_existing_phase_packet(self) -> None:
+        import json
+
+        from agent_lifecycle.planning.compact_packages import compile_compact_plan
+        from tests.metrics.test_plan_package_comparison import MANIFEST, SOURCE, paired_inputs
+
+        _, source = paired_inputs("S1")
+        manifest = compile_compact_plan(json.loads(source), source_path=SOURCE, manifest_path=MANIFEST)
+        payload = {"schemaVersion": "agent-phase-planning-handoff-payload.v1", "workstreams": [], "dependencyEdges": []}
+        for task in manifest["workstreams"]:
+            payload["workstreams"].append(
+                {
+                    "id": task["id"],
+                    "dependsOn": task["dependsOn"],
+                    "writes": task["writes"],
+                    "readOnly": manifest["readOnly"],
+                    "forbiddenWrites": sorted(manifest["forbiddenWrites"]),
+                    "acceptanceCriteria": [
+                        c for c in manifest["acceptance"]["criteria"] if c["id"] in task["acceptanceIds"]
+                    ],
+                    "evidenceRequirements": [
+                        e for e in manifest["acceptance"]["evidence"] if e["id"] in task["evidenceIds"]
+                    ],
+                    "activeBlockerIds": [],
+                }
+            )
+            payload["dependencyEdges"].extend(
+                {"from": dependency, "to": task["id"]} for dependency in task["dependsOn"]
+            )
+        packet = _build("PLANNING_HANDOFF", payload)
+        self.assertEqual(packet["payload"]["workstreams"], sorted(payload["workstreams"], key=lambda task: task["id"]))
+        self.assertEqual(packet["payload"]["dependencyEdges"], payload["dependencyEdges"])
+
     def test_builds_and_validates_each_purpose(self) -> None:
         for purpose, payload in (
             ("PLANNING_HANDOFF", _planning_payload()),

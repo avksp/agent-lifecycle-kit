@@ -33,7 +33,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==2.22.0` from
+  `python -m pip install agent-lifecycle-kit==2.23.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -206,3 +206,7 @@ versus 10/64/184 in 2.19. Event validation still scans the complete log.
 - [Source-native command accounting, bounded preparation and response recovery in 2.21](reference/source-native-workflow-accounting.md).
 
 - [Conservative plan-review reuse in 2.22](reference/conservative-delta-review.md).
+
+## Compact S0/S1 packages in 2.23
+
+[Compact DRAFT authoring](reference/tier-proportional-plan-packages.md) preserves checks, independent review and separate authorization. Explicit acceptance-criteria.md and planFiles completion are required before freeze; UNKNOWN metrics are never zero.

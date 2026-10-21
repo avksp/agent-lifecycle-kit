@@ -21,6 +21,41 @@ from agent_lifecycle.quality.validation_ladder import build_validation_check_cat
 
 
 class CanonicalPlanCompletenessTests(unittest.TestCase):
+    def test_paired_compact_and_verbose_graphs_share_existing_completeness_failures(self) -> None:
+        from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
+        from agent_lifecycle.planning.compact_packages import compile_compact_plan
+        from agent_lifecycle.planning.traceability import validate_plan_traceability
+        from tests.metrics.test_plan_package_comparison import MANIFEST, SOURCE, paired_inputs
+
+        for tier in ("S0", "S1"):
+            legacy, source = paired_inputs(tier)
+            compact = compile_compact_plan(json.loads(source), source_path=SOURCE, manifest_path=MANIFEST)
+            control = json.loads(legacy)
+            for mutation in ("intact", "acceptance", "requirement", "evidence", "checks", "ownership"):
+                outcomes = []
+                for original in (control, compact):
+                    manifest = json.loads(json.dumps(original))
+                    if mutation == "acceptance":
+                        manifest["workstreams"][0]["acceptanceIds"] = ["AC-MISSING"]
+                    elif mutation == "requirement":
+                        manifest["acceptance"]["criteria"][0]["requirementIds"] = ["R-MISSING"]
+                    elif mutation == "evidence":
+                        manifest["workstreams"][0]["evidenceIds"] = ["EV-MISSING"]
+                    elif mutation == "checks":
+                        del manifest["validation"]
+                    elif mutation == "ownership":
+                        manifest["workstreams"][0]["writes"] = ["tasks/compact-example"]
+                    try:
+                        validate_plan_manifest(manifest, require_completeness=True)
+                        require_manifest_authority_paths(manifest)
+                        trace = validate_plan_traceability(manifest)
+                        outcomes.append((trace["status"], sorted(_codes(trace))))
+                    except LifecycleError as exc:
+                        outcomes.append(("FAIL", [exc.code]))
+                with self.subTest(tier=tier, mutation=mutation):
+                    self.assertEqual(outcomes[0], outcomes[1])
+                    self.assertEqual(outcomes[0][0], "PASS" if mutation == "intact" else "FAIL")
+
     def test_canonical_graph_and_literal_paths_pass(self) -> None:
         result = validate_plan_completeness(_manifest())
 

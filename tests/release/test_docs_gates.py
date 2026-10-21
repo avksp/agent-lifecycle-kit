@@ -14,6 +14,24 @@ TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf
 
 
 class ReleaseDocumentationGateTests(unittest.TestCase):
+    def test_compact_documented_json_examples_compile_as_drafts_without_authority(self) -> None:
+        from agent_lifecycle.contracts.compact_plan_schemas import load_compact_plan_input
+        from agent_lifecycle.planning.compact_packages import compile_compact_plan
+
+        for prefix in ("docs", "docs/ru"):
+            text = (ROOT / prefix / "reference/tier-proportional-plan-packages.md").read_text(encoding="utf-8")
+            examples = re.findall(r"```json\n(.*?)\n```", text, flags=re.DOTALL)
+            self.assertEqual(len(examples), 1)
+            source = load_compact_plan_input(examples[0].encode("utf-8"))
+            manifest = compile_compact_plan(
+                source,
+                source_path="tasks/compact-example/compact-input.json",
+                manifest_path="tasks/compact-example/plan.manifest.json",
+            )
+            self.assertEqual(manifest["status"], "DRAFT")
+            self.assertTrue(manifest["planReview"]["required"])
+            self.assertNotIn("authorization", manifest)
+
     def test_frozen_release_candidate_rejects_empty_unreleased_changelog(self) -> None:
         # NEG-R03-13 Changelog Or Architecture Drift
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -650,7 +668,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
                 self.assertIn(marker, text)
             self.assertNotIn("oracle", text.lower())
         self.assertIn("not a task queue, daemon, model runtime or workflow controller", english)
-        self.assertIn(  # noqa: RUF001 - exact Russian documentation marker
+        self.assertIn(
             "не является очередью задач, daemon, средой выполнения модели",
             russian,
         )
@@ -992,7 +1010,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/ru/guides/phase-session-handoff.md",
-        handoff + "полный transcript. Не снижайте review, security, architecture или quality gates.\n",  # noqa: RUF001
+        handoff + "полный transcript. Не снижайте review, security, architecture или quality gates.\n",
     )
     phase_packets = (
         "agent-phase-packet.v1. PLANNING_HANDOFF. IMPLEMENTATION. TASK_AUDIT. REMEDIATION. "

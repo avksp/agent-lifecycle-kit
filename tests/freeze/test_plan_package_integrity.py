@@ -172,6 +172,133 @@ class ScopedPlanPackageIntegrityTests(unittest.TestCase):
 
 
 class PlanPackageIntegrityTests(unittest.TestCase):
+    def test_compact_cli_still_requires_fresh_independent_review_and_verified_lock(self) -> None:
+        from agent_lifecycle.compiler.task_packets import compile_task_packets
+        from tests.cli.helpers import _run_cli
+        from tests.metrics.test_plan_package_comparison import MANIFEST, SOURCE, paired_inputs
+
+        for tier in ("S0", "S1"):
+            with self.subTest(tier=tier), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                _, compact = paired_inputs(tier)
+                source = root / SOURCE
+                source.parent.mkdir(parents=True)
+                source.write_bytes(compact)
+                code, value = _run_cli(
+                    ["plan", "compact-compile", "--input", SOURCE, "--out", MANIFEST, "--repository-root", str(root)]
+                )
+                self.assertEqual(code, 0, value)
+                candidate = "tasks/reviewed-compact"
+                # Initial refusal is required: a compact DRAFT supplies no checklist or review.
+                prepare_args = [
+                    "plan",
+                    "freeze-prepare",
+                    "--manifest",
+                    MANIFEST,
+                    "--out",
+                    candidate,
+                    "--repository-root",
+                    str(root),
+                ]
+                code, refusal = _run_cli(prepare_args)
+                self.assertEqual(code, 2)
+                self.assertEqual(refusal["code"], "freeze-prepare-preflight-failed")
+                self.assertFalse((root / candidate).exists())
+                # Ordinary authoring enrichment remains explicit and source-derived, not an authority bypass.
+                authored = json.loads((root / MANIFEST).read_bytes())
+                checklist = (root / MANIFEST).parent / "acceptance-criteria.md"
+                rows = ["| ID | Requirement | Evidence | Criterion |", "| --- | --- | --- | --- |"]
+                for criterion in authored["acceptance"]["criteria"]:
+                    rows.append(
+                        "| `"
+                        + criterion["id"]
+                        + "` | `"
+                        + criterion["requirementIds"][0]
+                        + "` | `"
+                        + criterion["evidenceIds"][0]
+                        + "` | "
+                        + criterion["statement"]
+                        + " |"
+                    )
+                checklist.write_text("\n".join(rows) + "\n", encoding="utf-8")
+                authored["planFiles"] = sorted([*authored["planFiles"], checklist.relative_to(root).as_posix()])
+                (root / MANIFEST).write_bytes(canonical_bytes(authored) + b"\n")
+                code, value = _run_cli(
+                    [
+                        "plan",
+                        "freeze-prepare",
+                        "--manifest",
+                        MANIFEST,
+                        "--out",
+                        candidate,
+                        "--repository-root",
+                        str(root),
+                    ]
+                )
+                self.assertEqual(code, 0, value)
+                path = root / candidate / "plan.manifest.json"
+                manifest = json.loads(path.read_bytes())
+                report = manifest["planReview"]["report"]
+                lock_args = [
+                    "plan",
+                    "lock-create",
+                    "--manifest",
+                    candidate + "/plan.manifest.json",
+                    "--review",
+                    report,
+                    "--repository-root",
+                    str(root),
+                ]
+                self.assertEqual(_run_cli(lock_args)[0], 2)
+                self.assertFalse(path.with_name("plan.lock.json").exists())
+                with self.assertRaises(LifecycleError):
+                    compile_task_packets(path, write=True, repository_root=root)
+                review = {
+                    "schemaVersion": "agent-plan-review.v1",
+                    "reviewId": "CONTROLLED-REVIEW",
+                    "reviewer": {
+                        "id": "controlled-independent-reviewer",
+                        "runId": "controlled-unit-test",
+                        "surface": "synthetic-test-only",
+                        "independent": True,
+                    },
+                    "packageId": manifest["package"]["id"],
+                    "planRevision": manifest["planRevision"],
+                    "reviewedPlanHash": canonical_digest(manifest),
+                    "fullReview": True,
+                    "verdict": "READY_TO_FREEZE",
+                    "findings": [],
+                }
+                for mutation in ("self-review", "stale"):
+                    broken = json.loads(json.dumps(review))
+                    if mutation == "self-review":
+                        broken["reviewer"]["id"] = manifest["author"]
+                        broken["reviewer"]["independent"] = False
+                    else:
+                        broken["reviewedPlanHash"] = "0" * 64
+                    (root / report).write_bytes(canonical_bytes(broken) + b"\n")
+                    self.assertEqual(_run_cli(lock_args)[0], 2)
+                    self.assertFalse(path.with_name("plan.lock.json").exists())
+                (root / report).write_bytes(canonical_bytes(review) + b"\n")
+                code, value = _run_cli(lock_args)
+                self.assertEqual(code, 0, value)
+                lock = json.loads(path.with_name("plan.lock.json").read_bytes())
+                self.assertEqual(verify_plan_package_integrity(manifest, lock, repository_root=root)["status"], "PASS")
+                packets = compile_task_packets(path, write=True, repository_root=root)
+                self.assertTrue(packets)
+                packet_path = (
+                    root
+                    / manifest["package"]["artifactRoot"]
+                    / "workflow/task-packets"
+                    / (manifest["workstreams"][0]["id"] + ".task-packet.json")
+                )
+                packet = json.loads(packet_path.read_bytes())
+                self.assertEqual(packet["task"]["plannedItems"], manifest["workstreams"][0]["plannedItems"])
+                frozen_source = root / manifest["specification"]["source"]
+                frozen_source.write_bytes(frozen_source.read_bytes() + b" ")
+                with self.assertRaises(LifecycleError):
+                    verify_plan_package_integrity(manifest, lock, repository_root=root)
+
     def test_native_freeze_consumer_keeps_ordinary_and_refuses_stronger_claims_without_writes(self) -> None:
         claims = [
             ({}, True),
