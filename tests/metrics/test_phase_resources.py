@@ -19,6 +19,29 @@ from agent_lifecycle.metrics import (
 
 
 class PhaseResourceTests(unittest.TestCase):
+    def test_derived_input_and_cache_never_become_measured_workflow_source_metrics(self) -> None:
+        for raw, unavailable in (({"cachedInput": 1, "nonCachedInput": 2, "output": 1}, "modelInputTokens"),
+                                 ({"input": 3, "nonCachedInput": 2, "output": 1}, "modelCachedInputTokens"),
+                                 ({"input": 3, "total": 4}, "modelOutputTokens")):
+            phase = _phase("derived-source")
+            phase["tokens"] = raw
+            report = build_phase_resource_measurement([phase])
+            self.assertEqual(validate_phase_resource_measurement(report)["status"], "PASS")
+            self.assertEqual(report["phases"][0]["workflowMetrics"][unavailable],
+                             {"status": "UNAVAILABLE", "value": None})
+            self.assertEqual(report["workflowEconomics"]["metrics"][unavailable],
+                             {"status": "UNAVAILABLE", "value": None})
+
+    def test_new_token_observation_preserves_cache_missing_and_derived_basis(self) -> None:
+        phase = _phase("cache-observation")
+        phase["tokens"] = {"input": 150, "cachedInput": 50, "output": 25}
+        report = build_phase_resource_measurement([phase])
+        entry = report["phases"][0]
+        self.assertEqual(entry["tokenObservation"]["nonCachedInput"], 100)
+        self.assertEqual(entry["tokenObservationBasis"]["input"], "MEASURED")
+        self.assertEqual(entry["tokenObservationBasis"]["total"], "DERIVED")
+        self.assertEqual(validate_phase_resource_measurement(report)["status"], "PASS")
+
     def test_release_2_11_phase_packet_pair_is_predeclared_and_reports_all_deltas(self) -> None:
         root = Path(__file__).parent / "fixtures"
         declaration = _load(root / "release-2-11-phase-packet-comparison-pair.json")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -71,6 +72,9 @@ from agent_lifecycle.adapter_sessions.managed_process import (
 from agent_lifecycle.adapter_sessions.ordinary_audit import verify_fresh_task_gate
 from agent_lifecycle.adapter_sessions.planning_launch import run_planning_launch
 from agent_lifecycle.adapter_sessions.process import run_process
+from agent_lifecycle.adapter_sessions.process_admission import (
+    local_preparation_input_digest,
+)
 from agent_lifecycle.adapter_sessions.qualification import (
     build_qualification_receipt,
     require_planning_qualification_receipt,
@@ -79,6 +83,7 @@ from agent_lifecycle.adapter_sessions.qualification import (
     write_qualification_receipt,
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.preparation_policy import PreparationAdmission
 from agent_lifecycle.freeze import verify_plan_package_integrity
 from agent_lifecycle.workflow.closing_window import PROTECTED_OPERATOR_CLAIM, operator_claim_refusal
 from agent_lifecycle.workflow.risk_execution_gate import validate_task_risk_profile
@@ -134,6 +139,7 @@ def _dispatch_local_profile_operation(
     request: dict[str, Any] | None,
     requested_mode: str | None,
     task_text: str | None,
+    preparation: PreparationAdmission | None = None,
 ) -> dict[str, Any]:
     if operation == "preflight":
         if any(value is not None for value in (route_id, requested_claim, input_request)):
@@ -171,6 +177,18 @@ def _dispatch_local_profile_operation(
             advisory=advisory,
             immutable_input_request=request,
             immutable_input_context=immutable_input_context,
+            preparation=preparation,
+            preparation_input_digest=local_preparation_input_digest(
+                profile_digest=context.profile_digest,
+                operation=operation,
+                repository_root=context.root,
+                source_revision=source_revision,
+                task_id=task_id,
+                task_text=task_text,
+                immutable_context=immutable_input_context,
+            )
+            if preparation is not None
+            else None,
         )
     if operation == "managedTask":
         return _managed_task(
@@ -193,6 +211,46 @@ def _dispatch_local_profile_operation(
     if input_request is not None:
         cleanup_no_start(context.root, None, input_request)
     raise LifecycleError("local-launch-operation-invalid", "local launch operation is unsupported")
+
+
+def _prepared_context(
+    context: _LaunchContext,
+    admission: PreparationAdmission | None,
+    operation: str,
+    source_revision: str | None,
+    task_id: str | None,
+    task_text: str | None,
+    immutable_context: dict[str, Any] | None,
+) -> _LaunchContext:
+    if admission is None:
+        return context
+    if operation not in {"planningTask", "managedTask"}:
+        raise LifecycleError(
+            "PREPARATION_INPUT_MISMATCH",
+            "No expensive task selected",
+        )
+    admission.check(repository_root=context.root)
+    if operation == "planningTask":
+        return context
+    input_digest = local_preparation_input_digest(
+        profile_digest=context.profile_digest,
+        operation=operation,
+        repository_root=context.root,
+        source_revision=source_revision,
+        task_id=task_id,
+        task_text=task_text,
+        immutable_context=immutable_context,
+    )
+    runner = context.runner
+
+    def admitted_runner(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        return admission.invoke(
+            lambda: runner(*args, **kwargs),
+            input_digest=input_digest,
+            repository_root=context.root,
+        )
+
+    return replace(context, runner=admitted_runner)
 
 
 def launch_from_local_profile(
@@ -221,6 +279,7 @@ def launch_from_local_profile(
     input_request: Path | None = None,
     immutable_input_request: dict[str, Any] | None = None,
     immutable_input_context: dict[str, Any] | None = None,
+    preparation: PreparationAdmission | None = None,
 ) -> dict[str, Any]:
     """Select one local launch operation after loading and validating its profile."""
 
@@ -307,6 +366,15 @@ def launch_from_local_profile(
                 profile_digest=context.profile_digest,
             )
         return _blocked_context_launch(context, session_id, blockers, risk_profile)
+    context = _prepared_context(
+        context,
+        preparation,
+        operation,
+        source_revision,
+        task_id,
+        task_text,
+        immutable_input_context,
+    )
     return _dispatch_local_profile_operation(
         context,
         operation,
@@ -328,6 +396,7 @@ def launch_from_local_profile(
         request,
         requested_mode,
         task_text,
+        preparation,
     )
 
 
@@ -422,6 +491,8 @@ def _planning_task(
     advisory: dict[str, Any] | None,
     immutable_input_request: dict[str, Any] | None = None,
     immutable_input_context: dict[str, Any] | None = None,
+    preparation: PreparationAdmission | None = None,
+    preparation_input_digest: str | None = None,
 ) -> dict[str, Any]:
     if not explicit_launch:
         return _blocked_planning_launch(
@@ -478,20 +549,32 @@ def _planning_task(
             executable_identity=identity,
         )
         before = capture_git_worktree_identity(context.root)
-        receipt = run_planning_launch(
-            adapter_id=context.profile_adapter,
-            session_id=session_id,
-            requested_mode=requested_mode,
-            task_text=task_text,
-            input_source=input_source,
-            argv=argv,
-            env=context.env,
-            advisory=advisory,
-            timeout_seconds=context.timeout_seconds,
-            process_cwd=context.root,
-            immutable_input_request=request,
-            immutable_input_context=current,
-            profile_digest=context.profile_digest,
+
+        def launch() -> dict[str, Any]:
+            return run_planning_launch(
+                adapter_id=context.profile_adapter,
+                session_id=session_id,
+                requested_mode=requested_mode,
+                task_text=task_text,
+                input_source=input_source,
+                argv=argv,
+                env=context.env,
+                advisory=advisory,
+                timeout_seconds=context.timeout_seconds,
+                process_cwd=context.root,
+                immutable_input_request=request,
+                immutable_input_context=current,
+                profile_digest=context.profile_digest,
+            )
+
+        receipt = (
+            preparation.invoke(
+                launch,
+                input_digest=preparation_input_digest or "",
+                repository_root=context.root,
+            )
+            if preparation is not None
+            else launch()
         )
         after = capture_git_worktree_identity(context.root)
     except LifecycleError as exc:

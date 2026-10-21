@@ -38,6 +38,7 @@ from agent_lifecycle.adapter_sessions.qualification import (
 )
 from agent_lifecycle.adapter_sessions.worktree_identity import capture_git_worktree_identity
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.preparation_policy import PreparationAdmission
 from agent_lifecycle.host_protocol.validation import validate_managed_launch_profile
 
 
@@ -237,6 +238,8 @@ def launch_from_descriptor(
     state_path: Path | None = None,
     policy_path: Path | None = None,
     process_env: dict[str, str] | None = None,
+    preparation: PreparationAdmission | None = None,
+    project_root: Path | None = None,
 ) -> dict[str, Any]:
     """Block generic descriptor-driven launch until the qualified local route exists."""
 
@@ -248,6 +251,11 @@ def launch_from_descriptor(
     adapter_id = raw_adapter_id if isinstance(raw_adapter_id, str) else "unknown"
     timeout_seconds = _timeout_seconds(profile)
     blockers: list[dict[str, Any]] = []
+    if preparation is not None:
+        try:
+            preparation.check(repository_root=project_root or Path.cwd())
+        except LifecycleError as exc:
+            blockers.append({"code": exc.code})
     if validation["status"] != "PASS":
         blockers.append(
             {

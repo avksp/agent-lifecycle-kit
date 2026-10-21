@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
-from agent_lifecycle.contracts.redaction import redact_value
 from agent_lifecycle.contracts.local_launch_validation import validate_local_launch_profile
+from agent_lifecycle.contracts.redaction import redact_value
 
 LOCAL_HOST_LAUNCH_PROFILE_SCHEMA = "agent-local-host-launch-profile.v1"
 LOCAL_HOST_LAUNCH_PROFILE_VALIDATION_SCHEMA = "agent-local-host-launch-profile-validation.v1"
@@ -23,9 +23,7 @@ MAX_ARGV_ITEMS = 64
 MAX_ARG_BYTES = 4096
 EXECUTABLE_HASH_CHUNK_BYTES = 256 * 1024
 SAFE_VERSION_PROBES = (("--version",), ("-V",), ("version",))
-PLANNING_SUPPORT_STATUSES = frozenset(
-    {"PLANNING_ONLY_QUALIFIED", "PLANNING_ONLY_UNSUPPORTED"}
-)
+PLANNING_SUPPORT_STATUSES = frozenset({"PLANNING_ONLY_QUALIFIED", "PLANNING_ONLY_UNSUPPORTED"})
 _DANGEROUS_PLANNING_FLAGS = frozenset(
     {
         "--allow-dangerously-skip-permissions",
@@ -78,7 +76,6 @@ def load_local_launch_profile(
     """Load a validated profile contained below the ignored local root."""
 
     lexical_root = (project_root or Path.cwd()).absolute()
-    root = lexical_root.resolve()
     local_root_path = lexical_root / LOCAL_PROFILE_ROOT
     candidate = profile_path if profile_path.is_absolute() else lexical_root / profile_path
     try:
@@ -121,18 +118,24 @@ def build_executable_identity(
     profile_digest: str | None = None,
     shipped_profile_digest: str | None = None,
     strict: bool = True,
+    max_executable_bytes: int | None = None,
 ) -> dict[str, Any]:
     """Bind a launch receipt to the resolved executable without storing its path."""
 
     executable = str(profile.get("executable", ""))
     source_env = os.environ if process_env is None else process_env
+    candidate: Path | None
     if Path(executable).is_absolute():
         candidate = Path(executable)
     else:
         path_value = None if process_env is None else source_env.get("PATH", "")
         resolved_name = shutil.which(executable, path=path_value)
         candidate = Path(resolved_name) if resolved_name else None
-    origin = "SHIPPED_PROFILE_BOUND" if profile_digest and profile_digest == shipped_profile_digest else "OPERATOR_OWNED_UNVERIFIED"
+    origin = (
+        "SHIPPED_PROFILE_BOUND"
+        if profile_digest and profile_digest == shipped_profile_digest
+        else "OPERATOR_OWNED_UNVERIFIED"
+    )
     base = {
         "schemaVersion": "agent-host-executable-identity.v1",
         "status": "UNAVAILABLE",
@@ -160,6 +163,12 @@ def build_executable_identity(
         before = resolved.stat()
         if not resolved.is_file():
             raise OSError("executable is not a regular file")
+        if max_executable_bytes is not None and (
+            type(max_executable_bytes) is not int
+            or not 1 <= max_executable_bytes <= 64 * 1024 * 1024
+            or before.st_size > max_executable_bytes
+        ):
+            raise OSError("executable exceeds preflight bound")
         digest = hashlib.sha256()
         byte_count = 0
         with resolved.open("rb") as handle:
@@ -169,6 +178,8 @@ def build_executable_identity(
                     break
                 digest.update(chunk)
                 byte_count += len(chunk)
+                if max_executable_bytes is not None and byte_count > max_executable_bytes:
+                    raise OSError("executable exceeds preflight bound")
         after = resolved.stat()
     except OSError as exc:
         if strict:
@@ -407,7 +418,9 @@ def _validate_planning_only(value: Any, blockers: list[dict[str, Any]]) -> None:
         blockers=blockers,
         require_non_empty=True,
     )
-    argv = value.get("argvTemplate") if isinstance(value.get("argvTemplate"), list) else []
+    argv = value.get("argvTemplate")
+    if not isinstance(argv, list):
+        argv = []
     if any(token in _DANGEROUS_PLANNING_FLAGS for token in argv):
         blockers.append({"code": "planning-launch-dangerous-flag"})
     for index, token in enumerate(argv[:-1]):

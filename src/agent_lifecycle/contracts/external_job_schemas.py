@@ -7,6 +7,13 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.schema_builders import open_object_schema
+from agent_lifecycle.contracts.workflow_economics_schemas import (
+    SESSION_USAGE_SCHEMA,
+    validate_cumulative_session_usage,
+)
+from agent_lifecycle.contracts.workflow_economics_schemas import (
+    check_job_observation as _check_job_observation,
+)
 
 EXTERNAL_JOB_REQUEST_SCHEMA = "agent-external-job-request.v1"
 EXTERNAL_JOB_STATUS_SCHEMA = "agent-external-job-status.v1"
@@ -419,6 +426,7 @@ def build_external_job_status(
     cancel_requested: bool = False,
     process_cleanup_status: str = "NOT_REQUIRED",
     post_terminal_write_detected: bool = False,
+    observation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     require_external_job_pass(validate_external_job_request(request), "request")
     body = {
@@ -439,6 +447,8 @@ def build_external_job_status(
         "authorityClaimed": False,
         "productionPromotionClaimed": False,
     }
+    if observation is not None:
+        body["observation"] = dict(observation)
     result = {**body, "statusDigest": canonical_digest(body)}
     require_external_job_pass(validate_external_job_status(result, request=request), "status")
     return result
@@ -450,6 +460,7 @@ def validate_external_job_status(status: Any, *, request: dict[str, Any] | None 
     if not isinstance(status, dict):
         blockers.append({"code": "external-job-status-not-object"})
     _check_schema(value, EXTERNAL_JOB_STATUS_SCHEMA, "status", blockers)
+    _check_job_observation(value, request, blockers, max_attempts=MAX_ATTEMPTS)
     _check_identity(value.get("jobId"), "external-job-job-id-invalid", blockers)
     _check_attempt(value.get("attempt"), "external-job-attempt-invalid", blockers)
     _check_digest(value.get("requestDigest"), "external-job-request-digest-invalid", blockers)
@@ -489,6 +500,15 @@ def validate_external_job_status(status: Any, *, request: dict[str, Any] | None 
         and value.get("processCleanupStatus") in {"PASS", "NOT_REQUIRED"}
         and value.get("postTerminalWriteDetected") is False
     )
+    if "observation" in value:
+        observation = value["observation"]
+        eligible = (
+            eligible
+            and isinstance(observation, dict)
+            and observation.get("remoteState") == "TERMINAL"
+            and observation.get("localState") in ("COMPLETE", "RECOVERED")
+            and observation.get("semanticStatus") in ("PASS", "FAIL")
+        )
     return _validation("STATUS", state if isinstance(state, str) else None, blockers, blocking_eligible=eligible)
 
 
@@ -531,6 +551,8 @@ def build_external_job_result(
         "authorityClaimed": False,
         "productionPromotionClaimed": False,
     }
+    if "observation" in status:
+        body["observation"] = dict(status["observation"])
     result = {**body, "resultDigest": canonical_digest(body)}
     require_external_job_pass(validate_external_job_result(result, request=request, status=status), "result")
     return result
@@ -573,6 +595,7 @@ def validate_external_job_result(
         if validate_external_job_artifact(artifact, request=request)["status"] != "PASS":
             blockers.append({"code": "external-job-artifact-invalid"})
     _check_usage(value.get("usage"), blockers)
+    _check_job_observation(value, request, blockers, max_attempts=MAX_ATTEMPTS)
     if not isinstance(value.get("blockers"), list) or len(value.get("blockers", [])) > 128:
         blockers.append({"code": "external-job-blockers-invalid"})
     _check_false_fields(value, ("authorityClaimed", "productionPromotionClaimed"), blockers)
@@ -609,6 +632,8 @@ def validate_external_job_result(
             blockers.append({"code": "external-job-result-status-mismatch"})
         elif value.get("usage") != status.get("usage"):
             blockers.append({"code": "external-job-result-usage-mismatch"})
+        if value.get("observation") != status.get("observation"):
+            blockers.append({"code": "external-job-result-observation-mismatch"})
         expected_eligible = _blocking_eligible(status, verdict, bool(value.get("complete")))
         if value.get("blockingEligible") != expected_eligible:
             blockers.append({"code": "external-job-result-eligibility-mismatch"})
@@ -680,12 +705,22 @@ def _children(value: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _blocking_eligible(status: dict[str, Any], verdict: str | None, complete: bool) -> bool:
+    observation = status.get("observation")
     return bool(
         status.get("state") == "SUCCEEDED"
         and verdict in {"PASS", "FAIL"}
         and complete
         and status.get("processCleanupStatus") in {"PASS", "NOT_REQUIRED"}
         and status.get("postTerminalWriteDetected") is False
+        and (
+            "observation" not in status
+            or (
+                isinstance(observation, dict)
+                and observation.get("remoteState") == "TERMINAL"
+                and observation.get("localState") in ("COMPLETE", "RECOVERED")
+                and observation.get("semanticStatus") == verdict
+            )
+        )
     )
 
 
@@ -897,14 +932,35 @@ __all__ = [
     "EXTERNAL_JOB_VALIDATION_SCHEMA",
     "JOB_STATES",
     "JOB_VERDICTS",
+    "SESSION_USAGE_SCHEMA",
     "TERMINAL_JOB_STATES",
     "build_external_job_artifact",
     "build_external_job_request",
     "build_external_job_result",
     "build_external_job_status",
     "require_external_job_pass",
+    "validate_cumulative_session_usage",
     "validate_external_job_artifact",
     "validate_external_job_request",
     "validate_external_job_result",
     "validate_external_job_status",
 ]
+
+for _schema_id in (EXTERNAL_JOB_STATUS_SCHEMA, EXTERNAL_JOB_RESULT_SCHEMA):
+    EXTERNAL_JOB_SCHEMAS[_schema_id]["properties"]["observation"] = {
+        "type": "object",
+        "required": [
+            "subjectDigest",
+            "assignmentDigest",
+            "requestDigest",
+            "attempt",
+            "deliveryAttempt",
+            "semanticRound",
+            "remoteState",
+            "localState",
+            "semanticStatus",
+            "responseDigest",
+            "sessionUsage",
+        ],
+        "additionalProperties": True,
+    }

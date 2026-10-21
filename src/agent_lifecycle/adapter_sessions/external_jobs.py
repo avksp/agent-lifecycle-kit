@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import os
 import stat
@@ -16,16 +17,30 @@ from typing import Any
 from agent_lifecycle.adapter_sessions.process import run_process
 from agent_lifecycle.adapter_sessions.session_store import session_path
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.authority_io import create_authority_bytes
+from agent_lifecycle.contracts.canonical import canonical_bytes, require_private_file
 from agent_lifecycle.contracts.external_job_schemas import (
     TERMINAL_JOB_STATES,
     build_external_job_artifact,
+    build_external_job_request,
     build_external_job_result,
     build_external_job_status,
     require_external_job_pass,
     validate_external_job_request,
+    validate_external_job_result,
+    validate_external_job_status,
 )
+from agent_lifecycle.contracts.paths import read_stable_repository_file
 from agent_lifecycle.contracts.persistence import create_private_json, require_private_json
-from agent_lifecycle.contracts.redaction import redact_text
+from agent_lifecycle.contracts.preparation_policy import (
+    REVIEW_PREFLIGHT_FIELDS,
+    PreparationAdmission,
+    review_invocation_digest,
+)
+from agent_lifecycle.contracts.process_execution_schemas import (
+    validate_process_execution_receipt,
+)
+from agent_lifecycle.contracts.redaction import redact_text, redact_value
 from agent_lifecycle.host_protocol.external_jobs import validate_external_job_transition
 
 DEFAULT_EXTERNAL_JOB_ROOT = ".alk/external-jobs"
@@ -78,26 +93,94 @@ def run_external_job(
     process_runner: ProcessRunner = run_process,
     now: Clock | None = None,
     post_terminal_quiet_seconds: float = 0.05,
+    preparation: PreparationAdmission | None = None,
+    review_preflight: Callable[[], dict[str, Any]] | None = None,
+    recover_existing: bool = False,
+    stdin_text: str | None = None,
 ) -> dict[str, Any]:
     """Execute one adapter-owned process and persist an immutable attempt record."""
 
     require_external_job_pass(validate_external_job_request(request), "request")
     _require_portable_request_metadata(request)
+    if (
+        recover_existing
+        and external_job_attempt_path(
+            request,
+            job_root=job_root,
+        ).exists()
+    ):
+        return recover_external_job_attempt(request, job_root=job_root)
     if not argv or not all(isinstance(item, str) and item and "\x00" not in item for item in argv):
         raise LifecycleError("external-job-argv-invalid", "external job argv must be a non-empty string list")
     limits = request["limits"]
     _require_usage_bound(cost_micros, limits["maxCostMicros"], "costMicros")
     _require_usage_bound(reported_tokens, limits["maxReportedTokens"], "reportedTokens")
     children = _validated_children(request, child_requests or [])
+    preflight_receipt = None
+    if review_preflight is not None:
+        # The callback cannot replace the invocation while qualifying it.
+        request, argv, env = copy.deepcopy(request), list(argv), dict(env)
+        cwd = (cwd or Path.cwd()).resolve()
+        preflight_receipt = _require_review_preflight(
+            review_preflight,
+            request=request,
+            argv=argv,
+            cwd=cwd,
+            stdin_text=stdin_text,
+        )
+    if preparation is not None:
+        _require_prior_job_settled(
+            request,
+            job_root=job_root,
+            preparation=preparation,
+        )
+        preparation.check(repository_root=cwd or Path.cwd())
     context = _prepare_external_job(request, children, job_root=job_root, now=now)
+    if preflight_receipt is not None:
+        create_private_json(
+            context.attempt_root / "review-preflight.json",
+            preflight_receipt,
+        )
     invocation_started_ns = time.monotonic_ns()
-    process, local_cancel = _invoke_external_job_process(
-        context,
-        argv,
-        env=env,
-        cwd=cwd,
-        cancel_event=cancel_event,
-        process_runner=process_runner,
+
+    def invoke() -> tuple[dict[str, Any], threading.Event]:
+        if preparation is not None:
+            _require_prior_job_settled(
+                request,
+                job_root=job_root,
+                preparation=preparation,
+            )
+        if review_preflight is not None:
+            current_preflight = _require_review_preflight(
+                review_preflight,
+                request=request,
+                argv=argv,
+                cwd=cwd or Path.cwd(),
+                stdin_text=stdin_text,
+            )
+            if current_preflight != preflight_receipt:
+                raise LifecycleError(
+                    "REVIEW_PREFLIGHT_UNAVAILABLE",
+                    "Review qualification changed",
+                )
+        return _invoke_external_job_process(
+            context,
+            argv,
+            env=env,
+            cwd=cwd,
+            cancel_event=cancel_event,
+            process_runner=process_runner,
+            stdin_text=stdin_text,
+        )
+
+    process, local_cancel = (
+        preparation.invoke(
+            invoke,
+            input_digest=request["requestDigest"],
+            repository_root=cwd or Path.cwd(),
+        )
+        if preparation is not None
+        else invoke()
     )
     observed_elapsed_ms = max(0, (time.monotonic_ns() - invocation_started_ns) // 1_000_000)
     return _finalize_external_job(
@@ -110,6 +193,290 @@ def run_external_job(
         cost_micros=cost_micros,
         reported_tokens=reported_tokens,
         post_terminal_quiet_seconds=post_terminal_quiet_seconds,
+    )
+
+
+def _require_review_preflight(
+    check: Callable[[], dict[str, Any]],
+    *,
+    request: dict[str, Any],
+    argv: list[str],
+    cwd: Path,
+    stdin_text: str | None,
+) -> dict[str, Any]:
+    try:
+        if not isinstance(stdin_text, str):
+            raise ValueError("Qualified STDIN delivery required")
+        expected = review_invocation_digest(
+            request=request,
+            argv=argv,
+            root_digest=canonical_digest(str(cwd.resolve())),
+            rendered_input=stdin_text.encode("utf-8"),
+        )
+        receipt = check()
+        if set(receipt) != REVIEW_PREFLIGHT_FIELDS:
+            raise ValueError("Closed portable preflight required")
+        body = {k: v for k, v in receipt.items() if k != "preflightDigest"}
+        if (
+            receipt.get("status") != "PASS"
+            or receipt.get("requestDigest") != request["requestDigest"]
+            or receipt.get("sourceSnapshotDigest") != request["sourceSnapshotDigest"]
+            or receipt.get("invocationDigest") != expected
+            or receipt.get("preflightDigest") != canonical_digest(body)
+            or receipt.get("schemaVersion") != "agent-reviewer-preflight.v1"
+            or receipt.get("reason") != "READY"
+            or receipt.get("authorityClaimed") is not False
+            or receipt.get("productionPromotionClaimed") is not False
+            or type(receipt.get("modelCalls")) is not int
+            or receipt["modelCalls"] != 0
+            or not isinstance(receipt.get("packetDigest"), str)
+            or len(receipt["packetDigest"]) != 64
+            or any(v not in "0123456789abcdef" for v in receipt["packetDigest"])
+        ):
+            raise ValueError("Qualified actual invocation required")
+        return dict(receipt)
+    except (ValueError, KeyError, TypeError, LifecycleError) as exc:
+        raise LifecycleError(
+            "REVIEW_PREFLIGHT_UNAVAILABLE",
+            "Qualified reviewer input required",
+        ) from exc
+
+
+def _require_prior_job_settled(
+    request: dict[str, Any],
+    *,
+    job_root: Path | None,
+    preparation: PreparationAdmission,
+) -> None:
+    """Generation retry defaults to zero on selected preparation routes."""
+    if request["attempt"] <= 1:
+        return
+    root = external_job_attempt_path(request, job_root=job_root).parent
+    previous = root / ("attempt-" + str(request["attempt"] - 1))
+    try:
+        prior_request = _load_private_json(previous / "request.json", "prior request")
+        if any(prior_request[k] != value for k, value in request.items() if k not in {"attempt", "requestDigest"}):
+            raise ValueError("Immutable review subject changed")
+        prior = load_external_job_attempt(prior_request, job_root=job_root)
+        status, result, process = (
+            prior["jobStatus"],
+            prior["result"],
+            prior["processReceipt"],
+        )
+        require_external_job_pass(
+            validate_external_job_status(status, request=prior_request),
+            "status",
+        )
+        require_external_job_pass(
+            validate_external_job_result(
+                result,
+                request=prior_request,
+                status=status,
+            ),
+            "result",
+        )
+        if (
+            status["state"] != "FAILED"
+            or result["complete"] is not False
+            or result["outputBytes"] != 0
+            or not isinstance(process, dict)
+            or validate_process_execution_receipt(process)["status"] != "PASS"
+            or process["exitCode"] != 75
+            or process["timedOut"] is not False
+            or process["cancelled"] is not False
+            or process["cleanup"]["status"] != "PASS"
+        ):
+            raise ValueError("No settled bounded transient failure")
+        preparation.check_retry(
+            prior_request_digest=prior_request["requestDigest"],
+            prior_result_digest=result["resultDigest"],
+            retry_ordinal=request["attempt"] - 1,
+        )
+    except (OSError, TypeError, ValueError, KeyError, LifecycleError) as exc:
+        raise LifecycleError(
+            "REVIEW_ROUTE_SUSPENDED",
+            "Recover/resolve the original attempt first",
+        ) from exc
+
+
+def recover_external_job_attempt(
+    request: dict[str, Any],
+    *,
+    job_root: Path | None = None,
+) -> dict[str, Any]:
+    """Retrieve the same complete response without generation or new usage."""
+    try:
+        return _recover_complete_attempt(request, job_root=job_root)
+    except (OSError, ValueError, KeyError, TypeError, LifecycleError) as exc:
+        reason = "REVIEW_RECOVERY_INVALID"
+        if isinstance(exc, LifecycleError) and exc.code in {
+            "REVIEW_REMOTE_UNRESOLVED",
+            "REVIEW_ROUTE_SUSPENDED",
+            "REVIEW_RESPONSE_UNAVAILABLE",
+        }:
+            reason = exc.code
+        raise LifecycleError(reason, "Complete reusable response unavailable") from exc
+
+
+def _recover_complete_attempt(
+    request: dict[str, Any],
+    *,
+    job_root: Path | None,
+) -> dict[str, Any]:
+    view = load_external_job_attempt(request, job_root=job_root)
+    status, result = view["jobStatus"], view["result"]
+    require_external_job_pass(
+        validate_external_job_status(status, request=request),
+        "status",
+    )
+    if result is None or status["state"] not in TERMINAL_JOB_STATES:
+        raise LifecycleError(
+            "REVIEW_REMOTE_UNRESOLVED",
+            "Remote outcome remains unavailable",
+        )
+    require_external_job_pass(
+        validate_external_job_result(result, request=request, status=status),
+        "result",
+    )
+    if result["complete"] is not True or not result["blockingEligible"]:
+        raise LifecycleError(
+            "REVIEW_ROUTE_SUSPENDED",
+            "No complete reusable response",
+        )
+    _require_portable_recovery_records(request, status, result)
+    root = external_job_attempt_path(request, job_root=job_root)
+    running = _load_private_json(_status_path(root, 1), "running status")
+    transition = validate_external_job_transition(running, status, request=request)
+    require_external_job_pass(transition, "transition")
+    for artifact in result["artifacts"]:
+        path = root / artifact["locator"]
+        if not path.resolve().is_relative_to(root.resolve()):
+            raise LifecycleError("REVIEW_RECOVERY_INVALID", "Artifact changed")
+        data = read_stable_repository_file(
+            root,
+            artifact["locator"],
+            max_bytes=max(1, artifact["bytes"]),
+            label="recovered artifact",
+        )
+        if hashlib.sha256(data).hexdigest() != artifact["sha256"] or len(data) != artifact["bytes"]:
+            raise LifecycleError("REVIEW_RECOVERY_INVALID", "Artifact changed")
+    # Original process diagnostics remain in the immutable local attempt.
+    # Recovery exports the same semantic result/usage, never raw stored extras.
+    _read_complete_response(root, request, result)
+    view = _attempt_view(request, status, result, None, transition)
+    if len(canonical_bytes(view)) > 65536:
+        raise ValueError("Portable recovery exceeds its bound")
+    return view
+
+
+def _require_portable_recovery_records(
+    request: dict[str, Any],
+    status: dict[str, Any],
+    result: dict[str, Any],
+) -> None:
+    """Refuse unsupported extras without rewriting an accepting identity."""
+    normalized_request = build_external_job_request(
+        job_id=request["jobId"],
+        attempt=request["attempt"],
+        adapter_id=request["adapterId"],
+        operation=request["operation"],
+        execution_kind=request["executionKind"],
+        descriptor_digest=request["descriptorDigest"],
+        plan_digest=request["planDigest"],
+        plan_lock_digest=request["planLockDigest"],
+        source_revision=request["sourceRevision"],
+        source_snapshot_digest=request["sourceSnapshotDigest"],
+        limits=request["limits"],
+        parent_job_id=request["parentJobId"],
+        parent_attempt=request["parentAttempt"],
+        parent_request_digest=request["parentRequestDigest"],
+    )
+    normalized_status = build_external_job_status(
+        request=request,
+        state=status["state"],
+        sequence=status["sequence"],
+        observed_at=status["observedAt"],
+        usage=status["usage"],
+        started_at=status["startedAt"],
+        ended_at=status["endedAt"],
+        children=status["children"],
+        cancel_requested=status["cancelRequested"],
+        process_cleanup_status=status["processCleanupStatus"],
+        post_terminal_write_detected=status["postTerminalWriteDetected"],
+        observation=status.get("observation"),
+    )
+    artifacts = [
+        build_external_job_artifact(
+            request=request,
+            artifact_id=item["artifactId"],
+            media_type=item["mediaType"],
+            bytes_count=item["bytes"],
+            sha256=item["sha256"],
+            locator=item["locator"],
+        )
+        for item in result["artifacts"]
+    ]
+    normalized_result = build_external_job_result(
+        result_id=result["resultId"],
+        request=request,
+        status=status,
+        verdict=result["verdict"],
+        complete=result["complete"],
+        artifacts=artifacts,
+        output_digest=result["outputDigest"],
+        output_bytes=result["outputBytes"],
+        blockers=[],
+    )
+    for original, normalized in (
+        (request, normalized_request),
+        (status, normalized_status),
+        (result, normalized_result),
+    ):
+        _, changed = redact_value(original)
+        if original != normalized or changed:
+            raise ValueError("Unsupported or sensitive recovery metadata")
+
+
+def _read_complete_response(
+    root: Path,
+    request: dict[str, Any],
+    result: dict[str, Any],
+) -> dict[str, str]:
+    body = {}
+    for stream in ("stdout", "stderr"):
+        name = "response." + stream
+        try:
+            require_private_file(root / name)
+            data = read_stable_repository_file(
+                root,
+                name,
+                max_bytes=request["limits"]["maxOutputBytes"],
+                label="private recovered response",
+            )
+        except (OSError, LifecycleError) as exc:
+            raise LifecycleError(
+                "REVIEW_RESPONSE_UNAVAILABLE",
+                "Durable response unavailable",
+            ) from exc
+        body[stream] = data.decode("utf-8")
+    count = sum(len(value.encode("utf-8")) for value in body.values())
+    expected = canonical_digest(body) if count else None
+    if count != result["outputBytes"] or expected != result["outputDigest"]:
+        raise ValueError("Durable response identity changed")
+    return body
+
+
+def load_external_job_response(
+    request: dict[str, Any],
+    *,
+    job_root: Path | None = None,
+) -> dict[str, str]:
+    """Host-local bounded response input for parsing/import; never CLI output."""
+    view = recover_external_job_attempt(request, job_root=job_root)
+    return _read_complete_response(
+        external_job_attempt_path(request, job_root=job_root),
+        request,
+        view["result"],
     )
 
 
@@ -169,6 +536,7 @@ def _invoke_external_job_process(
     cwd: Path | None,
     cancel_event: threading.Event | None,
     process_runner: ProcessRunner,
+    stdin_text: str | None = None,
 ) -> tuple[dict[str, Any], threading.Event]:
     local_cancel = threading.Event()
     monitor_stop = threading.Event()
@@ -194,6 +562,7 @@ def _invoke_external_job_process(
             adapter_id=request["adapterId"],
             cancel_event=local_cancel,
             cleanup_grace_seconds=float(limits["cancelGraceSeconds"]),
+            **({"stdin_text": stdin_text, "max_input_bytes": 1024 * 1024} if stdin_text is not None else {}),
         )
     finally:
         create_private_json(
@@ -231,7 +600,8 @@ def _finalize_external_job(
         request, context.artifact_root, quiet_seconds=post_terminal_quiet_seconds
     )
 
-    blockers = [*process.get("blockers", []), *child_blockers, *artifact_blockers]
+    response_blockers = _capture_private_response(context, process)
+    blockers = [*process.get("blockers", []), *child_blockers, *artifact_blockers, *response_blockers]
     elapsed_ms = _elapsed_ms(process, observed_elapsed_ms=observed_elapsed_ms)
     wall_limit_ms = int(limits["maxWallSeconds"]) * 1000
     if elapsed_ms > wall_limit_ms:
@@ -300,6 +670,33 @@ def _finalize_external_job(
         create_private_json(context.attempt_root / "process-receipt.json", process["processReceipt"])
     create_private_json(context.attempt_root / "result.json", result)
     return _attempt_view(request, terminal, result, process["processReceipt"], terminal_transition)
+
+
+def _capture_private_response(
+    context: _JobContext,
+    process: dict[str, Any],
+) -> list[dict[str, str]]:
+    """Durable complete/partial delivery in the existing private attempt."""
+    limit = context.request["limits"]["maxOutputBytes"]
+    remaining = limit
+    truncated = False
+    for stream in ("stdout", "stderr"):
+        value = process.get(stream, "")
+        if not isinstance(value, str):
+            raise LifecycleError(
+                "REVIEW_RESPONSE_UNAVAILABLE",
+                "Response encoding unavailable",
+            )
+        data = value.encode("utf-8")
+        truncated = truncated or len(data) > remaining
+        selected = data[:remaining]
+        remaining -= len(selected)
+        create_authority_bytes(
+            context.attempt_root / ("response." + stream),
+            selected,
+            private=True,
+        )
+    return [{"code": "external-job-response-byte-limit"}] if truncated else []
 
 
 def _settle_artifacts(

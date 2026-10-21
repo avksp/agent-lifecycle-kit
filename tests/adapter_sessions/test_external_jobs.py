@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -10,6 +11,8 @@ from pathlib import Path
 from agent_lifecycle.adapter_sessions.external_jobs import (
     external_job_attempt_path,
     load_external_job_attempt,
+    load_external_job_response,
+    recover_external_job_attempt,
     run_external_job,
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
@@ -53,6 +56,185 @@ def _request(
 
 
 class ExternalJobRuntimeTests(unittest.TestCase):
+    def test_selected_transient_retry_requires_finite_bound_grant(self):
+        from dataclasses import replace
+
+        from agent_lifecycle.accounting.journal import Journal
+        from agent_lifecycle.adapter_sessions.process_admission import JournalPreparationAdmission
+        from tests.accounting.test_journal import PROOF, open_scope
+        from tests.adapter_sessions.test_process_admission import (
+            preparation_operation,
+            qualified_context,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with Journal(root / "usage.db", PROOF) as journal:
+                open_scope(journal)
+                first_request = _request("transient")
+                def first_context(prefix):
+                    context = qualified_context(prefix)
+                    context["inputDigest"] = first_request["requestDigest"]
+                    return context
+                first_admission = JournalPreparationAdmission(
+                    journal, replace(preparation_operation(), input_digest=first_request["requestDigest"]),
+                    first_context, clock=lambda: 100,
+                )
+                failed = run_external_job(
+                    first_request, [sys.executable, "-c", "raise SystemExit(75)"],
+                    env=dict(os.environ), cwd=root, job_root=root / "jobs",
+                    preparation=first_admission,
+                )
+                self.assertEqual(failed["result"]["state"], "FAILED")
+                second_request = _request("transient", attempt=2)
+                op = replace(preparation_operation("retry"), retry_ordinal=1,
+                             input_digest=second_request["requestDigest"])
+                def second_context(prefix):
+                    context = qualified_context(prefix)
+                    context["inputDigest"] = second_request["requestDigest"]
+                    context["repeat"] = {
+                        "required": True, "qualified": True,
+                        "disposition": "INVALIDATED", "inputDigests": ["e" * 64],
+                        "benefitDigest": "f" * 64,
+                    }
+                    return context
+                no_grant = JournalPreparationAdmission(journal, op, second_context, clock=lambda: 100)
+                with self.assertRaises(LifecycleError) as caught:
+                    run_external_job(second_request, ["never"], env={}, cwd=root,
+                                     job_root=root / "jobs", preparation=no_grant)
+                self.assertEqual(caught.exception.code, "REVIEW_ROUTE_SUSPENDED")
+                self.assertFalse(external_job_attempt_path(second_request, job_root=root / "jobs").exists())
+                def retry_context(prefix):
+                    context = second_context(prefix)
+                    context["retry"] = {
+                        "qualified": True, "authorizationDigest": "a" * 64,
+                        "priorRequestDigest": first_request["requestDigest"],
+                        "priorResultDigest": failed["result"]["resultDigest"],
+                        "disposition": "TRANSIENT_SETTLED", "maxGenerationRetries": 1,
+                    }
+                    return context
+                allowed = JournalPreparationAdmission(journal, op, retry_context, clock=lambda: 100)
+                complete = run_external_job(
+                    second_request, [sys.executable, "-c", "print('recovered')"],
+                    env=dict(os.environ), cwd=root, job_root=root / "jobs", preparation=allowed,
+                )
+                self.assertEqual(complete["result"]["state"], "SUCCEEDED")
+                self.assertEqual(journal.snapshot("run").active_reservations, 200)
+
+    def test_transport_recovery_keeps_one_original_result_and_charge(self):
+        from unittest.mock import Mock
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "jobs"
+            request = _request("recover-complete")
+            first = run_external_job(
+                request, [sys.executable, "-c", "print('complete')"],
+                env=dict(os.environ), job_root=root, reported_tokens=37,
+            )
+            runner = Mock(side_effect=AssertionError("second generation"))
+            recovered = run_external_job(
+                request, ["invalid-new-argv"], env={}, job_root=root,
+                recover_existing=True, process_runner=runner,
+            )
+            self.assertEqual(recovered["result"], first["result"])
+            self.assertEqual(recovered["jobStatus"], first["jobStatus"])
+            self.assertEqual(recovered["result"]["usage"]["reportedTokens"], 37)
+            self.assertIsNone(recovered["processReceipt"])
+            self.assertEqual(recover_external_job_attempt(request, job_root=root), recovered)
+            runner.assert_not_called()
+
+    def test_private_response_roundtrip_and_missing_or_changed_body_refuse(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "jobs"
+            request = _request("durable-response")
+            first = run_external_job(
+                request, [sys.executable, "-c", "print('complete private body')"],
+                env=dict(os.environ), job_root=root, reported_tokens=37,
+            )
+            attempt = external_job_attempt_path(request, job_root=root)
+            original = (attempt / "result.json").read_bytes()
+            self.assertEqual(load_external_job_response(request, job_root=root),
+                             {"stdout": "complete private body" + os.linesep, "stderr": ""})
+            self.assertEqual(recover_external_job_attempt(request, job_root=root)["result"],
+                             first["result"])
+            if os.name != "nt":
+                for stream in ("stdout", "stderr"):
+                    self.assertEqual((attempt / ("response." + stream)).stat().st_mode
+                                     & 0o777, 0o600)
+            (attempt / "response.stdout").write_text("changed body", encoding="utf-8")
+            with self.assertRaises(LifecycleError) as changed:
+                recover_external_job_attempt(request, job_root=root)
+            self.assertEqual(changed.exception.code, "REVIEW_RECOVERY_INVALID")
+            (attempt / "response.stdout").unlink()
+            with self.assertRaises(LifecycleError) as missing:
+                recover_external_job_attempt(request, job_root=root)
+            self.assertEqual(missing.exception.code, "REVIEW_RESPONSE_UNAVAILABLE")
+            # Historical metadata remains readable, but cannot qualify as a response.
+            self.assertEqual(load_external_job_attempt(request, job_root=root)["result"],
+                             first["result"])
+            self.assertEqual((attempt / "result.json").read_bytes(), original)
+
+    def test_recovery_refuses_open_schema_private_extras_without_rewriting(self):
+        from agent_lifecycle.contracts.external_job_schemas import (
+            validate_external_job_result,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "jobs"
+            request = _request("recovery-private-extras")
+            first = run_external_job(
+                request, [sys.executable, "-c", "print('complete')"],
+                env=dict(os.environ), job_root=root,
+            )
+            attempt = external_job_attempt_path(request, job_root=root)
+            result = dict(first["result"], diagnostic={
+                "api_key": "private-key-should-never-leave",
+                "prompt": "private prompt", "path": str(attempt),
+                "large": "x" * 200000,
+            })
+            result["resultDigest"] = canonical_digest({
+                k: v for k, v in result.items() if k != "resultDigest"
+            })
+            self.assertEqual(validate_external_job_result(
+                result, request=request, status=first["jobStatus"],
+            )["status"], "PASS")
+            path = attempt / "result.json"
+            path.write_text(json.dumps(result), encoding="utf-8")
+            original = path.read_bytes()
+            with self.assertRaises(LifecycleError) as caught:
+                recover_external_job_attempt(request, job_root=root)
+            self.assertEqual(caught.exception.code, "REVIEW_RECOVERY_INVALID")
+            self.assertLess(len(str(caught.exception)), 200)
+            self.assertNotIn("private-key", str(caught.exception))
+            self.assertNotIn(str(attempt), str(caught.exception))
+            self.assertEqual(path.read_bytes(), original)
+
+    def test_recovery_refuses_partial_wrong_subject_and_modified_artifacts(self):
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "jobs"
+            request = _request("recover-artifact")
+            script = (
+                "import os,pathlib; "
+                "(pathlib.Path(os.environ['ALK_EXTERNAL_JOB_ARTIFACT_DIR'])"
+                "/'result.txt').write_text('complete')"
+            )
+            run_external_job(request, [sys.executable, "-c", script],
+                             env=dict(os.environ), job_root=root)
+            attempt = external_job_attempt_path(request, job_root=root)
+            (attempt / "artifacts/result.txt").write_text("changed", encoding="utf-8")
+            with self.assertRaises(LifecycleError) as caught:
+                recover_external_job_attempt(request, job_root=root)
+            self.assertEqual(caught.exception.code, "REVIEW_RECOVERY_INVALID")
+            partial = _request("recover-partial")
+            run_external_job(partial, [sys.executable, "-c", "pass"],
+                             env=dict(os.environ), job_root=root, complete=False)
+            with self.assertRaises(LifecycleError) as caught:
+                recover_external_job_attempt(partial, job_root=root)
+            self.assertEqual(caught.exception.code, "REVIEW_ROUTE_SUSPENDED")
+            wrong = dict(request, sourceRevision="wrong-source")
+            with self.assertRaises(LifecycleError):
+                recover_external_job_attempt(wrong, job_root=root)
+
     def test_success_persists_private_bounded_artifact_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "jobs"

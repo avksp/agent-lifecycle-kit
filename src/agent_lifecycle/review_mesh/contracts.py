@@ -7,6 +7,7 @@ from typing import Any, cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.authority_text import require_review_text
+from agent_lifecycle.contracts.external_job_schemas import validate_cumulative_session_usage
 from agent_lifecycle.contracts.independent_evidence_schemas import validate_independence_requirement
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS as REVIEW_MESH_MODE_IDS
 from agent_lifecycle.model_routing.profiles import ALLOWED_MODEL_CLASSES as ALLOWED_MODEL_CLASSES
@@ -351,12 +352,19 @@ def build_review_mesh_result(
     status: str | None = None,
     live_calls_started: bool = False,
     independent_evidence: dict[str, Any] | None = None,
+    session_usage_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a normalized reviewer result receipt from an assignment."""
 
     require_review_mesh_profile_pass(validate_review_mesh_profile(profile))
     require_review_mesh_assignment_pass(validate_review_mesh_assignment(assignment, profile=profile))
     budget_usage = dict(budget_usage)
+    session_check = cumulative_reviewer_budget(
+        profile,
+        assignment,
+        budget_usage,
+        session_usage_context,
+    )
     usage_blockers: list[dict[str, Any]] = []
     _validate_budget_usage(budget_usage, usage_blockers, prefix="review-mesh-result", allow_unknown=True)
     if usage_blockers or set(budget_usage) != USAGE_KEYS:
@@ -416,7 +424,49 @@ def build_review_mesh_result(
         body["budgetUsageStatus"] = "UNAVAILABLE"
         body["roundParticipation"] = {"eligible": False, "reasonCode": "budget-usage-unavailable"}
         body["liveCallsStarted"] = live_calls_started
+    if session_check is not None and session_usage_context is not None:
+        body["sessionUsage"] = dict(session_usage_context["receipt"])
+        body["assignmentDigest"] = assignment["assignmentDigest"]
+        body["sessionBudgetBasis"] = "CUMULATIVE_PROVIDER_SESSION"
     return {**body, "resultDigest": canonical_digest(body)}
+
+
+def cumulative_reviewer_budget(
+    profile: dict[str, Any],
+    assignment: dict[str, Any],
+    usage: dict[str, Any],
+    context: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """A selected session route cannot fall back to prompt or per-call usage."""
+    subject = assignment.get("subject", {})
+    if subject.get("cumulativeUsageRequired") is not True and context is None:
+        return None
+    if not isinstance(context, dict):
+        raise LifecycleError("review-session-usage-required", "Qualified cumulative usage is required")
+    binding = {
+        "sessionDigest": subject.get("sessionDigest"),
+        "sourceRevision": subject.get("sourceRevision"),
+        "subjectDigest": canonical_digest(subject),
+        "assignmentDigest": assignment.get("assignmentDigest"),
+    }
+    cap = profile["budgetCap"]
+    names = {
+        "maxInputTokens": "inputTokens",
+        "maxOutputTokens": "outputTokens",
+        "maxInvocations": "invocations",
+        "maxWallSeconds": "wallSeconds",
+    }
+    check = validate_cumulative_session_usage(
+        context.get("receipt"),
+        binding=binding,
+        qualification=context.get("qualification"),
+        previous=context.get("previous"),
+        limits={names[key]: value for key, value in cap.items() if key in names},
+    )
+    receipt = context.get("receipt", {})
+    if check["status"] != "PASS" or any(usage.get(key) != receipt.get("usage", {}).get(key) for key in USAGE_KEYS):
+        raise LifecycleError("review-session-usage-invalid", "Cumulative reviewer usage is unavailable or invalid")
+    return check
 
 
 def _imported_independence_claimed(result: dict[str, Any]) -> bool:
@@ -440,11 +490,30 @@ def _imported_independence_claimed(result: dict[str, Any]) -> bool:
     return imported and isinstance(independence, dict) and independence.get("status") == "INDEPENDENT"
 
 
-def validate_review_mesh_result(result: dict[str, Any], *, profile: dict[str, Any] | None = None) -> dict[str, Any]:
+def validate_review_mesh_result(
+    result: dict[str, Any],
+    *,
+    profile: dict[str, Any] | None = None,
+    session_usage_context: dict[str, Any] | None = None,
+    assignment: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     if not isinstance(result, dict):
         raise LifecycleError("invalid-review-mesh-result", "Review Mesh result must be an object")
     require_review_text(result)
+    subject = result.get("subject")
+    if "sessionUsage" in result or (isinstance(subject, dict) and subject.get("cumulativeUsageRequired") is True):
+        try:
+            if profile is None or not isinstance(session_usage_context, dict) or assignment is None:
+                raise LifecycleError("review-session-usage-required", "Bound session context is required")
+            if result.get("sessionUsage") != session_usage_context.get("receipt"):
+                raise LifecycleError("review-session-usage-invalid", "Session receipt differs")
+            require_review_mesh_assignment_pass(validate_review_mesh_assignment(assignment, profile=profile))
+            if any(result.get(key) != assignment.get(key) for key in ("subject", "assignmentId", "assignmentDigest")):
+                raise LifecycleError("review-session-usage-invalid", "Assignment binding differs")
+            cumulative_reviewer_budget(profile, assignment, result.get("budgetUsage", {}), session_usage_context)
+        except (LifecycleError, KeyError):
+            blockers.append({"code": "review-mesh-result-session-usage-invalid"})
     if _imported_independence_claimed(result):
         blockers.append({"code": "review-mesh-result-import-independence-not-proven"})
     if result.get("schemaVersion") != REVIEW_MESH_RESULT_SCHEMA:

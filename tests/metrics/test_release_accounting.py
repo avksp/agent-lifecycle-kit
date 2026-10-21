@@ -16,6 +16,26 @@ from agent_lifecycle.metrics import (
 
 
 class ReleaseAccountingTests(unittest.TestCase):
+    def test_unknown_phase_stays_partial_and_intentional_scope_exclusion_stays_excluded(self) -> None:
+        from agent_lifecycle.metrics.phase_resources import build_phase_resource_measurement
+
+        for known in (0, 12):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                phases = [{"phaseId": "known", "phaseKind": "AUDIT", "durationMs": 0, "steps": 0,
+                           "tokens": {"input": known, "output": 0}},
+                          {"phaseId": "unknown", "phaseKind": "PLANNING", "durationMs": 0, "steps": 0}]
+                write_json_create(root / "phase.json", build_phase_resource_measurement(phases))
+                report = build_release_accounting("2.21.0", [Path("phase.json")], project_root=root)
+                self.assertEqual(validate_release_accounting(report)["status"], "PASS")
+                self.assertEqual(report["totals"]["metrics"]["tokens"], {"status": "PARTIAL", "value": known})
+                report["entries"][1]["scope"]["additive"] = False
+                source = build_release_accounting_source("2.21.0", report["entries"])
+                write_json_create(root / "intentional.json", source)
+                excluded = build_release_accounting("2.21.0", [Path("intentional.json")], project_root=root)
+                self.assertEqual(excluded["totals"]["metrics"]["tokens"], {"status": "DERIVED", "value": known})
+                self.assertEqual(excluded["exclusions"][0]["reason"], "NON_ADDITIVE_SCOPE")
+
     def test_release_2_13_strategy_fixture_is_comparable_and_non_authoritative(self) -> None:
         fixture_root = Path(__file__).parent / "fixtures"
         baseline = json.loads((fixture_root / "release-2-13-strategy-baseline.json").read_text(encoding="utf-8"))

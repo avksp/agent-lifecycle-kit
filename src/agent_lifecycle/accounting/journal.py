@@ -356,6 +356,78 @@ class Journal(
             for row in self._db.execute("SELECT * FROM events WHERE scope=? ORDER BY revision,ordinal", (scope,))
         ]
 
+    def bounded_prefix(
+        self,
+        scope: str,
+        *,
+        expected_revision: int,
+        boundary: tuple[int, int],
+        max_rows: int,
+        max_bytes: int,
+    ) -> dict:
+        """Read a complete current prefix; size checks precede payload loading.
+
+        This adds no event, schema or authority. Closed/compacted or incomplete
+        histories cannot qualify as an empty initial preparation history.
+        """
+        identity(scope)
+        uint(expected_revision)
+        if (
+            type(max_rows) is not int
+            or not 1 <= max_rows <= 4096
+            or type(max_bytes) is not int
+            or not 1 <= max_bytes <= 16 * 1024 * 1024
+            or type(boundary) is not tuple
+            or len(boundary) != 2
+            or any(type(v) is not int or v < 0 for v in boundary)
+        ):
+            raise ValueError("Invalid bounded prefix limits or boundary")
+        with self._transaction(scope):
+            row = self._db.execute("SELECT revision FROM scope_state WHERE scope=?", (scope,)).fetchone()
+            if row is None:
+                raise JournalUnavailable("Complete scope prefix unavailable")
+            if row[0] != expected_revision:
+                raise RevisionConflict("Prefix revision changed")
+            metadata = self._db.execute(
+                "SELECT revision,ordinal,"
+                "length(CAST(payload AS BLOB))+length(CAST(writer AS BLOB))+"
+                "length(CAST(event_id AS BLOB))+length(CAST(scope AS BLOB))+"
+                "length(CAST(transaction_id AS BLOB))+length(CAST(kind AS BLOB))+"
+                "length(CAST(digest AS BLOB))+"
+                "length(CAST(observed_at AS BLOB)) AS bytes "
+                "FROM events WHERE scope=? ORDER BY revision,ordinal LIMIT ?",
+                (scope, max_rows + 1),
+            ).fetchall()
+            if (
+                len(metadata) > max_rows
+                or sum(item["bytes"] for item in metadata) > max_bytes
+                or not metadata
+                or len(metadata) != expected_revision
+                or any(item["revision"] != index or item["ordinal"] != 0 for index, item in enumerate(metadata, 1))
+                or boundary != (metadata[-1]["revision"], metadata[-1]["ordinal"])
+            ):
+                raise JournalUnavailable("Prefix incomplete or exceeds limits")
+            events = [
+                dict(item)
+                for item in self._db.execute(
+                    "SELECT * FROM events WHERE scope=? ORDER BY revision,ordinal",
+                    (scope,),
+                )
+            ]
+            if any(hashlib.sha256(item["payload"].encode("utf-8")).hexdigest() != item["digest"] for item in events):
+                raise JournalUnavailable("Prefix payload integrity unavailable")
+            body = {
+                "schemaVersion": "agent-journal-bounded-prefix.v1",
+                "scope": scope,
+                "revision": expected_revision,
+                "boundary": list(boundary),
+                "complete": True,
+                "rowCount": len(events),
+                "utf8Bytes": sum(item["bytes"] for item in metadata),
+                "events": events,
+            }
+            return {**body, "prefixDigest": digest(body)}
+
     def _source_preflight(self, receipt: dict) -> None:
         self._check_observed(
             {

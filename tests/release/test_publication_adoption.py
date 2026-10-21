@@ -34,6 +34,17 @@ class PublicationAdoptionTests(unittest.TestCase):
             ):
                 self.assertIn(marker, text, (prefix, marker))
 
+    def test_source_native_accounting_is_reachable_without_host_claims(self):
+        for prefix in ("docs", "docs/ru"):
+            for page in ("README.md", "guides/install-and-first-run.md",
+                         "reference/cli.md"):
+                text = (ROOT / prefix / page).read_text(encoding="utf-8")
+                self.assertIn("source-native-workflow-accounting.md", text)
+            text = (ROOT / prefix / "reference/source-native-workflow-accounting.md").read_text(encoding="utf-8")
+            for marker in ("UNAVAILABLE", "response.stdout", "response.stderr",
+                           "load_external_job_response", "STDIN"):
+                self.assertIn(marker, text)
+
     def test_current_docs_pass_adoption_validation(self) -> None:
         result = validate_publication_adoption(root=ROOT, target_version=TARGET_VERSION)
 

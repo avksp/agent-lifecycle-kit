@@ -10,6 +10,7 @@ from typing import Any, cast
 def build_parser(argv: list[str] | None = None) -> argparse.ArgumentParser:
     if _is_version_only(argv):
         parser = _RootArgumentParser(prog="agent-lifecycle")
+        _measurement_options(parser)
         parser.add_subparsers(dest="command", required=True).add_parser(
             "version", help="print package version as compact JSON"
         )
@@ -30,6 +31,7 @@ def build_parser(argv: list[str] | None = None) -> argparse.ArgumentParser:
     from agent_lifecycle.cli.worktree import add_worktree_parser
 
     parser = _RootArgumentParser(prog="agent-lifecycle")
+    _measurement_options(parser)
     subparsers = cast(Any, parser.add_subparsers(dest="command", required=True))
     subparsers.add_parser("version", help="print package version as compact JSON")
     _add_start_parser(subparsers)
@@ -65,6 +67,11 @@ def build_parser(argv: list[str] | None = None) -> argparse.ArgumentParser:
     _add_project_parser(subparsers)
     subparsers.add_parser("conformance", help="conformance commands")
     return parser
+
+
+def _measurement_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--measure-request", help="opt-in bounded command measurement request")
+    parser.add_argument("--measure-out", help="create-only command measurement receipt")
 
 
 def _is_version_only(argv: list[str] | None) -> bool:

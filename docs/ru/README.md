@@ -18,7 +18,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 подтверждения, а основное время остаётся на исследование, реализацию и проверку
 продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 2.20.0 · Python 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 2.21.0 · Python 3.11-3.14
 
 Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
 
@@ -28,7 +28,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 
 Описание переносимого пакета навыков находится в разделе [переносимый пакет Agent Plugins](reference/agent-plugins.md), проверка установленного пакета - в разделе [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md), а необязательный контроль жизненного цикла адаптера - в [отдельном справочнике](adapters/lifecycle-control.md). Сейчас комплектные адаптеры публикуют `GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск сохраняет статус `WRAPPER_ONLY`.
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.20.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.21.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
 
 Для быстрого старта выполните:
 
@@ -51,7 +51,7 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 
 - Начните с [быстрого старта](quickstart.md).
 - Затем выберите подходящий сценарий в руководстве [как ALK работает с разными задачами](guides/how-alk-works.md).
-- Готовые последовательности команд собраны в разделе [сценарии задач жизненного цикла](guides/lifecycle-cookbook.md), а управляемое вычисление и явное применение следующего перехода описывает [продолжение workflow](reference/workflow-continuation.md).
+- Готовые последовательности команд собраны в разделе [сценарии задач жизненного цикла](guides/lifecycle-cookbook.md), а управляемое вычисление и явное применение следующего перехода описывает [продолжение workflow](reference/workflow-continuation.md). [Учёт команд, ограничение подготовки и восстановление ответа в 2.21](reference/source-native-workflow-accounting.md).
 - Границы [запуска только для планирования](reference/planning-only-launch.md) и [запуска зафиксированной задачи через проверенный профиль](reference/qualified-host-launch.md) описаны в справочнике. Поставляемые профили планирования остаются кандидатами с безопасным отказом до проверки соответствующего профиля.
 - Устройство проекта описывает [архитектура системы](architecture/system-architecture.md), а отличие от похожих инструментов показывает [сравнение проекта](reference/project-comparison.md).
 - Границы нескольких агентов, настройка рабочих потоков, выбор модели, промпты, тайм-ауты и повторы собраны в разделе [настройка рабочего процесса и управления выполнением](reference/workflow-customization.md).

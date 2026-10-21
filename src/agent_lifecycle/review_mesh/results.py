@@ -35,6 +35,8 @@ def import_review_mesh_result(
     assignment: dict[str, Any],
     reviewer_output: dict[str, Any],
     allow_local_evidence_refs: bool = False,
+    session_usage_context: dict[str, Any] | None = None,
+    existing_results: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Normalize a reviewer output object into a redacted Review Mesh result."""
 
@@ -61,6 +63,7 @@ def import_review_mesh_result(
         findings=findings,
         status=status,
         live_calls_started=sanitized.get("liveCallsStarted", False),
+        session_usage_context=session_usage_context,
     )
     # Distinct caller-supplied identity hashes are comparison data, not an
     # observed independent review. Retain them without promoting the import.
@@ -83,6 +86,7 @@ def import_review_mesh_result(
         "commandOutcomes": commands,
         "redaction": redaction,
         "import": {
+            "assignmentDigest": assignment["assignmentDigest"],
             "schemaVersion": sanitized.get("schemaVersion") or "reviewer-output.unknown",
             "rawOutputStored": False,
             "outputDigest": canonical_digest(reviewer_output),
@@ -96,7 +100,12 @@ def import_review_mesh_result(
         },
     }
     normalized = {**body, "resultDigest": canonical_digest(body)}
-    validation = validate_review_mesh_result(normalized, profile=profile)
+    validation = validate_review_mesh_result(
+        normalized,
+        profile=profile,
+        session_usage_context=session_usage_context,
+        assignment=assignment,
+    )
     if normalized.get("budgetUsageStatus") == "UNAVAILABLE" or unproven_independence:
         # Return readable candidates only for these expected proof gaps. The
         # public validator still rejects them; other validation errors survive.
@@ -110,7 +119,48 @@ def import_review_mesh_result(
         }
         validation["status"] = "FAIL" if validation["blockers"] else "PASS"
     require_review_mesh_result_pass(validation)
+    if existing_results is not None:
+        return _same_response_once(normalized, existing_results)
     return normalized
+
+
+def _same_response_once(
+    result: dict[str, Any],
+    existing: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not isinstance(existing, list) or len(existing) > 64:
+        _invalid_import("recovery input must be a bounded result list")
+    found = None
+    for candidate in existing:
+        if not isinstance(candidate, dict):
+            _invalid_import("recovery results must be objects")
+        imported = candidate.get("import", {})
+        if not isinstance(imported, dict):
+            _invalid_import("recovery result import binding is invalid")
+        if imported.get("assignmentDigest") != result["import"]["assignmentDigest"]:
+            continue
+        body = {key: value for key, value in candidate.items() if key != "resultDigest"}
+        if candidate.get("resultDigest") != canonical_digest(body):
+            _invalid_import("recovery result integrity differs")
+        if (
+            imported.get("outputDigest") != result["import"]["outputDigest"]
+            or any(
+                candidate.get(key) != result.get(key)
+                for key in (
+                    "subject",
+                    "reviewer",
+                    "profileDigest",
+                    "assignmentId",
+                    "sessionUsage",
+                    "budgetUsage",
+                )
+            )
+            or found is not None
+            or candidate != result
+        ):
+            _invalid_import("recovery cannot replace or duplicate a bound response")
+        found = candidate
+    return found if found is not None else result
 
 
 def _readable_candidate_gap(blocker: dict[str, Any], *, unproven_independence: bool) -> bool:

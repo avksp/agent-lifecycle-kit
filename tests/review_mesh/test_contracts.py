@@ -20,6 +20,65 @@ from agent_lifecycle.review_mesh import (
 from agent_lifecycle.review_mesh.contracts import require_review_mesh_quorum_pass
 
 
+def session_review_inputs(max_invocations: int = 2) -> tuple[dict, dict, dict]:
+    from tests.contracts.test_external_job_schemas import session_fixture
+
+    profile = build_review_mesh_profile(
+        independence_required=False,
+        budget_cap={"maxInputTokens": 12000, "maxOutputTokens": 4000,
+                    "maxInvocations": max_invocations, "maxWallSeconds": 180},
+    )
+    subject = {"taskId": "SESSION-REVIEW", "sourceRevision": "b" * 40,
+               "sessionDigest": "a" * 64, "cumulativeUsageRequired": True}
+    assignment = build_review_mesh_assignment(
+        profile=profile, assignment_id="SESSION-ASSIGNMENT", subject=subject,
+        reviewer={"role": "reviewer", "modelClass": "strong-reasoning"},
+    )
+    receipt, _, proof = session_fixture()
+    binding = {"subjectDigest": canonical_digest(subject), "assignmentDigest": assignment["assignmentDigest"]}
+    receipt.update(binding)
+    receipt["receiptDigest"] = canonical_digest({k: v for k, v in receipt.items() if k != "receiptDigest"})
+    proof.update(binding, receiptDigest=receipt["receiptDigest"])
+    return profile, assignment, {"receipt": receipt, "qualification": proof}
+
+
+class ReviewerSessionBudgetTests(unittest.TestCase):
+    def test_cumulative_invocations_overrun_is_not_hidden_by_a_single_result(self) -> None:
+        profile, assignment, context = session_review_inputs(1)
+        usage = {key: context["receipt"]["usage"][key] for key in ("invocations", "inputTokens", "outputTokens", "wallSeconds")}
+        with self.assertRaises(LifecycleError):
+            build_review_mesh_result(profile=profile, assignment=assignment, status="PASS",
+                                     budget_usage=usage, session_usage_context=context)
+
+    def test_cumulative_budget_needs_separately_bound_source_and_assignment(self) -> None:
+        profile, assignment, context = session_review_inputs()
+        usage = {key: context["receipt"]["usage"][key] for key in ("invocations", "inputTokens", "outputTokens", "wallSeconds")}
+        with self.assertRaises(LifecycleError):
+            build_review_mesh_result(profile=profile, assignment=assignment, budget_usage=usage, status="PASS")
+        result = build_review_mesh_result(profile=profile, assignment=assignment, budget_usage=usage,
+                                          status="PASS", session_usage_context=context)
+        self.assertEqual(result["sessionBudgetBasis"], "CUMULATIVE_PROVIDER_SESSION")
+        self.assertEqual(validate_review_mesh_result(result, profile=profile, assignment=assignment,
+                                                     session_usage_context=context)["status"], "PASS")
+        self.assertEqual(validate_review_mesh_result(result, profile=profile)["status"], "FAIL")
+
+    def test_prompt_size_usage_cannot_replace_session_totals(self) -> None:
+        profile, assignment, context = session_review_inputs()
+        with self.assertRaises(LifecycleError):
+            build_review_mesh_result(profile=profile, assignment=assignment, status="PASS",
+                                     budget_usage={"invocations": 1, "inputTokens": 10, "outputTokens": 4, "wallSeconds": 1},
+                                     session_usage_context=context)
+
+    def test_missing_provider_usage_or_wrong_attestation_refuses(self) -> None:
+        for key in ("receiptDigest", "sessionDigest", "sourceArtifactDigest", "assignmentDigest"):
+            profile, assignment, context = session_review_inputs()
+            context["qualification"][key] = "f" * 64
+            usage = {key: context["receipt"]["usage"][key] for key in ("invocations", "inputTokens", "outputTokens", "wallSeconds")}
+            with self.assertRaises(LifecycleError):
+                build_review_mesh_result(profile=profile, assignment=assignment, status="PASS",
+                                         budget_usage=usage, session_usage_context=context)
+
+
 class ReviewMeshContractTests(unittest.TestCase):
     def test_supplied_profile_modes_bind_result_synthesis_and_quorum_acceptance(self) -> None:
         allowed, excluded = "leader-draft-multi-review", "parallel-research-synthesis"

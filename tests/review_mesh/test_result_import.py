@@ -19,6 +19,38 @@ from agent_lifecycle.review_mesh.results import project_review_result_for_optimi
 
 
 class ReviewMeshResultImportTests(unittest.TestCase):
+    def test_same_recovered_response_is_imported_once_without_new_charge_or_voice(self) -> None:
+        profile, assignment = _profile_and_assignment()
+        raw = _raw_output()
+        first = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
+        second = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw,
+                                           existing_results=[first])
+        self.assertIs(first, second)
+        self.assertEqual(first["budgetUsage"], second["budgetUsage"])
+        self.assertEqual(first["resultDigest"], second["resultDigest"])
+        with self.assertRaises(LifecycleError):
+            import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw,
+                                      existing_results=[first, first])
+        changed = deepcopy(raw)
+        changed["findings"] = []
+        with self.assertRaises(LifecycleError):
+            import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=changed,
+                                      existing_results=[first])
+
+    def test_raw_session_claim_cannot_supply_separate_provenance(self) -> None:
+        from tests.review_mesh.test_contracts import session_review_inputs
+
+        profile, assignment, context = session_review_inputs()
+        raw = _raw_output()
+        raw["sessionUsage"] = context["receipt"]
+        raw["qualification"] = context["qualification"]
+        raw["budgetUsage"] = {key: context["receipt"]["usage"][key] for key in raw["budgetUsage"]}
+        with self.assertRaises(LifecycleError):
+            import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
+        result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw,
+                                           session_usage_context=context)
+        self.assertEqual(result["sessionBudgetBasis"], "CUMULATIVE_PROVIDER_SESSION")
+
     def test_import_encoded_bearer_plus_does_not_expose_a_credential_suffix(self) -> None:
         for marker in ["Bearer prefix+opaque-auth-secret", "Bearer prefix++opaque-auth-secret", "public+topic", "public topic+tail"]:
             for encoding, safe in [(1, ""), (2, ""), (3, ""), (1, "+"), (2, "+"), (3, "+")]:

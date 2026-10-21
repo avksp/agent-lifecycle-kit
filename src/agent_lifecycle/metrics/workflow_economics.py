@@ -35,6 +35,50 @@ MAX_WORKFLOW_METRIC_VALUE = (1 << 63) - 1
 _TIME_WINDOW_METRICS = {"elapsedWallMs", "toolWallMs"}
 
 
+def build_token_attribution(tokens: dict[str, Any] | None) -> dict[str, Any]:
+    """Keep observed zero, cached/noncached input and missing usage distinct."""
+    keys = {"input", "cachedInput", "nonCachedInput", "output", "total"}
+    if tokens is not None and (not isinstance(tokens, dict) or set(tokens) - keys):
+        raise LifecycleError("token-attribution-invalid", "Unsupported token observation")
+    raw = {} if tokens is None else dict(tokens)
+    if any(type(value) is not int or not 0 <= value <= MAX_WORKFLOW_METRIC_VALUE for value in raw.values()):
+        raise LifecycleError("token-attribution-invalid", "Invalid token counter")
+    equations = (("input", "cachedInput", "nonCachedInput"), ("total", "input", "output"))
+    for _ in range(3):
+        for total_key, left_key, right_key in equations:
+            present = [key for key in (total_key, left_key, right_key) if key in raw]
+            if len(present) == 3 and raw[total_key] != raw[left_key] + raw[right_key]:
+                raise LifecycleError("token-attribution-invalid", "Contradictory token counters")
+            if len(present) != 2:
+                continue
+            if total_key not in raw:
+                key, value = total_key, raw[left_key] + raw[right_key]
+            elif left_key not in raw:
+                key, value = left_key, raw[total_key] - raw[right_key]
+            else:
+                key, value = right_key, raw[total_key] - raw[left_key]
+            if not 0 <= value <= MAX_WORKFLOW_METRIC_VALUE:
+                raise LifecycleError("token-attribution-invalid", "Impossible partial token counters")
+            raw[key] = value
+    # Missing terms have a mathematical lower bound, never an observed zero.
+    minimum_input = raw.get("cachedInput", 0) + raw.get("nonCachedInput", 0)
+    if "input" in raw and minimum_input > raw["input"]:
+        raise LifecycleError("token-attribution-invalid", "Input components exceed input")
+    minimum_total = raw.get("input", minimum_input) + raw.get("output", 0)
+    if "total" in raw and minimum_total > raw["total"]:
+        raise LifecycleError("token-attribution-invalid", "Token components exceed total")
+    return {key: raw.get(key) for key in sorted(keys)}
+
+
+def token_attribution_basis(tokens: dict[str, Any] | None) -> dict[str, str]:
+    """Expose arithmetic derivation separately from supplied observations."""
+    values = build_token_attribution(tokens)
+    return {
+        key: "UNAVAILABLE" if value is None else ("MEASURED" if tokens is not None and key in tokens else "DERIVED")
+        for key, value in values.items()
+    }
+
+
 def build_workflow_metric_set(
     values: dict[str, Any] | None = None,
     *,

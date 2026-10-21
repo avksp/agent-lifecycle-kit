@@ -18,6 +18,41 @@ from agent_lifecycle.metrics.workflow_economics import (
 
 
 class WorkflowEconomicsTests(unittest.TestCase):
+    def test_all_small_partial_counter_subsets_match_nonnegative_feasibility(self) -> None:
+        from itertools import product
+
+        from agent_lifecycle.metrics.workflow_economics import build_token_attribution
+
+        keys = ("input", "cachedInput", "nonCachedInput", "output", "total")
+        witnesses = [dict(zip(keys, (cached + fresh, cached, fresh, output, cached + fresh + output), strict=True))
+                     for cached, fresh, output in product(range(5), repeat=3)]
+        for values in product((None, 0, 1, 2), repeat=5):
+            raw = {key: value for key, value in zip(keys, values, strict=True) if value is not None}
+            feasible = [item for item in witnesses if all(item[key] == value for key, value in raw.items())]
+            if not feasible:
+                with self.assertRaises(LifecycleError, msg=str(raw)):
+                    build_token_attribution(raw)
+                continue
+            normalized = build_token_attribution(raw)
+            self.assertTrue(any(all(value is None or item[key] == value for key, value in normalized.items())
+                                for item in feasible), raw)
+        self.assertTrue(all(value is None for value in build_token_attribution(None).values()))
+
+    def test_cache_and_noncache_observations_preserve_missing_and_explicit_zero(self) -> None:
+        from agent_lifecycle.metrics.workflow_economics import build_token_attribution
+
+        missing = build_token_attribution(None)
+        zero = build_token_attribution({"input": 0, "output": 0, "cachedInput": 0})
+        self.assertIsNone(missing["total"])
+        self.assertEqual(zero["total"], 0)
+        self.assertEqual(zero["nonCachedInput"], 0)
+        measured = build_token_attribution({"input": 150, "cachedInput": 50, "output": 25})
+        self.assertEqual(measured["nonCachedInput"], 100)
+        self.assertEqual(measured["total"], 175)
+        for invalid in ({"input": 1, "cachedInput": 2}, {"input": 1, "output": 2, "total": 0},
+                        {"input": True}, {"rawPrompt": "secret"}):
+            with self.assertRaises(LifecycleError):
+                build_token_attribution(invalid)
     def test_phase_summary_is_preserved_by_cost_report(self) -> None:
         phase = {
             "phaseId": "audit",

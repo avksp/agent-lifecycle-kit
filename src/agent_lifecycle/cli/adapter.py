@@ -65,6 +65,20 @@ def _add_strategy_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--strategy-out")
 
 
+def _add_preparation_commands(
+    adapter_sub: argparse._SubParsersAction,
+    external_job_sub: argparse._SubParsersAction,
+) -> None:
+    provider_check = adapter_sub.add_parser("provider-preflight")
+    provider_check.add_argument("--profile", required=True)
+    provider_check.add_argument("--project-root", default=".")
+    provider_check.add_argument("--out")
+    recover = external_job_sub.add_parser("recover")
+    recover.add_argument("--request", required=True)
+    recover.add_argument("--job-root")
+    recover.add_argument("--out")
+
+
 def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     adapter = subparsers.add_parser("adapter", help="adapter commands")
     adapter_sub = adapter.add_subparsers(dest="adapter_command")
@@ -181,6 +195,7 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     external_job_run.add_argument("--cwd", default=".")
     external_job_run.add_argument("--verdict", choices=["PASS", "FAIL", "NO_FINAL_VERDICT"], default="PASS")
     external_job_run.add_argument("--incomplete", action="store_true")
+    external_job_run.add_argument("--recover-existing", action="store_true")
     external_job_run.add_argument("--cost-micros", type=int, default=0)
     external_job_run.add_argument("--reported-tokens", type=int, default=0)
     external_job_run.add_argument("--child-request", action="append", default=[])
@@ -194,6 +209,7 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
     external_job_cancel.add_argument("--request", required=True)
     external_job_cancel.add_argument("--job-root")
     external_job_cancel.add_argument("--out")
+    _add_preparation_commands(adapter_sub, external_job_sub)
     adapter_thread_capability = adapter_sub.add_parser("thread-capability")
     adapter_thread_capability.add_argument("--descriptor", required=True)
     adapter_thread_capability.add_argument("--manifest", required=True)
@@ -214,6 +230,16 @@ def add_adapter_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def dispatch_adapter(args: argparse.Namespace) -> dict[str, Any]:
+    if args.adapter_command == "provider-preflight":
+        from agent_lifecycle.adapter_sessions.qualification import provider_preflight
+
+        payload = provider_preflight(
+            Path(args.profile),
+            project_root=Path(args.project_root),
+        )
+        if args.out:
+            write_json_create(Path(args.out), payload)
+        return payload
     if args.adapter_command == "validate":
         descriptor = read_json_object(Path(args.descriptor), label="adapter descriptor")
         baseline = read_json_object(Path(args.baseline), label="adapter baseline") if args.baseline else None
