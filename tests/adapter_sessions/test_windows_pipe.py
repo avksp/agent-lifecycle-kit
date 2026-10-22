@@ -14,7 +14,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from agent_lifecycle.adapter_sessions.process import run_process
 from agent_lifecycle.adapter_sessions.windows_pipe import (
@@ -82,22 +82,49 @@ def process_is_running(pid: int) -> bool:
     api = c.WinDLL("kernel32", use_last_error=True)
     api.OpenProcess.argtypes = [w.DWORD, w.BOOL, w.DWORD]
     api.OpenProcess.restype = w.HANDLE
-    api.GetExitCodeProcess.argtypes = [w.HANDLE, c.POINTER(w.DWORD)]
-    api.GetExitCodeProcess.restype = w.BOOL
+    api.WaitForSingleObject.argtypes = [w.HANDLE, w.DWORD]
+    api.WaitForSingleObject.restype = w.DWORD
     api.CloseHandle.argtypes = [w.HANDLE]
-    handle = api.OpenProcess(0x1000, False, pid)
+    handle = api.OpenProcess(0x00100000, False, pid)
     if not handle:
         error = c.get_last_error()
         if error in {87, 1168}:
             return False
         raise c.WinError(error)
     try:
-        code = w.DWORD()
-        if not api.GetExitCodeProcess(handle, c.byref(code)):
+        # An exit code can be available before Windows signals termination.
+        state = api.WaitForSingleObject(handle, 0)
+        if state == 0:
+            return False
+        if state == 0x102:
+            return True
+        if state == 0xFFFFFFFF:
             raise c.WinError(c.get_last_error())
-        return code.value == 259
+        raise OSError(f"Unexpected process wait result: {state}")
     finally:
         api.CloseHandle(handle)
+
+
+class WindowsProcessStateTests(unittest.TestCase):
+    def test_exit_code_does_not_prove_termination(self):
+        import ctypes
+
+        def completed_exit_code(handle, code):
+            code._obj.value = 0
+            return True
+
+        api = Mock()
+        api.OpenProcess.return_value = 1
+        api.GetExitCodeProcess.side_effect = completed_exit_code
+        api.WaitForSingleObject.return_value = 0x102
+        with (
+            patch.object(os, "name", "nt"),
+            patch.object(ctypes, "WinDLL", return_value=api, create=True),
+        ):
+            self.assertTrue(process_is_running(42))
+        api.OpenProcess.assert_called_once_with(0x00100000, False, 42)
+        api.WaitForSingleObject.assert_called_once_with(1, 0)
+        api.CloseHandle.assert_called_once_with(1)
 
 
 @unittest.skipUnless(os.name == "nt", "Requires actual Windows pipe APIs")
@@ -227,6 +254,17 @@ class WindowsPipeTests(unittest.TestCase):
 
         real_clock, real_read = time.monotonic, windows_pipe.read_pipe
         offset = [0.0]
+        launched_pids = []
+
+        def record_launch(*args, **kwargs):
+            process = _REAL_POPEN(*args, **kwargs)
+            launched_pids.append(process.pid)
+            return process
+
+        interpreter = getattr(sys, "_base_executable", sys.executable)
+        environment = dict(os.environ)
+        if os.path.normcase(interpreter) != os.path.normcase(sys.executable):
+            environment["__PYVENV_LAUNCHER__"] = sys.executable
 
         def advance_after_read(*args):
             chunk = real_read(*args)
@@ -243,18 +281,21 @@ class WindowsPipeTests(unittest.TestCase):
             with (
                 patch.object(diagnostic.time, "monotonic", side_effect=lambda: real_clock() + offset[0]),
                 patch.object(windows_pipe, "read_pipe", side_effect=advance_after_read),
+                patch.object(diagnostic.subprocess, "Popen", side_effect=record_launch),
                 self.assertRaises(LifecycleError) as error,
             ):
                 diagnostic._bounded_codex_debug_output(
-                    Path(sys.executable),
+                    Path(interpreter),
                     ("-B", "-c", script),
                     root=root,
-                    process_env=dict(os.environ),
+                    process_env=environment,
                     limit=3,
                 )
             self.assertEqual(error.exception.code, "codex-exact-catalog-unavailable")
             self.assertIn("timed out", str(error.exception))
-            self.assertFalse(process_is_running(int((root / "child.pid").read_text())))
+            child_pid = int((root / "child.pid").read_text())
+            self.assertEqual(launched_pids, [child_pid])
+            self.assertFalse(process_is_running(child_pid))
 
     def test_stalled_peer_timeout_and_cancel_preserve_partial_input_and_reap(self):
         payload = "x" * 1_048_576
