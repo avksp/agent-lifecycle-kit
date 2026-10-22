@@ -41,6 +41,12 @@ class ArtifactBuilderTests(unittest.TestCase):
                     return True
                 except FileExistsError:
                     return False
+                except LifecycleError as error:
+                    error.add_note(json.dumps({
+                        "writer": index, "code": error.code,
+                        "details": error.details,
+                    }, sort_keys=True))
+                    raise
 
             with ThreadPoolExecutor(max_workers=4) as pool:
                 outcomes = list(pool.map(write, range(4)))
