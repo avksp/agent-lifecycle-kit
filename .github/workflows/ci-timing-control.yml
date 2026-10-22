@@ -1,13 +1,6 @@
 name: ci-timing-control
 
 on:
-  pull_request:
-    paths:
-      - 'tools/ci/run_unittest.py'
-      - 'tools/ci/run_parallel_unittest.py'
-      - 'tests/release/test_ci_parallel_runner.py'
-      - '.github/workflows/ci.yml'
-      - '.github/workflows/ci-timing-control.yml'
   workflow_dispatch:
 
 permissions:

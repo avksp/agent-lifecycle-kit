@@ -72,11 +72,28 @@ def repository(hot=None, rest=None):
         for arguments in [('init', '-q'), ('config', 'user.email', 'ci@example.invalid'),
                           ('config', 'user.name', 'CI fixture'), ('config', 'core.autocrlf', 'false'),
                           ('add', '.'), ('commit', '-qm', 'isolated runner fixture')]:
-            subprocess.run(['git', *arguments], cwd=root, check=True, capture_output=True)
+            subprocess.run(['git', '-c', 'maintenance.auto=false', '-c', 'gc.auto=0', *arguments],
+                           cwd=root, check=True, capture_output=True)
         yield root
 
 
 class CiParallelRunnerTests(unittest.TestCase):
+    def test_fixture_git_never_launches_detached_maintenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            trace = Path(directory).resolve() / 'git-trace.jsonl'
+            environment = dict(GIT_TRACE2_EVENT=str(trace), GIT_CONFIG_COUNT='2',
+                               GIT_CONFIG_KEY_0='maintenance.auto', GIT_CONFIG_VALUE_0='true',
+                               GIT_CONFIG_KEY_1='maintenance.autoDetach', GIT_CONFIG_VALUE_1='true')
+            with patch.dict(os.environ, environment), repository():
+                pass
+            events = [json.loads(line) for line in trace.read_text().splitlines()]
+            self.assertTrue(any(event.get('event') == 'start' and 'commit' in event.get('argv', [])
+                                for event in events))
+            automatic = [event for event in events if event.get('event') == 'child_start'
+                         and ('maintenance' in event.get('argv', [])
+                              or ('gc' in event.get('argv', []) and '--auto' in event.get('argv', [])))]
+            self.assertFalse(automatic, automatic)
+
     def run_fixture(self, root, *arguments):
         result = subprocess.run(
             [sys.executable, '-B', str(RUNNER), '--out', 'out/test-timings.json', *arguments],

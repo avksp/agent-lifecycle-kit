@@ -184,6 +184,9 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
         # The six inventory tests above exercise real sealed records separately.
         from tests.adapter_sessions import test_bootstrap_r11 as fixtures
         fixture = fixtures.PreparedAttemptIntegrationTests()
+        # This success case includes filesystem observation, not a 2s latency gate.
+        # Select its finite budget before setUp creates the one original deadline.
+        fixture._launch_timeout_seconds = 15
         try:
             fixture.setUp()
             original = fixture.prepared["onStarted"]
