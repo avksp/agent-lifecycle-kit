@@ -64,22 +64,35 @@ runner behavior is unchanged. Wall fields exclude final JSON serialization;
 provider test-step duration includes all command startup, cloning, discovery,
 log and report writes.
 
-The path-filtered `ci-timing-control` PR workflow runs both full modes in one
+The manual-only `ci-timing-control` workflow runs both full modes in one
 Windows/Python3.11 job at the same checkout SHA. Its fixed order is parallel
 first, then sequential: any cache warming therefore benefits the sequential
 control, rather than favoring the proposed optimization. Both steps share one
 runner/image/interpreter; compare their provider step times. Cross-job image
 versions can differ even at the same SHA and runner label, so that comparison
 cannot certify the gate. Keep the recorded incomparable sample. Manual dispatch
-is available only for a separately authorized comparison.
-Promotion requires all normal OS/Python3.11–3.14 checks plus the successful
+is available only for a separately authorized comparison. Ordinary pull requests
+do not automatically repeat this expensive measurement.
+The initial promotion gate requires all normal OS/Python3.11–3.14 checks plus the successful
 control, identical full inventory/outcomes/skips, matching available environment
 identity and at least **15% lower provider test-step wall time**. Retain the
 original and failed samples. Do not rerun a pair merely to obtain a favorable
 timing. One pair is an observed result, not a median, p95 or future guarantee;
 queue time, job wall and total runner minutes are separate measures. Comparison
 evidence belongs to the [infrastructure PR](https://github.com/avksp/agent-lifecycle-kit/pull/189).
-This implementation alone does not establish a speedup. No fixture cache or
+That PR recorded 2144 seconds parallel versus 2712 seconds sequential: a 20.94%
+reduction for one same-job Windows/Python3.11 pair with identical 3721-case
+inventories and outcomes. This is a historical observation, not a new measurement
+for later source revisions.
+
+The temporary Git repositories used by the parallel-runner regression tests
+disable automatic maintenance and garbage collection per Git invocation. Ambient
+Git defaults cannot launch detached housekeeping from those fixture commands;
+real clone, safety and strict cleanup assertions remain. This does not change
+the production runners or establish the writer/cause of the separately preserved
+CI temporary-directory cleanup failure, which remains unproven.
+
+No fixture cache or
 application/dependency version change is included. Roll back the Windows runner
 selection to `run_unittest.py` if the promotion gate fails; retain its evidence.
 
