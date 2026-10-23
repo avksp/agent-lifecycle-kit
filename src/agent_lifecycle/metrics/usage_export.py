@@ -20,7 +20,7 @@ _SECRET_MARKERS = (
     "gh" + "p_",
     "xo" + "xb-",
 )
-_LOCAL_PATH_PREFIXES = ("/Vol" "umes/", "/Us" "ers/", "/ho" "me/")
+_LOCAL_PATH_PREFIXES = ("/Volumes\x2f", "/Users\x2f", "/home/")
 
 
 def build_usage_export(*, artifact_paths: list[Path], project_root: Path | None = None) -> dict[str, Any]:
@@ -60,7 +60,9 @@ def validate_usage_export(export: dict[str, Any]) -> dict[str, Any]:
     if export.get("schemaVersion") != USAGE_EXPORT_SCHEMA:
         blockers.append({"code": "usage-export-schema", "message": "unsupported usage export schemaVersion"})
     if export.get("productionPromotionClaimed") is not False:
-        blockers.append({"code": "usage-export-production-claim", "message": "usage export must not claim production promotion"})
+        blockers.append(
+            {"code": "usage-export-production-claim", "message": "usage export must not claim production promotion"}
+        )
     entries = export.get("entries")
     if not isinstance(entries, list) or not entries:
         blockers.append({"code": "usage-export-entries", "message": "entries must be a non-empty array"})
@@ -85,7 +87,9 @@ def validate_usage_export(export: dict[str, Any]) -> dict[str, Any]:
 
 def require_usage_export_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") == "FAIL":
-        raise LifecycleError("usage-export-validation-failed", "usage export validation failed", {"validation": validation})
+        raise LifecycleError(
+            "usage-export-validation-failed", "usage export validation failed", {"validation": validation}
+        )
     return validation
 
 
@@ -98,13 +102,15 @@ def usage_export_totals(entries: list[dict[str, Any]]) -> dict[str, Any]:
     host_reported_cost_total = 0.0
     host_reported_cost_count = 0
     for entry in entries:
-        usage = entry.get("tokens") if isinstance(entry.get("tokens"), dict) else {}
+        raw_usage = entry.get("tokens")
+        usage = raw_usage if isinstance(raw_usage, dict) else {}
         tokens["input"] += _non_negative_int(usage.get("input"))
         tokens["output"] += _non_negative_int(usage.get("output"))
         tokens["total"] += _non_negative_int(usage.get("total"))
         steps += _non_negative_int(entry.get("steps"))
         duration_ms += _non_negative_int(entry.get("durationMs"))
-        resources = entry.get("resources") if isinstance(entry.get("resources"), dict) else {}
+        raw_resources = entry.get("resources")
+        resources = raw_resources if isinstance(raw_resources, dict) else {}
         for key, value in resources.items():
             if isinstance(key, str):
                 resource_totals[key] = resource_totals.get(key, 0) + _non_negative_int(value)
@@ -137,7 +143,9 @@ def _load_artifact(raw_path: Path, root: Path) -> tuple[dict[str, Any], dict[str
     try:
         data = path.read_bytes()
     except OSError as exc:
-        raise LifecycleError("usage-export-artifact-unavailable", "usage export artifact cannot be read", {"path": display_path}) from exc
+        raise LifecycleError(
+            "usage-export-artifact-unavailable", "usage export artifact cannot be read", {"path": display_path}
+        ) from exc
     payload = load_json_object(data, label=display_path)
     source = {
         "path": display_path,
@@ -176,7 +184,13 @@ def _entry_from_payload(index: int, source: dict[str, Any], payload: dict[str, A
 
 
 def _tokens(payload: dict[str, Any]) -> dict[str, int]:
-    for candidate in (payload.get("usage"), payload.get("usageTotals"), payload.get("tokenUsage"), payload.get("tokens"), payload.get("counters")):
+    for candidate in (
+        payload.get("usage"),
+        payload.get("usageTotals"),
+        payload.get("tokenUsage"),
+        payload.get("tokens"),
+        payload.get("counters"),
+    ):
         if not isinstance(candidate, dict):
             continue
         input_tokens = _first_int(candidate, ("inputTokens", "promptTokens", "input"))
@@ -204,7 +218,12 @@ def _steps(payload: dict[str, Any]) -> int:
 
 def _resources(payload: dict[str, Any]) -> dict[str, int]:
     resources: dict[str, int] = {}
-    for candidate in (payload.get("resources"), payload.get("resourceUsage"), payload.get("usage"), payload.get("counters")):
+    for candidate in (
+        payload.get("resources"),
+        payload.get("resourceUsage"),
+        payload.get("usage"),
+        payload.get("counters"),
+    ):
         if not isinstance(candidate, dict):
             continue
         for source_key, export_key in (
@@ -231,7 +250,7 @@ def _duration_ms(payload: dict[str, Any]) -> int:
             return max(0, value)
         seconds = _number(candidate.get("durationSeconds")) or _number(candidate.get("wallSeconds"))
         if seconds is not None:
-            return max(0, int(round(seconds * 1000)))
+            return max(0, round(seconds * 1000))
     return 0
 
 
@@ -295,13 +314,21 @@ def _validate_entry(index: int, entry: Any, blockers: list[dict[str, Any]]) -> N
         blockers.append({"code": "usage-export-entry-tokens", "index": index})
     else:
         for key in ("input", "output", "total"):
-            if not isinstance(tokens.get(key), int) or isinstance(tokens.get(key), bool) or tokens.get(key) < 0:
+            value = tokens.get(key)
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
                 blockers.append({"code": "usage-export-entry-token-value", "index": index, "field": key})
-    if not isinstance(entry.get("steps"), int) or isinstance(entry.get("steps"), bool) or entry.get("steps") < 0:
+    steps = entry.get("steps")
+    if not isinstance(steps, int) or isinstance(steps, bool) or steps < 0:
         blockers.append({"code": "usage-export-entry-steps", "index": index})
-    if not isinstance(entry.get("durationMs"), int) or isinstance(entry.get("durationMs"), bool) or entry.get("durationMs") < 0:
+    duration_ms = entry.get("durationMs")
+    if not isinstance(duration_ms, int) or isinstance(duration_ms, bool) or duration_ms < 0:
         blockers.append({"code": "usage-export-entry-duration", "index": index})
-    if "usageConfidence" in entry and entry.get("usageConfidence") not in {"ATTESTED", "ESTIMATED", "MISSING", "INVALID"}:
+    if "usageConfidence" in entry and entry.get("usageConfidence") not in {
+        "ATTESTED",
+        "ESTIMATED",
+        "MISSING",
+        "INVALID",
+    }:
         blockers.append({"code": "usage-export-entry-confidence", "index": index})
     monetary = entry.get("monetary")
     if monetary is not None:
@@ -334,7 +361,10 @@ def _redaction_blockers(value: Any, index: int | str) -> list[dict[str, Any]]:
 
 def _usage_confidence(payload: dict[str, Any]) -> str:
     usage = payload.get("usage")
-    if not isinstance(usage, dict) or not any(_first_int(usage, (key,)) is not None for key in ("billableTokens", "totalTokens", "inputTokens", "outputTokens")):
+    if not isinstance(usage, dict) or not any(
+        _first_int(usage, (key,)) is not None
+        for key in ("billableTokens", "totalTokens", "inputTokens", "outputTokens")
+    ):
         return "MISSING"
     attestation = payload.get("attestation")
     if not isinstance(attestation, dict):

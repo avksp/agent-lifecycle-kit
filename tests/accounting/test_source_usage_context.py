@@ -107,3 +107,23 @@ class SourceUsageContextTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class WorkflowUsageContextTests(unittest.TestCase):
+    def test_public_factory_selects_typed_legacy_reader_and_mapping_compatibility(self):
+        from agent_lifecycle.accounting.source_usage_context import load_frozen_usage_context
+        from agent_lifecycle.accounting.usage_types import UsageContext
+
+        with TemporaryDirectory() as directory:
+            f = DeclaredFixture(Path(directory).resolve())
+            context = load_frozen_usage_context(f.root, f.state)
+            self.assertIsInstance(context, UsageContext)
+            self.assertEqual(context.policy, context['policy'])
+            self.assertEqual(context.policy_digest, context['policyDigest'])
+            self.assertEqual(dict(context), context.inputs)
+            with self.assertRaises(FrozenInstanceError):
+                context.root = Path('another-root')
+            # A same-process value never replaces the factory's actual frozen reads.
+            f.manifest['planRevision'] += 1
+            with self.assertRaises(LifecycleError):
+                load_source_usage_context(f.root, f.manifest, f.state, f.task, 'codex', 'codex')

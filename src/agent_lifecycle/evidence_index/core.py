@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
-from agent_lifecycle.contracts.schemas import get_schema
 from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file, resolve_repository_file
+from agent_lifecycle.contracts.schemas import get_schema
 from agent_lifecycle.contracts.token_estimation import estimate_tokens
 
 EVIDENCE_INDEX_SCHEMA = "agent-evidence-index.v1"
@@ -47,7 +47,9 @@ def build_evidence_index(
     if not artifact_paths:
         blockers.append({"code": "evidence-index-artifacts-missing"})
     if len(artifact_paths) > max_artifacts:
-        blockers.append({"code": "evidence-index-artifact-cap-exceeded", "requested": len(artifact_paths), "cap": max_artifacts})
+        blockers.append(
+            {"code": "evidence-index-artifact-cap-exceeded", "requested": len(artifact_paths), "cap": max_artifacts}
+        )
     total_bytes = 0
     root = project_root.resolve()
     for index, raw_path in enumerate(artifact_paths[:max_artifacts]):
@@ -59,13 +61,19 @@ def build_evidence_index(
         try:
             path = resolve_repository_file(root, repo_path, label="artifact")
         except LifecycleError as exc:
-            code = "evidence-index-artifact-symlink" if exc.code == "repository-input-symlink" else "evidence-index-artifact-missing"
+            code = (
+                "evidence-index-artifact-symlink"
+                if exc.code == "repository-input-symlink"
+                else "evidence-index-artifact-missing"
+            )
             blockers.append({"code": code, "index": index, "path": repo_path, "reason": exc.code})
             continue
         size = path.stat().st_size
         if total_bytes + size > max_input_bytes:
             omitted.append({"path": repo_path, "reason": "maxInputBytes"})
-            blockers.append({"code": "evidence-index-input-cap-exceeded", "index": index, "path": repo_path, "cap": max_input_bytes})
+            blockers.append(
+                {"code": "evidence-index-input-cap-exceeded", "index": index, "path": repo_path, "cap": max_input_bytes}
+            )
             continue
         try:
             data = read_stable_repository_file(
@@ -104,16 +112,17 @@ def build_evidence_index(
         "omitted": omitted,
         "blockers": blockers,
     }
-    body["estimatedTokens"] = estimate_tokens(body)
-    if body["estimatedTokens"] > target_tokens:
-        body["blockers"].append(
+    estimated_tokens = estimate_tokens(body)
+    body["estimatedTokens"] = estimated_tokens
+    if estimated_tokens > target_tokens:
+        blockers.append(
             {
                 "code": "evidence-index-target-tokens-exceeded",
-                "estimatedTokens": body["estimatedTokens"],
+                "estimatedTokens": estimated_tokens,
                 "targetTokens": target_tokens,
             }
         )
-    if body["blockers"]:
+    if blockers:
         body["status"] = "FAIL"
     return {**body, "indexDigest": canonical_digest(body)}
 
@@ -165,8 +174,12 @@ def search_evidence_index(
     _check_positive_cap(max_results, "maxResults")
     _check_positive_cap(target_tokens, "targetTokens")
     validation = validate_evidence_index(index)
-    entries = index.get("entries") if isinstance(index.get("entries"), list) else []
+    raw_entries = index.get("entries")
+    entries = raw_entries if isinstance(raw_entries, list) else []
     matches = _rank_entries(entries, query)[:max_results]
+    blockers: list[dict[str, str | int]] = (
+        [] if validation["status"] == "PASS" else [{"code": "evidence-index-invalid"}]
+    )
     body = {
         "schemaVersion": EVIDENCE_SEARCH_SUMMARY_SCHEMA,
         "status": "PASS",
@@ -177,19 +190,20 @@ def search_evidence_index(
         "results": [_search_projection(item) for item in matches],
         "omittedResultCount": max(0, len(_rank_entries(entries, query)) - len(matches)),
         "indexDigest": index.get("indexDigest"),
-        "blockers": [] if validation["status"] == "PASS" else [{"code": "evidence-index-invalid"}],
+        "blockers": blockers,
     }
-    body["estimatedTokens"] = estimate_tokens(body)
+    estimated_tokens = estimate_tokens(body)
+    body["estimatedTokens"] = estimated_tokens
     body["targetTokens"] = target_tokens
-    if body["estimatedTokens"] > target_tokens:
-        body["blockers"].append(
+    if estimated_tokens > target_tokens:
+        blockers.append(
             {
                 "code": "evidence-search-target-tokens-exceeded",
-                "estimatedTokens": body["estimatedTokens"],
+                "estimatedTokens": estimated_tokens,
                 "targetTokens": target_tokens,
             }
         )
-    if body["blockers"]:
+    if blockers:
         body["status"] = "FAIL"
     return {**body, "summaryDigest": canonical_digest(body)}
 
@@ -289,7 +303,8 @@ def _rank_entries(entries: list[Any], query: str) -> list[dict[str, Any]]:
 
 
 def _search_projection(entry: dict[str, Any]) -> dict[str, Any]:
-    summary = entry.get("summary") if isinstance(entry.get("summary"), dict) else {}
+    raw_summary = entry.get("summary")
+    summary = raw_summary if isinstance(raw_summary, dict) else {}
     return {
         "sourcePath": entry.get("sourcePath"),
         "artifactType": entry.get("artifactType"),

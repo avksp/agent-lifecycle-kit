@@ -34,7 +34,7 @@ def build_task_outcome_index(
         source_digests.append(
             {
                 "index": index,
-                "path": (source_paths or [None] * len(artifacts))[index] if source_paths and index < len(source_paths) else None,
+                "path": source_paths[index] if source_paths and index < len(source_paths) else None,
                 "schemaVersion": artifact.get("schemaVersion"),
                 "sha256": canonical_digest(artifact),
             }
@@ -90,11 +90,14 @@ def build_quality_cost_signals(index: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_quality_cost_signal_summary(signals: dict[str, Any]) -> dict[str, Any]:
-    rows = signals.get("signals") if isinstance(signals.get("signals"), list) else []
+    raw_rows = signals.get("signals")
+    rows = raw_rows if isinstance(raw_rows, list) else []
     best = _best_signal(rows)
     body = {
         "schemaVersion": QUALITY_COST_SIGNAL_SUMMARY_SCHEMA,
-        "latestUserIntent": "Use local receipt history to improve future lifecycle routing without auto-applying policy.",
+        "latestUserIntent": (
+            "Use local receipt history to improve future lifecycle routing without auto-applying policy."
+        ),
         "activeDecisions": [
             f"groupCount={signals.get('groupCount', 0)}",
             f"taskCount={signals.get('taskCount', 0)}",
@@ -133,7 +136,8 @@ def summarize_audit_quality(samples: list[dict[str, Any]]) -> dict[str, Any]:
     retries = 0
     timeouts = 0
     for sample in samples:
-        quality = sample.get("quality") if isinstance(sample.get("quality"), dict) else {}
+        raw_quality = sample.get("quality")
+        quality = raw_quality if isinstance(raw_quality, dict) else {}
         status = str(quality.get("status", "UNKNOWN"))
         if status in SUCCESS_STATUSES:
             successful += 1
@@ -143,7 +147,8 @@ def summarize_audit_quality(samples: list[dict[str, Any]]) -> dict[str, Any]:
             false_acceptances += 1
         corrections += _non_negative_value(quality.get("correctionCount"))
         disagreements += _non_negative_value(quality.get("disagreementCount"))
-        attempts = sample.get("attempts") if isinstance(sample.get("attempts"), dict) else {}
+        raw_attempts = sample.get("attempts")
+        attempts = raw_attempts if isinstance(raw_attempts, dict) else {}
         retries += _non_negative_value(attempts.get("retryCount"))
         timeouts += _non_negative_value(attempts.get("timeoutCount"))
     return {
@@ -168,7 +173,12 @@ def summarize_audit_quality(samples: list[dict[str, Any]]) -> dict[str, Any]:
 def _task_key(artifact: dict[str, Any], index: int) -> tuple[str, str, str]:
     run_id = _string_at(artifact, "runId") or _string_at(artifact, "lineage.runId") or "run-unknown"
     package_id = _string_at(artifact, "packageId") or _string_at(artifact, "lineage.packageId") or "package-unknown"
-    task_id = _string_at(artifact, "taskId") or _string_at(artifact, "task.id") or _string_at(artifact, "task") or f"task-{index}"
+    task_id = (
+        _string_at(artifact, "taskId")
+        or _string_at(artifact, "task.id")
+        or _string_at(artifact, "task")
+        or f"task-{index}"
+    )
     return run_id, package_id, task_id
 
 
@@ -180,7 +190,10 @@ def _empty_record(artifact: dict[str, Any], key: tuple[str, str, str]) -> dict[s
         "taskId": task_id,
         "taskShape": _string_at(artifact, "taskShape") or _shape_from_artifact(artifact),
         "lifecycleMode": _string_at(artifact, "lifecycleMode") or _string_at(artifact, "mode") or "standard",
-        "routeClass": _string_at(artifact, "routeClass") or _string_at(artifact, "modelClass") or _string_at(artifact, "modelRoute.modelClass") or "unknown",
+        "routeClass": _string_at(artifact, "routeClass")
+        or _string_at(artifact, "modelClass")
+        or _string_at(artifact, "modelRoute.modelClass")
+        or "unknown",
         "profile": _string_at(artifact, "profile") or _string_at(artifact, "contextProfile") or "default",
         "attempts": 0,
         "retries": 0,
@@ -202,8 +215,15 @@ def _merge_artifact(record: dict[str, Any], artifact: dict[str, Any]) -> None:
         record["artifactSchemas"].append(schema)
     record["artifactDigests"].append(canonical_digest(artifact))
     record["taskShape"] = _string_at(artifact, "taskShape") or record["taskShape"]
-    record["lifecycleMode"] = _string_at(artifact, "lifecycleMode") or _string_at(artifact, "mode") or record["lifecycleMode"]
-    record["routeClass"] = _string_at(artifact, "routeClass") or _string_at(artifact, "modelClass") or _string_at(artifact, "modelRoute.modelClass") or record["routeClass"]
+    record["lifecycleMode"] = (
+        _string_at(artifact, "lifecycleMode") or _string_at(artifact, "mode") or record["lifecycleMode"]
+    )
+    record["routeClass"] = (
+        _string_at(artifact, "routeClass")
+        or _string_at(artifact, "modelClass")
+        or _string_at(artifact, "modelRoute.modelClass")
+        or record["routeClass"]
+    )
     record["profile"] = _string_at(artifact, "profile") or _string_at(artifact, "contextProfile") or record["profile"]
     attempt = artifact.get("attempt")
     if isinstance(attempt, int) and not isinstance(attempt, bool):
@@ -246,7 +266,9 @@ def _groups(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "taskIds": sorted(item["taskId"] for item in rows),
             }
         )
-    return sorted(result, key=lambda item: (item["taskShape"], item["lifecycleMode"], item["routeClass"], item["profile"]))
+    return sorted(
+        result, key=lambda item: (item["taskShape"], item["lifecycleMode"], item["routeClass"], item["profile"])
+    )
 
 
 def _signal_from_group(group: dict[str, Any]) -> dict[str, Any]:
@@ -274,7 +296,14 @@ def _best_signal(rows: list[Any]) -> dict[str, Any] | None:
     candidates = [item for item in rows if isinstance(item, dict)]
     if not candidates:
         return None
-    return min(candidates, key=lambda item: (-float(item.get("successRate", 0.0)), float(item.get("averageTokens", 0.0)), -int(item.get("sampleCount", 0))))
+    return min(
+        candidates,
+        key=lambda item: (
+            -float(item.get("successRate", 0.0)),
+            float(item.get("averageTokens", 0.0)),
+            -int(item.get("sampleCount", 0)),
+        ),
+    )
 
 
 def _successful(record: dict[str, Any]) -> bool:
@@ -308,7 +337,8 @@ def _completion_outcome(current: str, artifact: dict[str, Any]) -> str:
 
 
 def _usage(artifact: dict[str, Any]) -> dict[str, Any]:
-    usage = artifact.get("usage") if isinstance(artifact.get("usage"), dict) else {}
+    raw_usage = artifact.get("usage")
+    usage = raw_usage if isinstance(raw_usage, dict) else {}
     input_tokens = _int_from(usage, "inputTokens") + _int_at(artifact, "inputTokens")
     output_tokens = _int_from(usage, "outputTokens") + _int_at(artifact, "outputTokens")
     billable = _int_from(usage, "billableTokens") + _int_at(artifact, "billableTokens")
@@ -326,7 +356,9 @@ def _usage(artifact: dict[str, Any]) -> dict[str, Any]:
 
 
 def _shape_from_artifact(artifact: dict[str, Any]) -> str:
-    title = " ".join(str(value).lower() for value in (artifact.get("title"), artifact.get("summary")) if isinstance(value, str))
+    title = " ".join(
+        str(value).lower() for value in (artifact.get("title"), artifact.get("summary")) if isinstance(value, str)
+    )
     if "bug" in title or "fix" in title:
         return "small-fix"
     if "adapter" in title:

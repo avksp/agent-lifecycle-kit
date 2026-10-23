@@ -357,6 +357,14 @@ LAST_CHANNEL_POLICY: dict[str, Any] = {
 }
 
 
+def accounting_fixture_path(target_version: str) -> str:
+    """Select the requested release fixture without falling back to history."""
+    match = re.fullmatch(r"([0-9]+)\.([0-9]+)\.[0-9]+", target_version)
+    if match is None:
+        raise ValueError("publication target must be a numeric major.minor.patch version")
+    return f"tests/metrics/fixtures/release-{match[1]}-{match[2]}-accounting.json"
+
+
 def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[str, Any]:
     entries = []
     for entry in PUBLICATION_ENTRIES:
@@ -364,7 +372,9 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
         entries.append(
             {
                 "id": entry["id"],
-                "path": entry["path"],
+                "path": accounting_fixture_path(target_version)
+                if entry["id"] == "release-accounting-fixture"
+                else entry["path"],
                 "kind": entry["kind"],
                 "fieldForm": entry["fieldForm"],
                 "jsonPath": entry.get("jsonPath"),

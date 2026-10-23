@@ -88,9 +88,5 @@ jobs:
         run: >-
           python tools/release/validate_architecture_complexity.py
           --package-root src/agent_lifecycle
-          --target-file-lines 800
-          --hard-file-lines 1200
-          --target-function-lines 80
-          --hard-function-lines 150
-          --hard-symbols 120
+          --policy policy/architecture-limits.json
           --evidence work/ci/architecture-complexity.json

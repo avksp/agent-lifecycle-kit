@@ -389,15 +389,15 @@ class LimitedUsageTests(unittest.TestCase):
             self.denied(lambda: require_snapshot_current(self.f.selection(), snapshot), 'scoped-usage-frontier-stale')
         with self.subTest(case='head-or-registry-changes-during-validation'):
             from unittest.mock import patch
-            from agent_lifecycle.workflow import limited_usage
-            original_projection = limited_usage._projection
+            from agent_lifecycle.accounting import legacy_source_usage
+            original_projection = legacy_source_usage._projection
             def derive_then_advance(selection, current):
                 projected = original_projection(selection, current)
                 # Advance the real temporary financial ledger between actual A/B
                 # reads. No fake reader return or manufactured PASS is supplied.
                 self.f.append_window(399, cap=1000)
                 return projected
-            with patch.object(limited_usage, '_projection', side_effect=derive_then_advance):
+            with patch.object(legacy_source_usage, '_projection', side_effect=derive_then_advance):
                 self.denied(self.f.snapshot, 'scoped-usage-frontier-stale')
         self.f.receipt = self.f.make_receipt()
         with self.subTest(case='wrong-current-registry-namespace-or-path'):
@@ -955,7 +955,7 @@ class AccountingOnlyClockTests(unittest.TestCase):
                 self.assertEqual('scoped-usage-current-admission-unbound', caught.exception.code)
 
     def test_accounting_only_clock_exception_requires_no_execution_authority(self):
-        from agent_lifecycle.workflow.limited_usage import _window
+        from agent_lifecycle.accounting.legacy_source_usage import _window
         f = self.fixture()
         original = json.loads(self.original_admission)
         for stage in ('ADMISSION', 'COST'):
@@ -985,7 +985,7 @@ class AccountingOnlyClockTests(unittest.TestCase):
                     self.assertEqual('scoped-usage-window-invalid', caught.exception.code)
 
     def test_work_clocks_utc_order_and_original_holds_remain_strict(self):
-        from agent_lifecycle.workflow.limited_usage import _window
+        from agent_lifecycle.accounting.legacy_source_usage import _window
         f = self.fixture()
         accounting = json.loads(self.original_admission)
         work = json.loads((f.root / f.admission_ref['path']).read_bytes())
@@ -1614,7 +1614,7 @@ class SourceMultiConflictRecoveryTests(unittest.TestCase):
         self.assertEqual(originals,{p:(f.root/p).read_bytes() for p in originals})
 
     def test_duplicate_or_overlapping_group_is_refused_before_eligibility_assignment(self):
-        from agent_lifecycle.workflow.limited_usage import _classify_source_conflict
+        from agent_lifecycle.accounting.legacy_source_usage import _classify_source_conflict
         f=self.fixture();selection=f.selection();snapshot=f.snapshot()
         pools=deepcopy(snapshot['projection']['windowPools'])
         for p in pools:p['eligibility']='UNTOUCHED'
@@ -2048,7 +2048,7 @@ class InvalidAnnotationAuthorityRefusalTests(unittest.TestCase):
                 self.assert_read_only_refusal(f)
 
     def test_selected_repetition_and_late_appearance_refuse(self):
-        from agent_lifecycle.workflow.limited_usage import _invalid_annotation_binding, _invalid_annotation_tracker
+        from agent_lifecycle.accounting.legacy_source_usage import _invalid_annotation_binding, _invalid_annotation_tracker
         f = self.fixture()
         selection = f.selection()
         current = f.snapshot()['current']
@@ -2213,3 +2213,46 @@ class ProspectiveAdmissionProcedureTests(unittest.TestCase):
                 self.assertIn('frontier changed', str(caught.exception))
             self.assertEqual(before, read_coordinator_cost_head(f.root)['headRaw'])
             self.assertEqual(original_state, (f.root / 'run.state.json').read_bytes())
+
+
+class PortableUsageInterfaceUnitTests(unittest.TestCase):
+    """UNIT_ONLY: injected reader exercises an interface, never a ledger route."""
+
+    def test_different_plan_and_window_roots_require_no_historical_directory(self):
+        from dataclasses import dataclass
+        from agent_lifecycle.accounting.usage_types import UsageContext, serialize_source_registry
+
+        @dataclass
+        class UnitOnlyReader:
+            root: Path
+            head_path: str = 'unit-ledger/custom-window/head.json'
+
+            def read_current(self):
+                head_raw = (self.root / self.head_path).read_bytes()
+                return {'headRaw': head_raw, 'ancestryHeadSha256s': [hashlib.sha256(head_raw).hexdigest()]}
+
+            def project(self, current):
+                return {'scope': 'UNIT_ONLY', 'terminal': current['ancestryHeadSha256s'][0],
+                        'planRoot': 'unit-plan/alternate', 'windowRoot': 'unit-ledger/custom-window',
+                        'actualTokens': None, 'unknownHolds': 700}
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            put(root, 'unit-plan/alternate/profile.json', {'scope': 'UNIT_ONLY'})
+            put(root, 'unit-ledger/custom-window/head.json', {'unknownHolds': 700, 'actualTokens': None})
+            context = UsageContext(root, {}, 'unit-only', {}, 65536, UnitOnlyReader(root), {})
+            snapshot = current_source_snapshot(context)
+            self.assertEqual(serialize_source_registry(snapshot['projection']), snapshot['projectionBytes'])
+            self.assertEqual(700, snapshot['projection']['unknownHolds'])
+            self.assertIsNone(snapshot['projection']['actualTokens'])
+            require_snapshot_current(context, snapshot)
+            self.assertFalse((root / 'tasks/release-2-16').exists())
+            self.assertFalse((root / 'work/release-2-16').exists())
+            # The value is not accepted as frozen production authority.
+            with self.assertRaises(LifecycleError) as caught:
+                emit_registry_artifact(root, {}, {'id': 'unit-task', 'attempt': 1})
+            self.assertEqual('scoped-usage-policy-missing', caught.exception.code)
+            put(root, 'unit-ledger/custom-window/head.json', {'unknownHolds': 800, 'actualTokens': None})
+            with self.assertRaises(LifecycleError) as caught:
+                require_snapshot_current(context, snapshot)
+            self.assertEqual('scoped-usage-frontier-stale', caught.exception.code)

@@ -43,7 +43,9 @@ def build_adaptive_lifecycle_decision(request: dict[str, Any], baseline_profile:
     blockers.extend(_monetary_blockers(request, budget_mode=normalized["budgetMode"]))
     baseline_validation = validate_lifecycle_baselines(baseline_profile)
     if baseline_validation["status"] != "PASS":
-        blockers.extend({"code": "adaptive-baseline-invalid", "blocker": item} for item in baseline_validation["blockers"])
+        blockers.extend(
+            {"code": "adaptive-baseline-invalid", "blocker": item} for item in baseline_validation["blockers"]
+        )
 
     floor_decision = resolve_quality_floor(
         task_shape=normalized["taskShape"],
@@ -53,7 +55,9 @@ def build_adaptive_lifecycle_decision(request: dict[str, Any], baseline_profile:
         required_evidence=normalized["requiredEvidence"],
     )
     if floor_decision["status"] != "PASS":
-        blockers.extend({"code": "adaptive-quality-floor-invalid", "blocker": item} for item in floor_decision["blockers"])
+        blockers.extend(
+            {"code": "adaptive-quality-floor-invalid", "blocker": item} for item in floor_decision["blockers"]
+        )
 
     recommended, reasons = _recommended_mode(normalized, baseline_profile, floor_decision["qualityFloor"])
     apply_automatically = normalized["automaticSelectionEnabled"] and not blockers
@@ -101,9 +105,13 @@ def validate_adaptive_lifecycle_decision(decision: dict[str, Any]) -> dict[str, 
         if value not in MODES:
             blockers.append({"code": "adaptive-decision-mode-invalid", "field": field, "mode": value})
     if floor in MODES and selected in MODES and mode_index(selected) < mode_index(floor):
-        blockers.append({"code": "adaptive-decision-selected-below-floor", "selectedMode": selected, "qualityFloor": floor})
+        blockers.append(
+            {"code": "adaptive-decision-selected-below-floor", "selectedMode": selected, "qualityFloor": floor}
+        )
     if floor in MODES and recommended in MODES and mode_index(recommended) < mode_index(floor):
-        blockers.append({"code": "adaptive-decision-recommended-below-floor", "recommendedMode": recommended, "qualityFloor": floor})
+        blockers.append(
+            {"code": "adaptive-decision-recommended-below-floor", "recommendedMode": recommended, "qualityFloor": floor}
+        )
     if decision.get("qualityFloorPreserved") is not True:
         blockers.append({"code": "adaptive-decision-quality-floor-not-preserved"})
     if decision.get("resourceBasis") != RESOURCE_BASIS:
@@ -153,7 +161,11 @@ def validate_adaptive_lifecycle_decision(decision: dict[str, Any]) -> dict[str, 
 
 def require_adaptive_lifecycle_decision_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("decisionStatus") != "PASS":
-        raise LifecycleError("adaptive-lifecycle-decision-validation-failed", "adaptive lifecycle decision did not pass", {"validation": validation})
+        raise LifecycleError(
+            "adaptive-lifecycle-decision-validation-failed",
+            "adaptive lifecycle decision did not pass",
+            {"validation": validation},
+        )
     return validation
 
 
@@ -161,7 +173,7 @@ def small_model_packet_eligibility(decision: dict[str, Any]) -> dict[str, Any]:
     """Return whether a small-model packet surface is allowed by the decision."""
 
     validation = validate_adaptive_lifecycle_decision(decision)
-    blockers = []
+    blockers: list[dict[str, Any]] = []
     if validation.get("status") != "PASS" or validation.get("decisionStatus") != "PASS":
         blockers.append({"code": "small-model-adaptive-decision-invalid", "validation": validation})
     floor = decision.get("qualityFloor")
@@ -212,7 +224,9 @@ def _normalize_request(request: dict[str, Any]) -> tuple[dict[str, Any], list[di
         automatic = False
     return (
         {
-            "requestId": request.get("requestId") if isinstance(request.get("requestId"), str) and request.get("requestId") else None,
+            "requestId": request.get("requestId")
+            if isinstance(request.get("requestId"), str) and request.get("requestId")
+            else None,
             "taskShape": task_shape,
             "sddTier": sdd_tier,
             "riskFlags": risk_flags,
@@ -229,7 +243,9 @@ def _normalize_request(request: dict[str, Any]) -> tuple[dict[str, Any], list[di
     )
 
 
-def _recommended_mode(normalized: dict[str, Any], baseline_profile: dict[str, Any], quality_floor: str) -> tuple[str, list[str]]:
+def _recommended_mode(
+    normalized: dict[str, Any], baseline_profile: dict[str, Any], quality_floor: str
+) -> tuple[str, list[str]]:
     reasons: list[str] = []
     shape = {}
     shapes = baseline_profile.get("taskShapes") if isinstance(baseline_profile, dict) else {}
@@ -246,7 +262,11 @@ def _recommended_mode(normalized: dict[str, Any], baseline_profile: dict[str, An
     if failure_class in {"api-contract", "serialization", "permission", "migration", "performance"}:
         target = max_mode(target, "standard")
         reasons.append(f"failure-class-{failure_class}-escalation")
-    if failure_class in HIGH_RISK_FAILURE_CLASSES or failure_class == "flaky-test" or failure_signals.get("flakeStatus") == "flaky":
+    if (
+        failure_class in HIGH_RISK_FAILURE_CLASSES
+        or failure_class == "flaky-test"
+        or failure_signals.get("flakeStatus") == "flaky"
+    ):
         target = max_mode(target, "strict")
         reasons.append(f"failure-class-{failure_class or 'flake'}-strict-escalation")
     if failure_signals.get("validationStatus") in {"FAIL", "ERROR", "BLOCKED", "REJECTED"}:
@@ -282,7 +302,9 @@ def _neutral_inputs(normalized: dict[str, Any], *, monetary_keys: list[str]) -> 
         "requiredEvidence": list(normalized["requiredEvidence"]),
         "priorAttempts": normalized["priorAttempts"],
         "contextTokens": normalized["contextTokens"],
-        "resourceCaps": {key: caps[key] for key in sorted(caps) if key in {"maxInvocations", "maxWallSeconds", "maxBillableTokens"}},
+        "resourceCaps": {
+            key: caps[key] for key in sorted(caps) if key in {"maxInvocations", "maxWallSeconds", "maxBillableTokens"}
+        },
         "failureSignals": dict(normalized["failureSignals"]),
         "budgetMode": normalized["budgetMode"],
         "automaticSelectionEnabled": normalized["automaticSelectionEnabled"],
@@ -332,8 +354,12 @@ def _failure_signals(value: Any, blockers: list[dict[str, Any]]) -> dict[str, An
     return {
         "failureClass": failure_class,
         "confidence": confidence,
-        "retryCount": _non_negative_int(value.get("retryCount", 0), field="failureSignals.retryCount", blockers=blockers),
-        "remediationLoops": _non_negative_int(value.get("remediationLoops", 0), field="failureSignals.remediationLoops", blockers=blockers),
+        "retryCount": _non_negative_int(
+            value.get("retryCount", 0), field="failureSignals.retryCount", blockers=blockers
+        ),
+        "remediationLoops": _non_negative_int(
+            value.get("remediationLoops", 0), field="failureSignals.remediationLoops", blockers=blockers
+        ),
         "validationStatus": validation_status,
         "flakeStatus": flake_status,
         "classificationDigest": classification_digest,
@@ -350,7 +376,9 @@ def _monetary_blockers(value: Any, *, budget_mode: str) -> list[dict[str, Any]]:
 
 
 def _monetary_keys(value: Any) -> list[str]:
-    return sorted({path for path, item in _walk(value) if _is_monetary_key(path.rsplit(".", 1)[-1]) and item is not None})
+    return sorted(
+        {path for path, item in _walk(value) if _is_monetary_key(path.rsplit(".", 1)[-1]) and item is not None}
+    )
 
 
 def _neutrality_blockers(value: Any) -> list[dict[str, Any]]:
@@ -413,4 +441,6 @@ def _non_negative_int(value: Any, *, field: str, blockers: list[dict[str, Any]])
 def _high_risk(normalized: dict[str, Any], shape: dict[str, Any]) -> bool:
     if shape.get("highRisk") is True:
         return True
-    return bool(set(normalized["riskFlags"]).intersection({"security", "contracts", "adapter", "architecture", "release"}))
+    return bool(
+        set(normalized["riskFlags"]).intersection({"security", "contracts", "adapter", "architecture", "release"})
+    )

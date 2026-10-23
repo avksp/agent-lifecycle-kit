@@ -21,7 +21,8 @@ def build_bug_forensics_audit(*, gate_receipt: dict[str, Any], task_id: str | No
         blockers.append({"code": "bug-forensics-gate-invalid", "validation": gate_validation})
     if gate_receipt.get("activated") is True and gate_status != "PASS":
         blockers.append({"code": "bug-forensics-active-gate-not-pass", "gateStatus": gate_status})
-    evidence = gate_receipt.get("evidence") if isinstance(gate_receipt.get("evidence"), dict) else {}
+    raw_evidence = gate_receipt.get("evidence")
+    evidence = raw_evidence if isinstance(raw_evidence, dict) else {}
     coverage = {
         "reproductionBeforeModification": evidence.get("reproduction") is not None,
         "failureFingerprint": evidence.get("failureFingerprint") is not None,
@@ -57,7 +58,9 @@ def validate_bug_forensics_audit(audit: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "bug-forensics-audit-gate-digest-invalid"})
     if not isinstance(audit.get("coverage"), dict):
         blockers.append({"code": "bug-forensics-audit-coverage-invalid"})
-    if not isinstance(audit.get("blockers"), list) or not all(isinstance(item, dict) for item in audit.get("blockers", [])):
+    if not isinstance(audit.get("blockers"), list) or not all(
+        isinstance(item, dict) for item in audit.get("blockers", [])
+    ):
         blockers.append({"code": "bug-forensics-audit-blockers-invalid"})
     if audit.get("productionPromotionClaimed") is not False:
         blockers.append({"code": "bug-forensics-audit-production-claim"})
@@ -78,7 +81,9 @@ def validate_bug_forensics_audit(audit: dict[str, Any]) -> dict[str, Any]:
 
 def require_bug_forensics_audit_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("auditStatus") not in {"PASS", "SKIPPED"}:
-        raise LifecycleError("bug-forensics-audit-validation-failed", "bug-forensics audit did not pass", {"validation": validation})
+        raise LifecycleError(
+            "bug-forensics-audit-validation-failed", "bug-forensics audit did not pass", {"validation": validation}
+        )
     return validation
 
 

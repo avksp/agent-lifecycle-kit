@@ -44,5 +44,619 @@
     "agent_lifecycle._version": 0,
     "agent_lifecycle.contracts.lifecycle_action_catalog": 0,
     "agent_lifecycle.workflow.transition_contract": 0
+  },
+  "privateImportBaselineSourceRevision": "86ba753e70ce7f27c2039eb21141d5bb8c2a43d2",
+  "privateImportBaseline": [
+    {
+      "module": "agent_lifecycle._version",
+      "symbol": "__version__",
+      "alias": "__version__",
+      "consumer": "agent_lifecycle",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.workflow_state_schemas",
+      "symbol": "_closing_instant",
+      "alias": "_closing_instant",
+      "consumer": "agent_lifecycle.accounting.closing_resource_recovery",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_sync_directory",
+      "alias": "_sync_directory",
+      "consumer": "agent_lifecycle.adapter_sessions.attempt_authority",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.attempt_authority",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.host_bridge",
+      "symbol": "_json",
+      "alias": "_json",
+      "consumer": "agent_lifecycle.adapter_sessions.limited_native_evidence",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_R11_REVIEW_ROOT",
+      "alias": "_R11_REVIEW_ROOT",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_contracts",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_git",
+      "alias": "_r11_git",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_contracts",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_R11_ROLE_CONTRACT_SHA256",
+      "alias": "_R11_ROLE_CONTRACT_SHA256",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_contracts",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_contracts",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_R11_COORDINATOR_SEED",
+      "alias": "_R11_COORDINATOR_SEED",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_r11_coordinator_head_value",
+      "alias": "_r11_coordinator_head_value",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_r11_coordinator_source",
+      "alias": "_r11_coordinator_source",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_R11_REVIEW_ROOT",
+      "alias": "_R11_REVIEW_ROOT",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_coordinator_root",
+      "alias": "_r11_coordinator_root",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_review_private",
+      "alias": "_r11_review_private",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_role_cost_chain",
+      "alias": "_r11_role_cost_chain",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_role_identity",
+      "alias": "_r11_role_identity",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_transport_binding",
+      "alias": "_r11_transport_binding",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_history",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_R11_REVIEW_ROOT",
+      "alias": "_R11_REVIEW_ROOT",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_inputs",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_inputs",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_R11_REVIEW_ROOT",
+      "alias": "_R11_REVIEW_ROOT",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_preparation_records",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_review_private",
+      "alias": "_r11_review_private",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_preparation_records",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_worker_directory",
+      "alias": "_r11_worker_directory",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_preparation_records",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_worker_sources",
+      "alias": "_r11_worker_sources",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_preparation_records",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_transport_binding",
+      "alias": "_r11_transport_binding",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_preparation_records",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_preparation_records",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_role_identity",
+      "alias": "_r11_role_identity",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_roles",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_role_subject",
+      "alias": "_r11_role_subject",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_roles",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_roles",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_R11_REVIEW_ROOT",
+      "alias": "_R11_REVIEW_ROOT",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_shards",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_review_private",
+      "alias": "_r11_review_private",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_shards",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_transport_binding",
+      "alias": "_r11_transport_binding",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_shards",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_shards",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_R11_REVIEW_ROOT",
+      "alias": "_R11_REVIEW_ROOT",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_support",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_review_private",
+      "alias": "_r11_review_private",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_support",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_support",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_sync_directory",
+      "alias": "_sync_directory",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_transcript",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_transport_binding",
+      "alias": "_r11_transport_binding",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_transcript",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.source_review_transcript",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.freeze.package_integrity",
+      "symbol": "_reject_undeclared_top_level_files",
+      "alias": "_reject_undeclared_top_level_files",
+      "consumer": "agent_lifecycle.cli.plan_lock_commands",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.context.checkpoints",
+      "symbol": "_reject_authority_fields",
+      "alias": "_reject_authority_fields",
+      "consumer": "agent_lifecycle.host_protocol.context_events",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_BASE_Y",
+      "alias": "_BASE_Y",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_IDENTITY",
+      "alias": "_IDENTITY",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_decode_point",
+      "alias": "_decode_point",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_encode_int",
+      "alias": "_encode_int",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_encode_point",
+      "alias": "_encode_point",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_extended_add",
+      "alias": "_extended_add",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_extended_double",
+      "alias": "_extended_double",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_extended_from_affine",
+      "alias": "_extended_from_affine",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_hint",
+      "alias": "_hint",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_is_on_curve",
+      "alias": "_is_on_curve",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_scalar_mult",
+      "alias": "_scalar_mult",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_secret_scalar",
+      "alias": "_secret_scalar",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.ed25519",
+      "symbol": "_x_recover",
+      "alias": "_x_recover",
+      "consumer": "agent_lifecycle.neutrality.ed25519",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.quality.cross_check",
+      "symbol": "_budget_blockers",
+      "alias": "_budget_blockers",
+      "consumer": "agent_lifecycle.review_mesh.validation_helpers",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.contracts.workflow_state_schemas",
+      "symbol": "_closing_instant",
+      "alias": "_closing_instant",
+      "consumer": "agent_lifecycle.workflow.closing_policy",
+      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
+    }
+  ],
+  "privateImportReexports": [
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_R11_COORDINATOR_HEAD",
+      "alias": "_R11_COORDINATOR_HEAD",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_R11_COORDINATOR_SEED",
+      "alias": "_R11_COORDINATOR_SEED",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_R11_COORDINATOR_SEED_SHA",
+      "alias": "_R11_COORDINATOR_SEED_SHA",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_r11_coordinator_head_bytes",
+      "alias": "_r11_coordinator_head_bytes",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_r11_coordinator_head_value",
+      "alias": "_r11_coordinator_head_value",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_r11_coordinator_source",
+      "alias": "_r11_coordinator_source",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_r11_coordinator_transition",
+      "alias": "_r11_coordinator_transition",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_r11_global_role_prefixes",
+      "alias": "_r11_global_role_prefixes",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger",
+      "symbol": "_sync_directory",
+      "alias": "_sync_directory",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_R11_REVIEW_ROOT",
+      "alias": "_R11_REVIEW_ROOT",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_R11_VALIDATION_ROOTS",
+      "alias": "_R11_VALIDATION_ROOTS",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_coordinator_root",
+      "alias": "_r11_coordinator_root",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_cost_worker",
+      "alias": "_r11_cost_worker",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_git",
+      "alias": "_r11_git",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_review_private",
+      "alias": "_r11_review_private",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_role_cost_chain",
+      "alias": "_r11_role_cost_chain",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_worker_directory",
+      "alias": "_r11_worker_directory",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_worker_disposition",
+      "alias": "_r11_worker_disposition",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_legacy",
+      "symbol": "_r11_worker_sources",
+      "alias": "_r11_worker_sources",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_R11_COORDINATOR_BASE",
+      "alias": "_R11_COORDINATOR_BASE",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_R11_ROLE_CONTRACT_SHA256",
+      "alias": "_R11_ROLE_CONTRACT_SHA256",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_cost_reservation",
+      "alias": "_r11_cost_reservation",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_role_funding_record",
+      "alias": "_r11_role_funding_record",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_role_identity",
+      "alias": "_r11_role_identity",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_role_prefix_record",
+      "alias": "_r11_role_prefix_record",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_role_subject",
+      "alias": "_r11_role_subject",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_r11_transport_binding",
+      "alias": "_r11_transport_binding",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.accounting.declared_ledger_records",
+      "symbol": "_require",
+      "alias": "_require",
+      "consumer": "agent_lifecycle.adapter_sessions.bootstrap_r11",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    },
+    {
+      "module": "agent_lifecycle.quality.cross_check",
+      "symbol": "_budget_blockers",
+      "alias": "_budget_blockers",
+      "consumer": "agent_lifecycle.review_mesh.contracts",
+      "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
+    }
+  ],
+  "privateImportBaselineDigest": "6db3b374a7e32ff3767664201b83246f434f318e46af71b479399eda371f427b",
+  "historicalObservation": {
+    "explicitReexports": 31,
+    "otherPrivateImports": 70,
+    "authority": "tasks/release-2-24-r4/specification.md",
+    "currentCounts": false
   }
 }

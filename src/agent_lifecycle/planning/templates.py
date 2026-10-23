@@ -24,8 +24,8 @@ _FORBIDDEN_MARKERS = (
     "productionPromotionClaimed: true",
     "providerDefault",
     "modelDefault",
-    "api" "_key",
-    "api" "Key",
+    "api_key",
+    "apiKey",
 )
 
 _TEMPLATE_SPECS: tuple[dict[str, Any], ...] = (
@@ -109,31 +109,14 @@ def build_task_template_library() -> dict[str, Any]:
 
 def validate_task_template_library(
     *,
-    project_root: Path = Path("."),
+    project_root: Path = Path(),
     library: dict[str, Any] | None = None,
     template_id: str | None = None,
 ) -> dict[str, Any]:
     """Validate the built-in template catalog and markdown files."""
 
     selected_library = library or build_task_template_library()
-    blockers: list[dict[str, Any]] = []
-    if selected_library.get("schemaVersion") != TASK_TEMPLATE_LIBRARY_SCHEMA:
-        blockers.append({"code": "task-template-library-schema-invalid"})
-    if selected_library.get("status") != "OPTIONAL":
-        blockers.append({"code": "task-template-library-status-invalid"})
-    if selected_library.get("enabledByDefault") is not False:
-        blockers.append({"code": "task-template-library-default-enabled"})
-    if selected_library.get("activationMode") != "explicit-template-selection":
-        blockers.append({"code": "task-template-library-activation-invalid"})
-    if selected_library.get("draftOnly") is not True:
-        blockers.append({"code": "task-template-library-not-draft-only"})
-    if selected_library.get("requiresReview") is not True or selected_library.get("freezeBlocked") is not True:
-        blockers.append({"code": "task-template-library-gates-missing"})
-    if selected_library.get("productionPromotionClaimed") is not False:
-        blockers.append({"code": "task-template-library-production-claim"})
-    if selected_library.get("libraryDigest") != canonical_digest(_without_digest(selected_library, "libraryDigest")):
-        blockers.append({"code": "task-template-library-digest-mismatch"})
-
+    blockers = _template_library_blockers(selected_library)
     templates = selected_library.get("templates")
     if not isinstance(templates, list) or not templates:
         blockers.append({"code": "task-template-library-empty"})
@@ -163,10 +146,31 @@ def validate_task_template_library(
     return {**body, "validationDigest": canonical_digest(body)}
 
 
+def _template_library_blockers(library: dict[str, Any]) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    if library.get("schemaVersion") != TASK_TEMPLATE_LIBRARY_SCHEMA:
+        blockers.append({"code": "task-template-library-schema-invalid"})
+    if library.get("status") != "OPTIONAL":
+        blockers.append({"code": "task-template-library-status-invalid"})
+    if library.get("enabledByDefault") is not False:
+        blockers.append({"code": "task-template-library-default-enabled"})
+    if library.get("activationMode") != "explicit-template-selection":
+        blockers.append({"code": "task-template-library-activation-invalid"})
+    if library.get("draftOnly") is not True:
+        blockers.append({"code": "task-template-library-not-draft-only"})
+    if library.get("requiresReview") is not True or library.get("freezeBlocked") is not True:
+        blockers.append({"code": "task-template-library-gates-missing"})
+    if library.get("productionPromotionClaimed") is not False:
+        blockers.append({"code": "task-template-library-production-claim"})
+    if library.get("libraryDigest") != canonical_digest(_without_digest(library, "libraryDigest")):
+        blockers.append({"code": "task-template-library-digest-mismatch"})
+    return blockers
+
+
 def render_task_template(
     template_id: str,
     *,
-    project_root: Path = Path("."),
+    project_root: Path = Path(),
     variables: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Render one draft-only template with optional declared placeholder values."""
@@ -206,7 +210,9 @@ def render_task_template(
 
 def require_task_template_validation_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("task-template-validation-failed", "task template validation failed", {"validation": validation})
+        raise LifecycleError(
+            "task-template-validation-failed", "task template validation failed", {"validation": validation}
+        )
     return validation
 
 
@@ -252,14 +258,21 @@ def _validate_template_record(project_root: Path, record: dict[str, Any], *, ind
             blockers.append({"code": "task-template-file-too-large", "templateId": template_id, "path": path_value})
         else:
             blockers.extend(_template_text_blockers(path.read_text(encoding="utf-8"), template_id=template_id))
-    return {"templateId": template_id, "path": path_value, "status": "PASS" if not blockers else "FAIL", "blockers": blockers}
+    return {
+        "templateId": template_id,
+        "path": path_value,
+        "status": "PASS" if not blockers else "FAIL",
+        "blockers": blockers,
+    }
 
 
-def _template_text_blockers(text: str, *, template_id: str) -> list[dict[str, Any]]:
+def _template_text_blockers(text: str, *, template_id: str | None) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     for marker in _REQUIRED_MARKERS:
         if marker not in text:
-            blockers.append({"code": "task-template-required-marker-missing", "templateId": template_id, "marker": marker})
+            blockers.append(
+                {"code": "task-template-required-marker-missing", "templateId": template_id, "marker": marker}
+            )
     for marker in _FORBIDDEN_MARKERS:
         if marker in text:
             blockers.append({"code": "task-template-forbidden-marker", "templateId": template_id, "marker": marker})

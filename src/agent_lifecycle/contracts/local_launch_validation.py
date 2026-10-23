@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.contracts.launch_qualification import validate_qualification_policy
@@ -76,13 +76,28 @@ def validate_local_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "local-launch-profile-version-probe"})
     _validate_env(profile.get("env"), blockers)
     _validate_planning_only(profile.get("planningOnly"), blockers)
-    if isinstance(executable, str) and "/" not in executable and "\\" not in executable:
-        if "PATH" not in _env_names(profile):
-            blockers.append({"code": "local-launch-profile-path-env-required"})
+    if (
+        isinstance(executable, str)
+        and "/" not in executable
+        and "\\" not in executable
+        and "PATH" not in _env_names(profile)
+    ):
+        blockers.append({"code": "local-launch-profile-path-env-required"})
     timeout = profile.get("timeoutSeconds")
-    if not isinstance(timeout, (int, float)) or isinstance(timeout, bool) or timeout <= 0 or timeout > MAX_TIMEOUT_SECONDS:
+    if (
+        not isinstance(timeout, (int, float))
+        or isinstance(timeout, bool)
+        or timeout <= 0
+        or timeout > MAX_TIMEOUT_SECONDS
+    ):
         blockers.append({"code": "local-launch-profile-timeout", "maximumSeconds": MAX_TIMEOUT_SECONDS})
-    for field in ("shell", "writesNativeConfig", "promptInjectionDefault", "publicSupportClaimed", "productionPromotionClaimed"):
+    for field in (
+        "shell",
+        "writesNativeConfig",
+        "promptInjectionDefault",
+        "publicSupportClaimed",
+        "productionPromotionClaimed",
+    ):
         if profile.get(field) is not False:
             blockers.append({"code": "local-launch-profile-safe-default", "field": field})
     blockers.extend(validate_qualification_policy(profile))
@@ -99,8 +114,13 @@ def validate_local_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
     return {**body, "validationDigest": canonical_digest(body)}
 
 
-def _valid_executable(value: Any) -> bool:
-    if not isinstance(value, str) or not value or len(value.encode("utf-8")) > MAX_ARG_BYTES or any(c in value for c in ("\x00", "\n", "\r")):
+def _valid_executable(value: Any) -> TypeGuard[str]:
+    if (
+        not isinstance(value, str)
+        or not value
+        or len(value.encode("utf-8")) > MAX_ARG_BYTES
+        or any(c in value for c in ("\x00", "\n", "\r"))
+    ):
         return False
     if "/" not in value and "\\" not in value:
         return value not in {".", ".."}
@@ -127,14 +147,21 @@ def _validate_argv_template(
         blockers.append({"code": "local-launch-profile-argv", "field": field})
         return
     for index, token in enumerate(value):
-        if not isinstance(token, str) or not token or len(token.encode("utf-8")) > MAX_ARG_BYTES or any(c in token for c in ("\x00", "\n", "\r")):
+        if (
+            not isinstance(token, str)
+            or not token
+            or len(token.encode("utf-8")) > MAX_ARG_BYTES
+            or any(c in token for c in ("\x00", "\n", "\r"))
+        ):
             blockers.append({"code": "local-launch-profile-argv-token", "field": field, "index": index})
             continue
         match = _PLACEHOLDER.fullmatch(token)
         if match is not None:
             name = match.group(1)
             if not placeholders or name not in ALLOWED_LAUNCH_PLACEHOLDERS:
-                blockers.append({"code": "local-launch-profile-placeholder", "field": field, "index": index, "placeholder": name})
+                blockers.append(
+                    {"code": "local-launch-profile-placeholder", "field": field, "index": index, "placeholder": name}
+                )
         elif "{" in token or "}" in token:
             blockers.append({"code": "local-launch-profile-placeholder-shape", "field": field, "index": index})
 
@@ -172,13 +199,7 @@ def _validate_planning_only(value: Any, blockers: list[dict[str, Any]]) -> None:
         if value.get("argvTemplate") not in (None, []):
             blockers.append({"code": "planning-launch-unsupported-argv"})
         return
-    _validate_argv_template(value.get("argvTemplate"), field="planningOnly.argvTemplate", placeholders=False, blockers=blockers, require_non_empty=True)
-    argv = value.get("argvTemplate") if isinstance(value.get("argvTemplate"), list) else []
-    if any(token in _DANGEROUS_PLANNING_FLAGS for token in argv):
-        blockers.append({"code": "planning-launch-dangerous-flag"})
-    for index, token in enumerate(argv[:-1]):
-        if token == "--permission-mode" and argv[index + 1] == "bypassPermissions":
-            blockers.append({"code": "planning-launch-dangerous-permission-mode"})
+    _validate_planning_argv(value.get("argvTemplate"), blockers)
     if value.get("inputTransport") != "STDIN":
         blockers.append({"code": "planning-launch-input-transport"})
     if value.get("resultFormat") != "SINGLE_JSON_OBJECT":
@@ -193,6 +214,22 @@ def _validate_planning_only(value: Any, blockers: list[dict[str, Any]]) -> None:
         blockers.append({"code": "planning-launch-qualified-evidence-missing"})
 
 
+def _validate_planning_argv(value: Any, blockers: list[dict[str, Any]]) -> None:
+    _validate_argv_template(
+        value,
+        field="planningOnly.argvTemplate",
+        placeholders=False,
+        blockers=blockers,
+        require_non_empty=True,
+    )
+    argv = value if isinstance(value, list) else []
+    if any(token in _DANGEROUS_PLANNING_FLAGS for token in argv):
+        blockers.append({"code": "planning-launch-dangerous-flag"})
+    for index, token in enumerate(argv[:-1]):
+        if token == "--permission-mode" and argv[index + 1] == "bypassPermissions":
+            blockers.append({"code": "planning-launch-dangerous-permission-mode"})
+
+
 def _env_names(profile: dict[str, Any]) -> list[str]:
     env = profile.get("env")
     allow = env.get("allow") if isinstance(env, dict) else []
@@ -203,8 +240,8 @@ __all__ = [
     "ALLOWED_LAUNCH_PLACEHOLDERS",
     "LOCAL_HOST_LAUNCH_PROFILE_SCHEMA",
     "LOCAL_HOST_LAUNCH_PROFILE_VALIDATION_SCHEMA",
-    "MAX_ARG_BYTES",
     "MAX_ARGV_ITEMS",
+    "MAX_ARG_BYTES",
     "MAX_TIMEOUT_SECONDS",
     "PLANNING_ONLY_PROFILE_SCHEMA",
     "PLANNING_SUPPORT_STATUSES",

@@ -228,6 +228,89 @@ class ClosingRecoveryTests(unittest.TestCase):
         finally:
             db.close()
 
+    def test_durable_record_joins_refuse_tampering_after_valid_rehash(self) -> None:
+        cases = (
+            ("effect", "schemaVersion", "wrong", "digest chain"),
+            ("candidate", "schemaVersion", "wrong", "digest chain"),
+            ("proposal", "schemaVersion", "wrong", "digest chain"),
+            ("effect", "runId", "other", "pinned scope"),
+            ("candidate", "budgetScopeId", "other", "pinned scope"),
+            ("proposal", "closingWindowId", "other", "pinned scope"),
+            ("proposal", "bindingId", "other", "revision or inventory"),
+            ("candidate", "journalIdentity", "other", "revision or inventory"),
+            ("candidate", "inventoryDigest", "other", "revision or inventory"),
+            ("candidate", "beforePolicy", {}, "revision or inventory"),
+            ("candidate", "afterPolicy", {}, "revision or inventory"),
+            ("effect", "beforeJournalRevision", True, "revision or inventory"),
+            ("effect", "beforeJournalRevision", -1, "revision or inventory"),
+            ("effect", "beforeJournalRevision", 1 << 53, "revision or inventory"),
+            ("effect", "afterJournalRevision", 8, "revision or inventory"),
+            ("proposal", "expectedJournalRevision", 5, "revision or inventory"),
+            ("candidate", "expectedJournalRevision", 5, "revision or inventory"),
+            ("nativeBeforePolicy", "policy_id", "other", "native policy lineage"),
+            ("nativeAfterPolicy", "revision", 99, "native policy lineage"),
+        )
+        for component, key, value, message in cases:
+            with self.subTest(component=component, key=key, value=value):
+                db, binding = self._persisted_example()
+                try:
+                    record = json.loads(db.execute("SELECT payload FROM closing_policy_effects").fetchone()[0])
+                    record[component][key] = value
+                    record["candidate"]["proposalDigest"] = digest(record["proposal"])
+                    record["effect"]["proposalDigest"] = digest(record["proposal"])
+                    record["effect"]["candidateDigest"] = digest(record["candidate"])
+                    db.execute("UPDATE closing_policy_effects SET effect_digest=?,payload=?",
+                               (digest(record["effect"]), canonical(record)))
+                    db.execute("UPDATE events SET payload=?,digest=?", (canonical(record), digest(record)))
+                    with self.assertRaisesRegex(LifecycleError, message):
+                        read_persisted_closing_balances(db, binding, "window")
+                finally:
+                    db.close()
+
+    def test_missing_native_facts_and_corrupt_cache_keep_exact_refusals(self) -> None:
+        cases = (
+            ("DELETE FROM closing_policy_effects", "Durable closing policy effect is absent"),
+            ("UPDATE closing_policy_effects SET payload='{}'", "record is incomplete"),
+            ("UPDATE closing_policy_effects SET effect_digest='bad'", "digest chain"),
+            ("DELETE FROM events", "Native closing policy event is absent"),
+            ("UPDATE events SET kind='OTHER'", "Native closing policy event is absent"),
+            ("UPDATE events SET digest='bad'", "event differs from durable effect"),
+            ("DELETE FROM scope_state", "Current native financial state is absent"),
+            ("UPDATE scope_state SET revision=6", "Current native financial state is absent"),
+            ("UPDATE scope_state SET data='{}'", "Current native policy differs"),
+            ("UPDATE closing_resource_balances SET generation=8", "projection SQL identity"),
+            ("UPDATE closing_resource_balances SET owner='other'", "projection SQL identity"),
+            ("INSERT INTO closing_resource_balances SELECT * FROM closing_resource_balances", "projection SQL identity"),
+        )
+        for sql, message in cases:
+            with self.subTest(sql=sql):
+                db, binding = self._persisted_example()
+                try:
+                    db.execute(sql)
+                    with self.assertRaisesRegex(LifecycleError, message):
+                        read_persisted_closing_balances(db, binding, "window")
+                finally:
+                    db.close()
+
+    def test_fresh_cache_corruption_refuses_but_absent_cache_rebuilds_without_authority(self) -> None:
+        db, binding = self._persisted_example()
+        try:
+            row = json.loads(db.execute("SELECT payload FROM closing_resource_balances WHERE owner='task'").fetchone()[0])
+            row["currentCumulativeSpent"] += 1
+            db.execute("UPDATE closing_resource_balances SET payload=? WHERE owner='task'", (canonical(row),))
+            with self.assertRaisesRegex(LifecycleError, "Fresh closing resource projection differs"):
+                read_persisted_closing_balances(db, binding, "window")
+            db.execute("DELETE FROM closing_resource_balances")
+            result = read_persisted_closing_balances(db, binding, "window")
+            self.assertEqual(result["status"], "REBUILD_REQUIRED")
+            self.assertFalse(result["financialAdmission"])
+            self.assertTrue(result["requiresAuthenticatedActivationAndCurrentClaim"])
+            for invalid in (None, "", "x" * 257):
+                with self.subTest(window=invalid), self.assertRaisesRegex(LifecycleError, "identity is malformed"):
+                    read_persisted_closing_balances(db, binding, invalid)
+        finally:
+            db.close()
+
     def test_late_old_spend_consumes_global_without_minting_window_allowance(self) -> None:
         state, proposal, sidecars, buckets = _example()
         rows = reconstruct_closing_balances(state, 7, proposal, sidecars, buckets, "b" * 64)
@@ -655,14 +738,13 @@ class RawRetentionWitnessTests(unittest.TestCase):
                 with self.assertRaises(JournalUnavailable):
                     self._collect_raw(closed.eligible_after)
                 authority_path.write_bytes(good)
-        for path, bad, restore in ((self.root, 0o755, 0o700), (authority_path, 0o644, 0o600),
+        for path, _bad, _restore in ((self.root, 0o755, 0o700), (authority_path, 0o644, 0o600),
                                   (self.journal_path, 0o644, 0o600),
                                   (self.sources["attempt-1"][0], 0o644, 0o600)):
             with self.subTest(path=str(path)):
                 from tests.contracts.test_private_storage import unsafe_private_access
-                with unsafe_private_access(path):
-                    with self.assertRaises(JournalUnavailable):
-                        self._collect_raw(closed.eligible_after)
+                with unsafe_private_access(path), self.assertRaises(JournalUnavailable):
+                    self._collect_raw(closed.eligible_after)
         self.assertNotEqual(self.j.raw_obligations("run", closed.eligible_after)[0]["status"], "DONE")
         self.assertTrue(all(p.exists() for p in self.sources["attempt-1"]))
 

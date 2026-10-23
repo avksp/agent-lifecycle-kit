@@ -14,7 +14,7 @@ def load_installation_facts(descriptor: dict[str, Any]) -> dict[str, Any]:
 
     facts = descriptor.get("installation")
     validation = validate_installation_facts(facts)
-    if validation["status"] != "PASS":
+    if validation["status"] != "PASS" or not isinstance(facts, dict):
         raise LifecycleError(
             "adapter-installation-facts-invalid",
             "adapter descriptor installation facts are invalid",

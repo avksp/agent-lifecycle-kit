@@ -16,6 +16,9 @@ contracts for the selected task.
 
 Read docs/guides/lifecycle-cookbook.md#audit-implementation-evidence. A typed audit validates bound artifacts, not an invented independent judgement. Final audit requires all required tasks accepted and actual native finalization.
 
+For new capability claims, apply the bounded pre-freeze feasibility mapping in
+the linked contract: actual entrypoints, lower authority, negative case and owners.
+
 Do not bypass independent review, reviewed freeze, ownership, authorization or
 budgets. Missing evidence stays missing; unknown telemetry stays null. Do not
 reset expenses or run clocks after retries or context compaction.
@@ -25,7 +28,7 @@ JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
 Review Mesh packets grant no review, attestation or execution authority. See
 `docs/reference/safe-artifact-authoring.md`.
 
-Full contract SHA256: `6dc7f14c8888c89bd91e1eae00eabd6ddb728476b5784cf89cb56b482bd6d10f`
+Full contract SHA256: `de42b0282e75ce75bff1dd37f4c1e91a8f2ad354750db8596d116986018af526`
 Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.
 
 

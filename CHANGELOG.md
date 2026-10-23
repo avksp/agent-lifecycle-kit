@@ -4,6 +4,33 @@
 
 - No changes yet.
 
+## 2.24.0 - 2026-10-23
+
+- Centralize quality-floor rules and goal validation while preserving public
+  imports, validation results and refusal behavior. Move review-packet
+  orchestration into an audit service behind public freeze/baseline interfaces.
+- Use explicit typed workflow usage and finalization contracts; isolate
+  historical accounting translation and preserve legacy JSON compatibility,
+  unavailable usage and existing financial support boundaries.
+- Remove unreachable implementations behind five retired R11 transport methods
+  while retaining historical readers and deliberate unsupported-route refusals.
+- Enforce shared size, dependency and branch policies, including import aliases
+  and nested defaults/decorators. Stabilize semantic fingerprints across
+  Python 3.11–3.14 without changing historical baseline hashes or thresholds.
+- Validate strict legacy/current declared-limit report forms, including scoped
+  CLI thresholds and observation-bound diagnostics; retain script/module imports.
+- Clear the source-wide mypy baseline across 496 Python files and align EN/RU
+  architecture guidance, planning/review skills and existing CI requirements.
+- Select accounting fixtures by target release and preserve historical 2.23
+  records. Record the available 2.24 validation receipts as partial evidence;
+  missing provider tokens/USD remain unavailable, and overlapping check
+  durations do not become an enclosing wall-time total.
+- Synchronize package/plugin versions and EN/RU installation pins. Preserve
+  Windows parallel tests and the full Linux/macOS/Windows, Python 3.11–3.14
+  matrix. No new host capability, retired R11 support or measured model savings
+  is claimed. Existing complexity baselines remain explicit debt; the 800-line
+  target is advisory and hard limits still apply.
+
 ## 2.23.0 - 2026-10-21
 
 - Add explicit S0/S1 compact authoring and deterministic canonical DRAFT

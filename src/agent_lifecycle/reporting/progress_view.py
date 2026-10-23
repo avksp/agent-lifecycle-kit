@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from datetime import timezone as timezone
 from pathlib import Path
 from typing import Any
 
@@ -27,10 +28,7 @@ def build_lifecycle_progress_view(
     usage_receipts = _load_usage_receipts(usage_receipt_paths or [])
     change_summary = _load_change_summary(change_summary_path, state)
     steps = _progress_steps(state)
-    rows = [
-        _progress_row(step, usage_receipts=usage_receipts, change_summary=change_summary)
-        for step in steps
-    ]
+    rows = [_progress_row(step, usage_receipts=usage_receipts, change_summary=change_summary) for step in steps]
     totals = _usage_totals(usage_receipts)
     terminal = str(state.get("phase")) in TERMINAL_PHASES
     aggregate_line = _aggregate_line(change_summary)
@@ -128,7 +126,8 @@ def _load_change_summary(path: Path | None, state: dict[str, Any]) -> dict[str, 
     if path is not None:
         payload = read_json_object(path, label="change summary")
     else:
-        payload = state.get("changeSummary") if isinstance(state.get("changeSummary"), dict) else {}
+        raw_summary = state.get("changeSummary")
+        payload = raw_summary if isinstance(raw_summary, dict) else {}
     return {
         "filesChanged": _int_value(payload, "filesChanged"),
         "insertions": _int_value(payload, "insertions"),
@@ -235,7 +234,7 @@ def _parse_iso(value: str) -> datetime | None:
 
 
 def _now_utc() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def _format_duration_seconds(seconds: int) -> str:

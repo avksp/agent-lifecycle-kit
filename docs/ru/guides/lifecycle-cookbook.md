@@ -233,9 +233,13 @@ agent-lifecycle workflow task-review-apply \
   --operation-id review-WS-01-attempt-1 \
   --expected-revision 7 \
   --source-revision <source-sha> \
-  --result work/WS-01/attempt-1/task-result.json \
-  --review work/WS-01/attempt-1/task-review.json
+  --review work/WS-01/attempt-1/task-review.json \
+  --reason "apply independent review"
 ```
+
+Результат уже присоединён командой `workflow task-result`; у `task-review-apply`
+нет параметра `--result`. Пример сверяется с действующим parser и `--help`.
+
 
 Состояние переходит в `FINAL_AUDIT` только после принятия всех обязательных
 задач. Старые команды `task-accept` и `task-rework` остаются совместимыми
@@ -323,3 +327,23 @@ assign`, запустите проверяющих вне ALK, импортир�
 Для обычного маршрута используйте `agent-lifecycle start`. Низкоуровневые
 команды `adapter task start`, `adapter run` и `adapter session resume` нужны
 только автоматизации, которой требуется прямое управление отдельным шагом.
+
+## Достижимость возможности до freeze
+
+До freeze свяжите новый маршрут, переносимость или изменение поддерживаемого
+сценария с 1–3 реальными точками входа, нижней границей возможностей/полномочий,
+существующим отрицательным тестом и точными владельцами изменений. Различайте
+рефакторинг и новую возможность: UNIT_ONLY/mock не заменяет сквозной сценарий.
+Если нижний слой намеренно отказывает, получите решение пользователя до freeze:
+сузить обещание либо включить изменения нижнего слоя и его владельцев. Если
+1–3 точек недостаточно, выделите ограниченный feasibility probe. Проверка входит
+в существующее plan review; новый общий аудит, schema и обязательный receipt
+не вводятся. Структурные plan verify/ownership/traceability не доказывают
+семантическую достижимость.
+
+Пример WS-03 релиза 2.24: `resolve_declared_ledger_context` сохраняет
+`declared-ledger-route-unsupported` и тест
+`test_unsupported_package_and_rebound_opening_refuse`. Переносимый fixture
+типизированного интерфейса остаётся UNIT_ONLY. Изоляция legacy-путей —
+рефакторинг; generic финансовый маршрут и новая квалификация хоста потребовали
+бы отдельной области изменений и сквозного доказательства.

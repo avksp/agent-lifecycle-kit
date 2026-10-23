@@ -20,7 +20,8 @@ def build_stage_guidance_projection(
 
     if stage not in PROJECT_PROFILE_STAGES:
         raise LifecycleError("project-profile-stage-unsupported", "stage name is not canonical", {"stage": stage})
-    stages = effective_profile.get("stages") if isinstance(effective_profile.get("stages"), dict) else {}
+    raw_stages = effective_profile.get("stages")
+    stages = raw_stages if isinstance(raw_stages, dict) else {}
     settings = stages.get(stage, {})
     checked = validate_stage_settings(stage, settings, project_root=project_root)
     guidance_ref = checked.get("guidanceRef")

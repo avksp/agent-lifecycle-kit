@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypeGuard
 
 from agent_lifecycle.benchmarks.contracts import LoadedSuite
 from agent_lifecycle.benchmarks.qualification import qualify_benchmark_runs
@@ -77,18 +77,7 @@ def validate_reference_task_comparison(comparison: dict[str, Any]) -> dict[str, 
         blockers.append({"code": "comparison-fail-without-blockers"})
     if status not in {"PASS", "FAIL"}:
         blockers.append({"code": "comparison-status-invalid"})
-    decision = comparison.get("decision") if isinstance(comparison.get("decision"), dict) else {}
-    resources = comparison.get("resources") if isinstance(comparison.get("resources"), dict) else {}
-    if decision.get("automaticStrategyAdoptionEligible") is True and resources.get("comparableAttestedUsage") is not True:
-        blockers.append({"code": "comparison-auto-adoption-without-attested-usage"})
-    if decision.get("automaticStrategyAdoptionEligible") is True and (
-        resources.get("exactSavingsClaimed") is not True
-        or resources.get("resourceRegressionFree") is not True
-        or resources.get("measurementComplete") is not True
-    ):
-        blockers.append({"code": "comparison-auto-adoption-without-complete-efficiency-proof"})
-    if decision.get("qualityFirst") is not True:
-        blockers.append({"code": "comparison-quality-first-missing"})
+    blockers.extend(_decision_blockers(comparison))
     for field in ("modelCallsStarted", "hostLaunchStarted", "productionPromotionClaimed"):
         if comparison.get(field) is not False:
             blockers.append({"code": "comparison-side-effect-claim", "field": field})
@@ -104,6 +93,28 @@ def validate_reference_task_comparison(comparison: dict[str, Any]) -> dict[str, 
         "productionPromotionClaimed": False,
     }
     return {**body, "validationDigest": canonical_digest(body)}
+
+
+def _decision_blockers(comparison: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_decision = comparison.get("decision")
+    decision = raw_decision if isinstance(raw_decision, dict) else {}
+    raw_resources = comparison.get("resources")
+    resources = raw_resources if isinstance(raw_resources, dict) else {}
+    blockers: list[dict[str, Any]] = []
+    if (
+        decision.get("automaticStrategyAdoptionEligible") is True
+        and resources.get("comparableAttestedUsage") is not True
+    ):
+        blockers.append({"code": "comparison-auto-adoption-without-attested-usage"})
+    if decision.get("automaticStrategyAdoptionEligible") is True and (
+        resources.get("exactSavingsClaimed") is not True
+        or resources.get("resourceRegressionFree") is not True
+        or resources.get("measurementComplete") is not True
+    ):
+        blockers.append({"code": "comparison-auto-adoption-without-complete-efficiency-proof"})
+    if decision.get("qualityFirst") is not True:
+        blockers.append({"code": "comparison-quality-first-missing"})
+    return blockers
 
 
 def compare_qualified_routes(
@@ -152,13 +163,14 @@ def compare_qualified_routes(
     blockers.extend(quality_blockers)
     base_resources = _aggregate_resources(baseline)
     candidate_resources = _aggregate_resources(candidate)
-    resource_deltas = {
-        key: candidate_resources[key] - base_resources[key]
-        for key in base_resources
-    }
+    resource_deltas = {key: candidate_resources[key] - base_resources[key] for key in base_resources}
     body = {
         "schemaVersion": ROUTE_COMPARISON_SCHEMA,
-        "status": "PASS" if not blockers else ("INCOMPARABLE" if any(item["code"].startswith("comparison-") for item in blockers) else "NO_RECOMMENDATION"),
+        "status": "PASS"
+        if not blockers
+        else (
+            "INCOMPARABLE" if any(item["code"].startswith("comparison-") for item in blockers) else "NO_RECOMMENDATION"
+        ),
         "lineage": {
             "taskIds": sorted(item for item in base_tasks if isinstance(item, str)),
             "baselineEnvironmentDigests": sorted(base_environment),
@@ -292,10 +304,14 @@ def _evaluation_blockers(evaluation: dict[str, Any], label: str) -> list[dict[st
 
 def _lineage_comparison(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
-    base_suite = baseline.get("suite") if isinstance(baseline.get("suite"), dict) else {}
-    candidate_suite = candidate.get("suite") if isinstance(candidate.get("suite"), dict) else {}
-    base_task = baseline.get("task") if isinstance(baseline.get("task"), dict) else {}
-    candidate_task = candidate.get("task") if isinstance(candidate.get("task"), dict) else {}
+    raw_base_suite = baseline.get("suite")
+    base_suite = raw_base_suite if isinstance(raw_base_suite, dict) else {}
+    raw_candidate_suite = candidate.get("suite")
+    candidate_suite = raw_candidate_suite if isinstance(raw_candidate_suite, dict) else {}
+    raw_base_task = baseline.get("task")
+    base_task = raw_base_task if isinstance(raw_base_task, dict) else {}
+    raw_candidate_task = candidate.get("task")
+    candidate_task = raw_candidate_task if isinstance(raw_candidate_task, dict) else {}
     for field in ("id", "version", "digest"):
         if base_suite.get(field) != candidate_suite.get(field):
             blockers.append({"code": "comparison-suite-lineage-mismatch", "field": field})
@@ -312,22 +328,30 @@ def _lineage_comparison(baseline: dict[str, Any], candidate: dict[str, Any]) -> 
 
 def _quality_comparison(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
-    base_summary = baseline.get("summary") if isinstance(baseline.get("summary"), dict) else {}
-    candidate_summary = candidate.get("summary") if isinstance(candidate.get("summary"), dict) else {}
+    raw_base_summary = baseline.get("summary")
+    base_summary = raw_base_summary if isinstance(raw_base_summary, dict) else {}
+    raw_candidate_summary = candidate.get("summary")
+    candidate_summary = raw_candidate_summary if isinstance(raw_candidate_summary, dict) else {}
     base_measurements = _measurements(baseline)
     candidate_measurements = _measurements(candidate)
     base_false = _integer(base_summary.get("falseAcceptanceCount"))
     candidate_false = _integer(candidate_summary.get("falseAcceptanceCount"))
     if candidate_false > base_false:
-        blockers.append({"code": "comparison-new-false-acceptance", "baseline": base_false, "candidate": candidate_false})
+        blockers.append(
+            {"code": "comparison-new-false-acceptance", "baseline": base_false, "candidate": candidate_false}
+        )
     base_passed = _integer(_nested(base_measurements, "quality", "criteriaPassed"))
     candidate_passed = _integer(_nested(candidate_measurements, "quality", "criteriaPassed"))
     base_total = _integer(_nested(base_measurements, "quality", "criteriaTotal"))
     candidate_total = _integer(_nested(candidate_measurements, "quality", "criteriaTotal"))
     if base_total != candidate_total:
-        blockers.append({"code": "comparison-oracle-count-mismatch", "baseline": base_total, "candidate": candidate_total})
+        blockers.append(
+            {"code": "comparison-oracle-count-mismatch", "baseline": base_total, "candidate": candidate_total}
+        )
     if candidate_passed < base_passed:
-        blockers.append({"code": "comparison-oracle-regression", "baseline": base_passed, "candidate": candidate_passed})
+        blockers.append(
+            {"code": "comparison-oracle-regression", "baseline": base_passed, "candidate": candidate_passed}
+        )
     lost = sorted(_passed_oracle_codes(baseline).difference(_passed_oracle_codes(candidate)))
     if lost:
         blockers.append({"code": "comparison-oracle-check-lost", "checks": lost})
@@ -403,14 +427,17 @@ def _measurements(evaluation: dict[str, Any]) -> dict[str, Any]:
 
 
 def _token_headline(measurements: dict[str, Any]) -> dict[str, Any]:
-    tokens = measurements.get("tokens") if isinstance(measurements.get("tokens"), dict) else {}
+    raw_tokens = measurements.get("tokens")
+    tokens = raw_tokens if isinstance(raw_tokens, dict) else {}
     headline = tokens.get("headline")
     return headline if isinstance(headline, dict) else {"confidence": "MISSING", "total": None}
 
 
 def _passed_oracle_codes(evaluation: dict[str, Any]) -> set[str]:
-    oracle = evaluation.get("oracle") if isinstance(evaluation.get("oracle"), dict) else {}
-    checks = oracle.get("checks") if isinstance(oracle.get("checks"), list) else []
+    raw_oracle = evaluation.get("oracle")
+    oracle = raw_oracle if isinstance(raw_oracle, dict) else {}
+    raw_checks = oracle.get("checks")
+    checks = raw_checks if isinstance(raw_checks, list) else []
     return {
         str(item["code"])
         for item in checks
@@ -433,5 +460,5 @@ def _integer(value: Any) -> int:
     return value if _is_integer(value) else 0
 
 
-def _is_integer(value: Any) -> bool:
+def _is_integer(value: Any) -> TypeGuard[int]:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0

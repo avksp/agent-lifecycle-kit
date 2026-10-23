@@ -1091,3 +1091,49 @@ raw contract consumed by its existing importer; no model runtime or second schem
 engine is added. Thin skill entrypoints link complete preserved contracts and
 are checked against actual plugin bytes. See [the SDLC boundary](sdlc-boundary.md)
 for designed, locally enforced, declared and externally attested guarantees.
+
+## Architecture stabilization and compatibility
+
+`policy/architecture-limits.json` is the single numerical authority for the
+existing architecture validator and CI. The table is checked against that
+policy; target warnings remain visible debt, while hard limits block acceptance.
+
+| Policy key | Limit |
+| --- | ---: |
+| `targetFileLines` | 800 |
+| `hardFileLines` | 1200 |
+| `targetFunctionLines` | 80 |
+| `hardFunctionLines` | 150 |
+| `hardSymbols` | 80 |
+| `cliTargetFunctionLines` | 80 |
+| `cliHardFunctionLines` | 150 |
+
+The branch ratchet measures qualified functions on the AST: new functions must
+score at most 20; a changed function above 20 must reduce its score by at least
+20% or reach 20. An unchanged semantic fingerprint retains existing debt.
+Nested bodies are separate; defaults, keyword-only defaults and decorators
+belong exactly once to the declared function. Named exceptions require a reason,
+owner, tests and independent review. Baselines never grow automatically.
+`policy/architecture-dependencies.json` records exact private-import exceptions
+(module, symbol, alias, consumer, reason), with explicit reexports separate from
+ordinary debt. Static annotated, dotted and chained module aliases are checked
+by the existing dependency validator; this is not runtime reachability proof.
+
+The review-packet service in `audit/review_packet.py` owns the use case; CLI
+adapts arguments and output. `FULL_REQUIRED` still stops before a model call or
+admission write. Shared contracts own quality-floor and goal rules.
+Typed usage context isolates historical paths in `accounting/legacy_source_usage.py`;
+historical bytes, digests, sums and UNKNOWN accounting remain authoritative.
+The retained financial route still rejects unsupported packages with
+`declared-ledger-route-unsupported`. A portable context fixture is **UNIT_ONLY**,
+not an end-to-end generic ledger or qualified host route. Retired R11 transport
+entrypoints still refuse without starting a process; historical readers remain.
+Typed closing/finalization boundaries preserve storage and refusal behavior,
+including compatible nullable legacy projections; constructing a typed object
+does not grant financial or workflow authority.
+
+The source-wide configured mypy gate requires zero errors and an empty mypy
+baseline. This does not assert that all architecture/formatting debt is gone.
+Skills guide authoring and review; they are not enforced host hooks. No global
+git hook is installed. Final compatibility still requires current local tests,
+independent implementation review and the candidate's complete OS/Python CI.

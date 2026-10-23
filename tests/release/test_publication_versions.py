@@ -12,7 +12,11 @@ ROOT = Path(__file__).resolve().parents[2]
 TOOLS_RELEASE = ROOT / "tools" / "release"
 sys.path.insert(0, str(TOOLS_RELEASE))
 
-from publication_contract import build_publication_manifest, validate_publication_tree  # noqa: E402
+from publication_contract import (  # noqa: E402
+    accounting_fixture_path,
+    build_publication_manifest,
+    validate_publication_tree,
+)
 
 TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 TARGET_REF = f"v{TARGET_VERSION}"
@@ -58,7 +62,7 @@ class PublicationVersionTests(unittest.TestCase):
     def test_current_accounting_fixture_keeps_unavailable_telemetry(self) -> None:
         from agent_lifecycle.metrics.release_accounting import validate_release_accounting
 
-        path = ROOT / "tests/metrics/fixtures/release-2-23-accounting.json"
+        path = ROOT / accounting_fixture_path(TARGET_VERSION)
         accounting = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(accounting["releaseId"], TARGET_VERSION)
         self.assertEqual(validate_release_accounting(accounting)["status"], "PASS")
@@ -69,10 +73,71 @@ class PublicationVersionTests(unittest.TestCase):
             {"alkProcess", "implementation", "audit", "postAuditRemediation"},
         )
         for entry in accounting["entries"]:
+            self.assertEqual(entry["metrics"]["tokens"]["status"], "UNAVAILABLE")
+            self.assertIsNone(entry["metrics"]["tokens"]["value"])
+            for key in ("modelInputTokens", "modelOutputTokens", "modelCachedInputTokens"):
+                self.assertEqual(entry["workflowMetrics"][key]["status"], "UNAVAILABLE")
+                self.assertIsNone(entry["workflowMetrics"][key]["value"])
             for metrics in (entry["metrics"], entry["workflowMetrics"]):
                 for metric in metrics.values():
-                    self.assertEqual(metric["status"], "UNAVAILABLE")
-                    self.assertIsNone(metric["value"])
+                    if metric["status"] == "UNAVAILABLE":
+                        self.assertIsNone(metric["value"])
+        # The current release has real command receipts but incomplete run coverage.
+        self.assertEqual("PARTIAL", accounting["totals"]["metrics"]["steps"]["status"])
+        self.assertGreater(accounting["totals"]["metrics"]["steps"]["value"], 0)
+        self.assertEqual("UNAVAILABLE", accounting["totals"]["metrics"]["elapsedWallMs"]["status"])
+        self.assertIsNone(accounting["totals"]["metrics"]["elapsedWallMs"]["value"])
+
+    def test_fixture_selection_is_target_specific_and_does_not_mutate_previous_manifests(self):
+        paths = []
+        for version in ("2.23.0", "2.24.0", "2.23.0"):
+            manifest = build_publication_manifest(target_version=version, target_ref=f"v{version}")
+            paths.append(next(row["path"] for row in manifest["entries"] if row["id"] == "release-accounting-fixture"))
+        self.assertEqual(
+            [
+                "tests/metrics/fixtures/release-2-23-accounting.json",
+                "tests/metrics/fixtures/release-2-24-accounting.json",
+                "tests/metrics/fixtures/release-2-23-accounting.json",
+            ],
+            paths,
+        )
+        for invalid in ("../2.24.0", "2.24", "v2.24.0", "2.24.0/other"):
+            with self.subTest(version=invalid), self.assertRaises(ValueError):
+                accounting_fixture_path(invalid)
+
+    def test_current_fixture_missing_refuses_despite_preserved_previous_fixture(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_publication_fixture(root, version="2.24.0", ref="v2.24.0")
+            old = root / "tests/metrics/fixtures/release-2-23-accounting.json"
+            old.write_bytes((ROOT / "tests/metrics/fixtures/release-2-23-accounting.json").read_bytes())
+            original = old.read_bytes()
+            current = root / "tests/metrics/fixtures/release-2-24-accounting.json"
+            self.assertEqual(
+                "PASS", validate_publication_tree(root=root, target_version="2.24.0", target_ref="v2.24.0")["status"]
+            )
+            current.unlink()
+            result = validate_publication_tree(root=root, target_version="2.24.0", target_ref="v2.24.0")
+            self.assertEqual("FAIL", result["status"])
+            self.assertIn("release-accounting-fixture", {row["entryId"] for row in result["blockers"]})
+            self.assertEqual(original, old.read_bytes())
+
+    def test_historical_fixture_remains_valid_under_its_own_target(self):
+        from agent_lifecycle.metrics.release_accounting import validate_release_accounting
+
+        historical = ROOT / "tests/metrics/fixtures/release-2-23-accounting.json"
+        original = historical.read_bytes()
+        accounting = json.loads(original)
+        self.assertEqual("2.23.0", accounting["releaseId"])
+        self.assertEqual("PASS", validate_release_accounting(accounting)["status"])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_publication_fixture(root, version="2.23.0", ref="v2.23.0")
+            (root / accounting_fixture_path("2.23.0")).write_bytes(original)
+            self.assertEqual(
+                "PASS", validate_publication_tree(root=root, target_version="2.23.0", target_ref="v2.23.0")["status"]
+            )
+        self.assertEqual(original, historical.read_bytes())
 
     def test_source_native_accounting_manifest_retains_scope_limits(self):
         manifest = build_publication_manifest(
@@ -299,7 +364,7 @@ class PublicationVersionTests(unittest.TestCase):
             root = Path(tmp)
             _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
             _write_json(
-                root / "tests/metrics/fixtures/release-2-23-accounting.json",
+                root / accounting_fixture_path(TARGET_VERSION),
                 {"releaseId": "2.8.0"},
             )
 
@@ -384,7 +449,7 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
     (root / "src/agent_lifecycle/_version.py").write_text(f'__version__ = "{version}"\n', encoding="utf-8")
     (root / "CHANGELOG.md").write_text(f"## {version} - 2026-01-01\n", encoding="utf-8")
     _write_json(
-        root / "tests/metrics/fixtures/release-2-23-accounting.json",
+        root / accounting_fixture_path(version),
         {"releaseId": version},
     )
     for path in (

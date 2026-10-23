@@ -84,3 +84,35 @@ Python](../reference/python-api.md); внутренние модули, кото
 
 Процесс релиза остаётся источником полномочий для области изменений,
 подтверждений, независимого ревью и итоговой приёмки.
+
+## Единая архитектурная политика
+
+Числа берутся из `policy/architecture-limits.json`; таблица проверяется тестом.
+Целевые значения — предупреждения, жёсткие — блокирующие пределы.
+
+| Policy key | Limit |
+| --- | ---: |
+| `targetFileLines` | 800 |
+| `hardFileLines` | 1200 |
+| `targetFunctionLines` | 80 |
+| `hardFunctionLines` | 150 |
+| `hardSymbols` | 80 |
+| `cliTargetFunctionLines` | 80 |
+| `cliHardFunctionLines` | 150 |
+
+```bash
+PYTHONPATH=src python3 tools/release/validate_architecture_complexity.py \
+  --package-root src/agent_lifecycle --policy policy/architecture-limits.json \
+  --evidence work/architecture-complexity.json
+PYTHONPATH=src python3 tools/release/validate_module_dependencies.py \
+  --package-root src/agent_lifecycle --policy policy/architecture-dependencies.json \
+  --require-acyclic-modules --require-acyclic-packages \
+  --evidence work/module-dependencies.json
+```
+
+Mypy baseline пуст: любая новая ошибка source-wide mypy блокирует приёмку.
+Устаревшая запись `runner/attempt_snapshots.py` удалена; исходник не восстанавливается.
+Прежний lint/format baseline не расширяется, порог покрытия 76% не снижается.
+Полный локальный unittest запускается один раз для неизменного кандидата;
+quality runner повторяет discovery для собственных coverage-доказательств в CI.
+Повтор успешной локальной проверки требует изменения её зависимостей.

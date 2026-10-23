@@ -15,10 +15,30 @@ COST_CATEGORIES = ("implementation", "productValidation", "pipelineCompliance", 
 USAGE_CONFIDENCE_STATES = ("ATTESTED", "ESTIMATED", "MISSING")
 
 DEFAULT_MODE_LIMITS: dict[str, dict[str, float | int]] = {
-    "light": {"maxPipelineTokenShare": 0.20, "maxPipelineStepShare": 0.30, "maxPipelineTokens": 1500, "maxPipelineSteps": 3},
-    "standard": {"maxPipelineTokenShare": 0.30, "maxPipelineStepShare": 0.40, "maxPipelineTokens": 6000, "maxPipelineSteps": 6},
-    "strict": {"maxPipelineTokenShare": 0.45, "maxPipelineStepShare": 0.55, "maxPipelineTokens": 20000, "maxPipelineSteps": 12},
-    "release": {"maxPipelineTokenShare": 0.60, "maxPipelineStepShare": 0.70, "maxPipelineTokens": 50000, "maxPipelineSteps": 24},
+    "light": {
+        "maxPipelineTokenShare": 0.20,
+        "maxPipelineStepShare": 0.30,
+        "maxPipelineTokens": 1500,
+        "maxPipelineSteps": 3,
+    },
+    "standard": {
+        "maxPipelineTokenShare": 0.30,
+        "maxPipelineStepShare": 0.40,
+        "maxPipelineTokens": 6000,
+        "maxPipelineSteps": 6,
+    },
+    "strict": {
+        "maxPipelineTokenShare": 0.45,
+        "maxPipelineStepShare": 0.55,
+        "maxPipelineTokens": 20000,
+        "maxPipelineSteps": 12,
+    },
+    "release": {
+        "maxPipelineTokenShare": 0.60,
+        "maxPipelineStepShare": 0.70,
+        "maxPipelineTokens": 50000,
+        "maxPipelineSteps": 24,
+    },
 }
 
 
@@ -29,7 +49,9 @@ def validate_lifecycle_cost_report(report: dict[str, Any]) -> dict[str, Any]:
     if report.get("schemaVersion") != COST_REPORT_SCHEMA:
         blockers.append({"code": "cost-report-schema", "message": "unsupported lifecycle cost report schemaVersion"})
     if report.get("productionPromotionClaimed") is True:
-        blockers.append({"code": "cost-report-production-claim", "message": "cost reports must not claim production promotion"})
+        blockers.append(
+            {"code": "cost-report-production-claim", "message": "cost reports must not claim production promotion"}
+        )
     mode = report.get("mode")
     if mode not in DEFAULT_MODE_LIMITS:
         blockers.append({"code": "cost-report-mode", "mode": mode})
@@ -66,7 +88,9 @@ def validate_lifecycle_cost_report(report: dict[str, Any]) -> dict[str, Any]:
 
 def require_lifecycle_cost_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") == "FAIL":
-        raise LifecycleError("lifecycle-cost-validation-failed", "lifecycle cost validation failed", {"validation": validation})
+        raise LifecycleError(
+            "lifecycle-cost-validation-failed", "lifecycle cost validation failed", {"validation": validation}
+        )
     return validation
 
 
@@ -136,7 +160,8 @@ def summarize_usage_confidence(entries: list[Any]) -> dict[str, int]:
         if not isinstance(entry, dict):
             continue
         confidence = entry.get("usageConfidence")
-        tokens = entry.get("tokens") if isinstance(entry.get("tokens"), int) else 0
+        raw_tokens = entry.get("tokens")
+        tokens = raw_tokens if isinstance(raw_tokens, int) else 0
         if confidence == "ATTESTED":
             summary["attestedEntries"] += 1
             summary["attestedTokens"] += max(0, tokens)

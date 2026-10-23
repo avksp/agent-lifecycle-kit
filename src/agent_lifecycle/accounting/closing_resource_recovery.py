@@ -15,6 +15,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, NoReturn
 
+from agent_lifecycle.accounting.closing_types import ClosingPolicyRecord
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.canonical import load_json_object
 from agent_lifecycle.contracts.closing_resource_schemas import (
@@ -538,19 +539,12 @@ def _read_closing_window_details(
     return sidecars, buckets
 
 
-def read_persisted_closing_balances(
+def _read_closing_policy_record(
     db: sqlite3.Connection,
-    binding: dict,
+    run_id: str,
     closing_window_id: str,
-) -> dict:
-    """Reconcile one current window inside the caller's pinned read transaction.
-
-    This checks durable record joins and cache freshness. It does not qualify
-    signing authority, native dispatch, or the completeness of a host route.
-    """
-    if type(closing_window_id) is not str or not 1 <= len(closing_window_id) <= 256:
-        _unavailable("Closing window identity is malformed")
-    run_id, scope = binding["runId"], binding["budgetScopeId"]
+) -> ClosingPolicyRecord:
+    """Load the durable record and verify its shape and digest chain."""
     effect_row = db.execute(
         "SELECT effect_digest,payload FROM closing_policy_effects WHERE run_id=? AND closing_window_id=?",
         (run_id, closing_window_id),
@@ -573,6 +567,17 @@ def read_persisted_closing_balances(
         or candidate.get("proposalDigest") != effect["proposalDigest"]
     ):
         _unavailable("Closing policy record digest chain is broken")
+    return ClosingPolicyRecord(record, effect, candidate, proposal, effect_row["effect_digest"])
+
+
+def _validate_closing_scope_join(
+    record: ClosingPolicyRecord,
+    binding: dict,
+    closing_window_id: str,
+) -> None:
+    """Join all three durable documents to the pinned scope and revision."""
+    run_id, scope = binding["runId"], binding["budgetScopeId"]
+    effect, candidate, proposal = record.effect, record.candidate, record.proposal
     for item in (effect, candidate, proposal):
         if (
             item.get("runId") != run_id
@@ -596,6 +601,15 @@ def read_persisted_closing_balances(
         or effect["afterJournalRevision"] != effect["beforeJournalRevision"] + 1
     ):
         _unavailable("Closing policy revision or inventory join is broken")
+
+
+def _validate_closing_policy_event(
+    db: sqlite3.Connection,
+    scope: str,
+    record: ClosingPolicyRecord,
+) -> dict:
+    """Check the native event and its before/after policy lineage."""
+    effect = record.effect
     event_row = db.execute(
         "SELECT kind,payload,digest FROM events WHERE scope=? AND revision=? AND ordinal=0",
         (scope, effect["afterJournalRevision"]),
@@ -603,9 +617,9 @@ def read_persisted_closing_balances(
     if event_row is None or event_row["kind"] != "CLOSING_POLICY_APPLIED":
         _unavailable("Native closing policy event is absent")
     event = _loaded_payload(event_row["payload"], "native closing policy event")
-    if event != record or event_row["digest"] != digest(event):
+    if event != record.body or event_row["digest"] != digest(event):
         _unavailable("Closing policy event differs from durable effect")
-    before_native, after_native = record["nativeBeforePolicy"], record["nativeAfterPolicy"]
+    before_native, after_native = record.body["nativeBeforePolicy"], record.body["nativeAfterPolicy"]
     if (
         not all(type(item) is dict for item in (before_native, after_native))
         or not all(type(item) is dict for item in (effect.get("beforePolicy"), effect.get("afterPolicy")))
@@ -619,6 +633,16 @@ def read_persisted_closing_balances(
         )
     ):
         _unavailable("Closing policy event native policy lineage is broken")
+    return after_native
+
+
+def _read_closing_financial_state(
+    db: sqlite3.Connection,
+    scope: str,
+    effect: dict,
+    after_native: dict,
+) -> tuple[sqlite3.Row, dict]:
+    """Require current native financial state to retain the applied policy."""
     state_row = db.execute("SELECT revision,data FROM scope_state WHERE scope=?", (scope,)).fetchone()
     if (
         state_row is None
@@ -639,10 +663,17 @@ def read_persisted_closing_balances(
         )
     ):
         _unavailable("Current native policy differs from closing effect")
-    sidecars, buckets = _read_closing_window_details(db, scope, closing_window_id, state_row)
-    rebuilt = reconstruct_closing_balances(
-        state, state_row["revision"], proposal, sidecars, buckets, effect_row["effect_digest"]
-    )
+    return state_row, state
+
+
+def _closing_projection_status(
+    db: sqlite3.Connection,
+    scope: str,
+    closing_window_id: str,
+    revision: int,
+    rebuilt: list[dict],
+) -> str:
+    """Distinguish a rebuildable stale cache from corrupt current facts."""
     saved = {}
     stale = False
     for row in db.execute(
@@ -656,18 +687,43 @@ def read_persisted_closing_balances(
             owner != row["owner"]
             or owner in saved
             or type(row["generation"]) is not int
-            or (row["generation"] > state_row["revision"])
+            or (row["generation"] > revision)
         ):
             _unavailable("Closing resource projection SQL identity is broken")
         saved[owner] = payload
-        stale |= row["generation"] != state_row["revision"]
+        stale |= row["generation"] != revision
     expected = {_owner_key(row["scope"]): row for row in rebuilt}
     if not stale and set(saved) == set(expected) and saved != expected:
         _unavailable("Fresh closing resource projection differs from native facts")
+    return "CURRENT" if not stale and saved == expected else "REBUILD_REQUIRED"
+
+
+def read_persisted_closing_balances(
+    db: sqlite3.Connection,
+    binding: dict,
+    closing_window_id: str,
+) -> dict:
+    """Reconcile one current window inside the caller's pinned read transaction.
+
+    This checks durable record joins and cache freshness. It does not qualify
+    signing authority, native dispatch, or the completeness of a host route.
+    """
+    if type(closing_window_id) is not str or not 1 <= len(closing_window_id) <= 256:
+        _unavailable("Closing window identity is malformed")
+    run_id, scope = binding["runId"], binding["budgetScopeId"]
+    record = _read_closing_policy_record(db, run_id, closing_window_id)
+    _validate_closing_scope_join(record, binding, closing_window_id)
+    after_native = _validate_closing_policy_event(db, scope, record)
+    state_row, state = _read_closing_financial_state(db, scope, record.effect, after_native)
+    sidecars, buckets = _read_closing_window_details(db, scope, closing_window_id, state_row)
+    rebuilt = reconstruct_closing_balances(
+        state, state_row["revision"], record.proposal, sidecars, buckets, record.effect_digest
+    )
+    status = _closing_projection_status(db, scope, closing_window_id, state_row["revision"], rebuilt)
     return {
-        "status": "CURRENT" if not stale and saved == expected else "REBUILD_REQUIRED",
+        "status": status,
         "balances": rebuilt,
-        "proposal": proposal,
+        "proposal": record.proposal,
         "financialAdmission": False,
         "requiresAuthenticatedActivationAndCurrentClaim": True,
     }

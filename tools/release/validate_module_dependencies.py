@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import subprocess
 from pathlib import Path
@@ -8,6 +9,7 @@ from typing import Any
 
 from release_common import digest_value, write_json
 
+from agent_lifecycle.quality.architecture_policy import private_import_findings, private_import_records
 from agent_lifecycle.quality.dependency_impact import (
     build_module_dependency_report,
     graph_edges,
@@ -19,6 +21,7 @@ from agent_lifecycle.quality.dependency_impact import (
 )
 
 POLICY_SCHEMA = "agent-architecture-dependencies.v1"
+POLICY_PATH = Path(__file__).resolve().parents[2] / "policy/architecture-dependencies.json"
 
 
 def main() -> int:
@@ -37,6 +40,10 @@ def main() -> int:
     repository_root = _repository_root(package_root, args.repository_root)
     blockers: list[dict[str, Any]] = []
     policy: dict[str, Any] = {}
+    if package_root == POLICY_PATH.parent.parent / "src/agent_lifecycle":
+        if args.policy and Path(args.policy).resolve() != POLICY_PATH:
+            blockers.append({"code": "architecture-production-policy-override-forbidden"})
+        args.policy = str(POLICY_PATH)
     if args.policy:
         try:
             policy = _load_policy(Path(args.policy))
@@ -70,6 +77,9 @@ def main() -> int:
 
     layer_policy = _layer_policy_result(graph, package_root, policy, module_paths)
     blockers.extend(layer_policy["blockers"])
+
+    private_imports = _private_import_result(identities, repository_root, module_root(package_root), policy)
+    blockers.extend(private_imports["blockers"])
 
     forbidden_cycles = [_parse_cycle(value) for value in args.forbid_cycle]
     for cycle in forbidden_cycles:
@@ -106,6 +116,7 @@ def main() -> int:
         "packageSccs": package_sccs,
         "packageEdges": graph_edges(package_graph),
         "layerPolicy": layer_policy,
+        "privateImports": private_imports,
         "policy": policy,
         "forbiddenCycles": forbidden_cycles,
         "lineChecks": line_checks,
@@ -116,10 +127,41 @@ def main() -> int:
     return 0 if not blockers else 1
 
 
+def _private_import_result(
+    identities: list[dict[str, Any]],
+    repository_root: Path,
+    root: str,
+    policy: dict[str, Any],
+) -> dict[str, Any]:
+    records = []
+    modules = {item["module"] for item in identities}
+    for item in identities:
+        path = repository_root / item["path"]
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        records.extend(
+            private_import_records(
+                tree, item["module"], root, is_package=path.name == "__init__.py", known_modules=modules
+            )
+        )
+    if "privateImportBaselineDigest" not in policy:
+        # Historical callers without a ratchet policy still receive inventory.
+        return {"records": records, "enforced": False, "blockers": []}
+    try:
+        return {**private_import_findings(records, policy), "enforced": True}
+    except (ValueError, KeyError, TypeError) as exc:
+        return {
+            "records": records,
+            "enforced": True,
+            "blockers": [{"code": "architecture-private-import-policy-invalid", "message": str(exc)}],
+        }
+
+
 def _load_policy(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict) or value.get("schemaVersion") != POLICY_SCHEMA:
         raise ValueError(f"expected {POLICY_SCHEMA}")
+    if path.resolve() == POLICY_PATH and "privateImportBaselineDigest" not in value:
+        raise ValueError("Repository policy requires the private import ratchet")
     return value
 
 
@@ -164,7 +206,7 @@ def _layer_policy_result(
                 unclassified.append(target)
             elif source_level < target_level:
                 violations.append({"from": source, "to": target, "fromLevel": source_level, "toLevel": target_level})
-    blockers = []
+    blockers: list[dict[str, Any]] = []
     if policy:
         if unclassified:
             blockers.append({"code": "architecture-layer-unclassified", "modules": sorted(set(unclassified))})

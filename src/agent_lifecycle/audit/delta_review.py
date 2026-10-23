@@ -36,7 +36,7 @@ def build_delta_review_packet(
     try:
         scope = make_review_scope(subject)
     except LifecycleError as exc:
-        return _input_refusal(subject, exc.code)
+        return build_review_input_refusal(subject, exc.code)
     body = {
         "schemaVersion": DELTA_REVIEW_SCHEMA,
         "mode": "FULL",
@@ -74,7 +74,7 @@ def build_delta_review_packet(
     return {**body, "packetDigest": canonical_digest(body)}
 
 
-def _input_refusal(subject: dict[str, Any], reason: str) -> dict[str, Any]:
+def build_review_input_refusal(subject: dict[str, Any], reason: str) -> dict[str, Any]:
     manifest = subject.get("manifest") if isinstance(subject, dict) else None
     body = {
         "schemaVersion": DELTA_REVIEW_SCHEMA,
@@ -111,3 +111,7 @@ def _baseline_subject(
     if len(canonical_bytes(baseline)) > 8 * 1024 * 1024:
         raise LifecycleError("review-chain-limit", "Baseline exceeds cap")
     return bound["subject"]
+
+
+# Compatibility for older internal callers.
+_input_refusal = build_review_input_refusal

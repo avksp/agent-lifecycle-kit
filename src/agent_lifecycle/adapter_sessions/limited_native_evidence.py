@@ -8,27 +8,41 @@ from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime
-from datetime import timezone as timezone
 from pathlib import Path
 
 from agent_lifecycle.accounting.host_bridge import ARTIFACT_BYTES, PROFILE_BYTES, BoundedReader, _json
 from agent_lifecycle.adapter_sessions.attempt_authority import _invocation_namespace, require_positive_attempt_result
 from agent_lifecycle.adapter_sessions.ordinary_audit import verify_area_report
+from agent_lifecycle.adapter_sessions.qualification_context import (
+    ADMISSION_PATH as ADMISSION_PATH,
+)
+from agent_lifecycle.adapter_sessions.qualification_context import (
+    CAPACITY_OBLIGATION as CAPACITY_OBLIGATION,
+)
+from agent_lifecycle.adapter_sessions.qualification_context import (
+    CLAIM as CLAIM,
+)
+from agent_lifecycle.adapter_sessions.qualification_context import (
+    LEGACY_CONTRACT_PATH,
+    LEGACY_LOCK_PATH,
+    LEGACY_REVIEW_ROOT,
+    load_qualification_context,
+)
+from agent_lifecycle.adapter_sessions.qualification_context import (
+    POLARITIES as POLARITIES,
+)
+from agent_lifecycle.adapter_sessions.qualification_context import (
+    PRODUCERS as PRODUCERS,
+)
+from agent_lifecycle.adapter_sessions.qualification_context import (
+    ROLES as ROLES,
+)
+from agent_lifecycle.adapter_sessions.qualification_context import (
+    ROUTE as ROUTE,
+)
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import normalize_repo_path
 
-ROLES = ("worker", "validator", "auditor", "retry", "coordinator", "closing")
-POLARITIES = ("POSITIVE", "PRELAUNCH_REFUSAL", "STARTED_FAILURE", "STRONG_REFUSAL")
-ROUTE = "codex-exact-prompt-v1"
-CLAIM = "ALK_CONTROLLED_OUTBOUND_INPUT_FIT"
-ADMISSION_PATH = "work/release-2-16/native-qualification-admission.json"
-CAPACITY_OBLIGATION = "accounting.native.aggregate-104-105-selected-invocation-capacity"
-PRODUCERS = (
-    "src/agent_lifecycle/adapter_sessions/limited_native_evidence.py",
-    "src/agent_lifecycle/adapter_sessions/launch_preflight.py",
-    "tests/adapter_sessions/codex_limited_native_support.py",
-    "tests/adapter_sessions/test_codex_exact_prompt.py",
-)
 LOCAL_FAULT_CODE = "import sys; sys.stdin.buffer.read(); sys.exit(7)"
 
 
@@ -74,7 +88,7 @@ def native_success_event(launch: dict) -> dict:
 
 
 def native_rows(root: Path, reader: BoundedReader) -> list[dict]:
-    contract = _json(reader.read(root, "tasks/release-2-16/route-bootstrap-contract.json", ARTIFACT_BYTES))
+    contract = _json(reader.read(root, LEGACY_CONTRACT_PATH, ARTIFACT_BYTES))
     rows = contract["validation"]["limitedNativeMatrix"]["rows"]
     expected = {(r, p) for r in ROLES for p in POLARITIES}
     require(
@@ -86,12 +100,8 @@ def native_rows(root: Path, reader: BoundedReader) -> list[dict]:
     return rows
 
 
-def read_native_admission(
-    root: Path, reader: BoundedReader, *, manifest: dict, state: dict, task: dict, live: bool
-) -> tuple[dict, dict]:
-    raw = reader.read(root, ADMISSION_PATH, PROFILE_BYTES)
-    admission = _json(raw)
-    lock_raw = reader.read(root, "tasks/release-2-16/plan.lock.json", ARTIFACT_BYTES)
+def _validate_native_lineage(admission: dict, manifest: dict, state: dict, task: dict, lock_raw: bytes) -> None:
+    """Bind the finite admission to this frozen plan and running attempt."""
     require(
         manifest.get("status") == "FROZEN"
         and admission["schemaVersion"] == "alk-r69-native-finite-admission.v1"
@@ -101,8 +111,15 @@ def read_native_admission(
         and admission["attemptId"] == str(task["attempt"])
         and task["status"] == "RUNNING"
         and admission["planDigest"] == canonical_digest(manifest) == state["planDigest"]
-        and admission["lockSha256"] == hashlib.sha256(lock_raw).hexdigest()
-        and type(admission["maxSelectedCodexInvocations"]) is int
+        and admission["lockSha256"] == hashlib.sha256(lock_raw).hexdigest(),
+        "Current finite native admission required",
+    )
+
+
+def _validate_native_budget(admission: dict) -> None:
+    """Keep the original finite caps and full UNKNOWN hold."""
+    require(
+        type(admission["maxSelectedCodexInvocations"]) is int
         and 0 < admission["maxSelectedCodexInvocations"] <= 6
         and type(admission["tokenCap"]) is int
         and 0 < admission["tokenCap"] <= 1600000
@@ -114,8 +131,12 @@ def read_native_admission(
         and admission["fullUnknownHoldRetained"] is True,
         "Current finite native admission required",
     )
-    # This qualification is a separately reviewed procedural boundary, not host telemetry.
-    capacity = _json(read_ref(root, admission["capacityQualificationRef"], reader, PROFILE_BYTES))
+
+
+def _native_capacity_ceiling(
+    root: Path, reader: BoundedReader, admission: dict, capacity: dict, state: dict, task: dict
+) -> tuple[int, dict | None]:
+    """Recognize only the original ceiling or its exact six-start renewal."""
     legacy_keys = {
         "status",
         "scope",
@@ -164,6 +185,13 @@ def read_native_admission(
             "Exact six-start renewal retaining all prior starts required",
         )
         ceiling = capacity["aggregateSelectedInvocationCeiling"]
+    return ceiling, renewal_ref
+
+
+def _validate_native_capacity(
+    admission: dict, capacity: dict, state: dict, ceiling: int, renewal_ref: dict | None
+) -> None:
+    """Reconcile all prior starts with the separately qualified remaining count."""
     prior_ceiling = max(6, ceiling - 6)
     expected_scope = (
         "ALK_CONTROLLED_SELECTED_INVOCATIONS_104_105"
@@ -185,6 +213,12 @@ def read_native_admission(
         and bool(capacity["historyRefs"]),
         "Current cumulative controlled launch capacity remains unqualified",
     )
+
+
+def _read_native_capacity_review(
+    root: Path, reader: BoundedReader, admission: dict, capacity: dict, state: dict
+) -> dict:
+    """Reopen independent review origin and charge its complete history."""
     # Facts never reference their covering review: both independent references
     # belong to the admission, avoiding a content-hash cycle.
     review_ref = admission["capacityReviewRef"]
@@ -195,8 +229,7 @@ def read_native_admission(
         and verified["nativeAllowed"] is False
         and verified["report"] == review
         and verified["reportSha256"] == review_ref["sha256"]
-        and review_ref["path"]
-        == "work/release-2-16/evidence/ordinary-audit/" + admission["capacityReviewId"] + "/report.json"
+        and review_ref["path"] == LEGACY_REVIEW_ROOT + admission["capacityReviewId"] + "/report.json"
         and review["reviewerId"] != admission["actorId"]
         and review["verdict"] == "PASS"
         and review["planDigest"] == state["planDigest"]
@@ -217,6 +250,11 @@ def read_native_admission(
     # integrity/financial ancestry checks retain their existing internal bounds.
     for ref in [*capacity["historyRefs"], *verified["snapshotRefs"]]:
         read_ref(root, ref, reader)
+    return verified
+
+
+def _validate_native_cases(admission: dict) -> None:
+    """Require a distinct original operation for each selected case."""
     specs = admission["cases"]
     require(
         isinstance(specs, dict)
@@ -225,14 +263,38 @@ def read_native_admission(
         and all(isinstance(s["operationId"], str) and s["operationId"] for s in specs.values()),
         "Distinct original task operation identities required",
     )
+
+
+def _validate_native_deadline(admission: dict, state: dict, task: dict) -> None:
+    """Observe the earlier original task/run deadline without renewing it."""
+    now = datetime.now(UTC)
+    original = min(
+        datetime.fromisoformat(x.replace("Z", "+00:00")) for x in (state["runDeadlineAt"], task["attemptDeadlineAt"])
+    )
+    admitted_deadline = datetime.fromisoformat(admission["absoluteDeadlineUtc"].replace("Z", "+00:00"))
+    require(admitted_deadline == original and now < original, "Original native/task/run deadline expired")
+
+
+def read_native_admission(
+    root: Path, reader: BoundedReader, *, manifest: dict, state: dict, task: dict, live: bool
+) -> tuple[dict, dict]:
+    """Compatibility entrypoint; the real independent review still checks freeze.
+
+    This helper keeps its historical pins. The complete qualification collector
+    additionally selects its context from the exact frozen profile.
+    """
+    raw = reader.read(root, ADMISSION_PATH, PROFILE_BYTES)
+    admission = _json(raw)
+    lock_raw = reader.read(root, LEGACY_LOCK_PATH, ARTIFACT_BYTES)
+    _validate_native_lineage(admission, manifest, state, task, lock_raw)
+    _validate_native_budget(admission)
+    capacity = _json(read_ref(root, admission["capacityQualificationRef"], reader, PROFILE_BYTES))
+    ceiling, renewal_ref = _native_capacity_ceiling(root, reader, admission, capacity, state, task)
+    _validate_native_capacity(admission, capacity, state, ceiling, renewal_ref)
+    _read_native_capacity_review(root, reader, admission, capacity, state)
+    _validate_native_cases(admission)
     if live:
-        now = datetime.now(UTC)
-        original = min(
-            datetime.fromisoformat(x.replace("Z", "+00:00"))
-            for x in (state["runDeadlineAt"], task["attemptDeadlineAt"])
-        )
-        admitted_deadline = datetime.fromisoformat(admission["absoluteDeadlineUtc"].replace("Z", "+00:00"))
-        require(admitted_deadline == original and now < original, "Original native/task/run deadline expired")
+        _validate_native_deadline(admission, state, task)
     return admission, {"path": ADMISSION_PATH, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
 
 
@@ -543,11 +605,12 @@ def verify_native_observations(
     root: Path, payload: dict, *, reader: BoundedReader, manifest: dict, state: dict, task: dict, candidate_digest: str
 ) -> list[dict]:
     """Validate native24 exactly once, before any C21 sidecar or accepting write."""
-    rows = native_rows(root, reader)
+    context = load_qualification_context(root, reader, manifest=manifest)
+    rows = context.rows
     admission, admission_ref = read_native_admission(root, reader, manifest=manifest, state=state, task=task, live=True)
     require(set(admission["cases"]) == {row["caseId"] for row in rows}, "Native admission row set differs")
     producer_refs = []
-    for path in PRODUCERS:
+    for path in context.producer_paths:
         raw = reader.read(root, path, ARTIFACT_BYTES)
         producer_refs.append({"path": path, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()})
     commands = payload["commands"]

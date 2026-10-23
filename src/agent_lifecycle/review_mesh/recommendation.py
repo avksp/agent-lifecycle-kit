@@ -28,8 +28,8 @@ _BUG_MARKERS = (
     "flaky",
     "incident",
     "ошиб",
-    "баг",
-    "регресс",
+    "\u0431\u0430\u0433",
+    "\u0440\u0435\u0433\u0440\u0435\u0441\u0441",
     "падает",
     "сбой",
 )
@@ -126,7 +126,8 @@ def recommend_review_mesh_for_text(
 def recommend_review_mesh_for_intake(intake_receipt: dict[str, Any]) -> dict[str, Any]:
     if intake_receipt.get("schemaVersion") != "agent-adapter-task-start-receipt.v1":
         raise LifecycleError("review-mesh-intake-schema-invalid", "expected agent-adapter-task-start-receipt.v1")
-    input_summary = intake_receipt.get("input") if isinstance(intake_receipt.get("input"), dict) else {}
+    raw_input = intake_receipt.get("input")
+    input_summary = raw_input if isinstance(raw_input, dict) else {}
     source = {
         "kind": "INTAKE_RECEIPT",
         "label": input_summary.get("label") or intake_receipt.get("adapterId") or "adapter-task-intake",
@@ -136,7 +137,9 @@ def recommend_review_mesh_for_intake(intake_receipt: dict[str, Any]) -> dict[str
     }
     return build_review_mesh_recommendation(
         source=source,
-        task_shape=intake_receipt.get("detectedTaskShape") if isinstance(intake_receipt.get("detectedTaskShape"), str) else None,
+        task_shape=intake_receipt.get("detectedTaskShape")
+        if isinstance(intake_receipt.get("detectedTaskShape"), str)
+        else None,
         recommended_quality_profiles=list(intake_receipt.get("recommendedQualityProfiles", []))
         if isinstance(intake_receipt.get("recommendedQualityProfiles"), list)
         else [],
@@ -150,8 +153,10 @@ def recommend_review_mesh_for_intake(intake_receipt: dict[str, Any]) -> dict[str
 def recommend_review_mesh_for_plan_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
     if manifest.get("schemaVersion") != "agent-plan-manifest.v1":
         raise LifecycleError("review-mesh-plan-schema-invalid", "expected agent-plan-manifest.v1")
-    specification = manifest.get("specification") if isinstance(manifest.get("specification"), dict) else {}
-    tier_request = specification.get("tierResolutionRequest") if isinstance(specification.get("tierResolutionRequest"), dict) else {}
+    raw_specification = manifest.get("specification")
+    specification = raw_specification if isinstance(raw_specification, dict) else {}
+    raw_tier_request = specification.get("tierResolutionRequest")
+    tier_request = raw_tier_request if isinstance(raw_tier_request, dict) else {}
     source = {
         "kind": "PLAN_MANIFEST",
         "label": _manifest_package_id(manifest),
@@ -233,7 +238,9 @@ def validate_review_mesh_recommendation(recommendation: dict[str, Any]) -> dict[
         blockers.append({"code": "review-mesh-recommendation-mode-invalid", "mode": mode})
     if mode != OFF_MODE and mode not in REVIEW_MESH_MODE_IDS:
         blockers.append({"code": "review-mesh-recommendation-mode-not-canonical"})
-    _check_string_list(recommendation.get("phaseCoverage"), "review-mesh-recommendation-phase-coverage-invalid", blockers)
+    _check_string_list(
+        recommendation.get("phaseCoverage"), "review-mesh-recommendation-phase-coverage-invalid", blockers
+    )
     if not isinstance(recommendation.get("reasons"), list):
         blockers.append({"code": "review-mesh-recommendation-reasons-invalid"})
     if mode == OFF_MODE and not recommendation.get("skipRationale"):
@@ -265,7 +272,9 @@ def validate_review_mesh_recommendation(recommendation: dict[str, Any]) -> dict[
         blockers.append({"code": "review-mesh-recommendation-raw-text-stored"})
     blockers.extend(_money_key_blockers(recommendation))
     blockers.extend(_provider_model_key_blockers(recommendation))
-    expected_digest = canonical_digest({key: value for key, value in recommendation.items() if key != "recommendationDigest"})
+    expected_digest = canonical_digest(
+        {key: value for key, value in recommendation.items() if key != "recommendationDigest"}
+    )
     if recommendation.get("recommendationDigest") != expected_digest:
         blockers.append({"code": "review-mesh-recommendation-digest-mismatch"})
     body = {
@@ -280,7 +289,11 @@ def validate_review_mesh_recommendation(recommendation: dict[str, Any]) -> dict[
 
 def require_review_mesh_recommendation_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("review-mesh-recommendation-validation-failed", "Review Mesh recommendation validation failed", {"validation": validation})
+        raise LifecycleError(
+            "review-mesh-recommendation-validation-failed",
+            "Review Mesh recommendation validation failed",
+            {"validation": validation},
+        )
     return validation
 
 
@@ -294,27 +307,54 @@ def _select_mode(
     risk_flags: set[str],
     status: str | None,
 ) -> dict[str, Any]:
+    _ = status
     lowered = text.lower()
     reasons: list[dict[str, str]] = []
     if _contains_any(lowered, _IMPLEMENTATION_AUDIT_MARKERS):
-        reasons.append({"code": "implementation-audit-shaped-input", "message": "implementation evidence or final audit review is requested"})
+        reasons.append(
+            {
+                "code": "implementation-audit-shaped-input",
+                "message": "implementation evidence or final audit review is requested",
+            }
+        )
         return _decision(MODE_IMPLEMENTATION_AUDIT, reasons)
-    if "bug-forensics" in recommended_quality_profiles or task_shape == "bugfix" or _contains_any(lowered, _BUG_MARKERS):
-        reasons.append({"code": "defect-risk", "message": "defect-shaped work benefits from independent root-cause and regression review"})
+    if (
+        "bug-forensics" in recommended_quality_profiles
+        or task_shape == "bugfix"
+        or _contains_any(lowered, _BUG_MARKERS)
+    ):
+        reasons.append(
+            {
+                "code": "defect-risk",
+                "message": "defect-shaped work benefits from independent root-cause and regression review",
+            }
+        )
         return _decision(MODE_LEADER_REVIEW, reasons)
     if _contains_any(lowered, _SECURITY_MARKERS) or "security" in risk_flags or "security-bug" in risk_flags:
         reasons.append({"code": "security-risk", "message": "security-sensitive work benefits from independent review"})
         return _decision(MODE_LEADER_REVIEW, reasons)
     if sdd_tier == "S2":
-        reasons.append({"code": "sdd-tier-s2", "message": "S2 work carries enough coordination risk to justify optional plan review"})
+        reasons.append(
+            {
+                "code": "sdd-tier-s2",
+                "message": "S2 work carries enough coordination risk to justify optional plan review",
+            }
+        )
         return _decision(MODE_LEADER_REVIEW, reasons)
-    high_risk_flags = risk_flags.intersection({"release", "externalEnvironment", "architecture", "securityRelease", "multiOwner"})
+    high_risk_flags = risk_flags.intersection(
+        {"release", "externalEnvironment", "architecture", "securityRelease", "multiOwner"}
+    )
     if high_risk_flags:
         reasons.append({"code": "risk-flags", "message": "risk flags justify optional plan review"})
         return _decision(MODE_LEADER_REVIEW, reasons)
     analysis_required = bool(pre_implementation_analysis and pre_implementation_analysis.get("required"))
     if _contains_any(lowered, _RESEARCH_MARKERS) or task_shape == "analysis-first" or analysis_required:
-        reasons.append({"code": "analysis-or-planning-shaped-input", "message": "independent research or planning may improve the decision before implementation"})
+        reasons.append(
+            {
+                "code": "analysis-or-planning-shaped-input",
+                "message": "independent research or planning may improve the decision before implementation",
+            }
+        )
         return _decision(MODE_PARALLEL_RESEARCH, reasons)
     reasons.append({"code": "low-risk-single-lifecycle", "message": "no Review Mesh trigger was detected"})
     return _decision(OFF_MODE, reasons)
@@ -390,7 +430,8 @@ def _manifest_signal_text(manifest: dict[str, Any]) -> str:
         for key in ("title", "id"):
             if isinstance(package.get(key), str):
                 pieces.append(package[key])
-    specification = manifest.get("specification") if isinstance(manifest.get("specification"), dict) else {}
+    raw_specification = manifest.get("specification")
+    specification = raw_specification if isinstance(raw_specification, dict) else {}
     requirements = specification.get("requirements")
     if isinstance(requirements, list):
         for item in requirements[:12]:
@@ -479,7 +520,9 @@ def _provider_model_key_blockers(value: Any, *, path: str = "") -> list[dict[str
         for key, item in value.items():
             key_path = f"{path}.{key}" if path else str(key)
             if key in _PROVIDER_MODEL_NAME_KEYS:
-                blockers.append({"code": "review-mesh-recommendation-provider-model-name-not-portable", "field": key_path})
+                blockers.append(
+                    {"code": "review-mesh-recommendation-provider-model-name-not-portable", "field": key_path}
+                )
             blockers.extend(_provider_model_key_blockers(item, path=key_path))
     elif isinstance(value, list):
         for index, item in enumerate(value):

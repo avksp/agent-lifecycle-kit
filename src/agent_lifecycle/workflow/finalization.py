@@ -6,7 +6,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, NamedTuple, NotRequired, TypedDict
 from typing import cast as _validated_cast
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
@@ -18,6 +18,16 @@ from agent_lifecycle.contracts.implementation_audit_validation import (
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.persistence import persist_json_artifact, prepared_artifact_identity
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
+from agent_lifecycle.contracts.workflow_finalization_types import (
+    AcceptedTaskProof,
+    FinalAuditOutcome,
+    FinalAuditOutcomeBody,
+    FinalAuditOutcomeValidation,
+    FinalAuditVerdict,
+    FinalizationProof,
+    FinalizationProofBody,
+    FinalizationProofInputs,
+)
 from agent_lifecycle.followup import validate_followup_register
 from agent_lifecycle.host_protocol.lifecycle_gate import (
     evaluate_stop_gate,
@@ -63,6 +73,75 @@ from agent_lifecycle.workflow.task_transitions import _clear_active_attempt_refe
 from agent_lifecycle.workflow.transactions import workflow_transaction
 
 
+class _OutcomeContent(TypedDict):
+    schemaVersion: Literal["agent-final-audit-outcome.v1"]
+    status: Literal["PASS"]
+    verdict: FinalAuditVerdict
+    finalAudit: dict[str, Any]
+    taskIds: list[str]
+    findingIds: list[str]
+    validation: FinalAuditOutcomeValidation
+    blocker: dict[str, Any] | None
+    contractChangeRequest: dict[str, Any] | None
+    productionPromotionClaimed: Literal[False]
+    reason: str
+    appliedAt: str
+
+
+class _ProofContent(TypedDict):
+    schemaVersion: Literal["agent-run-final-proof.v1"]
+    operationId: str
+    semanticStatus: Literal["READY_FOR_FINALIZATION"]
+    productionPromotionClaimed: Literal[False]
+    acceptedTasks: list[AcceptedTaskProof]
+    finalAudit: dict[str, Any]
+    completionCheck: dict[str, Any] | None
+    completionGate: dict[str, Any] | None
+    goalRecord: dict[str, Any] | None
+    followUpRegister: dict[str, Any] | None
+    proofIntegrity: dict[str, Any] | None
+    finalImplementationAudit: dict[str, Any] | None
+    releaseFullValidation: dict[str, Any] | None
+    finalizationGateReceipts: list[dict[str, Any]]
+    reviewMeshQuorum: dict[str, Any] | None
+    lifecycleControlStop: dict[str, Any] | None
+    reason: str
+    createdAt: str
+    usageAssurance: NotRequired[dict[str, Any]]
+
+
+class _FinalizationLineage(NamedTuple):
+    run_id: str
+    package_id: str
+    plan_revision: int
+    plan_digest: str
+    source_revision: str
+    state_revision: int
+
+
+def _typed_lineage(state: dict[str, Any]) -> _FinalizationLineage | None:
+    """Select the typed shape without rejecting legacy JSON lineage values."""
+
+    run_id = state.get("runId")
+    package_id = state.get("packageId")
+    plan_revision = state.get("planRevision")
+    plan_digest = state.get("planDigest")
+    source_revision = state.get("sourceRevision")
+    state_revision = state.get("stateRevision")
+    if (
+        isinstance(run_id, str)
+        and isinstance(package_id, str)
+        and isinstance(plan_revision, int)
+        and not isinstance(plan_revision, bool)
+        and isinstance(plan_digest, str)
+        and isinstance(source_revision, str)
+        and isinstance(state_revision, int)
+        and not isinstance(state_revision, bool)
+    ):
+        return _FinalizationLineage(run_id, package_id, plan_revision, plan_digest, source_revision, state_revision)
+    return None
+
+
 @workflow_transaction
 def apply_final_audit_outcome(
     state_path: Path,
@@ -103,8 +182,10 @@ def apply_final_audit_outcome(
             "final audit outcome failed validation",
             {"validation": validation},
         )
+    outcome_verdict: FinalAuditVerdict = "ACCEPTED"
     blocker: dict[str, Any] | None = None
     if verdict == "REWORK":
+        outcome_verdict = "REWORK"
         _apply_final_audit_rework(
             state_path,
             state,
@@ -114,6 +195,7 @@ def apply_final_audit_outcome(
             reason=reason,
         )
     elif verdict == "CONTRACT_CHANGE":
+        outcome_verdict = "CONTRACT_CHANGE"
         blocker = {
             "code": "FINAL_AUDIT_CONTRACT_CHANGE",
             "reason": reason,
@@ -124,6 +206,7 @@ def apply_final_audit_outcome(
         state["phase"] = "BLOCKED"
         state["blocker"] = blocker
     elif verdict == "BLOCKED":
+        outcome_verdict = "BLOCKED"
         external_action = _final_audit_external_action(audit)
         blocker = {
             "code": "FINAL_AUDIT_BLOCKED",
@@ -136,27 +219,35 @@ def apply_final_audit_outcome(
         state["phase"] = "WAITING_FOR_EXTERNAL_ACTION"
         state["blocker"] = blocker
         state["externalAction"] = external_action
-    outcome_body = {
+    content: _OutcomeContent = {
         "schemaVersion": "agent-final-audit-outcome.v1",
         "status": "PASS",
-        "verdict": verdict,
-        "runId": state.get("runId"),
-        "packageId": state.get("packageId"),
-        "planRevision": state.get("planRevision"),
-        "planDigest": state.get("planDigest"),
-        "sourceRevision": state.get("sourceRevision"),
+        "verdict": outcome_verdict,
         "finalAudit": audit_identity,
         "taskIds": selected_tasks,
         "findingIds": selected_findings,
-        "validation": validation,
+        "validation": _typed_outcome_validation(validation),
         "blocker": state.get("blocker") if verdict in {"CONTRACT_CHANGE", "BLOCKED"} else None,
         "contractChangeRequest": audit.get("contractChangeRequest") if verdict == "CONTRACT_CHANGE" else None,
         "productionPromotionClaimed": False,
         "reason": reason,
         "appliedAt": now_iso(),
     }
-    outcome = {**outcome_body, "outcomeDigest": canonical_digest(outcome_body)}
-    state["finalAuditOutcome"] = outcome
+    lineage = _typed_lineage(state)
+    if lineage is None:
+        legacy_body = {**content, **_legacy_lineage(state)}
+        state["finalAuditOutcome"] = {**legacy_body, "outcomeDigest": canonical_digest(legacy_body)}
+    else:
+        outcome_body: FinalAuditOutcomeBody = {
+            **content,
+            "runId": lineage.run_id,
+            "packageId": lineage.package_id,
+            "planRevision": lineage.plan_revision,
+            "planDigest": lineage.plan_digest,
+            "sourceRevision": lineage.source_revision,
+        }
+        outcome: FinalAuditOutcome = {**outcome_body, "outcomeDigest": canonical_digest(outcome_body)}
+        state["finalAuditOutcome"] = outcome
     commit_state(
         state_path,
         state,
@@ -171,6 +262,32 @@ def apply_final_audit_outcome(
         },
     )
     return status(state_path)
+
+
+def _legacy_lineage(state: dict[str, Any]) -> dict[str, Any]:
+    """Preserve admitted legacy JSON values without claiming the WS06 shape."""
+
+    return {
+        "runId": state.get("runId"),
+        "packageId": state.get("packageId"),
+        "planRevision": state.get("planRevision"),
+        "planDigest": state.get("planDigest"),
+        "sourceRevision": state.get("sourceRevision"),
+    }
+
+
+def _typed_outcome_validation(validation: dict[str, Any]) -> FinalAuditOutcomeValidation:
+    """Project the existing validator's result into its accepted static shape."""
+
+    return {
+        "schemaVersion": validation["schemaVersion"],
+        "status": validation["status"],
+        "verdict": validation["verdict"],
+        "taskIds": validation["taskIds"],
+        "findingIds": validation["findingIds"],
+        "blockers": validation["blockers"],
+        "validationDigest": validation["validationDigest"],
+    }
 
 
 def _apply_final_audit_rework(
@@ -363,7 +480,7 @@ def finalize_run(
         review_mesh_quorum_paths or [],
     )
     proof_rel = normalize_repo_path(proof_path)
-    proof_inputs: dict[str, Any] = {
+    proof_inputs: FinalizationProofInputs = {
         "operation_id": operation_id,
         "final_audit": final_audit_identity,
         "completion_check_receipt": completion_check_receipt,
@@ -378,7 +495,7 @@ def finalize_run(
         "reason": reason,
     }
     proof, source_writers, lifecycle_control_stop = _prepare_final_proof(root, state, final_audit, proof_inputs)
-    identity = prepared_artifact_identity(proof_rel, proof)
+    identity = prepared_artifact_identity(proof_rel, dict(proof))
     state["finalProof"] = {**identity, "semanticStatus": proof["semanticStatus"]}
     state["finalAudit"] = final_audit_identity
     optional_artifacts = (
@@ -401,7 +518,7 @@ def finalize_run(
         state,
         operation_id=operation_id,
         event_type="run-finalized",
-        persist_artifacts=(*source_writers, partial(persist_json_artifact, root, identity, proof)),
+        persist_artifacts=(*source_writers, partial(persist_json_artifact, root, identity, dict(proof))),
         payload={
             "finalAudit": final_audit_identity,
             "completionCheckReceipt": completion_check_receipt,
@@ -425,8 +542,8 @@ def _prepare_final_proof(
     root: Path,
     state: dict[str, Any],
     final_audit: dict[str, Any],
-    proof_inputs: dict[str, Any],
-) -> tuple[dict[str, Any], tuple[Callable[[], None], ...], dict[str, Any] | None]:
+    proof_inputs: FinalizationProofInputs,
+) -> tuple[FinalizationProof | dict[str, Any], tuple[Callable[[], None], ...], dict[str, Any] | None]:
     from agent_lifecycle.workflow.limited_usage import (
         PreparedSourceRegistry,
         aggregate_source_usage_assurance,
@@ -438,7 +555,7 @@ def _prepare_final_proof(
     if source_assurance is not None:
         proof_inputs["source_usage_assurance"] = source_assurance
     preview = _proof_body(state, **proof_inputs, lifecycle_control_stop=None)
-    stop = _evaluate_lifecycle_control_stop(state, final_audit=final_audit, final_proof=preview)
+    stop = _evaluate_lifecycle_control_stop(state, final_audit=final_audit, final_proof=dict(preview))
     proof = _proof_body(state, **proof_inputs, lifecycle_control_stop=stop)
     for task in state.get("tasks", []):
         if task.get("status") == "ACCEPTED":
@@ -712,42 +829,83 @@ def _proof_body(
     lifecycle_control_stop: dict[str, Any] | None,
     reason: str,
     source_usage_assurance: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    accepted = [
+) -> FinalizationProof | dict[str, Any]:
+    accepted: list[AcceptedTaskProof] = [
         {"id": task.get("id"), "attempt": task.get("attempt"), "review": task.get("review")}
         for task in state.get("tasks", [])
         if task.get("status") == "ACCEPTED"
     ]
-    body = {
+    inputs: FinalizationProofInputs = {
+        "operation_id": operation_id,
+        "final_audit": final_audit,
+        "completion_check_receipt": completion_check_receipt,
+        "completion_gate": completion_gate,
+        "goal_record": goal_record,
+        "follow_up_register": follow_up_register,
+        "proof_integrity": proof_integrity,
+        "final_implementation_audit": final_implementation_audit,
+        "release_full_validation": release_full_validation,
+        "finalization_gate_receipts": finalization_gate_receipts,
+        "review_mesh_quorum": review_mesh_quorum,
+        "reason": reason,
+        "source_usage_assurance": source_usage_assurance,
+    }
+    content = _proof_content(inputs, accepted, lifecycle_control_stop)
+    lineage = _typed_lineage(state)
+    if lineage is None:
+        legacy_body = {
+            **content,
+            **_legacy_lineage(state),
+            "stateRevisionBeforeFinalization": state.get("stateRevision"),
+        }
+        return {**legacy_body, "bodyDigest": canonical_digest(legacy_body)}
+    body: FinalizationProofBody = {
+        **content,
+        "runId": lineage.run_id,
+        "packageId": lineage.package_id,
+        "planRevision": lineage.plan_revision,
+        "planDigest": lineage.plan_digest,
+        "sourceRevision": lineage.source_revision,
+        "stateRevisionBeforeFinalization": lineage.state_revision,
+    }
+    proof: FinalizationProof = {**body, "bodyDigest": canonical_digest(body)}
+    return proof
+
+
+def _proof_content(
+    inputs: FinalizationProofInputs,
+    accepted: list[AcceptedTaskProof],
+    lifecycle_control_stop: dict[str, Any] | None,
+) -> _ProofContent:
+    body: _ProofContent = {
         "schemaVersion": "agent-run-final-proof.v1",
-        "runId": state.get("runId"),
-        "packageId": state.get("packageId"),
-        "planRevision": state.get("planRevision"),
-        "planDigest": state.get("planDigest"),
-        "sourceRevision": state.get("sourceRevision"),
-        "operationId": operation_id,
-        "stateRevisionBeforeFinalization": state.get("stateRevision"),
+        "operationId": inputs["operation_id"],
         "semanticStatus": "READY_FOR_FINALIZATION",
         "productionPromotionClaimed": False,
         "acceptedTasks": accepted,
-        "finalAudit": final_audit,
-        "completionCheck": completion_check_receipt,
-        "completionGate": completion_gate,
-        "goalRecord": goal_record,
-        "followUpRegister": follow_up_register,
-        "proofIntegrity": proof_integrity,
-        "finalImplementationAudit": final_implementation_audit,
-        "releaseFullValidation": release_full_validation,
-        "finalizationGateReceipts": finalization_gate_receipts,
-        "reviewMeshQuorum": review_mesh_quorum,
+        "finalAudit": inputs["final_audit"],
+        "completionCheck": inputs["completion_check_receipt"],
+        "completionGate": inputs["completion_gate"],
+        "goalRecord": inputs["goal_record"],
+        "followUpRegister": inputs["follow_up_register"],
+        "proofIntegrity": inputs["proof_integrity"],
+        "finalImplementationAudit": inputs["final_implementation_audit"],
+        "releaseFullValidation": inputs["release_full_validation"],
+        "finalizationGateReceipts": inputs["finalization_gate_receipts"],
+        "reviewMeshQuorum": inputs["review_mesh_quorum"],
         "lifecycleControlStop": lifecycle_control_stop,
-        "reason": reason,
+        "reason": inputs["reason"],
         "createdAt": now_iso(),
     }
+    source_usage_assurance = inputs.get("source_usage_assurance")
     if source_usage_assurance is not None:
         body["usageAssurance"] = source_usage_assurance
-        per_task = {row["taskId"]: row["assurance"] for row in source_usage_assurance["tasks"]}
-        for accepted_task in accepted:
-            if accepted_task["id"] in per_task:
-                accepted_task["usageAssurance"] = per_task[accepted_task["id"]]
-    return {**body, "bodyDigest": canonical_digest(body)}
+        _attach_task_assurance(accepted, source_usage_assurance)
+    return body
+
+
+def _attach_task_assurance(accepted: list[AcceptedTaskProof], source_usage_assurance: dict[str, Any]) -> None:
+    per_task = {row["taskId"]: row["assurance"] for row in source_usage_assurance["tasks"]}
+    for accepted_task in accepted:
+        if accepted_task["id"] in per_task:
+            accepted_task["usageAssurance"] = per_task[accepted_task["id"]]

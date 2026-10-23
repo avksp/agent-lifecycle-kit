@@ -1139,7 +1139,16 @@ def retention_process(path, barrier, output, action, value, stage=None):
                         raise
                     print(f'retention fixture admission retry: {action} NOT_STARTED', flush=True)
             if output:output.put(result)
-    except (JournalUnavailable,RevisionConflict):
+    except (JournalUnavailable,RevisionConflict) as exc:
+        # Preserve the exact oracle and retry budget while exposing the refusal
+        # that would otherwise be reduced to an undiagnosable UNAVAILABLE.
+        detail = {
+            "action": action,
+            "exception": type(exc).__name__,
+            "message": str(exc)[:240],
+            "write_outcome": getattr(exc, "write_outcome", None),
+        }
+        print("retention fixture refusal: " + repr(detail), flush=True)
         if output:output.put('UNAVAILABLE')
 
 

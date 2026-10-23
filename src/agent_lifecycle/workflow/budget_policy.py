@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypeGuard
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 
@@ -26,7 +26,9 @@ def validate_budget_exceeded_policy(policy: dict[str, Any]) -> dict[str, Any]:
     allowed_actions = _required_string_list(policy, "allowedActions")
     unknown = sorted(set(allowed_actions) - ALLOWED_BUDGET_ACTIONS)
     if unknown:
-        raise LifecycleError("invalid-budget-policy", "allowedActions contains unsupported actions", {"actions": unknown})
+        raise LifecycleError(
+            "invalid-budget-policy", "allowedActions contains unsupported actions", {"actions": unknown}
+        )
     if not allowed_actions:
         raise LifecycleError("invalid-budget-policy", "allowedActions must not be empty")
     forbid_critical = policy.get("forbidDowngradeForCriticalReview")
@@ -87,9 +89,8 @@ def _budget_mode_check(mode: str, config: Any) -> dict[str, Any]:
         threshold = config.get("meteredAskThreshold")
         has_cap = _positive_number(cap)
         threshold_present = threshold is not None
-        threshold_valid = (
-            not threshold_present
-            or (_positive_number(threshold) and has_cap and float(threshold) < float(cap))
+        threshold_valid = not threshold_present or (
+            _positive_number(threshold) and _positive_number(cap) and float(threshold) < float(cap)
         )
         return {
             "id": "metered-usd-cap",
@@ -136,5 +137,5 @@ def _required_string_list(payload: dict[str, Any], key: str) -> list[str]:
     return list(value)
 
 
-def _positive_number(value: Any) -> bool:
+def _positive_number(value: Any) -> TypeGuard[int | float]:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0

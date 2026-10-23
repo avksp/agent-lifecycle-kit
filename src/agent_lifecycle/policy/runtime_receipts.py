@@ -98,7 +98,9 @@ def validate_runtime_policy_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
         "policyId": receipt.get("policyId") if isinstance(receipt.get("policyId"), str) else None,
         "action": receipt.get("action") if isinstance(receipt.get("action"), str) else None,
         "enforcementMode": receipt.get("enforcementMode") if isinstance(receipt.get("enforcementMode"), str) else None,
-        "enforcementClaimed": receipt.get("enforcementClaimed") if isinstance(receipt.get("enforcementClaimed"), bool) else None,
+        "enforcementClaimed": receipt.get("enforcementClaimed")
+        if isinstance(receipt.get("enforcementClaimed"), bool)
+        else None,
         "blockers": blockers,
         "receiptDigest": receipt.get("receiptDigest") if isinstance(receipt.get("receiptDigest"), str) else None,
     }
@@ -107,7 +109,11 @@ def validate_runtime_policy_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
 
 def require_runtime_policy_receipt_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or validation.get("receiptStatus") != "PASS":
-        raise LifecycleError("runtime-policy-receipt-validation-failed", "runtime policy receipt did not pass", {"validation": validation})
+        raise LifecycleError(
+            "runtime-policy-receipt-validation-failed",
+            "runtime policy receipt did not pass",
+            {"validation": validation},
+        )
     return validation
 
 
@@ -116,7 +122,8 @@ def _runtime_policy_blockers(receipt: dict[str, Any]) -> list[dict[str, Any]]:
     mode = receipt.get("enforcementMode")
     enforcement_claimed = receipt.get("enforcementClaimed") is True
     advisory_only = receipt.get("advisoryOnly") is True
-    evidence = receipt.get("adapterEvidence") if isinstance(receipt.get("adapterEvidence"), dict) else {}
+    raw_evidence = receipt.get("adapterEvidence")
+    evidence = raw_evidence if isinstance(raw_evidence, dict) else {}
     pre_execution = evidence.get("preExecutionEnforcement") is True
     decision_before_execution = receipt.get("decisionRecordedBeforeExecution") is True
     if mode == "enforced" and not enforcement_claimed:
@@ -149,7 +156,11 @@ def _required_string(value: Any, *, label: str) -> str:
 
 
 def _string_list(value: Any, *, label: str, allow_empty: bool = False) -> list[str]:
-    if not isinstance(value, list) or (not allow_empty and not value) or not all(isinstance(item, str) and item for item in value):
+    if (
+        not isinstance(value, list)
+        or (not allow_empty and not value)
+        or not all(isinstance(item, str) and item for item in value)
+    ):
         raise LifecycleError("invalid-runtime-policy-receipt", f"{label} must be a list of strings")
     return list(value)
 

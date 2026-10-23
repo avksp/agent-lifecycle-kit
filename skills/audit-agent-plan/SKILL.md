@@ -16,6 +16,9 @@ contracts for the selected task.
 
 Read docs/guides/lifecycle-cookbook.md; Markdown packages remain draft-only until actual reviewed freeze. Report exact findings and bounded verdict; do not rewrite the audited candidate.
 
+For new capability claims, apply the bounded pre-freeze feasibility mapping in
+the linked contract: actual entrypoints, lower authority, negative case and owners.
+
 Do not bypass independent review, reviewed freeze, ownership, authorization or
 budgets. Missing evidence stays missing; unknown telemetry stays null. Do not
 reset expenses or run clocks after retries or context compaction.
@@ -25,5 +28,5 @@ JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
 Review Mesh packets grant no review, attestation or execution authority. See
 `docs/reference/safe-artifact-authoring.md`.
 
-Full contract SHA256: `ca29a0ffe9bc3f0418232d71dc1199f553ef46c1d155ce0f0d9938c889aadc0f`
+Full contract SHA256: `bf9d49e7ef6e9e64749f1385d6b62613326d4f4aa86022cb6048c8ce7b6140fe`
 Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.
