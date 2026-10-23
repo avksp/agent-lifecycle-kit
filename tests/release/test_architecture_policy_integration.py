@@ -24,7 +24,7 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
             "targetFunctionLines": 80, "hardFunctionLines": 150,
             "hardSymbols": 80, "cliTargetFunctionLines": 80, "cliHardFunctionLines": 150,
         }, policy["limits"])
-        ci = (ROOT / ".github/workflows/ci.yml").read_text()
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         complexity = ci.split("- name: Validate architecture complexity\n", 1)[1].split("\n      - name:", 1)[0]
         self.assertIn("--policy policy/architecture-limits.json", complexity)
         self.assertIn("validate_architecture_complexity.py", complexity)
@@ -39,10 +39,10 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
     def test_empty_mypy_baseline_keeps_normal_source_wide_configuration(self) -> None:
         import tomllib
 
-        policy = json.loads((ROOT / "policy/python-quality.json").read_text())
+        policy = json.loads((ROOT / "policy/python-quality.json").read_text(encoding="utf-8"))
         self.assertEqual([], policy["mypy"]["baseline"])
         self.assertFalse((ROOT / "src/agent_lifecycle/runner/attempt_snapshots.py").exists())
-        config = tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["mypy"]
+        config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["mypy"]
         self.assertEqual(["src/agent_lifecycle"], config["files"])
         self.assertNotIn("exclude", config)
         self.assertNotIn("follow_imports", config)
@@ -52,7 +52,7 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
     def test_cookbook_review_apply_examples_parse_and_invalid_result_refuses(self) -> None:
         parser = build_parser()
         for path in ("docs/guides/lifecycle-cookbook.md", "docs/ru/guides/lifecycle-cookbook.md"):
-            document = (ROOT / path).read_text()
+            document = (ROOT / path).read_text(encoding="utf-8")
             blocks = [block for block in re.findall(r"```bash\n(.*?)```", document, re.S)
                       if block.startswith("agent-lifecycle workflow task-review-apply")]
             self.assertEqual(1, len(blocks))
@@ -74,7 +74,7 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
         for name in ("agent-first-planning", "audit-agent-plan", "audit-plan-implementation"):
             root = ROOT / "skills" / name
             contract = (root / "references/lifecycle-contract.md").read_bytes()
-            entry = (root / "SKILL.md").read_text()
+            entry = (root / "SKILL.md").read_text(encoding="utf-8")
             with self.subTest(skill=name):
                 self.assertIn(f"Full contract SHA256: `{hashlib.sha256(contract).hexdigest()}`", entry)
                 text = contract.decode()

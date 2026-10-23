@@ -18,14 +18,14 @@ class ArchitectureDocumentationTests(unittest.TestCase):
             self.assertIn(acyclic_term, document.lower())
 
     def test_numeric_tables_match_policy_and_reject_conflicting_hard_limit(self) -> None:
-        limits = json.loads((ROOT / "policy/architecture-limits.json").read_text())["limits"]
+        limits = json.loads((ROOT / "policy/architecture-limits.json").read_text(encoding="utf-8"))["limits"]
         documents = (
             "docs/architecture/modular-controller.md", "docs/architecture/system-architecture.md",
             "docs/ru/architecture/system-architecture.md", "docs/guides/contributing-and-quality.md",
             "docs/ru/guides/contributing-and-quality.md",
         )
         for path in documents:
-            document = (ROOT / path).read_text()
+            document = (ROOT / path).read_text(encoding="utf-8")
             with self.subTest(path=path):
                 self.assertIn("policy/architecture-limits.json", document)
                 self._assert_limits(document, limits)
@@ -42,7 +42,7 @@ class ArchitectureDocumentationTests(unittest.TestCase):
                      "docs/reference/python-api.md", "docs/ru/reference/python-api.md",
                      "docs/guides/lifecycle-cookbook.md", "docs/ru/guides/lifecycle-cookbook.md"):
             with self.subTest(path=path):
-                document = (ROOT / path).read_text()
+                document = (ROOT / path).read_text(encoding="utf-8")
                 self.assertIn("UNIT_ONLY", document)
                 self.assertIn("declared-ledger-route-unsupported", document)
 
