@@ -8,10 +8,13 @@ from typing import Any
 from agent_lifecycle.context.profiles import resolve_window, validate_context_profile
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-
 from agent_lifecycle.contracts.goal_validation import (
     GOAL_STATUSES,
+)
+from agent_lifecycle.contracts.goal_validation import (
     LINEAGE_KEYS as LINEAGE_KEYS,
+)
+from agent_lifecycle.contracts.goal_validation import (
     validate_goal_record as validate_goal_record,
 )
 
@@ -100,12 +103,14 @@ def update_goal_record(
     if updated["completionCheck"] is None:
         updated.pop("completionCheck", None)
     history = list(record.get("history", [])) if isinstance(record.get("history"), list) else []
-    history.append({
-        "previousGoalDigest": previous["goalDigest"],
-        "previousStateRevision": previous["stateRevision"],
-        "reason": reason,
-        "updatedAt": updated["updatedAt"],
-    })
+    history.append(
+        {
+            "previousGoalDigest": previous["goalDigest"],
+            "previousStateRevision": previous["stateRevision"],
+            "reason": reason,
+            "updatedAt": updated["updatedAt"],
+        }
+    )
     updated["history"] = history
     validate_goal_record(updated, state=state, require_current=True)
     return updated
