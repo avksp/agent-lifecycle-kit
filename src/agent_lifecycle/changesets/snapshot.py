@@ -53,7 +53,7 @@ def capture_task_change_set(
     transitions: list[dict[str, Any]] = []
     current_entries: list[dict[str, Any]] = []
     total_bytes = 0
-    baselines = _baseline_entries(root, baseline_sha, scoped)
+    baselines = read_baseline_entries(root, baseline_sha, scoped)
     for path in scoped:
         normalized = normalize_repo_path(path, label="changed file")
         before = baselines[normalized]
@@ -143,7 +143,7 @@ def _path_batches(paths: list[str]) -> Iterator[list[str]]:
         yield batch
 
 
-def _baseline_entries(root: Path, baseline_sha: str, paths: list[str]) -> dict[str, dict[str, Any]]:
+def read_baseline_entries(root: Path, baseline_sha: str, paths: list[str]) -> dict[str, dict[str, Any]]:
     entries: dict[str, dict[str, Any]] = {
         path: {"kind": "missing", "mode": None, "sha256": None, "bytes": 0} for path in paths
     }
@@ -360,4 +360,8 @@ def _stat_identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]
     )
 
 
-__all__ = ["capture_task_change_set", "require_current_task_change_set"]
+__all__ = ["capture_task_change_set", "read_baseline_entries", "require_current_task_change_set"]
+
+
+# Compatibility for existing internal consumers.
+_baseline_entries = read_baseline_entries

@@ -7,7 +7,7 @@ from typing import Any
 
 from agent_lifecycle.changesets.git import changed_files, resolve_revision
 from agent_lifecycle.changesets.git_io import run_bounded_command
-from agent_lifecycle.changesets.snapshot import _baseline_entries
+from agent_lifecycle.changesets.snapshot import read_baseline_entries
 from agent_lifecycle.contracts import (
     LifecycleError,
     canonical_digest,
@@ -325,7 +325,7 @@ def _verify_runtime_inventory(
             paths = _runtime_paths(root, ["ls-tree", "-r", "--name-only", "-z", source], plan_roots)
             if len(paths) > 4096:
                 raise LifecycleError("review-input-limit", "Runtime inventory cap exceeded")
-            blobs = _baseline_entries(root, source, sorted(paths))
+            blobs = read_baseline_entries(root, source, sorted(paths))
             entries = {}
             for path, entry in blobs.items():
                 if entry["kind"] != "file" or entry["bytes"] > MAX_PLAN_FILE_BYTES:
