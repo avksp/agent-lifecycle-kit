@@ -2,13 +2,25 @@
 
 from __future__ import annotations
 
-import hashlib
-from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 from typing import cast as _validated_cast
 
-from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object
+from agent_lifecycle.accounting.legacy_source_usage import LegacySourceUsage
+from agent_lifecycle.accounting.legacy_source_usage import declared_source_context as _declared_context
+from agent_lifecycle.accounting.usage_types import (
+    SourceUsageContext as SourceUsageContext,
+)
+from agent_lifecycle.accounting.usage_types import (
+    UsageContext,
+)
+from agent_lifecycle.accounting.usage_types import (
+    read_source_reference as _read_ref,
+)
+from agent_lifecycle.accounting.usage_types import (
+    require_source_usage as _require,
+)
+from agent_lifecycle.contracts import canonical_digest, load_json_object
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.scoped_usage_schemas import (
@@ -22,28 +34,10 @@ from agent_lifecycle.contracts.scoped_usage_schemas import (
     validate_source_invalid_annotation_review_shape,
     validate_source_invalid_annotation_subject_shape,
     validate_source_recovery_policy_shape,
-    validate_source_ref_shape,
     validate_source_registry_prefix_shape,
     validate_source_usage_policy_shape,
 )
 from agent_lifecycle.freeze.package_integrity import verify_plan_package_integrity
-
-
-def _require(condition: bool, code: str, message: str) -> None:
-    if not condition:
-        raise LifecycleError(code, message)
-
-
-def _ref(path: str, raw: bytes) -> dict[str, Any]:
-    return {"path": path, "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
-
-
-def _read_ref(root: Path, ref: dict[str, Any], *, limit: int) -> bytes:
-    validate_source_ref_shape(ref)
-    _require(ref["bytes"] <= limit, "scoped-usage-ref-invalid", "reference exceeds its bound")
-    raw = read_authority_bytes(root / ref["path"], root=root, max_bytes=limit)
-    _require(_ref(ref["path"], raw) == ref, "scoped-usage-ref-invalid", "reference bytes differ")
-    return raw
 
 
 def _load_frozen_source_context(
@@ -137,7 +131,7 @@ def load_frozen_source_policy(
     *,
     adapter_id: str | None = None,
     adapter_host: str | None = None,
-) -> dict[str, Any] | None:
+) -> UsageContext | None:
     """Select task eligibility separately from shared historical context."""
 
     selected = _load_frozen_source_context(repository_root, state)
@@ -162,21 +156,25 @@ def load_frozen_source_policy(
             "scoped-usage-policy-scope-mismatch",
             "host differs from frozen policy",
         )
-    return selected
+    return _usage_context(selected)
 
 
-def _declared_context(selection: dict[str, Any]):
-    """Reuse checked immutable route values within one frozen source selection."""
+def _usage_context(selected: dict[str, Any]) -> UsageContext:
+    return UsageContext(
+        root=selected["root"],
+        policy=selected["policy"],
+        policy_digest=selected["policyDigest"],
+        prefix=selected["prefix"],
+        registry_byte_limit=selected["registryByteLimit"],
+        source=LegacySourceUsage(selected),
+        inputs=selected,
+    )
 
-    from agent_lifecycle.accounting.declared_ledger import resolve_declared_ledger_context
 
-    if "declaredLedgerContext" not in selection:
-        selection["declaredLedgerContext"] = resolve_declared_ledger_context(
-            selection["root"],
-            selection["manifest"],
-            selection["policy"]["openingRef"],
-        )
-    return selection["declaredLedgerContext"]
+def load_frozen_usage_context(repository_root: Path, state: dict[str, Any]) -> UsageContext | None:
+    """Load shared historical inputs without granting task limited eligibility."""
+    selected = _load_frozen_source_context(repository_root, state)
+    return None if selected is None else _usage_context(selected)
 
 
 def _load_source_recovery(selection: dict[str, Any], entries: dict[str, Any], path: str) -> None:
@@ -475,22 +473,6 @@ def _load_source_disposition(selection: dict[str, Any], policy: dict[str, Any], 
         "authorizing head is not the original admitted grant",
     )
     return {"dispositionRef": ref, "disposition": disposition, "grant": grant}
-
-
-@dataclass(frozen=True)
-class SourceUsageContext:
-    """Internal immutable value; its constructor is not an authority boundary."""
-
-    manifestDigest: str
-    stateDigest: str
-    runId: str
-    taskId: str
-    adapterId: str
-    adapterHost: str
-    policyDigest: str
-    appliesToTask: bool
-    allowedModelClasses: tuple[str, ...]
-    usageMode: str
 
 
 def load_source_usage_context(
