@@ -128,11 +128,32 @@ def validate_project_principles(
     if authority != expected_authority:
         blockers.append({"code": "principles-authority-invalid"})
 
+    _validate_principles_source(principles, blockers, project_root=project_root, source_path=source_path)
+
+    if principles.get("productionPromotionClaimed") is not False:
+        blockers.append({"code": "principles-production-claim"})
+    expected_digest = project_principles_digest(principles)
+    if principles.get("principlesDigest") != expected_digest:
+        blockers.append({"code": "principles-digest-mismatch", "expected": expected_digest})
+
+    return _validation(principles, blockers, entry_count=entry_count)
+
+
+def _validate_principles_source(
+    principles: dict[str, Any],
+    blockers: list[dict[str, Any]],
+    *,
+    project_root: Path | None,
+    source_path: Path | None,
+) -> None:
     source = principles.get("source")
     if not isinstance(source, dict) or source.get("kind") != "project-local":
         blockers.append({"code": "principles-source-invalid"})
     else:
         source_value = source.get("path")
+        if not isinstance(source_value, str):
+            blockers.append({"code": "principles-source-path-invalid"})
+            return
         try:
             normalized = normalize_repo_path(source_value, label="principles.source.path")
             if project_root is not None:
@@ -143,14 +164,6 @@ def validate_project_principles(
                 blockers.append({"code": "principles-source-mismatch", "path": normalized})
         except (LifecycleError, TypeError):
             blockers.append({"code": "principles-source-path-invalid"})
-
-    if principles.get("productionPromotionClaimed") is not False:
-        blockers.append({"code": "principles-production-claim"})
-    expected_digest = project_principles_digest(principles)
-    if principles.get("principlesDigest") != expected_digest:
-        blockers.append({"code": "principles-digest-mismatch", "expected": expected_digest})
-
-    return _validation(principles, blockers, entry_count=entry_count)
 
 
 def _validation(principles: Any, blockers: list[dict[str, Any]], *, entry_count: int) -> dict[str, Any]:

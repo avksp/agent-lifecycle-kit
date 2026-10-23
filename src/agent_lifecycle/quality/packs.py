@@ -77,19 +77,32 @@ def validate_quality_pack(manifest: dict[str, Any]) -> dict[str, Any]:
     if manifest.get("status") != "OPTIONAL":
         blockers.append({"code": "quality-pack-not-optional", "message": "quality pack status must be OPTIONAL"})
     if manifest.get("enabledByDefault") is not False:
-        blockers.append({"code": "quality-pack-default-enabled", "message": "quality packs must be disabled by default"})
+        blockers.append(
+            {"code": "quality-pack-default-enabled", "message": "quality packs must be disabled by default"}
+        )
     if manifest.get("activationMode") != "opt-in":
         blockers.append({"code": "quality-pack-not-opt-in", "message": "quality pack activation must be opt-in"})
     if manifest.get("canonicalLifecycleCommandsChanged") is not False:
-        blockers.append({"code": "quality-pack-command-drift", "message": "canonical lifecycle commands must remain unchanged"})
+        blockers.append(
+            {"code": "quality-pack-command-drift", "message": "canonical lifecycle commands must remain unchanged"}
+        )
     if manifest.get("providerSpecificCoreDependency") is not False:
-        blockers.append({"code": "quality-pack-provider-core-dependency", "message": "quality packs cannot add provider-specific core dependencies"})
+        blockers.append(
+            {
+                "code": "quality-pack-provider-core-dependency",
+                "message": "quality packs cannot add provider-specific core dependencies",
+            }
+        )
     if manifest.get("productionPromotionClaimed") is not False:
-        blockers.append({"code": "quality-pack-promotion-overclaim", "message": "quality packs cannot claim production promotion"})
+        blockers.append(
+            {"code": "quality-pack-promotion-overclaim", "message": "quality packs cannot claim production promotion"}
+        )
     _validate_default_footprint(manifest.get("defaultCommandFootprint"), blockers)
     commands = manifest.get("commands")
     if not isinstance(commands, list) or not commands:
-        blockers.append({"code": "quality-pack-command-missing", "message": "quality pack must declare opt-in commands"})
+        blockers.append(
+            {"code": "quality-pack-command-missing", "message": "quality pack must declare opt-in commands"}
+        )
         commands = []
     seen: set[str] = set()
     for index, command in enumerate(commands):
@@ -108,7 +121,9 @@ def validate_quality_pack(manifest: dict[str, Any]) -> dict[str, Any]:
 
 def require_quality_pack_pass(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("status") == "FAIL":
-        raise LifecycleError("quality-pack-validation-failed", "quality pack validation failed", {"validation": payload})
+        raise LifecycleError(
+            "quality-pack-validation-failed", "quality pack validation failed", {"validation": payload}
+        )
     return payload
 
 
@@ -155,7 +170,9 @@ def require_behavior_checks_pass(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _validate_command(command: object, index: int, blockers: list[dict[str, Any]], seen: set[str]) -> None:
     if not isinstance(command, dict):
-        blockers.append({"code": "quality-pack-command-invalid", "index": index, "message": "command must be an object"})
+        blockers.append(
+            {"code": "quality-pack-command-invalid", "index": index, "message": "command must be an object"}
+        )
         return
     name = command.get("name")
     if not isinstance(name, str) or not name:
@@ -249,9 +266,11 @@ def _signal_blockers(signals: dict[str, Any]) -> list[dict[str, Any]]:
     return blockers
 
 
-def _required_string(value: dict[str, Any], key: str, blockers: list[dict[str, Any]], *, index: int | None = None) -> None:
+def _required_string(
+    value: dict[str, Any], key: str, blockers: list[dict[str, Any]], *, index: int | None = None
+) -> None:
     if not isinstance(value.get(key), str) or not value.get(key):
-        item = {"code": f"quality-pack-{key}-missing"}
+        item: dict[str, str | int] = {"code": f"quality-pack-{key}-missing"}
         if index is not None:
             item["index"] = index
         blockers.append(item)
@@ -259,7 +278,7 @@ def _required_string(value: dict[str, Any], key: str, blockers: list[dict[str, A
 
 def _required_string_list(value: object, key: str, blockers: list[dict[str, Any]], *, index: int | None = None) -> None:
     if not isinstance(value, list) or not value or not all(isinstance(item, str) and item for item in value):
-        item = {"code": f"quality-pack-{key}-invalid"}
+        item: dict[str, str | int] = {"code": f"quality-pack-{key}-invalid"}
         if index is not None:
             item["index"] = index
         blockers.append(item)
