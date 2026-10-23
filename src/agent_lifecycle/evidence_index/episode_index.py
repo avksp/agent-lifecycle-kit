@@ -60,16 +60,17 @@ def build_episode_index(
         "hashChainDigest": hash_chain.get("chainDigest") if isinstance(hash_chain, dict) else None,
         "blockers": blockers,
     }
-    body["estimatedTokens"] = estimate_tokens(body)
-    if body["estimatedTokens"] > target_tokens:
-        body["blockers"].append(
+    estimated_tokens = estimate_tokens(body)
+    body["estimatedTokens"] = estimated_tokens
+    if estimated_tokens > target_tokens:
+        blockers.append(
             {
                 "code": "episode-index-target-tokens-exceeded",
-                "estimatedTokens": body["estimatedTokens"],
+                "estimatedTokens": estimated_tokens,
                 "targetTokens": target_tokens,
             }
         )
-    if body["blockers"]:
+    if blockers:
         body["status"] = "FAIL"
     return {**body, "indexDigest": canonical_digest(body)}
 
@@ -122,7 +123,8 @@ def retrieve_episodes(
     _positive_int(max_external_context_hints, "maxExternalContextHints")
     _positive_int(target_tokens, "targetTokens")
     validation = validate_episode_index(index)
-    episodes = index.get("episodes") if isinstance(index.get("episodes"), list) else []
+    raw_episodes = index.get("episodes")
+    episodes = raw_episodes if isinstance(raw_episodes, list) else []
     ranked = _rank_episodes([item for item in episodes if isinstance(item, dict)], query)
     results = [_retrieval_projection(item) for item in ranked[:max_results]]
     external_hints = _project_external_context_hints(
@@ -130,6 +132,7 @@ def retrieve_episodes(
         query=query,
         max_hints=max_external_context_hints,
     )
+    blockers: list[dict[str, str | int]] = [] if validation["status"] == "PASS" else [{"code": "episode-index-invalid"}]
     body = {
         "schemaVersion": EPISODE_RETRIEVAL_SCHEMA,
         "status": "PASS",
@@ -148,20 +151,21 @@ def retrieve_episodes(
         "externalContextHintCount": len(external_hints),
         "externalContextHints": external_hints,
         "indexDigest": index.get("indexDigest"),
-        "blockers": [] if validation["status"] == "PASS" else [{"code": "episode-index-invalid"}],
+        "blockers": blockers,
         "chainStateCounts": _chain_state_counts(results),
     }
-    body["estimatedTokens"] = estimate_tokens(body)
+    estimated_tokens = estimate_tokens(body)
+    body["estimatedTokens"] = estimated_tokens
     body["targetTokens"] = target_tokens
-    if body["estimatedTokens"] > target_tokens:
-        body["blockers"].append(
+    if estimated_tokens > target_tokens:
+        blockers.append(
             {
                 "code": "episode-retrieval-target-tokens-exceeded",
-                "estimatedTokens": body["estimatedTokens"],
+                "estimatedTokens": estimated_tokens,
                 "targetTokens": target_tokens,
             }
         )
-    if body["blockers"]:
+    if blockers:
         body["status"] = "FAIL"
     return {**body, "retrievalDigest": canonical_digest(body)}
 
@@ -183,7 +187,8 @@ def _episode_from_entry(entry: dict[str, Any], *, chain_entries: dict[tuple[str,
     digest = str(entry.get("artifactDigest"))
     chain_entry_hash = chain_entries.get((path, digest))
     chain_state = "chainVerified" if chain_entry_hash else "chainUnchecked"
-    summary = entry.get("summary") if isinstance(entry.get("summary"), dict) else {}
+    raw_summary = entry.get("summary")
+    summary = raw_summary if isinstance(raw_summary, dict) else {}
     return {
         "episodeId": f"episode-{canonical_digest({'path': path, 'digest': digest})[:16]}",
         "sourcePath": path,
@@ -255,7 +260,8 @@ def _rank_episodes(episodes: list[dict[str, Any]], query: str) -> list[dict[str,
 
 
 def _retrieval_projection(episode: dict[str, Any]) -> dict[str, Any]:
-    provenance = episode.get("provenance") if isinstance(episode.get("provenance"), dict) else {}
+    raw_provenance = episode.get("provenance")
+    provenance = raw_provenance if isinstance(raw_provenance, dict) else {}
     return {
         "episodeId": episode.get("episodeId"),
         "sourcePath": episode.get("sourcePath"),
@@ -310,7 +316,18 @@ def _compact_summary(summary: dict[str, Any]) -> dict[str, Any]:
     return {
         key: value
         for key, value in summary.items()
-        if key in {"schemaVersion", "status", "packageId", "runId", "taskId", "operationId", "adapterId", "host", "topLevelKeys"}
+        if key
+        in {
+            "schemaVersion",
+            "status",
+            "packageId",
+            "runId",
+            "taskId",
+            "operationId",
+            "adapterId",
+            "host",
+            "topLevelKeys",
+        }
     }
 
 

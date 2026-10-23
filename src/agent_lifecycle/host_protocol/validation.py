@@ -72,7 +72,9 @@ def validate_adapter_descriptor(
         "adapterId": descriptor.get("adapterId"),
         "host": descriptor.get("host"),
         "maturity": descriptor.get("maturity"),
-        "operationCount": len(descriptor.get("operations", [])) if isinstance(descriptor.get("operations"), list) else 0,
+        "operationCount": len(descriptor.get("operations", []))
+        if isinstance(descriptor.get("operations"), list)
+        else 0,
         "requestCount": len(request_contracts),
         "receiptCount": len(receipt_contracts),
         "usageNormalizationStatus": usage_validation["declaredStatus"],
@@ -89,21 +91,71 @@ def _validate_descriptor_shape(descriptor: dict[str, Any], blockers: list[dict[s
         blockers.append({"code": "invalid-adapter-schema", "message": "unsupported adapter descriptor schemaVersion"})
     missing = sorted(field for field in REQUIRED_DESCRIPTOR_FIELDS if field not in descriptor)
     if missing:
-        blockers.append({"code": "invalid-adapter-descriptor", "message": "required adapter descriptor fields are missing", "fields": missing})
+        blockers.append(
+            {
+                "code": "invalid-adapter-descriptor",
+                "message": "required adapter descriptor fields are missing",
+                "fields": missing,
+            }
+        )
     for key in ("adapterId", "host"):
         if not isinstance(descriptor.get(key), str) or not descriptor.get(key):
             blockers.append({"code": "invalid-adapter-descriptor", "message": f"{key} must be a non-empty string"})
     if descriptor.get("maturity") not in {"EXPERIMENTAL", "VERIFIED"}:
-        blockers.append({"code": "invalid-adapter-maturity", "message": "adapter maturity must be EXPERIMENTAL or VERIFIED"})
+        blockers.append(
+            {"code": "invalid-adapter-maturity", "message": "adapter maturity must be EXPERIMENTAL or VERIFIED"}
+        )
     if descriptor.get("maturity") == "VERIFIED" and not descriptor.get("liveTestedHostRange"):
-        blockers.append({"code": "verified-adapter-without-live-evidence", "message": "VERIFIED adapters require liveTestedHostRange evidence"})
+        blockers.append(
+            {
+                "code": "verified-adapter-without-live-evidence",
+                "message": "VERIFIED adapters require liveTestedHostRange evidence",
+            }
+        )
     if descriptor.get("unsupportedOperationPolicy") != "fail-closed":
-        blockers.append({"code": "adapter-unsupported-operation-policy", "message": "unsupported operations must fail closed"})
+        blockers.append(
+            {"code": "adapter-unsupported-operation-policy", "message": "unsupported operations must fail closed"}
+        )
     if descriptor.get("coreSemantics") != "delegated-to-agent-lifecycle-core":
-        blockers.append({"code": "adapter-core-semantics-overclaim", "message": "adapter must delegate lifecycle semantics to core"})
+        blockers.append(
+            {"code": "adapter-core-semantics-overclaim", "message": "adapter must delegate lifecycle semantics to core"}
+        )
+    _validate_descriptor_profiles(descriptor, blockers)
+    operations = descriptor.get("operations")
+    if not isinstance(operations, list):
+        blockers.append({"code": "invalid-adapter-operations", "message": "operations must be an array"})
+        return
+    provided = {item.get("name") for item in operations if isinstance(item, dict)}
+    missing_operations = sorted(REQUIRED_OPERATION_NAMES.difference(provided))
+    if missing_operations:
+        blockers.append(
+            {
+                "code": "adapter-required-operation-missing",
+                "message": "required operations are missing",
+                "operations": missing_operations,
+            }
+        )
+    host_capabilities = descriptor.get("hostCapabilities")
+    if host_capabilities is not None:
+        validation = validate_host_capabilities(
+            host_capabilities,
+            adapter_id=descriptor.get("adapterId") if isinstance(descriptor.get("adapterId"), str) else None,
+            host=descriptor.get("host") if isinstance(descriptor.get("host"), str) else None,
+        )
+        if validation["status"] == "FAIL":
+            blockers.append(
+                {
+                    "code": "adapter-host-capability-invalid",
+                    "message": "adapter hostCapabilities failed validation",
+                    "blockers": validation["blockers"],
+                }
+            )
+
+
+def _validate_descriptor_profiles(descriptor: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     _validate_managed_launch_profile(descriptor.get("managedLaunch"), blockers)
     if "threadBridge" in descriptor:
-        thread_validation = validate_thread_bridge_profile(descriptor.get("threadBridge"))
+        thread_validation = validate_thread_bridge_profile(descriptor["threadBridge"])
         if thread_validation["status"] == "FAIL":
             blockers.append(
                 {
@@ -120,29 +172,6 @@ def _validate_descriptor_shape(descriptor: dict[str, Any], blockers: list[dict[s
     blockers.extend(usage_validation["blockers"])
     if "installation" in descriptor:
         _validate_installation_facts(descriptor.get("installation"), blockers)
-    operations = descriptor.get("operations")
-    if not isinstance(operations, list):
-        blockers.append({"code": "invalid-adapter-operations", "message": "operations must be an array"})
-        return
-    provided = {item.get("name") for item in operations if isinstance(item, dict)}
-    missing_operations = sorted(REQUIRED_OPERATION_NAMES.difference(provided))
-    if missing_operations:
-        blockers.append({"code": "adapter-required-operation-missing", "message": "required operations are missing", "operations": missing_operations})
-    host_capabilities = descriptor.get("hostCapabilities")
-    if host_capabilities is not None:
-        validation = validate_host_capabilities(
-            host_capabilities,
-            adapter_id=descriptor.get("adapterId") if isinstance(descriptor.get("adapterId"), str) else None,
-            host=descriptor.get("host") if isinstance(descriptor.get("host"), str) else None,
-        )
-        if validation["status"] == "FAIL":
-            blockers.append(
-                {
-                    "code": "adapter-host-capability-invalid",
-                    "message": "adapter hostCapabilities failed validation",
-                    "blockers": validation["blockers"],
-                }
-            )
 
 
 def validate_managed_launch_profile(profile: dict[str, Any]) -> dict[str, Any]:
@@ -180,13 +209,25 @@ def _validate_managed_launch_profile(profile: Any, blockers: list[dict[str, Any]
         return
     status = profile.get("status")
     if status not in {"SUPPORTED", "WRAPPER_ONLY", "UNSUPPORTED"}:
-        blockers.append({"code": "adapter-managed-launch-status", "message": "managedLaunch status is invalid", "status": status})
+        blockers.append(
+            {"code": "adapter-managed-launch-status", "message": "managedLaunch status is invalid", "status": status}
+        )
     if profile.get("shell") is not False:
         blockers.append({"code": "adapter-managed-launch-shell", "message": "managedLaunch must declare shell false"})
     if profile.get("writesNativeConfig") is not False:
-        blockers.append({"code": "adapter-managed-launch-native-config", "message": "managed launch must not write native host config"})
+        blockers.append(
+            {
+                "code": "adapter-managed-launch-native-config",
+                "message": "managed launch must not write native host config",
+            }
+        )
     if profile.get("promptInjectionDefault") is not False:
-        blockers.append({"code": "adapter-managed-launch-prompt-injection", "message": "prompt injection must be disabled by default"})
+        blockers.append(
+            {
+                "code": "adapter-managed-launch-prompt-injection",
+                "message": "prompt injection must be disabled by default",
+            }
+        )
     timeout = profile.get("timeoutSeconds")
     if not isinstance(timeout, (int, float)) or isinstance(timeout, bool) or timeout <= 0:
         blockers.append({"code": "adapter-managed-launch-timeout", "message": "timeoutSeconds must be positive"})
@@ -199,18 +240,24 @@ def _validate_managed_launch_profile(profile: Any, blockers: list[dict[str, Any]
             if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
                 blockers.append({"code": "adapter-managed-launch-env-list", "field": key})
         if env.get("projectPolicyAllowed") is not False and env.get("projectPolicyAllowed") is not True:
-            blockers.append({"code": "adapter-managed-launch-env-project-policy", "message": "projectPolicyAllowed must be boolean"})
+            blockers.append(
+                {"code": "adapter-managed-launch-env-project-policy", "message": "projectPolicyAllowed must be boolean"}
+            )
     if status == "SUPPORTED":
         templates = profile.get("argvTemplates")
         if not isinstance(templates, dict):
-            blockers.append({"code": "adapter-managed-launch-argv", "message": "SUPPORTED managedLaunch requires argvTemplates"})
+            blockers.append(
+                {"code": "adapter-managed-launch-argv", "message": "SUPPORTED managedLaunch requires argvTemplates"}
+            )
             return
         for mode in ("interactive", "managedTask", "resume"):
             argv = templates.get(mode)
             if not isinstance(argv, list) or not argv or not all(isinstance(item, str) and item for item in argv):
                 blockers.append({"code": "adapter-managed-launch-argv-template", "mode": mode})
     elif not isinstance(profile.get("reason"), str) or not profile.get("reason"):
-        blockers.append({"code": "adapter-managed-launch-reason", "message": "non-supported managedLaunch profiles need a reason"})
+        blockers.append(
+            {"code": "adapter-managed-launch-reason", "message": "non-supported managedLaunch profiles need a reason"}
+        )
 
 
 def _validate_installation_facts(facts: Any, blockers: list[dict[str, Any]]) -> None:
@@ -226,18 +273,30 @@ def _validate_installation_facts(facts: Any, blockers: list[dict[str, Any]]) -> 
             }
         )
     aliases = facts.get("binaryAliases")
-    if not isinstance(aliases, list) or not aliases or not all(isinstance(item, str) and item.strip() == item for item in aliases):
-        blockers.append({"code": "adapter-installation-binary-aliases", "message": "binaryAliases must be a non-empty string array"})
+    if (
+        not isinstance(aliases, list)
+        or not aliases
+        or not all(isinstance(item, str) and item.strip() == item for item in aliases)
+    ):
+        blockers.append(
+            {"code": "adapter-installation-binary-aliases", "message": "binaryAliases must be a non-empty string array"}
+        )
     elif len(set(aliases)) != len(aliases):
-        blockers.append({"code": "adapter-installation-binary-aliases-duplicate", "message": "binaryAliases must be unique"})
+        blockers.append(
+            {"code": "adapter-installation-binary-aliases-duplicate", "message": "binaryAliases must be unique"}
+        )
 
     files = facts.get("files")
     if not isinstance(files, list) or not files:
-        blockers.append({"code": "adapter-installation-files", "message": "installation files must be a non-empty array"})
+        blockers.append(
+            {"code": "adapter-installation-files", "message": "installation files must be a non-empty array"}
+        )
     else:
         for index, item in enumerate(files):
             if not isinstance(item, dict):
-                blockers.append({"code": "adapter-installation-file", "index": index, "message": "file record must be an object"})
+                blockers.append(
+                    {"code": "adapter-installation-file", "index": index, "message": "file record must be an object"}
+                )
                 continue
             path = item.get("path")
             if not isinstance(path, str) or not path or path.startswith(("/", "\\")) or "\x00" in path:
@@ -249,19 +308,43 @@ def _validate_installation_facts(facts: Any, blockers: list[dict[str, Any]]) -> 
 
     commands = facts.get("commands")
     if not isinstance(commands, list) or not commands:
-        blockers.append({"code": "adapter-installation-commands", "message": "installation commands must be a non-empty array"})
+        blockers.append(
+            {"code": "adapter-installation-commands", "message": "installation commands must be a non-empty array"}
+        )
     else:
         for index, item in enumerate(commands):
             if not isinstance(item, dict):
-                blockers.append({"code": "adapter-installation-command", "index": index, "message": "command record must be an object"})
+                blockers.append(
+                    {
+                        "code": "adapter-installation-command",
+                        "index": index,
+                        "message": "command record must be an object",
+                    }
+                )
                 continue
             if "command" in item or "shell" in item:
-                blockers.append({"code": "adapter-installation-command-shell", "index": index, "message": "commands must use argv arrays without shell fields"})
+                blockers.append(
+                    {
+                        "code": "adapter-installation-command-shell",
+                        "index": index,
+                        "message": "commands must use argv arrays without shell fields",
+                    }
+                )
             argv = item.get("argv")
-            if not isinstance(argv, list) or not argv or not all(isinstance(value, str) and value and "\n" not in value for value in argv):
+            if (
+                not isinstance(argv, list)
+                or not argv
+                or not all(isinstance(value, str) and value and "\n" not in value for value in argv)
+            ):
                 blockers.append({"code": "adapter-installation-command-argv", "index": index})
             elif argv[0].lower() in SHELL_EXECUTABLES:
-                blockers.append({"code": "adapter-installation-command-shell", "index": index, "message": "shell executables are not installation guidance"})
+                blockers.append(
+                    {
+                        "code": "adapter-installation-command-shell",
+                        "index": index,
+                        "message": "shell executables are not installation guidance",
+                    }
+                )
             if not isinstance(item.get("purpose"), str) or not item["purpose"]:
                 blockers.append({"code": "adapter-installation-command-purpose", "index": index})
             for field in ("mutatesHost", "requiresOperator"):
@@ -270,20 +353,42 @@ def _validate_installation_facts(facts: Any, blockers: list[dict[str, Any]]) -> 
 
     actions = facts.get("operatorActions")
     if not isinstance(actions, list) or not actions or not all(isinstance(item, str) and item for item in actions):
-        blockers.append({"code": "adapter-installation-operator-actions", "message": "operatorActions must be a non-empty string array"})
+        blockers.append(
+            {
+                "code": "adapter-installation-operator-actions",
+                "message": "operatorActions must be a non-empty string array",
+            }
+        )
 
 
 def _validate_baseline(descriptor: dict[str, Any], baseline: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     rules = baseline.get("maturityRules", {})
     expected_maturity = rules.get("requiredReleaseMaturity")
     if expected_maturity and not _maturity_satisfies_baseline(descriptor, expected_maturity, rules):
-        blockers.append({"code": "adapter-baseline-maturity-mismatch", "expected": expected_maturity, "actual": descriptor.get("maturity")})
+        blockers.append(
+            {
+                "code": "adapter-baseline-maturity-mismatch",
+                "expected": expected_maturity,
+                "actual": descriptor.get("maturity"),
+            }
+        )
     expected_policy = baseline.get("maturityRules", {}).get("unsupportedOperationPolicy")
     if expected_policy and descriptor.get("unsupportedOperationPolicy") != expected_policy:
-        blockers.append({"code": "adapter-baseline-policy-mismatch", "expected": expected_policy, "actual": descriptor.get("unsupportedOperationPolicy")})
+        blockers.append(
+            {
+                "code": "adapter-baseline-policy-mismatch",
+                "expected": expected_policy,
+                "actual": descriptor.get("unsupportedOperationPolicy"),
+            }
+        )
     expected_contract = baseline.get("contractCompatibility")
     if expected_contract and descriptor.get("contractCompatibility") != expected_contract:
-        blockers.append({"code": "adapter-contract-compatibility-mismatch", "message": "descriptor contractCompatibility differs from baseline"})
+        blockers.append(
+            {
+                "code": "adapter-contract-compatibility-mismatch",
+                "message": "descriptor contractCompatibility differs from baseline",
+            }
+        )
     required = set(baseline.get("requiredOperations", []))
     if required:
         operations = descriptor.get("operations", [])
