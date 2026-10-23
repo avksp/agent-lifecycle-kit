@@ -11,20 +11,17 @@ import shlex
 import stat
 import subprocess
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 from typing import cast as _validated_cast
 
-from agent_lifecycle.accounting.declared_ledger import _sync_directory
 from agent_lifecycle.accounting.declared_ledger_legacy import (
     _R11_REVIEW_ROOT,
     _r11_review_private,
     capture_review_validation_sources,
 )
 from agent_lifecycle.accounting.declared_ledger_records import _require
-from agent_lifecycle.adapter_sessions.attempt_authority import _write
 from agent_lifecycle.adapter_sessions.source_review_contracts import (
     _R11_SUPPORT_ORACLE_SHA256,
     _r11_fresh_start,
@@ -493,159 +490,40 @@ def collect_source_review_support(
 
 
 class _R11AppServerPipe:
-    """Worker-owned blocking pipe; the enclosing process enforces the deadline.
+    """Disabled live-pipe compatibility surface; every entry refuses before IO.
 
-    Every received chunk is durable before parsing, including partial/invalid
-    frames. The separate review transcript records the exact review RPC lane.
-    This class must never run in a coordinator callback/thread.
+    Historical preparation replay retains its own read-only overrides below.
     """
 
     def __init__(self, root: Path, binding: dict[str, str], reader: Any, writer: Any) -> None:
+        _compatibility_arguments = (root, binding, reader, writer)
         raise LifecycleError(
             "r11-experimental-disabled", "Experimental R11 review route is disabled; use ordinary independent audit"
         )
-        from .private_input import _private_dir
-
-        self.root, self.reader, self.writer = root, reader, writer
-        self.directory = root / _R11_REVIEW_ROOT / "shards" / binding["shardId"] / "host-wire"
-        _private_dir(self.directory.parent, boundary=root)
-        self.directory.mkdir(mode=0o700)  # Exclusive even after a partial launch.
-        self.sequence = 0
-        self.total = 0
-        self.buffer = bytearray()
-        self.failed = False
-        self.record("SESSION", canonical_bytes(binding))
 
     def record(self, kind: str, raw: bytes) -> None:
+        _compatibility_arguments = (kind, raw)
         raise LifecycleError(
             "r11-experimental-disabled", "Experimental R11 review route is disabled; use ordinary independent audit"
         )
-        _require(
-            not self.failed and isinstance(raw, bytes) and self.total + len(raw) <= 8_388_608,
-            "r11-host-wire-limit",
-            "host wire is failed or exceeds its byte cap",
-        )
-        raw = _validated_cast(bytes, raw)
-        try:
-            for offset in range(0, max(1, len(raw)), 32_768):
-                _require(self.sequence < 65_536, "r11-host-wire-limit", "host wire record cap exceeded")
-                _write(
-                    self.root,
-                    self.directory / f"{self.sequence:08d}.json",
-                    {
-                        "sequence": self.sequence,
-                        "monotonicNs": time.monotonic_ns(),
-                        "kind": kind,
-                        "offset": offset,
-                        "bytes": len(raw),
-                        "rawHex": raw[offset : offset + 32_768].hex(),
-                    },
-                )
-                self.sequence += 1
-            _sync_directory(self.directory)
-            self.total += len(raw)
-        except BaseException:
-            self.failed = True
-            raise
 
     def send_bootstrap(self, value: dict[str, Any]) -> None:
+        _compatibility_arguments = (value,)
         raise LifecycleError(
             "r11-experimental-disabled", "Experimental R11 review route is disabled; use ordinary independent audit"
         )
-        _require(
-            value.get("method")
-            in {"initialize", "initialized", "model/list", "thread/resume", "thread/start", "thread/read"},
-            "r11-host-bootstrap",
-            "bootstrap lane cannot send a model/tool request",
-        )
-        raw = canonical_bytes(value) + b"\n"
-        self.record("SEND_PENDING", raw)
-        try:
-            offset = 0
-            while offset < len(raw):
-                count = self.writer.write(raw[offset:])
-                _require(
-                    type(count) is int and 0 < count <= len(raw) - offset,
-                    "r11-host-write",
-                    "bootstrap write made no valid progress",
-                )
-                count = _validated_cast(int, count)
-                self.record("WRITE_ACCEPTED", raw[offset : offset + count])
-                offset += count
-            self.writer.flush()
-            self.record("FLUSHED", canonical_bytes({"sha256": hashlib.sha256(raw).hexdigest()}))
-        except BaseException:
-            self.failed = True
-            raise
 
     def receive(self, transcript: _TranscriptReceiver | None = None) -> tuple[bytes, dict[str, Any]]:
+        _compatibility_arguments = (transcript,)
         raise LifecycleError(
             "r11-experimental-disabled", "Experimental R11 review route is disabled; use ordinary independent audit"
         )
-        try:
-            while b"\n" not in self.buffer:
-                chunk = os.read(self.reader.fileno(), 65_536)
-                self.record("RECEIVED_CHUNK", chunk)
-                _require(bool(chunk), "r11-host-eof", "host closed before a complete RPC frame")
-                self.buffer.extend(chunk)
-                _require(
-                    len(self.buffer.split(b"\n", 1)[0]) < 2_097_152,
-                    "r11-host-frame-limit",
-                    "host RPC frame exceeds its bound",
-                )
-            line, _, rest = self.buffer.partition(b"\n")
-            self.buffer[:] = rest
-            raw = bytes(line) + b"\n"
-            _require(len(raw) <= 2_097_152, "r11-host-frame-limit", "host RPC frame exceeds its bound")
-            if transcript is not None:
-                transcript.receive(raw)
-            value = _r11_json(raw, limit=2_097_152)
-            _require("jsonrpc" not in value or value["jsonrpc"] == "2.0", "r11-host-rpc", "unexpected RPC framing")
-            return raw, value
-        except BaseException:
-            self.failed = True
-            raise
 
     def bootstrap_reply(self, ident: int, thread_id: str | None) -> dict[str, Any]:
+        _compatibility_arguments = (ident, thread_id)
         raise LifecycleError(
             "r11-experimental-disabled", "Experimental R11 review route is disabled; use ordinary independent audit"
         )
-        for _ in range(256):
-            _, value = self.receive()
-            if "id" in value:
-                _require(
-                    type(value["id"]) is int
-                    and value["id"] == ident
-                    and set(value) <= {"id", "result", "jsonrpc"}
-                    and isinstance(value.get("result"), dict),
-                    "r11-host-rpc",
-                    "bootstrap RPC failed or returned an unexpected request/response",
-                )
-                return value["result"]
-            method, params = value.get("method"), _validated_cast(dict[str, Any], value.get("params"))
-            _require(
-                _r11_notification_envelope(value)
-                and (
-                    method
-                    in {
-                        "account/updated",
-                        "account/rateLimits/updated",
-                        "deprecationNotice",
-                        "mcpServer/startupStatus/updated",
-                        "remoteControl/status/changed",
-                    }
-                    or (
-                        method == "thread/started"
-                        and isinstance(params.get("thread"), dict)
-                        and isinstance(params["thread"].get("id"), str)
-                        and (thread_id is None or params["thread"]["id"] == thread_id)
-                    )
-                    or (method == "thread/status/changed" and params.get("threadId") == thread_id)
-                ),
-                "r11-host-rpc",
-                "unexpected bootstrap notification; no model/tool action authorized",
-            )
-        raise LifecycleError("r11-host-rpc", "bootstrap notification bound exceeded")
 
 
 def _r11_host_snapshot(root: Path, binding: dict[str, str]) -> dict[str, bytes]:
