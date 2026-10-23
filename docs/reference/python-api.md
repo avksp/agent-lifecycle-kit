@@ -124,3 +124,13 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 tools/release/validate_public_a
 Modules not listed in the policy are implementation details. Existing deep
 imports may continue to work for compatibility, but they are not new stable
 API commitments unless they are listed above.
+
+## Typed internal boundaries
+
+The stable surface remains defined by `policy/python-public-api.json`. Internal
+review-input, UsageContext, qualification, closing and finalization types do not
+expand that allowlist. Existing facades and compatibility names remain; CLI,
+storage schemas, refusal codes and historical records keep their behavior.
+Constructing a context does not replace frozen-input validation or grant authority.
+The portable usage interface is UNIT_ONLY; `declared-ledger-route-unsupported`
+remains, with no generic financial route or host qualification claim.

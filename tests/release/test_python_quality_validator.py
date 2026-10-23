@@ -185,6 +185,29 @@ class PythonQualityValidatorTests(unittest.TestCase):
             self.assertEqual(result["status"], "FAIL")
             self.assertIn("new-quality-finding", {item["code"] for item in result["blockers"]})
 
+    def test_empty_mypy_baseline_refuses_a_new_error_even_on_unchanged_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "src/example.py"
+            source.parent.mkdir()
+            source.write_text("value = 1\n")
+            raw = root / "work/raw"
+            raw.mkdir(parents=True)
+            for name in ("ruff-correctness.stdout.json", "ruff-migration.stdout.json", "ruff-line-length.stdout.json"):
+                (raw / name).write_text("[]\n")
+            (raw / "ruff-format.stdout.txt").write_text("1 file already formatted\n")
+            (raw / "coverage.json").write_text(json.dumps({"totals": {"percent_covered": 80.0}}))
+            (raw / "mypy.stdout.txt").write_text("src/example.py:1: error: Incompatible types [assignment]\n")
+            policy_path = root / "policy.json"
+            policy_path.write_text(json.dumps(_policy(_digest(source))))
+            run_path = root / "run.json"
+            run_path.write_text(json.dumps(_run_receipt()))
+            result = validate_quality(repository_root=root, policy_path=policy_path,
+                                      run_receipt_path=run_path, work_root=root / "work")
+            self.assertEqual("FAIL", result["status"])
+            self.assertTrue(any(row["code"] == "new-quality-finding" and row["kind"] == "mypy"
+                                for row in result["blockers"]))
+
 
 if __name__ == "__main__":
     unittest.main()

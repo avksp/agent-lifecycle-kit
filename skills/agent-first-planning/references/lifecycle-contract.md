@@ -71,3 +71,24 @@ Return these artifacts or their host-native equivalents:
 - exact worker write-set manifest;
 - validation and evidence plan;
 - plan review request.
+
+## Bounded capability feasibility before freeze
+
+For a new route, portability claim or changed supported scenario, bind the claim
+to 1–3 actual entrypoints, the lower capability/authority boundary, one existing
+negative case and exact write owners before freeze. Distinguish refactoring
+existing behavior from adding a capability. UNIT_ONLY or mock evidence cannot
+establish an end-to-end route. If the existing boundary refuses the claimed
+scenario, obtain the user's scope decision before freeze: narrow the claim or
+include the required lower-layer changes and owners. If 1–3 entrypoints are
+insufficient, scope a bounded feasibility probe before freeze; do not repeat a
+whole audit. Record this in the existing specification/evidence plan and review;
+no extra audit stage, manifest schema or mandatory receipt framework is added.
+Structural plan verify/ownership/traceability checks do not prove semantic reachability.
+
+Example: Release 2.24 WS-03 keeps `resolve_declared_ledger_context`'s
+`declared-ledger-route-unsupported` refusal and the existing
+`test_unsupported_package_and_rebound_opening_refuse` negative case. Its typed
+usage-interface fixture is UNIT_ONLY. Isolating legacy paths is a refactor;
+a generic financial ledger or a newly qualified host route would be a separate
+capability requiring lower-layer ownership and end-to-end evidence.

@@ -84,3 +84,35 @@ unlisted internal modules are not compatibility promises.
 
 The release workflow remains authoritative for scope, evidence, independent
 review and final acceptance.
+
+## Single architecture policy
+
+Numbers come from `policy/architecture-limits.json`; a test checks this table.
+Targets are warnings; hard limits block validation.
+
+| Policy key | Limit |
+| --- | ---: |
+| `targetFileLines` | 800 |
+| `hardFileLines` | 1200 |
+| `targetFunctionLines` | 80 |
+| `hardFunctionLines` | 150 |
+| `hardSymbols` | 80 |
+| `cliTargetFunctionLines` | 80 |
+| `cliHardFunctionLines` | 150 |
+
+```bash
+PYTHONPATH=src python3 tools/release/validate_architecture_complexity.py \
+  --package-root src/agent_lifecycle --policy policy/architecture-limits.json \
+  --evidence work/architecture-complexity.json
+PYTHONPATH=src python3 tools/release/validate_module_dependencies.py \
+  --package-root src/agent_lifecycle --policy policy/architecture-dependencies.json \
+  --require-acyclic-modules --require-acyclic-packages \
+  --evidence work/module-dependencies.json
+```
+
+The mypy baseline is empty: every new source-wide mypy error blocks acceptance.
+The obsolete `runner/attempt_snapshots.py` entry is removed; deleted source is not restored.
+Existing lint/format baselines do not expand and the 76% coverage floor stays fixed.
+Run full local unittest once for an unchanged candidate; the CI quality runner
+performs discovery for its own coverage evidence. Repeating a successful local
+check requires a change to its dependencies.

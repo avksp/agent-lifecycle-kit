@@ -156,18 +156,24 @@ lifecycle core.
 The standalone implementation must be usable by small-context models. File and
 function limits are therefore release gates, not style preferences.
 
-- Production Python source file target: 800 lines or less.
-- Production Python source file hard limit: 1200 lines.
-- Function or method target: 80 lines or less.
-- Function or method hard limit: 150 lines.
-- Root CLI entrypoint target: 80 lines or less.
-- Root CLI entrypoint hard limit: 150 lines.
-- Parser and dispatcher modules should stay below the production hard limit;
-  files above the 800-line source target are explicit split candidates.
-- External launcher target: 12 lines or less.
-- External launcher hard limit: 24 lines.
-- Top-level symbols target per module: 40 or fewer.
-- Top-level symbols hard limit per module: 80.
+`policy/architecture-limits.json` is the single authority used by the existing
+validator and CI. Targets are advisory split candidates; hard limits block.
+
+| Policy key | Limit |
+| --- | ---: |
+| `targetFileLines` | 800 |
+| `hardFileLines` | 1200 |
+| `targetFunctionLines` | 80 |
+| `hardFunctionLines` | 150 |
+| `hardSymbols` | 80 |
+| `cliTargetFunctionLines` | 80 |
+| `cliHardFunctionLines` | 150 |
+
+Branch/private-import ratchets and compatibility boundaries are described in
+[System architecture](system-architecture.md#architecture-stabilization-and-compatibility).
+Existing debt is visible; a passing hard gate does not imply every target is met.
+The separate external-launcher guidance remains target 12 / hard 24 lines;
+the top-level-symbol context target remains 40 (the enforced hard limit is 80).
 
 The exact context authority is the rendered C8 subject, not a line-count
 heuristic. Every changed production slice must have a bounded subject that fits

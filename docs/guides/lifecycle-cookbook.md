@@ -270,9 +270,13 @@ agent-lifecycle workflow task-review-apply \
   --operation-id review-WS-01-attempt-1 \
   --expected-revision 7 \
   --source-revision <source-sha> \
-  --result work/WS-01/attempt-1/task-result.json \
-  --review work/WS-01/attempt-1/task-review.json
+  --review work/WS-01/attempt-1/task-review.json \
+  --reason "apply independent review"
 ```
+
+The result is already attached by `workflow task-result`; `task-review-apply`
+has no `--result` option. The example is checked against the actual parser and `--help`.
+
 
 The run enters `FINAL_AUDIT` only after every required task is accepted. The
 legacy `task-accept` and `task-rework` commands remain compatibility wrappers
@@ -367,3 +371,24 @@ OpenCode; any configured model can be used by changing the host command.
 Use `agent-lifecycle start` for the common path. Advanced scripts may use the
 atomic `adapter task start`, `adapter run` and `adapter session resume`
 commands when they need direct control over one lifecycle primitive.
+
+## Bounded capability feasibility before freeze
+
+For a new route, portability claim or changed supported scenario, bind the claim
+to 1–3 actual entrypoints, the lower capability/authority boundary, one existing
+negative case and exact write owners before freeze. Distinguish refactoring
+existing behavior from adding a capability. UNIT_ONLY or mock evidence cannot
+establish an end-to-end route. If the existing boundary refuses the claimed
+scenario, obtain the user's scope decision before freeze: narrow the claim or
+include the required lower-layer changes and owners. If 1–3 entrypoints are
+insufficient, scope a bounded feasibility probe before freeze; do not repeat a
+whole audit. Record this in the existing specification/evidence plan and review;
+no extra audit stage, manifest schema or mandatory receipt framework is added.
+Structural plan verify/ownership/traceability checks do not prove semantic reachability.
+
+Example: Release 2.24 WS-03 keeps `resolve_declared_ledger_context`'s
+`declared-ledger-route-unsupported` refusal and the existing
+`test_unsupported_package_and_rebound_opening_refuse` negative case. Its typed
+usage-interface fixture is UNIT_ONLY. Isolating legacy paths is a refactor;
+a generic financial ledger or a newly qualified host route would be a separate
+capability requiring lower-layer ownership and end-to-end evidence.

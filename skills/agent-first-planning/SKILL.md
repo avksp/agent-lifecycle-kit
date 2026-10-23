@@ -16,6 +16,9 @@ contracts for the selected task.
 
 Use plan verify as the read-only structural preflight; freeze-prepare only prepares a new candidate, never review or execution permission.
 
+For new capability claims, apply the bounded pre-freeze feasibility mapping in
+the linked contract: actual entrypoints, lower authority, negative case and owners.
+
 Do not bypass independent review, reviewed freeze, ownership, authorization or
 budgets. Missing evidence stays missing; unknown telemetry stays null. Do not
 reset expenses or run clocks after retries or context compaction.
@@ -25,5 +28,5 @@ JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
 Review Mesh packets grant no review, attestation or execution authority. See
 `docs/reference/safe-artifact-authoring.md`.
 
-Full contract SHA256: `e8dc5e8e01c2db420f72da8fcc8fc0f5a9e5e1c1e65aadb3df049b8dfcf0735e`
+Full contract SHA256: `8c2545075762d46eced02d8a95a7cbb8556a36bcd19df68360c470443778bf0f`
 Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.
