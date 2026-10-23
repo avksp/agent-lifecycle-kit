@@ -1,0 +1,1723 @@
+{
+  "schemaVersion": "agent-architecture-limits.v1",
+  "limits": {
+    "targetFileLines": 800,
+    "hardFileLines": 1200,
+    "targetFunctionLines": 80,
+    "hardFunctionLines": 150,
+    "hardSymbols": 80,
+    "cliTargetFunctionLines": 80,
+    "cliHardFunctionLines": 150
+  },
+  "branchLimit": 20,
+  "baselineSourceRevision": "86ba753e70ce7f27c2039eb21141d5bb8c2a43d2",
+  "branchMetric": "AST v1: if/for/async-for/while/except/if-expression; comprehension generators and filters; extra boolean operands; extra match cases and OR patterns plus guards. Nested definitions counted separately. Function defaults, keyword-only defaults and decorators belong exactly once to the declared function, including nested definitions; they are not charged to the enclosing function.",
+  "branchBaseline": [
+    {
+      "path": "accounting/closing_resource_admission.py",
+      "name": "ClosureAdmissionMixin._observed_lookup",
+      "score": 21,
+      "fingerprint": "7821ca5032bc3cd6ea83c4cb184a709bd11bd1b0b0c077408fe89f4e39d0b3c1"
+    },
+    {
+      "path": "accounting/closing_resource_policy.py",
+      "name": "classify_current_claim_data",
+      "score": 41,
+      "fingerprint": "92814b61110580be6dfdefa9ac74f05314a95fa12a74e1ef9f1b60bcedcab5b2"
+    },
+    {
+      "path": "accounting/closing_resource_policy.py",
+      "name": "_validated_resource_inventory_owners",
+      "score": 51,
+      "fingerprint": "4b545036d8c5ebe0cbb3a8ee69e1e35834deac7d0429cef2ef70e658a7e74884"
+    },
+    {
+      "path": "accounting/closing_resource_policy.py",
+      "name": "derive_policy_candidate_data",
+      "score": 29,
+      "fingerprint": "38739fdf44f9174e50030ead43c8b7892d76b934df3c40eb1cd837d035662054"
+    },
+    {
+      "path": "accounting/closing_resource_policy.py",
+      "name": "_apply_closing_policy",
+      "score": 45,
+      "fingerprint": "b8f0a218da6e5d06ffba522472f799bdf4d36a6f0dbd7a885e5ab466abea8cae"
+    },
+    {
+      "path": "accounting/closing_resource_recovery.py",
+      "name": "_reserve_in_transaction",
+      "score": 21,
+      "fingerprint": "57803d31baaa4f0565b3a700c80bd64b80ca80a581490ac099e6ab6f5229caee"
+    },
+    {
+      "path": "accounting/closing_resource_recovery.py",
+      "name": "_window_operations",
+      "score": 37,
+      "fingerprint": "bfecebcd3dbb67c1baeb9a1aaaad455f8e71f8856f3e448573040ff5982c18df"
+    },
+    {
+      "path": "accounting/closing_resource_recovery.py",
+      "name": "reconstruct_closing_balances",
+      "score": 52,
+      "fingerprint": "d627fb8cc4d2baf80abc38fe8d1a35dec509d5513297915015404abf4e91aa99"
+    },
+    {
+      "path": "accounting/closing_resource_recovery.py",
+      "name": "read_persisted_closing_balances",
+      "score": 63,
+      "fingerprint": "319836c3bcdf618924a78151304b2971342a1743a3762ca0bef2cccabfd754eb"
+    },
+    {
+      "path": "accounting/closing_resource_recovery.py",
+      "name": "closed_financial_totals",
+      "score": 34,
+      "fingerprint": "25fa054745fa68837707c17c88f2f7e57a9ef7c2825d721d5098c8a614644531"
+    },
+    {
+      "path": "accounting/closing_resources.py",
+      "name": "JournalRetentionMixin._archive_state",
+      "score": 49,
+      "fingerprint": "a3d8835981887de3a691a97eccd9839c0ddebe864b4bdc13bb996006f1122d21"
+    },
+    {
+      "path": "accounting/closing_resources.py",
+      "name": "JournalRetentionMixin._raw_authority",
+      "score": 31,
+      "fingerprint": "b4d38ffd5910d3da0aa79d0393206cb0883ed34f8561dd19c44795d6d62d9ff5"
+    },
+    {
+      "path": "accounting/closing_resources.py",
+      "name": "JournalRetentionMixin.register_raw_inventory",
+      "score": 34,
+      "fingerprint": "939e18ff906c0865c348e425844a30adc53d0a17d3785e4238d06d32ab8cb6bb"
+    },
+    {
+      "path": "accounting/declared_ledger.py",
+      "name": "_r11_coordinator_source",
+      "score": 24,
+      "fingerprint": "367a09afd7ea508c8a4ec8bfe2a9455907164df65e84648bee07137bd0693425"
+    },
+    {
+      "path": "accounting/declared_ledger_legacy.py",
+      "name": "_r11_worker_disposition",
+      "score": 38,
+      "fingerprint": "75b21d64c6a73d2171aa8fee53892b6ccdd6e8c2744430b356b8da282d218a09"
+    },
+    {
+      "path": "accounting/declared_ledger_legacy.py",
+      "name": "read_source_review_worker",
+      "score": 27,
+      "fingerprint": "2295445bf35e38bc40f7786b3acdf5c02f89f402067ba79494af4658e906c792"
+    },
+    {
+      "path": "accounting/declared_ledger_legacy.py",
+      "name": "_r11_role_cost_chain",
+      "score": 21,
+      "fingerprint": "2e585839ba1876aaeddc0d3c2c9b991304042dfe3f31c7dcdb845b527b1d144a"
+    },
+    {
+      "path": "accounting/declared_ledger_records.py",
+      "name": "_r11_role_identity",
+      "score": 30,
+      "fingerprint": "c2ad46a54480bc802939474f4bf12f01d32c8a67fa4a8a2225f51de32a542ffc"
+    },
+    {
+      "path": "accounting/declared_ledger_records.py",
+      "name": "_r11_role_prefix_record",
+      "score": 27,
+      "fingerprint": "50a27beec96fa794a73f6cf89f062159edd1f14bd273040fb7d653d0a85b393f"
+    },
+    {
+      "path": "accounting/host_bridge.py",
+      "name": "EvidenceGraph._verify",
+      "score": 23,
+      "fingerprint": "b81ea58fd830ebd11350d80a2f16a79e8c776b6dc47bf732c4821b010abf06bc"
+    },
+    {
+      "path": "accounting/host_bridge.py",
+      "name": "_validate_source_qualification_observations",
+      "score": 29,
+      "fingerprint": "615f2db5ed1112fe57977350122444b5908d2110c9a9a7ae1fd0bfd520646d7d"
+    },
+    {
+      "path": "accounting/host_bridge.py",
+      "name": "_read_source_lifecycle_qualification",
+      "score": 38,
+      "fingerprint": "de8475bdc81950c2ec08e92426bb86b4ac268a79815af9a668a9bd6f4ad38bd8"
+    },
+    {
+      "path": "accounting/input_fit.py",
+      "name": "select_source_excerpts",
+      "score": 23,
+      "fingerprint": "6b4ace2c5ade3fd234fe79e6c4339a9f8e81d0d233b87fe64c8a67725585b03e"
+    },
+    {
+      "path": "accounting/input_fit.py",
+      "name": "_revalidate_selection",
+      "score": 38,
+      "fingerprint": "fd6d9c6f5649bf9e78565c13983615634079bd806f95e459fc706558656f4e48"
+    },
+    {
+      "path": "accounting/journal.py",
+      "name": "Journal.bounded_prefix",
+      "score": 24,
+      "fingerprint": "2964d4b581fde22f7f3629340dfe0927cd610696baed71585735f8b40d8c72a5"
+    },
+    {
+      "path": "accounting/journal.py",
+      "name": "Journal._v2_unavailable",
+      "score": 24,
+      "fingerprint": "ecaa355cec8ace9fefd18523312dfcf7b99d0c0df4d9dbe5e86d0e6b6759ddde"
+    },
+    {
+      "path": "accounting/journal.py",
+      "name": "Journal._live_facts",
+      "score": 35,
+      "fingerprint": "fdfe5298235163a5a6d74eeb80e3bbfacf55a664a825492f71b285dcad2d3f2b"
+    },
+    {
+      "path": "accounting/legacy_source_usage.py",
+      "name": "_window",
+      "score": 22,
+      "fingerprint": "7736ba7916a17820252abd5ebca6fc9b8f06f7b8921abcfceaebbde5bbd78a76"
+    },
+    {
+      "path": "accounting/legacy_source_usage.py",
+      "name": "_project_financial_record_chain",
+      "score": 27,
+      "fingerprint": "76d3910d7be6ec0fb4b3212cb5273685df27a1e8480f41f8cabcd691da5da83c"
+    },
+    {
+      "path": "accounting/legacy_source_usage.py",
+      "name": "_classify_source_conflict",
+      "score": 23,
+      "fingerprint": "267a84ec75bc0e684fa8e2571b93dcb1356816436a7b8b09a42b95a316784237"
+    },
+    {
+      "path": "accounting/normalization.py",
+      "name": "semantic_final",
+      "score": 22,
+      "fingerprint": "be041199095abed7ac21f04dd7298ec26bac4314b97f4eb1687f5f44cf20a23d"
+    },
+    {
+      "path": "accounting/normalization.py",
+      "name": "counter_interval",
+      "score": 30,
+      "fingerprint": "2c97ba4313670d65016731d12a34c9a4350a7b2b3fd4f8dfbad48a3088ff9839"
+    },
+    {
+      "path": "accounting/normalization.py",
+      "name": "normalize",
+      "score": 28,
+      "fingerprint": "fc9a692e3356ffea717750bfa8b39fee6a1a079bcb5f94d837d97f4f97b54bd7"
+    },
+    {
+      "path": "accounting/normalization.py",
+      "name": "JournalNormalizationMixin.ingest_usage",
+      "score": 23,
+      "fingerprint": "c4fb76b2f41d55a28aec6a00c42aa1a99656b8bcbb7afede4ef374591d3c113d"
+    },
+    {
+      "path": "accounting/normalization.py",
+      "name": "JournalNormalizationMixin._ingest_candidate",
+      "score": 29,
+      "fingerprint": "60d418d49b2826c3a98e4499bc30cfc9f50812dfc34c8c57088db76623caa7a4"
+    },
+    {
+      "path": "accounting/normalization.py",
+      "name": "JournalNormalizationMixin.reconcile_import",
+      "score": 48,
+      "fingerprint": "e115f5a68f200f4657c5c3777e930ecff69c03ef5a23db234cacec1e36733e50"
+    },
+    {
+      "path": "accounting/opening_balances.py",
+      "name": "_opening_qualification",
+      "score": 24,
+      "fingerprint": "913f7efc52f56dad9f77a007bde0970100e7f81e7387a55cf777d94046f2b95b"
+    },
+    {
+      "path": "accounting/opening_balances.py",
+      "name": "compile_opening",
+      "score": 44,
+      "fingerprint": "dd0adcadea024a669da81d319548db079df55a0215707140ba8cf62264a85fe3"
+    },
+    {
+      "path": "accounting/opening_balances.py",
+      "name": "JournalAdmissionMixin._validate_v2_history",
+      "score": 38,
+      "fingerprint": "7544fa042c23e7f1774aa9f5b8ba8ad68d2cdb66c97da11d56e6f171d877196b"
+    },
+    {
+      "path": "accounting/profile_schema.py",
+      "name": "_check_keyword_shapes",
+      "score": 31,
+      "fingerprint": "3d77ea0f31dcfd9b21590b8c0819c5bf969d84e83ac20b2c9280dad41c60271c"
+    },
+    {
+      "path": "accounting/profile_schema.py",
+      "name": "_matches",
+      "score": 29,
+      "fingerprint": "e1699da3071a25f8ed37b7b7415a68d282a50c6b1c8a9fd08443ea7ad799ac6b"
+    },
+    {
+      "path": "accounting/source_usage_context.py",
+      "name": "_load_source_disposition",
+      "score": 39,
+      "fingerprint": "94b803e00abc00c1db3b55b7fda4d78d25f374e43ecb447badc7397a020a0395"
+    },
+    {
+      "path": "accounting/support_profiles.py",
+      "name": "_validate_sources_and_cases",
+      "score": 40,
+      "fingerprint": "47a471696657b5d7139e6e2579bbb148b84d51e75fe2105a2ee718baddf605be"
+    },
+    {
+      "path": "accounting/support_profiles.py",
+      "name": "validate_profile_payload",
+      "score": 56,
+      "fingerprint": "3de5b2ef9ef4444e486c8e000f6c4c63fd193e53ea8d1879badee4a4719e962b"
+    },
+    {
+      "path": "accounting/support_profiles.py",
+      "name": "match_requested_claims",
+      "score": 47,
+      "fingerprint": "29bc292371a035c563a1a763e34f34be74f8666e5444ca0986d2e366e9cca968"
+    },
+    {
+      "path": "accounting/workflow_authority_store.py",
+      "name": "validate_legacy_adoption_history",
+      "score": 28,
+      "fingerprint": "ce5a8ec6a76ff7d56420afdd30eb9a631bc622f091e3676fc799791e0da3fec5"
+    },
+    {
+      "path": "accounting/workflow_authority_store.py",
+      "name": "prepare_legacy_adoption_candidate",
+      "score": 22,
+      "fingerprint": "18bf6c94f318f2c7266c2c64ad1a5992dc8e7a2f74bc77f99d491110f382e984"
+    },
+    {
+      "path": "accounting/workflow_state_store.py",
+      "name": "_apply_delta_encoded",
+      "score": 35,
+      "fingerprint": "61bd2e95e3e10cb13155eea0b2f1503f581538bc382e9f5682de602156f6f1a0"
+    },
+    {
+      "path": "accounting/workflow_state_store.py",
+      "name": "WorkflowStore._activation_intent_data_in_transaction",
+      "score": 27,
+      "fingerprint": "1779d6fa3cb102a6a393c8d06eaafc3b3d52e6e741e362313e9a190de9ea8d5c"
+    },
+    {
+      "path": "accounting/workflow_store.py",
+      "name": "_apply",
+      "score": 33,
+      "fingerprint": "9b27d83420d11e00bf12ec1dbb1026cb555e7e1141839f275ff982c6f39e4125"
+    },
+    {
+      "path": "adapter_sessions/codex_exact_prompt.py",
+      "name": "assess_retention_pre_fixture",
+      "score": 25,
+      "fingerprint": "e32169f2a20f363ba713d558acf0239ffa9cd9c8130154a0238d4c320e422ce1"
+    },
+    {
+      "path": "adapter_sessions/codex_input_diagnostics.py",
+      "name": "_private_diagnostic_output",
+      "score": 25,
+      "fingerprint": "694294c173a92df74b51acf76e9d3263075ea6aa6b5cd84a5fa65487e0ade6cb"
+    },
+    {
+      "path": "adapter_sessions/codex_prompt_preparation.py",
+      "name": "verify_prestart_raw_inventory",
+      "score": 29,
+      "fingerprint": "052cc95998c122b97b4806c23ea11752a366397f38a872ffda7c4055dbfb74ba"
+    },
+    {
+      "path": "adapter_sessions/codex_source_exposure.py",
+      "name": "_source_ast_ranges",
+      "score": 24,
+      "fingerprint": "b7d3e8355a110bb4b13fa36f3a063da81d7e33003bb832db8c416938b9fea637"
+    },
+    {
+      "path": "adapter_sessions/codex_source_exposure.py",
+      "name": "_r69h_exposure_inventory",
+      "score": 28,
+      "fingerprint": "f9a89f32b989167b73b9cbd79a1d57fb4ba9af8ba3462f88ab9ed7094554a1f5"
+    },
+    {
+      "path": "adapter_sessions/codex_source_exposure.py",
+      "name": "_r69h_codex_exposure",
+      "score": 41,
+      "fingerprint": "8ec313d56d5938c6daf59f91576d5f703c1418d322aa6190bbcaa3a26567ff4d"
+    },
+    {
+      "path": "adapter_sessions/codex_source_exposure.py",
+      "name": "_check_required_route_bridge",
+      "score": 46,
+      "fingerprint": "152c55345516b2eba55ee3d77219adcac2cafde8e42bd027db77b8b90b77474d"
+    },
+    {
+      "path": "adapter_sessions/codex_source_subject.py",
+      "name": "_matches_closed_schema",
+      "score": 41,
+      "fingerprint": "37fbf2492631508619af0379c1dd3d659a49f12b00ff128bbe305e594d8b889d"
+    },
+    {
+      "path": "adapter_sessions/codex_source_subject.py",
+      "name": "_r69h_check_one_test_dependency",
+      "score": 59,
+      "fingerprint": "1c935c0fc382154744efc7c1492612932c365075c510c780dbbf9adf308462c8"
+    },
+    {
+      "path": "adapter_sessions/codex_source_subject.py",
+      "name": "_single_turn_projection",
+      "score": 33,
+      "fingerprint": "15a136790ee3931f3f06412a8bc9a8c11ee49575f54ad070b377bf5d40a44237"
+    },
+    {
+      "path": "adapter_sessions/codex_source_subject.py",
+      "name": "_review_findings_match_v4",
+      "score": 23,
+      "fingerprint": "b6a5406610c86122e1058b5cd4c9cb785da6dbb80f16d7965a440cedc3591237"
+    },
+    {
+      "path": "adapter_sessions/codex_source_subject.py",
+      "name": "_r69h_expand_test_support",
+      "score": 23,
+      "fingerprint": "5265b9c51e7c44640505e10b005eb35a6149b59f1e688b6828932e8cb5d4aee9"
+    },
+    {
+      "path": "adapter_sessions/codex_source_subject.py",
+      "name": "_r69h_project_test_support",
+      "score": 36,
+      "fingerprint": "1b56cef59160ee163eba66cbf3782089186f7b54c792ede077b1799eb64e7790"
+    },
+    {
+      "path": "adapter_sessions/codex_source_subject.py",
+      "name": "_r69h_validation_command_evidence",
+      "score": 43,
+      "fingerprint": "3534a1a152a19150d1fd541f1c31c730529243e99bbe356333b70974da962373"
+    },
+    {
+      "path": "adapter_sessions/codex_source_subject.py",
+      "name": "_verify_bootstrap_support_and_cost",
+      "score": 21,
+      "fingerprint": "a5a93e9adece83432eb38842b917650888289601814c949f05b5c59f6e6b6e2b"
+    },
+    {
+      "path": "adapter_sessions/codex_source_subject.py",
+      "name": "_recompute_bootstrap_subject",
+      "score": 32,
+      "fingerprint": "0e013a2eb30aa5cb9b8fd33c231e4309d2f8f5c50a0a1ba157e06143baf898f6"
+    },
+    {
+      "path": "adapter_sessions/external_check.py",
+      "name": "_validate_profile",
+      "score": 25,
+      "fingerprint": "87bd1567485a4b0bc71c30ce2cd9edd558b5ec3c9b61c170a01bfdf22601dbed"
+    },
+    {
+      "path": "adapter_sessions/immutable_input.py",
+      "name": "current_managed_invocation",
+      "score": 27,
+      "fingerprint": "06912f8dca98c34fe18c7059d29ccc667a94760d9f94f3fd9c395d1c896989e8"
+    },
+    {
+      "path": "adapter_sessions/input_lifecycle.py",
+      "name": "reconcile_prelaunch_intents",
+      "score": 38,
+      "fingerprint": "4a0ba462ce1bb22330eee18a1fb421c9f2eca3f3c347116d31ea0d19bf7b4657"
+    },
+    {
+      "path": "adapter_sessions/limited_native_evidence.py",
+      "name": "_verify_positive_native_transport",
+      "score": 24,
+      "fingerprint": "a7571b3b8170bb7cf060bea663754d33021173beb34831afa4c8fe88c1c2a2e5"
+    },
+    {
+      "path": "adapter_sessions/limited_native_evidence.py",
+      "name": "_verify_case",
+      "score": 35,
+      "fingerprint": "8278636b253e8a6886df3b620a0a19c3fe38b7f222c56b9be63934b4ce841909"
+    },
+    {
+      "path": "adapter_sessions/local_launch_profile.py",
+      "name": "build_executable_identity",
+      "score": 21,
+      "fingerprint": "4459bc8a12869dc469f3109b038f8e6c7d71ec36db5d506e5a52a221d1a39f67"
+    },
+    {
+      "path": "adapter_sessions/local_launch_profile.py",
+      "name": "_validate_planning_only",
+      "score": 24,
+      "fingerprint": "837149e503404ba4efb23715b3e2f251fba15c149b0297548803ef8a0f60b3f8"
+    },
+    {
+      "path": "adapter_sessions/managed_process.py",
+      "name": "_finish_exact_process",
+      "score": 26,
+      "fingerprint": "0e48a072733cc40663648366de6e379b05fde49854c07a8659463cfb8bac6c22"
+    },
+    {
+      "path": "adapter_sessions/ordinary_audit.py",
+      "name": "_report",
+      "score": 33,
+      "fingerprint": "5e0a5f8bd4410b1ea607ef241b044eadc3f4ad8b06ea1c0d8c415fda58f294ab"
+    },
+    {
+      "path": "adapter_sessions/ordinary_audit.py",
+      "name": "verify_integration_report",
+      "score": 23,
+      "fingerprint": "05906ef352c8b26cbd864a7b253c2486fdd9e488c9248c1f77f874e7fa39fe54"
+    },
+    {
+      "path": "adapter_sessions/process.py",
+      "name": "_exceptional_started_failure",
+      "score": 31,
+      "fingerprint": "dc0e80f4f2c2dcd285fc83423d598d36574a40f67107666c136f51b61372f715"
+    },
+    {
+      "path": "adapter_sessions/source_review_contracts.py",
+      "name": "_r11_role_material_authority",
+      "score": 30,
+      "fingerprint": "07593514c911e78e18b728d7e25126e21a637617b80c43d48e909ca1530150e3"
+    },
+    {
+      "path": "adapter_sessions/source_review_history.py",
+      "name": "_r11_reconstruct_review_basis",
+      "score": 21,
+      "fingerprint": "42a5867904d39c1dc51e51b0617e1c526a34929084e9d314f6e1cdd09a272662"
+    },
+    {
+      "path": "adapter_sessions/source_review_history.py",
+      "name": "_r11_read_role_request_files",
+      "score": 21,
+      "fingerprint": "42ea6b59cd7a17f0d10a7ae6fcd09ae52fe806dd6aee482fdad08a291500c5c6"
+    },
+    {
+      "path": "adapter_sessions/source_review_history.py",
+      "name": "read_source_review_request",
+      "score": 26,
+      "fingerprint": "4d588f4292672272cf9702476b9dcab4d43c7e66daef480bc71ae2ee7c4139f0"
+    },
+    {
+      "path": "adapter_sessions/source_review_history.py",
+      "name": "read_source_review_catalog",
+      "score": 32,
+      "fingerprint": "41a25516b7af3fd1c027190a8844233c90b1220d1aaea65e90a687ac58c412c5"
+    },
+    {
+      "path": "adapter_sessions/source_review_history.py",
+      "name": "_r11_role_operation_start",
+      "score": 21,
+      "fingerprint": "52793b16f2b5279b250d41a81a7479f7b7e8157d5d1ef78760a028ce9f84cbcd"
+    },
+    {
+      "path": "adapter_sessions/source_review_inputs.py",
+      "name": "_r11_partition_current_rows",
+      "score": 28,
+      "fingerprint": "e6e00ff210d05b8845b7aad0f4ffc1cc302b234d9e7084d3d7ed4e98bc99f941"
+    },
+    {
+      "path": "adapter_sessions/source_review_inputs.py",
+      "name": "_r11_expand_dependency_worklist",
+      "score": 38,
+      "fingerprint": "2115a66abb5fb6d458668ef8ad4fd4c93ce809bb125d6eb467e86f980eb2d03a"
+    },
+    {
+      "path": "adapter_sessions/source_review_inputs.py",
+      "name": "collect_source_dependencies",
+      "score": 37,
+      "fingerprint": "add550bc6cd31c2493eaed9a96132932e517abdc13a77442136e3b5fe7a2cdfe"
+    },
+    {
+      "path": "adapter_sessions/source_review_inputs.py",
+      "name": "collect_source_review_parent",
+      "score": 32,
+      "fingerprint": "a4f0c078edea05000453c628de9b1042d27d328fa41a11cea169b94e9ff4d015"
+    },
+    {
+      "path": "adapter_sessions/source_review_preparation_records.py",
+      "name": "_r11_composite_verified",
+      "score": 45,
+      "fingerprint": "4521c7d4f91d109860d61a599cd802f17bc0914acadcbcf951c334bbce1e5f09"
+    },
+    {
+      "path": "adapter_sessions/source_review_preparation_records.py",
+      "name": "_r11_fresh_operation",
+      "score": 24,
+      "fingerprint": "f2f9daddf4b977968e0b48c07eab5dcea5d2e3510ad45db59aa1bdc027597491"
+    },
+    {
+      "path": "adapter_sessions/source_review_preparation_records.py",
+      "name": "_r11_fresh_basis",
+      "score": 28,
+      "fingerprint": "4c49b6976c600f87cd96c9b11f2658e6e7c22658926b4711e9b555ab8ee430e3"
+    },
+    {
+      "path": "adapter_sessions/source_review_preparation_records.py",
+      "name": "_r11_fixed_worker_basis",
+      "score": 31,
+      "fingerprint": "cb4ffacdcf55cc7dd080e9654e84b97caa578d689bec98f19dd701c94fdaa93e"
+    },
+    {
+      "path": "adapter_sessions/source_review_roles.py",
+      "name": "_r11_role_call_index",
+      "score": 26,
+      "fingerprint": "fb8b1817eb5ae5454d7d275835e65d39e9f67d8f3fab253c7fa16073afc078c7"
+    },
+    {
+      "path": "adapter_sessions/source_review_roles.py",
+      "name": "_r11_role_source_projection",
+      "score": 30,
+      "fingerprint": "d3bfa2087a6916766297e7518c3dbaf60da42758f0da46f4610ea69c7d693a50"
+    },
+    {
+      "path": "adapter_sessions/source_review_roles.py",
+      "name": "_r11_role_source_exposure",
+      "score": 25,
+      "fingerprint": "28d10fd347d74301f2910675e4aed74bd606b28cb639c752c6e3e88395d6218c"
+    },
+    {
+      "path": "adapter_sessions/source_review_shards.py",
+      "name": "_pack_source_review_selections",
+      "score": 38,
+      "fingerprint": "b87bf5992dca697e1ff5a18e842dfd2c465edb440dd6fccdb7479e7a76671756"
+    },
+    {
+      "path": "adapter_sessions/source_review_shards.py",
+      "name": "_r11_role_send_basis",
+      "score": 34,
+      "fingerprint": "6cf967fe037de0d3da0504cc2fbd8fcac5885be0fee7fa22c3028e87fc55ff8d"
+    },
+    {
+      "path": "adapter_sessions/source_review_shards.py",
+      "name": "_r11_read_completed_role",
+      "score": 27,
+      "fingerprint": "d12f7b409d26ba100f2e7222bf6698b551dc3bdad4d3a69dadd9adc964f245e5"
+    },
+    {
+      "path": "adapter_sessions/source_review_shards.py",
+      "name": "_r11_completed_assignment",
+      "score": 38,
+      "fingerprint": "0a62fe497f4eb91dad31f43550ff4dac57fa79916c49bae8381edb9ef804c6ee"
+    },
+    {
+      "path": "adapter_sessions/source_review_support.py",
+      "name": "_r11_match_test_support",
+      "score": 53,
+      "fingerprint": "4ec24256da9fec11bc9a023d81465b093e0162cf053a2ae2b8ad736264d1e181"
+    },
+    {
+      "path": "adapter_sessions/source_review_support.py",
+      "name": "_r11_match_cost_opening",
+      "score": 37,
+      "fingerprint": "11e97883dba2911a6a1765102a4d1bb068972f2f18bfd68ba091cae37e8e91ff"
+    },
+    {
+      "path": "adapter_sessions/source_review_support.py",
+      "name": "collect_source_review_support",
+      "score": 25,
+      "fingerprint": "325a248eff36d6321d08a0ee7a86de34d3ad84b95daa39a9864da33388feacb0"
+    },
+    {
+      "path": "adapter_sessions/source_review_support.py",
+      "name": "_r11_host_records",
+      "score": 22,
+      "fingerprint": "21c200f694cd264e1cf02a79d7bab3d0ef312f537ea966fb2012810fed55469c"
+    },
+    {
+      "path": "adapter_sessions/source_review_support.py",
+      "name": "_r11_replay_prelude_groups",
+      "score": 35,
+      "fingerprint": "5c2e55788d73936453acc164ac3e9aaaba6dcd4fe8cd945520dd32b0e977228d"
+    },
+    {
+      "path": "adapter_sessions/source_review_support.py",
+      "name": "_r11_empty_thread_exchange",
+      "score": 23,
+      "fingerprint": "31de12636a4721dbf9a132f244b9008d810242212f9717a91a0c5d0124952718"
+    },
+    {
+      "path": "adapter_sessions/source_review_transcript.py",
+      "name": "_verify_legacy_review_source_content",
+      "score": 23,
+      "fingerprint": "66a2982c5a864b130a949232e80c7f8ba49dcab0866e5cacb5dba9cfb41b4a4d"
+    },
+    {
+      "path": "adapter_sessions/source_review_transcript.py",
+      "name": "verify_source_review_body_and_reads",
+      "score": 26,
+      "fingerprint": "f1b8a38b58ed2cff4e50ec91e1b1a0d4ab5a977ec3739fe104b0f4d6787d3d88"
+    },
+    {
+      "path": "adapter_sessions/source_review_transcript.py",
+      "name": "_r11_receive_transport_record",
+      "score": 39,
+      "fingerprint": "2351c9fbd7ae6a1ffbda375cb9cd281b35b27c8606d0d9d73c8fcd22ed48812d"
+    },
+    {
+      "path": "adapter_sessions/source_review_transcript.py",
+      "name": "_r11_replay_transport_records",
+      "score": 28,
+      "fingerprint": "29aec3aeab03b6d2c8c2de3c5bfca8cc9d265dc87d09c9cdf3bc5ef7598ecce0"
+    },
+    {
+      "path": "adapter_sessions/unified_start.py",
+      "name": "_start_lifecycle_core",
+      "score": 27,
+      "fingerprint": "23276d42d015746493452efaaf4055bc6c9194a9e1d3b11911438d653909f50d"
+    },
+    {
+      "path": "audit/delta.py",
+      "name": "validate_rework_delta_audit",
+      "score": 40,
+      "fingerprint": "6b1913ec4c343a929798996ee3f0649b996a5f7124a980065380755182d6e397"
+    },
+    {
+      "path": "audit/delta.py",
+      "name": "_validate_receipt_attempt_delta",
+      "score": 21,
+      "fingerprint": "687545fe33bb4434e84acc97e04eecfc8f891034939a5837a171776a846dcabc"
+    },
+    {
+      "path": "audit/domain_language.py",
+      "name": "build_domain_language_impact_audit",
+      "score": 34,
+      "fingerprint": "4571080e89fcbc9fc1922a560a61b647be3552cfee3fd3cfd1c32f78851300f0"
+    },
+    {
+      "path": "audit/implementation.py",
+      "name": "validate_implementation_audit_report",
+      "score": 25,
+      "fingerprint": "6ef3ce4829d968d37316ce569a3e632e2d456c22c0ca215773756202ccc7bfe4"
+    },
+    {
+      "path": "audit/implementation.py",
+      "name": "build_final_implementation_audit",
+      "score": 22,
+      "fingerprint": "521d64b2b0005c529ca9bcd5133ae12854914aecb89345d9a0f2f674fe5c2e66"
+    },
+    {
+      "path": "audit/ownership.py",
+      "name": "_classifiers",
+      "score": 30,
+      "fingerprint": "0dbf885aac03c2f8c2d3ecb523d7555bbd9c768fab6edf2d4e18111f29d3a054"
+    },
+    {
+      "path": "audit/ownership.py",
+      "name": "_classify_path",
+      "score": 21,
+      "fingerprint": "99d97975ef4a1cc331df812462a1a645cde7e403586dad70392e4a0e161ca6f7"
+    },
+    {
+      "path": "benchmarks/comparison.py",
+      "name": "validate_reference_task_comparison",
+      "score": 25,
+      "fingerprint": "daa31fcccf5d6c4cd7606a9eb4b440d102f983a580937e54f9a7e5d36286eb4d"
+    },
+    {
+      "path": "benchmarks/contracts.py",
+      "name": "validate_benchmark_run_receipt",
+      "score": 41,
+      "fingerprint": "e28d2d331ff8e08455e7a32db7cd47a4914a173d98be825acc22b692eda3beb6"
+    },
+    {
+      "path": "benchmarks/qualification.py",
+      "name": "_route_report",
+      "score": 32,
+      "fingerprint": "3196ffe07a18d3717447c50abd59f122fa46a762f6c0d311f7e3911aa6051d4f"
+    },
+    {
+      "path": "benchmarks/reporting.py",
+      "name": "build_measurements",
+      "score": 29,
+      "fingerprint": "a4a5b2806c6a999cb10d838abb4f30d8c37e3dba04944e924b6cabba77a64fe4"
+    },
+    {
+      "path": "benchmarks/stratification.py",
+      "name": "select_stratified_tasks",
+      "score": 24,
+      "fingerprint": "4c275ae9bfa6ea36416581d754729962ae0e53db2814e35282003e6bdb1581cc"
+    },
+    {
+      "path": "cli/adapter.py",
+      "name": "dispatch_adapter",
+      "score": 31,
+      "fingerprint": "a08d369ddac6549f7f1809272facd0ef95137107c074439dc0099729cd9ede3d"
+    },
+    {
+      "path": "cli/dispatch_contracts.py",
+      "name": "_dispatch_quality",
+      "score": 21,
+      "fingerprint": "8571eb4830469324ea2b3727688e5fc68760c489eacb5686d6e19b00435fda71"
+    },
+    {
+      "path": "cli/dispatch_contracts.py",
+      "name": "_dispatch_review_mesh",
+      "score": 34,
+      "fingerprint": "eeb9ded85b00a12457a285f093ee8bb5049feb725a15f3c4f3c7322d366ad44e"
+    },
+    {
+      "path": "cli/dispatch_lifecycle.py",
+      "name": "_dispatch_workflow",
+      "score": 22,
+      "fingerprint": "1927826cfdfacb6b2b843306b0bb6446846146259ab4c422bffd482e10b11b9c"
+    },
+    {
+      "path": "cli/dispatch_observability.py",
+      "name": "_dispatch_report",
+      "score": 29,
+      "fingerprint": "a78474498f0b4d910c780e3ca7a77fa24f9d7ba69255d01c27961d4083e485fd"
+    },
+    {
+      "path": "cli/dispatch_observability.py",
+      "name": "_dispatch_metrics",
+      "score": 32,
+      "fingerprint": "ca241ffb86379de968269a63c9bae706a06e9ef27a5ab2b71238afc9d29f1535"
+    },
+    {
+      "path": "cli/dispatch_planning.py",
+      "name": "_dispatch_plan",
+      "score": 35,
+      "fingerprint": "cfaf3ee6cb3d18c9f17bd05822858272d526abdb010c77baa978f33eb6f4f261"
+    },
+    {
+      "path": "cli/dispatch_planning.py",
+      "name": "_build_planning_handoff_phase_packet",
+      "score": 22,
+      "fingerprint": "f2f96e6439d61f8056501ca49145cfa91b0cea532dd334a69d5aab2f434b2bd2"
+    },
+    {
+      "path": "cli/project.py",
+      "name": "_explain_profile",
+      "score": 29,
+      "fingerprint": "b1132f448b8b08d12badcafe975a072e7867ff7aa062c29cb1ab1776d9ed5023"
+    },
+    {
+      "path": "compiler/phase_packets.py",
+      "name": "validate_phase_packet",
+      "score": 23,
+      "fingerprint": "f5821c6d2c6603f23e69e27bbf0a2e67e60ce2bd4a121fc690227878a816c02b"
+    },
+    {
+      "path": "context/checkpoints.py",
+      "name": "validate_context_checkpoint",
+      "score": 32,
+      "fingerprint": "fe00bcbc9c5bf38de9b9d9ab3806123f49948859d77da569b22bb6afef165fbe"
+    },
+    {
+      "path": "contracts/agent_plugin_qualification_schemas.py",
+      "name": "validate_qualification_profile",
+      "score": 61,
+      "fingerprint": "01c9217a19cd739f9e1499f7a4a63cb21ad39a1e842673a0b4f958d897fd810a"
+    },
+    {
+      "path": "contracts/authority_io.py",
+      "name": "_parent",
+      "score": 26,
+      "fingerprint": "4eba9d503dc0e56dca420841957d315b68d14349414772831f67ee331cdcafca"
+    },
+    {
+      "path": "contracts/bounded_json.py",
+      "name": "_r11_role_schema_matches",
+      "score": 52,
+      "fingerprint": "318bbae43d11f8497ef100b0f601e03156043a57d1c124f0dba1ab99ba242455"
+    },
+    {
+      "path": "contracts/closing_resource_schemas.py",
+      "name": "validate_limit_proposal",
+      "score": 22,
+      "fingerprint": "689fd70d5c553b56a9367247722b5448f8d2ba8bfc0fa65080e7ea14421e3bcf"
+    },
+    {
+      "path": "contracts/closing_window_schemas.py",
+      "name": "validate_run_output_anchor",
+      "score": 24,
+      "fingerprint": "bed90fdf802c0c7cf4e66c558b49c52be9594ba3d891b5742a817b369dc9f9d4"
+    },
+    {
+      "path": "contracts/deadlines.py",
+      "name": "_late_disposition",
+      "score": 32,
+      "fingerprint": "f8372d55a7e172257b9d50c7e06426ac4f0cab8443c6fb66ec380abc7944afaf"
+    },
+    {
+      "path": "contracts/domain_language.py",
+      "name": "build_domain_language_delta",
+      "score": 23,
+      "fingerprint": "f40bc29514a4d7f375b9b259e923870ebaa8afb83777ffc50273e20a4d8859cc"
+    },
+    {
+      "path": "contracts/evidence_receipt_schemas.py",
+      "name": "validate_expected_evidence",
+      "score": 41,
+      "fingerprint": "c68726ea590916aa2b74e61f08bb736402b354bf9c385fcb401bfc6b3f2c864d"
+    },
+    {
+      "path": "contracts/evidence_receipt_schemas.py",
+      "name": "classify_evidence_candidate",
+      "score": 36,
+      "fingerprint": "0ffbd6494a5af272999f41c0efbd3288e0be486c990791aaf75d0bc7fef7d328"
+    },
+    {
+      "path": "contracts/external_check_schemas.py",
+      "name": "validate_external_check_result",
+      "score": 28,
+      "fingerprint": "c845a44f9fad1735fd2d59fe78cdddc734f4751f1fe8268414400b85f9903675"
+    },
+    {
+      "path": "contracts/external_job_schemas.py",
+      "name": "validate_external_job_status",
+      "score": 24,
+      "fingerprint": "8105f8af7d09924cb13fb7551a88932cde8c94a147d5a4b59117a4f3fd504e26"
+    },
+    {
+      "path": "contracts/external_job_schemas.py",
+      "name": "validate_external_job_result",
+      "score": 47,
+      "fingerprint": "98347b8192ba0143b92cd6de71f324b1de9e479ecb66f4224f8f7f1cc38610a6"
+    },
+    {
+      "path": "contracts/finding_check_schemas.py",
+      "name": "validate_finding_impact_scope",
+      "score": 29,
+      "fingerprint": "fe1ec523c3f3595ee01ec507c5c2dfae22a617ab38fa60fcac14734b533769e3"
+    },
+    {
+      "path": "contracts/finding_check_schemas.py",
+      "name": "validate_finding_check_binding",
+      "score": 23,
+      "fingerprint": "bd5c7611cd1e7877b4ab08538aaba1e2be0369015784f27ca9474ed831c2fc49"
+    },
+    {
+      "path": "contracts/immutable_input_schemas.py",
+      "name": "_validate_a5_state",
+      "score": 35,
+      "fingerprint": "383a6cb74f93c7e543335303867eb8a611100cb1bfdddef1a72cdd82d1b054a0"
+    },
+    {
+      "path": "contracts/implementation_audit_validation.py",
+      "name": "validate_final_audit_outcome_report",
+      "score": 29,
+      "fingerprint": "98b471855f063039293942a862e449877fc5719f936fee03d5876178280ece1c"
+    },
+    {
+      "path": "contracts/independent_evidence_schemas.py",
+      "name": "validate_independence_requirement",
+      "score": 28,
+      "fingerprint": "c2f54864b8c00be8a83cf208e93437727f2ad52481494768badf6495eed1f91a"
+    },
+    {
+      "path": "contracts/independent_evidence_schemas.py",
+      "name": "validate_independent_evidence",
+      "score": 35,
+      "fingerprint": "3b4ceff6d0296261b3d9c4d9706d14a7162026a29b9884b2d6a2a3f2a78def71"
+    },
+    {
+      "path": "contracts/lifecycle_control_schemas.py",
+      "name": "validate_adapter_action_evidence",
+      "score": 23,
+      "fingerprint": "67075a3bcd65668088fc51f35725197c76cbf866a2edfc2d2e9ea0820d17a60f"
+    },
+    {
+      "path": "contracts/lifecycle_control_validation.py",
+      "name": "validate_lifecycle_control_qualification_receipt",
+      "score": 27,
+      "fingerprint": "7f59d783636a276fbf0c9de9ab323aeb66b45e225602b985c63f5a3ed257616e"
+    },
+    {
+      "path": "contracts/local_launch_validation.py",
+      "name": "_validate_planning_only",
+      "score": 24,
+      "fingerprint": "437ddb52c54df3822a14f6baf423b77d741d16e235ef57829105383e5aa913e7"
+    },
+    {
+      "path": "contracts/ownership_paths.py",
+      "name": "_same_filesystem_name",
+      "score": 24,
+      "fingerprint": "6dad011f16ed7e9d7571425564552e3d7857e992a371a758308477b08f201322"
+    },
+    {
+      "path": "contracts/ownership_paths.py",
+      "name": "require_manifest_authority_paths",
+      "score": 25,
+      "fingerprint": "4525a89214e51ee9fcabfafcbf57d4f173c56233e8572bd6a3a321992e00bf09"
+    },
+    {
+      "path": "contracts/performance_limits.py",
+      "name": "validate_performance_policy",
+      "score": 28,
+      "fingerprint": "1e168670dafaf65a5c3693c1e36921829f5acd6b9384a3be6f631d34ecb3a7d9"
+    },
+    {
+      "path": "contracts/preparation_policy.py",
+      "name": "evaluate_preparation_policy",
+      "score": 60,
+      "fingerprint": "edf6ab39925bc1e0b6780269f20eeeea3a2a180df9fa6f58f9e90d92ec1b67ab"
+    },
+    {
+      "path": "contracts/release_accounting_schemas.py",
+      "name": "validate_command_resource_receipt",
+      "score": 28,
+      "fingerprint": "f37ca362f7bb32e5b48bc8fc4dbede1789a5d7c1c55f5c580ae05742fbead802"
+    },
+    {
+      "path": "contracts/release_accounting_schemas.py",
+      "name": "_span_values_valid",
+      "score": 26,
+      "fingerprint": "7162c529aaaef5d8d0bc60f4ee47e43f77e9240ce6e26690bd100780669f136d"
+    },
+    {
+      "path": "contracts/review_round_schemas.py",
+      "name": "build_review_round_participation",
+      "score": 26,
+      "fingerprint": "dc9631f1976952b80add8da9ff8a9a1859df9dafe4107c43b5ec3aa958c4c13a"
+    },
+    {
+      "path": "contracts/review_verdict.py",
+      "name": "validate_review_verdict",
+      "score": 30,
+      "fingerprint": "653d0565e91068a8c956769378265827a4cc2937c3b2ed804fe545b2efe023a2"
+    },
+    {
+      "path": "contracts/scoped_usage_schemas.py",
+      "name": "validate_source_conflict_grant_shape",
+      "score": 24,
+      "fingerprint": "804482fa38c0c23c88bf0c8d89265d32ffc71da4d63d3b51eadcad5f864fea22"
+    },
+    {
+      "path": "contracts/statistical_evidence_schemas.py",
+      "name": "_evaluate",
+      "score": 28,
+      "fingerprint": "6e049727e66fbd159d9e14bbcedf0c73b8a6394805ab3f0ecaed840b629e691d"
+    },
+    {
+      "path": "contracts/workflow_authority_schemas.py",
+      "name": "validate_authority_snapshot_shape",
+      "score": 23,
+      "fingerprint": "0ef2ecf86d51969a65749cac10e133aea42b1cefeabeb5e1bb3c7ecead7d9422"
+    },
+    {
+      "path": "contracts/workflow_continuation_schemas.py",
+      "name": "_validate_observation_times",
+      "score": 23,
+      "fingerprint": "99fc22999dc6e665a4d56b65a99bc268bf8d7fb3beeba2f9222537094471fe0b"
+    },
+    {
+      "path": "contracts/workflow_economics_schemas.py",
+      "name": "validate_cumulative_session_usage",
+      "score": 27,
+      "fingerprint": "9e42acfe542785e4596599dae37defd6840d65f2cbd54eb67919279b82701e64"
+    },
+    {
+      "path": "contracts/workflow_economics_schemas.py",
+      "name": "check_job_observation",
+      "score": 38,
+      "fingerprint": "cc675ed8f8c38371845b80f3b8cbfebe8338cc2ec63a90a749f243cf52472fd5"
+    },
+    {
+      "path": "contracts/workflow_state_schemas.py",
+      "name": "validate_transition_request",
+      "score": 23,
+      "fingerprint": "6531737b4a8cb70ede8f4d307b50fe32e9c4f554a6075abe632ae794970351b6"
+    },
+    {
+      "path": "contracts/workflow_state_schemas.py",
+      "name": "validate_closing_context",
+      "score": 27,
+      "fingerprint": "17cb2008fc0a1c3f8ac46beda8ebe1c55610929f9f7bb2d7342e679c24daa3f0"
+    },
+    {
+      "path": "contracts/workflow_state_schemas.py",
+      "name": "_validate_tasks",
+      "score": 24,
+      "fingerprint": "eae56072c6d0125f87c2e7f5fbcacc83120dbef9f60b18fd95e89a6be813157e"
+    },
+    {
+      "path": "freeze/package_integrity.py",
+      "name": "build_reviewed_plan_lock_v2",
+      "score": 27,
+      "fingerprint": "f36b18e9eadd7aa0a232a7a5e1a8e537922de857c7172530dcd42624d19ac4a5"
+    },
+    {
+      "path": "host_protocol/agent_plugin_qualification.py",
+      "name": "run_agent_plugin_qualification_probe",
+      "score": 24,
+      "fingerprint": "e4a62c5880fcc84bdc2358b54c9f07dbee5a6362c96eeb4cb4bbecd2509fec84"
+    },
+    {
+      "path": "host_protocol/context_events.py",
+      "name": "validate_context_checkpoint_event",
+      "score": 25,
+      "fingerprint": "151d45fc09a3739cd2d73088688a0d0845e22078c3434c3a76f4417863de3b0e"
+    },
+    {
+      "path": "host_protocol/event_capture.py",
+      "name": "validate_event_capture_receipt",
+      "score": 22,
+      "fingerprint": "4db9fbb363c6afc4e0dc4fccc9788bf85802d5c81c6d909b0c47d408bb911d19"
+    },
+    {
+      "path": "host_protocol/event_capture.py",
+      "name": "validate_observed_action_trace",
+      "score": 28,
+      "fingerprint": "f2f0f69f829fedbe8ebcb84bab966ae62d87cc1f6b0cffe483aed5fa7f1de398"
+    },
+    {
+      "path": "host_protocol/events.py",
+      "name": "_validate_event_payloads",
+      "score": 24,
+      "fingerprint": "663862455a18838e28a7f5bcd7ede0d57c35561a838cdfed7d92e4a1ead08013"
+    },
+    {
+      "path": "host_protocol/external_jobs.py",
+      "name": "validate_external_job_transition",
+      "score": 21,
+      "fingerprint": "0547a69dd8f11bcbf5c712eb0c19fb3926fe2aa12b678ddbe7f459827c764482"
+    },
+    {
+      "path": "host_protocol/external_jobs.py",
+      "name": "_check_terminal_children",
+      "score": 21,
+      "fingerprint": "b1dc5d629429779338dace127fb7f5d03f5e8d3f76f2adcd689ddae0ad9d51ee"
+    },
+    {
+      "path": "host_protocol/inspection_profile.py",
+      "name": "validate_inspection_profile",
+      "score": 22,
+      "fingerprint": "5661891bd56dd0390321d57d9d961559aa2ef8a875af618cbc1fe3c15b1fd427"
+    },
+    {
+      "path": "host_protocol/lifecycle_control_qualification.py",
+      "name": "_matrix_blockers",
+      "score": 28,
+      "fingerprint": "2551a44312ad543c95ba080cb18aad77050a71bd386230cc6229b420e72e22ab"
+    },
+    {
+      "path": "host_protocol/lifecycle_gate.py",
+      "name": "evaluate_pre_action_gate",
+      "score": 24,
+      "fingerprint": "90379932e90f8b5f88e666d1f70ced148f40dd76a81a1a60032aae80f8447850"
+    },
+    {
+      "path": "host_protocol/lifecycle_gate.py",
+      "name": "evaluate_stop_gate",
+      "score": 26,
+      "fingerprint": "e020a1926daa82f940db019f15e571522045ac7740a4d1d475aefb6ca651a62b"
+    },
+    {
+      "path": "host_protocol/lifecycle_gate.py",
+      "name": "_pre_action_invariants",
+      "score": 28,
+      "fingerprint": "e85eeb0d092c09b834caf737e9819ef568a8d4698f7f9d91d3c0112636bda63c"
+    },
+    {
+      "path": "host_protocol/lifecycle_gate.py",
+      "name": "_build_request",
+      "score": 24,
+      "fingerprint": "e77ad95b8d39279466cdd8429d05559f514f37b1b33bce802775bd690be5272d"
+    },
+    {
+      "path": "host_protocol/lifecycle_gate.py",
+      "name": "_ownership_summary",
+      "score": 37,
+      "fingerprint": "5729a12f88b48bc603c9c72564cd147dff9eccbdc0bd38ebf0c4e21d7db3ad10"
+    },
+    {
+      "path": "host_protocol/structured_results.py",
+      "name": "validate_structured_result_output",
+      "score": 25,
+      "fingerprint": "02c0088f7cc0f43423422d5967a46168ff9dc355d4004b01ca39e5cf5feeb091"
+    },
+    {
+      "path": "host_protocol/usage_normalizers.py",
+      "name": "validate_usage_normalization_profile",
+      "score": 25,
+      "fingerprint": "c234fca3f646f436b84ec709b9c2e81fc07e655164433d50770af7a1e2c70bac"
+    },
+    {
+      "path": "host_protocol/validation.py",
+      "name": "_validate_descriptor_shape",
+      "score": 25,
+      "fingerprint": "969c1d57f6aa0527e7f85de5ccdda14ffed065ca504af5d63b25b2a4f4597bc8"
+    },
+    {
+      "path": "host_protocol/validation.py",
+      "name": "_validate_managed_launch_profile",
+      "score": 26,
+      "fingerprint": "0b0de80d9d71537d350f2a220574b2615cb37cbf020f382f2956471c8d042c95"
+    },
+    {
+      "path": "host_protocol/validation.py",
+      "name": "_validate_installation_facts",
+      "score": 40,
+      "fingerprint": "47bac4a225ef51a256151ecfc497aa79d4db068f3a12bda66494b9c6d6188e58"
+    },
+    {
+      "path": "imports/planning.py",
+      "name": "validate_import_result",
+      "score": 23,
+      "fingerprint": "04bec9cb5d32fa1a309e76470b8584c1c5a90385943da554d44213e783cc4b3b"
+    },
+    {
+      "path": "metrics/audit_efficiency.py",
+      "name": "validate_audit_efficiency_report",
+      "score": 24,
+      "fingerprint": "5f3a5ec26f924842276f24908a695704c1463b2b33e9bd039c3b67ddb873d8d7"
+    },
+    {
+      "path": "metrics/audit_optimization.py",
+      "name": "evaluate_candidate_profiles",
+      "score": 42,
+      "fingerprint": "86a3613ad98f9e358c735bfc6ff8b2b99d14bbf3bec3213041a4722a89ec6ff0"
+    },
+    {
+      "path": "metrics/goal_progress.py",
+      "name": "_derive",
+      "score": 27,
+      "fingerprint": "705e6655ec2d27710b9abca1319d02ff99929345a5c68fea39cbc82f46ae01c0"
+    },
+    {
+      "path": "metrics/phase_resources.py",
+      "name": "validate_phase_resource_measurement",
+      "score": 27,
+      "fingerprint": "546a43a5c6cfb52ddb24784bcb826b52b13c605d7d09bab3bca638ea0ad09428"
+    },
+    {
+      "path": "metrics/phase_resources.py",
+      "name": "_validate_phase_entry",
+      "score": 39,
+      "fingerprint": "784d72fa6a58d68c33aa30a98608a57b189f4a68d5def0a9f86ac40e5ba85ee6"
+    },
+    {
+      "path": "metrics/regression_signals.py",
+      "name": "validate_workflow_economics_comparison_view",
+      "score": 23,
+      "fingerprint": "54d0439207728086408f4d6e7e2299acb945165d5f65eebb70dc252926319a48"
+    },
+    {
+      "path": "metrics/release_accounting.py",
+      "name": "validate_release_accounting",
+      "score": 37,
+      "fingerprint": "8ff2faa642d639316f870cfc874815ac740f3a5a3d57305c8524bda4d25fe82d"
+    },
+    {
+      "path": "metrics/release_accounting.py",
+      "name": "_validate_provenance_report",
+      "score": 29,
+      "fingerprint": "e9925acca535dc4ed91d470d5f651b2a4a744436325b0f7161446e062a1cda8a"
+    },
+    {
+      "path": "metrics/workflow_economics.py",
+      "name": "build_token_attribution",
+      "score": 22,
+      "fingerprint": "272d84d446af642f65279530bec607347c4e74892e48ffcea9575e74234def59"
+    },
+    {
+      "path": "migration/legacy_runner.py",
+      "name": "_validate_legacy_payload",
+      "score": 21,
+      "fingerprint": "14813c9fb2e3b1ba99ea3f32f8597cbd866343ed50a3a0d2cafa4500b432166e"
+    },
+    {
+      "path": "model_routing/receipts.py",
+      "name": "_validate_sidecar_binding",
+      "score": 25,
+      "fingerprint": "c619f1394dc2bea6f57dcbf4b7b43cf0addea1ce6e33cc5a840f8fe4f6919dbe"
+    },
+    {
+      "path": "model_routing/resolver.py",
+      "name": "_validate_request",
+      "score": 24,
+      "fingerprint": "46cea95d13e073709f7c3734fc914f67966442130455775ca52ae2774b158b09"
+    },
+    {
+      "path": "model_routing/resolver.py",
+      "name": "_apply_failure_escalation",
+      "score": 23,
+      "fingerprint": "9aa1507d91d6ee3f83244c639a61c02f20065bfce940ffb989019bdaf5ac1afb"
+    },
+    {
+      "path": "neutrality/receipt.py",
+      "name": "verify_existing_receipt",
+      "score": 35,
+      "fingerprint": "e64a51e667d1335e5dd5646e51aae2321db21c1f396e845a54f97d8fe4432c68"
+    },
+    {
+      "path": "neutrality/scanner.py",
+      "name": "scan_repository",
+      "score": 25,
+      "fingerprint": "7c20fe0afe63444cdc43b22d7f26815e506e3b02a3f47789bc33b151f495e218"
+    },
+    {
+      "path": "planning/completeness.py",
+      "name": "_check_path_authority",
+      "score": 29,
+      "fingerprint": "c40d0ffb651ff33c5b42158cf8e0b7a6b86caad2a75e1745b5a29fc5308ef1ec"
+    },
+    {
+      "path": "planning/deltas.py",
+      "name": "build_plan_delta",
+      "score": 34,
+      "fingerprint": "4bb43ab0ef63891ff2729eb07a2165116224e8e08e1ecdc4199594c8971bf517"
+    },
+    {
+      "path": "planning/deltas.py",
+      "name": "validate_plan_delta",
+      "score": 22,
+      "fingerprint": "498f19dbf10586ad7459ece42ffd146efd1221a9f9857f2267a00071f594342c"
+    },
+    {
+      "path": "planning/manifest_contract.py",
+      "name": "_validate_nested",
+      "score": 21,
+      "fingerprint": "37b59469509e1b1b8f80d3a392c5fccfdb07492627fbad0f613a9d6adfb54064"
+    },
+    {
+      "path": "planning/task_compatibility.py",
+      "name": "validate_task_plan_compatibility_receipt",
+      "score": 25,
+      "fingerprint": "1d0221cc7b832edf15374b6b7630f56ba0716c813afdd56376662146c39d8c47"
+    },
+    {
+      "path": "planning/templates.py",
+      "name": "validate_task_template_library",
+      "score": 23,
+      "fingerprint": "84e8183949cc406ce3688bf2567bf24147fd3174fa81da6c3c577342ca7a2fb2"
+    },
+    {
+      "path": "planning/traceability.py",
+      "name": "validate_finding_check_traceability",
+      "score": 34,
+      "fingerprint": "876dafff60980c93bb06b808b8d12f8635d80c36eb31b7cca0f3caf72a291680"
+    },
+    {
+      "path": "policy/adaptive_lifecycle.py",
+      "name": "validate_adaptive_lifecycle_decision",
+      "score": 39,
+      "fingerprint": "3869762895a9173ee926e9977d84158dfd45b6a99fbeae0b34b784c35cf47183"
+    },
+    {
+      "path": "policy/adaptive_lifecycle.py",
+      "name": "_recommended_mode",
+      "score": 22,
+      "fingerprint": "4aa0e84299ff6837e831b62d892790a865531e935ab80e821ef4b0af6c83d166"
+    },
+    {
+      "path": "policy/execution_strategy.py",
+      "name": "validate_execution_strategy",
+      "score": 22,
+      "fingerprint": "d9315369a55b9f98f17432503fc3eaa1115f237e46330e3c080041414641824d"
+    },
+    {
+      "path": "policy/execution_strategy.py",
+      "name": "_automatic_adoption_blockers",
+      "score": 26,
+      "fingerprint": "50ba85ae1f7057a65034144eb154fd6e8b98411e0902fe66d0d94985387adc2c"
+    },
+    {
+      "path": "policy/runtime_receipts.py",
+      "name": "validate_runtime_policy_receipt",
+      "score": 37,
+      "fingerprint": "85004b02391cbb896df802f6259349072c2b0818b784b86e982896bdb7b67a4b"
+    },
+    {
+      "path": "policy/thread_bridge.py",
+      "name": "validate_thread_bridge_policy",
+      "score": 26,
+      "fingerprint": "ae6466a9bddce47a2aa363a6f7f2c11959b22e159c9d92a3b87c71568b090431"
+    },
+    {
+      "path": "project/merge.py",
+      "name": "_build_field_provenance",
+      "score": 29,
+      "fingerprint": "9bfa0a562fd203a48af5767d45e1cae0b5bf7437e23decc0a4f239eee8868bc7"
+    },
+    {
+      "path": "project/presets.py",
+      "name": "validate_project_preset",
+      "score": 31,
+      "fingerprint": "69252a053d19c3d486e9aecfc2c9bd26ef72da3bdc9c7a3087f763a5895d1e37"
+    },
+    {
+      "path": "project/principles.py",
+      "name": "validate_project_principles",
+      "score": 32,
+      "fingerprint": "91efce8eece5910b2c92464326065a6564fb2cd0810d5c8d9f9551dc241452e2"
+    },
+    {
+      "path": "quality/bug_forensics.py",
+      "name": "validate_hypothesis_ledger",
+      "score": 22,
+      "fingerprint": "f4efffe2a12d6b4f004bc03fd38b461e978d27715455866df0fa095613d52014"
+    },
+    {
+      "path": "quality/bug_forensics_recipes.py",
+      "name": "validate_bug_forensics_recipe_library",
+      "score": 26,
+      "fingerprint": "5576a8b43732bf28a830e805164ebaffc171c07e1494c47271ca22419399e6f1"
+    },
+    {
+      "path": "quality/cross_check.py",
+      "name": "validate_cross_check_receipt",
+      "score": 43,
+      "fingerprint": "efc63782912e5b21e4cb2e72acac3ae1b11690465021d482728877e90511ddb7"
+    },
+    {
+      "path": "quality/dependency_impact.py",
+      "name": "validate_module_dependency_report",
+      "score": 24,
+      "fingerprint": "9d64e33e45b9747a017021d740479254f34a7b2280a43471d8154416de678759"
+    },
+    {
+      "path": "quality/dependency_impact.py",
+      "name": "_dynamic_imports",
+      "score": 48,
+      "fingerprint": "9a4ece649efdc20494b26e0311d16896543b0015ca3ddb8b10a12e1f17630a62"
+    },
+    {
+      "path": "quality/dependency_impact.py",
+      "name": "_registry_bindings",
+      "score": 31,
+      "fingerprint": "7cc568cde176329cd0232d11b1d9e16f89578ec983d4f9b4d79261137e479994"
+    },
+    {
+      "path": "quality/dependency_impact.py",
+      "name": "_literal_assignment",
+      "score": 25,
+      "fingerprint": "154dfa7cdfd6fbca5b56eb043477909667d0603e2a713b1e1e20b0d3d445f681"
+    },
+    {
+      "path": "quality/dependency_impact.py",
+      "name": "_string_values",
+      "score": 30,
+      "fingerprint": "ca5552f89fe16f388006282cb6bbed512562073b031dce2a1b90730b1be7227b"
+    },
+    {
+      "path": "quality/failure_classification.py",
+      "name": "validate_failure_classification_receipt",
+      "score": 28,
+      "fingerprint": "6f83a65d7c48d8b6466f37b035406766314abe111225de2921b7b3f056bf0625"
+    },
+    {
+      "path": "quality/security_analysis.py",
+      "name": "validate_security_analysis_profile",
+      "score": 25,
+      "fingerprint": "7d328ea9dce66648137571d7d38feb19a02f322419a5e2bc1b1b33aefc4bd940"
+    },
+    {
+      "path": "quality/security_analysis.py",
+      "name": "validate_security_finding",
+      "score": 23,
+      "fingerprint": "aa90fd27cabb9fd2e4bf3224b9df3f706046ca62bc76478a375dfeeab974667a"
+    },
+    {
+      "path": "quality/security_analysis.py",
+      "name": "validate_security_execution_gate_receipt",
+      "score": 36,
+      "fingerprint": "f0cbc6a0219017e1e6b68353bdbcf407c9f1c7b5428280c23c8581ddbe8158ea"
+    },
+    {
+      "path": "quality/security_analysis.py",
+      "name": "validate_security_verification_assignment",
+      "score": 32,
+      "fingerprint": "d9cfa465876e2891d9c0537d8d3eafb03e2cdc003d46158ffdd45f97241109bb"
+    },
+    {
+      "path": "quality/security_analysis.py",
+      "name": "validate_security_analysis_audit",
+      "score": 38,
+      "fingerprint": "a51cb2006400ccd06163bd2e016009b033178af6c82993e536d08b6079918b4f"
+    },
+    {
+      "path": "quality/validation_ladder.py",
+      "name": "build_validation_selection",
+      "score": 29,
+      "fingerprint": "cce32c8e75da987ab6636b6c5bc889f59be04f3b1ea31691e2e5a5611b22b1c3"
+    },
+    {
+      "path": "research/provenance.py",
+      "name": "analyze_provenance",
+      "score": 25,
+      "fingerprint": "2dc3d2a066d679bf04e7bb4ad4bf8b7e2d99409a2d0e05c9899922b875963a5e"
+    },
+    {
+      "path": "research/validation.py",
+      "name": "_validate_citation",
+      "score": 32,
+      "fingerprint": "153b48cbcb62389fa1ceb769dad8e9a500e96979f1a2f43e8e5c458baf9eca25"
+    },
+    {
+      "path": "review/provenance.py",
+      "name": "_context",
+      "score": 23,
+      "fingerprint": "c9778c79efa7a864616fceb9ca5e6b4df610e298cc7beb4590e0732def586292"
+    },
+    {
+      "path": "review/validation.py",
+      "name": "make_review_subject",
+      "score": 27,
+      "fingerprint": "51b9270056e3d7c758618842260f0e78797fdb6ec548f4d22938b3751427e6b3"
+    },
+    {
+      "path": "review/validation.py",
+      "name": "validate_bound_plan_review",
+      "score": 21,
+      "fingerprint": "cc69e60f9c2c8c9fcf963e672e882c621d4c367d98785c15edc0b3c330aad534"
+    },
+    {
+      "path": "review/validation.py",
+      "name": "_validate_review_seat",
+      "score": 23,
+      "fingerprint": "4d1b573251c5d0f9c1784e944eb85f4208a13b651da47b033031b53b18884b67"
+    },
+    {
+      "path": "review_mesh/contracts.py",
+      "name": "validate_review_mesh_profile",
+      "score": 23,
+      "fingerprint": "a23fcb87cff83275e4653f454f7387e74d12f635b042871b2eeb7b8c92620775"
+    },
+    {
+      "path": "review_mesh/contracts.py",
+      "name": "validate_review_mesh_result",
+      "score": 43,
+      "fingerprint": "d53d884c31ac794df1cbbaa059fcd4c94630729b31ff77b123de27ac81712ae3"
+    },
+    {
+      "path": "review_mesh/contracts.py",
+      "name": "validate_review_mesh_quorum_receipt",
+      "score": 28,
+      "fingerprint": "f122a70949c044f05c0ab196731e892879f85b6eaf7b23038601e29513d7f216"
+    },
+    {
+      "path": "review_mesh/operator_templates.py",
+      "name": "validate_review_mesh_operator_template",
+      "score": 22,
+      "fingerprint": "e84a8be774161c84e101d7a47ba552fc8cb95f4052baff712ddbe9a42aca18c4"
+    },
+    {
+      "path": "review_mesh/operator_templates.py",
+      "name": "_prepare_review_handoff",
+      "score": 22,
+      "fingerprint": "72533e4361ea3b88356ba1844ce0f52933221f6800bbdf33e0a4cc0be9a32bc1"
+    },
+    {
+      "path": "review_mesh/preflight.py",
+      "name": "reviewer_preflight",
+      "score": 32,
+      "fingerprint": "256668d16ee8204754e7369a8e5ffb806bb59886cb25cc47d17c6ab3612863b5"
+    },
+    {
+      "path": "review_mesh/results.py",
+      "name": "_validate_import_bindings",
+      "score": 24,
+      "fingerprint": "05af866fb818ed381d54ff5facb38ee3f98c6cddef8f337ac58679af32b5b46d"
+    },
+    {
+      "path": "review_mesh/synthesis.py",
+      "name": "synthesize_review_mesh_results",
+      "score": 26,
+      "fingerprint": "70f67ac2de11932986df0e1da6afbf0e7492bf953924c9bd44a6b58165b5347d"
+    },
+    {
+      "path": "review_mesh/synthesis.py",
+      "name": "evaluate_review_round",
+      "score": 30,
+      "fingerprint": "7bbc9fc9a3b22b20a81711cd1c0abb675fba7ef0fd5e53d014b8bc6385142ce7"
+    },
+    {
+      "path": "workflow/artifacts.py",
+      "name": "validate_structured_result_artifact",
+      "score": 21,
+      "fingerprint": "328ea35ab67f1e34c9823643385df37b99c0cbfea9f805cbe7313daa378a6cf8"
+    },
+    {
+      "path": "workflow/artifacts.py",
+      "name": "validate_attempt_history",
+      "score": 28,
+      "fingerprint": "41d3c353c6e3f466fed56cf6caec6c62e6f37644dbfbedf6bebd578fafcea1a5"
+    },
+    {
+      "path": "workflow/audit_evidence.py",
+      "name": "validate_task_evidence_paths",
+      "score": 31,
+      "fingerprint": "48aae74b7dffab2bd7a92f807992c9e3ddef24b074d6fcf59e3de41e5055b50b"
+    },
+    {
+      "path": "workflow/audit_evidence.py",
+      "name": "_validate_evidence_references",
+      "score": 37,
+      "fingerprint": "b2940791d249c5394795cf2234cb5ad623b7bfbdf113dcb9d758571e5edaf705"
+    },
+    {
+      "path": "workflow/bug_forensics_gates.py",
+      "name": "validate_bug_forensics_gate_receipt",
+      "score": 24,
+      "fingerprint": "69a6a2ce2262822c10b71c2644fab92ae910fef57628076e778e7bd43ee4d976"
+    },
+    {
+      "path": "workflow/bug_forensics_gates.py",
+      "name": "_collect_active_gate_blockers",
+      "score": 23,
+      "fingerprint": "dca959f98a38d29f1e7e14b07791be7c1fff5f4f099dc8c29d43c8e677bbd748"
+    },
+    {
+      "path": "workflow/checkpoint_gate.py",
+      "name": "normalize_context_checkpoint_policy",
+      "score": 22,
+      "fingerprint": "6acb10bde81f98156a67c80c59309dbc59c7038b77ac9c5ca1ee087e4e87f495"
+    },
+    {
+      "path": "workflow/closing_window.py",
+      "name": "_validate_resource_scopes",
+      "score": 21,
+      "fingerprint": "310145588a9dae0580682ed2d40dfec2910a1ca426a79ae5fc71cfc355988b55"
+    },
+    {
+      "path": "workflow/closing_window.py",
+      "name": "evaluate_closing_resources",
+      "score": 30,
+      "fingerprint": "9bf7a461d64a9a714ddb2e0097efecb6a21278b0e9c452cedc98c801572d3153"
+    },
+    {
+      "path": "workflow/closing_window.py",
+      "name": "assess_retained_evidence",
+      "score": 24,
+      "fingerprint": "5f67414dab754b6ebbd34951692b97982720ff506a044d35219b3328344c3206"
+    },
+    {
+      "path": "workflow/continuation.py",
+      "name": "_required_inputs",
+      "score": 22,
+      "fingerprint": "32eebf35148331f6a379e00db0eb809c24b0892a4ffc24cae095666c75181a87"
+    },
+    {
+      "path": "workflow/deadline_guards.py",
+      "name": "evaluate_deadline_guards",
+      "score": 29,
+      "fingerprint": "6cd1cdffa641d61af6ce660ef749e89c24881b6d915026bd6533f8f0d313e5ef"
+    },
+    {
+      "path": "workflow/finalization.py",
+      "name": "_apply_final_audit_rework",
+      "score": 22,
+      "fingerprint": "e8f3f10bac6d0d1cf5b540d3f888b2fc6e1aa59f4b4f49eb6e776c5d7f8a8b2e"
+    },
+    {
+      "path": "workflow/immutable_input.py",
+      "name": "evaluate_task_admission",
+      "score": 21,
+      "fingerprint": "67b7e260707834846c15ea1b966feaae03f893df14e5abb55b6887726c43a8a7"
+    },
+    {
+      "path": "workflow/immutable_input.py",
+      "name": "require_task_consumer_admission",
+      "score": 26,
+      "fingerprint": "a3a6c37a02603d95227eb5b4ae2fa396b60fbaf43114190fd5979fc071901150"
+    },
+    {
+      "path": "workflow/immutable_input.py",
+      "name": "original_legacy_plan_from_history",
+      "score": 24,
+      "fingerprint": "cbee4524d89be27ce30dc03565f9cca8a8d0af7abd9ae032a338e72eb514cf9b"
+    },
+    {
+      "path": "workflow/immutable_input.py",
+      "name": "original_admission_from_events",
+      "score": 35,
+      "fingerprint": "d9837482c5951b83b2f9b1c0c0d50e2eb345c8237d0ec04ad6fa676558e150bc"
+    },
+    {
+      "path": "workflow/immutable_input.py",
+      "name": "adoption_binding",
+      "score": 34,
+      "fingerprint": "0bba5f3f972cdb0e29da91292d732cbb46dd5f14ab69d5278c67879d64f9464f"
+    },
+    {
+      "path": "workflow/implementation_audit_gate.py",
+      "name": "validate_final_task_evidence_reports",
+      "score": 58,
+      "fingerprint": "3577919e52d3384f0bc8bec22f8fafb78ffe8d8c15a7ef322110332c4fbc47c8"
+    },
+    {
+      "path": "workflow/implementation_audit_gate.py",
+      "name": "_validate_security_verification_artifact",
+      "score": 22,
+      "fingerprint": "34b707e671ad5625e43f63d3925535ff6c867f14c1e379168c57d29b3a4b9fef"
+    },
+    {
+      "path": "workflow/implementation_audit_gate.py",
+      "name": "_security_assignment_payload",
+      "score": 29,
+      "fingerprint": "7c3aa366b6a6edffff083876ec1ae69da85db82a3a2f90f071962021b08d14dd"
+    },
+    {
+      "path": "workflow/initialization.py",
+      "name": "_prepare_initialization_inputs",
+      "score": 26,
+      "fingerprint": "e4a345ef5bb28f0b64c9d2cc5817d77821ee19d01fa7771122512d357c737467"
+    },
+    {
+      "path": "workflow/leases.py",
+      "name": "validate_worker_lease_receipt",
+      "score": 34,
+      "fingerprint": "43c88a5b157219e43bc27c98e39d71d58bb52b139a37985015fb18625dfc91e7"
+    },
+    {
+      "path": "workflow/plan_adoption.py",
+      "name": "adopt_plan",
+      "score": 21,
+      "fingerprint": "a4501f2e8119a565e7f97df2647dd364e084464cee8b1f37848cb4c37bb3ef7c"
+    },
+    {
+      "path": "workflow/plan_adoption.py",
+      "name": "_reconcile_previous_a5_authority",
+      "score": 30,
+      "fingerprint": "bda7195577ed9e33c64bbc0d3e254faa12b698566b7346fd7203f9d2e5723d10"
+    },
+    {
+      "path": "workflow/query.py",
+      "name": "_next_action",
+      "score": 34,
+      "fingerprint": "385fedaa20382d31933091ac0c045ab425994cab1efef953ea2d2465eedd554b"
+    },
+    {
+      "path": "workflow/review_mesh_gate.py",
+      "name": "validate_review_mesh_quorum_gate",
+      "score": 32,
+      "fingerprint": "38f4703a8e9d7c3a482efad36d33d8fa8099405f8c2836881780d7cee78ff20a"
+    },
+    {
+      "path": "workflow/reviews.py",
+      "name": "validate_task_result",
+      "score": 21,
+      "fingerprint": "49034a20cd102d498b5197f345134d48070107f7fdc67643d23d0e6db055264f"
+    },
+    {
+      "path": "workflow/reviews.py",
+      "name": "_authorized_item_exclusions",
+      "score": 22,
+      "fingerprint": "054eef758aef7bd37b1ec73ebf3fad45b594589c74d031ea1a246321ce583bc7"
+    },
+    {
+      "path": "workflow/risk_execution_gate.py",
+      "name": "validate_task_risk_profile",
+      "score": 46,
+      "fingerprint": "bae2b1d0c8b0e84d420327be6c41baa7cace30e81930fbfc324b0a3cec47bfc7"
+    },
+    {
+      "path": "workflow/risk_execution_gate.py",
+      "name": "validate_attempt_risk_usage",
+      "score": 26,
+      "fingerprint": "636a4cda3896266f86fc760436ea061d459a22363ead6c44d836aeb807d769df"
+    },
+    {
+      "path": "workflow/task_transitions.py",
+      "name": "_validate_task_write_scope",
+      "score": 56,
+      "fingerprint": "62fd5a8857305e6684349ad9c1eff2a25af86570deb85a9455062370b2befd3b"
+    }
+  ],
+  "branchBaselineDigest": "730afa70d5980b6107ec1cd2f605e59b12d334bcd1eb1cda9f2ea17e4a9190c1",
+  "branchExceptions": []
+}
