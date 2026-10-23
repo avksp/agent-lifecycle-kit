@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 
@@ -11,7 +12,8 @@ Oracle = Callable[[dict[str, Any], list[dict[str, Any]]], None]
 
 def evaluate_oracle(oracle: dict[str, Any], submission: dict[str, Any]) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
-    evidence = submission.get("evidence") if isinstance(submission.get("evidence"), dict) else {}
+    raw_evidence = submission.get("evidence")
+    evidence = raw_evidence if isinstance(raw_evidence, dict) else {}
     observed_schemas = _schema_versions(evidence)
     for schema in oracle["requiredEvidenceSchemas"]:
         _record(checks, code="required-evidence-schema", passed=schema in observed_schemas, evidence_schema=schema)
@@ -23,7 +25,7 @@ def evaluate_oracle(oracle: dict[str, Any], submission: dict[str, Any]) -> dict[
         "s2-evidence-task": _s2_evidence_task,
     }
     oracle_type = oracle.get("oracleType")
-    handler = handlers.get(oracle_type)
+    handler = handlers.get(oracle_type) if oracle_type is not None else None
     if handler is None:
         raise LifecycleError("reference-oracle-type", "reference task oracle type is unsupported")
     handler(evidence, checks)
@@ -42,7 +44,11 @@ def _planning(evidence: dict[str, Any], checks: list[dict[str, Any]]) -> None:
     plan = _object(evidence, "planValidation")
     completeness = _object(evidence, "completenessValidation")
     acceptance = _object(evidence, "acceptanceValidation")
-    _record(checks, code="plan-frozen", passed=plan.get("schemaVersion") == "agent-plan-validation.v1" and plan.get("status") == "FROZEN")
+    _record(
+        checks,
+        code="plan-frozen",
+        passed=plan.get("schemaVersion") == "agent-plan-validation.v1" and plan.get("status") == "FROZEN",
+    )
     _record(
         checks,
         code="plan-completeness-pass",

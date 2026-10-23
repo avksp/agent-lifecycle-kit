@@ -38,8 +38,8 @@ def dispatch_research(args: argparse.Namespace) -> dict[str, Any]:
     return payload
 
 
-def _load_snapshots(values: list[str]) -> dict[str, bytes]:
-    snapshots: dict[str, bytes] = {}
+def _load_snapshots(values: list[str]) -> dict[str, str | bytes]:
+    snapshots: dict[str, str | bytes] = {}
     for value in values:
         if "=" not in value:
             raise LifecycleError("research-snapshot-binding-invalid", "snapshot must use SOURCE_ID=PATH")

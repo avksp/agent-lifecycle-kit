@@ -39,9 +39,15 @@ def validate_workflow_progress_hook_request(args: argparse.Namespace, *, command
     if mode == "off":
         return
     if command not in HOOK_COMMANDS:
-        raise LifecycleError("progress-hook-command-unsupported", "workflow command does not support progress hooks", {"command": command})
+        raise LifecycleError(
+            "progress-hook-command-unsupported",
+            "workflow command does not support progress hooks",
+            {"command": command},
+        )
     if mode == "receipt" and not getattr(args, "progress_receipt", None):
-        raise LifecycleError("progress-hook-receipt-path-missing", "--progress-hook receipt requires --progress-receipt")
+        raise LifecycleError(
+            "progress-hook-receipt-path-missing", "--progress-hook receipt requires --progress-receipt"
+        )
 
 
 def maybe_emit_workflow_progress_hook(
@@ -55,7 +61,6 @@ def maybe_emit_workflow_progress_hook(
     mode = _resolve_hook_mode(args)
     if mode == "off":
         return None
-    receipt_path = Path(args.progress_receipt) if getattr(args, "progress_receipt", None) else None
     proof = _managed_workflow_proof(args, command)
     receipt = build_progress_hook_receipt(
         adapter_id=args.progress_adapter,
@@ -69,7 +74,7 @@ def maybe_emit_workflow_progress_hook(
         change_summary_path=Path(args.progress_change_summary) if args.progress_change_summary else None,
     )
     if mode == "receipt":
-        write_progress_hook_receipt(receipt_path, receipt)
+        write_progress_hook_receipt(Path(args.progress_receipt), receipt)
     else:
         sys.stderr.write(receipt["terminalText"].rstrip("\n") + "\n")
     return receipt
