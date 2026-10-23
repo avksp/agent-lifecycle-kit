@@ -34,7 +34,8 @@ def finding_identity_fields(finding: dict[str, Any], *, namespace: str = "defaul
 
     if not isinstance(finding, dict):
         raise LifecycleError("invalid-proof-finding", "finding must be an object")
-    location = finding.get("location") if isinstance(finding.get("location"), dict) else {}
+    raw_location = finding.get("location")
+    location = raw_location if isinstance(raw_location, dict) else {}
     raw_path = (
         finding.get("path")
         or finding.get("file")
@@ -181,7 +182,9 @@ def build_fix_impact_receipt(
     _digest_list(root_cause_digests, label="rootCauseDigests", code="invalid-fix-impact-receipt")
     _object_list(behavior_changes, label="behaviorChanges", code="invalid-fix-impact-receipt", allow_empty=False)
     _object_list(preserved_behaviors, label="preservedBehaviors", code="invalid-fix-impact-receipt", allow_empty=False)
-    _string_list(validation_evidence_ids, label="validationEvidenceIds", code="invalid-fix-impact-receipt", allow_empty=False)
+    _string_list(
+        validation_evidence_ids, label="validationEvidenceIds", code="invalid-fix-impact-receipt", allow_empty=False
+    )
     if not isinstance(collateral_damage, dict):
         raise LifecycleError("invalid-fix-impact-receipt", "collateralDamage must be an object")
     _verifier(verifier, code="invalid-fix-impact-receipt")
@@ -216,7 +219,9 @@ def validate_fix_impact_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
     _check_digest_list(receipt.get("rootCauseDigests"), "fix-impact-root-cause-digests", blockers)
     _check_object_list(receipt.get("behaviorChanges"), "fix-impact-behavior-changes", blockers, allow_empty=False)
     _check_object_list(receipt.get("preservedBehaviors"), "fix-impact-preserved-behaviors", blockers, allow_empty=False)
-    _check_string_list(receipt.get("validationEvidenceIds"), "fix-impact-validation-evidence", blockers, allow_empty=False)
+    _check_string_list(
+        receipt.get("validationEvidenceIds"), "fix-impact-validation-evidence", blockers, allow_empty=False
+    )
     collateral = receipt.get("collateralDamage")
     if not isinstance(collateral, dict):
         blockers.append({"code": "fix-impact-collateral-damage-invalid"})
@@ -251,9 +256,11 @@ def build_receipt_hash_chain(
             "operationId": _optional_text(item.get("operationId")),
             "evidenceIds": _optional_string_list(item.get("evidenceIds")),
         }
-        entry = {**entry_body, "entryHash": canonical_digest(entry_body)}
+        entry_hash = canonical_digest(entry_body)
+        entry = {**entry_body, "entryHash": entry_hash}
         chain_entries.append(entry)
-        previous = entry["entryHash"]
+        previous = entry_hash
+    blockers: list[dict[str, str]] = []
     body = {
         "schemaVersion": HASH_CHAIN_SCHEMA,
         "status": "PASS",
@@ -261,12 +268,12 @@ def build_receipt_hash_chain(
         "appendOnly": True,
         "lineage": dict(lineage or {}),
         "entries": chain_entries,
-        "blockers": [],
+        "blockers": blockers,
         "productionPromotionClaimed": False,
     }
     if not chain_entries:
         body["status"] = "FAIL"
-        body["blockers"].append({"code": "receipt-hash-chain-empty"})
+        blockers.append({"code": "receipt-hash-chain-empty"})
     return {**body, "chainDigest": canonical_digest(body)}
 
 
@@ -349,7 +356,11 @@ def validate_hash_chain_migration_policy(
     if policy.get("legacyReceiptPolicy") != "explicit-exemption-or-backfill":
         blockers.append({"code": "hash-chain-policy-legacy-invalid"})
     exemptions = policy.get("allowedLegacyExemptions")
-    if not isinstance(exemptions, list) or not exemptions or not all(isinstance(item, str) and item for item in exemptions):
+    if (
+        not isinstance(exemptions, list)
+        or not exemptions
+        or not all(isinstance(item, str) and item for item in exemptions)
+    ):
         blockers.append({"code": "hash-chain-policy-exemptions-invalid"})
         exemptions = []
     if not isinstance(policy.get("backfillBehavior"), str) or not policy["backfillBehavior"]:
@@ -473,7 +484,9 @@ def validate_proof_integrity_receipt(
 
 def require_proof_integrity_pass(validation: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS":
-        raise LifecycleError("proof-integrity-validation-failed", "proof integrity validation failed", {"validation": validation})
+        raise LifecycleError(
+            "proof-integrity-validation-failed", "proof integrity validation failed", {"validation": validation}
+        )
     return validation
 
 
@@ -503,7 +516,9 @@ def _validate_root_causes(
         if validation["status"] != "PASS":
             blockers.append({"code": "proof-integrity-root-cause-invalid", "index": index, "validation": validation})
         if evidence.get("status") != "CONFIRMED":
-            blockers.append({"code": "proof-integrity-root-cause-not-confirmed", "index": index, "status": evidence.get("status")})
+            blockers.append(
+                {"code": "proof-integrity-root-cause-not-confirmed", "index": index, "status": evidence.get("status")}
+            )
         finding_id = evidence.get("findingId")
         if isinstance(finding_id, str) and finding_id:
             root_causes_by_finding.add(finding_id)
@@ -530,7 +545,9 @@ def _validate_fix_impacts(
         if validation["status"] != "PASS":
             blockers.append({"code": "proof-integrity-fix-impact-invalid", "index": index, "validation": validation})
         if receipt.get("status") != "PASS":
-            blockers.append({"code": "proof-integrity-fix-impact-not-pass", "index": index, "status": receipt.get("status")})
+            blockers.append(
+                {"code": "proof-integrity-fix-impact-not-pass", "index": index, "status": receipt.get("status")}
+            )
         for finding_id in receipt.get("relatedFindingIds") or []:
             if isinstance(finding_id, str):
                 covered_findings.add(finding_id)
@@ -540,7 +557,9 @@ def _validate_fix_impacts(
             if isinstance(digest, str):
                 covered_root_causes.add(digest)
                 if root_cause_digests and digest not in root_cause_digests:
-                    blockers.append({"code": "proof-integrity-fix-impact-unmatched-root-cause", "rootCauseDigest": digest})
+                    blockers.append(
+                        {"code": "proof-integrity-fix-impact-unmatched-root-cause", "rootCauseDigest": digest}
+                    )
     for finding_id in sorted(finding_ids.difference(covered_findings)):
         blockers.append({"code": "proof-integrity-fix-impact-missing", "findingId": finding_id})
     for digest in sorted(root_cause_digests.difference(covered_root_causes)):
@@ -589,7 +608,9 @@ def _validate_chain_entry(
         try:
             normalize_repo_path(str(artifact.get("path")), label="chain artifact path")
         except LifecycleError as exc:
-            blockers.append({"code": "receipt-hash-chain-artifact-path-invalid", "sequence": expected_sequence, "reason": exc.code})
+            blockers.append(
+                {"code": "receipt-hash-chain-artifact-path-invalid", "sequence": expected_sequence, "reason": exc.code}
+            )
         _check_digest(artifact.get("digest"), "receipt-hash-chain-artifact-digest-invalid", blockers)
     if entry.get("previousEntryHash") != expected_previous:
         blockers.append({"code": "receipt-hash-chain-previous-mismatch", "sequence": expected_sequence})
@@ -599,8 +620,11 @@ def _validate_chain_entry(
 
 
 def _chain_artifact(item: dict[str, Any]) -> dict[str, Any]:
-    raw_artifact = item.get("artifact") if isinstance(item.get("artifact"), dict) else item
-    path = normalize_repo_path(str(raw_artifact.get("path") or raw_artifact.get("sourcePath")), label="chain artifact path")
+    artifact_value = item.get("artifact")
+    raw_artifact = artifact_value if isinstance(artifact_value, dict) else item
+    path = normalize_repo_path(
+        str(raw_artifact.get("path") or raw_artifact.get("sourcePath")), label="chain artifact path"
+    )
     digest = raw_artifact.get("digest") or raw_artifact.get("artifactDigest") or raw_artifact.get("sha256")
     if not _is_digest(digest):
         raise LifecycleError("invalid-receipt-hash-chain", "chain artifact digest must be a 64-character hex digest")
@@ -656,7 +680,9 @@ def _validation(schema: str, blockers: list[dict[str, Any]], **extra: Any) -> di
 def _lineage(lineage: dict[str, Any]) -> None:
     if not isinstance(lineage, dict):
         raise LifecycleError("invalid-lineage", "lineage must be an object")
-    missing = [key for key in ("runId", "packageId", "planRevision", "planDigest", "sourceRevision") if key not in lineage]
+    missing = [
+        key for key in ("runId", "packageId", "planRevision", "planDigest", "sourceRevision") if key not in lineage
+    ]
     if missing:
         raise LifecycleError("invalid-lineage", "lineage is missing required fields", {"fields": missing})
     if not _is_digest(lineage.get("planDigest")):
@@ -795,4 +821,20 @@ def _without_digest(value: dict[str, Any], digest_key: str) -> dict[str, Any]:
     return {key: item for key, item in value.items() if key != digest_key}
 
 
-__all__ = ("build_finding_identity", "build_fix_impact_receipt", "build_hash_chain_migration_policy", "build_proof_integrity_receipt", "build_receipt_hash_chain", "build_root_cause_evidence", "finding_identity_fields", "require_proof_integrity_pass", "stable_finding_id", "validate_finding_identity", "validate_fix_impact_receipt", "validate_hash_chain_migration_policy", "validate_proof_integrity_receipt", "validate_receipt_hash_chain", "validate_root_cause_evidence")
+__all__ = (
+    "build_finding_identity",
+    "build_fix_impact_receipt",
+    "build_hash_chain_migration_policy",
+    "build_proof_integrity_receipt",
+    "build_receipt_hash_chain",
+    "build_root_cause_evidence",
+    "finding_identity_fields",
+    "require_proof_integrity_pass",
+    "stable_finding_id",
+    "validate_finding_identity",
+    "validate_fix_impact_receipt",
+    "validate_hash_chain_migration_policy",
+    "validate_proof_integrity_receipt",
+    "validate_receipt_hash_chain",
+    "validate_root_cause_evidence",
+)

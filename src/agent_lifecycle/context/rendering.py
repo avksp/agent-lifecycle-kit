@@ -65,7 +65,9 @@ def check_context(
 def _summary_projection(summary: dict[str, Any]) -> dict[str, Any]:
     missing = sorted(field for field in REQUIRED_SUMMARY_FIELDS if field not in summary)
     if missing:
-        raise LifecycleError("invalid-context-summary", "compact summary is missing required fields", {"missing": missing})
+        raise LifecycleError(
+            "invalid-context-summary", "compact summary is missing required fields", {"missing": missing}
+        )
     projected = {field: summary[field] for field in sorted(REQUIRED_SUMMARY_FIELDS)}
     for field in sorted(OPTIONAL_SUMMARY_FIELDS):
         if field in summary:
@@ -100,9 +102,12 @@ def _id_projection(items: Any) -> list[Any]:
 
 
 def _small_model_packet_projection(packet: dict[str, Any]) -> dict[str, Any]:
-    write_scope = packet.get("writeScope") if isinstance(packet.get("writeScope"), dict) else {}
-    output_contract = packet.get("requiredOutputContract") if isinstance(packet.get("requiredOutputContract"), dict) else {}
-    validation = packet.get("validation") if isinstance(packet.get("validation"), dict) else {}
+    raw_write_scope = packet.get("writeScope")
+    write_scope = raw_write_scope if isinstance(raw_write_scope, dict) else {}
+    raw_output_contract = packet.get("requiredOutputContract")
+    output_contract = raw_output_contract if isinstance(raw_output_contract, dict) else {}
+    raw_validation = packet.get("validation")
+    validation = raw_validation if isinstance(raw_validation, dict) else {}
     task = dict(packet.get("task", {}))
     return {
         "plan": dict(packet.get("plan", {})),
@@ -137,7 +142,10 @@ def _acceptance_projection(items: Any) -> list[dict[str, Any]]:
 
 def _omitted(packet: dict[str, Any]) -> list[dict[str, Any]]:
     omitted: list[dict[str, Any]] = []
-    for key in sorted(set(packet) - {"schemaVersion", "plan", "task", "ownership", "specification", "validation", "acceptance", "context"}):
+    for key in sorted(
+        set(packet)
+        - {"schemaVersion", "plan", "task", "ownership", "specification", "validation", "acceptance", "context"}
+    ):
         omitted.append({"path": key, "reason": "not-required-for-compact-active-task"})
     return omitted
 
