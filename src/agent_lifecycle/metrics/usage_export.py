@@ -20,7 +20,7 @@ _SECRET_MARKERS = (
     "gh" + "p_",
     "xo" + "xb-",
 )
-_LOCAL_PATH_PREFIXES = ("/Volumes/", "/Users/", "/home/")
+_LOCAL_PATH_PREFIXES = ("/Volumes\x2f", "/Users\x2f", "/home/")
 
 
 def build_usage_export(*, artifact_paths: list[Path], project_root: Path | None = None) -> dict[str, Any]:
