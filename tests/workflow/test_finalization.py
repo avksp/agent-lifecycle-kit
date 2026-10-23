@@ -9,14 +9,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 try:
-    from .helpers import *  # noqa: F403
+    from .helpers import _completion_signal, _final_audit, _gate, _initialize_managed_git_state, _write_state
 except ImportError:
-    from helpers import *  # noqa: F403
+    from helpers import _completion_signal, _final_audit, _gate, _initialize_managed_git_state, _write_state
 
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, write_json_create  # noqa: E402
+from agent_lifecycle.contracts.workflow_finalization_types import FinalizationProof  # noqa: E402
 from agent_lifecycle.specification import build_completion_gate_receipt  # noqa: E402
 from agent_lifecycle.workflow.finalization import (  # noqa: E402
     _capture_release_current_tree,
     _evaluate_lifecycle_control_stop,
+    finalize_run,
 )
 
 
@@ -178,7 +181,11 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {
+                "path": "work/WS-01/attempt-1/task-review.json",
+                "sha256": "3" * 64,
+                "bytes": 10,
+            }
             state_path.write_text(json.dumps(state), encoding="utf-8")
             write_json_create(root / "final/final-audit.json", _final_audit())
 
@@ -199,6 +206,11 @@ class WorkflowFinalizationTests(unittest.TestCase):
             self.assertFalse(proof["productionPromotionClaimed"])
             self.assertEqual(proof["operationId"], "finalize-op")
             self.assertEqual(proof["finalAudit"]["path"], "final/final-audit.json")
+            self.assertEqual(proof.keys(), FinalizationProof.__required_keys__)
+            self.assertEqual(
+                proof["bodyDigest"],
+                canonical_digest({key: value for key, value in proof.items() if key != "bodyDigest"}),
+            )
 
             with self.assertRaises(LifecycleError) as raised:
                 finalize_run(
@@ -211,6 +223,41 @@ class WorkflowFinalizationTests(unittest.TestCase):
                     reason="replay",
                 )
             self.assertEqual(raised.exception.code, "duplicate-operation")
+
+    def test_missing_or_malformed_final_audit_fields_leave_state_and_proof_unchanged(self) -> None:
+        cases = (
+            ("completionSignal", None, "completion-signal-required"),
+            ("completionSignal", [], "invalid-final-audit"),
+            ("findings", {}, "invalid-final-audit"),
+            ("productionPromotionClaimed", None, "final-audit-production-claim"),
+            ("productionPromotionClaimed", "false", "final-audit-production-claim"),
+        )
+        for field, value, code in cases:
+            with self.subTest(field=field, value=value), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                state_path = _write_state(root, phase="FINAL_AUDIT")
+                _accept_only_task(state_path)
+                before = state_path.read_bytes()
+                audit = _final_audit()
+                if value is None:
+                    audit.pop(field)
+                else:
+                    audit[field] = value
+                write_json_create(root / "final/final-audit.json", audit)
+                with self.assertRaises(LifecycleError) as raised:
+                    finalize_run(
+                        state_path,
+                        operation_id="invalid-final-audit-field",
+                        expected_revision=1,
+                        source_revision="source",
+                        final_audit_path="final/final-audit.json",
+                        proof_path="final/proof.json",
+                        reason="invalid evidence",
+                    )
+                self.assertEqual(raised.exception.code, code)
+                self.assertEqual(state_path.read_bytes(), before)
+                self.assertFalse((root / "final/proof.json").exists())
+                self.assertFalse((root / "events.jsonl").exists())
 
     def test_finalize_run_rejects_final_audit_with_open_findings(self) -> None:
         for severity in ("BLOCKER", "CRITICAL", "HIGH", "MEDIUM"):
@@ -248,7 +295,11 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {
+                "path": "work/WS-01/attempt-1/task-review.json",
+                "sha256": "3" * 64,
+                "bytes": 10,
+            }
             state_path.write_text(json.dumps(state), encoding="utf-8")
             audit = _final_audit()
             audit.pop("completionSignal")
@@ -274,7 +325,11 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {
+                "path": "work/WS-01/attempt-1/task-review.json",
+                "sha256": "3" * 64,
+                "bytes": 10,
+            }
             state_path.write_text(json.dumps(state), encoding="utf-8")
             audit = _final_audit()
             audit["completionSignal"] = _completion_signal("WAIVED")
@@ -470,7 +525,9 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state_path = _write_state(root, phase="FINAL_AUDIT")
             _accept_only_task(state_path)
             write_json_create(root / "final/final-audit.json", _final_audit())
-            write_json_create(root / "final/follow-up-register.json", _follow_up_register(current_scope_impact="completion-proof"))
+            write_json_create(
+                root / "final/follow-up-register.json", _follow_up_register(current_scope_impact="completion-proof")
+            )
 
             with self.assertRaises(LifecycleError) as raised:
                 finalize_run(
@@ -575,7 +632,11 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {
+                "path": "work/WS-01/attempt-1/task-review.json",
+                "sha256": "3" * 64,
+                "bytes": 10,
+            }
             state_path.write_text(json.dumps(state), encoding="utf-8")
             audit = _final_audit()
             audit["planDigest"] = "9" * 64
@@ -600,7 +661,11 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {
+                "path": "work/WS-01/attempt-1/task-review.json",
+                "sha256": "3" * 64,
+                "bytes": 10,
+            }
             state_path.write_text(json.dumps(state), encoding="utf-8")
             write_json_create(root / "final/final-audit.json", _final_audit())
 
@@ -623,7 +688,11 @@ class WorkflowFinalizationTests(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             state["tasks"][0]["status"] = "ACCEPTED"
             state["tasks"][0]["attempt"] = 1
-            state["tasks"][0]["review"] = {"path": "work/WS-01/attempt-1/task-review.json", "sha256": "3" * 64, "bytes": 10}
+            state["tasks"][0]["review"] = {
+                "path": "work/WS-01/attempt-1/task-review.json",
+                "sha256": "3" * 64,
+                "bytes": 10,
+            }
             state["tasks"][0]["controllerGates"] = [_gate("G-FINAL", ["finalization"])]
             state_path.write_text(json.dumps(state), encoding="utf-8")
             write_json_create(root / "final/final-audit.json", _final_audit())
@@ -692,6 +761,7 @@ class WorkflowFinalizationTests(unittest.TestCase):
                 )
 
             self.assertEqual(raised.exception.code, "final-implementation-audit-required")
+
 
 def _accept_only_task(state_path: Path) -> None:
     state = json.loads(state_path.read_text(encoding="utf-8"))
