@@ -540,7 +540,9 @@ def _read_closing_window_details(
 
 
 def _read_closing_policy_record(
-    db: sqlite3.Connection, run_id: str, closing_window_id: str,
+    db: sqlite3.Connection,
+    run_id: str,
+    closing_window_id: str,
 ) -> ClosingPolicyRecord:
     """Load the durable record and verify its shape and digest chain."""
     effect_row = db.execute(
@@ -569,7 +571,9 @@ def _read_closing_policy_record(
 
 
 def _validate_closing_scope_join(
-    record: ClosingPolicyRecord, binding: dict, closing_window_id: str,
+    record: ClosingPolicyRecord,
+    binding: dict,
+    closing_window_id: str,
 ) -> None:
     """Join all three durable documents to the pinned scope and revision."""
     run_id, scope = binding["runId"], binding["budgetScopeId"]
@@ -600,7 +604,9 @@ def _validate_closing_scope_join(
 
 
 def _validate_closing_policy_event(
-    db: sqlite3.Connection, scope: str, record: ClosingPolicyRecord,
+    db: sqlite3.Connection,
+    scope: str,
+    record: ClosingPolicyRecord,
 ) -> dict:
     """Check the native event and its before/after policy lineage."""
     effect = record.effect
@@ -631,7 +637,10 @@ def _validate_closing_policy_event(
 
 
 def _read_closing_financial_state(
-    db: sqlite3.Connection, scope: str, effect: dict, after_native: dict,
+    db: sqlite3.Connection,
+    scope: str,
+    effect: dict,
+    after_native: dict,
 ) -> tuple[sqlite3.Row, dict]:
     """Require current native financial state to retain the applied policy."""
     state_row = db.execute("SELECT revision,data FROM scope_state WHERE scope=?", (scope,)).fetchone()
@@ -658,7 +667,11 @@ def _read_closing_financial_state(
 
 
 def _closing_projection_status(
-    db: sqlite3.Connection, scope: str, closing_window_id: str, revision: int, rebuilt: list[dict],
+    db: sqlite3.Connection,
+    scope: str,
+    closing_window_id: str,
+    revision: int,
+    rebuilt: list[dict],
 ) -> str:
     """Distinguish a rebuildable stale cache from corrupt current facts."""
     saved = {}
