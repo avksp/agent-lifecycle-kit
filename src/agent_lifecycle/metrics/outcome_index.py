@@ -95,7 +95,9 @@ def build_quality_cost_signal_summary(signals: dict[str, Any]) -> dict[str, Any]
     best = _best_signal(rows)
     body = {
         "schemaVersion": QUALITY_COST_SIGNAL_SUMMARY_SCHEMA,
-        "latestUserIntent": "Use local receipt history to improve future lifecycle routing without auto-applying policy.",
+        "latestUserIntent": (
+            "Use local receipt history to improve future lifecycle routing without auto-applying policy."
+        ),
         "activeDecisions": [
             f"groupCount={signals.get('groupCount', 0)}",
             f"taskCount={signals.get('taskCount', 0)}",
