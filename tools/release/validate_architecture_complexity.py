@@ -3,10 +3,18 @@ from __future__ import annotations
 import argparse
 import ast
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from release_common import digest_value, file_identity, write_json
-from validate_declared_limit_semantics import LIMIT_SEMANTICS
+if TYPE_CHECKING:
+    from tools.release.release_common import digest_value, file_identity, write_json
+    from tools.release.validate_declared_limit_semantics import LIMIT_SEMANTICS, is_cli_path
+else:
+    try:
+        from release_common import digest_value, file_identity, write_json
+        from validate_declared_limit_semantics import LIMIT_SEMANTICS, is_cli_path
+    except ImportError:
+        from .release_common import digest_value, file_identity, write_json
+        from .validate_declared_limit_semantics import LIMIT_SEMANTICS, is_cli_path
 
 from agent_lifecycle.quality.architecture_policy import (
     branch_findings,
@@ -87,7 +95,7 @@ def _measure_file(path: Path, root: Path, limits: dict[str, int]) -> dict[str, A
             }
         )
     functions = []
-    is_cli = "cli" in path.relative_to(root).parts or path.name == "cli.py"
+    is_cli = is_cli_path(path, root)
     target = limits["cliTargetFunctionLines" if is_cli else "targetFunctionLines"]
     hard = limits["cliHardFunctionLines" if is_cli else "hardFunctionLines"]
     for node in ast.walk(tree):

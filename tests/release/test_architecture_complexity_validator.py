@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tools.release.validate_declared_limit_semantics import LIMIT_SEMANTICS, validate_limit_semantics
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -50,6 +52,8 @@ class ArchitectureComplexityValidatorTests(unittest.TestCase):
         self.assertEqual(payload["targetFileConformance"], "EXCEEDED")
         self.assertIn("architecture-hard-function-limit-exceeded", codes)
         self.assertIn("architecture-hard-symbol-limit-exceeded", codes)
+        self.assertEqual(LIMIT_SEMANTICS, payload["limitSemantics"])
+        self.assertEqual("PASS", validate_limit_semantics(payload)["status"])
 
     def test_validator_passes_small_fixture(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -152,6 +156,7 @@ class ArchitectureComplexityValidatorTests(unittest.TestCase):
                 self.assertEqual(payload["hardLimitConformance"], "FAIL" if code else "PASS")
                 self.assertEqual(payload["status"], "FAIL" if code else "PASS")
                 self.assertEqual([row["code"] for row in payload["blockers"]], [code] if code else [])
+                self.assertEqual("PASS", validate_limit_semantics(payload)["status"])
 
 
 if __name__ == "__main__":
